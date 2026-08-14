@@ -86,23 +86,33 @@
     }
     .draft-bar .wrap {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
-      gap: 1rem;
+      gap: 0.65rem 1rem;
       padding: 0.7rem 0;
-      font-size: 0.92rem;
+      font-size: 0.88rem;
       font-weight: 500;
       letter-spacing: 0.01em;
     }
     .draft-bar strong {
       font-family: var(--font-mono);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.12em;
       font-weight: 500;
     }
-    .draft-bar p { margin: 0; opacity: 0.95; }
-    .draft-bar span { opacity: 0.85; white-space: nowrap; }
+    .draft-bar p { margin: 0; opacity: 0.95; max-width: 44rem; line-height: 1.35; }
+    .draft-bar .draft-meta {
+      opacity: 0.85;
+      white-space: nowrap;
+      font-size: 0.8rem;
+      padding-top: 0.1rem;
+    }
+    @media (max-width: 560px) {
+      .draft-bar .wrap { flex-direction: column; gap: 0.2rem; }
+      .draft-bar .draft-meta { white-space: normal; }
+      .draft-bar .draft-msg { display: none; }
+    }
 
     /* Hero */
     .hero {
@@ -110,14 +120,21 @@
       animation: rise 0.8s ease-out both;
     }
     .brand {
-      display: inline-flex;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .brand-row {
+      display: flex;
       align-items: center;
-      gap: 0.65rem;
-      margin-bottom: 1.25rem;
+      gap: 0.75rem;
     }
     .brand-mark {
-      width: 2.4rem;
-      height: 2.4rem;
+      width: 2.55rem;
+      height: 2.55rem;
+      flex: 0 0 auto;
       border-radius: 10px;
       background:
         linear-gradient(145deg, var(--teal) 0%, var(--sky) 100%);
@@ -145,21 +162,22 @@
     }
     .brand-name {
       font-family: var(--font-display);
-      font-size: clamp(1.75rem, 4.5vw, 2.35rem);
+      font-size: clamp(2.35rem, 9vw, 3.35rem);
       font-weight: 700;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
+      letter-spacing: -0.03em;
+      line-height: 0.98;
       margin: 0;
+      max-width: 12ch;
     }
     .hero h1 {
-      font-family: var(--font-display);
-      font-size: clamp(1.35rem, 3.2vw, 1.85rem);
-      font-weight: 600;
-      letter-spacing: -0.015em;
-      line-height: 1.25;
-      max-width: 22ch;
+      font-family: var(--font-ui);
+      font-size: clamp(1.05rem, 2.6vw, 1.3rem);
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+      max-width: 28ch;
       margin: 0 0 0.85rem;
-      color: var(--ink);
+      color: var(--muted);
     }
     .hero .lede {
       max-width: 46ch;
@@ -466,6 +484,61 @@
       color: var(--ink-soft);
       font-size: 0.88rem;
     }
+    /* Mobile: stacked field rows so Type/Notes stay readable */
+    @media (max-width: 640px) {
+      .table-scroll { overflow: visible; }
+      table.entity {
+        min-width: 0;
+        display: block;
+      }
+      table.entity thead { display: none; }
+      table.entity tbody { display: block; }
+      table.entity tr {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.2rem;
+        padding: 0.85rem 1rem;
+        border-top: 1px solid var(--line);
+      }
+      table.entity td {
+        display: block;
+        padding: 0;
+        border: none;
+        white-space: normal;
+      }
+      table.entity td.col:first-child {
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--teal);
+        margin-bottom: 0.15rem;
+      }
+      table.entity td.col:nth-child(2),
+      table.entity tr td.col:first-child:not([rowspan]) {
+        font-size: 0.95rem;
+        color: var(--ink);
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      /* When first cell is table name (rowspan), emphasize the column name cell */
+      table.entity td.type {
+        color: var(--sky);
+        font-size: 0.78rem;
+      }
+      table.entity td.note {
+        font-size: 0.88rem;
+      }
+      table.entity td.col[rowspan] {
+        grid-column: 1 / -1;
+        padding-bottom: 0.35rem;
+        margin-bottom: 0.25rem;
+        border-bottom: 1px dashed var(--line);
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--teal-deep);
+      }
+    }
     .pk { color: var(--amber); font-weight: 600; }
     .fk { color: var(--teal-deep); }
     .derived {
@@ -645,8 +718,8 @@
 <body>
   <div class="draft-bar" role="status">
     <div class="wrap">
-      <p><strong>Rough draft</strong> — starting point for discussion, not a locked schema.</p>
-      <span>Stakeholder review</span>
+      <p><strong>Rough draft</strong> <span class="draft-msg">— starting point for discussion, not a locked schema.</span></p>
+      <span class="draft-meta">Stakeholder review</span>
     </div>
   </div>
 
@@ -654,8 +727,10 @@
 
   <header class="hero wrap">
     <div class="brand">
-      <div class="brand-mark" aria-hidden="true"></div>
-      <p class="brand-name">Wholesale Inventory</p>
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <p class="brand-name">Wholesale Inventory</p>
+      </div>
     </div>
     <h1>Database design canvas</h1>
     <p class="lede">
