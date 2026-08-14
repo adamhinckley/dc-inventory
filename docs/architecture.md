@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost).
 
 ---
 
@@ -33,7 +33,7 @@ One backend. Two HTTP adapters. Shared use cases. Different OpenAPI specs and ge
 
 ## 2. Constraints that drive every decision
 
-**Solo operator.** There is no team, no SRE, and no second reviewer except the owner. Operational surface stays tiny: one deployable app, one Postgres, object storage for images.
+**Solo operator.** There is no team, no SRE, and no second reviewer except the owner. Operational surface stays tiny: one deployable app, one Postgres, object storage for images. Observability stays on free/near-free tiers and must produce **agent-actionable** incident packets — see [`observability.md`](./observability.md).
 
 **Coding agents build features.** Architecture is a set of hard module seams so an agent — Cursor, Codex, Claude Code, Copilot, Devin, or anything else that works from a git checkout — can complete a slice without loading the whole system. The owner reviews inventory, money, and auth. Agents own adapters, CRUD, and UI wiring once ports and tests exist. The repo contract is `AGENTS.md` + these docs, not a single vendor’s product.
 
@@ -471,6 +471,7 @@ docs/
   architecture.md          # this file
   stack.md
   api-contract.md          # OpenAPI, Orval, list/search protocol
+  observability.md         # logs, errors, uptime, cheap alerts → agent work packets
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
@@ -534,8 +535,10 @@ Suggested API package (when code starts):
 apps/api/                  # or packages/api/
   internal/                # staff controllers
   wholesale/               # client controllers
-  infrastructure/          # config, DI, database, logging
+  infrastructure/          # config, DI, database, logging, health, error reporter
 ```
+
+Health checks, structured logs, and error reporting are specified in [`observability.md`](./observability.md). Domain packages do not import Sentry or the logger SDK.
 
 ---
 
@@ -585,6 +588,8 @@ Do not sneak these into v1 modules:
 - In-product AI agents (reorder bots, etc.) — out of scope; this operating model is **build-time coding agents** only, any vendor
 - OCR / extracting line items from arbitrary supplier PDFs or emails
 - Embedded BI (Metabase, Supabase dashboards, Cube) — reports are first-class query endpoints
+- Full APM / self-hosted metrics-log stacks (Datadog, Prometheus+Grafana+Loki, ELK) — see [`observability.md`](./observability.md)
+- Runtime AI that auto-remediates production incidents — coding agents fix via PRs from incident work packets
 
 `LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types.
 
@@ -605,3 +610,4 @@ Use this when reviewing an agent PR:
 - [ ] Sales uses `ProductSnapshot` / `CustomerId`, not foreign aggregates
 - [ ] New use cases have an in-memory unit test
 - [ ] Slice stayed inside the allowed context paths
+- [ ] No new observability vendors or log/metrics microservices ([`observability.md`](./observability.md))
