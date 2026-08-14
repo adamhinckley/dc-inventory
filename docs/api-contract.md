@@ -1,6 +1,6 @@
 # API contract: OpenAPI, lists, shop, and presentation-only frontends
 
-Companion to [`architecture.md`](./architecture.md) and [`stack.md`](./stack.md).
+Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), and [`observability.md`](./observability.md) (ops signals; not part of the UI contract).
 
 The HTTP API is the **only** contract the UIs may use. Both Next.js apps are **presentation**. They do not invent query params, compute availability, or assemble filters/charts the spec does not declare.
 

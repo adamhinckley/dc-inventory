@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** a solo operator and coding agents (any vendor) should use, and how auth is enforced.
 
-UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md).
+UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md).
 
 Choices optimize for three things, in order:
 
@@ -59,6 +59,7 @@ packages/
 | Auth library | **Better Auth** (or equivalent session library) **as an Identity adapter only** | See [§5](#5-authentication-and-authorization). |
 | Passwords | Library default (**Argon2id** / scrypt) | Never roll bcrypt-by-hand in a use case. |
 | Hosting (solo) | Managed Postgres (Neon, RDS, or Supabase **as Postgres only**). API on Fly/Render/Railway. Frontends on Vercel. | No Kubernetes. Do not use Supabase Auth, Storage, or RLS as the domain. |
+| Observability | **Pino** JSON logs + **`requestId`**, **Sentry** (or free equivalent) on API + both Next apps, **`GET /health`** (+ optional `/ready`), free uptime ping, host metrics only | No Datadog/New Relic, no self-hosted Prometheus/Grafana/ELK, no OTel collector in v1. See [`observability.md`](./observability.md). |
 
 ### Explicitly rejected (v1)
 
@@ -79,6 +80,8 @@ packages/
 | Puppeteer/Playwright to “print HTML to PDF” as the default renderer | Heavy runtime. Fine later; v1 is a library renderer. |
 | Metabase / Superset / Cube in v1 | Extra ops. Dashboard reports are Fastify query endpoints + Recharts. |
 | OCR / LLM parsing of supplier PDFs in v1 | Unreliable; store as attachment instead. |
+| Datadog / New Relic / self-hosted ELK or Prometheus+Grafana (v1) | Solo-operator tax and cost. Free error tracking + uptime + host logs only — [`observability.md`](./observability.md). |
+| OpenTelemetry collector as a default runtime | Extra process. Sentry breadcrumbs + structured logs cover v1. |
 
 ---
 
@@ -259,8 +262,9 @@ Coding agents may wire login, cookies, and “require session” hooks. **Permis
 | List filters as Zod query params + `x-table` (then `gen:api`) | Inventing undocumented query params or browser-side filtering |
 | Presigned-upload adapter behind `IFileStorage` | Any “available qty” stored as an input |
 | CSV/XLSX export + import dry-run for Catalog/Customers | Stock-count spreadsheet that writes on-hand; PDF line-item extraction |
+| Pino/`requestId`, `/health`, Sentry SDK wiring (no secrets in logs) | Alert routing, PII-in-logs policy, paid APM |
 
-If an agent adds Redis, Prisma, Mongo, GraphQL, tRPC, Elasticsearch, JWT-in-localStorage, or hand-written `fetch` to the API, reject the PR. The stack is closed until this document changes.
+If an agent adds Redis, Prisma, Mongo, GraphQL, tRPC, Elasticsearch, JWT-in-localStorage, hand-written `fetch` to the API, Datadog, or a metrics/log microservice, reject the PR. The stack is closed until this document (and [`observability.md`](./observability.md)) changes.
 
 ---
 
@@ -278,4 +282,4 @@ Browser cookie
 
 **Local:** Docker Compose with Postgres (and optionally MinIO for S3). Unit tests do not start Compose; they use in-memory adapters.
 
-**Prod:** Managed Postgres, managed object storage, one API process, two frontend deploys. That is the entire runtime.
+**Prod:** Managed Postgres, managed object storage, one API process, two frontend deploys, free-tier error tracking + uptime on `/health`, host log stream. That is the entire runtime — details in [`observability.md`](./observability.md).
