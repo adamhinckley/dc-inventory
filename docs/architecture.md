@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports, **API evolution**) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost).
 
 ---
 
@@ -39,7 +39,73 @@ One backend. Two HTTP adapters. Shared use cases. Different OpenAPI specs and ge
 
 **Two products, one backend.** Shared use cases; different controllers, auth, DTOs, and UX. Internal is a dashboard; wholesale is a shop.
 
+**Requirements will change mid-build.** Stakeholders will reverse a rule, add a field, or invent a screen halfway through. The architecture exists so that kind of change is **local and additive**, not a rewrite. See [§2a](#2a-change-friendly-api-and-modules). HTTP evolution rules live in [`api-contract.md`](./api-contract.md#7-api-evolution-when-requirements-change).
+
 **Complex availability is a projection.** Stock on hand, stock on order, allocated-to-clients, and available are **not** independent columns that get mutated in three places. They are derived from a stock ledger. See [§6](#6-inventory-stock-ledger-not-a-qty-column).
+
+---
+
+## 2a. Change-friendly API and modules
+
+This is a **hard requirement**, not a nice-to-have: mid-build mind-changes must not force cascading rewrites across domain, database, and both frontends.
+
+### What “easy to change” means here
+
+| Kind of stakeholder flip | Expected blast radius |
+|---|---|
+| New list column / filter / sort | Zod + `x-table` + repository `WHERE` + `pnpm gen:api` — UI regenerates |
+| New CRUD field on a form | Optional Zod field + use case mapping + migration if persisted — same Orval path |
+| New screen / report | New query or command use case + one HTTP route + Orval hook — no shared “god” endpoint |
+| Business rule change (e.g. invoice on ship vs confirm) | One use case + its unit tests; adapters only if the wire shape must change |
+| Policy change on availability (e.g. sell against inbound later) | New **projection rule** on the Inventory read model — ledger movement types stay |
+| Wholesale-only vs staff-only behavior | DTO mapping in the matching HTTP adapter — **do not fork** the use case |
+
+If a change requires editing three contexts, both OpenAPI specs, and hand-written `fetch` in React, the previous design was wrong — fix the seam, do not paper over it.
+
+### Seams that absorb volatility
+
+1. **Use cases are the unit of change.** Features are `application/` classes with typed request/response objects. Adding behavior is usually a new use case (or a narrow change to one), not a new framework module or a new microservice.
+2. **Ports hide infrastructure.** Replacing S3 with local disk, or Postgres list SQL with a better query, does not touch domain entities. Agents implement adapters; owners protect ports and invariants.
+3. **HTTP is a thin driving adapter.** Controllers parse → call one use case → map DTOs. When the stakeholder wants a different JSON shape, change the Zod schema and mapper — keep the use case stable when the business meaning is unchanged.
+4. **Two OpenAPI specs.** Internal and wholesale evolve independently. A staff-table whim must not spill into the shop client (and vice versa).
+5. **Generated clients only.** Orval + `x-table` / report DTOs mean the UI cannot invent a parallel contract. After `pnpm gen:api`, both apps pick up the new surface without hand-rolled API layers that drift.
+6. **Snapshots and IDs across contexts.** `ProductSnapshot`, `CustomerId`, and Anti-Corruption ports mean Catalog or Customers can gain fields without rewriting historical orders or Sales aggregates.
+7. **Ledger vs projection.** Inventory quantities stay movement-sourced. Display and sellability rules can change as read-model policy without mutating “qty columns” in three places.
+8. **In-memory unit tests.** When a rule flips, the agent (or owner) updates failing tests first, then the use case. Refactors stay safe without Docker or a staging rewrite.
+
+```mermaid
+flowchart TB
+  Stakeholder[Stakeholder_mind_change]
+  subgraph localize [Change stays local]
+    UC[Use_case_or_new_use_case]
+    Zod[Zod_DTO_plus_OpenAPI]
+    Port[Port_unchanged_or_narrow_extend]
+    UI[Orval_regen_UI]
+  end
+  Stakeholder --> UC
+  UC --> Zod
+  UC --> Port
+  Zod --> UI
+```
+
+### Rules when the mind changes
+
+- **Prefer additive.** New optional response fields, new query params, new routes. Do not rename or remove fields that either generated client still uses.
+- **Change the rule in one place.** Business meaning lives in the use case (or domain entity/VO). Controllers and React components do not re-implement the new rule “just for this screen.”
+- **Extend ports narrowly.** Add a method or optional field to a port when needed; do not replace a port with a different abstraction mid-slice unless tests are rewritten with the owner.
+- **Do not grow the shared kernel** to paper over a change. Copy a snapshot or add a port.
+- **Do not introduce a second API style** (GraphQL, tRPC, JSON `filters` blobs, ad-hoc admin RPC) because the current list protocol feels slow to extend — extend Zod + `x-table` instead. See [`api-contract.md`](./api-contract.md).
+- **Defer irreversible coupling.** Feature flags / dual-path behavior are allowed only for short migrations (e.g. old and new response field). They are not a substitute for additive OpenAPI.
+
+### What agents may do when requirements shift
+
+| Autonomy | Allowed response to a mid-build change |
+|---|---|
+| **High** | Add optional fields, list filters, Catalog/Customers CRUD shape changes, new report endpoint wired to existing read models, DTO-only differences between internal and wholesale |
+| **Medium** | New Purchasing/Sales commands that call existing Inventory/Customers ports; owner glances at domain diffs |
+| **Low / gated** | Inventory ledger math, allocation failure policy, payment/AR meaning, authz/`customerId` binding, anything that redefines money or stock invariants |
+
+Work packets stay the same shape: allowed paths, existing ports/tests, stop when green. A stakeholder flip is a **new packet** (or an updated failing test), not permission to “clean up” unrelated contexts.
 
 ---
 
@@ -610,4 +676,6 @@ Use this when reviewing an agent PR:
 - [ ] Sales uses `ProductSnapshot` / `CustomerId`, not foreign aggregates
 - [ ] New use cases have an in-memory unit test
 - [ ] Slice stayed inside the allowed context paths
+- [ ] Requirement / API changes are additive or have a parallel-route migration — no silent breaks, no second API paradigm ([§2a](#2a-change-friendly-api-and-modules), [`api-contract.md` §7](./api-contract.md#7-api-evolution-when-requirements-change))
+- [ ] Business-rule flips landed in a use case (or domain VO), not only in a controller or React page
 - [ ] No new observability vendors or log/metrics microservices ([`observability.md`](./observability.md))
