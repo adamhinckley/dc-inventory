@@ -462,6 +462,12 @@ After this document is accepted, add:
 
 `AGENTS.md` is the contract. This architecture document is what it points at.
 
+### Future idea (not v1): in-app feature requests → coding agents
+
+Parked idea: the **internal** app exposes a way for staff (or the owner) to request a change in product language (“CSV export of open POs by vendor”), and that request kicks a **build-time** coding agent against this repo. The agent opens a PR (and eventually a staging/preview deploy); a human still gates inventory, money, and auth — and merge/promote to prod.
+
+This is a **control plane** for the operating model above (intake, status, preview, approve), not in-product domain agents (reorder bots, chat that mutates stock). Still deferred; see [§14](#14-explicitly-deferred). Viability today favors allowlisted change types and PR/staging first, not unsupervised prod.
+
 ---
 
 ## 11. Folder map
@@ -583,6 +589,7 @@ Do not sneak these into v1 modules:
 - Message broker, outbox, CQRS with a separate read DB
 - Microservices / separate deployables per context
 - In-product AI agents (reorder bots, etc.) — out of scope; this operating model is **build-time coding agents** only, any vendor
+- **In-app “request a feature” that coding agents build/deploy** — staff request from the internal app; an agent implements against this repo and returns a PR / staging preview; human still reviews inventory, money, and auth (and promote to prod). Prefer config/allowlisted slices before freeform code; do not auto-merge ledger or payment changes. See [§10](#future-idea-not-v1-in-app-feature-requests--coding-agents)
 - OCR / extracting line items from arbitrary supplier PDFs or emails
 - Embedded BI (Metabase, Supabase dashboards, Cube) — reports are first-class query endpoints
 
