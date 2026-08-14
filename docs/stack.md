@@ -137,6 +137,8 @@ Do not check availability in the app, then write in a second round trip with no 
 
 ### One database, schema-per-context
 
+Stakeholder-facing starting draft of tables and talk tracks: [`database-design-canvas.html`](./database-design-canvas.html) (rough draft — not a locked migration).
+
 One Postgres cluster, one database. **Separate schemas** (or table-name prefixes) per bounded context so agents do not join `catalog.products` from a Sales use case:
 
 ```
