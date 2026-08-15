@@ -1,12 +1,12 @@
-# Observability (solo ops, low cost)
+# Observability (solo software ops, low cost)
 
-Companion to [`architecture.md`](./architecture.md) and [`stack.md`](./stack.md). Those documents define the module map and runtime. This one is **how a solo operator knows something is wrong**, and how that signal becomes a **coding-agent work packet** without an SRE budget.
+Companion to [`architecture.md`](./architecture.md) and [`stack.md`](./stack.md). Those documents define the module map and runtime. This one is **how the solo software operator knows something is wrong**, and how that signal becomes a **coding-agent work packet** without an SRE budget.
 
 Choices optimize for three things, in order:
 
 1. **Surfacing failures** the owner (or an agent) can act on — not vanity dashboards
 2. **Lowest sustainable cost** — free tiers and host-native tooling first
-3. **Solo ops** — one person, no pager rotation, no second observability stack to babysit
+3. **Solo software ops** — one builder, no pager rotation, no second observability stack to babysit
 
 ---
 
@@ -62,7 +62,7 @@ Rough monthly expectation for v1 traffic: **$0–20** beyond what hosting alread
 
 | Rejected | Reason |
 |---|---|
-| Datadog / New Relic / Honeycomb full APM | Cost and solo-operator tax. Revisit only when free error+uptime cannot explain incidents. |
+| Datadog / New Relic / Honeycomb full APM | Cost and solo-software-operator tax. Revisit only when free error+uptime cannot explain incidents. |
 | Self-hosted Prometheus + Grafana + Loki / ELK | Extra runtime to babysit. Same rejection class as Kubernetes. |
 | OpenTelemetry collector + tracing backend as a default | Fine **later** if you outgrow Sentry breadcrumbs. Do not stand up a collector for v1. |
 | Log everything to a paid warehouse (BigQuery, etc.) | Wrong shape for transactional inventory; use reports endpoints for business KPIs. |
@@ -165,7 +165,7 @@ Owner (or a thin automation later) pastes the Sentry link + `requestId` into tha
 - Fingerprinted (same bug groups; not one alert per request)
 - Tied to a **release**
 - Includes enough stack to name a package (`catalog`, `sales`, …)
-- Actionable in one sitting for a solo operator
+- Actionable in one sitting for the solo software operator
 
 If an alert cannot be turned into the template above, delete or downgrade it.
 
