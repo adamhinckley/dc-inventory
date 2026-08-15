@@ -1,6 +1,6 @@
 # Stack, database, and security
 
-Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** a solo operator and coding agents (any vendor) should use, and how auth is enforced.
+Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** the solo software operator and coding agents (any vendor) should use, and how auth is enforced.
 
 UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md).
 
@@ -8,7 +8,7 @@ Choices optimize for three things, in order:
 
 1. **Correctness** for inventory, money, and two distinct audiences
 2. **Agent accuracy** — boring, typed, heavily documented tools agents implement without inventing a new style
-3. **Solo ops** — one database, managed hosting, no extra runtime to babysit
+3. **Solo software ops** — one database, managed hosting, no extra runtime for the builder to babysit
 
 ---
 
@@ -58,7 +58,7 @@ packages/
 | PDFs (outbound) | **PDFKit** (or `@react-pdf/renderer`) behind `IPdfRenderer` | Render PO/invoice from aggregates. Tests assert on a fake renderer, not PDF pixels. |
 | Auth library | **Better Auth** (or equivalent session library) **as an Identity adapter only** | See [§5](#5-authentication-and-authorization). |
 | Passwords | Library default (**Argon2id** / scrypt) | Never roll bcrypt-by-hand in a use case. |
-| Hosting (solo) | Managed Postgres (Neon, RDS, or Supabase **as Postgres only**). API on Fly/Render/Railway. Frontends on Vercel. | No Kubernetes. Do not use Supabase Auth, Storage, or RLS as the domain. |
+| Hosting (solo software ops) | Managed Postgres (Neon, RDS, or Supabase **as Postgres only**). API on Fly/Render/Railway. Frontends on Vercel. | No Kubernetes. Do not use Supabase Auth, Storage, or RLS as the domain. |
 | Observability | **Pino** JSON logs + **`requestId`**, **Sentry** (or free equivalent) on API + both Next apps, **`GET /health`** (+ optional `/ready`), free uptime ping, host metrics only | No Datadog/New Relic, no self-hosted Prometheus/Grafana/ELK, no OTel collector in v1. See [`observability.md`](./observability.md). |
 
 ### Explicitly rejected (v1)
@@ -76,11 +76,11 @@ packages/
 | Redis (v1) | Sessions and rate-limit counters live in Postgres until you have a reason. |
 | Next.js Route Handlers as the domain API | Mixes UI deploy with inventory transactions; two frontends would duplicate or awkwardly share routes. Fastify is the one composition root. |
 | Clerk/Auth0 as the source of truth for customers | Fine as a later IdP **adapter**. v1 keeps users in our DB so `CustomerId` binding stays in-process. |
-| Kubernetes, Kafka, Elasticsearch | Solo-operator tax. |
+| Kubernetes, Kafka, Elasticsearch | Solo-software-operator tax. |
 | Puppeteer/Playwright to “print HTML to PDF” as the default renderer | Heavy runtime. Fine later; v1 is a library renderer. |
 | Metabase / Superset / Cube in v1 | Extra ops. Dashboard reports are Fastify query endpoints + Recharts. |
 | OCR / LLM parsing of supplier PDFs in v1 | Unreliable; store as attachment instead. |
-| Datadog / New Relic / self-hosted ELK or Prometheus+Grafana (v1) | Solo-operator tax and cost. Free error tracking + uptime + host logs only — [`observability.md`](./observability.md). |
+| Datadog / New Relic / self-hosted ELK or Prometheus+Grafana (v1) | Solo-software-operator tax and cost. Free error tracking + uptime + host logs only — [`observability.md`](./observability.md). |
 | OpenTelemetry collector as a default runtime | Extra process. Sentry breadcrumbs + structured logs cover v1. |
 
 ---

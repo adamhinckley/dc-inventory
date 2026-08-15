@@ -20,6 +20,10 @@ Wholesale inventory control for a business that:
 - Manages customers (accounts, contacts, terms, credit)
 - Handles a thin slice of accounting (invoices, payments, AR)
 
+**Who this is for.** The **customer organization** is a multi-employee wholesale company: staff in different roles (purchasing, warehouse, sales support, admin), many wholesale client accounts with their own users, suppliers/vendors, and occasional data exports for an external accountant. This is not a one-person shop dressed up as wholesale.
+
+**Who builds it.** A **solo software operator** (the product owner / engineer) is building and running this stack largely alone, with coding agents — because the company wants a better system than what they have today. “Solo” describes **software ops and the build team**, not headcount at the wholesale business.
+
 The backend serves **two different products**, not two skins of the same admin:
 
 | App | Audience | What it is |
@@ -33,7 +37,7 @@ One backend. Two HTTP adapters. Shared use cases. Different OpenAPI specs and ge
 
 ## 2. Constraints that drive every decision
 
-**Solo operator.** There is no team, no SRE, and no second reviewer except the owner. Operational surface stays tiny: one deployable app, one Postgres, object storage for images. Observability stays on free/near-free tiers and must produce **agent-actionable** incident packets — see [`observability.md`](./observability.md).
+**Solo software operator (build + run).** There is no DevOps team, no SRE, and no second code reviewer except the product owner. Operational surface stays tiny: one deployable app, one Postgres, object storage for images. Observability stays on free/near-free tiers and must produce **agent-actionable** incident packets — see [`observability.md`](./observability.md). The wholesale company’s employees use the product daily; they are not expected to babysit the infrastructure.
 
 **Coding agents build features.** Architecture is a set of hard module seams so an agent — Cursor, Codex, Claude Code, Copilot, Devin, or anything else that works from a git checkout — can complete a slice without loading the whole system. The owner reviews inventory, money, and auth. Agents own adapters, CRUD, and UI wiring once ports and tests exist. The repo contract is `AGENTS.md` + these docs, not a single vendor’s product.
 
@@ -53,7 +57,7 @@ This is a **modular monolith**, not a set of microservices.
 - Cross-context collaboration is via **ports** (interfaces) and **in-process domain events**, not shared entities.
 - A transactional outbox / message bus appears only if a second process appears. It is not v1.
 
-Microservices would split the inventory consistency this product depends on, and would make a solo operator into an SRE. Extract a context later only if a real operational reason appears.
+Microservices would split the inventory consistency this product depends on, and would turn the solo software operator into an SRE. Extract a context later only if a real operational reason appears.
 
 ### Stack
 
