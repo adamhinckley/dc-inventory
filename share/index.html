@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>David Christopher’s — business context</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=Source+Code+Pro:wght@500&display=swap" rel="stylesheet" />
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      securityLevel: "strict",
+      themeVariables: {
+        fontFamily: "Source Sans 3, sans-serif",
+        fontSize: "16px",
+        primaryColor: "#f3ece0",
+        primaryTextColor: "#2c261e",
+        primaryBorderColor: "#c4b8a4",
+        lineColor: "#8a7d68",
+        tertiaryColor: "#faf7f1",
+        secondaryColor: "#e8dfd0",
+      },
+    });
+
+    const modal = document.getElementById("er-modal");
+    const dest = document.getElementById("er-full");
+
+    function diagramSvg() {
+      return document.querySelector(".diagram svg");
+    }
+
+    async function openEr() {
+      let svg = diagramSvg();
+      for (let i = 0; i < 40 && !svg; i++) {
+        await new Promise((r) => setTimeout(r, 50));
+        svg = diagramSvg();
+      }
+      if (!svg) return;
+      dest.replaceChildren(svg.cloneNode(true));
+      modal.showModal();
+    }
+
+    function closeEr() {
+      modal.close();
+    }
+
+    document.getElementById("open-er").addEventListener("click", openEr);
+    document.getElementById("close-er").addEventListener("click", closeEr);
+    document.querySelector(".diagram").addEventListener("click", openEr);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeEr();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.open) closeEr();
+    });
+  </script>
+  <style>
+    :root {
+      --paper: #f7f3eb;
+      --paper-2: #efe8da;
+      --ink: #2c261e;
+      --muted: #6b6256;
+      --rule: #ddd4c4;
+      --card: #fffcf6;
+      --accent: #5c6b4a;
+      --accent-ink: #3f4a32;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--paper); }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font: 17px/1.65 "Source Sans 3", system-ui, sans-serif;
+    }
+    .frame {
+      max-width: 44rem;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+    nav.top {
+      display: flex;
+      gap: 1.5rem;
+      padding: 1.35rem 0 0;
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    nav.top a { color: var(--muted); text-decoration: none; }
+    nav.top a[aria-current="page"] {
+      color: var(--ink);
+      border-bottom: 1px solid var(--ink);
+      padding-bottom: 0.15rem;
+    }
+    header.hero {
+      padding: 2.75rem 0 2rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .kicker {
+      margin: 0 0 0.65rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    h1 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: clamp(2.1rem, 5vw, 2.75rem);
+      font-weight: 500;
+      font-optical-sizing: auto;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.85rem;
+    }
+    .lede {
+      margin: 0;
+      max-width: 36rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+    h2 {
+      font-family: Fraunces, Georgia, serif;
+      font-size: 1.45rem;
+      font-weight: 500;
+      margin: 2.75rem 0 1rem;
+      padding-top: 0.35rem;
+    }
+    .note {
+      margin: 1.75rem 0 0;
+      padding: 1rem 0 1rem 1rem;
+      border-left: 2px solid var(--accent);
+      color: var(--muted);
+      font-size: 0.95rem;
+      background: transparent;
+    }
+    .ops {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .ops li {
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .ops li:last-child { border-bottom: none; }
+    .avoid {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.85rem;
+      color: #9a9084;
+      font-style: italic;
+    }
+    p.meta {
+      margin: 0 0 1.1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    dl.terms {
+      margin: 0;
+      border-top: 1px solid var(--rule);
+    }
+    .term {
+      display: grid;
+      grid-template-columns: 8.5rem 1fr;
+      gap: 0.75rem 1.25rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    @media (max-width: 560px) {
+      .term { grid-template-columns: 1fr; gap: 0.2rem; }
+    }
+    dt {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 650;
+      font-size: 1.05rem;
+    }
+    dd { margin: 0; color: var(--muted); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border: 1px solid var(--rule);
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.7rem 0.9rem;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:nth-child(even) { background: var(--paper-2); }
+    th {
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+      background: var(--paper-2);
+    }
+    code {
+      font-family: "Source Code Pro", ui-monospace, monospace;
+      font-size: 0.86em;
+      color: var(--accent-ink);
+    }
+    .diagram-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.65rem 1rem;
+      margin: 0.25rem 0 0.85rem;
+    }
+    .diagram {
+      background: var(--card);
+      border: 1px solid var(--rule);
+      padding: 1.1rem;
+      overflow: hidden;
+      max-height: 14rem;
+      cursor: zoom-in;
+    }
+    .diagram svg { pointer-events: none; }
+    button.linkish {
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--accent-ink);
+      background: var(--card);
+      border: 1px solid var(--rule);
+      padding: 0.4rem 0.85rem;
+      cursor: pointer;
+    }
+    button.linkish:hover { border-color: var(--accent); }
+    dialog.er-modal {
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      border: none;
+      background: var(--card);
+    }
+    dialog.er-modal::backdrop {
+      background: rgba(44, 38, 30, 0.45);
+    }
+    .modal-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem 1.15rem;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper);
+    }
+    .modal-bar h2 { margin: 0; padding: 0; font-size: 1.15rem; }
+    .modal-body {
+      height: calc(100vh - 3.5rem);
+      overflow: auto;
+      padding: 1.5rem;
+    }
+    .modal-body svg {
+      display: block;
+      width: max(100%, 1600px);
+      height: auto;
+    }
+    .connect {
+      margin: 1.25rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    .connect li {
+      padding: 0.55rem 0 0.55rem 1rem;
+      border-left: 2px solid var(--paper-2);
+      color: var(--muted);
+    }
+    a { color: var(--accent-ink); }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <nav class="top" aria-label="Shared artifacts">
+      <a href="index.html" aria-current="page">Business &amp; tables</a>
+    </nav>
+    <header class="hero">
+      <p class="kicker">Shared artifacts</p>
+      <h1>David Christopher’s</h1>
+      <p class="lede">Terms, expected tables, and how they connect — so the business and the product stay on the same page.</p>
+    </header>
+    <main>
+      <p class="note">
+        Tables and links below are <strong>expected</strong>, not a locked schema.
+        Product columns, factory Excel maps, and words like “vendor” / “SKU” wait on David’s lists.
+        Do not treat extra fields on this page as requirements.
+      </p>
+
+      <h2>What the business does</h2>
+      <ul class="ops">
+        <li>Buys product from <strong>factories</strong> using <strong>purchase orders</strong> (Excel sent to the factory).</li>
+        <li>Sells wholesale to <strong>customers</strong> (other businesses) via a shop, or staff place the same kind of <strong>sales order</strong> for them.</li>
+        <li>Staff run catalog, purchasing, stock, customers, and billing in one back office. Today that back office is <strong>SoloVue</strong>.</li>
+        <li>A sales order is confirmed as the <strong>order page plus an email that matches that page</strong>.</li>
+        <li>Customers may pay on terms (Net 30 / 60 / 90). When due, they get a <strong>statement</strong> email — not a marketing blast.</li>
+        <li><strong>Shopify</strong> is retail. It is a separate channel, not this wholesale product.</li>
+      </ul>
+
+      <h2>Defined terms</h2>
+      <p class="meta">Only words we can stand behind today. Source: CONTEXT.md in the product repo.</p>
+      <dl class="terms">
+        <div class="term">
+          <dt>Customer</dt>
+          <dd>A wholesale business that buys from us. Orders on the shop, or staff place the same kind of order for them. <span class="avoid">Not: vendor, client, account (until the business locks those words).</span></dd>
+        </div>
+        <div class="term">
+          <dt>Staff</dt>
+          <dd>An employee of David Christopher’s who uses the back office. <span class="avoid">Not: “admin” for every internal user.</span></dd>
+        </div>
+        <div class="term">
+          <dt>Factory</dt>
+          <dd>A business we buy product from. We send them purchase orders. <span class="avoid">Not: vendor / supplier until the glossary picks one word.</span></dd>
+        </div>
+        <div class="term">
+          <dt>Sales order</dt>
+          <dd>An order a customer places with us. Confirmation = page + matching email. Includes ship-to and, later, tracking. <span class="avoid">Not a purchase order or invoice.</span></dd>
+        </div>
+        <div class="term">
+          <dt>Purchase order</dt>
+          <dd>An order staff build to buy from a factory. Today: export Excel, fix layout, send to the factory. <span class="avoid">Not a customer order.</span></dd>
+        </div>
+        <div class="term">
+          <dt>Invoice</dt>
+          <dd>A bill we send a customer for a sales order. Some customers have time to pay. <span class="avoid">Not a statement.</span></dd>
+        </div>
+        <div class="term">
+          <dt>Statement</dt>
+          <dd>An email that a customer owes a stated amount because payment terms came due. <span class="avoid">Not the invoice itself, not a newsletter.</span></dd>
+        </div>
+        <div class="term">
+          <dt>Item number</dt>
+          <dd>The identifier staff type to find a product when building a purchase order. <span class="avoid">Not locked as “SKU” until the business says they are the same.</span></dd>
+        </div>
+      </dl>
+
+      <h2>Expected database tables</h2>
+      <p class="meta">Names are working labels. Column lists are not here on purpose.</p>
+      <table>
+        <thead>
+          <tr><th>Table</th><th>Holds</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>staff</code></td><td>People who use the back office.</td></tr>
+          <tr><td><code>customer</code></td><td>Wholesale buyer account, including payment terms (Net 30/60/90).</td></tr>
+          <tr><td><code>customer_contact</code></td><td>People at that customer.</td></tr>
+          <tr><td><code>customer_ship_to</code></td><td>Ship-to addresses for a customer.</td></tr>
+          <tr><td><code>customer_user</code></td><td>Shop logins belonging to a customer.</td></tr>
+          <tr><td><code>factory</code></td><td>Who we buy from.</td></tr>
+          <tr><td><code>product</code></td><td>What we sell/buy, found by item number. Packing facts live here when David lists them — not invented on this page.</td></tr>
+          <tr><td><code>product_image</code></td><td>Pictures of a product.</td></tr>
+          <tr><td><code>purchase_order</code></td><td>A buy from a factory.</td></tr>
+          <tr><td><code>purchase_order_line</code></td><td>Lines on that PO (item, qty, cost copied at add time).</td></tr>
+          <tr><td><code>sales_order</code></td><td>A customer order (shop or staff). Ship-to and later tracking sit here.</td></tr>
+          <tr><td><code>sales_order_line</code></td><td>Lines on that sales order (item, qty, price at order time).</td></tr>
+          <tr><td><code>stock_movement</code></td><td>Every stock change (PO placed, goods in, allocated to a sales order, shipped, count adjustment). This is the quantity history — not a single “qty” box on the product.</td></tr>
+          <tr><td><code>stock_on_hand</code></td><td>Numbers staff see: on hand, on order to the factory, already sold/allocated, available. Kept in step with movements. Available is on hand minus allocated — not typed in by hand.</td></tr>
+          <tr><td><code>invoice</code></td><td>Bill for a sales order, with a due date copied from the customer’s terms.</td></tr>
+          <tr><td><code>payment</code></td><td>Money applied to invoices.</td></tr>
+          <tr><td><code>statement</code></td><td>Record of a due-date statement that was sent (or is due to send).</td></tr>
+        </tbody>
+      </table>
+
+      <h2>How the tables connect</h2>
+      <p class="diagram-wrap">
+        <button type="button" class="linkish" id="open-er">Open diagram full width</button>
+        <span class="avoid" style="display:inline;margin:0;font-style:normal">Click the preview or the button. Close or Esc to exit.</span>
+      </p>
+      <div class="diagram" title="Open full width">
+        <pre class="mermaid">
+erDiagram
+  staff ||--o{ purchase_order : "builds"
+  factory ||--o{ purchase_order : "receives"
+  purchase_order ||--|{ purchase_order_line : "has"
+  product ||--o{ purchase_order_line : "item"
+  product ||--o{ product_image : "has"
+  product ||--o{ sales_order_line : "item"
+  product ||--o{ stock_movement : "item"
+  product ||--o| stock_on_hand : "shows qty for"
+
+  customer ||--o{ customer_contact : "has"
+  customer ||--o{ customer_ship_to : "has"
+  customer ||--o{ customer_user : "logs in as"
+  customer ||--o{ sales_order : "places"
+  customer ||--o{ invoice : "is billed"
+  customer ||--o{ statement : "is reminded"
+
+  customer_ship_to ||--o{ sales_order : "ships to"
+  sales_order ||--|{ sales_order_line : "has"
+  sales_order ||--o{ stock_movement : "allocates / ships"
+  sales_order ||--o| invoice : "billed as"
+
+  purchase_order ||--o{ stock_movement : "on order / received"
+  invoice ||--o{ payment : "paid by"
+  invoice ||--o{ statement : "comes due"
+        </pre>
+      </div>
+      <dialog class="er-modal" id="er-modal" aria-labelledby="er-title">
+        <div class="modal-bar">
+          <h2 id="er-title">How the tables connect</h2>
+          <button type="button" class="linkish" id="close-er">Close</button>
+        </div>
+        <div class="modal-body" id="er-full"></div>
+      </dialog>
+      <ul class="connect">
+        <li>A <strong>customer</strong> does not contain orders. A <strong>sales order</strong> points at the customer.</li>
+        <li>A <strong>product</strong> does not store “how many we have.” <strong>stock_movement</strong> does; <strong>stock_on_hand</strong> is the running picture.</li>
+        <li>Purchase-order lines and sales-order lines copy what they need from the product when the line is added, so later catalog edits do not rewrite history.</li>
+        <li>An <strong>invoice</strong> points at a sales order and a customer. A <strong>statement</strong> is not a second invoice — it is the “this is now due” notice.</li>
+      </ul>
+    </main>
+  </div>
+</body>
+</html>
