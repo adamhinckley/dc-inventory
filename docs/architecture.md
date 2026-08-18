@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost).
 
 ---
 
@@ -474,6 +474,7 @@ After this document is accepted, add:
 docs/
   architecture.md          # this file
   stack.md
+  database-design.md           # rough-draft Postgres schema + relations (stakeholder review)
   api-contract.md          # OpenAPI, Orval, list/search protocol
   observability.md         # logs, errors, uptime, cheap alerts → agent work packets
 AGENTS.md                  # canonical agent contract (any vendor)
