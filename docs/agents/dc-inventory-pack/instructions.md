@@ -6,6 +6,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 - `docs/stack.md` (TypeScript, Fastify, Drizzle, Postgres, Better Auth, two Next apps)
 - `docs/api-contract.md` (OpenAPI, Orval, tables vs shop)
 - `docs/observability.md` (cheap alerts → work packets)
+- `docs/linear.md` (all Cursor/Linear projects and issues on the DC Inventory initiative)
 - Root `AGENTS.md` when it exists
 
 ## Hard rules
@@ -17,6 +18,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 5. Frontends use Orval hooks only — no hand-written API `fetch`.
 6. Do not add Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, or extra observability vendors.
 7. Stop when the ticket's unit tests are green. Do not expand scope.
+8. **Linear:** all projects and issues created from Cursor belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview). Attach new projects to that initiative; put issues in a project already on it. See [`docs/linear.md`](../../linear.md).
 
 ## Work packet shape
 

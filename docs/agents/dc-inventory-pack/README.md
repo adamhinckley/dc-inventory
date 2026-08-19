@@ -4,6 +4,8 @@ Portable Buzz [persona pack](https://github.com/block/buzz/blob/main/crates/buzz
 
 Also usable as **Cursor Cloud Agent** prompts: paste the markdown body of any `agents/*.persona.md` and pick the Cursor model from the table below.
 
+All Cursor/Linear **projects** and **issues** for this work belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview) — see [`docs/linear.md`](../../linear.md).
+
 ## Roster
 
 | Persona | Job | Cost tier | Buzz `model` (default) | Cursor pick |
