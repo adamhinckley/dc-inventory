@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`linear.md`](./linear.md) (all Cursor/Linear projects and issues on the DC Inventory initiative).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
 
 ---
 
@@ -386,7 +386,7 @@ This is part of the architecture. **Coding agents** (cloud or local) implement f
 
 Vendor-specific instruction files (`.cursor/rules/`, `CLAUDE.md`, `.github/copilot-instructions.md`, …) are optional **mirrors** of `AGENTS.md`. Do not put rules in only one vendor’s folder.
 
-**Linear (Cursor).** All Linear projects and issues created for this repo from Cursor belong on the **DC Inventory** initiative. See [`linear.md`](./linear.md).
+**Linear (Cursor).** All Linear projects, issues, and sub-initiatives created for this repo from Cursor belong on the **DC Inventory** initiative. See [`linear.md`](./linear.md).
 
 ### Who owns what
 
@@ -479,7 +479,7 @@ docs/
   database-design.md           # rough-draft Postgres schema + relations (stakeholder review)
   api-contract.md          # OpenAPI, Orval, list/search protocol
   observability.md         # logs, errors, uptime, cheap alerts → agent work packets
-  linear.md                # all Cursor/Linear projects and issues → DC Inventory initiative
+  linear.md                # all Cursor/Linear projects, issues, and sub-initiatives → DC Inventory initiative
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
