@@ -8,6 +8,8 @@ The **internal** app exposes a way for staff (or the owner) to request a change 
 
 This is a **control plane** (intake, status, preview, approve) for the existing build-time agent operating model in [`architecture.md`](../architecture.md) §10. It is not in-product domain AI (reorder bots, chat that mutates stock).
 
+It is also **not** customer issue reporting. “Something is broken / confusing” goes through the **operator bridge** ([`../operator-bridge.md`](../operator-bridge.md)) into the developer’s other monorepo. Do not overload that form into an agent-PR pipeline.
+
 ## Viability ladder (today)
 
 1. **Highest reliability:** config / allowlisted change types — saved views, report defs, form fields — not freeform code for every request.

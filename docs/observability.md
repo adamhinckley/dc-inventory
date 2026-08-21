@@ -26,6 +26,8 @@ something breaks or degrades
 
 If a signal cannot become a concrete fix (file path, stack, request id, or failing invariant), it is noise. Do not add it in v1.
 
+Customer “report an issue” text is **not** this loop. That is [`operator-bridge.md`](./operator-bridge.md) (durable local copy, then the developer’s other repo). Do not send those reports only to Sentry.
+
 ---
 
 ## 2. Cost ceiling (v1)

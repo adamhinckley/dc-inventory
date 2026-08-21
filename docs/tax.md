@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is **how tax is quoted, committed, and stored** so a wholesale shop can check out without multiplying rates in Sales or in the UI.
 
-Related: [`stack.md`](./stack.md) (hosted engine as an adapter) · [`database-design.md`](./database-design.md) (tables) · [`api-contract.md`](./api-contract.md) (checkout / invoice DTOs).
+Related: [`stack.md`](./stack.md) (hosted engine as an adapter) · [`database-design.md`](./database-design.md) (tables) · [`api-contract.md`](./api-contract.md) (checkout / invoice DTOs) · [`invariants.md`](./invariants.md) (TX1–TX8).
 
 v1 **includes a tax engine**. It does **not** include a tax department in TypeScript. Calculation is a port; a hosted engine is the production adapter; invoices freeze the result.
 

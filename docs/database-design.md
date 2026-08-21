@@ -5,7 +5,7 @@
 
 One Postgres database · schema per context · inventory is the only place quantities are written.
 
-Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md)
+Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing)
 
 ---
 
@@ -59,6 +59,18 @@ flowchart LR
     payment_applications
   end
 
+  subgraph licensing["licensing · software"]
+    subscriptions
+    add_on_grants
+    software_payments
+    flag_overrides
+  end
+
+  subgraph operator_bridge["operator_bridge · door"]
+    issue_reports
+    operator_outbox
+  end
+
   wholesale_users -->|customer_id| customers_t
   staff_users --> sessions
   wholesale_users --> sessions
@@ -92,9 +104,17 @@ flowchart LR
   customers_t --> payments
   payments --> payment_applications
   invoices --> payment_applications
+
+  subscriptions --> add_on_grants
+  subscriptions --> software_payments
+  subscriptions --> flag_overrides
+  software_payments -.->|after commit| operator_outbox
+  issue_reports --> operator_outbox
 ```
 
-**Happy path:** product → purchase order received → client order (tax **quoted**) → stock allocates → invoice (tax **committed**) & payment.
+**Happy path (wholesale):** product → purchase order received → client order (tax **quoted**) → stock allocates → invoice (tax **committed**) & payment.
+
+**Happy path (software):** tenant subscribes → payment to the developer recorded → add-on grant → `IFeatures` flips. Not the same tables as customer AR.
 
 ---
 
@@ -132,6 +152,12 @@ erDiagram
   invoices ||--|{ invoice_tax_lines : "frozen copy"
   invoices ||--o{ payment_applications : "receives"
   payments ||--o{ payment_applications : "applies to"
+
+  subscriptions ||--o{ add_on_grants : "includes"
+  subscriptions ||--o{ software_payments : "history"
+  subscriptions ||--o{ flag_overrides : "ops"
+  issue_reports ||--o{ operator_outbox : "forward"
+  software_payments ||--o{ operator_outbox : "notify"
 ```
 
 ---
@@ -161,6 +187,11 @@ erDiagram
 | `invoices` | `customers` | `customer_id` | Denormalized for AR lists |
 | `payments` | `customers` | `customer_id` | |
 | `payment_applications` | `payments` + `invoices` | both FKs | Supports partial pay |
+| `add_on_grants` | `subscriptions` | `subscription_id` | Paid or complementary pack |
+| `software_payments` | `subscriptions` | `subscription_id` | Money **to the developer**; not customer AR |
+| `flag_overrides` | `subscriptions` | `subscription_id` | Operator force-on / force-off |
+| `issue_reports` | — | local `issue_id` | Saved here first; forwarded later |
+| `operator_outbox` | — | `idempotency_key` unique | Fail-soft messages to the other repo |
 
 ### Intentionally not a live FK
 
@@ -207,7 +238,11 @@ flowchart LR
 
 ## Open on the call
 
+These three are still open. [`invariants.md`](./invariants.md) §18 restates them with recommended v1 defaults and the other gaps they imply (ATP reject-all, credit formula, PO receive, statements).
+
 1. Invoice on **confirm** or on **ship**? (Tax **commits** at that same moment.)
 2. Separate **cart** table, or draft **orders**?
 3. Any missing documents for day one (credit memo, RMA, blanket PO)?
 4. Hosted engine: **Avalara AvaTax** (default for wholesale resale) vs cheaper Stripe Tax if few-nexus?
+
+Software subscription tables above are **operator-facing** (the developer billing this tenant). They are not part of the wholesale glossary call. See [`licensing.md`](./licensing.md). `issue_reports` / `operator_outbox` are the door to a **separate** developer monorepo — [`operator-bridge.md`](./operator-bridge.md).
