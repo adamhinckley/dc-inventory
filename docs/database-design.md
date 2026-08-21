@@ -5,7 +5,7 @@
 
 One Postgres database · schema per context · inventory is the only place quantities are written.
 
-Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there)
+Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing)
 
 ---
 
@@ -51,6 +51,13 @@ flowchart LR
     payment_applications
   end
 
+  subgraph licensing["licensing · software"]
+    subscriptions
+    add_on_grants
+    software_payments
+    flag_overrides
+  end
+
   wholesale_users -->|customer_id| customers_t
   staff_users --> sessions
   wholesale_users --> sessions
@@ -74,9 +81,15 @@ flowchart LR
   customers_t --> payments
   payments --> payment_applications
   invoices --> payment_applications
+
+  subscriptions --> add_on_grants
+  subscriptions --> software_payments
+  subscriptions --> flag_overrides
 ```
 
-**Happy path:** product → purchase order received → client order → stock allocates → invoice & payment.
+**Happy path (wholesale):** product → purchase order received → client order → stock allocates → invoice & payment.
+
+**Happy path (software):** tenant subscribes → payment to the developer recorded → add-on grant → `IFeatures` flips. Not the same tables as customer AR.
 
 ---
 
@@ -107,6 +120,10 @@ erDiagram
 
   invoices ||--o{ payment_applications : "receives"
   payments ||--o{ payment_applications : "applies to"
+
+  subscriptions ||--o{ add_on_grants : "includes"
+  subscriptions ||--o{ software_payments : "history"
+  subscriptions ||--o{ flag_overrides : "ops"
 ```
 
 ---
@@ -129,6 +146,9 @@ erDiagram
 | `invoices` | `customers` | `customer_id` | Denormalized for AR lists |
 | `payments` | `customers` | `customer_id` | |
 | `payment_applications` | `payments` + `invoices` | both FKs | Supports partial pay |
+| `add_on_grants` | `subscriptions` | `subscription_id` | Paid or complementary pack |
+| `software_payments` | `subscriptions` | `subscription_id` | Money **to the developer**; not customer AR |
+| `flag_overrides` | `subscriptions` | `subscription_id` | Operator force-on / force-off |
 
 ### Intentionally not a live FK
 
@@ -163,3 +183,5 @@ These three are still open. [`invariants.md`](./invariants.md) §18 restates the
 1. Invoice on **confirm** or on **ship**?
 2. Separate **cart** table, or draft **orders**?
 3. Any missing documents for day one (credit memo, RMA, blanket PO)?
+
+Software subscription tables above are **operator-facing** (the developer billing this tenant). They are not part of the wholesale glossary call. See [`licensing.md`](./licensing.md).

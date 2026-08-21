@@ -1,10 +1,10 @@
 # API contract: OpenAPI, lists, shop, and presentation-only frontends
 
-Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), and [`observability.md`](./observability.md) (ops signals; not part of the UI contract).
+Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`observability.md`](./observability.md) (ops signals; not part of the UI contract), and [`licensing.md`](./licensing.md) (software billing + flags).
 
-The HTTP API is the **only** contract the UIs may use. Both Next.js apps are **presentation**. They do not invent query params, compute availability, or assemble filters/charts the spec does not declare.
+The HTTP API is the **only** contract the UIs may use. Next.js apps are **presentation**. They do not invent query params, compute availability, or assemble filters/charts the spec does not declare.
 
-**Internal** is a staff dashboard (tables, reports, charts, CRUD). **Wholesale** is e-commerce (browse, product detail, cart, checkout, order history). Do not reuse `DataTable` as the shop.
+**Internal** is a staff dashboard (tables, reports, charts, CRUD). **Wholesale** is e-commerce (browse, product detail, cart, checkout, order history). **Ops** is the licensing control plane (subscription, payment history, add-ons, flags) for the software operator and the business owner. Do not reuse `DataTable` as the shop. Do not put flag admin on internal or wholesale.
 
 ---
 
@@ -16,29 +16,37 @@ flowchart LR
   Fastify[Fastify_routes]
   SpecInt[openapi/internal.yaml]
   SpecWh[openapi/wholesale.yaml]
+  SpecOps[openapi/ops.yaml]
   OrvalInt[Orval_internal_client]
   OrvalWh[Orval_wholesale_client]
+  OrvalOps[Orval_ops_client]
   Meta[Table_meta_codegen]
   InternalApp[apps/internal]
   WholesaleApp[apps/wholesale]
+  OpsApp[apps/ops]
 
   Zod --> Fastify
   Fastify --> SpecInt
   Fastify --> SpecWh
+  Fastify --> SpecOps
   SpecInt --> OrvalInt
   SpecWh --> OrvalWh
+  SpecOps --> OrvalOps
   SpecInt --> Meta
   SpecWh --> Meta
+  SpecOps --> Meta
   OrvalInt --> InternalApp
   OrvalWh --> WholesaleApp
+  OrvalOps --> OpsApp
   Meta --> InternalApp
   Meta --> WholesaleApp
+  Meta --> OpsApp
 ```
 
 1. Every route is declared with **Zod** (query, body, params, response). That schema **is** the OpenAPI source — not a handwritten YAML file that drifts.
-2. Fastify (`@fastify/swagger` + Zod JSON Schema) **emits two specs**: internal and wholesale. Wholesale must not list staff-only operations.
-3. `pnpm gen:api` writes `openapi/internal.yaml` and `openapi/wholesale.yaml` (committed).
-4. **Orval** generates typed TanStack Query hooks + DTOs into `packages/api-client-internal` and `packages/api-client-wholesale`.
+2. Fastify (`@fastify/swagger` + Zod JSON Schema) **emits three specs**: internal, wholesale, and ops. Wholesale must not list staff-only or ops-only operations. Internal must not list flag admin.
+3. `pnpm gen:api` writes `openapi/internal.yaml`, `openapi/wholesale.yaml`, and `openapi/ops.yaml` (committed).
+4. **Orval** generates typed TanStack Query hooks + DTOs into `packages/api-client-internal`, `packages/api-client-wholesale`, and `packages/api-client-ops`.
 5. A small **table-meta generator** reads `x-table` on **internal** list operations and emits `{ columns, search, filters, sort }` for `DataTable`.
 6. Report operations (`x-chart` or a documented series DTO) feed dashboard widgets. Wholesale operations are catalog/cart/checkout — not `x-table`.
 
@@ -48,15 +56,17 @@ CI fails if committed specs do not match the running route schemas (`gen:api` + 
 
 ---
 
-## 2. Two specs, two generated clients
+## 2. Three specs, three generated clients
 
 | Artifact | Used by | Contains |
 |---|---|---|
-| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export |
-| `openapi/wholesale.yaml` | Client shop | Catalog browse/PDP, cart, checkout, own orders, own account |
+| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export, **feature bootstrap** (read-only names) |
+| `openapi/wholesale.yaml` | Client shop | Catalog browse/PDP, cart, checkout, own orders, own account, **feature bootstrap** |
+| `openapi/ops.yaml` | Operator / business owner | Subscription, software payment history, add-ons, flag admin, checkout/manual payment |
 | `packages/api-client-internal` | `apps/internal` | Orval hooks, types |
 | `packages/api-client-wholesale` | `apps/wholesale` | Orval hooks, types |
-| `packages/ui` | Both | Buttons, money/date formatters — **no domain math** |
+| `packages/api-client-ops` | `apps/ops` | Orval hooks, types |
+| `packages/ui` | All | Buttons, money/date formatters — **no domain math** |
 | `packages/ui-internal` | Staff app only | `DataTable`, filter chrome, chart wrappers |
 
 Orval config: Fastify cookie auth (credentials: `include`), TanStack Query, a shared mutator that points at `apps/api` base URL. Do not generate a second HTTP stack.
@@ -224,8 +234,9 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 
 **Allowed**
 
-- **Internal:** routes, `DataTable`, KPI cards, Recharts on **report** hooks, CRUD forms.
-- **Wholesale:** browse grid, product detail, cart, checkout, order history.
+- **Internal:** routes, `DataTable`, KPI cards, Recharts on **report** hooks, CRUD forms, hide nav from feature bootstrap.
+- **Wholesale:** browse grid, product detail, cart, checkout, order history, hide nav from feature bootstrap.
+- **Ops:** subscription, payment history, add-on purchase, operator flag overrides.
 - Call Orval hooks with params that exist on the generated type.
 - Map labels, dates, money **for display** (formatting only; cents stay integers until a formatter).
 - Trigger Orval blob downloads (export, PDF). Upload files via generated multipart hooks.
@@ -240,6 +251,8 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 - Filtering a full dataset in the browser because the list endpoint “doesn’t support it yet” — add the filter to the API instead.
 - Parsing CSV/XLSX/PDF in the browser, or exporting only the current page of a table.
 - Importing `packages/*/domain` or Drizzle schemas.
+- Flag admin, complementary grants, or software checkout from `apps/internal` or `apps/wholesale`.
+- A flags SDK (LaunchDarkly, etc.) in a frontend. Bootstrap is a generated Orval hook.
 
 ---
 
@@ -263,13 +276,16 @@ Do not introduce GraphQL, tRPC, a generic `?filter=JSON` query language, Elastic
 openapi/
   internal.yaml              # committed, generated
   wholesale.yaml
+  ops.yaml
 packages/
   api-client-internal/       # Orval output
   api-client-wholesale/
+  api-client-ops/
   ui/                        # shared formatters
   ui-internal/               # DataTable + chart wrappers
 apps/
   api/                       # Fastify + swagger export
   internal/                  # staff dashboard
   wholesale/                 # e-commerce shop
+  ops/                       # licensing control plane
 ```

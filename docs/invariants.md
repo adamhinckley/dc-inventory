@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **checklist of rules that must always hold**, plus the decisions the initial plan still needs before a slice is agent-ready.
 
-Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`database-design.md`](./database-design.md), [`api-contract.md`](./api-contract.md), [`observability.md`](./observability.md). Stakeholder language on the share site is cited only in [§18](#18-what-the-initial-plan-still-needs) where it exposes a gap.
+Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`database-design.md`](./database-design.md), [`api-contract.md`](./api-contract.md), [`observability.md`](./observability.md), [`licensing.md`](./licensing.md). Stakeholder language on the share site is cited only in [§18](#18-what-the-initial-plan-still-needs) where it exposes a gap.
 
 **How to use this.** Owner-written unit tests for gated zones should encode the locked rules in [§1–§16](#1-system-shape). Coding agents make those tests pass without changing the rule. Changing a locked rule is a plan change, not a ticket. Gaps in [§18](#18-what-the-initial-plan-still-needs) are not yet tests — pick a default, write it here, then write the failing test.
 
@@ -13,8 +13,8 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | ID | Invariant |
 |---|---|
 | S1 | One modular monolith: one process, one Postgres, one deploy. Contexts are packages, not services. |
-| S2 | Two products, one backend. Shared use cases; different HTTP adapters, auth, DTOs, and UX. Internal is a dashboard; wholesale is a shop. |
-| S3 | The two frontends are presentation-only driving adapters, not a second backend and not two skins of the same admin. |
+| S2 | Two wholesale products plus an **ops control plane**, one backend. Shared use cases; different HTTP adapters, auth, DTOs, and UX. Internal is a dashboard; wholesale is a shop; ops is licensing/flags for the operator and business owner. |
+| S3 | Frontends are presentation-only driving adapters, not extra backends and not skins of the same admin. |
 | S4 | Operational surface stays tiny: one API process, managed Postgres, object storage for bytes. No Kubernetes, no second runtime for “performance.” |
 | S5 | v1 is a **single warehouse**. `LocationId` exists and is currently `DEFAULT`. Multi-location ATP is additive later, not a rewrite. |
 | S6 | Stock identity in v1 is **SKU** (see [§18](#18-what-the-initial-plan-still-needs) for the unresolved “item number” wording). Product variants are not a first-class aggregate. |
@@ -40,7 +40,9 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | C9 | `SalesOrder` is its own aggregate (Sales). Confirming it asks Inventory to allocate; Inventory may reject if `available` is insufficient. |
 | C10 | A use case that needs both an order and a stock number talks to **two ports**. It is not a reason to merge aggregates. |
 | C11 | Reporting views may join later. They are not the write model. Use cases do not cross-schema join `catalog.products` from Sales (etc.). |
-| C12 | A PO is a purchasing document, not a journal entry. Accounting v1 is AR only — not GL, not AP from POs, not inventory valuation. |
+| C12 | A PO is a purchasing document, not a journal entry. Accounting v1 is AR only — not GL, not AP from POs, not inventory valuation, **not software subscription**. |
+| C13 | Licensing is the only writer of software entitlements and **software payment history** (money to the developer). Other contexts read `IFeatures` / `FeatureName` only. |
+| C14 | Paid add-ons are Licensing `AddOnId`s, not Catalog products and not Inventory SKUs. |
 
 ### Shared kernel (tiny)
 
@@ -48,7 +50,7 @@ The only types allowed to be imported across contexts:
 
 - `Money` (integer minor units + currency; validated at construction)
 - `Sku`
-- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, …)
+- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, `TenantId`, `AddOnId`, …)
 
 Nothing else. If two contexts need the same concept, copy a snapshot or add a port. Do not grow the shared kernel.
 
@@ -59,12 +61,12 @@ Nothing else. If two contexts need the same concept, copy a snapshot or add a po
 | ID | Invariant |
 |---|---|
 | D1 | Every `import` in `domain/` and `application/` points only toward `domain/` or the shared kernel. |
-| D2 | Domain and use cases never import adapters, HTTP frameworks, ORM/Drizzle models, S3 SDKs, Better Auth, Zod, Sentry, or the logger SDK. |
-| D3 | A file under `domain/` or `application/` must compile with no Node HTTP, Drizzle, or auth-library imports. |
+| D2 | Domain and use cases never import adapters, HTTP frameworks, ORM/Drizzle models, S3 SDKs, Better Auth, Stripe, Zod, Sentry, or the logger SDK. |
+| D3 | A file under `domain/` or `application/` must compile with no Node HTTP, Drizzle, auth-library, or Stripe imports. |
 | D4 | A controller does three things only: parse the request, call **one** use case, map the response. No business logic, no SQL. |
 | D5 | A repository persists and reconstitutes an aggregate. It does not orchestrate other use cases. |
 | D6 | HTTP composition (routers, DI, pool, S3) lives at the composition root (`apps/api/`). Domain packages never import the root. |
-| D7 | Do not duplicate business logic in the two HTTP adapters. Different shapes → map DTOs; do not fork the use case. |
+| D7 | Do not duplicate business logic in HTTP adapters. Different shapes → map DTOs; do not fork the use case. |
 | D8 | Zod is adapter-only. Never put Zod (or class-validator / Pydantic-style HTTP models) on domain entities. |
 | D9 | In-memory adapters are required for every port that a unit test exercises. They are not optional. |
 | D10 | If a use case test “needs a database,” business logic has leaked into an adapter. |
@@ -81,7 +83,7 @@ Nothing else. If two contexts need the same concept, copy a snapshot or add a po
 | T4 | Quantities are integers (`INTEGER` / `BIGINT`). Never float. |
 | T5 | IDs are UUIDs. SKU is `TEXT` with a unique constraint. |
 | T6 | Multi-currency **beyond storing** `Money.currency` is not v1. Do not implement FX, dual books, or mixed-currency arithmetic until the plan adds it. |
-| T7 | Card PANs are never stored. AR v1 records a payment; it is not a card vault. |
+| T7 | Card PANs are never stored. Accounting AR and Licensing software billing may **record a payment**; neither is a card vault. |
 | T8 | Export files pick **one** money representation per export (integer cents **or** a single documented decimal format) and test it. Do not mix. |
 
 ---
@@ -190,12 +192,35 @@ The credit-limit **formula** (what counts against the limit) is not closed — s
 
 | ID | Invariant |
 |---|---|
-| A1 | Accounting v1: invoices, payments, AR. Out of scope: GL, inventory asset valuation, AP, tax engines. |
+| A1 | Accounting v1: invoices, payments, AR **owed by wholesale customers**. Out of scope: GL, inventory asset valuation, AP, tax engines, **software subscription**. |
 | A2 | Invoice is created from a confirmed/shipped sales order. **Pick one trigger and keep it** — not yet chosen ([G7](#g7-invoice-on-confirm-vs-on-ship)). |
 | A3 | Payments are applied to invoices (`payment_applications` supports partial pay). |
 | A4 | Payment application and AR balance are owner-gated. Agents do not invent AR rules or use float cash. |
 | A5 | Invoice PDF is a projection of our aggregates, same as PO PDF. |
 | A6 | Wholesale may download **their** invoices/order PDFs only if the wholesale spec includes the operation. |
+
+A `SoftwarePayment` is not an Accounting payment.
+
+---
+
+## 10b. Licensing (software subscription and flags)
+
+Full narrative: [`licensing.md`](./licensing.md).
+
+| ID | Invariant |
+|---|---|
+| L1 | Software subscription money (tenant → **developer**) lives in Licensing. Wholesale customer AR lives in Accounting. No shared payment table. |
+| L2 | `software_payments` is append-only history (status changes are new facts or a documented status field — never silent delete). Amount is `Money`. |
+| L3 | `IFeatures.isEnabled` is the only way other contexts learn entitlements. They do not import `Subscription` or Stripe types. |
+| L4 | Flag checks belong at the HTTP adapter or a use-case decorator. They must not live inside Inventory ATP, credit formula, or `customerId` binding. |
+| L5 | A hidden UI is not security. Gated routes still `403` (or documented payment-required) when the flag is off. |
+| L6 | `FeatureName` is a closed catalog in Licensing. Agents do not invent flag strings in controllers. |
+| L7 | Evaluation order: operator override, then core∩active/trialing subscription, then add-on/plan entitlement, else false. Force-off wins over force-on. |
+| L8 | Entitlement grant and (when money moved) `SoftwarePayment` update the flag projection in the **same transaction**. v1 has no eventual flags. |
+| L9 | Staff and wholesale sessions cannot write flags, complementary grants, or software checkout. That is `/ops` only. |
+| L10 | Business owners may view history and buy add-ons. They cannot write `FlagOverride` or complementary grants. |
+| L11 | Billing-provider webhooks are idempotent on `provider_ref`. Failed signature never reaches domain. |
+| L12 | `TenantId` is `DEFAULT` in v1. Multi-tenant is additive, not a rewrite. Lapsing an add-on does not roll back stock or sales orders. |
 
 ---
 
@@ -203,21 +228,21 @@ The credit-limit **formula** (what counts against the limit) is not closed — s
 
 | ID | Invariant |
 |---|---|
-| X1 | Two actor types in one Identity context: **Staff** and **Wholesale user**. |
-| X2 | Staff session is valid only on `/internal/*`. Wholesale session is valid only on `/wholesale/*`. Separate cookie names, separate origins. |
-| X3 | CORS allowlists **exactly** those two origins. |
+| X1 | Three actor types in one Identity context: **Staff**, **Wholesale user**, **Operator / business owner** (ops). |
+| X2 | Staff session is valid only on `/internal/*`. Wholesale session is valid only on `/wholesale/*`. Ops session is valid only on `/ops/*`. Separate cookie names, separate origins. |
+| X3 | CORS allowlists **exactly** those three origins. |
 | X4 | Mechanism is a **server-side session** (opaque id in cookie, row in Postgres). Not JWT in `localStorage`, not tokens in query strings or logs. |
 | X5 | Cookies: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`. HTTPS only in production. |
 | X6 | Wholesale user is bound at login to `wholesaleUserId` + **`customerId`**. Handlers **overwrite** `customerId` from the session after Zod parse. If the body contains a customer id, ignore it. |
 | X7 | Staff role elevation cannot be trusted from the client body. |
-| X8 | Authz layers: (1) edge — valid session for that route tree; (2) staff RBAC — small **static** matrix, no permission CMS in v1; (3) business rules in use cases (credit, allocation, submitted-order); (4) resource scoping by `customerId`. |
+| X8 | Authz layers: (1) edge — valid session for that route tree; (2) staff RBAC — small **static** matrix; (3) **IFeatures** for paid packs; (4) business rules in use cases (credit, allocation, submitted-order); (5) resource scoping by `customerId`. |
 | X9 | Do not sprinkle `if (role)` inside domain entities. |
-| X10 | Better Auth (or equivalent) is an **Identity adapter only**, not the domain. Domain stays `StaffUser` / `WholesaleUser` (or `User` + actor type). |
-| X11 | v1 keeps users in our DB so `CustomerId` binding stays in-process. Clerk/Auth0 are not the source of truth for customers. |
+| X10 | Better Auth (or equivalent) is an **Identity adapter only**, not the domain. Domain stays actor types, not the library’s User model. |
+| X11 | v1 keeps users in our DB so `CustomerId` / ops `tenantId` binding stays in-process. Clerk/Auth0 are not the source of truth for customers. |
 | X12 | Postgres RLS is not the primary authz mechanism. Application + session binding is the v1 gate. |
 | X13 | Passwords are hashed by the auth adapter (Argon2id / scrypt). Never roll hashing in a use case. Never log passwords. |
-| X14 | Rate-limit `/internal/auth/*` and `/wholesale/auth/*`. |
-| X15 | Coding agents may wire login/session. Permission matrix, session `customerId` binding, and credit/stock gates are owner-reviewed. |
+| X14 | Rate-limit `/internal/auth/*`, `/wholesale/auth/*`, and `/ops/auth/*`. |
+| X15 | Coding agents may wire login/session. Permission matrix, session `customerId` binding, credit/stock gates, and the `FeatureName` catalog are owner-reviewed. |
 | X16 | v1 does not include SSO/SAML, third-party API keys, or per-SKU permissions. |
 
 The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matrix).
@@ -229,7 +254,7 @@ The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matr
 | ID | Invariant |
 |---|---|
 | H1 | The HTTP API is the **only** contract the UIs may use. Frontends never hand-write `fetch` / axios to the API. Orval hooks only. |
-| H2 | Two committed OpenAPI specs: `openapi/internal.yaml` and `openapi/wholesale.yaml`. Wholesale must not list staff-only operations. |
+| H2 | Three committed OpenAPI specs: `openapi/internal.yaml`, `openapi/wholesale.yaml`, `openapi/ops.yaml`. Wholesale must not list staff-only or ops-only operations. Internal must not list flag admin. |
 | H3 | Zod route schemas **are** the OpenAPI source. CI fails if committed specs drift (`gen:api` + `git diff --exit-code`). |
 | H4 | Internal lists share one protocol: explicit query params (`q`, `page`, `pageSize`, `sortBy`, `sortOrder`, typed filters). No JSON `filters` blob, no OData. |
 | H5 | List response envelope is always `{ items, page, pageSize, total }`. No unpaginated “return everything” for tables. |
@@ -265,7 +290,7 @@ The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matr
 | ID | Invariant |
 |---|---|
 | DB1 | PostgreSQL is the only system of record (plus object storage for bytes). No Mongo/Dynamo/Firestore as primary. SQLite is fine for unit tests only. |
-| DB2 | One database, **schema per context** (`identity`, `catalog`, `inventory`, `purchasing`, `sales`, `customers`, `accounting`). |
+| DB2 | One database, **schema per context** (`identity`, `catalog`, `inventory`, `purchasing`, `sales`, `customers`, `accounting`, `licensing`). |
 | DB3 | Cross-context data is copied as IDs/snapshots at write time, not live FKs from order/PO lines to `catalog.products`. |
 | DB4 | Invariants live in TypeScript domain + use cases so unit tests do not need Postgres. No stored-procedure business logic. Extensions in v1: `pgcrypto`/`uuid` and `pg_trgm` only. |
 | DB5 | Sessions and rate-limit counters live in Postgres until there is a reason for Redis. Redis is not v1. |
@@ -282,10 +307,10 @@ The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matr
 | AG3 | The agent’s job is to make those tests pass **without changing the invariant** and without importing adapters from use cases. |
 | AG4 | **One agent, one context, one branch.** Two agents must not write Inventory’s ledger or the shared kernel at the same time. |
 | AG5 | Human owns: ports, invariants, failing unit tests for gated zones, PR review of inventory / money / authz. |
-| AG6 | Gated (owner tests first): Inventory ledger/ATP, stock `Adjustment` import, allocation when `available` is insufficient, payment/AR, authz / `customerId` binding. |
+| AG6 | Gated (owner tests first): Inventory ledger/ATP, stock `Adjustment` import, allocation when `available` is insufficient, payment/AR, authz / `customerId` binding, software subscription / webhooks / `FeatureName` catalog. |
 | AG7 | Vendor instruction files are optional **mirrors** of `AGENTS.md`. Do not put rules in only one vendor’s folder. |
 | AG8 | Stop when the ticket’s unit tests are green. Do not expand scope. |
-| AG9 | Reject PRs that add Redis, Prisma-as-data-layer, Mongo, GraphQL, tRPC, Nest, Kafka, Elasticsearch, JWT-in-localStorage, hand-written API `fetch`, Datadog, or a metrics/log microservice. |
+| AG9 | Reject PRs that add Redis, Prisma-as-data-layer, Mongo, GraphQL, tRPC, Nest, Kafka, Elasticsearch, JWT-in-localStorage, hand-written API `fetch`, Datadog, a metrics/log microservice, or LaunchDarkly as a required SDK. |
 | AG10 | Do not grant production shell access to agents as the default remediation path; fix in git, deploy through the normal pipeline. |
 
 Implementation order lock: do not start Sales allocation before Inventory tests exist. Do not start invoicing before Sales confirm exists.
@@ -299,7 +324,7 @@ Implementation order lock: do not start Sales allocation before Inventory tests 
 | OP1 | Domain/application do not import Sentry, Pino, or OpenTelemetry. |
 | OP2 | Client responses never include stack traces or secrets. |
 | OP3 | Never log passwords, session tokens, `Authorization`, cookies, or card secrets. Full PII request bodies are not logged by default. |
-| OP4 | Every API log line and error carries `requestId`. Actor type (`staff` \| `wholesale`) is allowed; raw session ids are not. |
+| OP4 | Every API log line and error carries `requestId`. Actor type (`staff` \| `wholesale` \| `ops`) is allowed; raw session ids are not. |
 | OP5 | `GET /health` proves process liveness only — no Postgres, S3, or external calls. Optional `GET /ready` is a cheap DB ping, not migrations. |
 | OP6 | Business KPIs are internal **report endpoints**, not an observability product. |
 | OP7 | No second deployable for metrics/logs (no Prometheus/Grafana/Loki/ELK collector) in v1. |
@@ -318,15 +343,18 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - Product variants as a separate aggregate
 - General ledger, AP, inventory asset valuation, tax engines
 - Message broker, outbox, CQRS with a separate read DB
-- Microservices / separate deployables per context
+- Microservices / separate deployables per context (ops **UI hosting** may split later; inventory does not)
 - OCR / extracting line items from arbitrary supplier PDFs or emails
 - Embedded BI; full APM; runtime AI that auto-remediates production
 - Retail / Shopify as a channel in these contexts (stakeholder language; make the deferral explicit — [G17](#g17-ubiquitous-language-mismatches-to-resolve-in-the-plan))
 - SSO / SAML; API keys for third parties; fine-grained per-SKU permissions
 - JWT access tokens for mobile (optional later; still bind `customerId` server-side)
 - In-app feature-request control plane ([`ideas/in-app-feature-requests-to-coding-agents.md`](./ideas/in-app-feature-requests-to-coding-agents.md))
+- LaunchDarkly (or similar) as a **required** runtime — later only as an `IFeatures` adapter
+- Stripe Connect / marketplace; charging wholesale customers’ cards in v1
+- Feature flags that disable ATP, credit checks, or session `customerId` binding
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive.
 
 ---
 
@@ -475,8 +503,8 @@ Without `IEmailSender`, agents will either skip a business-visible invariant or 
 
 **Close:**
 
-- **Single-tenant:** one wholesale company per deployment. No `tenantId` in v1.
-- **Currency:** store `Money.currency` but v1 operations are **one currency** (name it, likely USD). Mixing currencies on one order is rejected at construction.
+- **Single wholesale company per deployment in v1**, with `TenantId = DEFAULT` on Licensing so a later second tenant is additive (same pattern as `LocationId`).
+- **Currency:** store `Money.currency` but v1 operations are **one currency** (name it, likely USD). Mixing currencies on one order is rejected at construction. Software subscription currency should match or be documented.
 - **Clock / timezone:** report buckets (`from`, `to`, `granularity`) use one named timezone (company local). Domain tests inject a clock port; do not call `new Date()` in domain entities.
 
 ### G15. Human-readable document numbers
@@ -514,6 +542,18 @@ From [`database-design.md`](./database-design.md), still open and restated here 
 2. Separate **cart** table, or draft **orders**? → [G5](#g5-sales-order-state-machine)
 3. Day-one documents: credit memo, RMA, blanket PO? → default **none in v1**, named in [§17](#17-v1-scope-locks-explicitly-deferred)
 
+### G19. Licensing policy (subscription, grace, core vs paid)
+
+The seam is locked ([§10b](#10b-licensing-software-subscription-and-flags), [`licensing.md`](./licensing.md)). These **policies** are not:
+
+- Which `FeatureName`s are **core** vs first paid packs (start core = entire v1 product; paid catalog empty until a real add-on is sold).
+- What happens when subscription is `past_due`: grace period length, read-only staff vs hard paywall, whether ops still works (recommended: ops always works for operator; staff read-only after grace).
+- Trial length, if any.
+- Stripe vs manual-only for first go-live.
+- Whether `apps/ops` ships in the first deploy or the operator uses a stub `/ops` API until the UI exists.
+
+**Close before Licensing is more than `IFeatures` always-on:** past_due behavior and the core flag list. Stripe can wait if manual `SoftwarePayment` is tested.
+
 ### Suggested owner-test packets once P0 items close
 
 These are the failing tests the architecture already says the owner writes; they cannot be honest until the gaps above have defaults:
@@ -523,6 +563,7 @@ These are the failing tests the architecture already says the owner writes; they
 3. **Purchasing receive:** `GoodsReceived` vs remaining `on_order`, cancel-compensates inbound, over-receive rejected.
 4. **Accounting:** chosen invoice trigger, partial payment, cannot over-apply, `Money` integer-only.
 5. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
+6. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.
 
 ---
 
@@ -534,4 +575,5 @@ When reviewing an agent PR, the architecture checklist still applies ([architect
 - [ ] Did a status change skip a movement (cancel without `Deallocated`, receive without `GoodsReceived`)?
 - [ ] Did money or qty become float anywhere on the path (DB, DTO, CSV, chart)?
 - [ ] Did wholesale trust a body `customerId` or return another customer’s row as `403`?
+- [ ] Did software billing land in Accounting or Catalog, or did a flag skip ATP/authz?
 - [ ] Did the change close a [§18](#18-what-the-initial-plan-still-needs) gap **in code** without updating this file and owner tests?
