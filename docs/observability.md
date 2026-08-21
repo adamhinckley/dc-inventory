@@ -26,6 +26,8 @@ something breaks or degrades
 
 If a signal cannot become a concrete fix (file path, stack, request id, or failing invariant), it is noise. Do not add it in v1.
 
+Customer “report an issue” text is **not** this loop. That is [`operator-bridge.md`](./operator-bridge.md) (durable local copy, then the developer’s other repo). Do not send those reports only to Sentry.
+
 ---
 
 ## 2. Cost ceiling (v1)
@@ -133,7 +135,7 @@ The point of cheap observability is **action**. When Sentry or uptime fires, tur
 | Uptime down / deploy crash loop | Owner first (hosting, env, secrets) | Agent may inspect recent deploy diff after owner confirms app-side |
 | 5xx in Catalog / Customers / shop UI wiring | Coding agent | **High** — stack + Orval/route paths usually enough |
 | 5xx in Purchasing / Sales draft flows | Coding agent; owner glances | **Medium** |
-| Inventory allocation, ledger, ATP, payment/AR, authz/session binding | Owner specifies or reviews tightly | **Low** — agent implements only against existing tests |
+| Inventory allocation, ledger, ATP, payment/AR, **tax quote/commit**, authz/session binding | Owner specifies or reviews tightly | **Low** — agent implements only against existing tests |
 | Postgres connection / migration failure | Owner | Agent may propose migration fix for **their** schema only |
 
 ### Work packet template (incident)

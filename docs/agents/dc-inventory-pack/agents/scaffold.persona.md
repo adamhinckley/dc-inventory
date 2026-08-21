@@ -31,7 +31,7 @@ Implement **implementation order step 1** from `docs/architecture.md`: repo skel
 
 ## Forbidden
 
-- Inventory ledger math, authz matrices, Sales allocation, Accounting AR
+- Inventory ledger math, authz matrices, Sales allocation, Accounting AR, Tax commit
 - Adding rejected stack items (`docs/stack.md`)
 
 ## Done when

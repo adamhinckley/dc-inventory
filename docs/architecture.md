@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
 
 ---
 
@@ -17,21 +17,24 @@ Wholesale inventory control for a business that:
 - Surfaces **available** quantity for any SKU
 - Creates and receives purchase orders
 - Lets wholesale clients place orders from a dedicated frontend
-- Manages customers (accounts, contacts, terms, credit)
-- Handles a thin slice of accounting (invoices, payments, AR)
+- Manages customers (accounts, contacts, terms, credit, ship-to, tax exemption certificates)
+- Handles a thin slice of accounting (invoices **with committed tax**, payments, AR)
+- Pays the **software operator** (developer) via a subscription, with a payment history and optional paid add-ons, gated by feature flags
+- Leaves a **fail-soft door** to the operator’s separate business repo (income, active licenses, customer issue reports) — [`operator-bridge.md`](./operator-bridge.md)
 
 **Who this is for.** The **customer organization** is a multi-employee wholesale company: staff in different roles (purchasing, warehouse, sales support, admin), many wholesale client accounts with their own users, suppliers/vendors, and occasional data exports for an external accountant. This is not a one-person shop dressed up as wholesale.
 
 **Who builds it.** A **solo software operator** (the product owner / engineer) is building and running this stack largely alone, with coding agents — because the company wants a better system than what they have today. “Solo” describes **software ops and the build team**, not headcount at the wholesale business.
 
-The backend serves **two different products**, not two skins of the same admin:
+The backend serves **two products plus an operator control plane**, not two skins of the same admin:
 
 | App | Audience | What it is |
 |---|---|---|
 | **Internal** (`apps/internal`) | Staff | **Dashboard**: tables with search/filter, reports, charts, CRUD for catalog/POs/stock/customers/invoices |
 | **Wholesale** (`apps/wholesale`) | Clients | **E-commerce ordering**: browse, product detail, cart, checkout, order history — not a spreadsheet UI |
+| **Ops** (`apps/ops`) | Software operator + business owner | **Licensing control plane**: subscription, payment history, paid add-ons, feature-flag admin. Not a warehouse UI. Details: [`licensing.md`](./licensing.md). |
 
-One backend. Two HTTP adapters. Shared use cases. Different OpenAPI specs and generated clients. Tables/`DataTable` are an **internal** pattern. Wholesale uses catalog/cart/checkout screens.
+One backend. Three HTTP adapters (`/internal`, `/wholesale`, `/ops`). Shared use cases. Different OpenAPI specs and generated clients. Tables/`DataTable` are an **internal** pattern. Wholesale uses catalog/cart/checkout screens. Ops is extractable later (same Licensing ports) without splitting inventory.
 
 ---
 
@@ -41,7 +44,7 @@ One backend. Two HTTP adapters. Shared use cases. Different OpenAPI specs and ge
 
 **Coding agents build features.** Architecture is a set of hard module seams so an agent — Cursor, Codex, Claude Code, Copilot, Devin, or anything else that works from a git checkout — can complete a slice without loading the whole system. The owner reviews inventory, money, and auth. Agents own adapters, CRUD, and UI wiring once ports and tests exist. The repo contract is `AGENTS.md` + these docs, not a single vendor’s product.
 
-**Two products, one backend.** Shared use cases; different controllers, auth, DTOs, and UX. Internal is a dashboard; wholesale is a shop.
+**Two products plus ops, one backend.** Shared use cases; different controllers, auth, DTOs, and UX. Internal is a dashboard; wholesale is a shop; ops is licensing/flags for the operator and the business owner only.
 
 **Complex availability is a projection.** Stock on hand, stock on order, allocated-to-clients, and available are **not** independent columns that get mutated in three places. They are derived from a stock ledger. See [§6](#6-inventory-stock-ledger-not-a-qty-column).
 
@@ -55,15 +58,15 @@ This is a **modular monolith**, not a set of microservices.
 - Bounded contexts are **packages** with their own domain, use cases, and adapters.
 - Clean Architecture **inside each context**: dependencies point inward; domain and use cases never import adapters or frameworks.
 - Cross-context collaboration is via **ports** (interfaces) and **in-process domain events**, not shared entities.
-- A transactional outbox / message bus appears only if a second process appears. It is not v1.
+- A transactional outbox / message bus for **inventory or wholesale AR** is not v1. The operator-platform **bridge** may use a small local queue table so this app can notify a *separate* developer repo later without blocking stock or checkout — [`operator-bridge.md`](./operator-bridge.md).
 
 Microservices would split the inventory consistency this product depends on, and would turn the solo software operator into an SRE. Extract a context later only if a real operational reason appears.
 
 ### Stack
 
-Concrete choices (TypeScript monorepo, Fastify, Postgres, Drizzle, Better Auth, two Next.js apps) live in [`stack.md`](./stack.md). That document also covers **why Postgres**, how **sessions and the two audiences** are isolated, and what agents must not add.
+Concrete choices (TypeScript monorepo, Fastify, Postgres, Drizzle, Better Auth, Next.js apps) live in [`stack.md`](./stack.md). That document also covers **why Postgres**, how **sessions and the audiences** are isolated, and what agents must not add.
 
-The module map and inventory model do not depend on Fastify vs another HTTP library; they **do** depend on an ACID database and a session that binds `customerId` on the server.
+The module map and inventory model do not depend on Fastify vs another HTTP library; they **do** depend on an ACID database, a session that binds `customerId` on the server, and a Licensing port (`IFeatures`) so paid capability is not hardcoded in every use case.
 
 ### v1 scope locks
 
@@ -71,10 +74,13 @@ The module map and inventory model do not depend on Fastify vs another HTTP libr
 |---|---|---|
 | Warehouses | One warehouse, modeled as `LocationId` currently `DEFAULT` | Multi-location ATP |
 | Available qty | `on_hand - allocated` | Sell against inbound POs |
-| Accounting | Invoices, payments, AR | General ledger |
+| Accounting | Invoices, payments, AR **of wholesale customers** | General ledger |
+| Tax | Quote at checkout, commit on invoice post, hosted engine behind `ITaxCalculator` | Return filing, use tax on POs, certificate-lifecycle CMS |
+| Software billing | Licensing context + payment history + `IFeatures`; Stripe optional (manual record works) | Multi-tenant SaaS, LaunchDarkly as required runtime, Stripe Connect marketplace |
+| Operator platform | `IOperatorPlatform` no-op + local issue/outbox tables | HTTPS to the other monorepo; bidirectional tickets |
 | Stock identity | SKU | Product variants as a first-class model |
-| Events | In-process | Outbox + broker |
-| Deployables | One app | Split services |
+| Events | In-process (domain). Operator bridge: local queue, fail-soft | Kafka / inventory outbox / broker |
+| Deployables | One API process; `apps/ops` may live in this repo | Split ops UI; **operator platform stays a different repo** |
 
 ---
 
@@ -87,44 +93,70 @@ flowchart LR
   subgraph driving [Driving adapters]
     InternalAPI[Internal HTTP]
     WholesaleAPI[Wholesale HTTP]
+    OpsAPI[Ops HTTP]
   end
   subgraph core [Modular monolith]
     Identity[Identity]
+    Licensing[Licensing]
     Catalog[Catalog]
     Inventory[Inventory]
     Purchasing[Purchasing]
     Sales[Sales]
     Customers[Customers]
+    Tax[Tax]
     Accounting[Accounting]
+    OperatorBridge[OperatorBridge]
+  end
+  subgraph later [Later separate repo]
+    OperatorPlatform[Operator_platform]
   end
   InternalAPI --> Identity
+  InternalAPI --> Licensing
   InternalAPI --> Catalog
   InternalAPI --> Inventory
   InternalAPI --> Purchasing
   InternalAPI --> Sales
   InternalAPI --> Customers
+  InternalAPI --> Tax
   InternalAPI --> Accounting
+  InternalAPI --> OperatorBridge
   WholesaleAPI --> Identity
+  WholesaleAPI --> Licensing
   WholesaleAPI --> Catalog
   WholesaleAPI --> Sales
   WholesaleAPI --> Customers
+  WholesaleAPI --> Tax
+  OpsAPI --> Identity
+  OpsAPI --> Licensing
+  OpsAPI --> OperatorBridge
   Purchasing -->|"GoodsReceived"| Inventory
   Sales -->|"Allocated_Shipped"| Inventory
   Catalog -->|"ProductId_SKU"| Sales
   Catalog -->|"ProductId_SKU"| Purchasing
+  Catalog -->|"taxCategoryCode"| Tax
   Customers -->|"CustomerId_credit"| Sales
+  Customers -->|"shipTo_exemption"| Tax
+  Sales -->|"QuoteTax"| Tax
   Sales -->|"OrderInvoiced"| Accounting
+  Accounting -->|"CommitTax"| Tax
+  Licensing -->|"IFeatures"| Catalog
+  Licensing -->|"IFeatures"| Sales
+  Licensing -->|"license_income"| OperatorBridge
+  OperatorBridge -.->|"fail-soft HTTPS later"| OperatorPlatform
 ```
 
 | Context | Owns | Does not own | Agent autonomy |
 |---|---|---|---|
-| **Identity** | Staff vs wholesale users, credentials, roles, sessions | Customer credit, product data | Medium — owner reviews authz |
-| **Catalog** | SKU, name, description, images, list/wholesale price | Stock counts | **High** |
+| **Identity** | Staff vs wholesale vs **ops** users, credentials, roles, sessions | Customer credit, product data, plan prices | Medium — owner reviews authz |
+| **Licensing** | Software subscription, **payment history to the developer**, paid add-ons, `IFeatures` | Wholesale AR, inventory qty, catalog SKUs | Low for billing/webhooks; high for “gate this route” once a flag exists |
+| **Catalog** | SKU, name, description, images, list/wholesale price, `taxCategoryCode` | Stock counts, tax rates | **High** |
 | **Inventory** | Stock **ledger**, ATP read model, `LocationId` | Product marketing copy, order totals | **Low** — owner specifies tests first |
 | **Purchasing** | Suppliers, purchase orders, receiving | On-hand qty (emits `GoodsReceived`) | Medium |
 | **Sales** | Wholesale orders, line items, status | Customer master beyond `CustomerId`; live stock | Medium — allocation is gated |
-| **Customers** | Accounts, contacts, terms, credit limit | Invoices | **High** |
-| **Accounting** | Invoices, payments, AR | Full GL, inventory valuation | Low–medium — money paths gated |
+| **Customers** | Accounts, contacts, terms, credit limit, ship-to, exemption **files + metadata** | Invoices, tax math | **High** (exemption **enforcement** gated) |
+| **Tax** | `ITaxCalculator` quote/commit/void, frozen tax lines, engine transaction ids | Customer master, AR balance, filing returns | **Low** — owner specifies tests first |
+| **Accounting** | Invoices, payments, AR **owed by wholesale customers**; copies committed tax onto the invoice | Full GL, inventory valuation, **software** subscription, tax engine HTTP | Low–medium — money paths gated |
+| **Operator bridge** | Envelope to the developer’s **other** repo: license snapshot, income, issue reports, heartbeat | Inventory, customer AR, flags, helpdesk UI | High for no-op; owner reviews HTTPS secrets |
 
 ### Anti-corruption (required)
 
@@ -132,7 +164,13 @@ Sales **never** imports Catalog’s `Product` entity. It uses a `ProductSnapshot
 
 Sales and Accounting hold `CustomerId`, not a Customer aggregate. Credit-limit checks go through a Customers port, not a shared table join in the use case.
 
+Sales and Accounting **never** compute tax. They pass address, line, and exemption **snapshots** into Tax ports. Catalog stores `taxCategoryCode`, not a rate. See [`tax.md`](./tax.md).
+
 Inventory is the **only** writer of quantities. Catalog, Purchasing, and Sales call Inventory ports or emit events that Inventory handles. They do not `UPDATE stock SET qty = ...`.
+
+Licensing is the **only** writer of software entitlements and software payment history. Accounting does not store “they paid the developer.” Catalog does not store paid add-ons as products. Other contexts **read** `IFeatures` / `FeatureName` only — they do not import `Subscription` or Stripe types. See [`licensing.md`](./licensing.md).
+
+The developer’s multi-product business repo is **not** a context in this monolith. This app talks to it only through `IOperatorPlatform` after local commit. See [`operator-bridge.md`](./operator-bridge.md).
 
 ### Shared kernel (tiny)
 
@@ -140,7 +178,7 @@ The only types allowed to be imported across contexts:
 
 - `Money` (integer minor units + currency; validated at construction)
 - `Sku`
-- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, …)
+- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, `TenantId`, `AddOnId`, `InstallationId`, …)
 
 Nothing else. If two contexts need the same concept, copy a snapshot or add a port. Do not grow the shared kernel.
 
@@ -185,7 +223,16 @@ A repository persists and reconstitutes an aggregate. It does not orchestrate ot
 | `ICatalogProductPort` | Sales / Purchasing (ACL) | In-process Catalog adapter, later HTTP if split |
 | `ICustomerRepository` | Customers | Postgres, in-memory |
 | `ICreditCheckPort` | Sales | In-process Customers adapter |
+| `ITaxCalculator` | Tax | In-memory (tests), hosted engine (AvaTax or equivalent) |
 | `IInvoiceRepository` | Accounting | Postgres, in-memory |
+| `IFeatures` | Licensing (read) | Postgres projection, in-memory |
+| `IEntitlementRepository` | Licensing | Postgres, in-memory |
+| `ISoftwarePaymentRepository` | Licensing | Postgres, in-memory |
+| `ISoftwareBillingGateway` | Licensing | Manual record, Stripe, in-memory |
+| `IFeatureFlagAdmin` | Licensing (ops writes) | Postgres, in-memory |
+| `IOperatorPlatform` | Operator bridge (outbound) | No-op, later HTTPS |
+| `IOperatorOutbox` | Operator bridge | In-memory, Postgres queue table |
+| `IIssueReportRepository` | Operator bridge | Postgres, in-memory |
 
 In-memory adapters are not optional. They are how unit tests and coding agents verify a slice without Docker.
 
@@ -193,7 +240,7 @@ In-memory adapters are not optional. They are how unit tests and coding agents v
 
 ## 6. Inventory: stock ledger, not a qty column
 
-This is the hard problem. Get it wrong and every screen that shows “available” will drift.
+This is the hard problem. Get it wrong and every screen that shows “available” will drift. The full invariant checklist (including open ATP/credit/state-machine decisions) is [`invariants.md`](./invariants.md).
 
 ### Source of truth
 
@@ -258,13 +305,14 @@ If a use case needs both an order and a stock number, it is an **application** u
 
 ---
 
-## 7. Two HTTP adapters, same use cases
+## 7. Three HTTP adapters, same use cases
 
-The two frontends are **driving adapters**, not two backends. They are **presentation only**: OpenAPI (from Zod) is the contract; **Orval** generates TanStack Query clients. Internal tables use `x-table`; internal charts use **report query** endpoints (aggregated series — never 10k rows charted in the browser). Wholesale is shop UI over catalog/cart/checkout operations. Details: [`api-contract.md`](./api-contract.md).
+The frontends are **driving adapters**, not extra backends. They are **presentation only**: OpenAPI (from Zod) is the contract; **Orval** generates TanStack Query clients. Internal tables use `x-table`; internal charts use **report query** endpoints (aggregated series — never 10k rows charted in the browser). Wholesale is shop UI over catalog/cart/checkout operations. Ops is the licensing control plane. Details: [`api-contract.md`](./api-contract.md), [`licensing.md`](./licensing.md).
 
 ```
 /internal/...     staff session, full command + list surface
 /wholesale/...    wholesale-client session, scoped to that customer
+/ops/...          operator / business-owner session, licensing only
 ```
 
 ```mermaid
@@ -294,11 +342,14 @@ sequenceDiagram
 
 Rules:
 
-- Wholesale adapters **force** `customerId` from the session. Clients cannot pass another account’s id.
+- Wholesale adapters **force** `customerId` from the session. Clients cannot pass another account’s id. Checkout **quotes tax** via Tax ports; the shop does not compute tax.
 - Wholesale catalog reads may return price, images, and `available`; they never return cost, supplier, or other customers’ orders. Cart and checkout call Sales use cases with `customerId` from the session.
 - Internal **reports** are query use cases that return KPIs and chart series (bucketed in Postgres). The dashboard does not download a list and aggregate in React.
 - Internal adapters may call the same `PlaceOrder` / `GetAvailability` use cases with staff privileges (e.g. place an order on behalf of a customer).
-- Do not duplicate business logic in controllers. If the two adapters need different shapes, map DTOs — do not fork the use case.
+- Gated capabilities check `IFeatures` at the adapter (or a use-case decorator), then still `403` if someone calls the route anyway. Internal/wholesale get a **bootstrap list** of enabled flag names, not flag admin.
+- Ops adapters call Licensing use cases only. They do not expose inventory, catalog CRUD, or staff reports. Issue submit on ops/internal goes to the **operator bridge**, not Accounting.
+- Operator-platform HTTP is **outbound from adapters**, fail-soft. Domain use cases do not `fetch` the other repo.
+- Do not duplicate business logic in controllers. If adapters need different shapes, map DTOs — do not fork the use case.
 - List/table screens are `GET` query use cases with a shared pagination envelope and explicit filter query params. Controllers do not build SQL. Frontends do not filter full datasets in the browser.
 - Spreadsheet import/export and generated PDFs go through file ports. The UI only uploads/downloads; it does not parse Excel or build PDFs in the browser.
 
@@ -312,12 +363,12 @@ Bytes live in object storage (`IFileStorage`). Postgres stores **metadata and ob
 | **Spreadsheet export** | CSV + XLSX of the **current table query** (same filters as the list, no browser-side export of a page of rows) | Emailing giant dumps, Excel macros |
 | **Spreadsheet import** | CSV + XLSX → **dry-run then commit**. Rows become the same commands as the UI (create product, etc.) | Silent partial imports with no error report |
 | **Generated PDFs** | Purchase order and invoice **rendered from our aggregates**, stored on the document, downloadable | Pixel-perfect designer tooling |
-| **Inbound PDFs / scans** | Attach the file to a PO or invoice (staff uploaded it) | **OCR / parsing a supplier’s PDF into line items** — layouts vary; that is a later project |
+| **Inbound PDFs / scans** | Attach the file to a PO or invoice (staff uploaded it); **exemption certificates** on the customer | **OCR / parsing a supplier’s PDF into line items** — layouts vary; that is a later project |
 | **Templates** | Downloadable import template per resource (`GET …/import-template`) | Customer-specific Excel mappings in v1 unless one mapping is truly required |
 
 **Import is a use case, not a SQL dump.** Parse (`IWorkbookParser`) → validate each row → return `{ rowsOk, errors: [{ row, field, message }] }`. Commit runs existing create/update use cases. Imports **must not** write `available` or raw on-hand; a stock count import is an `Adjustment` movement and is owner-gated.
 
-**Export reuses the list query.** `GET /internal/products?…&format=xlsx` (or a sibling `/export`) uses the same filters as the table, with a higher row cap than `pageSize` (document the cap, e.g. 10_000; async jobs later if that is too small). Money stays integer cents in the file or a single documented decimal format — pick one per export and test it.
+**Export reuses the list query.** `GET /internal/products?…&format=xlsx` (or a sibling `/export`) uses the same filters as the table, with a higher row cap than `pageSize` (document the cap, e.g. 10_000; async jobs later if that is too small). Money stays integer minor units in the file or a single documented decimal format — pick one per export and test it. Do not invent tax in the spreadsheet; export frozen invoice tax amounts.
 
 **Purchase orders are data first.** The PO aggregate in Postgres is the source of truth. A PDF is a **projection** we generate when someone needs to send or print it (`IPdfRenderer` → `IFileStorage` → key on the PO). If a supplier emails a PDF, v1 stores it as an attachment; a human (or a later parser) enters the lines. Do not block Purchasing on PDF intelligence.
 
@@ -353,30 +404,32 @@ Add a report when a dashboard tile needs it — do not add a general-purpose “
 
 ## 8. Identity and authorization
 
-Two actor types in one Identity context:
+Three actor types in one Identity context:
 
 | Actor | Authenticates how | Authorized for |
 |---|---|---|
 | Staff | Internal login | `/internal/*` plus role checks (admin, purchasing, warehouse, …) |
 | Wholesale user | Client login, bound to `CustomerId` | `/wholesale/*` for that customer only |
+| Operator / business owner | Ops login | `/ops/*` — licensing, payment history, flags. Operator: full. Business owner: subscribe/pay/history, not complementary force-on. |
 
-Authorization lives at the adapter edge (middleware / guards) and, for money and stock mutations, as explicit checks in use cases where the invariant is a business rule (e.g. credit limit). Do not sprinkle `if (role)` inside domain entities.
+Authorization lives at the adapter edge (middleware / guards) and, for money and stock mutations, as explicit checks in use cases where the invariant is a business rule (e.g. credit limit). Do not sprinkle `if (role)` inside domain entities. Feature flags are **Licensing**, not a second RBAC matrix inside every entity.
 
-Coding agents may implement login/session adapters. **Permission matrices and credit/stock gates are owner-reviewed.**
+Coding agents may implement login/session adapters. **Permission matrices, credit/stock gates, and licensing/flag catalogs are owner-reviewed.**
 
 ---
 
 ## 9. Accounting (v1)
 
-Accounting is **AR only**:
+Accounting is **AR only** — money **wholesale customers owe the company**:
 
 - Invoice created from a confirmed/shipped sales order (policy: invoice on confirm vs on ship — pick one in the first Accounting use case and keep it).
-- Payments applied to invoices.
+- **Tax is committed when the invoice posts** (`ITaxCalculator.commit`). The invoice stores `subtotal`, `taxTotal`, `total` as `Money` plus frozen tax lines. Details: [`tax.md`](./tax.md).
+- Payments applied to invoices (applied to the invoice **total**, which includes tax).
 - Customer balance is a projection of invoices minus payments, optionally also held as a snapshot on the customer read side via events.
 
-Out of scope for v1: general ledger, inventory asset valuation, AP bills from POs, tax engines, multi-currency beyond storing `Money.currency`.
+Out of scope for Accounting: general ledger, inventory asset valuation, AP bills from POs, multi-currency beyond storing `Money.currency`, tax **return filing**, and **software subscription** (that is [`licensing.md`](./licensing.md)).
 
-A PO is a **purchasing document**, not a journal entry.
+A PO is a **purchasing document**, not a journal entry. v1 does not compute use tax on POs. A Stripe charge for the app itself is a **Licensing** `SoftwarePayment`, not an Accounting payment.
 
 ---
 
@@ -392,7 +445,7 @@ Vendor-specific instruction files (`.cursor/rules/`, `CLAUDE.md`, `.github/copil
 
 | Owner | Owns |
 |---|---|
-| Human | Ports, invariants, failing unit tests for gated zones, PR review of inventory / money / authz |
+| Human | Ports, invariants ([`invariants.md`](./invariants.md)), failing unit tests for gated zones, PR review of inventory / money / tax / authz |
 | Coding agent | Adapters (Postgres, HTTP, S3), CRUD screens, wholesale shop UI, wiring until tests pass |
 
 A slice is **agent-ready** when all three exist:
@@ -407,14 +460,16 @@ The agent’s job is to make those tests pass **without changing the invariant**
 
 **High autonomy** (agent may take a ticket and ship a PR):
 
-- Catalog CRUD, product images, list/wholesale price fields
-- Customers CRUD, contacts, terms
+- Catalog CRUD, product images, list/wholesale price fields, `taxCategoryCode`
+- Customers CRUD, contacts, terms, ship-to, exemption **file upload + metadata**
 - CSV/XLSX **export** and import **dry-run** adapters behind existing ports (not stock qty columns)
 - PO/invoice **PDF render** adapters when the use case and fixture HTML/layout already exist
-- Wholesale **shop** UI (browse, PDP, cart) against existing Sales/Catalog ports
+- Wholesale **shop** UI (browse, PDP, cart) against existing Sales/Catalog ports — tax **display only** from quoted API fields
 - Internal dashboard tables, KPI cards, and Recharts wired to **existing** report endpoints
 - Internal CRUD screens that call existing use cases
 - In-memory and Postgres adapter mapping when tests already specify behavior
+- Gating an existing route behind an **already named** `FeatureName` via `IFeatures`
+- Ops UI for payment history / add-on list against existing Licensing use cases
 
 **Medium** (agent implements; owner glances at domain changes):
 
@@ -428,11 +483,13 @@ The agent’s job is to make those tests pass **without changing the invariant**
 - Parsing supplier PDFs into PO lines
 - Allocation when `available` is insufficient
 - Payment application and AR balance
+- Tax quote/commit/void, fail-closed, engine mapping, exemption **enforcement**
 - Authz / session binding of `customerId`
+- Software subscription state, Stripe webhooks, complementary grants, the `FeatureName` catalog
 
 ### Concurrency
 
-**One agent, one context, one branch.** Two agents must not write Inventory’s ledger (or the shared kernel) at the same time.
+**One agent, one context, one branch.** Two agents must not write Inventory’s ledger, Tax’s calculator, Licensing entitlements, or the shared kernel at the same time.
 
 ### Work packet template
 
@@ -478,7 +535,11 @@ docs/
   stack.md
   database-design.md           # rough-draft Postgres schema + relations (stakeholder review)
   api-contract.md          # OpenAPI, Orval, list/search protocol
+  tax.md                   # quote/commit engine, exemptions, fail-closed
   observability.md         # logs, errors, uptime, cheap alerts → agent work packets
+  invariants.md            # locked rules + open decisions for owner tests
+  licensing.md             # software subscription, add-ons, flags, ops dashboard
+  operator-bridge.md       # door to the developer’s other monorepo
   linear.md                # all Cursor/Linear projects, issues, and sub-initiatives → DC Inventory initiative
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
@@ -486,15 +547,18 @@ AGENTS.md                  # canonical agent contract (any vendor)
 openapi/
   internal.yaml            # generated, committed
   wholesale.yaml
+  ops.yaml                 # licensing control plane
 
 apps/
   api/                     # Fastify composition root + swagger export
   internal/                # staff frontend — Orval client only
   wholesale/               # e-commerce shop — Orval client only
+  ops/                     # operator + business owner — licensing UI; extractable later
 
 packages/
   api-client-internal/     # Orval output
   api-client-wholesale/
+  api-client-ops/
   ui/                      # shared formatters, buttons
   ui-internal/             # DataTable, charts — staff dashboard only
   shared-kernel/           # Money, Sku, typed IDs only
@@ -528,14 +592,29 @@ packages/
     application/
     adapters/
     tests/unit/
+  tax/
+    domain/
+    application/
+    adapters/              # in-memory + hosted engine; SDK stays here
+    tests/unit/
   accounting/
+    domain/
+    application/
+    adapters/
+    tests/unit/
+  licensing/
+    domain/
+    application/
+    adapters/
+    tests/unit/
+  operator-bridge/
     domain/
     application/
     adapters/
     tests/unit/
 ```
 
-HTTP composition (internal vs wholesale routers, DI container, Postgres pool, S3 client) lives at the **application composition root** (e.g. `apps/api/` or `packages/api/`), not inside a domain package. That root imports adapters and wires ports. Domain packages never import the root.
+HTTP composition (internal vs wholesale vs ops routers, DI container, Postgres pool, S3 client) lives at the **application composition root** (e.g. `apps/api/` or `packages/api/`), not inside a domain package. That root imports adapters and wires ports. Domain packages never import the root.
 
 Suggested API package (when code starts):
 
@@ -543,6 +622,7 @@ Suggested API package (when code starts):
 apps/api/                  # or packages/api/
   internal/                # staff controllers
   wholesale/               # client controllers
+  ops/                     # operator / business-owner controllers
   infrastructure/          # config, DI, database, logging, health, error reporter
 ```
 
@@ -568,18 +648,20 @@ If a use case test “needs a database,” business logic has leaked into an ada
 
 Order is chosen so each step is a valid agent work packet and Inventory stays gated.
 
-1. Repo skeleton, shared kernel (`Money`, `Sku`, IDs), composition root, test runner, **OpenAPI export + Orval + `DataTable`**
-2. Identity: staff + wholesale user, session, two route mounts, two specs
-3. Catalog: product + image upload via `IFileStorage` (high autonomy)
-4. Customers: account + contacts + credit limit field (high autonomy)
-5. Inventory: ledger + read model **with owner-written tests first**
-6. Purchasing: PO + receive, calling Inventory ports; **generate PO PDF** (do not parse inbound PDFs)
-7. Sales: draft order → confirm (allocate) → ship; **wholesale shop** (catalog, cart, checkout)
-8. Accounting: invoice from order + payment application (gated); invoice PDF
-9. Spreadsheet import/export on Catalog/Customers first, then orders/POs; stock imports last and gated
-10. Internal dashboard reports/charts (summary KPIs, sales over time, inventory snapshot) — after the write models they read exist
+1. Repo skeleton, shared kernel (`Money`, `Sku`, IDs), composition root, test runner, **OpenAPI export + Orval + `DataTable`**, `IFeatures` in-memory (core flags on)
+2. Identity: staff + wholesale user + **ops user**, session, three route mounts, three specs
+3. Licensing: entitlements + software payment history + ops bootstrap; Stripe adapter can wait (manual record first). **Operator bridge:** `IOperatorPlatform` no-op + local issue/outbox ports (HTTPS later).
+4. Catalog: product + image upload via `IFileStorage` + `taxCategoryCode` (high autonomy)
+5. Customers: account + contacts + credit limit + **ship-to** + exemption certificate metadata (high autonomy; enforcement gated)
+6. Inventory: ledger + read model **with owner-written tests first**
+7. Purchasing: PO + receive, calling Inventory ports; **generate PO PDF** (do not parse inbound PDFs)
+8. Tax: `ITaxCalculator` + in-memory + hosted-engine adapter **with owner-written tests first** ([`tax.md`](./tax.md))
+9. Sales: draft order → confirm (allocate) → ship; **wholesale shop** quotes tax before confirm; UI does not compute tax
+10. Accounting: invoice from order + **commit tax on post** + payment application (gated); invoice PDF prints frozen tax
+11. Spreadsheet import/export on Catalog/Customers first, then orders/POs; stock imports last and gated
+12. Internal dashboard reports/charts (summary KPIs, sales over time, inventory snapshot) — after the write models they read exist
 
-Do not start Sales allocation before Inventory tests exist. Do not start invoicing before Sales confirm exists.
+Do not start Sales allocation before Inventory tests exist. Do not launch wholesale checkout before Tax quote tests exist. Do not post invoices before Tax commit tests exist. Do not mix Licensing `SoftwarePayment` into Accounting. Do not start Stripe until `ISoftwareBillingGateway` + payment-history tests exist.
 
 ---
 
@@ -591,15 +673,22 @@ Do not sneak these into v1 modules:
 - Selling against inbound PO quantity
 - Product variants as a separate aggregate (SKU is the stock-keeping identity)
 - General ledger, AP, inventory asset valuation
-- Message broker, outbox, CQRS with a separate read DB
-- Microservices / separate deployables per context
+- Tax **return filing**, remittance, nexus dashboards, use tax on POs, full certificate-lifecycle CMS (CertCapture-class). Calculation + commit **is** v1 — [`tax.md`](./tax.md)
+- Message broker, outbox, CQRS with a separate read DB **for inventory / wholesale AR**
+- Implementing the **operator platform** inside this repo (it is a different monorepo; this app only has the bridge)
+- Bidirectional support tickets / helpdesk UI in this product
+- Streaming inventory or customer AR into the operator platform
+- Microservices / separate deployables per context (ops UI **hosting** may split later; inventory does not)
 - In-product AI agents (reorder bots, etc.) — out of scope; this operating model is **build-time coding agents** only, any vendor
 - OCR / extracting line items from arbitrary supplier PDFs or emails
 - Embedded BI (Metabase, Supabase dashboards, Cube) — reports are first-class query endpoints
 - Full APM / self-hosted metrics-log stacks (Datadog, Prometheus+Grafana+Loki, ELK) — see [`observability.md`](./observability.md)
 - Runtime AI that auto-remediates production incidents — coding agents fix via PRs from incident work packets
+- LaunchDarkly (or similar) as a **required** runtime — allowed later only as an `IFeatures` adapter
+- Stripe Connect / marketplace splits; charging wholesale *customers’* cards through this app in v1
+- Feature flags that disable inventory ATP, credit checks, or session `customerId` binding
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain.
 
 ---
 
@@ -615,7 +704,11 @@ Use this when reviewing an agent PR:
 - [ ] Spreadsheet import/export and PDFs go through file ports; UI does not parse workbooks
 - [ ] Quantities change only via Inventory movements
 - [ ] `available` is not assigned as a business input
+- [ ] Tax is only via `ITaxCalculator`; no `price * rate` in Sales, Accounting, or UI; invoices freeze committed tax ([`tax.md`](./tax.md))
 - [ ] Sales uses `ProductSnapshot` / `CustomerId`, not foreign aggregates
 - [ ] New use cases have an in-memory unit test
 - [ ] Slice stayed inside the allowed context paths
 - [ ] No new observability vendors or log/metrics microservices ([`observability.md`](./observability.md))
+- [ ] Software payments and entitlements stay in Licensing, not Accounting or Catalog
+- [ ] New paid capability added a `FeatureName` + `IFeatures` gate; flags do not skip ATP/authz
+- [ ] Operator-platform publish is fail-soft; no SDK from the other repo in `domain/`

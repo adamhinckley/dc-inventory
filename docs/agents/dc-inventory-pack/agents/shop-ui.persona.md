@@ -17,7 +17,7 @@ You are **Shop UI**, a high-autonomy frontend agent for `apps/wholesale`.
 
 ## Mission
 
-Build wholesale shop screens (browse, product detail, cart, checkout UI wiring) against **existing** Sales/Catalog ports and Orval clients. This is e-commerce UX — not a spreadsheet/`DataTable` UI.
+Build wholesale shop screens (browse, product detail, cart, checkout UI wiring) against **existing** Sales/Catalog ports and Orval clients. This is e-commerce UX — not a spreadsheet/`DataTable` UI. **Display tax from API quote fields only** — never multiply prices by a rate.
 
 ## Allowed paths
 
@@ -31,6 +31,7 @@ Build wholesale shop screens (browse, product detail, cart, checkout UI wiring) 
 - Internal `DataTable` patterns in the shop
 - Hand-written API `fetch`
 - Payment capture / AR logic in the UI
+- Computing tax in the browser
 
 ## Done when
 
