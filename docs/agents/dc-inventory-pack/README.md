@@ -9,7 +9,7 @@ Also usable as **Cursor Cloud Agent** prompts: paste the markdown body of any `a
 | Persona | Job | Cost tier | Buzz `model` (default) | Cursor pick |
 |---|---|---|---|---|
 | `scaffold` | Monorepo skeleton, kernel, Vitest, OpenAPI/Orval/`DataTable` | Mid | `openai:gpt-5.6-terra` | Composer 2.5 or Sonnet 5 |
-| `identity` | Staff + wholesale sessions, two mounts, two specs | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
+| `identity` | Staff + wholesale + ops sessions, three mounts, three specs | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
 | `catalog` | Products, images, prices, CRUD + tables | Cheap | pack default (Luna) | Composer 2.5 |
 | `customers` | Accounts, contacts, terms | Cheap | pack default | Composer 2.5 |
 | `shop-ui` | Wholesale browse / PDP / cart | Cheap | pack default | Composer 2.5 |
@@ -42,7 +42,7 @@ Adjust `model:` frontmatter if your Buzz runtime uses different provider IDs (Go
 
 ## Concurrency
 
-Do **not** run `inventory` and another agent that edits `packages/inventory` or `packages/shared-kernel` at the same time. Prefer at most two cheap agents in parallel (e.g. `catalog` + `customers`).
+Do not run `inventory` and another agent that edits `packages/inventory` or `packages/shared-kernel` at the same time. Do not run a Licensing billing ticket in parallel with another Licensing writer. Prefer at most two cheap agents in parallel (e.g. `catalog` + `customers`).
 
 ## Layout
 
