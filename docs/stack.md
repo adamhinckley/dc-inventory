@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** the solo software operator and coding agents (any vendor) should use, and how auth is enforced.
 
-UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md).
+UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md). Software subscription is [`licensing.md`](./licensing.md). The door to the developer’s other monorepo is [`operator-bridge.md`](./operator-bridge.md).
 
 Choices optimize for three things, in order:
 
@@ -61,6 +61,7 @@ packages/
 | Auth library | **Better Auth** (or equivalent session library) **as an Identity adapter only** | See [§5](#5-authentication-and-authorization). |
 | Software billing | **`ISoftwareBillingGateway`** — manual record in v1; **Stripe** as an adapter when charging cards | Domain never imports Stripe types. See [`licensing.md`](./licensing.md). |
 | Feature flags | **`IFeatures`** in-process from Licensing Postgres | Not LaunchDarkly in v1. Not `if (process.env.FLAG)` scattered in domain. |
+| Operator platform | **`IOperatorPlatform` no-op** + local outbox/issues | HTTPS later. Not Kafka. Not this repo. See [`operator-bridge.md`](./operator-bridge.md). |
 | Passwords | Library default (**Argon2id** / scrypt) | Never roll bcrypt-by-hand in a use case. |
 | Hosting (solo software ops) | Managed Postgres (Neon, RDS, or Supabase **as Postgres only**). API on Fly/Render/Railway. Frontends on Vercel. | No Kubernetes. Do not use Supabase Auth, Storage, or RLS as the domain. |
 | Observability | **Pino** JSON logs + **`requestId`**, **Sentry** (or free equivalent) on API + Next apps, **`GET /health`** (+ optional `/ready`), free uptime ping, host metrics only | No Datadog/New Relic, no self-hosted Prometheus/Grafana/ELK, no OTel collector in v1. See [`observability.md`](./observability.md). |
@@ -157,6 +158,7 @@ sales.*
 customers.*
 accounting.*
 licensing.*
+operator_bridge.*
 ```
 
 Cross-context data is copied as IDs/snapshots at write time, not queried via cross-schema joins inside a use case. Reporting views can join later; they are not the write model.
@@ -283,6 +285,7 @@ Coding agents may wire login, cookies, and “require session” hooks. **Permis
 | Presigned-upload adapter behind `IFileStorage` | Any “available qty” stored as an input |
 | CSV/XLSX export + import dry-run for Catalog/Customers | Stock-count spreadsheet that writes on-hand; PDF line-item extraction |
 | Gate a route with existing `IFeatures` / `FeatureName` | Inventing flag names, mixing software payments into Accounting, LaunchDarkly |
+| No-op `IOperatorPlatform` + issue form against existing use case | Inventing message kinds, requiring the other repo at boot, Kafka “for the bridge” |
 | Pino/`requestId`, `/health`, Sentry SDK wiring (no secrets in logs) | Alert routing, PII-in-logs policy, paid APM |
 
 If an agent adds Redis, Prisma, Mongo, GraphQL, tRPC, Elasticsearch, JWT-in-localStorage, hand-written `fetch` to the API, Datadog, or a metrics/log microservice, reject the PR. The stack is closed until this document (and [`observability.md`](./observability.md)) changes.

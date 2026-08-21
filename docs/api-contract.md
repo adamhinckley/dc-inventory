@@ -60,9 +60,9 @@ CI fails if committed specs do not match the running route schemas (`gen:api` + 
 
 | Artifact | Used by | Contains |
 |---|---|---|
-| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export, **feature bootstrap** (read-only names) |
+| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export, **feature bootstrap** (read-only names), **issue submit** |
 | `openapi/wholesale.yaml` | Client shop | Catalog browse/PDP, cart, checkout, own orders, own account, **feature bootstrap** |
-| `openapi/ops.yaml` | Operator / business owner | Subscription, software payment history, add-ons, flag admin, checkout/manual payment |
+| `openapi/ops.yaml` | Operator / business owner | Subscription, software payment history, add-ons, flag admin, checkout/manual payment, **issue submit** |
 | `packages/api-client-internal` | `apps/internal` | Orval hooks, types |
 | `packages/api-client-wholesale` | `apps/wholesale` | Orval hooks, types |
 | `packages/api-client-ops` | `apps/ops` | Orval hooks, types |
@@ -234,9 +234,9 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 
 **Allowed**
 
-- **Internal:** routes, `DataTable`, KPI cards, Recharts on **report** hooks, CRUD forms, hide nav from feature bootstrap.
+- **Internal:** routes, `DataTable`, KPI cards, Recharts on **report** hooks, CRUD forms, hide nav from feature bootstrap, **report an issue** (not a ticket inbox).
 - **Wholesale:** browse grid, product detail, cart, checkout, order history, hide nav from feature bootstrap.
-- **Ops:** subscription, payment history, add-on purchase, operator flag overrides.
+- **Ops:** subscription, payment history, add-on purchase, operator flag overrides, **report an issue**.
 - Call Orval hooks with params that exist on the generated type.
 - Map labels, dates, money **for display** (formatting only; cents stay integers until a formatter).
 - Trigger Orval blob downloads (export, PDF). Upload files via generated multipart hooks.
@@ -253,6 +253,7 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 - Importing `packages/*/domain` or Drizzle schemas.
 - Flag admin, complementary grants, or software checkout from `apps/internal` or `apps/wholesale`.
 - A flags SDK (LaunchDarkly, etc.) in a frontend. Bootstrap is a generated Orval hook.
+- A helpdesk or operator-platform dashboard inside this product. Issue submit is a form; the inbox is the other repo.
 
 ---
 

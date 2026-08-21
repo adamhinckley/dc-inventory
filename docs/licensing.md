@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). Wholesale **Accounting** is the company invoicing *its* customers. This document is the other money: the wholesale company paying the **software operator** (developer) for the product, plus the flags that turn paid capability on.
 
-Related: [`invariants.md`](./invariants.md) (L1–L12, G19) · [`stack.md`](./stack.md) (Stripe as an adapter) · [`api-contract.md`](./api-contract.md) (ops spec vs internal/wholesale).
+Related: [`invariants.md`](./invariants.md) (L1–L12, G19) · [`stack.md`](./stack.md) (Stripe as an adapter) · [`api-contract.md`](./api-contract.md) (ops spec vs internal/wholesale) · [`operator-bridge.md`](./operator-bridge.md) (push license/income/issues to your other monorepo).
 
 This is architecture. Stripe wiring and a polished ops UI come after the ports and tests exist.
 
@@ -56,6 +56,7 @@ Write path for flags and entitlements is **Licensing ports**, not `UPDATE` from 
 | `apps/ops` in this monorepo, cookie `ops_session`, origin allowlisted | Same UI deployed separately, still calling `/ops` |
 | Postgres is the flag/entitlement source of truth | `IFeatures` adapter that reads an external flag service |
 | `ISoftwareBillingGateway`: **record manual payment** + in-memory fake | Stripe Billing + Customer Portal + webhooks |
+| After local commit, enqueue `license.snapshot` / `income.recorded` on `IOperatorOutbox` | HTTPS `IOperatorPlatform` in the other monorepo |
 
 Do **not** require LaunchDarkly, Stripe, or a second deployable to start. Do **not** put a flags SDK in `domain/` or in every React page.
 
@@ -220,6 +221,7 @@ Owner-written tests (when this slice is built):
 - Duplicate webhook / duplicate `provider_ref` does not double-grant.
 - Accounting payment tests do not read `software_payments`.
 - Inventory tests do not stub flags to skip ATP.
+- A throwing `IOperatorPlatform` does not roll back a recorded `SoftwarePayment`.
 
 ---
 
@@ -231,3 +233,4 @@ Owner-written tests (when this slice is built):
 - Per-request remote flag lookup on the inventory hot path (evaluate in-process from our projection)
 - Using feature flags to “temporarily allow oversell” or skip `customerId` binding
 - Selling add-ons through the wholesale shop as if they were inventory SKUs
+- Being the multi-product operator dashboard (that is the other monorepo; this context **enqueues** facts via [`operator-bridge.md`](./operator-bridge.md))

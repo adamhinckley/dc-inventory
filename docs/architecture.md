@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports).
 
 ---
 
@@ -20,6 +20,7 @@ Wholesale inventory control for a business that:
 - Manages customers (accounts, contacts, terms, credit)
 - Handles a thin slice of accounting (invoices, payments, AR)
 - Pays the **software operator** (developer) via a subscription, with a payment history and optional paid add-ons, gated by feature flags
+- Leaves a **fail-soft door** to the operator’s separate business repo (income, active licenses, customer issue reports) — [`operator-bridge.md`](./operator-bridge.md)
 
 **Who this is for.** The **customer organization** is a multi-employee wholesale company: staff in different roles (purchasing, warehouse, sales support, admin), many wholesale client accounts with their own users, suppliers/vendors, and occasional data exports for an external accountant. This is not a one-person shop dressed up as wholesale.
 
@@ -57,7 +58,7 @@ This is a **modular monolith**, not a set of microservices.
 - Bounded contexts are **packages** with their own domain, use cases, and adapters.
 - Clean Architecture **inside each context**: dependencies point inward; domain and use cases never import adapters or frameworks.
 - Cross-context collaboration is via **ports** (interfaces) and **in-process domain events**, not shared entities.
-- A transactional outbox / message bus appears only if a second process appears. It is not v1.
+- A transactional outbox / message bus for **inventory or wholesale AR** is not v1. The operator-platform **bridge** may use a small local queue table so this app can notify a *separate* developer repo later without blocking stock or checkout — [`operator-bridge.md`](./operator-bridge.md).
 
 Microservices would split the inventory consistency this product depends on, and would turn the solo software operator into an SRE. Extract a context later only if a real operational reason appears.
 
@@ -75,9 +76,10 @@ The module map and inventory model do not depend on Fastify vs another HTTP libr
 | Available qty | `on_hand - allocated` | Sell against inbound POs |
 | Accounting | Invoices, payments, AR **of wholesale customers** | General ledger |
 | Software billing | Licensing context + payment history + `IFeatures`; Stripe optional (manual record works) | Multi-tenant SaaS, LaunchDarkly as required runtime, Stripe Connect marketplace |
+| Operator platform | `IOperatorPlatform` no-op + local issue/outbox tables | HTTPS to the other monorepo; bidirectional tickets |
 | Stock identity | SKU | Product variants as a first-class model |
-| Events | In-process | Outbox + broker |
-| Deployables | One API process; `apps/ops` may live in this repo | Split ops UI to its own host (same `/ops` API) |
+| Events | In-process (domain). Operator bridge: local queue, fail-soft | Kafka / inventory outbox / broker |
+| Deployables | One API process; `apps/ops` may live in this repo | Split ops UI; **operator platform stays a different repo** |
 
 ---
 
@@ -101,6 +103,10 @@ flowchart LR
     Sales[Sales]
     Customers[Customers]
     Accounting[Accounting]
+    OperatorBridge[OperatorBridge]
+  end
+  subgraph later [Later separate repo]
+    OperatorPlatform[Operator_platform]
   end
   InternalAPI --> Identity
   InternalAPI --> Licensing
@@ -110,6 +116,7 @@ flowchart LR
   InternalAPI --> Sales
   InternalAPI --> Customers
   InternalAPI --> Accounting
+  InternalAPI --> OperatorBridge
   WholesaleAPI --> Identity
   WholesaleAPI --> Licensing
   WholesaleAPI --> Catalog
@@ -117,6 +124,7 @@ flowchart LR
   WholesaleAPI --> Customers
   OpsAPI --> Identity
   OpsAPI --> Licensing
+  OpsAPI --> OperatorBridge
   Purchasing -->|"GoodsReceived"| Inventory
   Sales -->|"Allocated_Shipped"| Inventory
   Catalog -->|"ProductId_SKU"| Sales
@@ -125,6 +133,8 @@ flowchart LR
   Sales -->|"OrderInvoiced"| Accounting
   Licensing -->|"IFeatures"| Catalog
   Licensing -->|"IFeatures"| Sales
+  Licensing -->|"license_income"| OperatorBridge
+  OperatorBridge -.->|"fail-soft HTTPS later"| OperatorPlatform
 ```
 
 | Context | Owns | Does not own | Agent autonomy |
@@ -137,6 +147,7 @@ flowchart LR
 | **Sales** | Wholesale orders, line items, status | Customer master beyond `CustomerId`; live stock | Medium — allocation is gated |
 | **Customers** | Accounts, contacts, terms, credit limit | Invoices | **High** |
 | **Accounting** | Invoices, payments, AR **owed by wholesale customers** | Full GL, inventory valuation, **software** subscription | Low–medium — money paths gated |
+| **Operator bridge** | Envelope to the developer’s **other** repo: license snapshot, income, issue reports, heartbeat | Inventory, customer AR, flags, helpdesk UI | High for no-op; owner reviews HTTPS secrets |
 
 ### Anti-corruption (required)
 
@@ -148,13 +159,15 @@ Inventory is the **only** writer of quantities. Catalog, Purchasing, and Sales c
 
 Licensing is the **only** writer of software entitlements and software payment history. Accounting does not store “they paid the developer.” Catalog does not store paid add-ons as products. Other contexts **read** `IFeatures` / `FeatureName` only — they do not import `Subscription` or Stripe types. See [`licensing.md`](./licensing.md).
 
+The developer’s multi-product business repo is **not** a context in this monolith. This app talks to it only through `IOperatorPlatform` after local commit. See [`operator-bridge.md`](./operator-bridge.md).
+
 ### Shared kernel (tiny)
 
 The only types allowed to be imported across contexts:
 
 - `Money` (integer minor units + currency; validated at construction)
 - `Sku`
-- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, `TenantId`, `AddOnId`, …)
+- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, `TenantId`, `AddOnId`, `InstallationId`, …)
 
 Nothing else. If two contexts need the same concept, copy a snapshot or add a port. Do not grow the shared kernel.
 
@@ -205,6 +218,9 @@ A repository persists and reconstitutes an aggregate. It does not orchestrate ot
 | `ISoftwarePaymentRepository` | Licensing | Postgres, in-memory |
 | `ISoftwareBillingGateway` | Licensing | Manual record, Stripe, in-memory |
 | `IFeatureFlagAdmin` | Licensing (ops writes) | Postgres, in-memory |
+| `IOperatorPlatform` | Operator bridge (outbound) | No-op, later HTTPS |
+| `IOperatorOutbox` | Operator bridge | In-memory, Postgres queue table |
+| `IIssueReportRepository` | Operator bridge | Postgres, in-memory |
 
 In-memory adapters are not optional. They are how unit tests and coding agents verify a slice without Docker.
 
@@ -319,7 +335,8 @@ Rules:
 - Internal **reports** are query use cases that return KPIs and chart series (bucketed in Postgres). The dashboard does not download a list and aggregate in React.
 - Internal adapters may call the same `PlaceOrder` / `GetAvailability` use cases with staff privileges (e.g. place an order on behalf of a customer).
 - Gated capabilities check `IFeatures` at the adapter (or a use-case decorator), then still `403` if someone calls the route anyway. Internal/wholesale get a **bootstrap list** of enabled flag names, not flag admin.
-- Ops adapters call Licensing use cases only. They do not expose inventory, catalog CRUD, or staff reports.
+- Ops adapters call Licensing use cases only. They do not expose inventory, catalog CRUD, or staff reports. Issue submit on ops/internal goes to the **operator bridge**, not Accounting.
+- Operator-platform HTTP is **outbound from adapters**, fail-soft. Domain use cases do not `fetch` the other repo.
 - Do not duplicate business logic in controllers. If adapters need different shapes, map DTOs — do not fork the use case.
 - List/table screens are `GET` query use cases with a shared pagination envelope and explicit filter query params. Controllers do not build SQL. Frontends do not filter full datasets in the browser.
 - Spreadsheet import/export and generated PDFs go through file ports. The UI only uploads/downloads; it does not parse Excel or build PDFs in the browser.
@@ -505,6 +522,7 @@ docs/
   observability.md         # logs, errors, uptime, cheap alerts → agent work packets
   invariants.md            # locked rules + open decisions for owner tests
   licensing.md             # software subscription, add-ons, flags, ops dashboard
+  operator-bridge.md       # door to the developer’s other monorepo
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
@@ -566,6 +584,11 @@ packages/
     application/
     adapters/
     tests/unit/
+  operator-bridge/
+    domain/
+    application/
+    adapters/
+    tests/unit/
 ```
 
 HTTP composition (internal vs wholesale vs ops routers, DI container, Postgres pool, S3 client) lives at the **application composition root** (e.g. `apps/api/` or `packages/api/`), not inside a domain package. That root imports adapters and wires ports. Domain packages never import the root.
@@ -604,7 +627,7 @@ Order is chosen so each step is a valid agent work packet and Inventory stays ga
 
 1. Repo skeleton, shared kernel (`Money`, `Sku`, IDs), composition root, test runner, **OpenAPI export + Orval + `DataTable`**, `IFeatures` in-memory (core flags on)
 2. Identity: staff + wholesale user + **ops user**, session, three route mounts, three specs
-3. Licensing: entitlements + software payment history + ops bootstrap; Stripe adapter can wait (manual record first)
+3. Licensing: entitlements + software payment history + ops bootstrap; Stripe adapter can wait (manual record first). **Operator bridge:** `IOperatorPlatform` no-op + local issue/outbox ports (HTTPS later).
 4. Catalog: product + image upload via `IFileStorage` (high autonomy)
 5. Customers: account + contacts + credit limit field (high autonomy)
 6. Inventory: ledger + read model **with owner-written tests first**
@@ -626,7 +649,10 @@ Do not sneak these into v1 modules:
 - Selling against inbound PO quantity
 - Product variants as a separate aggregate (SKU is the stock-keeping identity)
 - General ledger, AP, inventory asset valuation
-- Message broker, outbox, CQRS with a separate read DB
+- Message broker, outbox, CQRS with a separate read DB **for inventory / wholesale AR**
+- Implementing the **operator platform** inside this repo (it is a different monorepo; this app only has the bridge)
+- Bidirectional support tickets / helpdesk UI in this product
+- Streaming inventory or customer AR into the operator platform
 - Microservices / separate deployables per context (ops UI **hosting** may split later; inventory does not)
 - In-product AI agents (reorder bots, etc.) — out of scope; this operating model is **build-time coding agents** only, any vendor
 - OCR / extracting line items from arbitrary supplier PDFs or emails
@@ -659,3 +685,4 @@ Use this when reviewing an agent PR:
 - [ ] No new observability vendors or log/metrics microservices ([`observability.md`](./observability.md))
 - [ ] Software payments and entitlements stay in Licensing, not Accounting or Catalog
 - [ ] New paid capability added a `FeatureName` + `IFeatures` gate; flags do not skip ATP/authz
+- [ ] Operator-platform publish is fail-soft; no SDK from the other repo in `domain/`

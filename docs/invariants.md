@@ -18,7 +18,7 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | S4 | Operational surface stays tiny: one API process, managed Postgres, object storage for bytes. No Kubernetes, no second runtime for “performance.” |
 | S5 | v1 is a **single warehouse**. `LocationId` exists and is currently `DEFAULT`. Multi-location ATP is additive later, not a rewrite. |
 | S6 | Stock identity in v1 is **SKU** (see [§18](#18-what-the-initial-plan-still-needs) for the unresolved “item number” wording). Product variants are not a first-class aggregate. |
-| S7 | Events in v1 are **in-process**. Outbox, broker, and a second process are not v1. |
+| S7 | Domain events in v1 are **in-process**. Kafka / inventory outbox are not v1. The operator **bridge** may persist a local queue so a separate developer repo can be wired later without blocking stock. |
 | S8 | Inventory correctness is transactional (ACID + row lock), not eventually consistent on the number staff and clients see. |
 | S9 | The module map depends on an ACID database and a session that binds `customerId` on the server. It does not depend on Fastify vs another HTTP library. |
 | S10 | This operating model is **build-time coding agents** only. In-product domain AI (reorder bots, auto-remediation) is out of scope. |
@@ -50,7 +50,7 @@ The only types allowed to be imported across contexts:
 
 - `Money` (integer minor units + currency; validated at construction)
 - `Sku`
-- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, `TenantId`, `AddOnId`, …)
+- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, `TenantId`, `AddOnId`, `InstallationId`, …)
 
 Nothing else. If two contexts need the same concept, copy a snapshot or add a port. Do not grow the shared kernel.
 
@@ -221,6 +221,26 @@ Full narrative: [`licensing.md`](./licensing.md).
 | L10 | Business owners may view history and buy add-ons. They cannot write `FlagOverride` or complementary grants. |
 | L11 | Billing-provider webhooks are idempotent on `provider_ref`. Failed signature never reaches domain. |
 | L12 | `TenantId` is `DEFAULT` in v1. Multi-tenant is additive, not a rewrite. Lapsing an add-on does not roll back stock or sales orders. |
+| L13 | After a software payment or entitlement change is **committed**, enqueue an operator-bridge message. Publish failure must not roll back Licensing. |
+
+---
+
+## 10c. Operator platform bridge
+
+Full narrative: [`operator-bridge.md`](./operator-bridge.md).
+
+| ID | Invariant |
+|---|---|
+| B1 | The developer’s multi-product business platform is a **different repo**. This monolith does not host it and does not import its domain. |
+| B2 | This app identifies itself with stable `ProductCode` (`dc-inventory`) + `InstallationId` + `TenantId`. |
+| B3 | Outbound kinds are a closed set: `license.snapshot`, `income.recorded`, `issue.reported`, `heartbeat`. Agents do not invent kinds. |
+| B4 | Publish is **fail-soft after local persist**. Inventory, sales, login, and software-payment success do not depend on the other repo. |
+| B5 | Issue reports are saved **in this database** first. The user is done when that save succeeds. No helpdesk UI in this app. |
+| B6 | Bridge payloads have no PAN, no session tokens, and no wholesale customer PII by default. No order lines or ATP. |
+| B7 | Messages carry `idempotencyKey`. Replays must not double-count income on the other side (and must not double-insert locally). |
+| B8 | `IOperatorPlatform` v1 may be no-op. The door is the port + outbox, not a live URL. |
+| B9 | Staff/ops submit issues via this product’s API. Wholesale shop submit is off unless explicitly enabled. |
+| B10 | Observability (Sentry, `/health`) is not the issue inbox. Feature flags stay `IFeatures`. In-app “build this feature with an agent” is a different, parked idea. |
 
 ---
 
@@ -290,7 +310,7 @@ The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matr
 | ID | Invariant |
 |---|---|
 | DB1 | PostgreSQL is the only system of record (plus object storage for bytes). No Mongo/Dynamo/Firestore as primary. SQLite is fine for unit tests only. |
-| DB2 | One database, **schema per context** (`identity`, `catalog`, `inventory`, `purchasing`, `sales`, `customers`, `accounting`, `licensing`). |
+| DB2 | One database, **schema per context** (`identity`, `catalog`, `inventory`, `purchasing`, `sales`, `customers`, `accounting`, `licensing`, `operator_bridge`). |
 | DB3 | Cross-context data is copied as IDs/snapshots at write time, not live FKs from order/PO lines to `catalog.products`. |
 | DB4 | Invariants live in TypeScript domain + use cases so unit tests do not need Postgres. No stored-procedure business logic. Extensions in v1: `pgcrypto`/`uuid` and `pg_trgm` only. |
 | DB5 | Sessions and rate-limit counters live in Postgres until there is a reason for Redis. Redis is not v1. |
@@ -307,7 +327,7 @@ The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matr
 | AG3 | The agent’s job is to make those tests pass **without changing the invariant** and without importing adapters from use cases. |
 | AG4 | **One agent, one context, one branch.** Two agents must not write Inventory’s ledger or the shared kernel at the same time. |
 | AG5 | Human owns: ports, invariants, failing unit tests for gated zones, PR review of inventory / money / authz. |
-| AG6 | Gated (owner tests first): Inventory ledger/ATP, stock `Adjustment` import, allocation when `available` is insufficient, payment/AR, authz / `customerId` binding, software subscription / webhooks / `FeatureName` catalog. |
+| AG6 | Gated (owner tests first): Inventory ledger/ATP, stock `Adjustment` import, allocation when `available` is insufficient, payment/AR, authz / `customerId` binding, software subscription / webhooks / `FeatureName` catalog, operator-bridge message kinds. |
 | AG7 | Vendor instruction files are optional **mirrors** of `AGENTS.md`. Do not put rules in only one vendor’s folder. |
 | AG8 | Stop when the ticket’s unit tests are green. Do not expand scope. |
 | AG9 | Reject PRs that add Redis, Prisma-as-data-layer, Mongo, GraphQL, tRPC, Nest, Kafka, Elasticsearch, JWT-in-localStorage, hand-written API `fetch`, Datadog, a metrics/log microservice, or LaunchDarkly as a required SDK. |
@@ -353,8 +373,9 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - LaunchDarkly (or similar) as a **required** runtime — later only as an `IFeatures` adapter
 - Stripe Connect / marketplace; charging wholesale customers’ cards in v1
 - Feature flags that disable ATP, credit checks, or session `customerId` binding
+- Building the operator platform **in this repo**; bidirectional tickets; streaming inventory/AR to that platform
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive. `InstallationId` exists so the operator platform can tell deploys apart.
 
 ---
 
@@ -554,6 +575,17 @@ The seam is locked ([§10b](#10b-licensing-software-subscription-and-flags), [`l
 
 **Close before Licensing is more than `IFeatures` always-on:** past_due behavior and the core flag list. Stripe can wait if manual `SoftwarePayment` is tested.
 
+### G20. Operator platform ingest (when you wire the other repo)
+
+The **door** is locked ([§10c](#10c-operator-platform-bridge), [`operator-bridge.md`](./operator-bridge.md)). Before flipping no-op → HTTPS:
+
+- Ingest URL + auth (HMAC/shared secret in env).
+- Heartbeat cadence and fields (keep it a snapshot, not APM).
+- Whether wholesale users may submit issues (default **no**).
+- Replay policy for `forward_failed` outbox rows.
+
+Until then, no-op is the correct v1 adapter.
+
 ### Suggested owner-test packets once P0 items close
 
 These are the failing tests the architecture already says the owner writes; they cannot be honest until the gaps above have defaults:
@@ -564,6 +596,7 @@ These are the failing tests the architecture already says the owner writes; they
 4. **Accounting:** chosen invoice trigger, partial payment, cannot over-apply, `Money` integer-only.
 5. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
 6. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.
+7. **Operator bridge:** software payment still commits if publish throws; issue submit succeeds on local save; closed message kinds only.
 
 ---
 
@@ -576,4 +609,5 @@ When reviewing an agent PR, the architecture checklist still applies ([architect
 - [ ] Did money or qty become float anywhere on the path (DB, DTO, CSV, chart)?
 - [ ] Did wholesale trust a body `customerId` or return another customer’s row as `403`?
 - [ ] Did software billing land in Accounting or Catalog, or did a flag skip ATP/authz?
+- [ ] Did a slice require the operator platform to be online for inventory or checkout?
 - [ ] Did the change close a [§18](#18-what-the-initial-plan-still-needs) gap **in code** without updating this file and owner tests?
