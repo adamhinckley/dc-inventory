@@ -6,6 +6,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 - `docs/stack.md` (TypeScript, Fastify, Drizzle, Postgres, Better Auth, two Next apps)
 - `docs/api-contract.md` (OpenAPI, Orval, tables vs shop)
 - `docs/observability.md` (cheap alerts → work packets)
+- `docs/invariants.md` (locked rules; do not invent defaults for §18 gaps)
 - Root `AGENTS.md` when it exists
 
 ## Hard rules

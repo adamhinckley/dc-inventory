@@ -5,7 +5,7 @@
 
 One Postgres database · schema per context · inventory is the only place quantities are written.
 
-Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md)
+Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there)
 
 ---
 
@@ -157,6 +157,8 @@ flowchart LR
 ---
 
 ## Open on the call
+
+These three are still open. [`invariants.md`](./invariants.md) §18 restates them with recommended v1 defaults and the other gaps they imply (ATP reject-all, credit formula, PO receive, statements).
 
 1. Invoice on **confirm** or on **ship**?
 2. Separate **cart** table, or draft **orders**?

@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close).
 
 ---
 
@@ -193,7 +193,7 @@ In-memory adapters are not optional. They are how unit tests and coding agents v
 
 ## 6. Inventory: stock ledger, not a qty column
 
-This is the hard problem. Get it wrong and every screen that shows “available” will drift.
+This is the hard problem. Get it wrong and every screen that shows “available” will drift. The full invariant checklist (including open ATP/credit/state-machine decisions) is [`invariants.md`](./invariants.md).
 
 ### Source of truth
 
@@ -390,7 +390,7 @@ Vendor-specific instruction files (`.cursor/rules/`, `CLAUDE.md`, `.github/copil
 
 | Owner | Owns |
 |---|---|
-| Human | Ports, invariants, failing unit tests for gated zones, PR review of inventory / money / authz |
+| Human | Ports, invariants ([`invariants.md`](./invariants.md)), failing unit tests for gated zones, PR review of inventory / money / authz |
 | Coding agent | Adapters (Postgres, HTTP, S3), CRUD screens, wholesale shop UI, wiring until tests pass |
 
 A slice is **agent-ready** when all three exist:
@@ -477,6 +477,7 @@ docs/
   database-design.md           # rough-draft Postgres schema + relations (stakeholder review)
   api-contract.md          # OpenAPI, Orval, list/search protocol
   observability.md         # logs, errors, uptime, cheap alerts → agent work packets
+  invariants.md            # locked rules + open decisions for owner tests
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 

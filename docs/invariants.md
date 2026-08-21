@@ -1,0 +1,536 @@
+# Architecture invariants (v1)
+
+Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **checklist of rules that must always hold**, plus the decisions the initial plan still needs before a slice is agent-ready.
+
+Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`database-design.md`](./database-design.md), [`api-contract.md`](./api-contract.md), [`observability.md`](./observability.md). Stakeholder language on the share site is cited only in [§18](#18-what-the-initial-plan-still-needs) where it exposes a gap.
+
+**How to use this.** Owner-written unit tests for gated zones should encode the locked rules in [§1–§16](#1-system-shape). Coding agents make those tests pass without changing the rule. Changing a locked rule is a plan change, not a ticket. Gaps in [§18](#18-what-the-initial-plan-still-needs) are not yet tests — pick a default, write it here, then write the failing test.
+
+---
+
+## 1. System shape
+
+| ID | Invariant |
+|---|---|
+| S1 | One modular monolith: one process, one Postgres, one deploy. Contexts are packages, not services. |
+| S2 | Two products, one backend. Shared use cases; different HTTP adapters, auth, DTOs, and UX. Internal is a dashboard; wholesale is a shop. |
+| S3 | The two frontends are presentation-only driving adapters, not a second backend and not two skins of the same admin. |
+| S4 | Operational surface stays tiny: one API process, managed Postgres, object storage for bytes. No Kubernetes, no second runtime for “performance.” |
+| S5 | v1 is a **single warehouse**. `LocationId` exists and is currently `DEFAULT`. Multi-location ATP is additive later, not a rewrite. |
+| S6 | Stock identity in v1 is **SKU** (see [§18](#18-what-the-initial-plan-still-needs) for the unresolved “item number” wording). Product variants are not a first-class aggregate. |
+| S7 | Events in v1 are **in-process**. Outbox, broker, and a second process are not v1. |
+| S8 | Inventory correctness is transactional (ACID + row lock), not eventually consistent on the number staff and clients see. |
+| S9 | The module map depends on an ACID database and a session that binds `customerId` on the server. It does not depend on Fastify vs another HTTP library. |
+| S10 | This operating model is **build-time coding agents** only. In-product domain AI (reorder bots, auto-remediation) is out of scope. |
+| S11 | Retail / Shopify is a separate channel, not this wholesale product. Do not model it in v1 contexts. |
+
+---
+
+## 2. Bounded contexts and anti-corruption
+
+| ID | Invariant |
+|---|---|
+| C1 | Each context owns a coherent model. Other contexts may hold an **ID** or a **snapshot**, never the foreign aggregate. |
+| C2 | Sales never imports Catalog’s `Product`. It uses a `ProductSnapshot` (sku, name, unit price at order time) via `ICatalogProductPort`. |
+| C3 | Purchasing never imports Catalog’s `Product`. It snapshots supplier-facing product identity (sku, name) at write time. |
+| C4 | Sales and Accounting hold `CustomerId`, not a Customer aggregate. Credit checks go through `ICreditCheckPort`, not a shared table join in a use case. |
+| C5 | Customer does not contain orders. Order holds `CustomerId`. |
+| C6 | Inventory is the **only** writer of quantities. Catalog, Purchasing, and Sales do not `UPDATE` qty columns. They call Inventory ports (or emit events Inventory handles — see [G1](#g1-inventory-write-path)). |
+| C7 | On-hand does not live on `Product` or on `SalesOrder`. Ledger + per-SKU snapshot live in Inventory. |
+| C8 | `PurchaseOrder` is its own aggregate (Purchasing). Receiving records a receipt against the PO, then Inventory records `GoodsReceived`. |
+| C9 | `SalesOrder` is its own aggregate (Sales). Confirming it asks Inventory to allocate; Inventory may reject if `available` is insufficient. |
+| C10 | A use case that needs both an order and a stock number talks to **two ports**. It is not a reason to merge aggregates. |
+| C11 | Reporting views may join later. They are not the write model. Use cases do not cross-schema join `catalog.products` from Sales (etc.). |
+| C12 | A PO is a purchasing document, not a journal entry. Accounting v1 is AR only — not GL, not AP from POs, not inventory valuation. |
+
+### Shared kernel (tiny)
+
+The only types allowed to be imported across contexts:
+
+- `Money` (integer minor units + currency; validated at construction)
+- `Sku`
+- Typed IDs (`ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId`, …)
+
+Nothing else. If two contexts need the same concept, copy a snapshot or add a port. Do not grow the shared kernel.
+
+---
+
+## 3. Dependency rule (every context)
+
+| ID | Invariant |
+|---|---|
+| D1 | Every `import` in `domain/` and `application/` points only toward `domain/` or the shared kernel. |
+| D2 | Domain and use cases never import adapters, HTTP frameworks, ORM/Drizzle models, S3 SDKs, Better Auth, Zod, Sentry, or the logger SDK. |
+| D3 | A file under `domain/` or `application/` must compile with no Node HTTP, Drizzle, or auth-library imports. |
+| D4 | A controller does three things only: parse the request, call **one** use case, map the response. No business logic, no SQL. |
+| D5 | A repository persists and reconstitutes an aggregate. It does not orchestrate other use cases. |
+| D6 | HTTP composition (routers, DI, pool, S3) lives at the composition root (`apps/api/`). Domain packages never import the root. |
+| D7 | Do not duplicate business logic in the two HTTP adapters. Different shapes → map DTOs; do not fork the use case. |
+| D8 | Zod is adapter-only. Never put Zod (or class-validator / Pydantic-style HTTP models) on domain entities. |
+| D9 | In-memory adapters are required for every port that a unit test exercises. They are not optional. |
+| D10 | If a use case test “needs a database,” business logic has leaked into an adapter. |
+
+---
+
+## 4. Money, quantities, and identifiers
+
+| ID | Invariant |
+|---|---|
+| T1 | Money is integer **minor units** (cents) + currency. Never `FLOAT` / `REAL` / `DOUBLE` in domain, DB, APIs, files, or charts. |
+| T2 | `Money` is validated at construction. Invalid money cannot exist as a value object. |
+| T3 | Chart `y` for money is integer cents. The chart library only formats for display. UI formatters convert cents at the edge only. |
+| T4 | Quantities are integers (`INTEGER` / `BIGINT`). Never float. |
+| T5 | IDs are UUIDs. SKU is `TEXT` with a unique constraint. |
+| T6 | Multi-currency **beyond storing** `Money.currency` is not v1. Do not implement FX, dual books, or mixed-currency arithmetic until the plan adds it. |
+| T7 | Card PANs are never stored. AR v1 records a payment; it is not a card vault. |
+| T8 | Export files pick **one** money representation per export (integer cents **or** a single documented decimal format) and test it. Do not mix. |
+
+---
+
+## 5. Inventory: ledger and ATP
+
+This is the hard problem. Get it wrong and every “available” screen drifts.
+
+### Source of truth
+
+| ID | Invariant |
+|---|---|
+| I1 | **Stock movements** are the source of truth. The availability snapshot is a **read model**. |
+| I2 | The snapshot for a SKU is updated in the **same database transaction** as the movement. v1 has no eventual-consistency gap on the number staff and clients see. |
+| I3 | `available` is never a business input and is never assigned by a use case as a raw field. It is `on_hand − allocated` (computed, or a derived column the Inventory adapter maintains). |
+| I4 | Frontends never compute `available` (or any stock figure). A list that shows stock figures is a query use case that reads the Inventory read model. |
+| I5 | Imports must not write `available` or raw on-hand. A stock-count import is an `Adjustment` movement and is owner-gated. |
+| I6 | v1 policy: inbound PO qty is **shown**, not **sellable**. Clients cannot order against stock that has not been received. Changing that is a new projection rule, not a ledger rewrite. |
+| I7 | Confirm order and insert `Allocated` happen in **one transaction**, with a row lock on that SKU’s snapshot (`SELECT … FOR UPDATE` or equivalent). |
+| I8 | Do not check availability in the app, then write in a second round trip with no lock. |
+| I9 | Inventory may reject allocation if `available` is insufficient. Confirm does not oversell. |
+| I10 | Snapshot grain is `(sku, locationId)`. |
+| I11 | Ledger math and the ATP formula are owner-specified (failing tests first). Agents do not invent or soften them. |
+| I12 | Inventory snapshot/ledger migrations are owner-gated. Agents may migrate **their** context’s schema only. |
+
+### Movement types (locked)
+
+| Movement | Effect |
+|---|---|
+| `InboundFromPo` | Increases `on_order` when a PO is placed/confirmed |
+| `GoodsReceived` | Decreases `on_order`, increases `on_hand` |
+| `Allocated` | Increases `allocated` when a sales order is confirmed |
+| `Deallocated` | Decreases `allocated` on cancel / reject |
+| `Shipped` | Decreases `allocated` and `on_hand` |
+| `Adjustment` | Explicit on-hand correction (shrink, count, damage) |
+
+### Read model (what UIs show)
+
+For each `(sku, locationId)`:
+
+```
+on_hand     = receipts − shipments − adjustments
+on_order    = open PO qty not yet received
+allocated   = open sales-order qty not yet shipped
+available   = on_hand − allocated
+```
+
+The `on_hand` line assumes a **signed** adjustment convention that is not yet closed — see [G3](#g3-adjustment-sign-and-negative-stock).
+
+---
+
+## 6. Purchasing
+
+| ID | Invariant |
+|---|---|
+| P1 | Purchasing owns suppliers (factories), purchase orders, and receiving. It does not own on-hand qty. |
+| P2 | PO confirm emits `InboundFromPo`. Receipt emits `GoodsReceived` via Inventory ports. |
+| P3 | PO lines freeze sku/name at write time. Later catalog edits must not rewrite PO history. |
+| P4 | The PO aggregate in Postgres is the source of truth. A PDF is a **projection** (`IPdfRenderer` → `IFileStorage` → key on the PO). |
+| P5 | Inbound supplier PDFs/scans are attachments in v1. Humans enter lines. Do not block Purchasing on OCR. |
+| P6 | A PO is not an accounting journal entry and does not create AP bills in v1. |
+
+---
+
+## 7. Sales and wholesale shop
+
+| ID | Invariant |
+|---|---|
+| O1 | Sales owns wholesale orders, line items, and status. It does not own customer master beyond `CustomerId`, and it does not own live stock. |
+| O2 | Order lines freeze sku, name, and unit price at write time. Catalog edits must not rewrite order history. |
+| O3 | Draft / line-item work is medium autonomy. **Allocation on confirm is gated** (owner tests first). |
+| O4 | Wholesale cart and checkout call Sales use cases with `customerId` from the session, never from the client body. |
+| O5 | Wholesale catalog may return price, images, and `available`. It never returns cost, supplier, or other customers’ orders. |
+| O6 | Wholesale users never import into Catalog or Inventory. They do not get staff DataTables or report charts. |
+| O7 | Staff “place order on behalf of customer” is an **internal** use case: `customerId` comes from the staff DTO and still goes through credit + allocation ports. |
+| O8 | Wholesale `GetOrder` loads by id **and** session `customerId`. Missing row and other-customer’s row look the same (`404`), not a `403` that leaks existence. |
+| O9 | Cannot-modify-a-submitted-order is a **use-case / domain** rule, not middleware. (Exact statuses: [G5](#g5-sales-order-state-machine).) |
+| O10 | Wholesale browse is shop search/filter, not the internal `x-table` protocol. Do not put `DataTable` on the shop. |
+
+---
+
+## 8. Catalog
+
+| ID | Invariant |
+|---|---|
+| K1 | Catalog owns SKU, name, description, images, list/wholesale price. It does not own stock counts. |
+| K2 | Product image **bytes** live in object storage. Postgres stores metadata + object keys only. |
+| K3 | Catalog CRUD is high autonomy **except** it must not add qty columns or treat `available` as writable. |
+
+---
+
+## 9. Customers and credit
+
+| ID | Invariant |
+|---|---|
+| U1 | Customers owns accounts, contacts, terms, and the credit-limit **field**. It does not own invoices. |
+| U2 | Credit **enforcement** at order time is a business rule in the Sales use case via `ICreditCheckPort`. Not `if (role)` in a domain entity. Not a Customers CRUD ticket. |
+| U3 | Customer balance (AR) is a projection of invoices minus payments (optionally a snapshot via events). It is not a hand-edited field that bypasses Accounting. |
+| U4 | Permission matrices and credit/stock gates are owner-reviewed. |
+
+The credit-limit **formula** (what counts against the limit) is not closed — see [G6](#g6-credit-limit-formula).
+
+---
+
+## 10. Accounting (AR only)
+
+| ID | Invariant |
+|---|---|
+| A1 | Accounting v1: invoices, payments, AR. Out of scope: GL, inventory asset valuation, AP, tax engines. |
+| A2 | Invoice is created from a confirmed/shipped sales order. **Pick one trigger and keep it** — not yet chosen ([G7](#g7-invoice-on-confirm-vs-on-ship)). |
+| A3 | Payments are applied to invoices (`payment_applications` supports partial pay). |
+| A4 | Payment application and AR balance are owner-gated. Agents do not invent AR rules or use float cash. |
+| A5 | Invoice PDF is a projection of our aggregates, same as PO PDF. |
+| A6 | Wholesale may download **their** invoices/order PDFs only if the wholesale spec includes the operation. |
+
+---
+
+## 11. Identity and authorization
+
+| ID | Invariant |
+|---|---|
+| X1 | Two actor types in one Identity context: **Staff** and **Wholesale user**. |
+| X2 | Staff session is valid only on `/internal/*`. Wholesale session is valid only on `/wholesale/*`. Separate cookie names, separate origins. |
+| X3 | CORS allowlists **exactly** those two origins. |
+| X4 | Mechanism is a **server-side session** (opaque id in cookie, row in Postgres). Not JWT in `localStorage`, not tokens in query strings or logs. |
+| X5 | Cookies: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`. HTTPS only in production. |
+| X6 | Wholesale user is bound at login to `wholesaleUserId` + **`customerId`**. Handlers **overwrite** `customerId` from the session after Zod parse. If the body contains a customer id, ignore it. |
+| X7 | Staff role elevation cannot be trusted from the client body. |
+| X8 | Authz layers: (1) edge — valid session for that route tree; (2) staff RBAC — small **static** matrix, no permission CMS in v1; (3) business rules in use cases (credit, allocation, submitted-order); (4) resource scoping by `customerId`. |
+| X9 | Do not sprinkle `if (role)` inside domain entities. |
+| X10 | Better Auth (or equivalent) is an **Identity adapter only**, not the domain. Domain stays `StaffUser` / `WholesaleUser` (or `User` + actor type). |
+| X11 | v1 keeps users in our DB so `CustomerId` binding stays in-process. Clerk/Auth0 are not the source of truth for customers. |
+| X12 | Postgres RLS is not the primary authz mechanism. Application + session binding is the v1 gate. |
+| X13 | Passwords are hashed by the auth adapter (Argon2id / scrypt). Never roll hashing in a use case. Never log passwords. |
+| X14 | Rate-limit `/internal/auth/*` and `/wholesale/auth/*`. |
+| X15 | Coding agents may wire login/session. Permission matrix, session `customerId` binding, and credit/stock gates are owner-reviewed. |
+| X16 | v1 does not include SSO/SAML, third-party API keys, or per-SKU permissions. |
+
+The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matrix).
+
+---
+
+## 12. HTTP, lists, reports, frontends
+
+| ID | Invariant |
+|---|---|
+| H1 | The HTTP API is the **only** contract the UIs may use. Frontends never hand-write `fetch` / axios to the API. Orval hooks only. |
+| H2 | Two committed OpenAPI specs: `openapi/internal.yaml` and `openapi/wholesale.yaml`. Wholesale must not list staff-only operations. |
+| H3 | Zod route schemas **are** the OpenAPI source. CI fails if committed specs drift (`gen:api` + `git diff --exit-code`). |
+| H4 | Internal lists share one protocol: explicit query params (`q`, `page`, `pageSize`, `sortBy`, `sortOrder`, typed filters). No JSON `filters` blob, no OData. |
+| H5 | List response envelope is always `{ items, page, pageSize, total }`. No unpaginated “return everything” for tables. |
+| H6 | `pageSize` max is 100 for tables. Exports are a separate operation with a documented higher row cap. |
+| H7 | `x-table` tells the staff UI which columns/search/filters exist. The UI does not hardcode a filter form that disagrees with the API. |
+| H8 | Adding a filter is a backend change (Zod + `x-table` + repository `WHERE`) plus `gen:api`. Frontends do not filter full datasets in the browser. |
+| H9 | Search in v1 is Postgres (`ILIKE` / `pg_trgm`), not Elasticsearch. |
+| H10 | Internal charts are report query use cases returning a small bucketed payload. Never fetch list pages and aggregate in React. |
+| H11 | Do not add a general-purpose query builder or embed Metabase/Superset/Cube in v1. |
+| H12 | Packages `ui` may format money/dates for display. They must not contain domain math (ATP, AR, totals that disagree with the API). |
+| H13 | Frontends must not import `packages/*/domain` or Drizzle schemas. |
+
+---
+
+## 13. Files, import, export, PDFs
+
+| ID | Invariant |
+|---|---|
+| F1 | Bytes live in object storage (`IFileStorage`). Postgres stores metadata and object keys, never workbook or PDF blobs. Bytes never live on the API disk. |
+| F2 | Spreadsheet import/export and generated PDFs go through file ports. The UI only uploads/downloads; it does not parse Excel or build PDFs in the browser. |
+| F3 | Import is a use case, not a SQL dump: parse → validate each row → `{ rowsOk, errors: [{ row, field, message }] }`. Commit runs **existing** create/update use cases. |
+| F4 | Silent partial imports with no error report are forbidden. Do not return 200 with a silent skip. |
+| F5 | Export reuses the **same list query/filters** (not the current page of rows). Document the row cap. |
+| F6 | Staff-only uploads (or presign staff-only), except wholesale downloads that exist on the wholesale spec. |
+| F7 | Presigned PUT: allowlist `Content-Type` (jpeg/png/webp + spreadsheet/PDF types in OpenAPI), max size, random object key (not the original filename as the key). |
+| F8 | Do not treat an uploaded XLSX as trusted SQL. |
+| F9 | Max upload size is declared in OpenAPI and enforced in Fastify. |
+
+---
+
+## 14. Persistence
+
+| ID | Invariant |
+|---|---|
+| DB1 | PostgreSQL is the only system of record (plus object storage for bytes). No Mongo/Dynamo/Firestore as primary. SQLite is fine for unit tests only. |
+| DB2 | One database, **schema per context** (`identity`, `catalog`, `inventory`, `purchasing`, `sales`, `customers`, `accounting`). |
+| DB3 | Cross-context data is copied as IDs/snapshots at write time, not live FKs from order/PO lines to `catalog.products`. |
+| DB4 | Invariants live in TypeScript domain + use cases so unit tests do not need Postgres. No stored-procedure business logic. Extensions in v1: `pgcrypto`/`uuid` and `pg_trgm` only. |
+| DB5 | Sessions and rate-limit counters live in Postgres until there is a reason for Redis. Redis is not v1. |
+| DB6 | Next.js Route Handlers are not the domain API. Fastify is the one composition root. |
+
+---
+
+## 15. Testing, agents, and ownership
+
+| ID | Invariant |
+|---|---|
+| AG1 | Every use case runs in a plain unit test with in-memory adapters — no Postgres, no Docker, no network. |
+| AG2 | A slice is agent-ready only when all three exist: port in `domain/`, use case skeleton in `application/`, failing unit tests in `tests/unit/`. |
+| AG3 | The agent’s job is to make those tests pass **without changing the invariant** and without importing adapters from use cases. |
+| AG4 | **One agent, one context, one branch.** Two agents must not write Inventory’s ledger or the shared kernel at the same time. |
+| AG5 | Human owns: ports, invariants, failing unit tests for gated zones, PR review of inventory / money / authz. |
+| AG6 | Gated (owner tests first): Inventory ledger/ATP, stock `Adjustment` import, allocation when `available` is insufficient, payment/AR, authz / `customerId` binding. |
+| AG7 | Vendor instruction files are optional **mirrors** of `AGENTS.md`. Do not put rules in only one vendor’s folder. |
+| AG8 | Stop when the ticket’s unit tests are green. Do not expand scope. |
+| AG9 | Reject PRs that add Redis, Prisma-as-data-layer, Mongo, GraphQL, tRPC, Nest, Kafka, Elasticsearch, JWT-in-localStorage, hand-written API `fetch`, Datadog, or a metrics/log microservice. |
+| AG10 | Do not grant production shell access to agents as the default remediation path; fix in git, deploy through the normal pipeline. |
+
+Implementation order lock: do not start Sales allocation before Inventory tests exist. Do not start invoicing before Sales confirm exists.
+
+---
+
+## 16. Observability and secrets
+
+| ID | Invariant |
+|---|---|
+| OP1 | Domain/application do not import Sentry, Pino, or OpenTelemetry. |
+| OP2 | Client responses never include stack traces or secrets. |
+| OP3 | Never log passwords, session tokens, `Authorization`, cookies, or card secrets. Full PII request bodies are not logged by default. |
+| OP4 | Every API log line and error carries `requestId`. Actor type (`staff` \| `wholesale`) is allowed; raw session ids are not. |
+| OP5 | `GET /health` proves process liveness only — no Postgres, S3, or external calls. Optional `GET /ready` is a cheap DB ping, not migrations. |
+| OP6 | Business KPIs are internal **report endpoints**, not an observability product. |
+| OP7 | No second deployable for metrics/logs (no Prometheus/Grafana/Loki/ELK collector) in v1. |
+| OP8 | Secrets only in environment / host secret store. Never commit real `.env` values. |
+| OP9 | Unit tests never call the network error reporter (fake `IErrorReporter` or no-op). |
+| OP10 | If a signal cannot become a concrete fix (file path, stack, request id, or failing invariant), it is noise. Do not add it in v1. |
+
+---
+
+## 17. v1 scope locks (explicitly deferred)
+
+Do not sneak these into v1 modules. Naming them here keeps agents from “helpfully” adding them:
+
+- Multiple warehouses / transfers / per-location ATP beyond `LocationId = DEFAULT`
+- Selling against inbound PO quantity
+- Product variants as a separate aggregate
+- General ledger, AP, inventory asset valuation, tax engines
+- Message broker, outbox, CQRS with a separate read DB
+- Microservices / separate deployables per context
+- OCR / extracting line items from arbitrary supplier PDFs or emails
+- Embedded BI; full APM; runtime AI that auto-remediates production
+- SSO / SAML; API keys for third parties; fine-grained per-SKU permissions
+- JWT access tokens for mobile (optional later; still bind `customerId` server-side)
+- In-app feature-request control plane ([`ideas/in-app-feature-requests-to-coding-agents.md`](./ideas/in-app-feature-requests-to-coding-agents.md))
+
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types.
+
+---
+
+## 18. What the initial plan still needs
+
+Locked rules above are necessary but not sufficient. The items below are either flagged open in the plan, implied but unstated (agents will invent them), or present in stakeholder language and missing from the architecture. **Close these in the plan and in owner tests before the named slice is agent-ready.**
+
+Priority: **P0** = decide before that gated slice is implemented (inventory / sales confirm / AR / identity). **P1** = decide in the initial plan so CRUD agents do not invent a second model. **P2** = name a v1 default or explicitly defer.
+
+### G1. Inventory write path: ports vs events vs one transaction
+
+Architecture says Purchasing/Sales “call Inventory ports **or** emit events that Inventory handles,” and also that confirm + `Allocated` is **one transaction** with `FOR UPDATE`.
+
+**Close:** Stock mutations are **synchronous commands** through Inventory ports, in the same DB transaction as the order/PO write. In-process domain events may notify other contexts **after** that commit (e.g. “order confirmed” → Accounting). They must not be the mechanism that updates the ledger, or ATP will race.
+
+### G2. Movement identity, idempotency, and ledger mutability
+
+The plan does not say whether the ledger is append-only, how a double-clicked Confirm is rejected, or what unique key prevents two `Allocated` rows for the same order line.
+
+**Close for Inventory tests:**
+
+- Movements are **append-only**. Corrections are new movements (`Deallocated`, compensating `Adjustment`), not `UPDATE` of an old row.
+- A unique constraint on `(ref_type, ref_id, sku, movement_type)` (or an explicit idempotency key on the command) so confirm/receive/ship is safe to retry.
+- Movement qty is a **positive integer**. Direction lives in the movement type, not a negative qty (except possibly signed `Adjustment` — [G3](#g3-adjustment-sign-and-negative-stock)).
+
+### G3. Adjustment sign and negative stock
+
+Read-model formula: `on_hand = receipts − shipments − adjustments`. That only works if “adjustments” are shrink-positive. Found stock (cycle count up) needs the opposite sign.
+
+**Close:**
+
+- `Adjustment` qty is **signed** (positive = increase on-hand, negative = decrease), **or** split into `AdjustmentIncrease` / `AdjustmentDecrease`.
+- Whether `on_hand` may go **negative**.
+- Whether an adjustment may drive `available` negative (on-hand below allocated). If yes, what Sales does on the next ship. If no, Inventory rejects the adjustment.
+
+### G4. Insufficient ATP on confirm
+
+“Inventory may reject if `available` is insufficient” does not specify the unit of rejection.
+
+**Close (v1 recommendation to write into tests):** reject the **entire confirm** if any line exceeds `available` after locking those SKUs in a stable order (avoid deadlocks). No partial allocation, no silent qty reduction, no backorder document in v1. Cart may display `available`; reservation happens at confirm, not while browsing.
+
+### G5. Sales order state machine
+
+Statuses are sketched (draft → confirm/allocate → ship) but not closed. Stack mentions “cannot modify a submitted order” without listing legal transitions.
+
+**Close for Sales + Inventory tests:**
+
+| From | To | Stock effect | Notes |
+|---|---|---|---|
+| `draft` | `confirmed` | `Allocated` per line, or reject all | Lines editable only in `draft` |
+| `confirmed` | `cancelled` | `Deallocated` | Only if nothing shipped |
+| `confirmed` | `shipped` | `Shipped` | See partial ship below |
+| `draft` | `cancelled` | none | |
+
+Still decide:
+
+- **Partial ship:** forbidden in v1 (one `Shipped` for full remaining qty) vs allowed (multiple `Shipped` until allocated hits zero).
+- **Cart vs draft order** (already open in [`database-design.md`](./database-design.md)): one `SalesOrder` in `draft` used as the cart, vs a separate cart DTO that becomes an order at checkout. Pick one so wholesale and staff-on-behalf share the same aggregate.
+- Empty orders, zero qty, duplicate SKU on two lines (merge vs reject).
+- Whether draft/cart qty may exceed `available` (show a warning; hard fail only at confirm).
+
+### G6. Credit-limit formula
+
+Credit is named as a use-case invariant but not specified.
+
+**Close:** what counts against the limit at confirm — e.g. `open AR (invoiced unpaid) + this order total + confirmed-uninvoiced orders` vs invoices only. Same currency as `Money`. Fail the whole confirm (like ATP). Customers CRUD only stores the limit; it does not enforce it.
+
+### G7. Invoice on confirm vs on ship
+
+Already flagged in architecture and database-design. Also decide:
+
+- **One invoice per sales order** in v1 (matches the ER “may create” / “billed as”).
+- Due date = invoice date + customer terms (Net 30/60/90), copied onto the invoice so later terms edits do not rewrite history — stakeholder language already assumes this.
+- Whether a confirmed-but-unshipped order can be invoiced if the trigger is “on ship” (no) or “on confirm” (yes).
+
+Until this is picked, Accounting tests cannot be written honestly.
+
+### G8. Staff RBAC matrix
+
+Roles are examples (`admin`, `purchasing`, `warehouse`). There is no matrix.
+
+**Close a tiny static table** before Identity is more than login, for example:
+
+| Action | admin | purchasing | warehouse | sales support |
+|---|---|---|---|---|
+| Catalog / customers CRUD | yes | yes | read | read |
+| Create / send PO | yes | yes | no | no |
+| Receive PO / adjust stock | yes | no | yes | no |
+| Place order on behalf of customer | yes | no | no | yes |
+| Apply payment | yes | no | no | no |
+
+Without this, agents will either skip checks or invent a permission CMS.
+
+### G9. Purchasing state machine (cancel, over/under receive)
+
+`InboundFromPo` on place/confirm and `GoodsReceived` on receive do not specify:
+
+- PO statuses (`draft`, `confirmed`, `partially_received`, `received`, `cancelled`).
+- **Cancel after confirm:** must emit a compensating movement so `on_order` does not leak.
+- **Over-receive / under-receive** vs PO line qty (reject over-receive in v1 is the safest default).
+- **Partial receive** (likely needed on day one for wholesale importing).
+- Whether confirm and “placed” are the same event (Excel-to-factory send vs internal confirm).
+
+### G10. Payment application rules
+
+`payment_applications` exists; rules do not.
+
+**Close:** payment amount > 0; cannot apply more than invoice remaining; overpay rejected (no automatic credit memo in v1); unapplied payment remainder allowed or not; reverse/void vs compensating application; idempotency on “record payment.”
+
+Credit memos, RMA, and blanket POs are already an open stakeholder question — **explicitly defer** in the plan if they are not day one, so agents do not add them as “helpful” Accounting types.
+
+### G11. Cross-context transaction boundary
+
+Confirm must write the sales order **and** the `Allocated` movement atomically (I7) while keeping aggregates separate (C10).
+
+**Close:** a composition-root / application unit of work wraps both ports in one Postgres transaction. In-memory tests use a single in-memory unit of work. Do not document “Inventory handles an event after commit” for allocation — that violates I2/I8.
+
+### G12. Catalog identity: SKU vs item number, delete, categories
+
+Stakeholder language uses **item number** and has not locked it as SKU. Architecture and Inventory ATP are SKU-based.
+
+**Close in the initial plan (wording + rules):**
+
+- One public identifier in v1 (`Sku` in code; label in the UI can say “item number” if the business prefers). Do not ship two identifiers.
+- SKU is **immutable** after the first stock movement or order/PO line snapshot.
+- Products are **archived**, not deleted, once referenced. Archived products are not sellable on wholesale; staff can still see history.
+- Wholesale browse mentions **category**, but Catalog’s owned fields do not. Either add `category` (or a simple `product_group`) to Catalog v1, or remove category from the shop API sketch.
+
+### G13. Customers: ship-to, terms, statements, confirmation email
+
+The architecture Customers context is accounts, contacts, terms, credit. Stakeholder tables also have **`customer_ship_to`**, **invoice due-from-terms**, **statements**, and **confirm = page + matching email**.
+
+**Close for the initial plan:**
+
+| Topic | Why it belongs in v1 | Suggested default |
+|---|---|---|
+| Ship-to | Sales order “includes ship-to”; otherwise every order is a blob | `Customer` has one-or-more ship-to addresses; order snapshots address at confirm |
+| Terms enum | Net 30/60/90 is the AR clock | Enum on customer; copied to invoice |
+| Confirmation email | Stated as part of what a confirmed sales order *is* | `IEmailSender` port; confirm use case sends after commit; in-memory fake in tests |
+| Statement | Distinct from invoice; due-date notice | **Defer** the send-job if needed, but name `Statement` as later — do not overload Invoice to mean statement |
+| Tracking | “later” | Explicitly deferred |
+
+Without `IEmailSender`, agents will either skip a business-visible invariant or put nodemailer in a controller.
+
+### G14. Tenancy, currency, clock
+
+**Close:**
+
+- **Single-tenant:** one wholesale company per deployment. No `tenantId` in v1.
+- **Currency:** store `Money.currency` but v1 operations are **one currency** (name it, likely USD). Mixing currencies on one order is rejected at construction.
+- **Clock / timezone:** report buckets (`from`, `to`, `granularity`) use one named timezone (company local). Domain tests inject a clock port; do not call `new Date()` in domain entities.
+
+### G15. Human-readable document numbers
+
+IDs are UUIDs. Staff and factories will not read UUIDs on POs, orders, or invoices.
+
+**Close:** each of PO, sales order, invoice has a unique **document number** (opaque sequence or `YYYY-#####`) assigned in the context that owns the aggregate. UUID remains the primary key. Snapshot the number onto PDFs.
+
+### G16. Command and import atomicity
+
+**Close:**
+
+- Import **commit** is all-or-nothing per file **or** row-by-row with a persisted error report — pick one. Dry-run then commit has a race (catalog changed between); v1 can accept that if stated.
+- Export cap (architecture’s “e.g. 10_000”) should be a single number in the API contract.
+- Numeric upload caps (image vs spreadsheet vs PDF) should be numbers in OpenAPI, not “declared later.”
+
+### G17. Ubiquitous language mismatches to resolve in the plan
+
+Keep one word per concept in architecture + code + UI labels:
+
+| Architecture / code today | Stakeholder share site | Risk if unset |
+|---|---|---|
+| Supplier | Factory (do not say vendor/supplier until locked) | Purchasing package vs UI copy vs table names |
+| SKU | Item number (not locked as SKU) | Inventory grain vs how staff search POs |
+| Wholesale user | Customer user / shop login | Identity entity name |
+| Client DTO / “clients” in intro | Customer | Agents generate `Client` and `Customer` side by side |
+| Statement (absent) | Statement ≠ invoice | Accounting invents a second invoice type |
+
+### G18. Already listed as “open on the call”
+
+From [`database-design.md`](./database-design.md), still open and restated here so they are not lost:
+
+1. Invoice on **confirm** or on **ship**? → [G7](#g7-invoice-on-confirm-vs-on-ship)
+2. Separate **cart** table, or draft **orders**? → [G5](#g5-sales-order-state-machine)
+3. Day-one documents: credit memo, RMA, blanket PO? → default **none in v1**, named in [§17](#17-v1-scope-locks-explicitly-deferred)
+
+### Suggested owner-test packets once P0 items close
+
+These are the failing tests the architecture already says the owner writes; they cannot be honest until the gaps above have defaults:
+
+1. **Inventory:** movement effects, `available = on_hand − allocated`, reject oversell under concurrent confirms (in-memory lock/serial), adjustment sign, compensating deallocate.
+2. **Sales confirm:** all-or-nothing ATP, credit formula, session `customerId` overwrite, snapshot price frozen, draft not allocatable twice.
+3. **Purchasing receive:** `GoodsReceived` vs remaining `on_order`, cancel-compensates inbound, over-receive rejected.
+4. **Accounting:** chosen invoice trigger, partial payment, cannot over-apply, `Money` integer-only.
+5. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
+
+---
+
+## 19. PR review map
+
+When reviewing an agent PR, the architecture checklist still applies ([architecture.md §15](./architecture.md#15-dependency-checklist)). Extra questions this document adds:
+
+- [ ] Did the slice invent a qty write, a second ATP formula, or a cart-side reservation?
+- [ ] Did a status change skip a movement (cancel without `Deallocated`, receive without `GoodsReceived`)?
+- [ ] Did money or qty become float anywhere on the path (DB, DTO, CSV, chart)?
+- [ ] Did wholesale trust a body `customerId` or return another customer’s row as `403`?
+- [ ] Did the change close a [§18](#18-what-the-initial-plan-still-needs) gap **in code** without updating this file and owner tests?

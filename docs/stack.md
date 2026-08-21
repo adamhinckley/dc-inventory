@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** the solo software operator and coding agents (any vendor) should use, and how auth is enforced.
 
-UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md).
+UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md).
 
 Choices optimize for three things, in order:
 
