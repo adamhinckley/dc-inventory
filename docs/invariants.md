@@ -22,7 +22,6 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | S8 | Inventory correctness is transactional (ACID + row lock), not eventually consistent on the number staff and clients see. |
 | S9 | The module map depends on an ACID database and a session that binds `customerId` on the server. It does not depend on Fastify vs another HTTP library. |
 | S10 | This operating model is **build-time coding agents** only. In-product domain AI (reorder bots, auto-remediation) is out of scope. |
-| S11 | Retail / Shopify is a separate channel, not this wholesale product. Do not model it in v1 contexts. |
 
 ---
 
@@ -35,7 +34,7 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | C3 | Purchasing never imports Catalog’s `Product`. It snapshots supplier-facing product identity (sku, name) at write time. |
 | C4 | Sales and Accounting hold `CustomerId`, not a Customer aggregate. Credit checks go through `ICreditCheckPort`, not a shared table join in a use case. |
 | C5 | Customer does not contain orders. Order holds `CustomerId`. |
-| C6 | Inventory is the **only** writer of quantities. Catalog, Purchasing, and Sales do not `UPDATE` qty columns. They call Inventory ports (or emit events Inventory handles — see [G1](#g1-inventory-write-path)). |
+| C6 | Inventory is the **only** writer of quantities. Catalog, Purchasing, and Sales do not `UPDATE` qty columns. They call Inventory ports (or emit events Inventory handles — see [G1](#g1-inventory-write-path-ports-vs-events-vs-one-transaction)). |
 | C7 | On-hand does not live on `Product` or on `SalesOrder`. Ledger + per-SKU snapshot live in Inventory. |
 | C8 | `PurchaseOrder` is its own aggregate (Purchasing). Receiving records a receipt against the PO, then Inventory records `GoodsReceived`. |
 | C9 | `SalesOrder` is its own aggregate (Sales). Confirming it asks Inventory to allocate; Inventory may reject if `available` is insufficient. |
@@ -322,6 +321,7 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - Microservices / separate deployables per context
 - OCR / extracting line items from arbitrary supplier PDFs or emails
 - Embedded BI; full APM; runtime AI that auto-remediates production
+- Retail / Shopify as a channel in these contexts (stakeholder language; make the deferral explicit — [G17](#g17-ubiquitous-language-mismatches-to-resolve-in-the-plan))
 - SSO / SAML; API keys for third parties; fine-grained per-SKU permissions
 - JWT access tokens for mobile (optional later; still bind `customerId` server-side)
 - In-app feature-request control plane ([`ideas/in-app-feature-requests-to-coding-agents.md`](./ideas/in-app-feature-requests-to-coding-agents.md))
@@ -504,6 +504,7 @@ Keep one word per concept in architecture + code + UI labels:
 | Wholesale user | Customer user / shop login | Identity entity name |
 | Client DTO / “clients” in intro | Customer | Agents generate `Client` and `Customer` side by side |
 | Statement (absent) | Statement ≠ invoice | Accounting invents a second invoice type |
+| (not in architecture) | Shopify is retail, not this product | A later ticket adds a retail channel into Catalog/Sales |
 
 ### G18. Already listed as “open on the call”
 
