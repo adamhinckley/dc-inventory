@@ -16,6 +16,7 @@ Also usable as **Cursor Cloud Agent** prompts: paste the markdown body of any `a
 | `dashboard-ui` | Internal tables/charts on existing reports | Cheap | pack default | Composer 2.5 |
 | `purchasing-sales` | PO create/receive, sales drafts (no allocation math) | Mid | `anthropic:claude-sonnet-5` | Sonnet 5 / Composer 2.5 |
 | `inventory` | Ledger/ATP **only after owner tests** | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
+| `tax` | Quote/commit/void **only after owner tests** | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
 | `accounting` | Invoice/payment **only after owner tests** | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
 | `fixit` | CI red / Sentry work packets in high-autonomy areas | Cheap | pack default | Composer 2.5 |
 
@@ -42,7 +43,7 @@ Adjust `model:` frontmatter if your Buzz runtime uses different provider IDs (Go
 
 ## Concurrency
 
-Do not run `inventory` and another agent that edits `packages/inventory` or `packages/shared-kernel` at the same time. Do not run a Licensing billing ticket in parallel with another Licensing writer. Prefer at most two cheap agents in parallel (e.g. `catalog` + `customers`).
+Do **not** run `inventory` and another agent that edits `packages/inventory` or `packages/shared-kernel` at the same time. Do **not** run `tax` in parallel with Sales confirm or Accounting invoice slices. Do not run a Licensing billing ticket in parallel with another Licensing writer. Prefer at most two cheap agents in parallel (e.g. `catalog` + `customers`).
 
 ## Layout
 

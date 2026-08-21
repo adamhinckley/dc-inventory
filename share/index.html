@@ -303,6 +303,7 @@
         <li>Staff run catalog, purchasing, stock, customers, and billing in one back office. Today that back office is <strong>SoloVue</strong>.</li>
         <li>A sales order is confirmed as the <strong>order page plus an email that matches that page</strong>.</li>
         <li>Customers may pay on terms (Net 30 / 60 / 90). When due, they get a <strong>statement</strong> email — not a marketing blast.</li>
+        <li>Invoices include <strong>sales tax</strong> where it applies. Many wholesale customers are <strong>resale-exempt</strong> and keep a certificate on file. Tax is calculated by an engine at checkout (preview) and locked when the invoice is posted — staff do not type a percent on the product.</li>
         <li><strong>Shopify</strong> is retail. It is a separate channel, not this wholesale product.</li>
       </ul>
 
@@ -331,7 +332,11 @@
         </div>
         <div class="term">
           <dt>Invoice</dt>
-          <dd>A bill we send a customer for a sales order. Some customers have time to pay. <span class="avoid">Not a statement.</span></dd>
+          <dd>A bill we send a customer for a sales order, including tax that was locked when the bill was posted. Some customers have time to pay. <span class="avoid">Not a statement.</span></dd>
+        </div>
+        <div class="term">
+          <dt>Resale certificate</dt>
+          <dd>Proof a customer may buy without sales tax in named places (they will resell). We store the file on their account. The tax engine decides if it applies to <em>this</em> ship-to. <span class="avoid">Not a discount. Not a tax percent on the product.</span></dd>
         </div>
         <div class="term">
           <dt>Statement</dt>
@@ -353,10 +358,11 @@
           <tr><td><code>staff</code></td><td>People who use the back office.</td></tr>
           <tr><td><code>customer</code></td><td>Wholesale buyer account, including payment terms (Net 30/60/90).</td></tr>
           <tr><td><code>customer_contact</code></td><td>People at that customer.</td></tr>
-          <tr><td><code>customer_ship_to</code></td><td>Ship-to addresses for a customer.</td></tr>
+          <tr><td><code>customer_ship_to</code></td><td>Ship-to addresses for a customer. Needed before tax can be quoted (tax depends on where it ships).</td></tr>
+          <tr><td><code>exemption_certificate</code></td><td>Resale (or other) certificate file + where it applies and when it expires.</td></tr>
           <tr><td><code>customer_user</code></td><td>Shop logins belonging to a customer.</td></tr>
           <tr><td><code>factory</code></td><td>Who we buy from.</td></tr>
-          <tr><td><code>product</code></td><td>What we sell/buy, found by item number. Packing facts live here when David lists them — not invented on this page.</td></tr>
+          <tr><td><code>product</code></td><td>What we sell/buy, found by item number. Includes a tax category <em>code</em> (what kind of goods) — not a tax percent. Packing facts live here when David lists them — not invented on this page.</td></tr>
           <tr><td><code>product_image</code></td><td>Pictures of a product.</td></tr>
           <tr><td><code>purchase_order</code></td><td>A buy from a factory.</td></tr>
           <tr><td><code>purchase_order_line</code></td><td>Lines on that PO (item, qty, cost copied at add time).</td></tr>
@@ -364,7 +370,10 @@
           <tr><td><code>sales_order_line</code></td><td>Lines on that sales order (item, qty, price at order time).</td></tr>
           <tr><td><code>stock_movement</code></td><td>Every stock change (PO placed, goods in, allocated to a sales order, shipped, count adjustment). This is the quantity history — not a single “qty” box on the product.</td></tr>
           <tr><td><code>stock_on_hand</code></td><td>Numbers staff see: on hand, on order to the factory, already sold/allocated, available. Kept in step with movements. Available is on hand minus allocated — not typed in by hand.</td></tr>
-          <tr><td><code>invoice</code></td><td>Bill for a sales order, with a due date copied from the customer’s terms.</td></tr>
+          <tr><td><code>invoice</code></td><td>Bill for a sales order, with a due date copied from the customer’s terms. Totals: merchandise, tax, grand total — tax copied from the committed calculation, not typed in.</td></tr>
+          <tr><td><code>invoice_tax_line</code></td><td>Frozen tax breakdown on that invoice (jurisdiction, rate for display, tax amount). History does not change if rates change later.</td></tr>
+          <tr><td><code>tax_commit</code></td><td>Record of a tax quote or the committed calculation sent to the tax engine (including the engine’s id, so we can void if the invoice is cancelled).</td></tr>
+          <tr><td><code>tax_commit_line</code></td><td>Lines inside that tax calculation.</td></tr>
           <tr><td><code>payment</code></td><td>Money applied to invoices.</td></tr>
           <tr><td><code>statement</code></td><td>Record of a due-date statement that was sent (or is due to send).</td></tr>
         </tbody>
@@ -389,6 +398,7 @@ erDiagram
 
   customer ||--o{ customer_contact : "has"
   customer ||--o{ customer_ship_to : "has"
+  customer ||--o{ exemption_certificate : "holds"
   customer ||--o{ customer_user : "logs in as"
   customer ||--o{ sales_order : "places"
   customer ||--o{ invoice : "is billed"
@@ -398,8 +408,12 @@ erDiagram
   sales_order ||--|{ sales_order_line : "has"
   sales_order ||--o{ stock_movement : "allocates / ships"
   sales_order ||--o| invoice : "billed as"
+  sales_order ||--o{ tax_commit : "quoted on"
 
   purchase_order ||--o{ stock_movement : "on order / received"
+  invoice ||--o| tax_commit : "commits"
+  tax_commit ||--|{ tax_commit_line : "has"
+  invoice ||--|{ invoice_tax_line : "shows"
   invoice ||--o{ payment : "paid by"
   invoice ||--o{ statement : "comes due"
         </pre>
@@ -416,6 +430,7 @@ erDiagram
         <li>A <strong>product</strong> does not store “how many we have.” <strong>stock_movement</strong> does; <strong>stock_on_hand</strong> is the running picture.</li>
         <li>Purchase-order lines and sales-order lines copy what they need from the product when the line is added, so later catalog edits do not rewrite history.</li>
         <li>An <strong>invoice</strong> points at a sales order and a customer. A <strong>statement</strong> is not a second invoice — it is the “this is now due” notice.</li>
+        <li><strong>Tax</strong> is quoted at checkout and locked when the invoice is posted. A product does not store “how many percent tax.”</li>
       </ul>
     </main>
   </div>

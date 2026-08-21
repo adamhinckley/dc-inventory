@@ -1,6 +1,6 @@
 # API contract: OpenAPI, lists, shop, and presentation-only frontends
 
-Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`observability.md`](./observability.md) (ops signals; not part of the UI contract), and [`licensing.md`](./licensing.md) (software billing + flags).
+Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`tax.md`](./tax.md) (checkout quote / invoice commit; not computed in the UI), [`observability.md`](./observability.md) (ops signals; not part of the UI contract), and [`licensing.md`](./licensing.md) (software billing + flags).
 
 The HTTP API is the **only** contract the UIs may use. Next.js apps are **presentation**. They do not invent query params, compute availability, or assemble filters/charts the spec does not declare.
 
@@ -204,10 +204,10 @@ The wholesale spec is an **ordering API**, not a cut-down admin:
 |---|---|
 | `GET /wholesale/catalog` | Browse: `q`, category, pagination, sort (shop-relevant). Response includes image URLs, wholesale price, `available`. |
 | `GET /wholesale/catalog/:id` | Product detail |
-| `GET/PATCH /wholesale/cart` | Cart lines; qty changes |
-| `POST /wholesale/checkout` | Place order (Sales confirm + Inventory allocate) |
+| `GET/PATCH /wholesale/cart` | Cart lines; qty changes; **tax quote** on the totals (`taxTotal` as integer minor units + currency). Re-quote when ship-to or lines change. |
+| `POST /wholesale/checkout` | Place order (Sales confirm + Inventory allocate). Does **not** commit tax. Requires a successful quote; fail closed if the engine is down. |
 | `GET /wholesale/orders` | Own order history (paginated) |
-| `GET /wholesale/orders/:id` | Own order detail |
+| `GET /wholesale/orders/:id` | Own order detail (includes last quote; invoiced orders include **committed** tax) |
 
 Do not generate `x-table` for these. Do not expose `/internal/reports/*` on the wholesale spec.
 
@@ -238,7 +238,7 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 - **Wholesale:** browse grid, product detail, cart, checkout, order history, hide nav from feature bootstrap.
 - **Ops:** subscription, payment history, add-on purchase, operator flag overrides, **report an issue**.
 - Call Orval hooks with params that exist on the generated type.
-- Map labels, dates, money **for display** (formatting only; cents stay integers until a formatter).
+- Map labels, dates, money **for display** (formatting only; minor units stay integers until a formatter).
 - Trigger Orval blob downloads (export, PDF). Upload files via generated multipart hooks.
 
 **Forbidden**
@@ -246,6 +246,7 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 - Hand-written `fetch` / axios to `apps/api`.
 - Query params not in the generated client.
 - Computing `available` (or any stock figure) in the UI.
+- Computing tax (`price * rate`, hardcoded percents). Display `taxTotal` from the API only.
 - Charting by fetching list pages and reducing them in the browser.
 - Putting `DataTable` on the wholesale shop as the catalog.
 - Filtering a full dataset in the browser because the list endpoint “doesn’t support it yet” — add the filter to the API instead.

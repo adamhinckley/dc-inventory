@@ -30,7 +30,7 @@ Wire staff dashboard tables (`DataTable` + `x-table` query protocol), KPI cards,
 - New report endpoints without a ticket that owns the API package
 - Charting raw list pages instead of report series
 - Hand-written `fetch`
-- Inventory/Accounting domain edits
+- Inventory/Accounting/Tax domain edits
 
 ## Done when
 

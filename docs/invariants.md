@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **checklist of rules that must always hold**, plus the decisions the initial plan still needs before a slice is agent-ready.
 
-Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`database-design.md`](./database-design.md), [`api-contract.md`](./api-contract.md), [`observability.md`](./observability.md), [`licensing.md`](./licensing.md). Stakeholder language on the share site is cited only in [§18](#18-what-the-initial-plan-still-needs) where it exposes a gap.
+Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`database-design.md`](./database-design.md), [`api-contract.md`](./api-contract.md), [`tax.md`](./tax.md), [`observability.md`](./observability.md), [`licensing.md`](./licensing.md). Stakeholder language on the share site is cited only in [§18](#18-what-the-initial-plan-still-needs) where it exposes a gap.
 
 **How to use this.** Owner-written unit tests for gated zones should encode the locked rules in [§1–§16](#1-system-shape). Coding agents make those tests pass without changing the rule. Changing a locked rule is a plan change, not a ticket. Gaps in [§18](#18-what-the-initial-plan-still-needs) are not yet tests — pick a default, write it here, then write the failing test.
 
@@ -43,6 +43,7 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | C12 | A PO is a purchasing document, not a journal entry. Accounting v1 is AR only — not GL, not AP from POs, not inventory valuation, **not software subscription**. |
 | C13 | Licensing is the only writer of software entitlements and **software payment history** (money to the developer). Other contexts read `IFeatures` / `FeatureName` only. |
 | C14 | Paid add-ons are Licensing `AddOnId`s, not Catalog products and not Inventory SKUs. |
+| C15 | Sales and Accounting **never** compute tax. They pass address, line, and exemption snapshots into `ITaxCalculator`. Catalog stores `taxCategoryCode`, not a rate. |
 
 ### Shared kernel (tiny)
 
@@ -61,8 +62,8 @@ Nothing else. If two contexts need the same concept, copy a snapshot or add a po
 | ID | Invariant |
 |---|---|
 | D1 | Every `import` in `domain/` and `application/` points only toward `domain/` or the shared kernel. |
-| D2 | Domain and use cases never import adapters, HTTP frameworks, ORM/Drizzle models, S3 SDKs, Better Auth, Stripe, Zod, Sentry, or the logger SDK. |
-| D3 | A file under `domain/` or `application/` must compile with no Node HTTP, Drizzle, auth-library, or Stripe imports. |
+| D2 | Domain and use cases never import adapters, HTTP frameworks, ORM/Drizzle models, S3 SDKs, Better Auth, Stripe, tax-engine SDKs, Zod, Sentry, or the logger SDK. |
+| D3 | A file under `domain/` or `application/` must compile with no Node HTTP, Drizzle, auth-library, Stripe, or tax-SDK imports. |
 | D4 | A controller does three things only: parse the request, call **one** use case, map the response. No business logic, no SQL. |
 | D5 | A repository persists and reconstitutes an aggregate. It does not orchestrate other use cases. |
 | D6 | HTTP composition (routers, DI, pool, S3) lives at the composition root (`apps/api/`). Domain packages never import the root. |
@@ -192,14 +193,31 @@ The credit-limit **formula** (what counts against the limit) is not closed — s
 
 | ID | Invariant |
 |---|---|
-| A1 | Accounting v1: invoices, payments, AR **owed by wholesale customers**. Out of scope: GL, inventory asset valuation, AP, tax engines, **software subscription**. |
-| A2 | Invoice is created from a confirmed/shipped sales order. **Pick one trigger and keep it** — not yet chosen ([G7](#g7-invoice-on-confirm-vs-on-ship)). |
-| A3 | Payments are applied to invoices (`payment_applications` supports partial pay). |
+| A1 | Accounting v1: invoices, payments, AR **owed by wholesale customers**. Out of scope: GL, inventory asset valuation, AP, tax **return filing**, **software subscription**. Tax **calculation** is Tax context (`ITaxCalculator`), not Accounting math. |
+| A2 | Invoice is created from a confirmed/shipped sales order. **Pick one trigger and keep it** — not yet chosen ([G7](#g7-invoice-on-confirm-vs-on-ship)). Tax **commits when that invoice posts**. |
+| A3 | Payments are applied to invoices (`payment_applications` supports partial pay) against the invoice **total**, which includes committed tax. |
 | A4 | Payment application and AR balance are owner-gated. Agents do not invent AR rules or use float cash. |
 | A5 | Invoice PDF is a projection of our aggregates, same as PO PDF. |
 | A6 | Wholesale may download **their** invoices/order PDFs only if the wholesale spec includes the operation. |
 
 A `SoftwarePayment` is not an Accounting payment.
+
+---
+
+## 10a. Tax (quote / commit)
+
+Full narrative: [`tax.md`](./tax.md).
+
+| ID | Invariant |
+|---|---|
+| TX1 | Tax calculation is `ITaxCalculator` (quote / commit / void). Sales, Accounting, Catalog, and UIs never `price * rate`. |
+| TX2 | Checkout **quotes**. Invoice **post** **commits**. The committed `Money` (and tax lines) are frozen on the invoice and never recomputed from today’s engine. |
+| TX3 | Fail closed: engine down or garbage → do not confirm an order or post an invoice with `tax = 0`. |
+| TX4 | Tax HTTP is **not** inside the Inventory `FOR UPDATE` transaction. Allocate stock, then quote/commit as a separate I/O. Commit is idempotent; void if invoice post fails after a successful commit. |
+| TX5 | Catalog stores `taxCategoryCode`, not a percent. Customers store ship-to + exemption **files and metadata**; enforcement is owner-gated. |
+| TX6 | Convert engine floats to `Money` in the Tax adapter. Domain never sees `0.0875`. |
+| TX7 | Production adapter is a hosted engine (default AvaTax). In-memory adapter is required in unit tests. SDK lives only in `packages/tax/adapters`. |
+| TX8 | Return filing, remittance, use tax on POs, and CertCapture-class certificate campaigns are **not** v1. |
 
 ---
 
@@ -361,7 +379,8 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - Multiple warehouses / transfers / per-location ATP beyond `LocationId = DEFAULT`
 - Selling against inbound PO quantity
 - Product variants as a separate aggregate
-- General ledger, AP, inventory asset valuation, tax engines
+- General ledger, AP, inventory asset valuation
+- Tax **return filing**, remittance, nexus dashboards, use tax on POs, full certificate-lifecycle CMS (calculation + commit **is** v1 — [`tax.md`](./tax.md))
 - Message broker, outbox, CQRS with a separate read DB
 - Microservices / separate deployables per context (ops **UI hosting** may split later; inventory does not)
 - OCR / extracting line items from arbitrary supplier PDFs or emails
@@ -451,7 +470,7 @@ Already flagged in architecture and database-design. Also decide:
 - Due date = invoice date + customer terms (Net 30/60/90), copied onto the invoice so later terms edits do not rewrite history — stakeholder language already assumes this.
 - Whether a confirmed-but-unshipped order can be invoiced if the trigger is “on ship” (no) or “on confirm” (yes).
 
-Until this is picked, Accounting tests cannot be written honestly.
+Until this is picked, Accounting tests cannot be written honestly. Tax **commits at the same moment the invoice posts**, whichever trigger is chosen.
 
 ### G8. Staff RBAC matrix
 
@@ -586,6 +605,15 @@ The **door** is locked ([§10c](#10c-operator-platform-bridge), [`operator-bridg
 
 Until then, no-op is the correct v1 adapter.
 
+### G21. Hosted tax engine (AvaTax vs cheaper)
+
+Calculation + commit is locked ([§10a](#10a-tax-quote--commit), [`tax.md`](./tax.md)). The **vendor** is not:
+
+- Default: Avalara AvaTax (wholesale resale certificates).
+- Acceptable cheaper: Stripe Tax only if few-nexus and staff will store certificates themselves.
+
+**Close before the production adapter is wired:** which engine, sandbox credentials, and the entity-use / resale codes for this company’s customers. In-memory tests do not wait on that pick.
+
 ### Suggested owner-test packets once P0 items close
 
 These are the failing tests the architecture already says the owner writes; they cannot be honest until the gaps above have defaults:
@@ -593,10 +621,11 @@ These are the failing tests the architecture already says the owner writes; they
 1. **Inventory:** movement effects, `available = on_hand − allocated`, reject oversell under concurrent confirms (in-memory lock/serial), adjustment sign, compensating deallocate.
 2. **Sales confirm:** all-or-nothing ATP, credit formula, session `customerId` overwrite, snapshot price frozen, draft not allocatable twice.
 3. **Purchasing receive:** `GoodsReceived` vs remaining `on_order`, cancel-compensates inbound, over-receive rejected.
-4. **Accounting:** chosen invoice trigger, partial payment, cannot over-apply, `Money` integer-only.
-5. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
-6. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.
-7. **Operator bridge:** software payment still commits if publish throws; issue submit succeeds on local save; closed message kinds only.
+4. **Accounting:** chosen invoice trigger, partial payment, cannot over-apply, `Money` integer-only; invoice total includes committed tax.
+5. **Tax:** quote ≠ commit; fail-closed on engine error; commit idempotent; posted invoice tax lines do not change when a later quote would; no tax HTTP inside inventory lock.
+6. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
+7. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.
+8. **Operator bridge:** software payment still commits if publish throws; issue submit succeeds on local save; closed message kinds only.
 
 ---
 
@@ -609,5 +638,6 @@ When reviewing an agent PR, the architecture checklist still applies ([architect
 - [ ] Did money or qty become float anywhere on the path (DB, DTO, CSV, chart)?
 - [ ] Did wholesale trust a body `customerId` or return another customer’s row as `403`?
 - [ ] Did software billing land in Accounting or Catalog, or did a flag skip ATP/authz?
+- [ ] Did a slice multiply a tax rate, post an invoice without `ITaxCalculator.commit`, or treat a quote as the legal amount?
 - [ ] Did a slice require the operator platform to be online for inventory or checkout?
 - [ ] Did the change close a [§18](#18-what-the-initial-plan-still-needs) gap **in code** without updating this file and owner tests?
