@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
 
 ---
 
@@ -439,6 +439,8 @@ This is part of the architecture. **Coding agents** (cloud or local) implement f
 
 Vendor-specific instruction files (`.cursor/rules/`, `CLAUDE.md`, `.github/copilot-instructions.md`, …) are optional **mirrors** of `AGENTS.md`. Do not put rules in only one vendor’s folder.
 
+**Linear (Cursor).** All Linear projects, issues, and sub-initiatives created for this repo from Cursor belong on the **DC Inventory** initiative. See [`linear.md`](./linear.md).
+
 ### Who owns what
 
 | Owner | Owns |
@@ -538,6 +540,7 @@ docs/
   invariants.md            # locked rules + open decisions for owner tests
   licensing.md             # software subscription, add-ons, flags, ops dashboard
   operator-bridge.md       # door to the developer’s other monorepo
+  linear.md                # all Cursor/Linear projects, issues, and sub-initiatives → DC Inventory initiative
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 

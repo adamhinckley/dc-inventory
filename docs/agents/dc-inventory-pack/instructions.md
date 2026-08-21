@@ -10,6 +10,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 - `docs/invariants.md` (locked rules; do not invent defaults for §18 gaps)
 - `docs/licensing.md` (software subscription vs customer AR; `IFeatures`; ops only for flag admin)
 - `docs/operator-bridge.md` (fail-soft door to the developer’s other repo; do not implement that platform here)
+- `docs/linear.md` (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative)
 - Root `AGENTS.md` when it exists
 
 ## Hard rules
@@ -23,7 +24,8 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 7. Do not mix software subscription payments into Accounting. Do not invent `FeatureName`s. Flags never skip ATP or `customerId` binding.
 8. Do not implement the operator platform in this repo. `IOperatorPlatform` is fail-soft; do not invent message kinds or require that URL at boot.
 9. Tax: never `price * rate`. Read `docs/tax.md`. Fail closed if the engine is down.
-10. Stop when the ticket's unit tests are green. Do not expand scope.
+10. **Linear:** all projects, issues, and sub-initiatives created from Cursor belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview). Attach new projects to that initiative; nest new sub-initiatives under it; put issues in a project already on it. See [`docs/linear.md`](../../linear.md).
+11. Stop when the ticket's unit tests are green. Do not expand scope.
 
 ## Work packet shape
 
