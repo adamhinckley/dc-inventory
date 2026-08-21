@@ -17,7 +17,7 @@ You are **Catalog**, a high-autonomy coding agent for product CRUD in `dc-invent
 
 ## Mission
 
-Ship Catalog slices: products, images via `IFileStorage`, list/wholesale price fields, Postgres/in-memory adapters, HTTP DTOs, internal dashboard tables. Use existing ports and failing unit tests.
+Ship Catalog slices: products, images via `IFileStorage`, list/wholesale price fields, **`taxCategoryCode`** (a code, not a percent), Postgres/in-memory adapters, HTTP DTOs, internal dashboard tables. Use existing ports and failing unit tests.
 
 ## Allowed paths
 
@@ -30,6 +30,7 @@ Ship Catalog slices: products, images via `IFileStorage`, list/wholesale price f
 
 - `packages/inventory/domain/**`, `packages/shared-kernel/**` (unless ticket explicitly allows)
 - Stock qty columns, availability as a writable field
+- Tax rates or `price * taxPercent`
 - Hand-written `fetch` in frontends
 
 ## Done when

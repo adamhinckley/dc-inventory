@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** the solo software operator and coding agents (any vendor) should use, and how auth is enforced.
 
-UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md).
+UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Tax quote/commit and the hosted engine are in [`tax.md`](./tax.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md).
 
 Choices optimize for three things, in order:
 
@@ -59,6 +59,7 @@ packages/
 | Auth library | **Better Auth** (or equivalent session library) **as an Identity adapter only** | See [§5](#5-authentication-and-authorization). |
 | Passwords | Library default (**Argon2id** / scrypt) | Never roll bcrypt-by-hand in a use case. |
 | Hosting (solo software ops) | Managed Postgres (Neon, RDS, or Supabase **as Postgres only**). API on Fly/Render/Railway. Frontends on Vercel. | No Kubernetes. Do not use Supabase Auth, Storage, or RLS as the domain. |
+| Tax engine | **Hosted calculator** behind `ITaxCalculator` (default **Avalara AvaTax**; Stripe Tax only if few-nexus). In-memory adapter in tests. | Do not put rates on products or multiply in Sales/UI. Quote at checkout, commit on invoice post. See [`tax.md`](./tax.md). |
 | Observability | **Pino** JSON logs + **`requestId`**, **Sentry** (or free equivalent) on API + both Next apps, **`GET /health`** (+ optional `/ready`), free uptime ping, host metrics only | No Datadog/New Relic, no self-hosted Prometheus/Grafana/ELK, no OTel collector in v1. See [`observability.md`](./observability.md). |
 
 ### Explicitly rejected (v1)
@@ -79,6 +80,8 @@ packages/
 | Kubernetes, Kafka, Elasticsearch | Solo-software-operator tax. |
 | Puppeteer/Playwright to “print HTML to PDF” as the default renderer | Heavy runtime. Fine later; v1 is a library renderer. |
 | Metabase / Superset / Cube in v1 | Extra ops. Dashboard reports are Fastify query endpoints + Recharts. |
+| Homegrown `taxPercent` / per-state rate tables as the **production** calculator | Wrong for destination + resale exemptions. A table adapter is not v1 prod. |
+| Tax SDK inside Sales or Accounting packages | Engine HTTP lives in `packages/tax/adapters` only. |
 | OCR / LLM parsing of supplier PDFs in v1 | Unreliable; store as attachment instead. |
 | Datadog / New Relic / self-hosted ELK or Prometheus+Grafana (v1) | Solo-software-operator tax and cost. Free error tracking + uptime + host logs only — [`observability.md`](./observability.md). |
 | OpenTelemetry collector as a default runtime | Extra process. Sentry breadcrumbs + structured logs cover v1. |
@@ -95,8 +98,9 @@ Drizzle schemas       → persistence models, mapped to/from domain in repositor
 S3/R2 SDK             → IFileStorage adapter
 exceljs / csv-*       → IWorkbookParser / IWorkbookWriter
 PDFKit                → IPdfRenderer
+Hosted tax SDK        → ITaxCalculator adapter only (`packages/tax/adapters`)
 Better Auth           → Identity adapter (sessions, cookies, password hash)
-domain/ + application/→ pure TypeScript, no Fastify/Drizzle/Better Auth imports
+domain/ + application/→ pure TypeScript, no Fastify/Drizzle/Better Auth/tax-SDK imports
 ```
 
 **Rule agents must follow:** if a file is under `domain/` or `application/`, it must compile with no Node HTTP, Drizzle, or auth-library imports. Tests inject in-memory adapters.
@@ -113,7 +117,7 @@ This product is a **transactional ledger**. Allocation must not oversell: confir
 
 | Data | Storage |
 |---|---|
-| Money | `BIGINT` integer **minor units** (cents). Never `FLOAT`/`REAL`/`DOUBLE`. |
+| Money | `BIGINT` integer **minor units** + ISO `currency` (CHAR(3)). Scale is the currency’s exponent (USD=2, JPY=0) — not a hardcoded `/100`. Never `FLOAT`/`REAL`/`DOUBLE`. Tax amounts from the engine are converted to `Money` in the Tax adapter. |
 | Quantities | `INTEGER` (or `BIGINT`). Never float. |
 | IDs | `UUID` (`gen_random_uuid()`). |
 | SKU | `TEXT` with a unique constraint. |
@@ -148,6 +152,7 @@ inventory.*
 purchasing.*
 sales.*
 customers.*
+tax.*
 accounting.*
 ```
 
@@ -264,9 +269,10 @@ Coding agents may wire login, cookies, and “require session” hooks. **Permis
 | List filters as Zod query params + `x-table` (then `gen:api`) | Inventing undocumented query params or browser-side filtering |
 | Presigned-upload adapter behind `IFileStorage` | Any “available qty” stored as an input |
 | CSV/XLSX export + import dry-run for Catalog/Customers | Stock-count spreadsheet that writes on-hand; PDF line-item extraction |
+| Tax **display** DTOs and in-memory `ITaxCalculator` that matches existing tests | Engine choice, fail-closed, commit-on-invoice, exemption enforcement ([`tax.md`](./tax.md)) |
 | Pino/`requestId`, `/health`, Sentry SDK wiring (no secrets in logs) | Alert routing, PII-in-logs policy, paid APM |
 
-If an agent adds Redis, Prisma, Mongo, GraphQL, tRPC, Elasticsearch, JWT-in-localStorage, hand-written `fetch` to the API, Datadog, or a metrics/log microservice, reject the PR. The stack is closed until this document (and [`observability.md`](./observability.md)) changes.
+If an agent adds Redis, Prisma, Mongo, GraphQL, tRPC, Elasticsearch, JWT-in-localStorage, hand-written `fetch` to the API, Datadog, a metrics/log microservice, or a tax SDK outside `packages/tax/adapters`, reject the PR. The stack is closed until this document (and [`observability.md`](./observability.md) / [`tax.md`](./tax.md)) changes.
 
 ---
 
@@ -279,7 +285,7 @@ Browser cookie
             → Identity adapter (session row in Postgres)
             → one use case
                 → domain
-                → ports → Drizzle (Postgres) and/or S3
+                → ports → Drizzle (Postgres) and/or S3 and/or ITaxCalculator
 ```
 
 **Local:** Docker Compose with Postgres (and optionally MinIO for S3). Unit tests do not start Compose; they use in-memory adapters.

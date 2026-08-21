@@ -26,7 +26,7 @@ Turn CI failures and observability work packets (`docs/observability.md`) into s
 
 ## Forbidden
 
-- Inventory ledger, allocation, payment/AR, authz/session binding unless the packet is explicitly owner-scoped and tests already exist
+- Inventory ledger, allocation, payment/AR, tax quote/commit, authz/session binding unless the packet is explicitly owner-scoped and tests already exist
 - Adding new observability vendors or infra
 - Broad refactors
 

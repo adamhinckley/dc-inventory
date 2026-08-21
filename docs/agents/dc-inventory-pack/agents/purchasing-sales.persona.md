@@ -31,6 +31,7 @@ Implement Purchasing PO create/receive **when Inventory ports and tests already 
 - Changing Inventory ledger invariants or ATP formula
 - Parsing supplier PDFs into lines (deferred)
 - Payment application / AR
+- Tax rates or engine SDKs
 - Confirm/allocate without owner tests
 
 ## Done when
