@@ -1,10 +1,10 @@
 # API contract: OpenAPI, lists, shop, and presentation-only frontends
 
-Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), and [`observability.md`](./observability.md) (ops signals; not part of the UI contract).
+Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`tax.md`](./tax.md) (checkout quote / invoice commit; not computed in the UI), [`observability.md`](./observability.md) (ops signals; not part of the UI contract), and [`licensing.md`](./licensing.md) (software billing + flags).
 
-The HTTP API is the **only** contract the UIs may use. Both Next.js apps are **presentation**. They do not invent query params, compute availability, or assemble filters/charts the spec does not declare.
+The HTTP API is the **only** contract the UIs may use. Next.js apps are **presentation**. They do not invent query params, compute availability, or assemble filters/charts the spec does not declare.
 
-**Internal** is a staff dashboard (tables, reports, charts, CRUD). **Wholesale** is e-commerce (browse, product detail, cart, checkout, order history). Do not reuse `DataTable` as the shop.
+**Internal** is a staff dashboard (tables, reports, charts, CRUD). **Wholesale** is e-commerce (browse, product detail, cart, checkout, order history). **Ops** is the licensing control plane (subscription, payment history, add-ons, flags) for the software operator and the business owner. Do not reuse `DataTable` as the shop. Do not put flag admin on internal or wholesale.
 
 **Evolvability is required.** Mid-build requirement changes must stay additive and local — see [§7](#7-api-evolution-when-requirements-change) and [`architecture.md` §2a](./architecture.md#2a-change-friendly-api-and-modules).
 
@@ -18,29 +18,37 @@ flowchart LR
   Fastify[Fastify_routes]
   SpecInt[openapi/internal.yaml]
   SpecWh[openapi/wholesale.yaml]
+  SpecOps[openapi/ops.yaml]
   OrvalInt[Orval_internal_client]
   OrvalWh[Orval_wholesale_client]
+  OrvalOps[Orval_ops_client]
   Meta[Table_meta_codegen]
   InternalApp[apps/internal]
   WholesaleApp[apps/wholesale]
+  OpsApp[apps/ops]
 
   Zod --> Fastify
   Fastify --> SpecInt
   Fastify --> SpecWh
+  Fastify --> SpecOps
   SpecInt --> OrvalInt
   SpecWh --> OrvalWh
+  SpecOps --> OrvalOps
   SpecInt --> Meta
   SpecWh --> Meta
+  SpecOps --> Meta
   OrvalInt --> InternalApp
   OrvalWh --> WholesaleApp
+  OrvalOps --> OpsApp
   Meta --> InternalApp
   Meta --> WholesaleApp
+  Meta --> OpsApp
 ```
 
 1. Every route is declared with **Zod** (query, body, params, response). That schema **is** the OpenAPI source — not a handwritten YAML file that drifts.
-2. Fastify (`@fastify/swagger` + Zod JSON Schema) **emits two specs**: internal and wholesale. Wholesale must not list staff-only operations.
-3. `pnpm gen:api` writes `openapi/internal.yaml` and `openapi/wholesale.yaml` (committed).
-4. **Orval** generates typed TanStack Query hooks + DTOs into `packages/api-client-internal` and `packages/api-client-wholesale`.
+2. Fastify (`@fastify/swagger` + Zod JSON Schema) **emits three specs**: internal, wholesale, and ops. Wholesale must not list staff-only or ops-only operations. Internal must not list flag admin.
+3. `pnpm gen:api` writes `openapi/internal.yaml`, `openapi/wholesale.yaml`, and `openapi/ops.yaml` (committed).
+4. **Orval** generates typed TanStack Query hooks + DTOs into `packages/api-client-internal`, `packages/api-client-wholesale`, and `packages/api-client-ops`.
 5. A small **table-meta generator** reads `x-table` on **internal** list operations and emits `{ columns, search, filters, sort }` for `DataTable`.
 6. Report operations (`x-chart` or a documented series DTO) feed dashboard widgets. Wholesale operations are catalog/cart/checkout — not `x-table`.
 
@@ -50,15 +58,17 @@ CI fails if committed specs do not match the running route schemas (`gen:api` + 
 
 ---
 
-## 2. Two specs, two generated clients
+## 2. Three specs, three generated clients
 
 | Artifact | Used by | Contains |
 |---|---|---|
-| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export |
-| `openapi/wholesale.yaml` | Client shop | Catalog browse/PDP, cart, checkout, own orders, own account |
+| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export, **feature bootstrap** (read-only names), **issue submit** |
+| `openapi/wholesale.yaml` | Client shop | Catalog browse/PDP, cart, checkout, own orders, own account, **feature bootstrap** |
+| `openapi/ops.yaml` | Operator / business owner | Subscription, software payment history, add-ons, flag admin, checkout/manual payment, **issue submit** |
 | `packages/api-client-internal` | `apps/internal` | Orval hooks, types |
 | `packages/api-client-wholesale` | `apps/wholesale` | Orval hooks, types |
-| `packages/ui` | Both | Buttons, money/date formatters — **no domain math** |
+| `packages/api-client-ops` | `apps/ops` | Orval hooks, types |
+| `packages/ui` | All | Buttons, money/date formatters — **no domain math** |
 | `packages/ui-internal` | Staff app only | `DataTable`, filter chrome, chart wrappers |
 
 Orval config: Fastify cookie auth (credentials: `include`), TanStack Query, a shared mutator that points at `apps/api` base URL. Do not generate a second HTTP stack.
@@ -196,10 +206,10 @@ The wholesale spec is an **ordering API**, not a cut-down admin:
 |---|---|
 | `GET /wholesale/catalog` | Browse: `q`, category, pagination, sort (shop-relevant). Response includes image URLs, wholesale price, `available`. |
 | `GET /wholesale/catalog/:id` | Product detail |
-| `GET/PATCH /wholesale/cart` | Cart lines; qty changes |
-| `POST /wholesale/checkout` | Place order (Sales confirm + Inventory allocate) |
+| `GET/PATCH /wholesale/cart` | Cart lines; qty changes; **tax quote** on the totals (`taxTotal` as integer minor units + currency). Re-quote when ship-to or lines change. |
+| `POST /wholesale/checkout` | Place order (Sales confirm + Inventory allocate). Does **not** commit tax. Requires a successful quote; fail closed if the engine is down. |
 | `GET /wholesale/orders` | Own order history (paginated) |
-| `GET /wholesale/orders/:id` | Own order detail |
+| `GET /wholesale/orders/:id` | Own order detail (includes last quote; invoiced orders include **committed** tax) |
 
 Do not generate `x-table` for these. Do not expose `/internal/reports/*` on the wholesale spec.
 
@@ -226,10 +236,11 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 
 **Allowed**
 
-- **Internal:** routes, `DataTable`, KPI cards, Recharts on **report** hooks, CRUD forms.
-- **Wholesale:** browse grid, product detail, cart, checkout, order history.
+- **Internal:** routes, `DataTable`, KPI cards, Recharts on **report** hooks, CRUD forms, hide nav from feature bootstrap, **report an issue** (not a ticket inbox).
+- **Wholesale:** browse grid, product detail, cart, checkout, order history, hide nav from feature bootstrap.
+- **Ops:** subscription, payment history, add-on purchase, operator flag overrides, **report an issue**.
 - Call Orval hooks with params that exist on the generated type.
-- Map labels, dates, money **for display** (formatting only; cents stay integers until a formatter).
+- Map labels, dates, money **for display** (formatting only; minor units stay integers until a formatter).
 - Trigger Orval blob downloads (export, PDF). Upload files via generated multipart hooks.
 
 **Forbidden**
@@ -237,11 +248,15 @@ Zod request bodies for commands are the form contract. Prefer generating form fi
 - Hand-written `fetch` / axios to `apps/api`.
 - Query params not in the generated client.
 - Computing `available` (or any stock figure) in the UI.
+- Computing tax (`price * rate`, hardcoded percents). Display `taxTotal` from the API only.
 - Charting by fetching list pages and reducing them in the browser.
 - Putting `DataTable` on the wholesale shop as the catalog.
 - Filtering a full dataset in the browser because the list endpoint “doesn’t support it yet” — add the filter to the API instead.
 - Parsing CSV/XLSX/PDF in the browser, or exporting only the current page of a table.
 - Importing `packages/*/domain` or Drizzle schemas.
+- Flag admin, complementary grants, or software checkout from `apps/internal` or `apps/wholesale`.
+- A flags SDK (LaunchDarkly, etc.) in a frontend. Bootstrap is a generated Orval hook.
+- A helpdesk or operator-platform dashboard inside this product. Issue submit is a form; the inbox is the other repo.
 
 ---
 
@@ -281,13 +296,13 @@ An API that is easy to **extend and rebuild on**: new fields, filters, commands,
 
 ### Additive-first (no global `/v1` tax)
 
-v1 does **not** version the entire surface as `/v1` vs `/v2`. Paths stay under `/internal/…` and `/wholesale/…`. Compatibility is:
+v1 does **not** version the entire surface as `/v1` vs `/v2`. Paths stay under `/internal/…`, `/wholesale/…`, and `/ops/…`. Compatibility is:
 
 1. **Additive OpenAPI** — new operations and optional fields.
 2. **Parallel operations** when a shape must break — e.g. keep `POST /internal/products` and add `POST /internal/products:import` rather than silently changing multipart meaning.
 3. **Short dual-publish** only when migrating — old and new field together for one release, then remove the old after both apps use the new one.
 
-Wholesale and internal specs version **independently**. A breaking staff-dashboard change must not force a wholesale client bump.
+Internal, wholesale, and ops specs version **independently**. A breaking staff-dashboard change must not force a wholesale or ops client bump.
 
 ### Recipe: stakeholder asks for “just one more filter”
 
@@ -321,7 +336,7 @@ Wholesale and internal specs version **independently**. A breaking staff-dashboa
 
 - [ ] Change is additive, or has a parallel route + migration plan
 - [ ] Business rule updated in **one** use case (or domain VO), not in React
-- [ ] Internal and wholesale specs only changed where that audience needs it
+- [ ] Internal, wholesale, and ops specs only changed where that audience needs it
 - [ ] `pnpm gen:api` run; committed YAML matches Zod
 - [ ] No hand-written `fetch`; no new API paradigm (GraphQL/tRPC/JSON filters)
 - [ ] Inventory/money/authz flips stay owner-gated per architecture autonomy map
@@ -334,13 +349,16 @@ Wholesale and internal specs version **independently**. A breaking staff-dashboa
 openapi/
   internal.yaml              # committed, generated
   wholesale.yaml
+  ops.yaml
 packages/
   api-client-internal/       # Orval output
   api-client-wholesale/
+  api-client-ops/
   ui/                        # shared formatters
   ui-internal/               # DataTable + chart wrappers
 apps/
   api/                       # Fastify + swagger export
   internal/                  # staff dashboard
   wholesale/                 # e-commerce shop
+  ops/                       # licensing control plane
 ```
