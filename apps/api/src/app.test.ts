@@ -1,5 +1,6 @@
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
+import { pingResponseSchema } from "./adapters/http/ping.js";
 import { InMemoryClock } from "./adapters/in-memory-clock.js";
 import { buildApp } from "./app.js";
 import { REQUEST_ID_HEADER } from "./infrastructure/request-id.js";
@@ -39,7 +40,9 @@ describe("composition root HTTP", () => {
     const app = await startApp({ clock: new InMemoryClock(at) });
     const res = await app.inject({ method: "GET", url: "/ping" });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ ok: true, at: "2026-08-22T04:00:00.000Z" });
+    const body = res.json();
+    expect(body).toEqual({ ok: true, at: "2026-08-22T04:00:00.000Z" });
+    expect(pingResponseSchema.parse(body)).toEqual(body);
   });
 
   it("echoes x-request-id and generates one when missing", async () => {
