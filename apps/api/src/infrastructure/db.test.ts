@@ -4,8 +4,25 @@ import { createPostgresDatabase, PostgresDatabase } from "./db.js";
 import { schema } from "./schema.js";
 
 describe("PostgresDatabase", () => {
-  it("registers no business tables", () => {
-    expect(schema).toEqual({});
+  it("registers catalog, purchasing, and inventory tables", () => {
+    expect(Object.keys(schema).sort()).toEqual(
+      [
+        "categories",
+        "locations",
+        "productCategories",
+        "productIdentifiers",
+        "productImages",
+        "productPackaging",
+        "products",
+        "purchaseOrderLines",
+        "purchaseOrders",
+        "reorderPolicies",
+        "stockMovements",
+        "stockSnapshots",
+        "supplierProducts",
+        "suppliers",
+      ].sort(),
+    );
   });
 
   it("fails clearly when DATABASE_URL is missing", () => {

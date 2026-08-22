@@ -11,7 +11,7 @@ if (!process.env.DATABASE_URL?.trim() && existsSync(localEnv)) {
 
 /**
  * One Kit home: this file and `out` stay in the API app.
- * No packages/db. No second drizzle.config. Empty history until later schema tickets.
+ * No packages/db. No second drizzle.config. Additive Kit history lives in `out`.
  */
 export default defineConfig({
   dialect: "postgresql",
