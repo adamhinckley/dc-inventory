@@ -16,4 +16,4 @@ Also: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md)
 
 ## Current scaffold
 
-Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest. Domain packages, Next apps, and Fastify composition root are **not** in this pass. `dev:api` and `gen:api` are stubs until later tickets.
+Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest. Fastify lives in `apps/api` with stub `/internal`, `/wholesale`, and `/ops` routes. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). Domain packages and Next apps are not in this pass.
