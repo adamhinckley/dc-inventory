@@ -64,8 +64,9 @@ describe("required CI: Compose + db:migrate + GET /ready (ADA-55)", () => {
       health.indexOf('"/health"'),
       health.indexOf('"/ready"'),
     );
+    expect(healthHandler).toContain("async () => ({ ok: true as const })");
     expect(healthHandler).not.toMatch(
-      /postgres|sql`|createPostgres|DATABASE_URL|migrate|readyCheck|database/i,
+      /sql`|createPostgres|DATABASE_URL|migrate|readyCheck/i,
     );
   });
 
