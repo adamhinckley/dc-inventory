@@ -1,6 +1,22 @@
-# DC Inventory
+# DC Inventory — context
 
-Wholesale inventory control for a multi-employee wholesale company: staff dashboard, client shop, and a thin software-licensing ops plane — one modular monolith backend, separate Next.js apps per audience.
+Wholesale inventory control: catalog, stock ledger, purchasing, wholesale shop, customers, thin AR, software licensing.
+
+This file orients agents. The contracts live in `docs/`.
+
+## Start here
+
+1. [`AGENTS.md`](./AGENTS.md) — vendor-neutral repo contract (read first)
+2. [`docs/architecture.md`](./docs/architecture.md) — module map, autonomy, work packets
+3. [`docs/invariants.md`](./docs/invariants.md) — locked rules (do not invent §18 defaults)
+4. [`docs/stack.md`](./docs/stack.md) — TypeScript, Fastify, Drizzle, Postgres, Better Auth, Next.js
+5. [`docs/api-contract.md`](./docs/api-contract.md) — OpenAPI, Orval, tables vs shop
+
+Also: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md).
+
+## Current scaffold
+
+Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Next apps and the Fastify composition root are **not** in this pass. `dev:api` and `gen:api` are stubs until later tickets.
 
 ## Language
 
