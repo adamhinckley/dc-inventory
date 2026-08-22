@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "vitest run",
-    "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm typecheck:clients",
+    "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm --filter @dc-inventory/shared-kernel typecheck && pnpm typecheck:clients",
     "dev:api": "pnpm --filter @dc-inventory/api dev",
     "gen:api": "pnpm --filter @dc-inventory/api gen:api",
     "typecheck:clients": "pnpm --filter @dc-inventory/api-client-internal typecheck && pnpm --filter @dc-inventory/api-client-wholesale typecheck && pnpm --filter @dc-inventory/api-client-ops typecheck"
