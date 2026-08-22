@@ -59,7 +59,7 @@ pnpm dev:api
 
 - `GET /health` never opens a connection (uptime monitors use this).
 - `GET /ready` runs `SELECT 1` on the same postgres.js client Drizzle uses. `200 { "ready": true }` or `503 { "ready": false, "error": "…" }`. `/ready` does **not** migrate (OP5).
-- Catalog, purchasing, inventory, identity, customers, sales, tax, and accounting tables live in [`src/infrastructure/schema/`](./src/infrastructure/schema/) and are re-exported from [`src/infrastructure/schema.ts`](./src/infrastructure/schema.ts). Later context tickets add more tables to the same Kit history. Do not create a second migrate home.
+- Catalog through operator_bridge tables (including licensing `software_payments` and the fail-soft outbox) live in [`src/infrastructure/schema/`](./src/infrastructure/schema/) and are re-exported from [`src/infrastructure/schema.ts`](./src/infrastructure/schema.ts). Do not create a second migrate home. Do not surface software payments in any UI. `IOperatorPlatform` stays no-op.
 - MinIO is in Compose so object storage is in the box. Do not wire `IFileStorage`.
 
 Unit tests inject `InMemoryDatabase`. They do not start Docker, open a network socket, or run migrate.

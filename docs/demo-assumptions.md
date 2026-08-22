@@ -20,7 +20,7 @@ Do not edit `invariants.md` §18 or tick `open-questions.md` because of this fil
 - Seed / history generator. Migrate on **empty** Postgres is the stop condition.
 - Catalog image **upload** against MinIO. MinIO boots so the box is complete; `IFileStorage` is not wired.
 - Neon / production hosting and production secrets.
-- Software-payment UI. Licensing rows may exist later; they are not shown on ops/internal/wholesale screens in Phase 0.
+- Software-payment UI. Licensing and operator_bridge rows exist after migrate; they are not shown on ops/internal/wholesale screens in Phase 0. `IOperatorPlatform` stays no-op.
 
 ## How this relates to env
 
