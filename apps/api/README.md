@@ -36,14 +36,19 @@ Composition is explicit — no Nest-style container.
 
 ## Local Postgres
 
-The API **will not listen** without `DATABASE_URL`. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. Copy [`.env.example`](./.env.example) to `.env` in this folder (`apps/api/.env`); `pnpm dev:api` loads that file if `DATABASE_URL` is not already in the environment.
-
-Example:
+From the **repo root**, start Compose (Postgres 16 + MinIO placeholders), copy env examples, migrate, then boot the API:
 
 ```bash
+docker compose up -d --wait
+cp .env.example .env
 cp apps/api/.env.example apps/api/.env
+pnpm db:migrate
 pnpm dev:api
 ```
+
+`pnpm db:migrate` is the only migrate entrypoint. It runs `drizzle-kit migrate` in this app. There is no `packages/db` and no second Kit config.
+
+The API **will not listen** without `DATABASE_URL`. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. `pnpm dev:api` loads `apps/api/.env` if `DATABASE_URL` is not already in the environment.
 
 Or export it yourself:
 
@@ -52,20 +57,12 @@ export DATABASE_URL=postgres://postgres:postgres@localhost:5432/dc_inventory
 pnpm dev:api
 ```
 
-A local server (Homebrew, Postgres.app, or Docker) is enough. One-shot Docker:
-
-```bash
-docker run --rm -p 5432:5432 \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=dc_inventory \
-  postgres:16
-```
-
 - `GET /health` never opens a connection (uptime monitors use this).
-- `GET /ready` runs `SELECT 1` on the same postgres.js client Drizzle uses. `200 { "ready": true }` or `503 { "ready": false, "error": "…" }`.
-- There are **no business tables** yet. [`src/infrastructure/schema.ts`](./src/infrastructure/schema.ts) is empty; [`drizzle/migrations`](./drizzle/migrations) is reserved for later context tickets. Do not add Catalog/Inventory schemas here.
+- `GET /ready` runs `SELECT 1` on the same postgres.js client Drizzle uses. `200 { "ready": true }` or `503 { "ready": false, "error": "…" }`. `/ready` does **not** migrate (OP5).
+- There are **no business tables** yet. [`src/infrastructure/schema.ts`](./src/infrastructure/schema.ts) is empty; [`drizzle/migrations`](./drizzle/migrations) is an empty Kit journal for later context tickets. Do not add Catalog/Inventory schemas here.
+- MinIO is in Compose so object storage is in the box. Do not wire `IFileStorage`.
 
-Unit tests inject `InMemoryDatabase`. They do not start Docker or read `.env`.
+Unit tests inject `InMemoryDatabase`. They do not start Docker, open a network socket, or run migrate.
 
 ## Golden path (copy this later)
 
