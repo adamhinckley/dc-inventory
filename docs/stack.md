@@ -4,11 +4,12 @@ Companion to [`architecture.md`](./architecture.md). That document is the module
 
 UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Internal dashboard color, type, and dark opt-in tokens are in [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md). Tax quote/commit and the hosted engine are in [`tax.md`](./tax.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md). Software subscription is [`licensing.md`](./licensing.md). The door to the developer’s other monorepo is [`operator-bridge.md`](./operator-bridge.md).
 
-Choices optimize for three things, in order:
+Choices optimize for four things, in order:
 
 1. **Correctness** for inventory, money, and **distinct audiences** (staff, wholesale clients, ops)
-2. **Agent accuracy** — boring, typed, heavily documented tools agents implement without inventing a new style
-3. **Solo software ops** — one database, managed hosting, no extra runtime for the builder to babysit
+2. **Changeability** — mid-build requirement flips stay local (use cases + additive OpenAPI); see [`architecture.md` §2a](./architecture.md#2a-change-friendly-api-and-modules) and [`api-contract.md` §7](./api-contract.md#7-api-evolution-when-requirements-change)
+3. **Agent accuracy** — boring, typed, heavily documented tools agents implement without inventing a new style
+4. **Solo software ops** — one database, managed hosting, no extra runtime for the builder to babysit
 
 ---
 

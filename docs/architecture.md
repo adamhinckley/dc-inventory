@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon White + opt-in g100 tokens, Tailwind v4) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports, **API evolution**) · [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon White + opt-in g100 tokens, Tailwind v4) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative) · [`open-questions.md`](./open-questions.md) (stakeholder questions) · [`surfaces/`](./surfaces/) (dashboard, shop, owner metrics) · [`future-concepts/`](./future-concepts/) (later capabilities that must stay additive).
 
 ---
 
@@ -46,7 +46,73 @@ One backend. Three HTTP adapters (`/internal`, `/wholesale`, `/ops`). Shared use
 
 **Two products plus ops, one backend.** Shared use cases; different controllers, auth, DTOs, and UX. Internal is a dashboard; wholesale is a shop; ops is licensing/flags for the operator and the business owner only.
 
+**Requirements will change mid-build.** Stakeholders will reverse a rule, add a field, or invent a screen halfway through. The architecture exists so that kind of change is **local and additive**, not a rewrite. See [§2a](#2a-change-friendly-api-and-modules). HTTP evolution rules live in [`api-contract.md`](./api-contract.md#7-api-evolution-when-requirements-change).
+
 **Complex availability is a projection.** Stock on hand, stock on order, allocated-to-clients, and available are **not** independent columns that get mutated in three places. They are derived from a stock ledger. See [§6](#6-inventory-stock-ledger-not-a-qty-column).
+
+---
+
+## 2a. Change-friendly API and modules
+
+This is a **hard requirement**, not a nice-to-have: mid-build mind-changes must not force cascading rewrites across domain, database, and both frontends.
+
+### What “easy to change” means here
+
+| Kind of stakeholder flip | Expected blast radius |
+|---|---|
+| New list column / filter / sort | Zod + `x-table` + repository `WHERE` + `pnpm gen:api` — UI regenerates |
+| New CRUD field on a form | Optional Zod field + use case mapping + migration if persisted — same Orval path |
+| New screen / report | New query or command use case + one HTTP route + Orval hook — no shared “god” endpoint |
+| Business rule change (e.g. invoice on ship vs confirm) | One use case + its unit tests; adapters only if the wire shape must change |
+| Policy change on availability (e.g. sell against inbound later) | New **projection rule** on the Inventory read model — ledger movement types stay |
+| Wholesale-only vs staff-only behavior | DTO mapping in the matching HTTP adapter — **do not fork** the use case |
+
+If a change requires editing three contexts, both OpenAPI specs, and hand-written `fetch` in React, the previous design was wrong — fix the seam, do not paper over it.
+
+### Seams that absorb volatility
+
+1. **Use cases are the unit of change.** Features are `application/` classes with typed request/response objects. Adding behavior is usually a new use case (or a narrow change to one), not a new framework module or a new microservice.
+2. **Ports hide infrastructure.** Replacing S3 with local disk, or Postgres list SQL with a better query, does not touch domain entities. Agents implement adapters; owners protect ports and invariants.
+3. **HTTP is a thin driving adapter.** Controllers parse → call one use case → map DTOs. When the stakeholder wants a different JSON shape, change the Zod schema and mapper — keep the use case stable when the business meaning is unchanged.
+4. **Three OpenAPI specs.** Internal, wholesale, and ops evolve independently. A staff-table whim must not spill into the shop or ops clients (and vice versa).
+5. **Generated clients only.** Orval + `x-table` / report DTOs mean the UI cannot invent a parallel contract. After `pnpm gen:api`, the apps pick up the new surface without hand-rolled API layers that drift.
+6. **Snapshots and IDs across contexts.** `ProductSnapshot`, `CustomerId`, and Anti-Corruption ports mean Catalog or Customers can gain fields without rewriting historical orders or Sales aggregates.
+7. **Ledger vs projection.** Inventory quantities stay movement-sourced. Display and sellability rules can change as read-model policy without mutating “qty columns” in three places.
+8. **In-memory unit tests.** When a rule flips, the agent (or owner) updates failing tests first, then the use case. Refactors stay safe without Docker or a staging rewrite.
+
+```mermaid
+flowchart TB
+  Stakeholder[Stakeholder_mind_change]
+  subgraph localize [Change stays local]
+    UC[Use_case_or_new_use_case]
+    Zod[Zod_DTO_plus_OpenAPI]
+    Port[Port_unchanged_or_narrow_extend]
+    UI[Orval_regen_UI]
+  end
+  Stakeholder --> UC
+  UC --> Zod
+  UC --> Port
+  Zod --> UI
+```
+
+### Rules when the mind changes
+
+- **Prefer additive.** New optional response fields, new query params, new routes. Do not rename or remove fields that either generated client still uses.
+- **Change the rule in one place.** Business meaning lives in the use case (or domain entity/VO). Controllers and React components do not re-implement the new rule “just for this screen.”
+- **Extend ports narrowly.** Add a method or optional field to a port when needed; do not replace a port with a different abstraction mid-slice unless tests are rewritten with the owner.
+- **Do not grow the shared kernel** to paper over a change. Copy a snapshot or add a port.
+- **Do not introduce a second API style** (GraphQL, tRPC, JSON `filters` blobs, ad-hoc admin RPC) because the current list protocol feels slow to extend — extend Zod + `x-table` instead. See [`api-contract.md`](./api-contract.md).
+- **Defer irreversible coupling.** Feature flags / dual-path behavior are allowed only for short migrations (e.g. old and new response field). They are not a substitute for additive OpenAPI.
+
+### What agents may do when requirements shift
+
+| Autonomy | Allowed response to a mid-build change |
+|---|---|
+| **High** | Add optional fields, list filters, Catalog/Customers CRUD shape changes, new report endpoint wired to existing read models, DTO-only differences between internal and wholesale |
+| **Medium** | New Purchasing/Sales commands that call existing Inventory/Customers ports; owner glances at domain diffs |
+| **Low / gated** | Inventory ledger math, allocation failure policy, payment/AR meaning, authz/`customerId` binding, anything that redefines money or stock invariants |
+
+Work packets stay the same shape: allowed paths, existing ports/tests, stop when green. A stakeholder flip is a **new packet** (or an updated failing test), not permission to “clean up” unrelated contexts.
 
 ---
 
@@ -429,7 +495,7 @@ Accounting is **AR only** — money **wholesale customers owe the company**:
 - Payments applied to invoices (applied to the invoice **total**, which includes tax).
 - Customer balance is a projection of invoices minus payments, optionally also held as a snapshot on the customer read side via events.
 
-Out of scope for Accounting: general ledger, inventory asset valuation, AP bills from POs, multi-currency beyond storing `Money.currency`, tax **return filing**, and **software subscription** (that is [`licensing.md`](./licensing.md)).
+Out of scope for Accounting: general ledger, inventory asset valuation, AP bills from POs, multi-currency beyond storing `Money.currency`, tax **return filing**, and **software subscription** (that is [`licensing.md`](./licensing.md)). Tax **calculation** is v1 via [`tax.md`](./tax.md) — port + snapshot, not a rate on the customer or in the shop client.
 
 A PO is a **purchasing document**, not a journal entry. v1 does not compute use tax on POs. A Stripe charge for the app itself is a **Licensing** `SoftwarePayment`, not an Accounting payment.
 
@@ -544,6 +610,9 @@ docs/
   operator-bridge.md       # door to the developer’s other monorepo
   linear.md                # all Cursor/Linear projects, issues, and sub-initiatives → DC Inventory initiative
   work-dashboard-design-spec.md  # Carbon White + opt-in g100, Tailwind v4 tokens (internal UI)
+  open-questions.md        # stakeholder questions (Slack copy)
+  surfaces/                # dashboard, wholesale shop, owner insights
+  future-concepts/         # not v1; must stay additive (multi-organization, …)
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
@@ -690,8 +759,9 @@ Do not sneak these into v1 modules:
 - LaunchDarkly (or similar) as a **required** runtime — allowed later only as an `IFeatures` adapter
 - Stripe Connect / marketplace splits; charging wholesale *customers’* cards through this app in v1
 - Feature flags that disable inventory ATP, credit checks, or session `customerId` binding
+- A second wholesale **Organization** on the same site (self-serve signup, `OrganizationId` on rows) — [`future-concepts/multi-organization.md`](./future-concepts/multi-organization.md)
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain. `OrganizationId` should exist the same way (v1 = one implicit org) so a second company is additive — do not implement signup or a database-per-tenant in v1.
 
 ---
 
@@ -711,6 +781,8 @@ Use this when reviewing an agent PR:
 - [ ] Sales uses `ProductSnapshot` / `CustomerId`, not foreign aggregates
 - [ ] New use cases have an in-memory unit test
 - [ ] Slice stayed inside the allowed context paths
+- [ ] Requirement / API changes are additive or have a parallel-route migration — no silent breaks, no second API paradigm ([§2a](#2a-change-friendly-api-and-modules), [`api-contract.md` §7](./api-contract.md#7-api-evolution-when-requirements-change))
+- [ ] Business-rule flips landed in a use case (or domain VO), not only in a controller or React page
 - [ ] No new observability vendors or log/metrics microservices ([`observability.md`](./observability.md))
 - [ ] Software payments and entitlements stay in Licensing, not Accounting or Catalog
 - [ ] New paid capability added a `FeatureName` + `IFeatures` gate; flags do not skip ATP/authz

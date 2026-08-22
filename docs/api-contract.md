@@ -6,6 +6,8 @@ The HTTP API is the **only** contract the UIs may use. Next.js apps are **presen
 
 **Internal** is a staff dashboard (tables, reports, charts, CRUD). **Wholesale** is e-commerce (browse, product detail, cart, checkout, order history). **Ops** is the licensing control plane (subscription, payment history, add-ons, flags) for the software operator and the business owner. Do not reuse `DataTable` as the shop. Do not put flag admin on internal or wholesale.
 
+**Evolvability is required.** Mid-build requirement changes must stay additive and local — see [§7](#7-api-evolution-when-requirements-change) and [`architecture.md` §2a](./architecture.md#2a-change-friendly-api-and-modules).
+
 ---
 
 ## 1. Contract flow
@@ -272,7 +274,76 @@ Do not introduce GraphQL, tRPC, a generic `?filter=JSON` query language, Elastic
 
 ---
 
-## 7. Folder map (contract artifacts)
+## 7. API evolution (when requirements change)
+
+Stakeholders will change their mind mid-build. The HTTP contract is designed so those changes are **routine**, not architectural events. Module-level seams are in [`architecture.md` §2a](./architecture.md#2a-change-friendly-api-and-modules).
+
+### Design goal
+
+An API that is easy to **extend and rebuild on**: new fields, filters, commands, and reports land as additive OpenAPI changes; business-rule flips stay in use cases; frontends only regenerate clients.
+
+### Evolution policy (v1)
+
+| Change | How to do it | Do not |
+|---|---|---|
+| Add a response field | Optional (or always-present with a safe default) on the Zod response; regenerate both specs/clients as needed | Remove or rename an existing field the same day |
+| Add a list filter / column / sort | New typed query param + `x-table` + repository support + `pnpm gen:api` | Hardcode a filter in React, or send a JSON `filters` blob |
+| Add a command | New `POST`/`PATCH`/`DELETE` with its own Zod body; one use case | Overload an existing endpoint with a `mode` / `action` string |
+| Add a report / chart | New `GET /internal/reports/…` + series DTO | Aggregate table pages in the browser |
+| Change DTO shape for one audience | Map in that audience’s HTTP adapter; keep the use case | Fork `PlaceOrder` into staff vs client variants with duplicated rules |
+| Change a business rule | Update use case + unit tests; change Zod only if the wire contract must change | Patch the rule only in a controller or a single page |
+| Breaking rename / remove | Add the replacement; migrate Orval call sites; delete the old field/route in a follow-up when unused | `/v2` of the whole API for a single field rename |
+
+### Additive-first (no global `/v1` tax)
+
+v1 does **not** version the entire surface as `/v1` vs `/v2`. Paths stay under `/internal/…`, `/wholesale/…`, and `/ops/…`. Compatibility is:
+
+1. **Additive OpenAPI** — new operations and optional fields.
+2. **Parallel operations** when a shape must break — e.g. keep `POST /internal/products` and add `POST /internal/products:import` rather than silently changing multipart meaning.
+3. **Short dual-publish** only when migrating — old and new field together for one release, then remove the old after both apps use the new one.
+
+Internal, wholesale, and ops specs version **independently**. A breaking staff-dashboard change must not force a wholesale or ops client bump.
+
+### Recipe: stakeholder asks for “just one more filter”
+
+```
+1. Zod query: add typed param (enum / uuid / date / boolean)
+2. x-table.filters: add control + param name
+3. List use case + repository: honor the filter (in-memory test first)
+4. pnpm gen:api  → commit openapi/*.yaml
+5. Internal page: regenerated meta + hook — no custom filter bar
+```
+
+### Recipe: stakeholder flips a rule (“invoice on ship, not on confirm”)
+
+```
+1. Owner/agent updates the failing unit test for the Accounting (or Sales) use case
+2. Change the use case only
+3. Touch HTTP Zod only if request/response meaning changes
+4. Do not add a frontend-only branch that invents invoice timing
+```
+
+### Recipe: stakeholder wants a different JSON name on the shop only
+
+```
+1. Keep the shared use case response as domain/application types
+2. Map field names in the wholesale controller / presenter
+3. Regenerate wholesale OpenAPI + Orval client
+4. Leave internal DTO alone unless staff asked too
+```
+
+### Contract checklist for evolvability
+
+- [ ] Change is additive, or has a parallel route + migration plan
+- [ ] Business rule updated in **one** use case (or domain VO), not in React
+- [ ] Internal, wholesale, and ops specs only changed where that audience needs it
+- [ ] `pnpm gen:api` run; committed YAML matches Zod
+- [ ] No hand-written `fetch`; no new API paradigm (GraphQL/tRPC/JSON filters)
+- [ ] Inventory/money/authz flips stay owner-gated per architecture autonomy map
+
+---
+
+## 8. Folder map (contract artifacts)
 
 ```
 openapi/
