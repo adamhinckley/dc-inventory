@@ -1,6 +1,7 @@
 /**
  * Drizzle table models — one Postgres schema per bounded context.
- * Kit home stays in the API app. ADA-52 adds catalog / purchasing / inventory.
+ * Kit home stays in the API app. ADA-52 catalog / purchasing / inventory.
+ * ADA-53 identity / customers / sales / tax / accounting.
  */
 export {
   catalog,
@@ -28,6 +29,37 @@ export {
   stockMovements,
   stockSnapshots,
 } from "./schema/inventory.js";
+export {
+  actorType,
+  identity,
+  opsUserKind,
+  opsUsers,
+  sessions,
+  staffUsers,
+  wholesaleUsers,
+} from "./schema/identity.js";
+export {
+  contacts,
+  customers,
+  customersSchema,
+  exemptionCertificates,
+  shipTos,
+} from "./schema/customers.js";
+export { orderLines, orders, orderStatus, sales } from "./schema/sales.js";
+export {
+  tax,
+  taxCommitLines,
+  taxCommits,
+  taxCommitStatus,
+} from "./schema/tax.js";
+export {
+  accounting,
+  invoiceStatus,
+  invoices,
+  invoiceTaxLines,
+  paymentApplications,
+  payments,
+} from "./schema/accounting.js";
 
 import {
   categories,
@@ -49,6 +81,26 @@ import {
   stockMovements,
   stockSnapshots,
 } from "./schema/inventory.js";
+import {
+  opsUsers,
+  sessions,
+  staffUsers,
+  wholesaleUsers,
+} from "./schema/identity.js";
+import {
+  contacts,
+  customers,
+  exemptionCertificates,
+  shipTos,
+} from "./schema/customers.js";
+import { orderLines, orders } from "./schema/sales.js";
+import { taxCommitLines, taxCommits } from "./schema/tax.js";
+import {
+  invoices,
+  invoiceTaxLines,
+  paymentApplications,
+  payments,
+} from "./schema/accounting.js";
 
 export const schema = {
   products,
@@ -65,4 +117,20 @@ export const schema = {
   reorderPolicies,
   stockMovements,
   stockSnapshots,
+  opsUsers,
+  staffUsers,
+  wholesaleUsers,
+  sessions,
+  customers,
+  contacts,
+  shipTos,
+  exemptionCertificates,
+  orders,
+  orderLines,
+  taxCommits,
+  taxCommitLines,
+  invoices,
+  invoiceTaxLines,
+  payments,
+  paymentApplications,
 };
