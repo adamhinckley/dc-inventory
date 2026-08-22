@@ -16,7 +16,7 @@ Also: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md)
 
 ## Current scaffold
 
-Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, Node >=24, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Fastify lives in `apps/api`: composition root + DI in `apps/api/src/infrastructure`, Drizzle + postgres.js (`DATABASE_URL`, no business schemas), `GET /health` (no DB) + `GET /ready` (`SELECT 1`), Pino JSON + `requestId`, Ping golden path, and stub `/internal`, `/wholesale`, and `/ops` mounts. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). Next.js apps are not in this pass.
+Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, Node >=24, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Fastify lives in `apps/api`: composition root + DI in `apps/api/src/infrastructure`, Drizzle + postgres.js (`DATABASE_URL`, no business schemas), `GET /health` (no DB) + `GET /ready` (`SELECT 1`), Pino JSON + `requestId`, Ping golden path, and stub `/internal`, `/wholesale`, and `/ops` mounts. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). `apps/wholesale` is an App Router shop shell (Orval hooks, example product list); Internal and Ops UIs are not in this pass.
 
 ## Language
 

@@ -70,6 +70,39 @@ export const emptyCatalogList = {
   total: 0,
 };
 
+/** Stub rows so the wholesale shop can render an example product-card list. */
+export const stubCatalogList = {
+  items: [
+    {
+      id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      name: "Galvanized hex bolt",
+      imageUrl: null,
+      wholesalePrice: 1250,
+      currency: "USD",
+      available: 48,
+    },
+    {
+      id: "2f1a0b8c-3d4e-4f5a-8b6c-7d8e9f0a1b2c",
+      name: "Stainless washer pack",
+      imageUrl: null,
+      wholesalePrice: 475,
+      currency: "USD",
+      available: 120,
+    },
+    {
+      id: "0a1b2c3d-4e5f-4678-89ab-cdef01234567",
+      name: "Nylon lock nut",
+      imageUrl: null,
+      wholesalePrice: 89,
+      currency: "USD",
+      available: 0,
+    },
+  ],
+  page: 1,
+  pageSize: 25,
+  total: 3,
+} satisfies z.infer<typeof catalogListResponseSchema>;
+
 export const stubOpsSubscription = {
   status: "inactive" as const,
   plan: null,
