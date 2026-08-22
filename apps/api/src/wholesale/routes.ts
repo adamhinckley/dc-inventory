@@ -3,7 +3,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   catalogListResponseSchema,
   catalogQuerySchema,
-  emptyCatalogList,
+  stubCatalogList,
 } from "../schemas.js";
 
 function typed(app: FastifyInstance) {
@@ -22,6 +22,6 @@ export async function wholesaleRoutes(app: FastifyInstance): Promise<void> {
       querystring: catalogQuerySchema,
       response: { 200: catalogListResponseSchema },
     },
-    handler: async () => emptyCatalogList,
+    handler: async () => stubCatalogList,
   });
 }

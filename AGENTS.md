@@ -30,6 +30,7 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 | `pnpm test` | Vitest |
 | `pnpm lint` | Typecheck (`tsc --noEmit` plus API, shared-kernel, and client packages) |
 | `pnpm dev:api` | API dev server (`apps/api`) |
+| `pnpm dev:wholesale` | Wholesale shop (`apps/wholesale`) |
 | `pnpm gen:api` | Export OpenAPI YAML + Orval clients |
 
 ## Hard rules
