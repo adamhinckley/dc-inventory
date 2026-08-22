@@ -19,7 +19,7 @@ Agents and CI run these **verbatim** from the repo root:
 
 Requires **Node >=24**. Vite 7 and the rest of the root toolchain support that range.
 
-Local demo database: `docker compose up -d` (Postgres 16 + MinIO, placeholder credentials). Copy [`.env.example`](./.env.example) and [`apps/api/.env.example`](./apps/api/.env.example). Then `pnpm db:migrate` and `pnpm dev:api`. `GET /ready` is `SELECT 1`, not migrate. Demo-only locks: [`docs/demo-assumptions.md`](./docs/demo-assumptions.md) — not [`docs/invariants.md`](./docs/invariants.md) §18.
+Local demo database: `docker compose up -d --wait` (Postgres 16 + MinIO, placeholder credentials). Copy [`.env.example`](./.env.example) and [`apps/api/.env.example`](./apps/api/.env.example). Then `pnpm db:migrate` and `pnpm dev:api`. `GET /ready` is `SELECT 1`, not migrate. Demo-only locks: [`docs/demo-assumptions.md`](./docs/demo-assumptions.md) — not [`docs/invariants.md`](./docs/invariants.md) §18.
 
 ```bash
 pnpm install

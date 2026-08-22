@@ -39,7 +39,7 @@ Composition is explicit — no Nest-style container.
 From the **repo root**, start Compose (Postgres 16 + MinIO placeholders), copy env examples, migrate, then boot the API:
 
 ```bash
-docker compose up -d
+docker compose up -d --wait
 cp .env.example .env
 cp apps/api/.env.example apps/api/.env
 pnpm db:migrate
