@@ -14,3 +14,14 @@ Do not create a Cursor/Linear project, issue, or sub-initiative for `dc-inventor
 4. **Team.** Create issues on the **Adam Hinckley** team unless a ticket says otherwise.
 
 Existing work on the initiative (for example the **Database mapping** project) is the default home for related issues. Create a new project or sub-initiative on DC Inventory only when the work is a distinct outcome, not a one-off ticket.
+
+## Scaffold (architecture §13 step 1)
+
+Intended as a **Scaffold** sub-initiative under DC Inventory. The workspace plan does not currently allow nested initiatives, so these projects attach **directly** to DC Inventory instead:
+
+| Project | Role |
+|---|---|
+| [Scaffold — Backend](https://linear.app/adamhinckley/project/scaffold-backend-43a46702b7e7) | Monorepo root, shared kernel, Fastify, OpenAPI/Orval, Drizzle wiring |
+| [Scaffold — Frontend](https://linear.app/adamhinckley/project/scaffold-frontend-ebcc04a0da47) | `apps/internal` + `apps/wholesale`, UI packages, Storybook |
+
+Frontend depends on Backend. Decisions: `CONTEXT.md`, `docs/adr/0001`–`0005`. When nested initiatives become available, re-parent these projects under a Scaffold sub-initiative without renaming them.
