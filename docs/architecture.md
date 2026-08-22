@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports, **API evolution**) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports, **API evolution**) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative) · [`open-questions.md`](./open-questions.md) (stakeholder questions) · [`surfaces/`](./surfaces/) (dashboard, shop, owner metrics) · [`future-concepts/`](./future-concepts/) (later capabilities that must stay additive).
 
 ---
 
@@ -493,7 +493,7 @@ Accounting is **AR only** — money **wholesale customers owe the company**:
 - Payments applied to invoices (applied to the invoice **total**, which includes tax).
 - Customer balance is a projection of invoices minus payments, optionally also held as a snapshot on the customer read side via events.
 
-Out of scope for Accounting: general ledger, inventory asset valuation, AP bills from POs, multi-currency beyond storing `Money.currency`, tax **return filing**, and **software subscription** (that is [`licensing.md`](./licensing.md)).
+Out of scope for Accounting: general ledger, inventory asset valuation, AP bills from POs, multi-currency beyond storing `Money.currency`, tax **return filing**, and **software subscription** (that is [`licensing.md`](./licensing.md)). Tax **calculation** is v1 via [`tax.md`](./tax.md) — port + snapshot, not a rate on the customer or in the shop client.
 
 A PO is a **purchasing document**, not a journal entry. v1 does not compute use tax on POs. A Stripe charge for the app itself is a **Licensing** `SoftwarePayment`, not an Accounting payment.
 
@@ -607,6 +607,9 @@ docs/
   licensing.md             # software subscription, add-ons, flags, ops dashboard
   operator-bridge.md       # door to the developer’s other monorepo
   linear.md                # all Cursor/Linear projects, issues, and sub-initiatives → DC Inventory initiative
+  open-questions.md        # stakeholder questions (Slack copy)
+  surfaces/                # dashboard, wholesale shop, owner insights
+  future-concepts/         # not v1; must stay additive (multi-organization, …)
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
@@ -753,8 +756,9 @@ Do not sneak these into v1 modules:
 - LaunchDarkly (or similar) as a **required** runtime — allowed later only as an `IFeatures` adapter
 - Stripe Connect / marketplace splits; charging wholesale *customers’* cards through this app in v1
 - Feature flags that disable inventory ATP, credit checks, or session `customerId` binding
+- A second wholesale **Organization** on the same site (self-serve signup, `OrganizationId` on rows) — [`future-concepts/multi-organization.md`](./future-concepts/multi-organization.md)
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain. `OrganizationId` should exist the same way (v1 = one implicit org) so a second company is additive — do not implement signup or a database-per-tenant in v1.
 
 ---
 
