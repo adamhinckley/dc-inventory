@@ -88,6 +88,46 @@ importers:
         specifier: ^4.23.12
         version: 4.23.12
 
+  apps/internal:
+    dependencies:
+      '@dc-inventory/api-client-internal':
+        specifier: workspace:*
+        version: link:../../packages/api-client-internal
+      '@dc-inventory/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@dc-inventory/ui-internal':
+        specifier: workspace:*
+        version: link:../../packages/ui-internal
+      '@tanstack/react-query':
+        specifier: ^5.101.4
+        version: 5.101.4(react@19.2.8)
+      next:
+        specifier: ^15.5.2
+        version: 15.5.23(@babel/core@7.29.7)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@tailwindcss/postcss':
+        specifier: ^4.1.12
+        version: 4.3.3
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.4(@types/react@19.2.18)
+      tailwindcss:
+        specifier: ^4.1.12
+        version: 4.3.3
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
   apps/wholesale:
     dependencies:
       '@dc-inventory/api-client-wholesale':
