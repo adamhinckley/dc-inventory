@@ -613,6 +613,7 @@ docs/
   open-questions.md        # stakeholder questions (Slack copy)
   surfaces/                # dashboard, wholesale shop, owner insights
   future-concepts/         # not v1; must stay additive (multi-organization, …)
+  wayfinder/               # research + grilling locks for implementation specs (not product law except where stack.md cites them)
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
@@ -622,7 +623,7 @@ openapi/
   ops.yaml                 # licensing control plane
 
 apps/
-  api/                     # Fastify composition root + swagger export
+  api/                     # Fastify composition root + swagger export + the only Drizzle Kit / migrate history
   internal/                # staff frontend — Orval client only
   wholesale/               # e-commerce shop — Orval client only
   ops/                     # operator + business owner — licensing UI; extractable later

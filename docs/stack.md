@@ -177,7 +177,16 @@ Cross-context data is copied as IDs/snapshots at write time, not queried via cro
 
 ### Migrations
 
-Drizzle Kit (or equivalent) migrations in version control. Agents may add a migration **for their context’s schema only**. Inventory snapshot/ledger migrations are owner-gated.
+**One home:** Drizzle Kit lives in `apps/api`. Do not add a second `drizzle.config.ts`, a second `drizzle/migrations` folder, or a `packages/db` / `packages/persistence` package.
+
+| Role | Path |
+|---|---|
+| Kit config | `apps/api/drizzle.config.ts` |
+| Schema barrel | `apps/api/src/infrastructure/schema.ts` |
+| Migrate history | `apps/api/drizzle/migrations` |
+| Apply command | Root `pnpm db:migrate` (Phase 0 adds) → `@dc-inventory/api` `drizzle-kit migrate` |
+
+Agents may add a migration **for their context’s schema only**, still emitted into that same `out` path. Inventory snapshot/ledger migrations are owner-gated. Decision: [`wayfinder/grilling/drizzle-kit-home-and-db-migrate.md`](./wayfinder/grilling/drizzle-kit-home-and-db-migrate.md) ([ADA-45](https://linear.app/adamhinckley/issue/ADA-45/drizzle-kit-home-and-dbmigrate)).
 
 ---
 
