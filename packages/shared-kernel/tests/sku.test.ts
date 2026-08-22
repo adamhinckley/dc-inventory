@@ -13,6 +13,12 @@ describe("Sku", () => {
     expect(() => Sku.parse("   ")).toThrow(InvalidSkuError);
   });
 
+  it("accepts the max length and rejects one character over", () => {
+    const max = "A".repeat(64);
+    expect(Sku.parse(max).value).toBe(max);
+    expect(() => Sku.parse(`${max}X`)).toThrow(InvalidSkuError);
+  });
+
   it("rejects leading or trailing whitespace (no silent identity change)", () => {
     expect(() => Sku.parse(" WIDGET-1")).toThrow(InvalidSkuError);
     expect(() => Sku.parse("WIDGET-1 ")).toThrow(InvalidSkuError);

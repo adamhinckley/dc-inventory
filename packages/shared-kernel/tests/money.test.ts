@@ -83,6 +83,9 @@ describe("Money arithmetic", () => {
     expect(() => usd.add(eur)).toThrow(CurrencyMismatchError);
     expect(() => usd.subtract(eur)).toThrow(CurrencyMismatchError);
     expect(() => usd.compare(eur)).toThrow(CurrencyMismatchError);
+    expect(() => usd.add(eur)).toThrow(
+      /Mixed-currency arithmetic is not supported in v1/,
+    );
   });
 
   it("multiplies by an integer quantity", () => {

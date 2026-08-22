@@ -1,7 +1,9 @@
 import { InvalidSkuError } from "./errors.js";
 
 const MAX_SKU_LENGTH = 64;
-const SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+const SKU_PATTERN = new RegExp(
+  `^[A-Za-z0-9][A-Za-z0-9._:-]{0,${String(MAX_SKU_LENGTH - 1)}}$`,
+);
 
 /**
  * Stock-keeping identity. Not a product variant model — SKU is the v1 grain.

@@ -10,7 +10,9 @@ export class CurrencyMismatchError extends Error {
   override readonly name = "CurrencyMismatchError";
 
   constructor(left: string, right: string) {
-    super(`Currency mismatch: ${left} vs ${right}. Mixed-currency arithmetic is not v1.`);
+    super(
+      `Currency mismatch: ${left} vs ${right}. Mixed-currency arithmetic is not supported in v1.`,
+    );
   }
 }
 
