@@ -9,12 +9,18 @@ export function DashboardNav() {
 
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-border-subtle bg-layer-01">
-      <div className="border-b border-border-subtle px-5 py-5">
+      <div className="flex items-start justify-between gap-2 border-b border-border-subtle px-5 py-5">
         <Link href="/catalog" className="flex flex-col">
           <span className="text-base font-semibold text-primary">
             DC Internal
           </span>
           <span className="text-sm text-secondary">Staff dashboard</span>
+        </Link>
+        <Link
+          href="/login"
+          className="shrink-0 text-sm text-link hover:text-link-hover"
+        >
+          Sign in
         </Link>
       </div>
       <nav aria-label="Dashboard" className="flex flex-1 flex-col gap-1 p-3">
@@ -36,14 +42,6 @@ export function DashboardNav() {
           );
         })}
       </nav>
-      <div className="border-t border-border-subtle p-3">
-        <Link
-          href="/login"
-          className="block rounded-sm px-3 py-2 text-sm text-link hover:text-link-hover"
-        >
-          Sign in
-        </Link>
-      </div>
     </aside>
   );
 }
