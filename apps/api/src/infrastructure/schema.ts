@@ -2,6 +2,7 @@
  * Drizzle table models — one Postgres schema per bounded context.
  * Kit home stays in the API app. ADA-52 catalog / purchasing / inventory.
  * ADA-53 identity / customers / sales / tax / accounting.
+ * ADA-54 licensing / operator_bridge.
  */
 export {
   catalog,
@@ -60,6 +61,28 @@ export {
   paymentApplications,
   payments,
 } from "./schema/accounting.js";
+export {
+  addOnGrantSource,
+  addOnGrants,
+  flagOverrideDirection,
+  flagOverrides,
+  licensing,
+  softwarePaymentKind,
+  softwarePaymentProvider,
+  softwarePayments,
+  softwarePaymentStatus,
+  subscriptionStatus,
+  subscriptions,
+} from "./schema/licensing.js";
+export {
+  issueActorType,
+  issueReports,
+  issueReportStatus,
+  issueSurface,
+  operatorBridge,
+  operatorOutbox,
+  operatorOutboxKind,
+} from "./schema/operator-bridge.js";
 
 import {
   categories,
@@ -101,6 +124,13 @@ import {
   paymentApplications,
   payments,
 } from "./schema/accounting.js";
+import {
+  addOnGrants,
+  flagOverrides,
+  softwarePayments,
+  subscriptions,
+} from "./schema/licensing.js";
+import { issueReports, operatorOutbox } from "./schema/operator-bridge.js";
 
 export const schema = {
   products,
@@ -133,4 +163,10 @@ export const schema = {
   invoiceTaxLines,
   payments,
   paymentApplications,
+  subscriptions,
+  addOnGrants,
+  flagOverrides,
+  softwarePayments,
+  issueReports,
+  operatorOutbox,
 };

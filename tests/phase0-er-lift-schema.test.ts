@@ -140,7 +140,12 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     expect(sql).not.toMatch(/CREATE TABLE "sales"\."carts"/);
     expect(sql).not.toMatch(/document_number/);
     expect(sql).not.toMatch(/ship_to_id/);
-    expect(sql).not.toMatch(/jsonb/i);
+    const salesTables = [
+      ...sql.matchAll(/CREATE TABLE "sales"\."[^"]+" \([\s\S]*?\);/g),
+    ]
+      .map((match) => match[0])
+      .join("\n");
+    expect(salesTables).not.toMatch(/jsonb/i);
   });
 
   it("defines tax commits plus frozen invoice tax lines with no live tax FK", () => {
@@ -179,9 +184,14 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     expect(sql).toMatch(/payments/);
     expect(sql).toMatch(/payment_applications/);
     expect(sql).not.toMatch(/due_date/);
-    expect(sql).not.toMatch(/stripe/i);
-    expect(sql).not.toMatch(/"pan"/);
-    expect(sql).not.toMatch(/software_payments/);
+    const accountingTables = [
+      ...sql.matchAll(/CREATE TABLE "accounting"\."[^"]+" \([\s\S]*?\);/g),
+    ]
+      .map((match) => match[0])
+      .join("\n");
+    expect(accountingTables).not.toMatch(/stripe/i);
+    expect(accountingTables).not.toMatch(/"pan"/);
+    expect(accountingTables).not.toMatch(/software_payments/);
   });
 
   it("uses UUID PKs, integer qty, BIGINT cents + CHAR(3) currency, timestamptz", () => {
