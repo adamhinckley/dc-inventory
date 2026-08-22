@@ -59,3 +59,9 @@ _Avoid_: Hand-written fetch layer, API SDK (unless you mean these packages)
 **Agent-optimized scaffold**:
 Repo layout, scripts, tickets, and examples shaped so a coding agent can finish a slice from allowed paths + failing tests without inventing structure. Prefer boring, explicit, duplicated-if-clear over clever shared abstractions.
 _Avoid_: “DX”, developer experience (when you mean agent success), flexible folder conventions
+
+### Stock
+
+**Available**:
+Sellable quantity of a SKU at a location: on-hand minus allocated. Inbound purchase-order quantity is not part of it.
+_Avoid_: A number staff enter; ATP as a third stored qty; selling against on-order
