@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/*
+  Shop tokens — not the internal dashboard Carbon White / g100 spec.
+  Wholesale is e-commerce chrome (browse, cards, cart), not DataTable.
+*/
+@theme {
+  --font-sans: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --color-canvas: #f6f1e8;
+  --color-ink: #1f1b16;
+  --color-ink-muted: #5c5348;
+  --color-card: #fffdf8;
+  --color-line: #e4d9c8;
+  --color-accent: #8a3d14;
+  --color-accent-hover: #6d2f0e;
+  --color-on-accent: #fffdf8;
+  --color-sold-out: #7a2e2e;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}

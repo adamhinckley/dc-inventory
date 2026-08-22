@@ -1,0 +1,12 @@
+{
+  "name": "DC Inventory",
+  "user": "ubuntu",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "pnpm dev:api"
+    }
+  ],
+  "ports": [{ "name": "api", "port": 3001 }]
+}

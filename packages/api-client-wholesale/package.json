@@ -1,0 +1,20 @@
+{
+  "name": "@dc-inventory/api-client-wholesale",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.0.0",
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "@types/react": "^19.2.18",
+    "react": "^19.2.8"
+  }
+}

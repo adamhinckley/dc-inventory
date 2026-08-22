@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+/*
+  Token source of truth: docs/work-dashboard-design-spec.md §6.
+  Copy :root / .dark / @theme inline from that spec. Do not invent hex.
+  Light = Carbon White (default). Dark = Carbon Gray 100 via class `.dark`.
+*/
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source "./**/*.{ts,tsx}";
+@source "../../ui-internal/src/**/*.{ts,tsx}";
+
+:root {
+  --color-background: #ffffff;
+  --color-layer-01: #f4f4f4;
+  --color-layer-02: #ffffff;
+  --color-layer-03: #f4f4f4;
+  --color-layer-hover-01: #e8e8e8;
+  --color-layer-selected-01: #e0e0e0;
+  --color-layer-accent-01: #e0e0e0;
+  --color-field-01: #f4f4f4;
+  --color-text-primary: #161616;
+  --color-text-secondary: #525252;
+  --color-text-helper: #6f6f6f;
+  --color-text-on-color: #ffffff;
+  --color-text-error: #da1e28;
+  --color-text-inverse: #ffffff;
+  --color-link: #0f62fe;
+  --color-link-hover: #0043ce;
+  --color-focus: #0f62fe;
+  --color-focus-inset: #ffffff;
+  --color-border-subtle: #e0e0e0;
+  --color-border-strong: #8d8d8d;
+  --color-border-inverse: #161616;
+  --color-background-brand: #0f62fe;
+  --color-highlight: #d0e2ff;
+  --color-overlay: rgb(0 0 0 / 60%);
+  --color-status-error: #da1e28;
+  --color-status-ok: #24a148;
+  --color-status-warn: #f1c21b;
+  --color-status-caution: #ff832b;
+  --color-status-info: #0043ce;
+  --color-status-neutral: #8d8d8d;
+  --color-chart-01: #e69f00;
+  --color-chart-02: #56b4e9;
+  --color-chart-03: #009e73;
+  --color-chart-04: #f0e442;
+  --color-chart-05: #0072b2;
+  --color-chart-06: #d55e00;
+  --color-chart-07: #cc79a7;
+  --color-chart-08: #000000;
+}
+
+.dark {
+  --color-background: #161616;
+  --color-layer-01: #262626;
+  --color-layer-02: #393939;
+  --color-layer-03: #525252;
+  --color-layer-hover-01: #333333;
+  --color-layer-selected-01: #393939;
+  --color-layer-accent-01: #393939;
+  --color-field-01: #262626;
+  --color-text-primary: #f4f4f4;
+  --color-text-secondary: #c6c6c6;
+  --color-text-helper: #a8a8a8;
+  --color-text-on-color: #ffffff;
+  --color-text-error: #ff8389;
+  --color-text-inverse: #161616;
+  --color-link: #78a9ff;
+  --color-link-hover: #a6c8ff;
+  --color-focus: #ffffff;
+  --color-focus-inset: #161616;
+  --color-border-subtle: #393939;
+  --color-border-strong: #6f6f6f;
+  --color-border-inverse: #f4f4f4;
+  --color-background-brand: #0f62fe;
+  --color-highlight: #001d6c;
+  --color-overlay: rgb(0 0 0 / 60%);
+  --color-status-error: #fa4d56;
+  --color-status-ok: #42be65;
+  --color-status-warn: #f1c21b;
+  --color-status-caution: #ff832b;
+  --color-status-info: #4589ff;
+  --color-status-neutral: #8d8d8d;
+  --color-chart-01: #e69f00;
+  --color-chart-02: #56b4e9;
+  --color-chart-03: #009e73;
+  --color-chart-04: #f0e442;
+  --color-chart-05: #0072b2;
+  --color-chart-06: #d55e00;
+  --color-chart-07: #cc79a7;
+  --color-chart-08: #f4f4f4; /* Okabe–Ito black → Gray 10 on dark */
+}
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-layer-01: var(--color-layer-01);
+  --color-layer-02: var(--color-layer-02);
+  --color-layer-03: var(--color-layer-03);
+  --color-layer-hover-01: var(--color-layer-hover-01);
+  --color-layer-selected-01: var(--color-layer-selected-01);
+  --color-layer-accent-01: var(--color-layer-accent-01);
+  --color-field-01: var(--color-field-01);
+  --color-primary: var(--color-text-primary);
+  --color-secondary: var(--color-text-secondary);
+  --color-helper: var(--color-text-helper);
+  --color-on-color: var(--color-text-on-color);
+  --color-error: var(--color-text-error);
+  --color-inverse: var(--color-text-inverse);
+  --color-link: var(--color-link);
+  --color-link-hover: var(--color-link-hover);
+  --color-focus: var(--color-focus);
+  --color-focus-inset: var(--color-focus-inset);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-border-strong: var(--color-border-strong);
+  --color-border-inverse: var(--color-border-inverse);
+  --color-background-brand: var(--color-background-brand);
+  --color-highlight: var(--color-highlight);
+  --color-overlay: var(--color-overlay);
+  --color-status-error: var(--color-status-error);
+  --color-status-ok: var(--color-status-ok);
+  --color-status-warn: var(--color-status-warn);
+  --color-status-caution: var(--color-status-caution);
+  --color-status-info: var(--color-status-info);
+  --color-status-neutral: var(--color-status-neutral);
+  --color-chart-01: var(--color-chart-01);
+  --color-chart-02: var(--color-chart-02);
+  --color-chart-03: var(--color-chart-03);
+  --color-chart-04: var(--color-chart-04);
+  --color-chart-05: var(--color-chart-05);
+  --color-chart-06: var(--color-chart-06);
+  --color-chart-07: var(--color-chart-07);
+  --color-chart-08: var(--color-chart-08);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}

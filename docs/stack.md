@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** the solo software operator and coding agents (any vendor) should use, and how auth is enforced.
 
-UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Tax quote/commit and the hosted engine are in [`tax.md`](./tax.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md). Software subscription is [`licensing.md`](./licensing.md). The door to the developer’s other monorepo is [`operator-bridge.md`](./operator-bridge.md).
+UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Internal dashboard color, type, and dark opt-in tokens are in [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md). Tax quote/commit and the hosted engine are in [`tax.md`](./tax.md). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md). Software subscription is [`licensing.md`](./licensing.md). The door to the developer’s other monorepo is [`operator-bridge.md`](./operator-bridge.md).
 
 Choices optimize for four things, in order:
 
