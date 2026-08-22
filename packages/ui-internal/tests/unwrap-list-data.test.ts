@@ -1,0 +1,19 @@
+import { describe, expect, it } from "vitest";
+import { unwrapListData } from "../src/data-table";
+
+const envelope = {
+  items: [{ id: "1" }],
+  page: 1,
+  pageSize: 25,
+  total: 1,
+};
+
+describe("unwrapListData", () => {
+  it("accepts a bare list envelope", () => {
+    expect(unwrapListData(envelope)).toEqual(envelope);
+  });
+
+  it("unwraps the Orval { data, status } envelope", () => {
+    expect(unwrapListData({ data: envelope, status: 200 })).toEqual(envelope);
+  });
+});
