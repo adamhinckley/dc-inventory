@@ -62,7 +62,7 @@ pnpm dev:api
 - Catalog through operator_bridge tables (including licensing `software_payments` and the fail-soft outbox) live in [`src/infrastructure/schema/`](./src/infrastructure/schema/) and are re-exported from [`src/infrastructure/schema.ts`](./src/infrastructure/schema.ts). Do not create a second migrate home. Do not surface software payments in any UI. `IOperatorPlatform` stays no-op.
 - MinIO is in Compose so object storage is in the box. Do not wire `IFileStorage`.
 
-Unit tests inject `InMemoryDatabase`. They do not start Docker, open a network socket, or run migrate.
+Unit tests inject `InMemoryDatabase`. They do not start Docker, open a network socket, or run migrate. Required CI (`compose-migrate-ready`) is a job step that starts Compose, runs `pnpm db:migrate`, then proves `GET /ready` — migrate is not inside this route.
 
 ## Golden path (copy this later)
 

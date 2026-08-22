@@ -1,0 +1,47 @@
+# Required check (ADA-55). Job name `compose-migrate-ready` is the status
+# context to require on main. Not optional: no path filters, no
+# continue-on-error, no skip conditions, placeholder env only.
+name: Compose migrate ready
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compose-migrate-ready-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compose-migrate-ready:
+    name: compose-migrate-ready
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/dc_inventory
+      PORT: "3001"
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dc_inventory
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio-placeholder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.3
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Compose, migrate, GET /ready
+        run: bash scripts/ci-compose-migrate-ready.sh
