@@ -40,6 +40,25 @@ describe("listParamsFromSearchParams", () => {
     });
   });
 
+  it("parses boolean filters only from true/false tokens", () => {
+    const booleanMeta = {
+      ...productsListTable,
+      filters: [{ param: "active", control: "boolean" as const }],
+    };
+    expect(
+      listParamsFromSearchParams(booleanMeta, { active: "true" }).active,
+    ).toBe(true);
+    expect(
+      listParamsFromSearchParams(booleanMeta, { active: "false" }).active,
+    ).toBe(false);
+    expect(
+      listParamsFromSearchParams(booleanMeta, { active: "1" }),
+    ).not.toHaveProperty("active");
+    expect(
+      listParamsFromSearchParams(booleanMeta, { active: "no" }),
+    ).not.toHaveProperty("active");
+  });
+
   it("includes dateRange pair keys declared on x-table", () => {
     expect(
       listParamsFromSearchParams(dateRangeMeta, {

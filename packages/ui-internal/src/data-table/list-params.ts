@@ -31,6 +31,22 @@ export function defaultTableState(meta: TableMeta): DataTableState {
   };
 }
 
+/** Accept only explicit boolean tokens. Invalid strings are ignored. */
+export function parseBooleanFilterParam(
+  value: string | number | boolean | undefined,
+): boolean | undefined {
+  if (typeof value === "boolean") {
+    return value;
+  }
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  return undefined;
+}
+
 export function declaredFilterParams(meta: TableMeta): Set<string> {
   const allowed = new Set<string>();
   for (const filter of meta.filters) {
@@ -74,7 +90,10 @@ export function tableStateFromInitial(
         (filter) => filter.param === key || filter.rangePair === key,
       )?.control;
       if (control === "boolean") {
-        filters[key] = value === "true";
+        const parsed = parseBooleanFilterParam(value);
+        if (parsed !== undefined) {
+          filters[key] = parsed;
+        }
         continue;
       }
       filters[key] = String(value);

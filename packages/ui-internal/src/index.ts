@@ -8,6 +8,7 @@ export {
   declaredFilterParams,
   defaultTableState,
   listParamsFromState,
+  parseBooleanFilterParam,
   tableStateFromInitial,
   unwrapListData,
   useDataTable,

@@ -97,6 +97,26 @@ describe("tableStateFromInitial", () => {
     );
   });
 
+  it("parses boolean filters only from true/false tokens", () => {
+    const booleanMeta = {
+      ...productsListTable,
+      filters: [{ param: "active", control: "boolean" as const }],
+    } satisfies TableMeta;
+
+    expect(
+      tableStateFromInitial(booleanMeta, { active: "true" }).filters.active,
+    ).toBe(true);
+    expect(
+      tableStateFromInitial(booleanMeta, { active: "false" }).filters.active,
+    ).toBe(false);
+    expect(
+      tableStateFromInitial(booleanMeta, { active: "no" }).filters,
+    ).not.toHaveProperty("active");
+    expect(
+      tableStateFromInitial(booleanMeta, { active: 1 }).filters,
+    ).not.toHaveProperty("active");
+  });
+
   it("ignores invalid page and unknown sortBy", () => {
     const state = tableStateFromInitial(productsListTable, {
       page: 0,

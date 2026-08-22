@@ -1,5 +1,6 @@
 import {
   declaredFilterParams,
+  parseBooleanFilterParam,
   type ListQueryParams,
   type TableMeta,
 } from "@dc-inventory/ui-internal";
@@ -71,7 +72,14 @@ export function listParamsFromSearchParams(
       if (raw === undefined || raw === "") {
         return;
       }
-      params[key] = control === "boolean" ? raw === "true" : raw;
+      if (control === "boolean") {
+        const parsed = parseBooleanFilterParam(raw);
+        if (parsed !== undefined) {
+          params[key] = parsed;
+        }
+        return;
+      }
+      params[key] = raw;
     };
     apply(filter.param, filter.control);
     if (filter.control === "dateRange" && filter.rangePair) {
