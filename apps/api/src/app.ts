@@ -10,6 +10,7 @@ import {
 import { registerHealthRoutes } from "./adapters/http/health.js";
 import { registerPingRoute } from "./adapters/http/ping.js";
 import type { PingUseCase } from "./application/ping.js";
+import type { ReadyCheckUseCase } from "./application/ready.js";
 import { featuresAllCoreOn, type IFeatures } from "./features.js";
 import {
   composeAppServices,
@@ -90,11 +91,15 @@ export async function buildApp(
   });
   app.decorate("features", services.features);
   app.decorate("ping", services.ping);
+  app.decorate("readyCheck", services.ready);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
   registerHealthRoutes(app);
   registerPingRoute(app);
   await registerAudienceMounts(app);
+  app.addHook("onClose", async () => {
+    await services.database.close();
+  });
   return app;
 }
 
@@ -102,5 +107,6 @@ declare module "fastify" {
   interface FastifyInstance {
     features: IFeatures;
     ping: PingUseCase;
+    readyCheck: ReadyCheckUseCase;
   }
 }

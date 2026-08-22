@@ -2,11 +2,14 @@ import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   healthResponseSchema,
+  notReadyResponseSchema,
   readyResponseSchema,
 } from "./adapters/http/health.js";
 import { pingResponseSchema } from "./adapters/http/ping.js";
 import { InMemoryClock } from "./adapters/in-memory-clock.js";
+import { InMemoryDatabase } from "./adapters/in-memory-database.js";
 import { buildApp } from "./app.js";
+import { MissingDatabaseUrlError } from "./infrastructure/database-url.js";
 import { REQUEST_ID_HEADER } from "./infrastructure/request-id.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
 
@@ -19,7 +22,11 @@ afterEach(async () => {
 async function startApp(
   options?: Parameters<typeof buildApp>[0],
 ): Promise<Awaited<ReturnType<typeof buildApp>>> {
-  const app = await buildApp({ logger: false, ...options });
+  const app = await buildApp({
+    logger: false,
+    database: new InMemoryDatabase(),
+    ...options,
+  });
   apps.push(app);
   return app;
 }
@@ -34,13 +41,58 @@ describe("composition root HTTP", () => {
     expect(healthResponseSchema.parse(body)).toEqual(body);
   });
 
-  it("GET /ready is a stub 200", async () => {
+  it("GET /ready returns 200 when the database pings", async () => {
     const app = await startApp();
     const res = await app.inject({ method: "GET", url: "/ready" });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toEqual({ ready: true });
     expect(readyResponseSchema.parse(body)).toEqual(body);
+  });
+
+  it("GET /ready returns 503 when the database ping fails", async () => {
+    const app = await startApp({
+      database: new InMemoryDatabase({
+        failWith: new Error("connection refused"),
+      }),
+    });
+    const res = await app.inject({ method: "GET", url: "/ready" });
+    expect(res.statusCode).toBe(503);
+    const body = res.json();
+    expect(body).toEqual({
+      ready: false,
+      error: "connection refused",
+    });
+    expect(notReadyResponseSchema.parse(body)).toEqual(body);
+  });
+
+  it("GET /ready reports a missing DATABASE_URL clearly", async () => {
+    const app = await startApp({
+      database: new InMemoryDatabase({
+        failWith: new MissingDatabaseUrlError(),
+      }),
+    });
+    const res = await app.inject({ method: "GET", url: "/ready" });
+    expect(res.statusCode).toBe(503);
+    const body = res.json() as { ready: boolean; error: string };
+    expect(body.ready).toBe(false);
+    expect(body.error).toMatch(/DATABASE_URL is missing/);
+  });
+
+  it("buildApp fails clearly without DATABASE_URL or a database override", async () => {
+    const previous = process.env.DATABASE_URL;
+    delete process.env.DATABASE_URL;
+    try {
+      await expect(buildApp({ logger: false })).rejects.toThrow(
+        /DATABASE_URL is missing/,
+      );
+    } finally {
+      if (previous === undefined) {
+        delete process.env.DATABASE_URL;
+      } else {
+        process.env.DATABASE_URL = previous;
+      }
+    }
   });
 
   it("GET /ping maps the use case through the HTTP adapter", async () => {
@@ -98,6 +150,7 @@ describe("composition root HTTP", () => {
     });
     const app = await buildApp({
       logger: { ...pinoLoggerOptions("info"), stream },
+      database: new InMemoryDatabase(),
     });
     apps.push(app);
 
