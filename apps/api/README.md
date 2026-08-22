@@ -36,9 +36,16 @@ Composition is explicit — no Nest-style container.
 
 ## Local Postgres
 
-The API **will not listen** without `DATABASE_URL`. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. Copy [`.env.example`](./.env.example) and point it at PostgreSQL **16+**.
+The API **will not listen** without `DATABASE_URL`. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. Copy [`.env.example`](./.env.example) to `.env` in this folder (`apps/api/.env`); `pnpm dev:api` loads that file if `DATABASE_URL` is not already in the environment.
 
 Example:
+
+```bash
+cp apps/api/.env.example apps/api/.env
+pnpm dev:api
+```
+
+Or export it yourself:
 
 ```bash
 export DATABASE_URL=postgres://postgres:postgres@localhost:5432/dc_inventory
