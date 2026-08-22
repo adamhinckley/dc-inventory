@@ -4,11 +4,21 @@ import { createPostgresDatabase, PostgresDatabase } from "./db.js";
 import { schema } from "./schema.js";
 
 describe("PostgresDatabase", () => {
-  it("registers catalog, purchasing, and inventory tables", () => {
+  it("registers catalog through accounting tables", () => {
     expect(Object.keys(schema).sort()).toEqual(
       [
         "categories",
+        "contacts",
+        "customers",
+        "exemptionCertificates",
+        "invoiceTaxLines",
+        "invoices",
         "locations",
+        "opsUsers",
+        "orderLines",
+        "orders",
+        "paymentApplications",
+        "payments",
         "productCategories",
         "productIdentifiers",
         "productImages",
@@ -17,10 +27,16 @@ describe("PostgresDatabase", () => {
         "purchaseOrderLines",
         "purchaseOrders",
         "reorderPolicies",
+        "sessions",
+        "shipTos",
+        "staffUsers",
         "stockMovements",
         "stockSnapshots",
         "supplierProducts",
         "suppliers",
+        "taxCommitLines",
+        "taxCommits",
+        "wholesaleUsers",
       ].sort(),
     );
   });

@@ -8,6 +8,13 @@
       "when": 1787429785577,
       "tag": "0000_catalog_purchasing_inventory",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787430597854,
+      "tag": "0001_identity_customers_sales_tax_accounting",
+      "breakpoints": true
     }
   ]
 }

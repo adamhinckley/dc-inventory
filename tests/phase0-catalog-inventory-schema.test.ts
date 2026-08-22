@@ -149,7 +149,8 @@ describe("Phase 0 catalog / purchasing / inventory schemas (ADA-52)", () => {
       readText("apps/api/drizzle/migrations/meta/_journal.json"),
     ) as { dialect: string; entries: unknown[] };
     expect(journal.dialect).toBe("postgresql");
-    expect(journal.entries).toHaveLength(1);
+    expect(journal.entries.length).toBeGreaterThanOrEqual(1);
+    expect(journal.entries[0]).toBeDefined();
 
     const ready = readText("apps/api/src/infrastructure/db.ts");
     expect(ready).toContain("SELECT 1");
