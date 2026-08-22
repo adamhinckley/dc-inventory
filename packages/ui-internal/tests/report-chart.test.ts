@@ -2,10 +2,13 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { CHART_SERIES_COLORS } from "../src/chart-tokens";
-import { formatChartY, toWideRows } from "../src/report-chart-data";
+import { CHART_SERIES_COLORS } from "../src/charts/report-chart/chart-tokens";
+import { formatChartY, toWideRows } from "../src/charts/report-chart/report-chart-data";
 
-const srcDir = join(dirname(fileURLToPath(import.meta.url)), "../src");
+const chartDir = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../src/charts/report-chart",
+);
 
 describe("Recharts stub tokens", () => {
   it("uses Okabe–Ito CSS variables, not raw hex", () => {
@@ -25,7 +28,7 @@ describe("Recharts stub tokens", () => {
   });
 
   it("does not hardcode hex in the chart wrapper", () => {
-    const source = readFileSync(join(srcDir, "report-chart.tsx"), "utf8");
+    const source = readFileSync(join(chartDir, "report-chart.tsx"), "utf8");
     expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}/);
     expect(source).toContain("recharts");
     expect(source).toContain("CHART_SERIES_COLORS");

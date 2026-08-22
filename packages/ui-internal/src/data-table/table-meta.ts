@@ -40,7 +40,22 @@ export type TableImportMeta = {
 
 /**
  * Generated `x-table` shape (`productsListTable.ts` after codegen).
- * `DataTable` renders only columns / search / filters listed here.
+ *
+ * When to use: pass this object as `DataTable.Root` `meta` so chrome only
+ * renders columns / search / filters the operation declared.
+ *
+ * When not to use: do not hand-author extra filters here — add them on the
+ * OpenAPI `x-table` and regenerate.
+ *
+ * Import from `@dc-inventory/ui-internal`.
+ *
+ * @example
+ * ```ts
+ * import type { TableMeta } from "@dc-inventory/ui-internal";
+ * import { productsListTable } from "../lib/products-list-table";
+ *
+ * const meta: TableMeta = productsListTable;
+ * ```
  */
 export type TableMeta = {
   rowId: string;

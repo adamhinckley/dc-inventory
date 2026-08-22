@@ -3,9 +3,10 @@ import { productsListTable } from "../src/fixtures/products-list-table";
 import {
   defaultTableState,
   listParamsFromState,
+  tableStateFromInitial,
   type DataTableState,
-} from "../src/list-params";
-import type { TableMeta } from "../src/table-meta";
+} from "../src/data-table/list-params";
+import type { TableMeta } from "../src/data-table/table-meta";
 
 const dateRangeMeta = {
   ...productsListTable,
@@ -69,5 +70,39 @@ describe("listParamsFromState", () => {
     expect(params.createdFrom).toBe("2026-01-01");
     expect(params.createdTo).toBe("2026-01-31");
     expect(params).not.toHaveProperty("category");
+  });
+});
+
+describe("tableStateFromInitial", () => {
+  it("uses URL page, q, sort, and declared filters on first paint", () => {
+    const state = tableStateFromInitial(productsListTable, {
+      page: 2,
+      q: "bolt",
+      sortBy: "name",
+      sortOrder: "desc",
+      status: "active",
+      category: "hardware",
+    });
+    expect(state.page).toBe(2);
+    expect(state.search).toBe("bolt");
+    expect(state.sortBy).toBe("name");
+    expect(state.sortOrder).toBe("desc");
+    expect(state.filters.status).toBe("active");
+    expect(state.filters).not.toHaveProperty("category");
+  });
+
+  it("falls back to x-table defaults when initialParams are empty", () => {
+    expect(tableStateFromInitial(productsListTable)).toEqual(
+      defaultTableState(productsListTable),
+    );
+  });
+
+  it("ignores invalid page and unknown sortBy", () => {
+    const state = tableStateFromInitial(productsListTable, {
+      page: 0,
+      sortBy: "price",
+    });
+    expect(state.page).toBe(1);
+    expect(state.sortBy).toBe("sku");
   });
 });

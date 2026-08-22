@@ -1,4 +1,4 @@
-import type { TableMeta } from "../table-meta";
+import type { TableMeta } from "../data-table/table-meta";
 
 /**
  * Same shape as `productsListTable` on GET /internal/products (`x-table`).
