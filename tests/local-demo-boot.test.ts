@@ -1,0 +1,94 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const root = resolve(import.meta.dirname, "..");
+
+function readText(relativePath: string): string {
+  return readFileSync(resolve(root, relativePath), "utf8");
+}
+
+describe("local demo boot (ADA-51)", () => {
+  it("Compose starts Postgres 16 and MinIO with placeholder credentials", () => {
+    const compose = readText("docker-compose.yml");
+    expect(compose).toMatch(/image:\s*postgres:16\b/);
+    expect(compose).toMatch(/image:\s*minio\/minio/);
+    expect(compose).toContain("POSTGRES_USER: ${POSTGRES_USER:-postgres}");
+    expect(compose).toContain(
+      "POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}",
+    );
+    expect(compose).toContain("POSTGRES_DB: ${POSTGRES_DB:-dc_inventory}");
+    expect(compose).toContain("MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}");
+    expect(compose).toContain(
+      "MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio-placeholder}",
+    );
+    expect(compose).not.toMatch(/IFileStorage|better-auth|stripe/i);
+  });
+
+  it("keeps committed env examples as placeholders only", () => {
+    const rootEnv = readText(".env.example");
+    expect(rootEnv).toContain("POSTGRES_USER=postgres");
+    expect(rootEnv).toContain("POSTGRES_PASSWORD=postgres");
+    expect(rootEnv).toContain("MINIO_ROOT_USER=minio");
+    expect(rootEnv).toContain("MINIO_ROOT_PASSWORD=minio-placeholder");
+
+    const apiEnv = readText("apps/api/.env.example");
+    expect(apiEnv).toMatch(/^DATABASE_URL=/m);
+    expect(apiEnv).toMatch(/^PORT=/m);
+    expect(apiEnv).toContain(
+      "postgres://postgres:postgres@localhost:5432/dc_inventory",
+    );
+
+    expect(readText("apps/wholesale/.env.example")).toContain(
+      "API_PROXY_ORIGIN=http://localhost:3001",
+    );
+    expect(readText("apps/internal/.env.example")).toContain(
+      "API_PROXY_ORIGIN=http://localhost:3001",
+    );
+  });
+
+  it("root pnpm db:migrate runs Drizzle Kit in the API app only", () => {
+    const rootPkg = JSON.parse(readText("package.json")) as {
+      scripts: Record<string, string>;
+    };
+    const apiPkg = JSON.parse(readText("apps/api/package.json")) as {
+      scripts: Record<string, string>;
+    };
+    expect(rootPkg.scripts["db:migrate"]).toBe(
+      "pnpm --filter @dc-inventory/api db:migrate",
+    );
+    expect(apiPkg.scripts["db:migrate"]).toBe("drizzle-kit migrate");
+    expect(existsSync(resolve(root, "packages/db"))).toBe(false);
+    expect(existsSync(resolve(root, "packages/persistence"))).toBe(false);
+    expect(existsSync(resolve(root, "drizzle.config.ts"))).toBe(false);
+    expect(existsSync(resolve(root, "apps/api/drizzle.config.ts"))).toBe(true);
+
+    const journal = JSON.parse(
+      readText("apps/api/drizzle/migrations/meta/_journal.json"),
+    ) as { dialect: string; entries: unknown[] };
+    expect(journal.dialect).toBe("postgresql");
+    expect(journal.entries).toEqual([]);
+  });
+
+  it("records demo-only locks that are not invariants §18", () => {
+    const doc = readText("docs/demo-assumptions.md");
+    expect(doc).toMatch(/invoice on ship/i);
+    expect(doc).toMatch(/cart = draft sales order/i);
+    expect(doc).toMatch(/block oversell/i);
+    expect(doc).toMatch(/MP is shop price/i);
+    expect(doc).toMatch(/in-memory tax/i);
+    expect(doc).toMatch(/not.*invariants\.md.*§18/i);
+    expect(doc).toMatch(/Better Auth/i);
+    expect(doc).toMatch(/IFileStorage/);
+  });
+
+  it("does not put Docker, network, or migrate inside Vitest", () => {
+    const vitest = readText("vitest.config.ts");
+    expect(vitest).not.toMatch(/docker|compose|db:migrate/i);
+
+    const thisFile = readText("tests/local-demo-boot.test.ts");
+    expect(thisFile).not.toMatch(
+      /docker compose|createConnection|fetch\(|execSync/,
+    );
+  });
+});
