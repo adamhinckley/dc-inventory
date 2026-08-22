@@ -1,0 +1,3 @@
+@import "@dc-inventory/ui/globals.css";
+
+@source "../**/*.{ts,tsx}";
