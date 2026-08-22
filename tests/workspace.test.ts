@@ -35,4 +35,11 @@ describe("workspace", () => {
       }),
     );
   });
+
+  it("requires Node >=22.12.0 to match Vite", () => {
+    const pkg = JSON.parse(readText("package.json")) as {
+      engines: { node: string };
+    };
+    expect(pkg.engines.node).toBe(">=22.12.0");
+  });
 });
