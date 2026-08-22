@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "strict": true,
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -8,6 +9,7 @@
     "noEmit": true,
     "allowJs": true,
     "incremental": true,
+    "resolveJsonModule": true,
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"]
