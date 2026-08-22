@@ -4,7 +4,7 @@ export default function CustomersPage() {
   return (
     <DashboardPlaceholder
       title="Customers"
-      body="Placeholder customers list. A later ticket will wire DataTable to the customers Orval hook."
+      body="Placeholder customers list. A later ticket will wire the customers Orval list hook."
     />
   );
 }

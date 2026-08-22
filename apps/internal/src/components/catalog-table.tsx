@@ -7,9 +7,13 @@ import {
   productsListTable,
 } from "../lib/products-list-table";
 
+type CatalogListParams = NonNullable<
+  Parameters<typeof useListInternalProducts>[0]
+>;
+
 export function CatalogTable() {
   return (
-    <DataTable
+    <DataTable<CatalogListParams>
       meta={productsListTable}
       queryHook={useListInternalProducts}
       filterOptions={{ status: productStatusFilterOptions }}

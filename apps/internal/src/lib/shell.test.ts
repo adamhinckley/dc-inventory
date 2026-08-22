@@ -47,7 +47,8 @@ describe("internal dashboard shell", () => {
         join(srcRoot, "app/(dashboard)", route, "page.tsx"),
         "utf8",
       );
-      expect(text, route).not.toMatch(/DataTable/);
+      expect(text, route).not.toMatch(/@dc-inventory\/ui-internal/);
+      expect(text, route).not.toMatch(/import\s*\{[^}]*\bDataTable\b/);
       expect(text, route).toMatch(/DashboardPlaceholder/);
     }
   });
