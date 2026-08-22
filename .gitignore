@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.pnpm-debug.log*
+
+# Test runner
+.vitest/
 
 # Env and secrets
 .env
