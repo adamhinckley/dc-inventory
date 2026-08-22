@@ -15,7 +15,7 @@ Wholesale is a different product (browse, PDP, cart) with its own canvas/ink/acc
 
 1. **Internal only.** Vendored design-system code lives in `packages/ui` (`tokens/`, `ui/`, `shells/`, `layouts/`) and is consumed by `apps/internal` and `packages/ui-internal`. Hex values stay Carbon White / g100. Token **names** are the semantic set (`surface-base`, `fg`, `interactive`, `.page`, `.section-flat`).
 2. **Wholesale follows the same principles, not the same kit.** Elevation (base / raised / overlay), type roles, intent-named spacing, and `.interactable` behavior should show up in the shop — implemented with shop tokens (`canvas`, `ink`, `accent`), not dashboard Carbon variables or AppShell.
-3. **Parked.** `ui/Charts` (this repo keeps Recharts + Okabe–Ito) and `resource/*` (this repo keeps `DataTable` + OpenAPI `x-table`).
+3. **Parked.** `ui/Charts` (this repo keeps Recharts + Okabe–Ito) and `ui/Table` / `resource/*` (this repo keeps `DataTable` + OpenAPI `x-table`). `packages/ui/src/ui/Table` stays in the tree but is excluded from package typecheck and Storybook until a ticket unparks it.
 
 ## Consequences
 

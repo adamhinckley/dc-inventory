@@ -9,6 +9,7 @@ const rootDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const config: StorybookConfig = {
   stories: [
     "../packages/ui/src/**/*.stories.@(ts|tsx)",
+    "!../packages/ui/src/ui/Table/**",
     "../packages/ui-internal/src/**/*.stories.@(ts|tsx)",
   ],
   addons: ["@storybook/addon-docs", "@storybook/addon-themes"],
@@ -23,6 +24,9 @@ const config: StorybookConfig = {
     const nodeEnv = JSON.stringify(process.env.NODE_ENV ?? "development");
     return mergeConfig(config, {
       plugins: [tailwindcss()],
+      esbuild: {
+        jsx: "automatic",
+      },
       define: {
         "process.env.NODE_ENV": nodeEnv,
       },

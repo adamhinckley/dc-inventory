@@ -1,6 +1,14 @@
 'use client'
 
-import { Children, isValidElement, useEffect, useRef, useState } from 'react'
+import {
+  Children,
+  isValidElement,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -35,15 +43,15 @@ export const navRow = 'interactable subtle flex w-full items-center px-tight py-
 
 export interface AppShellProps {
   /** Sidebar navigation */
-  nav?: React.ReactNode
+  nav?: ReactNode
   /** Top bar — renders inside the elevated page panel */
-  topbar?: React.ReactNode
+  topbar?: ReactNode
   /**
    * Persistent full-bleed bar pinned to the very top of the frame, spanning
    * the full viewport width above BOTH the sidebar and the page panel (e.g. an
    * impersonation or alpha-preview notice). Omit for the normal frame.
    */
-  banner?: React.ReactNode
+  banner?: ReactNode
   /**
    * Render ONLY the main content — no sidebar, topbar, or banner — at natural
    * height/width. For the headless PDF export deployment (`isExportMode()`): the
@@ -52,7 +60,7 @@ export interface AppShellProps {
    */
   exportMode?: boolean
   /** Page content */
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export interface BrandingLogo {
@@ -61,11 +69,11 @@ export interface BrandingLogo {
 }
 
 export interface NavRootProps {
-  children: React.ReactNode
+  children: ReactNode
   /** White-label partner logo URLs. Omit for the default animated 360Privacy logo. */
   brandingLogo?: BrandingLogo | null
   /** Custom header element replacing the default logo header. */
-  header?: React.ReactNode
+  header?: ReactNode
   /** Where clicking the logo navigates. Default: "/" */
   href?: string
 }
@@ -76,9 +84,9 @@ export interface NavGroupProps {
   /** Section header text */
   label: string
   /** Icon shown in header and in collapsed (icon-only) state */
-  icon: React.ReactNode
+  icon: ReactNode
   /** NavItem children */
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export interface NavItemProps {
@@ -87,7 +95,7 @@ export interface NavItemProps {
   /** Display text */
   label: string
   /** Optional icon beside the label */
-  icon?: React.ReactNode
+  icon?: ReactNode
   /** Optional count badge */
   badge?: number
   /**
@@ -132,7 +140,7 @@ export interface NavItemProps {
 
 export interface NavActionProps {
   /** Icon element */
-  icon: React.ReactNode
+  icon: ReactNode
   /** Label text — visible when expanded, used as aria-label when collapsed */
   label: string
   /** Click handler */
@@ -145,7 +153,7 @@ export interface NavTenantItemProps {
   /** Account / organization display name — visible expanded, used as aria-label collapsed */
   label: string
   /** Glyph shown when no logo is available, and in the collapsed icon rail */
-  icon: React.ReactNode
+  icon: ReactNode
   /** Optional white-label logo; falls back to `icon` on absence or load error */
   logo?: BrandingLogo | null
   /** Explicit active override (longest-match, computed across the full nav set). See `NavItemProps.active`. */
@@ -153,19 +161,19 @@ export interface NavTenantItemProps {
 }
 
 export interface NavFooterProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export interface NavToolbarProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export interface TopbarRootProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export interface TopbarActionsProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 // ---------------------------------------------------------------------------
@@ -315,8 +323,7 @@ function NavHeader({
 /**
  * Builds a nav item's LINK href: fixed `defaultParams` first, then params copied from the
  * current URL (`preserveParams`, which override a same-named default). Pure so it can run inside
- * `Children.map` — callers read `useSearchParams()` once. The bare `href` is used for active
- * matching, never this.
+ * `Children.map`. The bare `href` is used for active matching, never this.
  */
 function appendPreservedParams(
   href: string,
@@ -336,7 +343,28 @@ function appendPreservedParams(
   return query ? `${href}?${query}` : href
 }
 
-function hasActiveChild(children: React.ReactNode, pathname: string): boolean {
+function carriesQueryParams(
+  preserveParams: string[] | undefined,
+  defaultParams: string | undefined,
+): boolean {
+  return Boolean(preserveParams?.length || defaultParams)
+}
+
+function childrenCarryQueryParams(children: ReactNode): boolean {
+  let carry = false
+  Children.forEach(children, (child) => {
+    if (carry || !isValidElement(child)) return
+    const props = child.props as Pick<NavItemProps, 'preserveParams' | 'defaultParams'>
+    if (carriesQueryParams(props.preserveParams, props.defaultParams)) {
+      carry = true
+    }
+  })
+  return carry
+}
+
+const EMPTY_SEARCH_PARAMS = new URLSearchParams()
+
+function hasActiveChild(children: ReactNode, pathname: string): boolean {
   let active = false
   Children.forEach(children, (child) => {
     if (active) return
@@ -353,7 +381,6 @@ function hasActiveChild(children: React.ReactNode, pathname: string): boolean {
 export function NavGroup({ id, label, icon, children }: NavGroupProps) {
   const { isExpanded, expandSidebar } = useAppShellContext()
   const pathname = usePathname() ?? ''
-  const searchParams = useSearchParams()
   const isActive = hasActiveChild(children, pathname)
   const [openGroups, setOpenGroups] = usePreference<string[]>('sideNav.openGroups', [])
   const isOpen = openGroups.includes(id)
@@ -392,80 +419,23 @@ export function NavGroup({ id, label, icon, children }: NavGroupProps) {
   // element. `closeDelay` is left at the wrapper default (300ms) so keyboard
   // focus has time to enter the popup before the hover-out timer fires.
   if (!isExpanded) {
+    const menu = {
+      id,
+      label,
+      icon,
+      isActive,
+      handleExpand,
+      children,
+    }
+    if (childrenCarryQueryParams(children)) {
+      return (
+        <Suspense fallback={null}>
+          <CollapsedNavGroupMenuWithSearch {...menu} />
+        </Suspense>
+      )
+    }
     return (
-      <Menu>
-        <Menu.Trigger
-          openOnHover
-          closeDelay={0}
-          aria-label={label}
-          data-testid={`sidebar-${id}-collapsed-trigger`}
-          className={cn(navRow, 'justify-center', isActive && 'text-primary')}
-          onClick={(e) => {
-            if (e.detail > 0) {
-              handleExpand()
-            }
-          }}
-        >
-          <span className={iconBox}>{icon}</span>
-        </Menu.Trigger>
-        <Menu.Content side="right" align="start" data-testid={`sidebar-${id}-collapsed-popup`}>
-          <Menu.Group>
-            <Menu.GroupLabel>{label}</Menu.GroupLabel>
-            {Children.map(children, (child) => {
-              if (!isValidElement(child)) return null
-              const props = child.props as NavItemProps
-              // Disabled item (FE-4 / CORE-603): Base UI's `disabled` blocks
-              // selection and applies the dimmed data-disabled styling — no
-              // Link, so the row can't navigate. The `disabledReason` renders
-              // inline (FE-5 / CORE-606) — the disabled row is
-              // `pointer-events-none` and skipped by the menu's keyboard
-              // highlight, so a tooltip would be unreachable here.
-              if (props.disabled) {
-                return (
-                  <Menu.Item disabled>
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate">{props.label}</span>
-                      {props.disabledReason && (
-                        <span className="text-caption text-fg-tertiary">
-                          {props.disabledReason}
-                        </span>
-                      )}
-                    </span>
-                  </Menu.Item>
-                )
-              }
-              // Render the menu item AS the Link, not nested inside one. Two
-              // focusable elements per row (Base UI's menu item + the inner
-              // anchor) split keyboard activation: Tab landed on the menu
-              // item, Enter closed without navigating; only a second Tab into
-              // the anchor would activate the href.
-              return (
-                <Menu.Item
-                  render={
-                    <Link
-                      href={appendPreservedParams(
-                        props.href,
-                        props.preserveParams,
-                        searchParams,
-                        props.defaultParams,
-                      )}
-                    />
-                  }
-                >
-                  <span className="flex-1 truncate">{props.label}</span>
-                  {props.badge !== undefined && (
-                    <span
-                      className={cn('rounded-full px-1.5 py-px', badgeLabel, 'text-fg-tertiary')}
-                    >
-                      {props.badge}
-                    </span>
-                  )}
-                </Menu.Item>
-              )
-            })}
-          </Menu.Group>
-        </Menu.Content>
-      </Menu>
+      <CollapsedNavGroupMenu {...menu} searchParams={EMPTY_SEARCH_PARAMS} />
     )
   }
 
@@ -483,36 +453,142 @@ export function NavGroup({ id, label, icon, children }: NavGroupProps) {
   )
 }
 
+type CollapsedNavGroupMenuProps = {
+  id: string
+  label: string
+  icon: ReactNode
+  isActive: boolean
+  handleExpand: () => void
+  children: ReactNode
+  searchParams: URLSearchParams
+}
+
+function CollapsedNavGroupMenuWithSearch(
+  props: Omit<CollapsedNavGroupMenuProps, 'searchParams'>,
+) {
+  const searchParams = useSearchParams()
+  return <CollapsedNavGroupMenu {...props} searchParams={searchParams} />
+}
+
+function CollapsedNavGroupMenu({
+  id,
+  label,
+  icon,
+  isActive,
+  handleExpand,
+  children,
+  searchParams,
+}: CollapsedNavGroupMenuProps) {
+  return (
+    <Menu>
+      <Menu.Trigger
+        openOnHover
+        closeDelay={0}
+        aria-label={label}
+        data-testid={`sidebar-${id}-collapsed-trigger`}
+        className={cn(navRow, 'justify-center', isActive && 'text-primary')}
+        onClick={(e) => {
+          if (e.detail > 0) {
+            handleExpand()
+          }
+        }}
+      >
+        <span className={iconBox}>{icon}</span>
+      </Menu.Trigger>
+      <Menu.Content side="right" align="start" data-testid={`sidebar-${id}-collapsed-popup`}>
+        <Menu.Group>
+          <Menu.GroupLabel>{label}</Menu.GroupLabel>
+          {Children.map(children, (child) => {
+            if (!isValidElement(child)) return null
+            const props = child.props as NavItemProps
+            if (props.disabled) {
+              return (
+                <Menu.Item disabled>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate">{props.label}</span>
+                    {props.disabledReason && (
+                      <span className="text-caption text-fg-tertiary">
+                        {props.disabledReason}
+                      </span>
+                    )}
+                  </span>
+                </Menu.Item>
+              )
+            }
+            return (
+              <Menu.Item
+                render={
+                  <Link
+                    href={appendPreservedParams(
+                      props.href,
+                      props.preserveParams,
+                      searchParams,
+                      props.defaultParams,
+                    )}
+                  />
+                }
+              >
+                <span className="flex-1 truncate">{props.label}</span>
+                {props.badge !== undefined && (
+                  <span
+                    className={cn('rounded-full px-1.5 py-px', badgeLabel, 'text-fg-tertiary')}
+                  >
+                    {props.badge}
+                  </span>
+                )}
+              </Menu.Item>
+            )
+          })}
+        </Menu.Group>
+      </Menu.Content>
+    </Menu>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // NavItem
 // ---------------------------------------------------------------------------
 
-export function NavItem({
+export function NavItem(props: NavItemProps) {
+  if (carriesQueryParams(props.preserveParams, props.defaultParams)) {
+    return (
+      <Suspense fallback={null}>
+        <NavItemWithSearchParams {...props} />
+      </Suspense>
+    )
+  }
+  return <NavItemView {...props} resolvedHref={props.href} />
+}
+
+function NavItemWithSearchParams(props: NavItemProps) {
+  const searchParams = useSearchParams()
+  const resolvedHref = appendPreservedParams(
+    props.href,
+    props.preserveParams,
+    searchParams,
+    props.defaultParams,
+  )
+  return <NavItemView {...props} resolvedHref={resolvedHref} />
+}
+
+function NavItemView({
   href,
+  resolvedHref,
   label,
   badge,
-  preserveParams,
-  defaultParams,
   disabled,
   disabledReason,
   active,
-}: NavItemProps) {
+}: NavItemProps & { resolvedHref: string }) {
   const pathname = usePathname() ?? ''
-  const searchParams = useSearchParams()
   const { isExpanded } = useAppShellContext()
-  // Active matching is against the bare href — preserved params never carry
-  // path information, so they can't affect which item is active. An explicit
-  // `active` prop (longest-match computed across the full nav set) wins over
-  // the standalone prefix check when provided (CORE-834: `/incidents` must not
-  // stay lit on `/incidents/heatmap`).
   const isActive = !disabled && (active ?? (pathname === href || pathname.startsWith(href + '/')))
 
-  // Collapsed mode: NavGroup handles rendering via children inspection
   if (!isExpanded) return null
 
   return (
     <UINavGroup.Item
-      href={appendPreservedParams(href, preserveParams, searchParams, defaultParams)}
+      href={resolvedHref}
       active={isActive}
       badge={badge}
       disabled={disabled}
@@ -534,7 +610,7 @@ export function NavItem({
  * light-only logo on the dark sidebar reads as washed-out / grayscale). Falls
  * back to either variant when the other is missing, and to `icon` on load error.
  */
-function TenantGlyph({ icon, logo }: { icon: React.ReactNode; logo?: BrandingLogo | null }) {
+function TenantGlyph({ icon, logo }: { icon: ReactNode; logo?: BrandingLogo | null }) {
   const [imgError, setImgError] = useState(false)
   const lightUrl = logo?.light ?? logo?.dark ?? null
   const darkUrl = logo?.dark ?? logo?.light ?? null
@@ -668,10 +744,10 @@ export function NavToolbar({ children }: NavToolbarProps) {
 // NavRoot + internal layout helpers
 // ---------------------------------------------------------------------------
 
-function splitChildren(children: React.ReactNode) {
-  let footer: React.ReactNode = null
-  let toolbar: React.ReactNode = null
-  const body: React.ReactNode[] = []
+function splitChildren(children: ReactNode) {
+  let footer: ReactNode = null
+  let toolbar: ReactNode = null
+  const body: ReactNode[] = []
 
   Children.forEach(children, (child) => {
     if (isValidElement(child) && child.type === NavFooter) {

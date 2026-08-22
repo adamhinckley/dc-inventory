@@ -7,15 +7,24 @@ const meta = {
   title: 'Design System/AppShell',
   component: AppShell,
   parameters: { layout: 'fullscreen' },
+  args: {
+    children: (
+      <div className="p-page-gutter">
+        <h1 className="page-title">Products</h1>
+        <p className="page-description mt-2">Staff dashboard chrome with sidebar and topbar.</p>
+      </div>
+    ),
+  },
 } satisfies Meta<typeof AppShell>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Dashboard: Story = {
-  render: () => (
+  render: (args) => (
     <div className="-m-8 h-screen">
       <AppShell
+        {...args}
         nav={
           <AppShell.Nav>
             <AppShell.NavGroup id="catalog" label="Catalog" icon={<Package />}>
@@ -36,12 +45,7 @@ export const Dashboard: Story = {
             </AppShell.TopbarActions>
           </AppShell.Topbar>
         }
-      >
-        <div className="p-page-gutter">
-          <h1 className="page-title">Products</h1>
-          <p className="page-description mt-2">Staff dashboard chrome with sidebar and topbar.</p>
-        </div>
-      </AppShell>
+      />
     </div>
   ),
 }

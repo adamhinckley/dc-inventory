@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import React, { type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 type LinkProps = Omit<ComponentPropsWithoutRef<"a">, "href"> & {
   href: string | { pathname?: string };

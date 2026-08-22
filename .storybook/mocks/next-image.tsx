@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
+import React, { type ComponentPropsWithoutRef } from "react";
 
 type ImageProps = ComponentPropsWithoutRef<"img"> & {
   fill?: boolean;
