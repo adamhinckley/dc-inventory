@@ -362,10 +362,10 @@ Written only by inventory, from `stock_movements`. **Never** a CRUD field on pro
 
 | Snapshot field | Source field | Meaning in v1 |
 | --- | --- | --- |
-| `on_hand` | `onhand_qty` / `loc_onhand` | Receipts − shipments − adjustments |
-| `allocated` | `onpicklist_qty` | Confirmed sales not yet shipped |
-| `on_order` | `on_order_qty` | Open PO qty not yet received |
-| `available` | — | `on_hand − allocated` (derived) |
+| `on_hand` | `onhand_qty` / `loc_onhand` | Receipts − shipments − adjustments. **Persisted.** |
+| `allocated` | `onpicklist_qty` | Confirmed sales not yet shipped. **Persisted.** |
+| `on_order` | `on_order_qty` | Open PO qty not yet received. **Persisted.** |
+| `available` | — | `on_hand − allocated`. **Not a column.** Derived in the Inventory repository / in-memory adapter. Not a Postgres generated column. |
 
 If `onhand_qty` and `loc_onhand` diverge in the dump, that is a source-system bug or multi-bin total vs location qty — call it out on import, do not invent a third quantity.
 
@@ -395,10 +395,10 @@ Purchasing and sales never write quantity columns. They emit movements; inventor
 flowchart LR
   purchasing["purchasing<br/>PO confirm / receive"] --> movements
   sales["sales<br/>confirm / cancel / ship"] --> movements
-  movements["stock_movements"] --> snapshots["stock_snapshots<br/>on_hand · on_order · allocated · available"]
+  movements["stock_movements"] --> snapshots["stock_snapshots<br/>on_hand · on_order · allocated"]
 ```
 
-`available` = `on_hand − allocated` (derived). v1 does not sell against inbound PO qty.
+`available` = `on_hand − allocated` (derived in the Inventory repository — **omit the column**). v1 does not sell against inbound PO qty. See [`wayfinder/grilling/available-generated-column-vs-repository-derivation.md`](./wayfinder/grilling/available-generated-column-vs-repository-derivation.md).
 
 ---
 

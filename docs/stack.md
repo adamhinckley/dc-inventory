@@ -133,7 +133,7 @@ This product is a **transactional ledger**. Allocation must not oversell: confir
 | Enumerations | Postgres enums **or** text + check constraint; map to TS union types in the adapter. |
 | Product image bytes | **Not in Postgres.** Store object key + metadata only. |
 | Product / order snapshots | Columns, or `JSONB` for a frozen `ProductSnapshot` on a line item — not a live join to catalog at read time for historical orders. |
-| Availability | Movement table is source of truth; snapshot table (`on_hand`, `on_order`, `allocated`) updated **in the same transaction**. `available` is `on_hand - allocated` (generated column or computed in the repository). |
+| Availability | Movement table is source of truth; snapshot table (`on_hand`, `on_order`, `allocated`) updated **in the same transaction**. **Do not persist `available`.** It is `on_hand - allocated`, derived in the Inventory repository and the in-memory adapter (domain helper allowed). Not a Postgres generated column. Decision: [`wayfinder/grilling/available-generated-column-vs-repository-derivation.md`](./wayfinder/grilling/available-generated-column-vs-repository-derivation.md) ([ADA-46](https://linear.app/adamhinckley/issue/ADA-46/available-generated-column-vs-repository-derivation)). |
 
 ### Transactions and locking (Inventory)
 

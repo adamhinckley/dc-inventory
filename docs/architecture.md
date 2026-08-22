@@ -336,7 +336,7 @@ available   = on_hand − allocated
 
 **v1 policy:** inbound PO qty is **shown**, not **sellable**. Clients cannot order against stock that has not been received. Changing that policy later is a new projection rule, not a rewrite of the ledger.
 
-`available` is never written by a use case as a raw field. It is computed (or stored only as a derived column maintained by the Inventory adapter).
+`available` is never written by a use case as a raw field. It is **not a persisted column**. Derive `on_hand − allocated` in the Inventory repository and the in-memory adapter (a domain helper / snapshot getter is allowed). Do not add a Postgres generated column. Decision: [`wayfinder/grilling/available-generated-column-vs-repository-derivation.md`](./wayfinder/grilling/available-generated-column-vs-repository-derivation.md) ([ADA-46](https://linear.app/adamhinckley/issue/ADA-46/available-generated-column-vs-repository-derivation)).
 
 ```mermaid
 flowchart TD

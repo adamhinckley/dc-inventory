@@ -99,7 +99,7 @@ This is the hard problem. Get it wrong and every “available” screen drifts.
 |---|---|
 | I1 | **Stock movements** are the source of truth. The availability snapshot is a **read model**. |
 | I2 | The snapshot for a SKU is updated in the **same database transaction** as the movement. v1 has no eventual-consistency gap on the number staff and clients see. |
-| I3 | `available` is never a business input and is never assigned by a use case as a raw field. It is `on_hand − allocated` (computed, or a derived column the Inventory adapter maintains). |
+| I3 | `available` is never a business input and is never assigned by a use case as a raw field. It is `on_hand − allocated`, derived in the Inventory repository / in-memory adapter (domain helper allowed). It is **not** a persisted column — writable or generated. |
 | I4 | Frontends never compute `available` (or any stock figure). A list that shows stock figures is a query use case that reads the Inventory read model. |
 | I5 | Imports must not write `available` or raw on-hand. A stock-count import is an `Adjustment` movement and is owner-gated. |
 | I6 | v1 policy: inbound PO qty is **shown**, not **sellable**. Clients cannot order against stock that has not been received. Changing that is a new projection rule, not a ledger rewrite. |
