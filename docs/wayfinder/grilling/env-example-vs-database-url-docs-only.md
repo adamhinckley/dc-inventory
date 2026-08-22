@@ -3,12 +3,12 @@
 **Ticket:** [`.env.example` vs DATABASE_URL docs only](https://linear.app/adamhinckley/issue/ADA-48/envexample-vs-database-url-docs-only)
 **Kind:** grilling (demo-only lock for the Phase 0 spec)
 **Map:** [Phase 0 implementation spec map](https://linear.app/adamhinckley/issue/ADA-41/phase-0-implementation-spec-map)
-**HITL:** Cursor thread [bc-411f69b0](https://www.cursor.com/agents/bc-411f69b0-60a8-4e58-be6f-77e3bdfb3048) (Q1 open — answer in chat)
+**HITL:** Cursor thread [bc-411f69b0](https://www.cursor.com/agents/bc-411f69b0-60a8-4e58-be6f-77e3bdfb3048) (Q1 → **1**)
 **Not product law:** do not edit [`invariants.md`](../../invariants.md) §18 or tick [`open-questions.md`](../../open-questions.md)
 
 This note does not add compose, MinIO wiring, or real secrets.
 
-Do **not** treat a Done comment that appears before HITL as canonical.
+Canonical pick is HITL in that thread. A Linear Done comment that disagrees with HITL 1 is wrong.
 
 ---
 
@@ -16,7 +16,27 @@ Do **not** treat a Done comment that appears before HITL as canonical.
 
 | Q | Pick | Lock |
 | --- | --- | --- |
-| 1 Where env lives | *waiting* | Committed `.env.example` + compose env, or docs-only `DATABASE_URL` |
+| 1 Where env lives | **1** | Committed `.env.example` + Compose env for Postgres + MinIO. Placeholders only. Never a real `.env`. |
+
+---
+
+## Decision
+
+Phase 0 **requires** committed example env files and Compose `environment` for Postgres 16 + MinIO.
+
+Keep (and add if missing):
+
+- `apps/api/.env.example` — `DATABASE_URL` + `PORT` (scaffold already has this)
+- Wholesale / internal `.env.example` files already on `main` (API proxy). Do not delete them.
+- `docker-compose.yml` service env for Postgres and MinIO (written after `/to-spec`, not this PR)
+
+Values are **placeholders only** (local `postgres`/`postgres`, dummy MinIO keys). `.env` stays gitignored. Never commit real secrets (OP8).
+
+`docs/demo-assumptions.md` (later) may **repeat** the names; it is not a substitute for the files.
+
+MinIO keys may appear in compose / example so the box boots. Do **not** wire `IFileStorage` or add catalog upload in Phase 0.
+
+Rejected: docs-only (option 2) and “API example only, no app MinIO keys / no extra examples” (option 3).
 
 ---
 
