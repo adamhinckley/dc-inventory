@@ -1,5 +1,9 @@
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
+import {
+  healthResponseSchema,
+  readyResponseSchema,
+} from "./adapters/http/health.js";
 import { pingResponseSchema } from "./adapters/http/ping.js";
 import { InMemoryClock } from "./adapters/in-memory-clock.js";
 import { buildApp } from "./app.js";
@@ -25,14 +29,18 @@ describe("composition root HTTP", () => {
     const app = await startApp();
     const res = await app.inject({ method: "GET", url: "/health" });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ ok: true });
+    const body = res.json();
+    expect(body).toEqual({ ok: true });
+    expect(healthResponseSchema.parse(body)).toEqual(body);
   });
 
   it("GET /ready is a stub 200", async () => {
     const app = await startApp();
     const res = await app.inject({ method: "GET", url: "/ready" });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ ready: true });
+    const body = res.json();
+    expect(body).toEqual({ ready: true });
+    expect(readyResponseSchema.parse(body)).toEqual(body);
   });
 
   it("GET /ping maps the use case through the HTTP adapter", async () => {

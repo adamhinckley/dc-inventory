@@ -10,28 +10,40 @@ export const readyResponseSchema = z.object({
   ready: z.literal(true),
 });
 
+function typed(app: FastifyInstance) {
+  return app.withTypeProvider<ZodTypeProvider>();
+}
+
 /**
  * Liveness + readiness. `/health` must not touch Postgres or other I/O.
  * `/ready` is a stub until ADA-34 wires a real `SELECT 1`.
  */
 export function registerHealthRoutes(app: FastifyInstance): void {
-  const typed = app.withTypeProvider<ZodTypeProvider>();
+  const routes = typed(app);
 
-  typed.route({
-    method: "GET",
-    url: "/health",
-    schema: {
-      response: { 200: healthResponseSchema },
+  routes.get(
+    "/health",
+    {
+      schema: {
+        operationId: "getHealth",
+        tags: ["ops-signals"],
+        summary: "Liveness probe (no database I/O)",
+        response: { 200: healthResponseSchema },
+      },
     },
-    handler: async () => ({ ok: true as const }),
-  });
+    async () => ({ ok: true as const }),
+  );
 
-  typed.route({
-    method: "GET",
-    url: "/ready",
-    schema: {
-      response: { 200: readyResponseSchema },
+  routes.get(
+    "/ready",
+    {
+      schema: {
+        operationId: "getReady",
+        tags: ["ops-signals"],
+        summary: "Readiness stub until ADA-34",
+        response: { 200: readyResponseSchema },
+      },
     },
-    handler: async () => ({ ready: true as const }),
-  });
+    async () => ({ ready: true as const }),
+  );
 }
