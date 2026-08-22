@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { DataTable, type ListQueryHook } from "./data-table";
+import { DataTable } from "./data-table";
 import { productsListTable } from "./fixtures/products-list-table";
 import type { ListQueryParams } from "./list-params";
+import type { ListQueryHook } from "./use-data-table";
 
 type ProductRow = {
   id: string;
@@ -79,32 +80,46 @@ const useMockProducts: ListQueryHook<ListQueryParams, ProductRow> = (params) => 
 
 const meta = {
   title: "ui-internal/DataTable",
-  component: DataTable,
-} satisfies Meta<typeof DataTable>;
+  component: DataTable.Root,
+} satisfies Meta<typeof DataTable.Root>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ProductsList: Story = {
-  args: {
-    meta: productsListTable,
-    queryHook: useMockProducts,
-    filterOptions: {
-      status: [
-        { value: "active", label: "active" },
-        { value: "inactive", label: "inactive" },
-      ],
-    },
-  },
+  render: () => (
+    <DataTable.Root
+      meta={productsListTable}
+      queryHook={useMockProducts}
+      filterOptions={{
+        status: [
+          { value: "active", label: "active" },
+          { value: "inactive", label: "inactive" },
+        ],
+      }}
+    >
+      <DataTable.Search />
+      <DataTable.Filters />
+      <DataTable.Table />
+      <DataTable.Pagination />
+    </DataTable.Root>
+  ),
 };
 
 export const Empty: Story = {
-  args: {
-    meta: productsListTable,
-    queryHook: () => ({
-      data: { data: { items: [], page: 1, pageSize: 25, total: 0 }, status: 200 },
-      isPending: false,
-      isError: false,
-    }),
-  },
+  render: () => (
+    <DataTable.Root
+      meta={productsListTable}
+      queryHook={() => ({
+        data: { data: { items: [], page: 1, pageSize: 25, total: 0 }, status: 200 },
+        isPending: false,
+        isError: false,
+      })}
+    >
+      <DataTable.Search />
+      <DataTable.Filters />
+      <DataTable.Table />
+      <DataTable.Pagination />
+    </DataTable.Root>
+  ),
 };

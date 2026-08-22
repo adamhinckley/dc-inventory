@@ -39,8 +39,26 @@ export type TableImportMeta = {
 };
 
 /**
- * Generated `x-table` shape (`productsListTable.ts` after codegen).
- * `DataTable` renders only columns / search / filters listed here.
+ * Generated OpenAPI `x-table` shape consumed by `DataTable` (`columns`, `search`,
+ * `filters`, `sort`).
+ *
+ * Use this type for generated or copied list meta on internal dashboard pages.
+ * Do not invent filters or columns that are not on the operation’s `x-table`.
+ *
+ * Import from `@dc-inventory/ui-internal`.
+ *
+ * @example
+ * ```ts
+ * import type { TableMeta } from "@dc-inventory/ui-internal";
+ *
+ * export const productsListTable = {
+ *   rowId: "id",
+ *   columns: [{ field: "sku", label: "SKU" }],
+ *   search: { param: "q", fields: ["sku", "name"], placeholder: "Search SKU or name" },
+ *   filters: [{ param: "status", control: "select" }],
+ *   sort: { defaultBy: "sku", defaultOrder: "asc", fields: ["sku", "name"] },
+ * } as const satisfies TableMeta;
+ * ```
  */
 export type TableMeta = {
   rowId: string;

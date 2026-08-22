@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { productsListTable } from "../src/fixtures/products-list-table";
-import type { TableMeta } from "../src/table-meta";
+import { productsListTable } from "../src/data-table/fixtures/products-list-table";
+import type { TableMeta } from "../src/data-table/table-meta";
 
 describe("generated x-table meta shape", () => {
   it("accepts the internal products stub as TableMeta", () => {

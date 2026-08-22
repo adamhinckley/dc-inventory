@@ -1,6 +1,19 @@
 import { CatalogTable } from "../../../components/catalog-table";
+import { productsListTable } from "../../../lib/products-list-table";
+import { tableParamsFromSearchParams } from "../../../lib/table-url-params";
 
-export default function CatalogPage() {
+type CatalogSearchParams = Promise<
+  Record<string, string | string[] | undefined>
+>;
+
+export default async function CatalogPage({
+  searchParams,
+}: {
+  searchParams: CatalogSearchParams;
+}) {
+  const params = await searchParams;
+  const initialParams = tableParamsFromSearchParams(productsListTable, params);
+
   return (
     <section className="flex flex-col gap-6">
       <header className="max-w-2xl">
@@ -13,7 +26,7 @@ export default function CatalogPage() {
           returned — this page does not write inventory.
         </p>
       </header>
-      <CatalogTable />
+      <CatalogTable initialParams={initialParams} />
     </section>
   );
 }

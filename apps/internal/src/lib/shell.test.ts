@@ -31,8 +31,19 @@ describe("internal dashboard shell", () => {
       join(srcRoot, "components/catalog-table.tsx"),
       "utf8",
     );
-    expect(catalog).toMatch(/DataTable/);
+    expect(catalog).toMatch(/DataTable\.Root/);
     expect(catalog).toMatch(/useListInternalProducts/);
+    expect(catalog).toMatch(/onParamsChange/);
+    expect(catalog).not.toMatch(/history\.push/);
+    expect(catalog).not.toMatch(/useSearchParams/);
+
+    const catalogPage = readFileSync(
+      join(srcRoot, "app/(dashboard)/catalog/page.tsx"),
+      "utf8",
+    );
+    expect(catalogPage).toMatch(/searchParams/);
+    expect(catalogPage).toMatch(/initialParams/);
+    expect(catalogPage).toMatch(/tableParamsFromSearchParams/);
 
     const placeholders = [
       "customers",

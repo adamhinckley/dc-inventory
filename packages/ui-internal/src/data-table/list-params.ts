@@ -1,0 +1,155 @@
+import type { TableMeta } from "./table-meta";
+
+/**
+ * Shared list query params from api-contract.md plus declared filter keys.
+ *
+ * Use as the URL / Orval list shape for one internal `DataTable` per route
+ * (`page`, `sortBy`, `sortOrder`, `q`, and `meta.filters`). Do not add
+ * invented filter keys or prefixed query names.
+ *
+ * Import from `@dc-inventory/ui-internal`.
+ *
+ * @example
+ * ```ts
+ * import type { ListQueryParams } from "@dc-inventory/ui-internal";
+ *
+ * const initialParams: ListQueryParams = { page: 2, q: "bolt", status: "active" };
+ * ```
+ */
+export type ListQueryParams = {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  [filterParam: string]: string | number | boolean | undefined;
+};
+
+export type DataTableState = {
+  search: string;
+  page: number;
+  pageSize: number;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+  /** Values keyed by `x-table` filter params (and `rangePair` for date ranges). */
+  filters: Record<string, string | boolean | undefined>;
+};
+
+export function defaultTableState(meta: TableMeta): DataTableState {
+  return {
+    search: "",
+    page: 1,
+    pageSize: 25,
+    sortBy: meta.sort.defaultBy,
+    sortOrder: meta.sort.defaultOrder,
+    filters: {},
+  };
+}
+
+function declaredFilterParams(meta: TableMeta): Set<string> {
+  const allowed = new Set<string>();
+  for (const filter of meta.filters) {
+    allowed.add(filter.param);
+    if (filter.control === "dateRange" && filter.rangePair) {
+      allowed.add(filter.rangePair);
+    }
+  }
+  return allowed;
+}
+
+/**
+ * Builds Orval list params from chrome state.
+ * Drops filter keys that are not in `meta.filters` (do not invent filters).
+ */
+export function listParamsFromState(
+  meta: TableMeta,
+  state: DataTableState,
+): ListQueryParams {
+  const params: ListQueryParams = {
+    page: state.page,
+    pageSize: state.pageSize,
+    sortBy: state.sortBy,
+    sortOrder: state.sortOrder,
+  };
+
+  if (meta.search) {
+    const value = state.search.trim();
+    if (value !== "") {
+      params[meta.search.param] = value;
+    }
+  }
+
+  const allowed = declaredFilterParams(meta);
+  for (const [key, value] of Object.entries(state.filters)) {
+    if (!allowed.has(key)) {
+      continue;
+    }
+    if (value === undefined || value === "") {
+      continue;
+    }
+    params[key] = value;
+  }
+
+  return params;
+}
+
+/**
+ * First-paint table chrome from page-owned `initialParams` (URL / searchParams).
+ * Unknown filter keys and invalid page/sort values fall back to `x-table` defaults.
+ */
+export function tableStateFromParams(
+  meta: TableMeta,
+  initial?: ListQueryParams,
+): DataTableState {
+  const defaults = defaultTableState(meta);
+  if (!initial) {
+    return defaults;
+  }
+
+  const searchKey = meta.search?.param;
+  const searchRaw = searchKey ? initial[searchKey] : undefined;
+
+  const filters: DataTableState["filters"] = {};
+  const allowed = declaredFilterParams(meta);
+  for (const key of allowed) {
+    const value = initial[key];
+    if (value === undefined || value === "") {
+      continue;
+    }
+    if (typeof value === "boolean") {
+      filters[key] = value;
+    } else if (typeof value === "string" || typeof value === "number") {
+      filters[key] = String(value);
+    }
+  }
+
+  const page =
+    typeof initial.page === "number" &&
+    Number.isInteger(initial.page) &&
+    initial.page >= 1
+      ? initial.page
+      : defaults.page;
+  const pageSize =
+    typeof initial.pageSize === "number" &&
+    Number.isInteger(initial.pageSize) &&
+    initial.pageSize >= 1
+      ? initial.pageSize
+      : defaults.pageSize;
+  const sortBy =
+    typeof initial.sortBy === "string" && meta.sort.fields.includes(initial.sortBy)
+      ? initial.sortBy
+      : defaults.sortBy;
+  const sortOrder =
+    initial.sortOrder === "asc" || initial.sortOrder === "desc"
+      ? initial.sortOrder
+      : defaults.sortOrder;
+
+  return {
+    search: typeof searchRaw === "string" ? searchRaw : defaults.search,
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+    filters,
+  };
+}

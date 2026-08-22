@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { unwrapListData } from "../src/data-table";
+import { unwrapListData } from "../src/data-table/use-data-table";
 
 const envelope = {
   items: [{ id: "1" }],

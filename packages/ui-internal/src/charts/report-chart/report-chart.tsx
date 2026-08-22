@@ -17,14 +17,6 @@ import { CHART_SERIES_COLORS } from "./chart-tokens";
 import { formatChartY, toWideRows } from "./report-chart-data";
 import type { ReportChartProps } from "./report-chart-types";
 
-export type {
-  ChartMeta,
-  ChartPoint,
-  ChartSeries,
-  ReportChartProps,
-} from "./report-chart-types";
-export { formatChartY, toWideRows } from "./report-chart-data";
-
 function seriesColor(index: number): string {
   return (
     CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length] ??
@@ -32,6 +24,25 @@ function seriesColor(index: number): string {
   );
 }
 
+/**
+ * Recharts wrapper for a single shipped report series (`x-chart` meta + points).
+ *
+ * Use on internal report pages when the API declares `x-chart`. Do not put this
+ * on the wholesale shop, do not invent a second chart type folder for this
+ * ticket, and do not hardcode series hex — tokens only.
+ *
+ * Import from `@dc-inventory/ui-internal`.
+ *
+ * @example
+ * ```tsx
+ * import { ReportChart } from "@dc-inventory/ui-internal";
+ *
+ * <ReportChart
+ *   meta={{ type: "line", xLabel: "Week", yUnit: "quantity" }}
+ *   series={[{ name: "Available", points: [{ x: "W1", y: 48 }] }]}
+ * />
+ * ```
+ */
 export function ReportChart({ meta, series }: ReportChartProps) {
   if (meta.type === "kpi") {
     const first = series[0];
