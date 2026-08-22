@@ -7,6 +7,7 @@ export default defineConfig({
       "apps/api/**/*.test.ts",
       "apps/wholesale/**/*.test.ts",
       "packages/shared-kernel/tests/**/*.test.ts",
+      "packages/ui/tests/**/*.test.ts",
     ],
     exclude: ["**/node_modules/**", "**/dist/**"],
   },
