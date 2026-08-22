@@ -21,7 +21,7 @@ Write token classes (`bg-background`, `text-primary`, `border-border-strong`, `d
 
 ## Storybook
 
-One monorepo Storybook at the repo root covers this package (and later `packages/ui-internal`). From the repo root:
+One monorepo Storybook at the repo root covers this package and `packages/ui-internal`. From the repo root:
 
 ```bash
 pnpm storybook

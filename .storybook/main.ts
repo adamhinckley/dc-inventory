@@ -9,7 +9,6 @@ const rootDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const config: StorybookConfig = {
   stories: [
     "../packages/ui/src/**/*.stories.@(ts|tsx)",
-    // ADA-37 will add DataTable stories here.
     "../packages/ui-internal/src/**/*.stories.@(ts|tsx)",
   ],
   addons: ["@storybook/addon-docs", "@storybook/addon-themes"],
@@ -26,6 +25,10 @@ const config: StorybookConfig = {
       resolve: {
         alias: {
           "@dc-inventory/ui": join(rootDir, "packages/ui/src/index.ts"),
+          "@dc-inventory/ui-internal": join(
+            rootDir,
+            "packages/ui-internal/src/index.ts",
+          ),
         },
       },
     });

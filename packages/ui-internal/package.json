@@ -1,0 +1,29 @@
+{
+  "name": "@dc-inventory/ui-internal",
+  "private": true,
+  "type": "module",
+  "description": "Staff-only DataTable and Recharts wrappers. Not for the wholesale shop.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "dependencies": {
+    "@dc-inventory/ui": "workspace:*",
+    "recharts": "^3.1.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
