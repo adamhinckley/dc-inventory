@@ -4,8 +4,47 @@ import { createPostgresDatabase, PostgresDatabase } from "./db.js";
 import { schema } from "./schema.js";
 
 describe("PostgresDatabase", () => {
-  it("registers no business tables", () => {
-    expect(schema).toEqual({});
+  it("registers catalog through operator-bridge tables", () => {
+    expect(Object.keys(schema).sort()).toEqual(
+      [
+        "addOnGrants",
+        "categories",
+        "contacts",
+        "customers",
+        "exemptionCertificates",
+        "flagOverrides",
+        "invoiceTaxLines",
+        "invoices",
+        "issueReports",
+        "locations",
+        "operatorOutbox",
+        "opsUsers",
+        "orderLines",
+        "orders",
+        "paymentApplications",
+        "payments",
+        "productCategories",
+        "productIdentifiers",
+        "productImages",
+        "productPackaging",
+        "products",
+        "purchaseOrderLines",
+        "purchaseOrders",
+        "reorderPolicies",
+        "sessions",
+        "shipTos",
+        "softwarePayments",
+        "staffUsers",
+        "stockMovements",
+        "stockSnapshots",
+        "subscriptions",
+        "supplierProducts",
+        "suppliers",
+        "taxCommitLines",
+        "taxCommits",
+        "wholesaleUsers",
+      ].sort(),
+    );
   });
 
   it("fails clearly when DATABASE_URL is missing", () => {

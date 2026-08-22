@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/server.ts",
+    "db:migrate": "drizzle-kit migrate",
     "gen:api": "tsx src/gen-api.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

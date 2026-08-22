@@ -30,6 +30,7 @@ describe("workspace", () => {
       expect.objectContaining({
         test: expect.any(String),
         lint: expect.any(String),
+        "db:migrate": expect.any(String),
         "dev:api": expect.any(String),
         "gen:api": expect.any(String),
       }),

@@ -27,12 +27,20 @@ describe("internal dashboard shell", () => {
   });
 
   it("puts DataTable only on the catalog example page", () => {
+    const catalogPage = readFileSync(
+      join(srcRoot, "app/(dashboard)/catalog/page.tsx"),
+      "utf8",
+    );
+    expect(catalogPage).toMatch(/searchParams/);
+    expect(catalogPage).toMatch(/listParamsFromSearchParams/);
+
     const catalog = readFileSync(
       join(srcRoot, "components/catalog-table.tsx"),
       "utf8",
     );
-    expect(catalog).toMatch(/DataTable/);
+    expect(catalog).toMatch(/DataTable\.Root/);
     expect(catalog).toMatch(/useListInternalProducts/);
+    expect(catalog).toMatch(/replaceTableUrlParams/);
 
     const placeholders = [
       "customers",

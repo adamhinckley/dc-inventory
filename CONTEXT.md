@@ -16,7 +16,7 @@ Also: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md)
 
 ## Current scaffold
 
-Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, Node >=24, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Fastify lives in `apps/api`: composition root + DI in `apps/api/src/infrastructure`, Drizzle + postgres.js (`DATABASE_URL`, no business schemas), `GET /health` (no DB) + `GET /ready` (`SELECT 1`), Pino JSON + `requestId`, Ping golden path, and stub `/internal`, `/wholesale`, and `/ops` mounts. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). `packages/ui` is the **internal dashboard** design system: Tailwind v4, Carbon White / g100 hex on semantic tokens, Base UI primitives, AppShell, Storybook (`pnpm storybook`). `packages/ui-internal` is the staff `DataTable` (`{ meta, queryHook }` + `x-table` meta) and Recharts. `apps/internal` uses AppShell. `apps/wholesale` is an App Router shop with its own canvas/ink tokens — same layout *principles* as the dashboard kit, not the same components. Ops UI is deferred.
+Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, Node >=24, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Fastify lives in `apps/api`: composition root + DI in `apps/api/src/infrastructure`, Drizzle + postgres.js (`DATABASE_URL`, catalog / purchasing / inventory / identity / customers / sales / tax / accounting / licensing / operator_bridge tables), `GET /health` (no DB) + `GET /ready` (`SELECT 1`), Pino JSON + `requestId`, Ping golden path, and stub `/internal`, `/wholesale`, and `/ops` mounts. Root Compose starts Postgres 16 + MinIO (placeholders; MinIO is unwired). `pnpm db:migrate` runs Drizzle Kit in the API app only. Demo-only locks live in [`docs/demo-assumptions.md`](./docs/demo-assumptions.md) and are not [`docs/invariants.md`](./docs/invariants.md) §18. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). `packages/ui` is the **internal dashboard** design system: Tailwind v4, Carbon White / g100 hex on semantic tokens, Base UI primitives, AppShell, Storybook (`pnpm storybook`). `packages/ui-internal` is the staff `DataTable` (`{ meta, queryHook }` + `x-table` meta) and Recharts. `apps/internal` uses AppShell. `apps/wholesale` is an App Router shop with its own canvas/ink tokens — same layout *principles* as the dashboard kit, not the same components. Ops UI is deferred.
 
 ## Language
 
@@ -35,7 +35,7 @@ The licensing control plane UI (`apps/ops`) for the software operator and busine
 _Avoid_: Operator platform (that is a different repo), admin
 
 **Backend scaffold**:
-The monorepo foundation and Fastify composition root: workspace tooling, shared kernel, `/health`, audience mounts, OpenAPI export, Orval clients, Drizzle connected with no business schemas yet. Owns the repo root.
+The monorepo foundation and Fastify composition root: workspace tooling, shared kernel, `/health`, audience mounts, OpenAPI export, Orval clients, Drizzle connected with catalog / purchasing / inventory / identity / customers / sales / tax / accounting / licensing / operator_bridge tables. Owns the repo root.
 _Avoid_: Boilerplate, MVP backend
 
 **Frontend scaffold**:
