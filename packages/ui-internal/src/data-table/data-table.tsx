@@ -4,6 +4,7 @@ import { Button, Input, Label } from "@dc-inventory/ui";
 import {
   createContext,
   useContext,
+  useId,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
@@ -37,6 +38,8 @@ export type DataTableRootProps<
 
 type DataTableContextValue = ReturnType<typeof useDataTable> & {
   filterOptions?: DataTableRootProps["filterOptions"];
+  /** Per-Root prefix so two tables do not share form-control IDs. */
+  idBase: string;
 };
 
 const DataTableContext = createContext<DataTableContextValue | null>(null);
@@ -65,11 +68,13 @@ function FilterControl({
   state,
   setState,
   options,
+  idBase,
 }: {
   filter: TableFilterMeta;
   state: DataTableState;
   setState: Dispatch<SetStateAction<DataTableState>>;
   options: readonly FilterOption[] | undefined;
+  idBase: string;
 }) {
   const setFilter = (param: string, value: string | boolean | undefined) => {
     setState((current) => ({
@@ -78,13 +83,14 @@ function FilterControl({
       filters: { ...current.filters, [param]: value },
     }));
   };
+  const filterId = `${idBase}-filter-${filter.param}`;
 
   if (filter.control === "select") {
     return (
       <div className="flex min-w-40 flex-col gap-2">
-        <Label htmlFor={`filter-${filter.param}`}>{filter.param}</Label>
+        <Label htmlFor={filterId}>{filter.param}</Label>
         <select
-          id={`filter-${filter.param}`}
+          id={filterId}
           className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
           value={String(state.filters[filter.param] ?? "")}
           onChange={(event) =>
@@ -106,14 +112,14 @@ function FilterControl({
     return (
       <div className="flex items-end gap-2 pb-2">
         <input
-          id={`filter-${filter.param}`}
+          id={filterId}
           type="checkbox"
           checked={state.filters[filter.param] === true}
           onChange={(event) =>
             setFilter(filter.param, event.target.checked ? true : undefined)
           }
         />
-        <Label htmlFor={`filter-${filter.param}`}>{filter.param}</Label>
+        <Label htmlFor={filterId}>{filter.param}</Label>
       </div>
     );
   }
@@ -123,9 +129,9 @@ function FilterControl({
     return (
       <div className="flex flex-wrap gap-4">
         <div className="flex min-w-40 flex-col gap-2">
-          <Label htmlFor={`filter-${filter.param}`}>{filter.param}</Label>
+          <Label htmlFor={filterId}>{filter.param}</Label>
           <Input
-            id={`filter-${filter.param}`}
+            id={filterId}
             type="date"
             value={String(state.filters[filter.param] ?? "")}
             onChange={(event) =>
@@ -135,9 +141,9 @@ function FilterControl({
         </div>
         {toParam ? (
           <div className="flex min-w-40 flex-col gap-2">
-            <Label htmlFor={`filter-${toParam}`}>{toParam}</Label>
+            <Label htmlFor={`${idBase}-filter-${toParam}`}>{toParam}</Label>
             <Input
-              id={`filter-${toParam}`}
+              id={`${idBase}-filter-${toParam}`}
               type="date"
               value={String(state.filters[toParam] ?? "")}
               onChange={(event) =>
@@ -153,9 +159,9 @@ function FilterControl({
   const inputType = filter.control === "date" ? "date" : "text";
   return (
     <div className="flex min-w-40 flex-col gap-2">
-      <Label htmlFor={`filter-${filter.param}`}>{filter.param}</Label>
+      <Label htmlFor={filterId}>{filter.param}</Label>
       <Input
-        id={`filter-${filter.param}`}
+        id={filterId}
         type={inputType}
         value={String(state.filters[filter.param] ?? "")}
         onChange={(event) =>
@@ -207,6 +213,7 @@ export function DataTableRoot<
   onParamsChange,
   children,
 }: DataTableRootProps<TParams, TRow>) {
+  const idBase = useId();
   const table = useDataTable({
     meta,
     queryHook,
@@ -215,7 +222,7 @@ export function DataTableRoot<
   });
 
   return (
-    <DataTableContext.Provider value={{ ...table, filterOptions }}>
+    <DataTableContext.Provider value={{ ...table, filterOptions, idBase }}>
       <div className="flex flex-col gap-4">{children}</div>
     </DataTableContext.Provider>
   );
@@ -237,16 +244,17 @@ export function DataTableRoot<
  * ```
  */
 export function DataTableSearch() {
-  const { meta, state, setState } = useDataTableContext();
+  const { meta, state, setState, idBase } = useDataTableContext();
   if (!meta.search) {
     return null;
   }
+  const searchId = `${idBase}-search`;
 
   return (
     <div className="flex min-w-56 flex-1 flex-col gap-2">
-      <Label htmlFor="datatable-search">{meta.search.placeholder}</Label>
+      <Label htmlFor={searchId}>{meta.search.placeholder}</Label>
       <Input
-        id="datatable-search"
+        id={searchId}
         value={state.search}
         placeholder={meta.search.placeholder}
         onChange={(event) =>
@@ -281,7 +289,9 @@ export function DataTableSearch() {
  * ```
  */
 export function DataTableFilters() {
-  const { meta, state, setState, filterOptions } = useDataTableContext();
+  const { meta, state, setState, filterOptions, idBase } = useDataTableContext();
+  const sortId = `${idBase}-sort`;
+  const sortOrderId = `${idBase}-sort-order`;
 
   return (
     <div className="flex flex-wrap items-end gap-4">
@@ -292,12 +302,13 @@ export function DataTableFilters() {
           state={state}
           setState={setState}
           options={filterOptions?.[filter.param]}
+          idBase={idBase}
         />
       ))}
       <div className="flex min-w-40 flex-col gap-2">
-        <Label htmlFor="datatable-sort">Sort</Label>
+        <Label htmlFor={sortId}>Sort</Label>
         <select
-          id="datatable-sort"
+          id={sortId}
           className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
           value={state.sortBy}
           onChange={(event) =>
@@ -316,9 +327,9 @@ export function DataTableFilters() {
         </select>
       </div>
       <div className="flex min-w-28 flex-col gap-2">
-        <Label htmlFor="datatable-sort-order">Order</Label>
+        <Label htmlFor={sortOrderId}>Order</Label>
         <select
-          id="datatable-sort-order"
+          id={sortOrderId}
           className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
           value={state.sortOrder}
           onChange={(event) =>

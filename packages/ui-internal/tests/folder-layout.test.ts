@@ -40,4 +40,12 @@ describe("folder-per-surface layout", () => {
     const charts = readdirSync(join(srcDir, "charts"));
     expect(charts).toEqual(["report-chart"]);
   });
+
+  it("scopes form-control IDs per Root instance", () => {
+    const source = readFileSync(join(srcDir, "data-table/data-table.tsx"), "utf8");
+    expect(source).toContain("useId");
+    expect(source).toContain("idBase");
+    expect(source).not.toMatch(/id="datatable-search"/);
+    expect(source).not.toMatch(/id="datatable-sort"/);
+  });
 });

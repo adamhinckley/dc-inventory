@@ -99,10 +99,11 @@ export function tableSearchFromParams(
   const search = new URLSearchParams(
     currentSearch.startsWith("?") ? currentSearch.slice(1) : currentSearch,
   );
-  for (const key of tableUrlKeys(meta)) {
+  const keys = tableUrlKeys(meta);
+  for (const key of keys) {
     search.delete(key);
   }
-  for (const key of tableUrlKeys(meta)) {
+  for (const key of keys) {
     const value = params[key];
     if (value === undefined || value === "") {
       continue;
