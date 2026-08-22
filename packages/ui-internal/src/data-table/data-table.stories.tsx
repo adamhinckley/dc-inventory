@@ -12,6 +12,7 @@ type ProductRow = {
   onOrder: number;
   allocated: number;
   available: number;
+  createdAt: string;
   status: "active" | "inactive";
 };
 
@@ -24,6 +25,7 @@ const rows: ProductRow[] = [
     onOrder: 12,
     allocated: 2,
     available: 48,
+    createdAt: "2024-01-15T10:00:00.000Z",
     status: "active",
   },
   {
@@ -34,6 +36,7 @@ const rows: ProductRow[] = [
     onOrder: 0,
     allocated: 0,
     available: 120,
+    createdAt: "2025-06-01T10:00:00.000Z",
     status: "active",
   },
   {
@@ -44,6 +47,7 @@ const rows: ProductRow[] = [
     onOrder: 40,
     allocated: 0,
     available: 0,
+    createdAt: "2026-03-20T10:00:00.000Z",
     status: "inactive",
   },
 ];
