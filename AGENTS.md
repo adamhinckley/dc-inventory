@@ -16,7 +16,7 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 
 ## Stack (do not replace)
 
-- **Language:** TypeScript, `strict: true` (see `tsconfig.base.json`)
+- **Language:** TypeScript, `strict: true` (see `tsconfig.base.json`); **Node >=24**
 - **Monorepo:** pnpm workspaces — `apps/*` + `packages/*`
 - **Tests:** Vitest; every use case must run with in-memory adapters (no Docker, no network)
 - **API:** Fastify composition root in `apps/api` (not present yet)

@@ -13,6 +13,8 @@ Agents and CI run these **verbatim** from the repo root:
 | `pnpm dev:api` | Start the API (stub until `apps/api` exists) |
 | `pnpm gen:api` | Export OpenAPI specs and Orval clients (stub until swagger export exists) |
 
+Requires **Node >=24**. Vite 7 and the rest of the root toolchain support that range.
+
 ```bash
 pnpm install
 pnpm test
