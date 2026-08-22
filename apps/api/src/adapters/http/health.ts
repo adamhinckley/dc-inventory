@@ -10,13 +10,18 @@ export const readyResponseSchema = z.object({
   ready: z.literal(true),
 });
 
+export const notReadyResponseSchema = z.object({
+  ready: z.literal(false),
+  error: z.string(),
+});
+
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
 }
 
 /**
  * Liveness + readiness. `/health` must not touch Postgres or other I/O.
- * `/ready` is a stub until ADA-34 wires a real `SELECT 1`.
+ * `/ready` runs `SELECT 1` through `ReadyCheckUseCase` (IDatabase port).
  */
 export function registerHealthRoutes(app: FastifyInstance): void {
   const routes = typed(app);
@@ -40,10 +45,19 @@ export function registerHealthRoutes(app: FastifyInstance): void {
       schema: {
         operationId: "getReady",
         tags: ["ops-signals"],
-        summary: "Readiness stub until ADA-34",
-        response: { 200: readyResponseSchema },
+        summary: "Readiness: Postgres SELECT 1",
+        response: {
+          200: readyResponseSchema,
+          503: notReadyResponseSchema,
+        },
       },
     },
-    async () => ({ ready: true as const }),
+    async (_request, reply) => {
+      const result = await app.readyCheck.execute();
+      if (!result.ready) {
+        return reply.code(503).send(result);
+      }
+      return result;
+    },
   );
 }
