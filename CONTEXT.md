@@ -16,7 +16,7 @@ Also: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md)
 
 ## Current scaffold
 
-Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, Node >=24, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Fastify lives in `apps/api` with stub `/internal`, `/wholesale`, and `/ops` routes. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). Next.js apps are not in this pass.
+Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, Node >=24, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Fastify lives in `apps/api`: composition root + DI in `apps/api/src/infrastructure`, `GET /health` (+ `/ready` stub), Pino JSON + `requestId`, Ping golden path, and stub `/internal`, `/wholesale`, and `/ops` mounts. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). Next.js apps are not in this pass.
 
 ## Language
 
