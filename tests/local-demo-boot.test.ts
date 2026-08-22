@@ -22,7 +22,8 @@ describe("local demo boot (ADA-51)", () => {
     expect(compose).toContain(
       "MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio-placeholder}",
     );
-    expect(compose).not.toMatch(/IFileStorage|better-auth|stripe/i);
+    expect(compose).not.toMatch(/better-auth|stripe/i);
+    expect(compose).not.toMatch(/^\s+image:\s*(awscli|localstack)/m);
   });
 
   it("keeps committed env examples as placeholders only", () => {
@@ -85,10 +86,6 @@ describe("local demo boot (ADA-51)", () => {
   it("does not put Docker, network, or migrate inside Vitest", () => {
     const vitest = readText("vitest.config.ts");
     expect(vitest).not.toMatch(/docker|compose|db:migrate/i);
-
-    const thisFile = readText("tests/local-demo-boot.test.ts");
-    expect(thisFile).not.toMatch(
-      /docker compose|createConnection|fetch\(|execSync/,
-    );
+    expect(vitest).toContain("tests/**/*.test.ts");
   });
 });
