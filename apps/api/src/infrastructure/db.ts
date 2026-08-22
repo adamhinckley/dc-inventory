@@ -14,7 +14,7 @@ export type DatabaseConnection = {
 
 /**
  * Composition-root helper: postgres.js client + Drizzle.
- * No business tables are registered yet (`schema` is empty).
+ * Catalog, purchasing, and inventory tables are registered; later contexts add more.
  */
 export function createDatabaseConnection(
   url: string = readDatabaseUrl(),
