@@ -3,12 +3,12 @@
 **Ticket:** [CI migrate vs local-only stop condition](https://linear.app/adamhinckley/issue/ADA-49/ci-migrate-vs-local-only-stop-condition)
 **Kind:** grilling (demo-only lock for the Phase 0 spec)
 **Map:** [Phase 0 implementation spec map](https://linear.app/adamhinckley/issue/ADA-41/phase-0-implementation-spec-map)
-**HITL:** Cursor thread [bc-411f69b0](https://www.cursor.com/agents/bc-411f69b0-60a8-4e58-be6f-77e3bdfb3048) (Q1 open — answer in chat, not here)
+**HITL:** Cursor thread [bc-411f69b0](https://www.cursor.com/agents/bc-411f69b0-60a8-4e58-be6f-77e3bdfb3048) (Q1 → **1**)
 **Not product law:** do not edit [`invariants.md`](../../invariants.md) §18 or tick [`open-questions.md`](../../open-questions.md)
 
 This note does not add `docker-compose.yml`, Drizzle schemas, migrations, or a GitHub Actions workflow.
 
-Do **not** treat a Done comment that appears before HITL as canonical.
+Canonical pick is HITL in that thread. A Linear Done comment that disagrees with HITL 1 is wrong.
 
 ---
 
@@ -16,7 +16,19 @@ Do **not** treat a Done comment that appears before HITL as canonical.
 
 | Q | Pick | Lock |
 | --- | --- | --- |
-| 1 Phase 0 stop condition | *waiting* | CI compose + migrate + `/ready`, or local-only while `pnpm test` stays in-memory |
+| 1 Phase 0 stop condition | **1** | Required CI gate: Compose + `pnpm db:migrate` + `GET /ready` must pass. `pnpm test` stays in-memory. |
+
+---
+
+## Decision
+
+Phase 0 is **not done** until a required CI job starts Compose (Postgres 16; MinIO may be present but `IFileStorage` stays unwired), runs `pnpm db:migrate`, boots the API, and **fails if `GET /ready` cannot talk to Postgres**.
+
+Local compose + migrate + `/ready` is still required. CI is an extra stop condition, not a substitute.
+
+`pnpm test` stays in-memory adapters. No Docker, no network, no migrate inside Vitest. `GET /ready` stays `SELECT 1` (OP5) — CI runs migrate **then** pings `/ready`; `/ready` itself does not migrate.
+
+Rejected: local-only (option 2) and “workflow file but not a required check” (option 3).
 
 ---
 
