@@ -39,3 +39,7 @@ _Avoid_: Grid, CRUD table (as the component name)
 **Orval client**:
 Generated TanStack Query hooks from committed OpenAPI specs. The only allowed way a Next.js app talks to the API.
 _Avoid_: Hand-written fetch layer, API SDK (unless you mean these packages)
+
+**Agent-optimized scaffold**:
+Repo layout, scripts, tickets, and examples shaped so a coding agent can finish a slice from allowed paths + failing tests without inventing structure. Prefer boring, explicit, duplicated-if-clear over clever shared abstractions.
+_Avoid_: “DX”, developer experience (when you mean agent success), flexible folder conventions
