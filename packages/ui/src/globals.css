@@ -9,6 +9,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @source "./**/*.{ts,tsx}";
+@source "../../ui-internal/src/**/*.{ts,tsx}";
 
 :root {
   --color-background: #ffffff;
