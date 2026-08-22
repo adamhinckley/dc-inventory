@@ -13,6 +13,7 @@
     "gen:api": "echo 'gen:api stub: OpenAPI export is not implemented yet (ADA-31).' && exit 0"
   },
   "devDependencies": {
+    "@types/node": "^26.2.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }
