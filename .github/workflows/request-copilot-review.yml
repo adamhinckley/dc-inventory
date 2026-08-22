@@ -1,0 +1,55 @@
+name: Request Copilot review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  copilot-requests: write
+
+jobs:
+  request-copilot-review:
+    name: Request Copilot review
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request Copilot code review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NODE_ID: ${{ github.event.pull_request.node_id }}
+        run: |
+          set -euo pipefail
+          gh pr edit "$PR_NUMBER" --add-reviewer "@copilot" || true
+          BOT_NODE_ID="$(gh api "users/copilot-pull-request-reviewer[bot]" --jq .node_id || true)"
+          ATTACHED=""
+          if [[ -n "$BOT_NODE_ID" ]]; then
+            ATTACHED="$(
+              gh api graphql \
+                -f query='mutation($pullRequestId: ID!, $botIds: [ID!]!) {
+                  requestReviews(input: { pullRequestId: $pullRequestId, botIds: $botIds, union: true }) {
+                    pullRequest {
+                      reviewRequests(first: 20) {
+                        nodes {
+                          requestedReviewer {
+                            __typename
+                            ... on Bot { login }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }' \
+                -f pullRequestId="$PR_NODE_ID" \
+                -f "botIds[]=${BOT_NODE_ID}" \
+                --jq '[.data.requestReviews.pullRequest.reviewRequests.nodes[].requestedReviewer.login] | join(",")' \
+                || true
+            )"
+          fi
+          echo "Requested reviewers: ${ATTACHED}"
+          if [[ "$ATTACHED" != *copilot-pull-request-reviewer* ]]; then
+            echo "::warning::Copilot reviewer was not attached (non-blocking)."
+          fi
