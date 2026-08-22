@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports) · [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon White + opt-in g100 tokens, Tailwind v4) · [`tax.md`](./tax.md) (quote/commit tax engine, exemptions, fail-closed) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative).
 
 ---
 
@@ -398,6 +398,8 @@ v1 reports (internal spec only):
 
 `y` for money is **integer cents**. The chart library only formats for display.
 
+Color, type, and dark opt-in for this chrome: [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon White default, Gray 100 via `.dark`, Okabe–Ito series). Do not pick raw hex in Recharts.
+
 Add a report when a dashboard tile needs it — do not add a general-purpose “query builder” or embed Metabase/Superset in v1.
 
 ---
@@ -541,6 +543,7 @@ docs/
   licensing.md             # software subscription, add-ons, flags, ops dashboard
   operator-bridge.md       # door to the developer’s other monorepo
   linear.md                # all Cursor/Linear projects, issues, and sub-initiatives → DC Inventory initiative
+  work-dashboard-design-spec.md  # Carbon White + opt-in g100, Tailwind v4 tokens (internal UI)
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
