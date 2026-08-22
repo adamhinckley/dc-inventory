@@ -23,10 +23,11 @@ export type ListEnvelope<TRow> = {
   total: number;
 };
 
-/** Orval query result wraps the list envelope in `{ data, status }`. */
+/** Orval `customFetch` wraps the list envelope in `{ data, status, headers }`. */
 export type OrvalListResponse<TRow> = {
   data: ListEnvelope<TRow>;
   status: number;
+  headers?: Headers;
 };
 
 export type ListQueryResult<TRow = Record<string, unknown>> = {
@@ -281,6 +282,7 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
               {meta.columns.map((column) => (
                 <th
                   key={column.field}
+                  scope="col"
                   className="border-b border-border-subtle px-4 py-3 font-medium"
                 >
                   {column.label}

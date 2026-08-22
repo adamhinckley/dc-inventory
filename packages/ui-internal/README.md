@@ -19,7 +19,7 @@ import { productsListTable } from "./generated/productsListTable";
 <DataTable meta={productsListTable} queryHook={useListInternalProducts} />
 ```
 
-`queryHook` is an Orval TanStack Query hook. `DataTable` unwraps `{ data: { items, page, pageSize, total } }`.
+`queryHook` is an Orval TanStack Query hook. `DataTable` unwraps `{ data, status, headers }` from `customFetch` to `{ items, page, pageSize, total }`.
 
 Adding a filter is a **backend** change (Zod + `x-table` + `pnpm gen:api`). Do not invent filter controls in this package.
 

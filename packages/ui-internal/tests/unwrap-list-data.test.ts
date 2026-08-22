@@ -13,7 +13,13 @@ describe("unwrapListData", () => {
     expect(unwrapListData(envelope)).toEqual(envelope);
   });
 
-  it("unwraps the Orval { data, status } envelope", () => {
-    expect(unwrapListData({ data: envelope, status: 200 })).toEqual(envelope);
+  it("unwraps the Orval { data, status, headers } envelope", () => {
+    expect(
+      unwrapListData({
+        data: envelope,
+        status: 200,
+        headers: new Headers(),
+      }),
+    ).toEqual(envelope);
   });
 });
