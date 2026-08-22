@@ -1,0 +1,161 @@
+openapi: 3.0.3
+info:
+  title: DC Inventory internal API
+  version: 0.0.0
+components:
+  schemas: {}
+paths:
+  /internal/products:
+    get:
+      operationId: listInternalProducts
+      summary: Stub product list for DataTable (x-table)
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: q
+          required: false
+        - schema:
+            default: 1
+            type: integer
+            minimum: 1
+            maximum: 9007199254740991
+          in: query
+          name: page
+          required: false
+        - schema:
+            default: 25
+            type: integer
+            minimum: 1
+            maximum: 100
+          in: query
+          name: pageSize
+          required: false
+        - schema:
+            default: sku
+            type: string
+            enum:
+              - sku
+              - name
+              - available
+              - createdAt
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
+          required: false
+        - schema:
+            type: string
+            enum:
+              - active
+              - inactive
+          in: query
+          name: status
+          required: false
+      x-table:
+        rowId: id
+        columns:
+          - field: sku
+            label: SKU
+          - field: name
+            label: Name
+          - field: onHand
+            label: On hand
+          - field: onOrder
+            label: On order
+          - field: allocated
+            label: Allocated
+          - field: available
+            label: Available
+        search:
+          param: q
+          fields:
+            - sku
+            - name
+          placeholder: Search SKU or name
+        filters:
+          - param: status
+            control: select
+        sort:
+          defaultBy: sku
+          defaultOrder: asc
+          fields:
+            - sku
+            - name
+            - available
+            - createdAt
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        sku:
+                          type: string
+                        name:
+                          type: string
+                        onHand:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        onOrder:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        allocated:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        available:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                      required:
+                        - id
+                        - sku
+                        - name
+                        - onHand
+                        - onOrder
+                        - allocated
+                        - available
+                      additionalProperties: false
+                  page:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  pageSize:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  total:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - items
+                  - page
+                  - pageSize
+                  - total
+                additionalProperties: false
+servers:
+  - url: http://localhost:3001

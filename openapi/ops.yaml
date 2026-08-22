@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: DC Inventory ops API
+  version: 0.0.0
+components:
+  schemas: {}
+paths:
+  /ops/subscription:
+    get:
+      operationId: getOpsSubscription
+      summary: Stub software subscription
+      tags:
+        - ops
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - trialing
+                      - active
+                      - inactive
+                  plan:
+                    nullable: true
+                    type: string
+                required:
+                  - status
+                  - plan
+                additionalProperties: false
+servers:
+  - url: http://localhost:3001

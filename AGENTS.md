@@ -19,7 +19,7 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 - **Language:** TypeScript, `strict: true` (see `tsconfig.base.json`); **Node >=24**
 - **Monorepo:** pnpm workspaces — `apps/*` + `packages/*`
 - **Tests:** Vitest; every use case must run with in-memory adapters (no Docker, no network)
-- **API:** Fastify composition root in `apps/api` (not present yet)
+- **API:** Fastify composition root in `apps/api` (stub routes + OpenAPI export)
 - **UI:** three Next.js apps later (`internal`, `wholesale`, `ops`) — presentation only
 - **DB:** PostgreSQL + Drizzle. Rejected: Prisma-as-only-layer, Nest, GraphQL, tRPC, Mongo, Redis in v1
 
@@ -28,9 +28,9 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 | Script | Purpose |
 |---|---|
 | `pnpm test` | Vitest |
-| `pnpm lint` | Typecheck (`tsc --noEmit`) |
-| `pnpm dev:api` | API dev server (**stub** until `apps/api` exists) |
-| `pnpm gen:api` | Export OpenAPI + Orval (**stub** until swagger export exists) |
+| `pnpm lint` | Typecheck (`tsc --noEmit` plus API, shared-kernel, and client packages) |
+| `pnpm dev:api` | API dev server (`apps/api`) |
+| `pnpm gen:api` | Export OpenAPI YAML + Orval clients |
 
 ## Hard rules
 

@@ -8,12 +8,14 @@
   },
   "scripts": {
     "test": "vitest run",
-    "lint": "tsc --noEmit -p tsconfig.json",
-    "dev:api": "echo 'dev:api stub: apps/api is not scaffolded yet (ADA-31).' && exit 0",
-    "gen:api": "echo 'gen:api stub: OpenAPI export is not implemented yet (ADA-31).' && exit 0"
+    "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm --filter @dc-inventory/shared-kernel typecheck && pnpm typecheck:clients",
+    "dev:api": "pnpm --filter @dc-inventory/api dev",
+    "gen:api": "pnpm --filter @dc-inventory/api gen:api",
+    "typecheck:clients": "pnpm --filter @dc-inventory/api-client-internal typecheck && pnpm --filter @dc-inventory/api-client-wholesale typecheck && pnpm --filter @dc-inventory/api-client-ops typecheck"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "orval": "^8.25.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

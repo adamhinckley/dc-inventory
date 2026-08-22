@@ -16,7 +16,7 @@ Also: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md)
 
 ## Current scaffold
 
-Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Next apps and the Fastify composition root are **not** in this pass. `dev:api` and `gen:api` are stubs until later tickets.
+Root pnpm workspace (`apps/*`, `packages/*`), TypeScript `strict: true`, Vitest, Node >=24, and `packages/shared-kernel` (`Money`, `Sku`, branded IDs). Fastify lives in `apps/api` with stub `/internal`, `/wholesale`, and `/ops` routes. `pnpm gen:api` writes committed OpenAPI YAML and Orval clients (`packages/api-client-*`). Next.js apps are not in this pass.
 
 ## Language
 
@@ -35,7 +35,7 @@ The licensing control plane UI (`apps/ops`) for the software operator and busine
 _Avoid_: Operator platform (that is a different repo), admin
 
 **Backend scaffold**:
-The monorepo foundation and Fastify composition root: workspace tooling, shared kernel, `/health`, empty audience mounts, OpenAPI export stubs, Orval wiring, Drizzle connected with no business schemas yet. Owns the repo root.
+The monorepo foundation and Fastify composition root: workspace tooling, shared kernel, `/health`, audience mounts, OpenAPI export, Orval clients, Drizzle connected with no business schemas yet. Owns the repo root.
 _Avoid_: Boilerplate, MVP backend
 
 **Frontend scaffold**:
