@@ -11,10 +11,12 @@ const nextConfig: NextConfig = {
   },
   webpack: (config) => {
     // Orval clients use TypeScript ESM `.js` specifiers that point at `.ts` files.
-    config.resolve.extensionAlias = {
-      ...config.resolve.extensionAlias,
+    const resolve = config.resolve ?? {};
+    resolve.extensionAlias = {
+      ...(resolve.extensionAlias ?? {}),
       ".js": [".ts", ".tsx", ".js", ".jsx"],
     };
+    config.resolve = resolve;
     return config;
   },
   async rewrites() {
