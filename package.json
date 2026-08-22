@@ -8,9 +8,10 @@
   },
   "scripts": {
     "test": "vitest run",
-    "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm --filter @dc-inventory/shared-kernel typecheck && pnpm typecheck:clients && pnpm --filter @dc-inventory/wholesale typecheck && pnpm --filter @dc-inventory/ui typecheck && pnpm --filter @dc-inventory/ui-internal typecheck",
+    "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm --filter @dc-inventory/shared-kernel typecheck && pnpm typecheck:clients && pnpm --filter @dc-inventory/wholesale typecheck && pnpm --filter @dc-inventory/internal typecheck && pnpm --filter @dc-inventory/ui typecheck && pnpm --filter @dc-inventory/ui-internal typecheck",
     "dev:api": "pnpm --filter @dc-inventory/api dev",
     "dev:wholesale": "pnpm --filter @dc-inventory/wholesale dev",
+    "dev:internal": "pnpm --filter @dc-inventory/internal dev",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "gen:api": "pnpm --filter @dc-inventory/api gen:api",
