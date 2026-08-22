@@ -18,29 +18,34 @@ function block(name: string): string {
   return match[1];
 }
 
-describe("dashboard tokens (work-dashboard-design-spec.md §6)", () => {
+describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
   it("loads Tailwind v4 and class-based dark", () => {
     expect(css).toContain('@import "tailwindcss"');
-    expect(css).toContain("@custom-variant dark (&:where(.dark, .dark *))");
+    expect(css).toContain("@custom-variant dark");
   });
 
-  it("locks Carbon White on :root", () => {
+  it("locks Carbon White hex on :root under semantic names", () => {
     const root = block(":root");
-    expect(root).toContain("--color-background: #ffffff");
-    expect(root).toContain("--color-text-primary: #161616");
-    expect(root).toContain("--color-text-error: #da1e28");
-    expect(root).toContain("--color-background-brand: #0f62fe");
+    expect(root).toContain("--color-surface-base: #ffffff");
+    expect(root).toContain("--color-fg: #161616");
+    expect(root).toContain("--color-error: #da1e28");
+    expect(root).toContain("--color-primary-strong: #0f62fe");
     expect(root).toContain("--color-chart-08: #000000");
   });
 
-  it("locks Carbon Gray 100 on .dark", () => {
-    const dark = block(".dark");
-    expect(dark).toContain("--color-background: #161616");
-    expect(dark).toContain("--color-text-primary: #f4f4f4");
-    expect(dark).toContain("--color-text-error: #ff8389");
-    expect(dark).toContain("--color-text-helper: #a8a8a8");
-    expect(dark).toContain("--color-highlight: #001d6c");
-    expect(dark).toContain("--color-status-ok: #42be65");
-    expect(dark).toContain("--color-chart-08: #f4f4f4");
+  it("locks Carbon Gray 100 hex on .dark", () => {
+    expect(css).toMatch(/\.dark[\s\S]*--color-surface-base: #161616/);
+    expect(css).toMatch(/\.dark[\s\S]*--color-fg: #f4f4f4/);
+    expect(css).toMatch(/\.dark[\s\S]*--color-error: #fa4d56/);
+    expect(css).toMatch(/\.dark[\s\S]*--color-fg-tertiary: #a8a8a8/);
+    expect(css).toMatch(/\.dark[\s\S]*--color-highlight: #001d6c/);
+    expect(css).toMatch(/\.dark[\s\S]*--color-success: #42be65/);
+    expect(css).toMatch(/\.dark[\s\S]*--color-chart-08: #f4f4f4/);
+  });
+
+  it("does not reintroduce Carbon role names as the public token language", () => {
+    expect(css).not.toContain("--color-background-brand:");
+    expect(css).not.toContain("--color-text-primary:");
+    expect(css).not.toContain("--color-layer-01:");
   });
 });

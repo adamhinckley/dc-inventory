@@ -1,0 +1,64 @@
+/**
+ * Shared — Cross-cutting Layer 2 building blocks
+ *
+ * Spacing, radius, layout tokens, and behavioral archetypes used across all
+ * structural levels. These are the primitives that components compose from.
+ */
+
+:root {
+
+  /* --- Spacing: Gaps -------------------------------------------------------- */
+
+  --space-tight-gap: 0.25rem;        /* 4px — Tightest gap — between tightly coupled elements in any direction */
+  --space-snug-gap: 0.375rem;        /* 6px — Inline icon-text-icon clusters: chips, breadcrumbs, warning rows */
+  --space-icon-gap: 0.5rem;          /* 8px — Between an icon and its adjacent text */
+  --space-action-gap: 0.5rem;        /* 8px — Between action buttons in a footer or toolbar */
+  --space-region-gap: 0.75rem;       /* 12px — Between items in a header, footer, or toolbar */
+
+  /* --- Spacing: Component-type padding -------------------------------------- */
+
+  --space-input-padding-x: 0.75rem;  /* 12px — Horizontal padding inside inputs and selects */
+  --space-input-padding-y: 0.5rem;   /* 8px — Vertical padding inside inputs and selects */
+  --space-input-padding-x-compact: 0.5rem;  /* 8px — Compact-density (FilterBar) input/select horizontal padding.
+                                                Distinct token from item-padding despite the shared value — these are
+                                                input chrome, not selectable items (match by intent, not value). */
+  --space-input-padding-y-compact: 0.25rem; /* 4px — Compact-density (FilterBar) input/select vertical padding */
+  --space-input-height: 2.375rem;    /* 38px — Comfortable-density input/select/picker chrome min-height floor.
+                                                Applied as `min-h-(--space-input-height)` (a floor, NOT a fixed
+                                                height) so primitives that share `px-input-x py-input-y text-input`
+                                                (TextInput, DateInput, DateRangeInput, Select, Combobox, …)
+                                                align in filter rows regardless of internal content (button vs
+                                                input element, icon-wrapper differences) yet still grow if a
+                                                contributing property changes. See design-tokens.md § Heights. */
+  --space-button-padding-x: 1rem;    /* 16px — Horizontal padding inside buttons */
+  --space-button-padding-y: 0.625rem; /* 10px — Vertical padding inside buttons */
+  --space-item-padding-x: 0.5rem;    /* 8px — Horizontal padding for interactive list/menu items */
+  --space-item-padding-y: 0.25rem;   /* 4px — Vertical padding for interactive list/menu items */
+
+  /* --- Spacing: Container padding ------------------------------------------- */
+
+  --space-card-padding: 1rem;        /* 16px — Compact cards, notifications, nav toolbar */
+  --space-region-padding-x: 1rem;    /* 16px — Horizontal padding for container regions (header, footer) */
+  --space-region-padding-y: 0.75rem; /* 12px — Vertical padding for container regions (header, footer) */
+  --space-panel-padding: 1.25rem;    /* 20px — Tab panels, sidebar panels */
+  --space-canvas-padding: 1rem;      /* 16px — Scrollable content pane that holds cards/panels */
+
+  /* --- Spacing: Form -------------------------------------------------------- */
+
+  --space-field-gap: 0.5rem;           /* 8px — between label, input, error within a field */
+  --space-field-group-gap: 1rem;       /* 16px — between fields in a form */
+  --space-form-section-gap: 1.5rem;    /* 24px — between fieldsets/sections in a form */
+
+  /* --- Border radius -------------------------------------------------------- */
+
+  --radius-interactable-raw: 0.375rem;   /* 6px — buttons, inputs, chips, nav items */
+  --radius-section-raw: 0.625rem;        /* 10px — cards, panels, tab containers */
+  --radius-page-raw: 0.75rem;            /* 12px — page panel, outermost container */
+
+  /* --- Layout --------------------------------------------------------------- */
+
+  --sidebar-width-expanded: 240px;
+  --sidebar-width-collapsed: 56px;
+}
+
+/* --- Behavioral Archetypes -------------------------------------------------- */

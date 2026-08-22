@@ -4,10 +4,5 @@ import { cn } from "../lib/cn";
 export type LabelProps = LabelHTMLAttributes<HTMLLabelElement>;
 
 export function Label({ className, ...props }: LabelProps) {
-  return (
-    <label
-      className={cn("text-sm font-medium text-primary", className)}
-      {...props}
-    />
-  );
+  return <label className={cn("form-label", className)} {...props} />;
 }

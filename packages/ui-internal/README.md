@@ -1,8 +1,6 @@
 # `@dc-inventory/ui-internal`
 
-Staff-dashboard **DataTable** and Recharts wrappers for `apps/internal`.
-
-Wholesale shop and ops must not import this package. `DataTable` is not a catalog.
+Staff-dashboard **DataTable** and Recharts wrappers for `apps/internal`. Token classes come from `@dc-inventory/ui` (`section-flat`, `text-fg`). Wholesale shop and ops must not import this package.
 
 ## What lives here
 

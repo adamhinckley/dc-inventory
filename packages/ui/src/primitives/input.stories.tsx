@@ -3,7 +3,7 @@ import { Input } from "./input";
 import { Label } from "./label";
 
 const meta = {
-  title: "ui/Input",
+  title: "Primitives/Input",
   component: Input,
   args: {
     placeholder: "SKU",

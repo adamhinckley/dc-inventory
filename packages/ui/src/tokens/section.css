@@ -1,0 +1,68 @@
+/**
+ * Section (elevation-2) — Content within the page.
+ * Cards, tab panels, timeline entries, dashboard panels, tables.
+ * Two container variants: primary (glassmorphic) and flat.
+ */
+
+/* --- Container: primary ----------------------------------------------------- */
+
+/** Glassmorphic gradient border + subtle interior glow.
+    For focal content — details cards, timeline entries. */
+
+.section {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(
+      ellipse 100% 90% at 18% 0%,
+      var(--color-section-glow) 0%,
+      transparent 90%
+    ) padding-box,
+    linear-gradient(var(--color-section-fill), var(--color-section-fill)) padding-box,
+    linear-gradient(
+      158deg,
+      var(--color-section-border-highlight) 0%,
+      var(--color-section-border) 35%,
+      var(--color-section-border-dim) 65%,
+      var(--color-section-border) 100%
+    ) border-box;
+}
+
+/* --- Container: flat -------------------------------------------------------- */
+
+/** Solid border, no effects.
+    For secondary content — source cards, tab panels, dashboard panels, tables. */
+
+.section-flat {
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-section);
+}
+
+/* --- Glassmorphic tokens --------------------------------------------------- */
+
+:root {
+  --color-section-fill: var(--color-surface-card);
+  --color-section-glow: var(--color-secondary-tint);
+  --color-section-border-highlight: rgba(0, 0, 0, 0.1);
+  --color-section-border: rgba(0, 0, 0, 0.06);
+  --color-section-border-dim: rgba(0, 0, 0, 0.03);
+}
+
+.dark,
+[data-theme='dark'] {
+  --color-section-glow: rgba(255, 255, 255, 0.06);
+  --color-section-border-highlight: rgba(255, 255, 255, 0.35);
+  --color-section-border: rgba(255, 255, 255, 0.12);
+  --color-section-border-dim: rgba(255, 255, 255, 0.06);
+}
+
+/* --- Spacing ---------------------------------------------------------------- */
+
+:root {
+  --space-section-content-x: 0.75rem; /* 12px — Horizontal padding for section content rows */
+  --space-section-content-y: 0.5rem;  /* 8px — Vertical padding for section content rows */
+}
+
+/* --- Text roles ------------------------------------------------------------- */

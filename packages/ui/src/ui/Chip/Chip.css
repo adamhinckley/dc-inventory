@@ -1,0 +1,67 @@
+/* Chip fill + border — theme-aware */
+.glassmorphic-chip {
+  /* Label/icon/dot ink. On light surfaces the raw --chip-color is too vivid
+     to read as small text (amber/status hues fail WCAG 4.5:1), so clamp the
+     oklch lightness to 0.45 — hue + chroma preserved, contrast guaranteed
+     across the whole palette (min ~5:1 even on the darkest light surface). */
+  --chip-ink: oklch(from var(--chip-color) 0.45 c h);
+  background-color: transparent;
+  border: 1px solid color-mix(in oklch, var(--chip-color) 25%, transparent);
+}
+
+/* Opt-in faint fill on light surfaces — mirrors the dark-mode tint so a chip reads as a soft
+   pill rather than an outline-only chip. Defined BEFORE the dark rule so, in dark mode, the
+   equal-specificity `.dark, [data-theme='dark'] .glassmorphic-chip` background wins by source order and
+   the dark fill is unchanged. */
+.glassmorphic-chip.chip-tinted {
+  background-color: color-mix(in oklch, var(--chip-color) 12%, transparent);
+}
+
+.dark, [data-theme='dark'] .glassmorphic-chip {
+  /* Dark surfaces: the bright chip color already clears AA on the tinted
+     fill, so the ink is the color itself (no darkening). */
+  --chip-ink: var(--chip-color);
+  background-color: color-mix(in oklch, var(--chip-color) 12%, var(--color-surface-card));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Animated border trace
+ *
+ * --angle is driven by JS (requestAnimationFrame) instead of @property +
+ * @keyframes because Firefox cannot animate registered custom properties
+ * inside conic-gradient.
+ *
+ * Border isolation uses longhand mask properties (mask-image, mask-origin,
+ * mask-clip, mask-composite) because shorthand mask parsing differs across
+ * browsers — Firefox in particular is strict about the shorthand form.
+ */
+.animate-border-trace {
+  position: relative;
+  border-color: transparent;
+}
+
+.animate-border-trace::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    var(--chip-color) 0deg,
+    var(--chip-color) 60deg,
+    transparent 120deg,
+    transparent 300deg,
+    var(--chip-color) 360deg
+  );
+  /* Webkit (Chrome, Safari) */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  /* Standard (Firefox) — longhand to avoid shorthand parsing differences */
+  mask-image: linear-gradient(#fff 0 0), linear-gradient(#fff 0 0);
+  mask-origin: content-box, border-box;
+  mask-clip: content-box, border-box;
+  mask-composite: exclude;
+}

@@ -37,7 +37,7 @@ Catalog data comes from the generated wholesale client only. There is no hand-wr
 
 ## Layout
 
-Shop chrome is a storefront header (catalog + cart + orders), not an admin sidebar. Shared primitives from `packages/ui` can land later (ADA-36); product cards stay in this app because they are a shop pattern.
+Shop chrome is a storefront header (catalog + cart + orders), not AppShell. Do not import the internal dashboard kit. Match its *principles* (raised surfaces, type hierarchy, intent spacing) using shop tokens in `src/app/globals.css`.
 
 ## Env
 

@@ -1,33 +1,37 @@
 # `@dc-inventory/ui`
 
-Shared **Tailwind CSS v4** primitives and display formatters for the Next.js apps.
+**Internal dashboard** design system: Tailwind v4 tokens, Base UI primitives, AppShell.
 
-This is not a domain package. Buttons, inputs, and money/date **formatting** live here. Shared-kernel `Money` math, Orval clients, and app pages do not.
+This is not a domain package. It is not the wholesale shop chrome.
 
-## What lives here
+## Audience
 
-- `globals.css` — Carbon White (default) + opt-in Gray 100 via `.dark`. Tokens copied from [`docs/work-dashboard-design-spec.md`](../../docs/work-dashboard-design-spec.md) §6. Do not invent hex.
-- shadcn-style primitives: `Button`, `Input`, `Label`
-- Display formatters: `formatMoneyMinorUnits`, `formatDate`, `formatDateTime`
+| App | Uses this package? |
+|---|---|
+| `apps/internal` | Yes — tokens, primitives, AppShell |
+| `packages/ui-internal` | Yes — DataTable / charts consume token classes |
+| `apps/wholesale` | No AppShell / dashboard tokens. Shop CSS stays in the wholesale app. Mirror elevation, type roles, and intent spacing on canvas/ink/accent tokens. |
+
+Hex values: Carbon White (default) + Gray 100 (`.dark`). Names: `surface-base`, `fg`, `primary-strong`, `.page`, `.section-flat`. Spec: [`docs/work-dashboard-design-spec.md`](../../docs/work-dashboard-design-spec.md). ADR: [`docs/adr/0006-vendor-design-system.md`](../../docs/adr/0006-vendor-design-system.md). Do not invent hex.
 
 ## How to consume
 
 ```ts
-import { Button, formatMoneyMinorUnits } from "@dc-inventory/ui";
+import { Button, AppShell, formatMoneyMinorUnits } from "@dc-inventory/ui";
 import "@dc-inventory/ui/globals.css";
 ```
 
-Write token classes (`bg-background`, `text-primary`, `border-border-strong`, `dark:`). Dark is class-based: put `.dark` on `<html>` or a shell. Light stays the default.
+Write token classes (`bg-surface-base`, `text-fg`, `page-title`, `dark:`). Dark is class-based: put `.dark` on `<html>` or a shell. Light stays the default.
 
 ## Storybook
 
-One monorepo Storybook at the repo root covers this package and `packages/ui-internal`. From the repo root:
+One monorepo Storybook at the repo root. From the repo root:
 
 ```bash
 pnpm storybook
 ```
 
-Toolbar **theme** toggle switches light / dark. Stories are components only — no app pages.
+Toolbar **theme** toggle switches light / dark.
 
 ## How to test
 

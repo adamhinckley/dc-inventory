@@ -37,13 +37,13 @@ export function ReportChart({ meta, series }: ReportChartProps) {
     const first = series[0];
     const last = first?.points.at(-1);
     return (
-      <div className="rounded-sm border border-border-subtle bg-layer-01 p-4">
-        <p className="text-sm text-secondary">{first?.name ?? "KPI"}</p>
-        <p className="text-2xl tabular-nums text-primary">
+      <div className="section-flat p-card">
+        <p className="section-content-stat-label">{first?.name ?? "KPI"}</p>
+        <p className="section-content-stat-value">
           {last ? formatChartY(last.y, meta.yUnit) : "—"}
         </p>
         {meta.yUnit ? (
-          <p className="text-sm text-helper">{meta.yUnit}</p>
+          <p className="section-content-subtitle">{meta.yUnit}</p>
         ) : null}
       </div>
     );

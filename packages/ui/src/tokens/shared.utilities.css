@@ -1,0 +1,107 @@
+@utility stacked {
+  /** Content child inside a pseudo-element container (.section, .overlay, .glassmorphic-chip).
+      Lifts above ::before/::after decorative layers. */
+  position: relative;
+  z-index: 1;
+}
+
+/** Discrete interactable element — rounded corners + color transition.
+    For buttons, menu items, nav items, close buttons, chips.
+    Compose with an emphasis modifier (.ghost, .subtle, .filled) or CVA color variant —
+    .interactable alone has no color treatment. Add .disableable for disabled state.
+
+    Emphasis modifiers are nested here so they only activate when .interactable is
+    present. Using .ghost/.subtle/.filled without .interactable is a no-op — use
+    text-fg-secondary or text-fg-tertiary directly for non-interactive text. */
+.interactable {
+  @apply rounded-interactable transition-colors;
+
+  /** Circular shape — overrides the default rounded-interactable.
+        For circular icon buttons, avatar buttons, FAB-style controls. */
+  &.circle {
+    @apply rounded-full;
+  }
+
+  /** Ghost — transparent bg, hover reveals surface.
+        Ghost buttons, nav items, close buttons, pagination buttons. */
+  &.ghost {
+    @apply text-fg-secondary hover:bg-interactive-hover hover:text-fg;
+  }
+
+  /** Subtle — muted text, quiet hover.
+        Close buttons, icon-only controls, tertiary actions. */
+  &.subtle {
+    @apply text-fg-tertiary hover:bg-interactive-hover hover:text-fg;
+  }
+
+  /** Filled — persistent surface background.
+        Default buttons, icon buttons. */
+  &.filled {
+    @apply bg-interactive text-fg-secondary hover:bg-interactive-active hover:text-fg;
+  }
+}
+
+@utility disableable {
+  /** Disabled treatment — blocks pointer events + reduces opacity.
+      Buttons, pagination controls, form submit triggers. */
+  @apply disabled:pointer-events-none disabled:opacity-40;
+}
+
+@utility item-padding {
+  /** Item-density padding — content that's selected: menu items, nav items, group labels (8×4). */
+  @apply px-item-x py-item-y;
+}
+
+@utility sticky-scrollport {
+  /** Scroll container that adapts to sticky descendants.
+      When a [data-sticky-table] descendant is inside, drops the container's
+      vertical padding and emits pseudo-element spacers (matching
+      --space-canvas-padding) as the first and last children of the scrolling
+      content. Apply alongside `overflow-auto` + a padding utility (`p-canvas`).
+      VESTIGIAL (CORE-990): a sticky `<Table>` now scrolls its rows inside its
+      own card, so nothing pins to the outer scrollport anymore — this swap of
+      padding for spacers is visually neutral where it still applies
+      (Dialog.Body). DetailView no longer uses it (CORE-1009 rebuilt its
+      sticky-tab layout as a `:has([data-sticky-table])` flex chain). Remove
+      alongside the remaining Dialog.Body usages when they're cleaned up. */
+  &:has([data-sticky-table]) {
+    padding-top: 0;
+    padding-bottom: 0;
+
+    &::before,
+    &::after {
+      content: '';
+      display: block;
+      height: var(--space-canvas-padding);
+    }
+  }
+}
+
+/* --- Shared text roles ------------------------------------------------------ */
+
+@utility text-placeholder {
+  /** Empty-state / loading caption — "No logo uploaded", "Loading..." */
+  @apply text-body-sm text-fg-tertiary;
+}
+
+/* --- Form roles ------------------------------------------------------------- */
+
+@utility form-label {
+  /** Field label — "Account Name", "Email", "Enrollment Date" */
+  @apply text-label text-fg;
+}
+
+@utility form-section-label {
+  /** Form section heading — "Account Details", "License Allocation" */
+  @apply text-body-emphasis text-fg;
+}
+
+@utility form-description {
+  /** Field helper text — "When the account becomes active." */
+  @apply text-body-sm text-fg-tertiary;
+}
+
+@utility form-error {
+  /** Field validation error — "Username must be at least 3 characters" */
+  @apply text-body-sm text-error;
+}

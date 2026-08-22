@@ -1,3 +1,3 @@
 # Tailwind CSS plus shadcn-style primitives
 
-Frontend styling is Tailwind CSS with copy-in shadcn-style primitives in `packages/ui`. We rejected a heavier design-system package and hand-rolled CSS-only primitives so agents have a boring, well-documented pattern for buttons, forms chrome, and layout without inventing a second UI kit.
+Frontend styling is Tailwind CSS. The **internal dashboard** vendors a design system in `packages/ui` (semantic tokens, Base UI primitives, AppShell). Hex values remain Carbon White / g100 ([0006](./0006-vendor-design-system.md)). Wholesale does not use that chrome; it keeps shop tokens and the same layout principles.

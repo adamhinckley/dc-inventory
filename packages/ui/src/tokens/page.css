@@ -1,0 +1,44 @@
+/**
+ * Page (elevation-1) — The elevated content panel.
+ * Breadcrumbs, page header, filter bar.
+ */
+
+/* --- Container -------------------------------------------------------------- */
+
+.page {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* --- Spacing ---------------------------------------------------------------- */
+
+:root {
+  --space-page-gutter: 1rem;        /* 16px — Left/right page margins */
+  --space-page-section: 3rem;       /* 48px — Vertical padding between page sections */
+  --space-page-hero: 4rem;          /* 64px — Hero block vertical padding */
+  --header-height: 3.5rem;          /* 56px — Fixed header height */
+}
+
+/* The 768 / 1024 steps track Tailwind's `md` / `lg` defaults so the page-spacing
+   tokens and `lg:` utilities transition at the same width — keep in sync (CSS media
+   queries can't read theme vars). */
+@media (min-width: 768px) {
+  :root {
+    --space-page-gutter: 1.5rem;    /* 24px */
+    --space-page-section: 4rem;     /* 64px */
+    --space-page-hero: 5rem;        /* 80px */
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --space-page-gutter: 2rem;      /* 32px */
+    --space-page-section: 6rem;     /* 96px */
+    --space-page-hero: 8rem;        /* 128px */
+    --header-height: 4rem;          /* 64px */
+  }
+}
+
+/* --- Text roles ------------------------------------------------------------- */

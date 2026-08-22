@@ -1,12 +1,14 @@
 # Work dashboard design spec
 
-Locked visual contract for the **internal staff dashboard** (`apps/internal`, `packages/ui-internal`). Coding agents copy tokens from this file. Do not invent hex. Do not restyle the wholesale shop or ops UI from this spec unless a later ticket says those apps share the same tokens.
+Locked visual contract for the **internal staff dashboard** (`apps/internal`, `packages/ui-internal`). Coding agents copy tokens from [`packages/ui/src/globals.css`](../packages/ui/src/globals.css). Do not invent hex.
 
-**Light is the default.** Warehouse floors and daytime offices stay on Carbon White. Dark is an **opt-in** Gray 100 theme for low-light / night office — not an OS-only invert, and not the app default.
+**This kit is not the wholesale shop.** `apps/wholesale` keeps its own canvas/ink/accent tokens. Shop screens should reuse the *principles* in this spec (elevation stack, type composites, intent spacing, color + icon + label for status) without importing AppShell, DataTable, or Carbon dashboard variables. See [ADR 0006](./adr/0006-vendor-design-system.md).
 
-Related: [`architecture.md`](./architecture.md) (internal dashboard reports) · [`stack.md`](./stack.md) (Next.js + Recharts) · [`api-contract.md`](./api-contract.md) (presentation-only UI) · Linear [ADA-36](https://linear.app/adamhinckley/issue/ADA-36/packagesui-tailwind-shadcn-primitives-storybook) (Tailwind CSS **v4** + shadcn-style primitives; not landed yet).
+**Light is the default.** Warehouse floors and daytime offices stay on Carbon White. Dark is an **opt-in** Gray 100 theme (`.dark` or `data-theme="dark"`) for low-light / night office — not an OS-only invert, and not the app default.
 
-There is **no** `globals.css` / `tailwind.config` token file in the repo yet. This document is the token source of truth. When ADA-36 adds CSS, copy the `:root` / `.dark` / `@theme` blocks from [§6](#6-tailwind-v4-wiring) so the file and this spec stay identical.
+Related: [`architecture.md`](./architecture.md) (internal dashboard reports) · [`stack.md`](./stack.md) (Next.js + Recharts) · [`api-contract.md`](./api-contract.md) (presentation-only UI).
+
+Token **roles** (foreground, surfaces, brand, status) are the same in light and dark. Only values change. Public class names are semantic (`bg-surface-base`, `text-fg`, `page-title`), not Carbon’s `$layer-01` / `$text-primary`.
 
 ---
 
@@ -162,215 +164,31 @@ Never encode a pipeline or stock state as red vs green alone.
 
 ## 6. Tailwind v4 wiring
 
-Repo lock: **Tailwind CSS v4** ([ADA-36](https://linear.app/adamhinckley/issue/ADA-36/packagesui-tailwind-shadcn-primitives-storybook)). Class-based dark: `@custom-variant dark` targeting `.dark`. Do not use `darkMode: 'media'` as the only switch.
+Repo lock: **Tailwind CSS v4**. Class-based dark: `@custom-variant dark` targeting `.dark` and `[data-theme="dark"]`. Source of truth for the CSS is `packages/ui/src/globals.css`.
 
-`@theme inline` maps utilities to the CSS variables already defined on `:root` / `.dark`. It does **not** re-declare the hex. That is how one class (`bg-background`) tracks the theme.
+Agents write **`bg-surface-base text-fg border-border dark:`** — never raw hex, never `bg-layer-01` / `text-primary` as body text (those Carbon names are retired). Brand blue is `bg-primary-strong` / `text-primary`.
 
-### 6.1 CSS variables (copy-paste)
+| Role | CSS variable (light hex) | Write this |
+|---|---|---|
+| Shell background | `--color-surface-base` `#ffffff` | `bg-surface-base` |
+| Raised page / sidebar wash | `--color-surface-raised` `#f4f4f4` | `bg-surface-raised` / `.page` |
+| Card / table | `--color-surface-card` `#ffffff` | `bg-surface-card` / `.section-flat` |
+| Body text | `--color-fg` `#161616` | `text-fg` |
+| Secondary text | `--color-fg-secondary` `#525252` | `text-fg-secondary` |
+| Helper / muted | `--color-fg-tertiary` `#6f6f6f` | `text-fg-tertiary` |
+| Brand fill | `--color-primary-strong` `#0f62fe` | `bg-primary-strong text-primary-content` |
+| Error text/fill | `--color-error` `#da1e28` | `text-error` |
+| Field border | `--color-border-field` `#8d8d8d` | `border-border-field` |
+| Charts | `--color-chart-01`…`08` Okabe–Ito | `var(--color-chart-*)` |
 
-```css
-:root {
-  --color-background: #ffffff;
-  --color-layer-01: #f4f4f4;
-  --color-layer-02: #ffffff;
-  --color-layer-03: #f4f4f4;
-  --color-layer-hover-01: #e8e8e8;
-  --color-layer-selected-01: #e0e0e0;
-  --color-layer-accent-01: #e0e0e0;
-  --color-field-01: #f4f4f4;
-  --color-text-primary: #161616;
-  --color-text-secondary: #525252;
-  --color-text-helper: #6f6f6f;
-  --color-text-on-color: #ffffff;
-  --color-text-error: #da1e28;
-  --color-text-inverse: #ffffff;
-  --color-link: #0f62fe;
-  --color-link-hover: #0043ce;
-  --color-focus: #0f62fe;
-  --color-focus-inset: #ffffff;
-  --color-border-subtle: #e0e0e0;
-  --color-border-strong: #8d8d8d;
-  --color-border-inverse: #161616;
-  --color-background-brand: #0f62fe;
-  --color-highlight: #d0e2ff;
-  --color-overlay: rgb(0 0 0 / 60%);
-  --color-status-error: #da1e28;
-  --color-status-ok: #24a148;
-  --color-status-warn: #f1c21b;
-  --color-status-caution: #ff832b;
-  --color-status-info: #0043ce;
-  --color-status-neutral: #8d8d8d;
-  --color-chart-01: #e69f00;
-  --color-chart-02: #56b4e9;
-  --color-chart-03: #009e73;
-  --color-chart-04: #f0e442;
-  --color-chart-05: #0072b2;
-  --color-chart-06: #d55e00;
-  --color-chart-07: #cc79a7;
-  --color-chart-08: #000000;
-}
+Dark overrides the same keys (g100). `chart-08` becomes `#f4f4f4`.
 
-.dark {
-  --color-background: #161616;
-  --color-layer-01: #262626;
-  --color-layer-02: #393939;
-  --color-layer-03: #525252;
-  --color-layer-hover-01: #333333;
-  --color-layer-selected-01: #393939;
-  --color-layer-accent-01: #393939;
-  --color-field-01: #262626;
-  --color-text-primary: #f4f4f4;
-  --color-text-secondary: #c6c6c6;
-  --color-text-helper: #a8a8a8;
-  --color-text-on-color: #ffffff;
-  --color-text-error: #ff8389;
-  --color-text-inverse: #161616;
-  --color-link: #78a9ff;
-  --color-link-hover: #a6c8ff;
-  --color-focus: #ffffff;
-  --color-focus-inset: #161616;
-  --color-border-subtle: #393939;
-  --color-border-strong: #6f6f6f;
-  --color-border-inverse: #f4f4f4;
-  --color-background-brand: #0f62fe;
-  --color-highlight: #001d6c;
-  --color-overlay: rgb(0 0 0 / 60%);
-  --color-status-error: #fa4d56;
-  --color-status-ok: #42be65;
-  --color-status-warn: #f1c21b;
-  --color-status-caution: #ff832b;
-  --color-status-info: #4589ff;
-  --color-status-neutral: #8d8d8d;
-  --color-chart-01: #e69f00;
-  --color-chart-02: #56b4e9;
-  --color-chart-03: #009e73;
-  --color-chart-04: #f0e442;
-  --color-chart-05: #0072b2;
-  --color-chart-06: #d55e00;
-  --color-chart-07: #cc79a7;
-  --color-chart-08: #f4f4f4; /* Okabe–Ito black → Gray 10 on dark */
-}
-```
+Elevation: shell `bg-surface-base` (E0) → `.page` (E1) → `.section` / `.section-flat` (E2) → `.overlay` (E3). Type composites: `page-title`, `page-description`, `text-body`, `text-label`, `section-content-column-header`.
 
-Put `.dark` on a root you control (`<html>` or the dashboard shell). Warehouse kiosks omit the class.
-
-Optional hook (not the only switch):
-
-```ts
-if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-  document.documentElement.classList.add('dark');
-}
-```
-
-Staff must still be able to force light on a bright floor.
-
-### 6.2 `@theme inline` + `@custom-variant dark`
-
-Text-role tokens drop the `text-` prefix in the Tailwind color key so utilities read `text-primary`, not `text-text-primary`.
-
-```css
-@import "tailwindcss";
-
-@custom-variant dark (&:where(.dark, .dark *));
-
-@theme inline {
-  --color-background: var(--color-background);
-  --color-layer-01: var(--color-layer-01);
-  --color-layer-02: var(--color-layer-02);
-  --color-layer-03: var(--color-layer-03);
-  --color-layer-hover-01: var(--color-layer-hover-01);
-  --color-layer-selected-01: var(--color-layer-selected-01);
-  --color-layer-accent-01: var(--color-layer-accent-01);
-  --color-field-01: var(--color-field-01);
-  --color-primary: var(--color-text-primary);
-  --color-secondary: var(--color-text-secondary);
-  --color-helper: var(--color-text-helper);
-  --color-on-color: var(--color-text-on-color);
-  --color-error: var(--color-text-error);
-  --color-inverse: var(--color-text-inverse);
-  --color-link: var(--color-link);
-  --color-link-hover: var(--color-link-hover);
-  --color-focus: var(--color-focus);
-  --color-focus-inset: var(--color-focus-inset);
-  --color-border-subtle: var(--color-border-subtle);
-  --color-border-strong: var(--color-border-strong);
-  --color-border-inverse: var(--color-border-inverse);
-  --color-background-brand: var(--color-background-brand);
-  --color-highlight: var(--color-highlight);
-  --color-overlay: var(--color-overlay);
-  --color-status-error: var(--color-status-error);
-  --color-status-ok: var(--color-status-ok);
-  --color-status-warn: var(--color-status-warn);
-  --color-status-caution: var(--color-status-caution);
-  --color-status-info: var(--color-status-info);
-  --color-status-neutral: var(--color-status-neutral);
-  --color-chart-01: var(--color-chart-01);
-  --color-chart-02: var(--color-chart-02);
-  --color-chart-03: var(--color-chart-03);
-  --color-chart-04: var(--color-chart-04);
-  --color-chart-05: var(--color-chart-05);
-  --color-chart-06: var(--color-chart-06);
-  --color-chart-07: var(--color-chart-07);
-  --color-chart-08: var(--color-chart-08);
-}
-```
-
-If `@theme inline` self-reference fights the ADA-36 / shadcn setup, follow that file’s existing pattern (shadcn often uses `--background` on `:root` and `--color-background: var(--background)` in `@theme`). Do not invent a second palette. Do not add an npm dependency for tokens.
-
-### 6.3 Color keys → utilities (required)
-
-| Token | CSS variable | Tailwind color key | Write this |
-|---|---|---|---|
-| `background` | `--color-background` | `background` | `bg-background` |
-| `layer-01` | `--color-layer-01` | `layer-01` | `bg-layer-01` |
-| `text-primary` | `--color-text-primary` | `primary` | `text-primary` |
-| `text-secondary` | `--color-text-secondary` | `secondary` | `text-secondary` |
-| `text-error` | `--color-text-error` | `error` | `text-error` |
-| `border-strong` | `--color-border-strong` | `border-strong` | `border-border-strong` |
-| `status-error` | `--color-status-error` | `status-error` | `text-status-error` |
-| (any, in dark) | (same vars) | (same keys) | `dark:bg-background` |
-
-Agents write **`bg-background text-primary border-border-strong dark:`** — never raw hex in product classes.
-
-```html
-<main class="bg-background text-primary">
-  <section class="bg-layer-01 text-secondary border border-border-strong">
-    <p class="text-error">Qty must be a whole number.</p>
-    <p class="text-status-error">Error — allocation failed</p>
-  </section>
-</main>
-
-<html class="dark">
-  <body class="dark:bg-background dark:text-primary">…</body>
-</html>
-```
-
-`text-error` = form / inline message (`$text-error`). `text-status-error` = status fill (still pair with icon + “Error”).
-
-### 6.4 If a later app is Tailwind v3
-
-Not the current lock. If someone adds a v3 app anyway: `darkMode: 'class'` and `theme.extend.colors` pointing at `var(--color-*)`. Same CSS variables. Same class names.
-
-```js
-// tailwind.config.js — v3 only
-module.exports = {
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        background: 'var(--color-background)',
-        primary: 'var(--color-text-primary)',
-        secondary: 'var(--color-text-secondary)',
-        'layer-01': 'var(--color-layer-01)',
-        'border-strong': 'var(--color-border-strong)',
-        'status-error': 'var(--color-status-error)',
-      },
-    },
-  },
-};
-```
+Put `.dark` on a root you control (`<html>` or Storybook). Warehouse kiosks omit the class.
 
 ---
+
 
 ## 7. Charts on dark (and light)
 
@@ -413,15 +231,16 @@ Recharts consumes **report** series from the API ([`architecture.md`](./architec
 
 | Do | Don’t |
 |---|---|
-| Use token classes (`bg-background`, `text-primary`) | Raw hex in JSX / class names |
+| Use token classes (`bg-surface-base`, `text-fg`, `page-title`) | Raw hex in JSX / class names |
 | Keep warehouse / daytime on White (no `.dark`) | Make `prefers-color-scheme` the only switch |
 | Opt in to g100 with `.dark` for night office | Use Gray 90 as the app-default dark |
 | Pair status color with icon + label | Red/green-only rows or series |
-| Dark error *text* = Red 40 `#ff8389` | Light Red 60 `#da1e28` as dark body/error text |
-| Dark links = Blue 40 / 30 | Blue 60 links on `#161616` as the only affordance |
+| Dark error *text* = Red 40 `#ff8389` (`text-error` on `.dark`) | Light Red 60 `#da1e28` as dark body/error text |
+| Dark links = Blue 40 / 30 (`text-link`) | Blue 60 links on `#161616` as the only affordance |
 | Okabe–Ito; `chart-08` → `#f4f4f4` on dark | Spectral / RdYlGn / turbo / rainbow |
 | Reverse sequential Blues (or viridis/cividis) on dark | Copy the light sequential as-is |
-| 8px grid, Plex, `tnum` | Material dynamic / generated dark, or a naive `#fff` on `#000` invert |
+| Plex, `tnum`, intent spacing (`gap-icon`, `p-card`) | Material dynamic / generated dark, or a naive `#fff` on `#000` invert |
+| Wholesale: same principles on shop tokens | Importing AppShell / DataTable / Carbon dashboard vars into `apps/wholesale` |
 
 ### Explicitly rejected
 
@@ -453,8 +272,8 @@ Recharts consumes **report** series from the API ([`architecture.md`](./architec
 
 ---
 
-## 11. What this PR does not do
+## 11. Scope
 
-- No product UI restyle. No new npm package. No `globals.css` until ADA-36 (or equivalent) owns that file.
-- Wholesale shop and ops licensing UI are out of scope.
-- Agents implementing dashboard chrome later: copy [§6](#6-tailwind-v4-wiring), do not re-derive hex.
+- Internal dashboard copies [`packages/ui/src/globals.css`](../packages/ui/src/globals.css). Do not re-derive hex.
+- Wholesale shop and ops licensing UI do **not** consume this token file. Wholesale may mirror elevation / type / spacing *ideas* with shop tokens ([ADR 0006](./adr/0006-vendor-design-system.md)).
+- ResourceTable / echarts from the source kit stay out of this repo. Lists stay `DataTable` + `x-table`. Charts stay Recharts.

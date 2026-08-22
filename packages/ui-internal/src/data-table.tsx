@@ -105,7 +105,7 @@ function FilterControl({
         <Label htmlFor={`filter-${filter.param}`}>{filter.param}</Label>
         <select
           id={`filter-${filter.param}`}
-          className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
+          className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
           value={String(state.filters[filter.param] ?? "")}
           onChange={(event) =>
             setFilter(filter.param, event.target.value || undefined)
@@ -206,8 +206,8 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
   const busy = query.isPending === true || query.isLoading === true;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end gap-4">
+    <div className="flex flex-col gap-field-group">
+      <div className="flex flex-wrap items-end gap-field-group">
         {meta.search ? (
           <div className="flex min-w-56 flex-1 flex-col gap-2">
             <Label htmlFor="datatable-search">{meta.search.placeholder}</Label>
@@ -238,7 +238,7 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
           <Label htmlFor="datatable-sort">Sort</Label>
           <select
             id="datatable-sort"
-            className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
+            className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
             value={state.sortBy}
             onChange={(event) =>
               setState((current) => ({
@@ -259,7 +259,7 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
           <Label htmlFor="datatable-sort-order">Order</Label>
           <select
             id="datatable-sort-order"
-            className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
+            className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
             value={state.sortOrder}
             onChange={(event) =>
               setState((current) => ({
@@ -275,15 +275,15 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-sm border border-border-subtle">
-        <table className="w-full border-collapse text-left text-sm">
-          <thead className="bg-layer-01 text-secondary">
+      <div className="section-flat overflow-x-auto">
+        <table className="w-full border-collapse text-left text-body">
+          <thead>
             <tr>
               {meta.columns.map((column) => (
                 <th
                   key={column.field}
                   scope="col"
-                  className="border-b border-border-subtle px-4 py-3 font-medium"
+                  className="section-content-column-header section-content-padding border-b border-border"
                 >
                   {column.label}
                 </th>
@@ -294,7 +294,7 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
             {busy ? (
               <tr>
                 <td
-                  className="px-4 py-6 text-helper"
+                  className="section-content-padding text-placeholder"
                   colSpan={meta.columns.length}
                 >
                   Loading…
@@ -303,7 +303,7 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
             ) : query.isError ? (
               <tr>
                 <td
-                  className="px-4 py-6 text-error"
+                  className="section-content-padding text-error"
                   colSpan={meta.columns.length}
                 >
                   {query.error instanceof Error
@@ -314,7 +314,7 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
             ) : items.length === 0 ? (
               <tr>
                 <td
-                  className="px-4 py-6 text-helper"
+                  className="section-content-padding text-placeholder"
                   colSpan={meta.columns.length}
                 >
                   No rows
@@ -325,19 +325,14 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
                 const row = item as Record<string, unknown>;
                 const rowKey = String(row[meta.rowId] ?? index);
                 return (
-                  <tr
-                    key={rowKey}
-                    className={
-                      index % 2 === 1 ? "bg-layer-accent-01" : "bg-background"
-                    }
-                  >
+                  <tr key={rowKey}>
                     {meta.columns.map((column) => (
                       <td
                         key={column.field}
                         className={
                           column.field === "sku"
-                            ? "border-b border-border-subtle px-4 py-3 font-mono"
-                            : "border-b border-border-subtle px-4 py-3"
+                            ? "section-content-padding section-content-value-mono border-b border-border"
+                            : "section-content-padding section-content-value border-b border-border"
                         }
                       >
                         {cellValue(row, column.field)}
@@ -351,11 +346,11 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
         </table>
       </div>
 
-      <div className="flex items-center justify-between gap-4 text-sm text-secondary">
+      <div className="flex items-center justify-between gap-region text-body-sm text-fg-secondary">
         <p className="tabular-nums">
           Page {page} of {pageCount} · {total} rows
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-action">
           <Button
             variant="outline"
             size="sm"

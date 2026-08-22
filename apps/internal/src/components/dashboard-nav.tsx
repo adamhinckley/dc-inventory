@@ -4,26 +4,25 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { dashboardNav } from "../lib/dashboard-routes";
 
+/** Kept for tests that still read this file; chrome lives in `dashboard-frame`. */
 export function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-border-subtle bg-layer-01">
-      <div className="flex items-start justify-between gap-2 border-b border-border-subtle px-5 py-5">
+    <aside className="flex w-sidebar-expanded shrink-0 flex-col px-action">
+      <div className="flex items-start justify-between gap-icon border-b border-border-subtle px-region-x py-region-y">
         <Link href="/catalog" className="flex flex-col">
-          <span className="text-base font-semibold text-primary">
-            DC Internal
-          </span>
-          <span className="text-sm text-secondary">Staff dashboard</span>
+          <span className="text-title-sm text-fg">DC Internal</span>
+          <span className="text-body-sm text-fg-secondary">Staff dashboard</span>
         </Link>
         <Link
           href="/login"
-          className="shrink-0 text-sm text-link hover:text-link-hover"
+          className="shrink-0 text-body-sm text-link hover:text-link-hover"
         >
           Sign in
         </Link>
       </div>
-      <nav aria-label="Dashboard" className="flex flex-1 flex-col gap-1 p-3">
+      <nav aria-label="Dashboard" className="flex flex-1 flex-col gap-tight p-tight">
         {dashboardNav.map((item) => {
           const active = pathname === item.href;
           return (
@@ -32,8 +31,8 @@ export function DashboardNav() {
               href={item.href}
               className={
                 active
-                  ? "rounded-sm bg-layer-selected-01 px-3 py-2 text-sm font-medium text-primary"
-                  : "rounded-sm px-3 py-2 text-sm text-primary hover:bg-layer-hover-01"
+                  ? "interactable item-padding shell-nav-item-active bg-selected"
+                  : "interactable ghost item-padding shell-nav-item"
               }
               aria-current={active ? "page" : undefined}
             >

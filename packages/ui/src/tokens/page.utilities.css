@@ -1,0 +1,24 @@
+@utility page-title {
+  /** Top-level heading, one per page — "Incident Details" */
+  @apply text-title-lg text-fg;
+}
+
+@utility page-description {
+  /** Supporting text under the page title */
+  @apply text-body text-fg-secondary;
+}
+
+@utility page-breadcrumb {
+  /** Breadcrumb path segment links — "Exposure", "Incident Explorer" */
+  @apply text-body-sm text-fg-tertiary;
+}
+
+@utility page-breadcrumb-separator {
+  /** Breadcrumb dividers — "/" */
+  @apply text-body-sm text-fg-muted;
+}
+
+@utility page-breadcrumb-current {
+  /** Breadcrumb terminal segment — "Incident Details" */
+  @apply text-body-sm text-fg-secondary;
+}
