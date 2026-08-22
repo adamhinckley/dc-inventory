@@ -48,6 +48,21 @@ const rows: ProductRow[] = [
   },
 ];
 
+function compareProductField(
+  left: ProductRow,
+  right: ProductRow,
+  field: string,
+): number {
+  const a = left[field as keyof ProductRow];
+  const b = right[field as keyof ProductRow];
+  if (typeof a === "number" && typeof b === "number") {
+    return a - b;
+  }
+  return String(a ?? "").localeCompare(String(b ?? ""), undefined, {
+    numeric: true,
+  });
+}
+
 const useMockProducts: ListQueryHook<ListQueryParams, ProductRow> = (params) => {
   const q = params?.q?.toLowerCase();
   const status = params?.status;
@@ -60,16 +75,21 @@ const useMockProducts: ListQueryHook<ListQueryParams, ProductRow> = (params) => 
     }
     return row.sku.toLowerCase().includes(q) || row.name.toLowerCase().includes(q);
   });
+  const sortBy = params?.sortBy ?? "sku";
+  const direction = params?.sortOrder === "desc" ? -1 : 1;
+  const sorted = [...filtered].sort(
+    (left, right) => compareProductField(left, right, sortBy) * direction,
+  );
   const page = params?.page ?? 1;
   const pageSize = params?.pageSize ?? 25;
   const start = (page - 1) * pageSize;
   return {
     data: {
       data: {
-        items: filtered.slice(start, start + pageSize),
+        items: sorted.slice(start, start + pageSize),
         page,
         pageSize,
-        total: filtered.length,
+        total: sorted.length,
       },
       status: 200,
     },

@@ -9,7 +9,11 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import type { DataTableState, ListQueryParams } from "./list-params";
+import {
+  toggleColumnSort,
+  type DataTableState,
+  type ListQueryParams,
+} from "./list-params";
 import type { TableFilterMeta, TableMeta } from "./table-meta";
 import {
   useDataTable,
@@ -61,6 +65,40 @@ function cellValue(row: Record<string, unknown>, field: string): ReactNode {
     return <span className="tabular-nums">{value}</span>;
   }
   return String(value);
+}
+
+function SortGlyph({
+  active,
+  order,
+}: {
+  active: boolean;
+  order: "asc" | "desc";
+}) {
+  const className = active
+    ? "size-4 shrink-0 text-primary"
+    : "size-4 shrink-0 text-helper";
+  if (!active) {
+    return (
+      <svg aria-hidden className={className} viewBox="0 0 16 16">
+        <path
+          fill="currentColor"
+          d="M8 2.5 4.25 7h7.5L8 2.5Zm0 11L11.75 9h-7.5L8 13.5Z"
+        />
+      </svg>
+    );
+  }
+  if (order === "asc") {
+    return (
+      <svg aria-hidden className={className} viewBox="0 0 16 16">
+        <path fill="currentColor" d="M8 3 3.5 9.5h9L8 3Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg aria-hidden className={className} viewBox="0 0 16 16">
+      <path fill="currentColor" d="M8 13 12.5 6.5h-9L8 13Z" />
+    </svg>
+  );
 }
 
 function FilterControl({
@@ -349,7 +387,8 @@ export function DataTableFilters() {
 }
 
 /**
- * Row grid for the current `queryHook` page.
+ * Row grid for the current `queryHook` page. Columns in `meta.sort.fields`
+ * are header buttons with sort icons; other columns stay plain labels.
  *
  * When to use: as the body slot under `DataTable.Root`.
  * When not to use: wholesale product cards, or as a standalone HTML table.
@@ -364,22 +403,61 @@ export function DataTableFilters() {
  * ```
  */
 export function DataTableTable() {
-  const { meta, items, query, busy } = useDataTableContext();
+  const { meta, items, query, busy, state, setState } = useDataTableContext();
 
   return (
     <div className="overflow-x-auto rounded-sm border border-border-subtle">
       <table className="w-full border-collapse text-left text-sm">
         <thead className="bg-layer-01 text-secondary">
           <tr>
-            {meta.columns.map((column) => (
-              <th
-                key={column.field}
-                scope="col"
-                className="border-b border-border-subtle px-4 py-3 font-medium"
-              >
-                {column.label}
-              </th>
-            ))}
+            {meta.columns.map((column) => {
+              const sortable = meta.sort.fields.includes(column.field);
+              const active = sortable && state.sortBy === column.field;
+              const ariaSort = !sortable
+                ? undefined
+                : active
+                  ? state.sortOrder === "desc"
+                    ? "descending"
+                    : "ascending"
+                  : "none";
+              return (
+                <th
+                  key={column.field}
+                  scope="col"
+                  aria-sort={ariaSort}
+                  className="border-b border-border-subtle px-4 py-3 font-medium"
+                >
+                  {sortable ? (
+                    <Button
+                      variant="ghost"
+                      className="h-auto justify-start gap-1.5 px-0 py-0 font-medium text-secondary hover:bg-transparent hover:text-primary"
+                      aria-label={
+                        active
+                          ? `Sort by ${column.label}, currently ${state.sortOrder === "desc" ? "descending" : "ascending"}`
+                          : `Sort by ${column.label}`
+                      }
+                      onClick={() =>
+                        setState((current) =>
+                          toggleColumnSort(
+                            current,
+                            column.field,
+                            meta.sort.fields,
+                          ),
+                        )
+                      }
+                    >
+                      {column.label}
+                      <SortGlyph
+                        active={active}
+                        order={active ? state.sortOrder : "asc"}
+                      />
+                    </Button>
+                  ) : (
+                    column.label
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>

@@ -164,3 +164,24 @@ export function listParamsFromState(
 
   return params;
 }
+
+/**
+ * Header click: declared `meta.sort.fields` only. Same column toggles
+ * asc/desc; a new column starts ascending. Always returns to page 1.
+ */
+export function toggleColumnSort(
+  state: DataTableState,
+  field: string,
+  sortableFields: readonly string[],
+): DataTableState {
+  if (!sortableFields.includes(field)) {
+    return state;
+  }
+  const sameColumn = state.sortBy === field;
+  return {
+    ...state,
+    page: 1,
+    sortBy: field,
+    sortOrder: sameColumn && state.sortOrder === "asc" ? "desc" : "asc",
+  };
+}

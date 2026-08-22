@@ -4,6 +4,7 @@ import {
   defaultTableState,
   listParamsFromState,
   tableStateFromInitial,
+  toggleColumnSort,
   type DataTableState,
 } from "../src/data-table/list-params";
 import type { TableMeta } from "../src/data-table/table-meta";
@@ -124,5 +125,33 @@ describe("tableStateFromInitial", () => {
     });
     expect(state.page).toBe(1);
     expect(state.sortBy).toBe("sku");
+  });
+});
+
+describe("toggleColumnSort", () => {
+  const fields = productsListTable.sort.fields;
+
+  it("starts a new column at ascending and returns to page 1", () => {
+    const state: DataTableState = {
+      ...defaultTableState(productsListTable),
+      page: 3,
+      sortBy: "sku",
+      sortOrder: "desc",
+    };
+    expect(toggleColumnSort(state, "name", fields)).toMatchObject({
+      page: 1,
+      sortBy: "name",
+      sortOrder: "asc",
+    });
+  });
+
+  it("toggles the active column from asc to desc", () => {
+    const state = defaultTableState(productsListTable);
+    expect(toggleColumnSort(state, "sku", fields).sortOrder).toBe("desc");
+  });
+
+  it("leaves undeclared columns unchanged", () => {
+    const state = defaultTableState(productsListTable);
+    expect(toggleColumnSort(state, "onHand", fields)).toBe(state);
   });
 });
