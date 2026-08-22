@@ -1,6 +1,6 @@
 # API contract: OpenAPI, lists, shop, and presentation-only frontends
 
-Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`tax.md`](./tax.md) (checkout quote / invoice commit; not computed in the UI), [`observability.md`](./observability.md) (ops signals; not part of the UI contract), and [`licensing.md`](./licensing.md) (software billing + flags).
+Companion to [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (internal dashboard tokens; not the shop), [`tax.md`](./tax.md) (checkout quote / invoice commit; not computed in the UI), [`observability.md`](./observability.md) (ops signals; not part of the UI contract), and [`licensing.md`](./licensing.md) (software billing + flags).
 
 The HTTP API is the **only** contract the UIs may use. Next.js apps are **presentation**. They do not invent query params, compute availability, or assemble filters/charts the spec does not declare.
 
