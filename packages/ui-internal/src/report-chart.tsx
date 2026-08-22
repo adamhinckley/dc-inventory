@@ -14,58 +14,22 @@ import {
   YAxis,
 } from "recharts";
 import { CHART_SERIES_COLORS } from "./chart-tokens";
+import { formatChartY, toWideRows } from "./report-chart-data";
+import type { ReportChartProps } from "./report-chart-types";
 
-/** OpenAPI `x-chart` on report operations. */
-export type ChartMeta = {
-  type: "line" | "bar" | "pie" | "kpi";
-  xLabel?: string;
-  yUnit?: "cents" | "count" | "quantity";
-};
-
-export type ChartPoint = {
-  x: string;
-  y: number;
-};
-
-export type ChartSeries = {
-  name: string;
-  points: readonly ChartPoint[];
-};
-
-export type ReportChartProps = {
-  meta: ChartMeta;
-  series: readonly ChartSeries[];
-};
+export type {
+  ChartMeta,
+  ChartPoint,
+  ChartSeries,
+  ReportChartProps,
+} from "./report-chart-types";
+export { formatChartY, toWideRows } from "./report-chart-data";
 
 function seriesColor(index: number): string {
   return (
     CHART_SERIES_COLORS[index % CHART_SERIES_COLORS.length] ??
     "var(--color-chart-01)"
   );
-}
-
-function toWideRows(series: readonly ChartSeries[]): Record<string, string | number>[] {
-  const xs = new Set<string>();
-  for (const item of series) {
-    for (const point of item.points) {
-      xs.add(point.x);
-    }
-  }
-  return [...xs].map((x) => {
-    const row: Record<string, string | number> = { x };
-    for (const item of series) {
-      const point = item.points.find((entry) => entry.x === x);
-      row[item.name] = point?.y ?? 0;
-    }
-    return row;
-  });
-}
-
-function yTick(value: number, unit: ChartMeta["yUnit"]): string {
-  if (unit === "cents") {
-    return String(value);
-  }
-  return String(value);
 }
 
 export function ReportChart({ meta, series }: ReportChartProps) {
@@ -76,7 +40,7 @@ export function ReportChart({ meta, series }: ReportChartProps) {
       <div className="rounded-sm border border-border-subtle bg-layer-01 p-4">
         <p className="text-sm text-secondary">{first?.name ?? "KPI"}</p>
         <p className="text-2xl tabular-nums text-primary">
-          {last ? yTick(last.y, meta.yUnit) : "—"}
+          {last ? formatChartY(last.y, meta.yUnit) : "—"}
         </p>
         {meta.yUnit ? (
           <p className="text-sm text-helper">{meta.yUnit}</p>
@@ -125,7 +89,7 @@ export function ReportChart({ meta, series }: ReportChartProps) {
           />
           <YAxis
             stroke="var(--color-text-secondary)"
-            tickFormatter={(value: number) => yTick(value, meta.yUnit)}
+            tickFormatter={(value: number) => formatChartY(value, meta.yUnit)}
           />
           <Tooltip />
           <Legend />

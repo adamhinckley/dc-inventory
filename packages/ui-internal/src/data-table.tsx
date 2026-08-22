@@ -1,7 +1,13 @@
 "use client";
 
 import { Button, Input, Label } from "@dc-inventory/ui";
-import { useMemo, useState, type ReactNode } from "react";
+import {
+  useMemo,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
 import {
   defaultTableState,
   listParamsFromState,
@@ -81,15 +87,15 @@ function FilterControl({
 }: {
   filter: TableFilterMeta;
   state: DataTableState;
-  setState: (next: DataTableState) => void;
+  setState: Dispatch<SetStateAction<DataTableState>>;
   options: readonly FilterOption[] | undefined;
 }) {
   const setFilter = (param: string, value: string | boolean | undefined) => {
-    setState({
-      ...state,
+    setState((current) => ({
+      ...current,
       page: 1,
-      filters: { ...state.filters, [param]: value },
-    });
+      filters: { ...current.filters, [param]: value },
+    }));
   };
 
   if (filter.control === "select") {
@@ -209,7 +215,11 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
               value={state.search}
               placeholder={meta.search.placeholder}
               onChange={(event) =>
-                setState({ ...state, page: 1, search: event.target.value })
+                setState((current) => ({
+                  ...current,
+                  page: 1,
+                  search: event.target.value,
+                }))
               }
             />
           </div>
@@ -230,7 +240,11 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
             className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
             value={state.sortBy}
             onChange={(event) =>
-              setState({ ...state, page: 1, sortBy: event.target.value })
+              setState((current) => ({
+                ...current,
+                page: 1,
+                sortBy: event.target.value,
+              }))
             }
           >
             {meta.sort.fields.map((field) => (
@@ -247,11 +261,11 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
             className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
             value={state.sortOrder}
             onChange={(event) =>
-              setState({
-                ...state,
+              setState((current) => ({
+                ...current,
                 page: 1,
                 sortOrder: event.target.value === "desc" ? "desc" : "asc",
-              })
+              }))
             }
           >
             <option value="asc">asc</option>
@@ -343,16 +357,26 @@ export function DataTable<TParams = ListQueryParams, TRow = Record<string, unkno
           <Button
             variant="outline"
             size="sm"
-            disabled={page <= 1}
-            onClick={() => setState({ ...state, page: Math.max(1, state.page - 1) })}
+            disabled={busy || page <= 1}
+            onClick={() =>
+              setState((current) => ({
+                ...current,
+                page: Math.max(1, current.page - 1),
+              }))
+            }
           >
             Previous
           </Button>
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= pageCount}
-            onClick={() => setState({ ...state, page: state.page + 1 })}
+            disabled={busy || page >= pageCount}
+            onClick={() =>
+              setState((current) => ({
+                ...current,
+                page: current.page + 1,
+              }))
+            }
           >
             Next
           </Button>

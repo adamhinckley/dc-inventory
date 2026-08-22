@@ -17,7 +17,14 @@ export {
   type DataTableState,
   type ListQueryParams,
 } from "./list-params";
-export { ReportChart, type ChartMeta, type ChartPoint, type ChartSeries, type ReportChartProps } from "./report-chart";
+export { formatChartY, toWideRows } from "./report-chart-data";
+export {
+  ReportChart,
+  type ChartMeta,
+  type ChartPoint,
+  type ChartSeries,
+  type ReportChartProps,
+} from "./report-chart";
 export type {
   TableColumnMeta,
   TableExportMeta,
