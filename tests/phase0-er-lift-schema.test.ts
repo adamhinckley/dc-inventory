@@ -18,6 +18,7 @@ function listSqlMigrations(): string[] {
 function schemaSources(): string {
   const files = [
     "apps/api/src/infrastructure/schema.ts",
+    "packages/identity/src/persistence/schema.ts",
     "apps/api/src/infrastructure/schema/identity.ts",
     "apps/api/src/infrastructure/schema/customers.ts",
     "apps/api/src/infrastructure/schema/sales.ts",
@@ -31,7 +32,6 @@ function schemaSources(): string {
 }
 
 const inventedLeftovers = [
-  "password_hash",
   "password",
   "better_auth",
   "role",
@@ -84,11 +84,10 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     expect(sql).toMatch(/wholesale/);
     expect(sql).toMatch(/ops/);
 
-    expect(sources).not.toMatch(/password_hash/);
+    expect(sources).toMatch(/password_hash/);
     expect(sources).not.toMatch(/betterAuth|better_auth/);
     expect(sources).not.toMatch(/["']role["']/);
     expect(sources).not.toMatch(/["']rbac["']/);
-    expect(sql).not.toMatch(/password_hash/);
     expect(sql).not.toMatch(/better_auth/);
   });
 

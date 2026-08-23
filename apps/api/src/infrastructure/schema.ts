@@ -38,7 +38,7 @@ export {
   sessions,
   staffUsers,
   wholesaleUsers,
-} from "./schema/identity.js";
+} from "@dc-inventory/identity/schema";
 export {
   contacts,
   customers,
@@ -109,7 +109,7 @@ import {
   sessions,
   staffUsers,
   wholesaleUsers,
-} from "./schema/identity.js";
+} from "@dc-inventory/identity/schema";
 import {
   contacts,
   customers,
