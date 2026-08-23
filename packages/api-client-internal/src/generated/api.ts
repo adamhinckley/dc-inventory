@@ -5,11 +5,15 @@
  * OpenAPI spec version: 0.0.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -97,56 +101,50 @@ return customFetch<loginInternalResponse>(getLoginInternalUrl(),
 
 
 
-export const getLoginInternalQueryKey = (loginInternalBody?: LoginInternalBody,) => {
-    return [
-    'POST', `/internal/auth/login`, loginInternalBody
-    ] as const;
-    }
+export const getLoginInternalMutationOptions = <TError = LoginInternal401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginInternal>>, TError,{data: LoginInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof loginInternal>>, TError,{data: LoginInternalBody}, TContext> => {
 
-
-export const getLoginInternalQueryOptions = <TData = Awaited<ReturnType<typeof loginInternal>>, TError = LoginInternal401>(loginInternalBody: LoginInternalBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getLoginInternalQueryKey(loginInternalBody);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof loginInternal>>> = ({ signal }) => loginInternal(loginInternalBody, { signal, ...requestOptions });
+const mutationKey = ['loginInternal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginInternal>>, {data: LoginInternalBody}> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof loginInternal>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type LoginInternalQueryResult = NonNullable<Awaited<ReturnType<typeof loginInternal>>>
-export type LoginInternalQueryError = LoginInternal401
+          return  loginInternal(data,requestOptions)
+        }
 
 
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginInternalMutationResult = NonNullable<Awaited<ReturnType<typeof loginInternal>>>
+    export type LoginInternalMutationBody = LoginInternalBody
+    export type LoginInternalMutationError = LoginInternal401
+
+    /**
  * @summary Staff login; sets HttpOnly staff_session
  */
-
-export function useLoginInternal<TData = Awaited<ReturnType<typeof loginInternal>>, TError = LoginInternal401>(
- loginInternalBody: LoginInternalBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getLoginInternalQueryOptions(loginInternalBody,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useLoginInternal = <TError = LoginInternal401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginInternal>>, TError,{data: LoginInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof loginInternal>>,
+        TError,
+        {data: LoginInternalBody},
+        TContext
+      > => {
+      return useMutation(getLoginInternalMutationOptions(options));
+    }
 
 export type logoutInternalResponse200 = {
   data: LogoutInternal200
@@ -193,56 +191,50 @@ export const logoutInternal = async ( options?: Parameters<typeof customFetch>[1
 
 
 
-export const getLogoutInternalQueryKey = () => {
-    return [
-    'POST', `/internal/auth/logout`
-    ] as const;
-    }
+export const getLogoutInternalMutationOptions = <TError = LogoutInternal401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutInternal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logoutInternal>>, TError,void, TContext> => {
 
-
-export const getLogoutInternalQueryOptions = <TData = Awaited<ReturnType<typeof logoutInternal>>, TError = LogoutInternal401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getLogoutInternalQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof logoutInternal>>> = ({ signal }) => logoutInternal({ signal, ...requestOptions });
+const mutationKey = ['logoutInternal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof logoutInternal>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type LogoutInternalQueryResult = NonNullable<Awaited<ReturnType<typeof logoutInternal>>>
-export type LogoutInternalQueryError = LogoutInternal401
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logoutInternal>>, void> = () => {
 
 
-/**
+          return  logoutInternal(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutInternalMutationResult = NonNullable<Awaited<ReturnType<typeof logoutInternal>>>
+
+    export type LogoutInternalMutationError = LogoutInternal401
+
+    /**
  * @summary Revoke staff session and clear cookie
  */
-
-export function useLogoutInternal<TData = Awaited<ReturnType<typeof logoutInternal>>, TError = LogoutInternal401>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getLogoutInternalQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useLogoutInternal = <TError = LogoutInternal401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutInternal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logoutInternal>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutInternalMutationOptions(options));
+    }
 
 export type getInternalSessionResponse200 = {
   data: GetInternalSession200

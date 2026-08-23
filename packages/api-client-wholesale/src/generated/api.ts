@@ -5,11 +5,15 @@
  * OpenAPI spec version: 0.0.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -97,56 +101,50 @@ return customFetch<loginWholesaleResponse>(getLoginWholesaleUrl(),
 
 
 
-export const getLoginWholesaleQueryKey = (loginWholesaleBody?: LoginWholesaleBody,) => {
-    return [
-    'POST', `/wholesale/auth/login`, loginWholesaleBody
-    ] as const;
-    }
+export const getLoginWholesaleMutationOptions = <TError = LoginWholesale401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWholesale>>, TError,{data: LoginWholesaleBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof loginWholesale>>, TError,{data: LoginWholesaleBody}, TContext> => {
 
-
-export const getLoginWholesaleQueryOptions = <TData = Awaited<ReturnType<typeof loginWholesale>>, TError = LoginWholesale401>(loginWholesaleBody: LoginWholesaleBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getLoginWholesaleQueryKey(loginWholesaleBody);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof loginWholesale>>> = ({ signal }) => loginWholesale(loginWholesaleBody, { signal, ...requestOptions });
+const mutationKey = ['loginWholesale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginWholesale>>, {data: LoginWholesaleBody}> = (props) => {
+          const {data} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof loginWholesale>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type LoginWholesaleQueryResult = NonNullable<Awaited<ReturnType<typeof loginWholesale>>>
-export type LoginWholesaleQueryError = LoginWholesale401
+          return  loginWholesale(data,requestOptions)
+        }
 
 
-/**
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginWholesaleMutationResult = NonNullable<Awaited<ReturnType<typeof loginWholesale>>>
+    export type LoginWholesaleMutationBody = LoginWholesaleBody
+    export type LoginWholesaleMutationError = LoginWholesale401
+
+    /**
  * @summary Wholesale login; sets HttpOnly wholesale_session
  */
-
-export function useLoginWholesale<TData = Awaited<ReturnType<typeof loginWholesale>>, TError = LoginWholesale401>(
- loginWholesaleBody: LoginWholesaleBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getLoginWholesaleQueryOptions(loginWholesaleBody,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useLoginWholesale = <TError = LoginWholesale401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWholesale>>, TError,{data: LoginWholesaleBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof loginWholesale>>,
+        TError,
+        {data: LoginWholesaleBody},
+        TContext
+      > => {
+      return useMutation(getLoginWholesaleMutationOptions(options));
+    }
 
 export type logoutWholesaleResponse200 = {
   data: LogoutWholesale200
@@ -193,56 +191,50 @@ export const logoutWholesale = async ( options?: Parameters<typeof customFetch>[
 
 
 
-export const getLogoutWholesaleQueryKey = () => {
-    return [
-    'POST', `/wholesale/auth/logout`
-    ] as const;
-    }
+export const getLogoutWholesaleMutationOptions = <TError = LogoutWholesale401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError,void, TContext> => {
 
-
-export const getLogoutWholesaleQueryOptions = <TData = Awaited<ReturnType<typeof logoutWholesale>>, TError = LogoutWholesale401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getLogoutWholesaleQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof logoutWholesale>>> = ({ signal }) => logoutWholesale({ signal, ...requestOptions });
+const mutationKey = ['logoutWholesale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type LogoutWholesaleQueryResult = NonNullable<Awaited<ReturnType<typeof logoutWholesale>>>
-export type LogoutWholesaleQueryError = LogoutWholesale401
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logoutWholesale>>, void> = () => {
 
 
-/**
+          return  logoutWholesale(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutWholesaleMutationResult = NonNullable<Awaited<ReturnType<typeof logoutWholesale>>>
+
+    export type LogoutWholesaleMutationError = LogoutWholesale401
+
+    /**
  * @summary Revoke wholesale session and clear cookie
  */
-
-export function useLogoutWholesale<TData = Awaited<ReturnType<typeof logoutWholesale>>, TError = LogoutWholesale401>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getLogoutWholesaleQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useLogoutWholesale = <TError = LogoutWholesale401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logoutWholesale>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutWholesaleMutationOptions(options));
+    }
 
 export type getWholesaleSessionResponse200 = {
   data: GetWholesaleSession200
