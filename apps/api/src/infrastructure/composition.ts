@@ -1,4 +1,18 @@
 import {
+  CreateProductUseCase,
+  DrizzleProductRepository,
+  GetProductUseCase,
+  GetWholesaleProductUseCase,
+  InMemoryProductRepository,
+  InMemoryQtyReadPort,
+  ListStaffProductsUseCase,
+  ListWholesaleCatalogUseCase,
+  UpdateProductUseCase,
+  type CatalogDrizzle,
+  type IProductRepository,
+  type IQtyReadPort,
+} from "@dc-inventory/catalog";
+import {
   CreateContactUseCase,
   CreateCustomerUseCase,
   CreateExemptionCertificateUseCase,
@@ -46,7 +60,9 @@ import {
   type IWholesaleUserRepository,
   type IdentityDrizzle,
 } from "@dc-inventory/identity";
+import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
+import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
 import type { IClock } from "../domain/clock.js";
@@ -61,6 +77,15 @@ export type IdentityHttpServices = {
   logoutWholesale: LogoutUseCase;
   resolveStaff: ResolveStaffSessionUseCase;
   resolveWholesale: ResolveWholesaleSessionUseCase;
+};
+
+export type CatalogHttpServices = {
+  listStaffProducts: ListStaffProductsUseCase;
+  createProduct: CreateProductUseCase;
+  getProduct: GetProductUseCase;
+  updateProduct: UpdateProductUseCase;
+  listWholesaleCatalog: ListWholesaleCatalogUseCase;
+  getWholesaleProduct: GetWholesaleProductUseCase;
 };
 
 export type CustomersHttpServices = {
@@ -91,6 +116,7 @@ export type AppServices = {
   ready: ReadyCheckUseCase;
   identity: IdentityHttpServices;
   customers: CustomersHttpServices;
+  catalog: CatalogHttpServices;
 };
 
 export type AppServiceOverrides = {
@@ -105,7 +131,23 @@ export type AppServiceOverrides = {
   contactRepo?: IContactRepository;
   shipToRepo?: IShipToRepository;
   exemptionRepo?: IExemptionCertificateRepository;
+  productRepo?: IProductRepository;
+  qtyRead?: IQtyReadPort;
 };
+
+function catalogServices(
+  productRepo: IProductRepository,
+  qtyRead: IQtyReadPort,
+): CatalogHttpServices {
+  return {
+    listStaffProducts: new ListStaffProductsUseCase(productRepo, qtyRead),
+    createProduct: new CreateProductUseCase(productRepo),
+    getProduct: new GetProductUseCase(productRepo, qtyRead),
+    updateProduct: new UpdateProductUseCase(productRepo, qtyRead),
+    listWholesaleCatalog: new ListWholesaleCatalogUseCase(productRepo, qtyRead),
+    getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead),
+  };
+}
 
 function customersServices(
   customerRepo: ICustomerRepository,
@@ -148,6 +190,8 @@ export function composeAppServices(
   let database: IDatabase;
   let identityDb: IdentityDrizzle | undefined;
   let customersDb: CustomersDrizzle | undefined;
+  let catalogDb: CatalogDrizzle | undefined;
+  let appDb: AppDrizzle | undefined;
   if (overrides.database) {
     database = overrides.database;
   } else {
@@ -155,6 +199,8 @@ export function composeAppServices(
     database = new PostgresDatabase(connection.sql);
     identityDb = connection.db as unknown as IdentityDrizzle;
     customersDb = connection.db as unknown as CustomersDrizzle;
+    catalogDb = connection.db as unknown as CatalogDrizzle;
+    appDb = connection.db;
   }
 
   const staffUsers =
@@ -195,6 +241,15 @@ export function composeAppServices(
       ? new DrizzleExemptionCertificateRepository(customersDb)
       : new InMemoryExemptionCertificateRepository());
 
+  const productRepo =
+    overrides.productRepo ??
+    (catalogDb
+      ? new DrizzleProductRepository(catalogDb)
+      : new InMemoryProductRepository());
+  const qtyRead =
+    overrides.qtyRead ??
+    (appDb ? new StockSnapshotQtyReadAdapter(appDb) : new InMemoryQtyReadPort());
+
   return {
     features,
     clock,
@@ -219,5 +274,6 @@ export function composeAppServices(
       ),
     },
     customers: customersServices(customerRepo, contactRepo, shipToRepo, exemptionRepo),
+    catalog: catalogServices(productRepo, qtyRead),
   };
 }

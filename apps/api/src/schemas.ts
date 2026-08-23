@@ -24,19 +24,34 @@ export const wholesaleSessionResponseSchema = z.object({
   customerId: z.string().uuid(),
 });
 
+const optionalBooleanQuery = z
+  .union([z.literal("true"), z.literal("false"), z.boolean()])
+  .optional()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined;
+    }
+    return value === true || value === "true";
+  });
+
 export const listQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["sku", "name", "available", "createdAt"]).default("sku"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
-  status: z.enum(["active", "inactive"]).optional(),
+  inactive: optionalBooleanQuery,
 });
 
 export const productListItemSchema = z.object({
   id: z.string().uuid(),
   sku: z.string(),
   name: z.string(),
+  memberPrice: z.number().int(),
+  currency: z.string(),
+  inactive: z.boolean(),
+  discontinued: z.boolean(),
+  webWholesale: z.boolean(),
   onHand: z.number().int(),
   onOrder: z.number().int(),
   allocated: z.number().int(),
@@ -80,52 +95,68 @@ export const opsSubscriptionSchema = z.object({
   plan: z.string().nullable(),
 });
 
-export const emptyProductList = {
-  items: [] as z.infer<typeof productListItemSchema>[],
-  page: 1,
-  pageSize: 25,
-  total: 0,
-};
+export const productIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
 
-export const emptyCatalogList = {
-  items: [] as z.infer<typeof catalogItemSchema>[],
-  page: 1,
-  pageSize: 25,
-  total: 0,
-};
+export const productWriteBodySchema = z
+  .object({
+    sku: z.string().min(1),
+    name: z.string().min(1),
+    uom: z.string().min(1),
+    memberPriceCents: z.number().int(),
+    currency: z.string().length(3).optional(),
+    inactive: z.boolean().optional(),
+    discontinued: z.boolean().optional(),
+    webWholesale: z.boolean().optional(),
+    description: z.string().optional().nullable(),
+    taxCategoryCode: z.string().optional().nullable(),
+  })
+  .strict();
 
-/** Stub rows so the wholesale shop can render an example product-card list. */
-export const stubCatalogList = {
-  items: [
-    {
-      id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-      name: "Galvanized hex bolt",
-      imageUrl: null,
-      wholesalePrice: 1250,
-      currency: "USD",
-      available: 48,
-    },
-    {
-      id: "2f1a0b8c-3d4e-4f5a-8b6c-7d8e9f0a1b2c",
-      name: "Stainless washer pack",
-      imageUrl: null,
-      wholesalePrice: 475,
-      currency: "USD",
-      available: 120,
-    },
-    {
-      id: "0a1b2c3d-4e5f-4678-89ab-cdef01234567",
-      name: "Nylon lock nut",
-      imageUrl: null,
-      wholesalePrice: 89,
-      currency: "USD",
-      available: 0,
-    },
-  ],
-  page: 1,
-  pageSize: 25,
-  total: 3,
-} satisfies z.infer<typeof catalogListResponseSchema>;
+export const productPatchBodySchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    uom: z.string().min(1).optional(),
+    memberPriceCents: z.number().int().optional(),
+    currency: z.string().length(3).optional(),
+    inactive: z.boolean().optional(),
+    discontinued: z.boolean().optional(),
+    webWholesale: z.boolean().optional(),
+    description: z.string().optional().nullable(),
+    taxCategoryCode: z.string().optional().nullable(),
+  })
+  .strict();
+
+export const productDetailSchema = z.object({
+  id: z.string().uuid(),
+  sku: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  uom: z.string(),
+  memberPriceCents: z.number().int(),
+  currency: z.string(),
+  inactive: z.boolean(),
+  discontinued: z.boolean(),
+  webWholesale: z.boolean(),
+  taxCategoryCode: z.string().nullable(),
+  onHand: z.number().int(),
+  onOrder: z.number().int(),
+  allocated: z.number().int(),
+  available: z.number().int(),
+});
+
+export const duplicateSkuResponseSchema = z.object({
+  error: z.literal("duplicate_sku"),
+});
+
+export const skuImmutableResponseSchema = z.object({
+  error: z.literal("sku_immutable"),
+});
+
+export const qtyNotAllowedResponseSchema = z.object({
+  error: z.literal("qty_not_allowed"),
+});
 
 export const stubOpsSubscription = {
   status: "inactive" as const,
@@ -295,6 +326,11 @@ export const productsListTable = {
   columns: [
     { field: "sku", label: "SKU" },
     { field: "name", label: "Name" },
+    { field: "memberPrice", label: "Member price" },
+    { field: "currency", label: "Currency" },
+    { field: "inactive", label: "Inactive" },
+    { field: "discontinued", label: "Discontinued" },
+    { field: "webWholesale", label: "Web wholesale" },
     { field: "onHand", label: "On hand" },
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
@@ -305,7 +341,7 @@ export const productsListTable = {
     fields: ["sku", "name"],
     placeholder: "Search SKU or name",
   },
-  filters: [{ param: "status", control: "select" }],
+  filters: [{ param: "inactive", control: "boolean" }],
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
