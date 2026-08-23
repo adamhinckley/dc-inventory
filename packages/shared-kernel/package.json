@@ -6,8 +6,8 @@
   "description": "Tiny shared kernel: Money, Sku, and branded IDs. No frameworks.",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
     }
   },
   "files": [

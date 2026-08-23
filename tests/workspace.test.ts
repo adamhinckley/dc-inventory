@@ -37,6 +37,13 @@ describe("workspace", () => {
     );
   });
 
+  it("exports shared-kernel source so tsx can boot identity without dist", () => {
+    const pkg = JSON.parse(readText("packages/shared-kernel/package.json")) as {
+      exports: { ".": { import: string } };
+    };
+    expect(pkg.exports["."].import).toMatch(/src\/index\.ts$/);
+  });
+
   it("requires Node >=24", () => {
     const pkg = JSON.parse(readText("package.json")) as {
       engines: { node: string };

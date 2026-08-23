@@ -22,7 +22,7 @@ Other packages may import **only** the symbols above from `@dc-inventory/shared-
 
 Domain / application layers must **not** pull Fastify, Drizzle, Zod, or any HTTP/ORM/SDK types onto these value objects. Zod belongs at HTTP adapters.
 
-Runtime consumers import the built `dist/` entry (`pnpm build`). Tests import TypeScript source via Vitest.
+Workspace consumers import TypeScript source (`src/index.ts`) so `tsx` / Vitest resolve without a prior `dist` build. `pnpm build` still emits `dist/` for a compiled artifact.
 
 ## Forbidden
 
