@@ -1,0 +1,27 @@
+{
+  "name": "@dc-inventory/customers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Customers context: accounts, contacts, ship-tos, exemption metadata.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/persistence/schema.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dc-inventory/shared-kernel": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

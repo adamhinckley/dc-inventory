@@ -29,6 +29,13 @@
       "when": 1787452189228,
       "tag": "0003_identity_password_session_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787453400000,
+      "tag": "0004_customers_contact_columns_exemption_object_key",
+      "breakpoints": true
     }
   ]
 }

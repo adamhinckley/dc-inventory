@@ -2,7 +2,7 @@ import { pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Persistence FK target only — not a Customers domain/application import.
- * The real customers table stays in the API app until ADA-79.
+ * The real customers table lives in `@dc-inventory/customers`.
  */
 const customers = pgSchema("customers").table("customers", {
   id: uuid("id").primaryKey(),
