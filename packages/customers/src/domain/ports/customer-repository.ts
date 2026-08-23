@@ -20,5 +20,6 @@ export type CustomerListPage = {
 export interface ICustomerRepository {
   list(query: ListCustomersQuery): Promise<CustomerListPage>;
   findById(id: CustomerId): Promise<Customer | null>;
+  findByName(name: string): Promise<Customer | null>;
   save(customer: Customer): Promise<void>;
 }

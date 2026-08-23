@@ -80,6 +80,9 @@ describe("Customers use cases (in-memory)", () => {
       customerId: acme.id,
     });
     expect(got).toEqual({ ok: true, customer: acme });
+    expect(await h.customers.findByName("Acme Wholesale")).toEqual(acme);
+    expect(await h.customers.findByName("  Acme Wholesale  ")).toEqual(acme);
+    expect(await h.customers.findByName("missing")).toBeNull();
   });
 
   it("updates customer fields without a credit formula", async () => {
