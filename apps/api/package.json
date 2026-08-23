@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed:phase1": "tsx src/seed/cli.ts",
     "gen:api": "tsx src/gen-api.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
