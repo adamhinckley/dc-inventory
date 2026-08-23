@@ -1,18 +1,40 @@
 "use client";
 
+import { useLoginInternal } from "@dc-inventory/api-client-internal";
 import { Button, Input, Label } from "@dc-inventory/ui";
-import type { FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const login = useLoginInternal();
+  const [error, setError] = useState<string | null>(null);
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
+    const password = String(form.get("password") ?? "");
+    setError(null);
+    login.mutate(
+      { data: { email, password } },
+      {
+        onSuccess: () => {
+          router.push("/catalog");
+        },
+        onError: () => {
+          setError("Sign-in failed.");
+        },
+      },
+    );
   }
 
   return (
     <section className="section-flat w-full max-w-md p-panel">
       <h1 className="page-title">Sign in</h1>
       <p className="page-description mt-2">
-        Placeholder staff login. Session binding lands with Identity.
+        Staff sign-in. After <code>pnpm db:seed:phase1</code>, use{" "}
+        <code>staff@local.test</code>.
       </p>
       <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
         <div className="flex flex-col gap-field">
@@ -22,6 +44,7 @@ export default function LoginPage() {
             type="email"
             name="email"
             autoComplete="username"
+            required
           />
         </div>
         <div className="flex flex-col gap-field">
@@ -31,9 +54,15 @@ export default function LoginPage() {
             type="password"
             name="password"
             autoComplete="current-password"
+            required
           />
         </div>
-        <Button type="submit" className="mt-2">
+        {error !== null ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <Button type="submit" className="mt-2" disabled={login.isPending}>
           Continue
         </Button>
       </form>

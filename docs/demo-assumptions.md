@@ -16,8 +16,8 @@ Do not edit `invariants.md` §18 or tick `open-questions.md` because of this fil
 
 ## Explicitly out of this demo phase
 
-- Better Auth (Phase 1).
-- Seed / history generator. Migrate on **empty** Postgres is the stop condition.
+- Better Auth is **deferred**. Phase 1 uses opaque staff and wholesale sessions (HttpOnly cookies), not Better Auth `user` / `session` / `account` / `verification` tables.
+- Phase 0 migrate still lands on **empty** Postgres. Phase 1 local/demo rows come from `pnpm db:seed:phase1` (not a migration, not CSV). The Phase 3 `seed:demo` history generator is still out.
 - Catalog image **upload** against MinIO. MinIO boots so the box is complete; `IFileStorage` is not wired.
 - Neon / production hosting and production secrets.
 - Software-payment UI. Licensing and operator_bridge rows exist after migrate; they are not shown on ops/internal/wholesale screens in Phase 0. `IOperatorPlatform` stays no-op.

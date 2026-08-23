@@ -17,8 +17,8 @@ function walk(dir: string): string[] {
   });
 }
 
-describe("internal dashboard HTTP", () => {
-  it("uses the Orval internal client and does not hand-write fetch", () => {
+describe("wholesale shop HTTP", () => {
+  it("uses the Orval wholesale client and does not hand-write fetch", () => {
     const sources = walk(appRoot).filter(
       (path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx"),
     );
@@ -26,12 +26,12 @@ describe("internal dashboard HTTP", () => {
     expect(sources.length).toBeGreaterThan(0);
 
     const joined = sources.map((file) => readFileSync(file, "utf8")).join("\n");
-    expect(joined).toMatch(/@dc-inventory\/api-client-internal/);
-    expect(joined).toMatch(/useListInternalProducts/);
-    expect(joined).toMatch(/useLoginInternal/);
-    expect(joined).not.toMatch(/Placeholder staff login/);
-    expect(joined).not.toMatch(/@dc-inventory\/api-client-wholesale/);
+    expect(joined).toMatch(/@dc-inventory\/api-client-wholesale/);
+    expect(joined).toMatch(/useListWholesaleCatalog/);
+    expect(joined).toMatch(/useLoginWholesale/);
+    expect(joined).not.toMatch(/@dc-inventory\/api-client-internal/);
     expect(joined).not.toMatch(/@dc-inventory\/api-client-ops/);
+    expect(joined).not.toMatch(/preventDefault\(\);\s*\n\s*\}/);
 
     for (const file of sources) {
       const text = readFileSync(file, "utf8");

@@ -1,6 +1,8 @@
 # Local demo infrastructure only (ADA-51).
 # Placeholders — not production secrets. Copy root `.env.example` to `.env` to override.
 # MinIO is in the box so object storage can wait; do not wire IFileStorage here.
+# PHASE1_STAFF_PASSWORD and PHASE1_WHOLESALE_PASSWORD are API process env
+# (apps/api/.env.example) for `pnpm db:seed:phase1`. Not used by Postgres or MinIO.
 
 services:
   postgres:
