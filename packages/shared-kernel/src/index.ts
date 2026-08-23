@@ -15,8 +15,11 @@ export {
   OrderId,
   ProductId,
   PurchaseOrderId,
+  SessionId,
+  StaffUserId,
   SupplierId,
   TenantId,
+  WholesaleUserId,
 } from "./ids.js";
 export { Money } from "./money.js";
 export { Sku } from "./sku.js";

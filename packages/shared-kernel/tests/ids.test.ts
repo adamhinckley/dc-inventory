@@ -9,8 +9,11 @@ import {
   OrderId,
   ProductId,
   PurchaseOrderId,
+  SessionId,
+  StaffUserId,
   SupplierId,
   TenantId,
+  WholesaleUserId,
 } from "../src/index.js";
 
 const UUID = "550e8400-e29b-41d4-a716-446655440000";
@@ -26,6 +29,9 @@ describe("branded IDs", () => {
     expect(InstallationId.parse(UUID)).toBe(UUID);
     expect(InvoiceId.parse(UUID)).toBe(UUID);
     expect(SupplierId.parse(UUID)).toBe(UUID);
+    expect(StaffUserId.parse(UUID)).toBe(UUID);
+    expect(WholesaleUserId.parse(UUID)).toBe(UUID);
+    expect(SessionId.parse(UUID)).toBe(UUID);
   });
 
   it("rejects a non-UUID", () => {

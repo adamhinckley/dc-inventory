@@ -8,7 +8,7 @@ Cross-context value objects (the only concepts other contexts should depend on):
 
 - `Money` — integer **minor units** + ISO 4217 currency, validated at construction
 - `Sku` — stock-keeping identity (not a product variant model)
-- Branded IDs — `ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId` (`DEFAULT` in v1), `TenantId`, `AddOnId`, `InstallationId`, `InvoiceId`, `SupplierId`
+- Branded IDs — `ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId` (`DEFAULT` in v1), `TenantId`, `AddOnId`, `InstallationId`, `InvoiceId`, `SupplierId`, `StaffUserId`, `WholesaleUserId`, `SessionId`
 
 Also exported for callers of those types (not extra domain concepts):
 
