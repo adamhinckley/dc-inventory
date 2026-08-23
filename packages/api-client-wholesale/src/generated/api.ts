@@ -19,9 +19,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  GetWholesaleCatalogProduct200,
+  GetWholesaleCatalogProduct401,
+  GetWholesaleCatalogProduct404,
   GetWholesaleSession200,
   GetWholesaleSession401,
   ListWholesaleCatalog200,
+  ListWholesaleCatalog401,
   ListWholesaleCatalogParams,
   LoginWholesale200,
   LoginWholesale401,
@@ -337,12 +341,19 @@ export type listWholesaleCatalogResponse200 = {
   status: 200
 }
 
+export type listWholesaleCatalogResponse401 = {
+  data: ListWholesaleCatalog401
+  status: 401
+}
+
 export type listWholesaleCatalogResponseSuccess = (listWholesaleCatalogResponse200) & {
   headers: Headers;
 };
-;
+export type listWholesaleCatalogResponseError = (listWholesaleCatalogResponse401) & {
+  headers: Headers;
+};
 
-export type listWholesaleCatalogResponse = (listWholesaleCatalogResponseSuccess)
+export type listWholesaleCatalogResponse = (listWholesaleCatalogResponseSuccess | listWholesaleCatalogResponseError)
 
 export const getListWholesaleCatalogUrl = (params?: ListWholesaleCatalogParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -360,7 +371,7 @@ export const getListWholesaleCatalogUrl = (params?: ListWholesaleCatalogParams,)
 }
 
 /**
- * @summary Stub catalog list for product-card examples
+ * @summary List shop-visible catalog products
  */
 export const listWholesaleCatalog = async (params?: ListWholesaleCatalogParams, options?: Parameters<typeof customFetch>[1]): Promise<listWholesaleCatalogResponse> => {
 
@@ -384,7 +395,7 @@ export const getListWholesaleCatalogQueryKey = (params?: ListWholesaleCatalogPar
     }
 
 
-export const getListWholesaleCatalogQueryOptions = <TData = Awaited<ReturnType<typeof listWholesaleCatalog>>, TError = unknown>(params?: ListWholesaleCatalogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListWholesaleCatalogQueryOptions = <TData = Awaited<ReturnType<typeof listWholesaleCatalog>>, TError = ListWholesaleCatalog401>(params?: ListWholesaleCatalogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -403,19 +414,120 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListWholesaleCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof listWholesaleCatalog>>>
-export type ListWholesaleCatalogQueryError = unknown
+export type ListWholesaleCatalogQueryError = ListWholesaleCatalog401
 
 
 /**
- * @summary Stub catalog list for product-card examples
+ * @summary List shop-visible catalog products
  */
 
-export function useListWholesaleCatalog<TData = Awaited<ReturnType<typeof listWholesaleCatalog>>, TError = unknown>(
+export function useListWholesaleCatalog<TData = Awaited<ReturnType<typeof listWholesaleCatalog>>, TError = ListWholesaleCatalog401>(
  params?: ListWholesaleCatalogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListWholesaleCatalogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getWholesaleCatalogProductResponse200 = {
+  data: GetWholesaleCatalogProduct200
+  status: 200
+}
+
+export type getWholesaleCatalogProductResponse401 = {
+  data: GetWholesaleCatalogProduct401
+  status: 401
+}
+
+export type getWholesaleCatalogProductResponse404 = {
+  data: GetWholesaleCatalogProduct404
+  status: 404
+}
+
+export type getWholesaleCatalogProductResponseSuccess = (getWholesaleCatalogProductResponse200) & {
+  headers: Headers;
+};
+export type getWholesaleCatalogProductResponseError = (getWholesaleCatalogProductResponse401 | getWholesaleCatalogProductResponse404) & {
+  headers: Headers;
+};
+
+export type getWholesaleCatalogProductResponse = (getWholesaleCatalogProductResponseSuccess | getWholesaleCatalogProductResponseError)
+
+export const getGetWholesaleCatalogProductUrl = (id: string,) => {
+
+
+
+
+  return `/wholesale/catalog/${id}`
+}
+
+/**
+ * @summary Get a shop-visible catalog product (hidden is 404)
+ */
+export const getWholesaleCatalogProduct = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleCatalogProductResponse> => {
+
+  return customFetch<getWholesaleCatalogProductResponse>(getGetWholesaleCatalogProductUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWholesaleCatalogProductQueryKey = (id: string,) => {
+    return [
+    `/wholesale/catalog/${id}`
+    ] as const;
+    }
+
+
+export const getGetWholesaleCatalogProductQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleCatalogProduct>>, TError = GetWholesaleCatalogProduct401 | GetWholesaleCatalogProduct404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleCatalogProduct>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWholesaleCatalogProductQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWholesaleCatalogProduct>>> = ({ signal }) => getWholesaleCatalogProduct(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWholesaleCatalogProduct>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWholesaleCatalogProductQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleCatalogProduct>>>
+export type GetWholesaleCatalogProductQueryError = GetWholesaleCatalogProduct401 | GetWholesaleCatalogProduct404
+
+
+/**
+ * @summary Get a shop-visible catalog product (hidden is 404)
+ */
+
+export function useGetWholesaleCatalogProduct<TData = Awaited<ReturnType<typeof getWholesaleCatalogProduct>>, TError = GetWholesaleCatalogProduct401 | GetWholesaleCatalogProduct404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleCatalogProduct>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWholesaleCatalogProductQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

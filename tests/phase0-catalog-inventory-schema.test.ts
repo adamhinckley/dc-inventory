@@ -41,7 +41,9 @@ const omittedProductColumns = [
 describe("Phase 0 catalog / purchasing / inventory schemas (ADA-52)", () => {
   it("registers dump-mapped tables in the API Kit schema barrel", () => {
     const barrel = readText("apps/api/src/infrastructure/schema.ts");
-    expect(barrel).toMatch(/pgSchema\("catalog"\)|from "\.\/schema\//);
+    expect(barrel).toMatch(
+      /pgSchema\("catalog"\)|from "\.\/schema\/|@dc-inventory\/catalog\/schema/,
+    );
     expect(barrel).toMatch(/products/);
     expect(barrel).toMatch(/productIdentifiers|product_identifiers/);
     expect(barrel).toMatch(/productPackaging|product_packaging/);
@@ -64,6 +66,9 @@ describe("Phase 0 catalog / purchasing / inventory schemas (ADA-52)", () => {
       readText("apps/api/src/infrastructure/schema.ts"),
       existsSync(resolve(root, "apps/api/src/infrastructure/schema/catalog.ts"))
         ? readText("apps/api/src/infrastructure/schema/catalog.ts")
+        : "",
+      existsSync(resolve(root, "packages/catalog/src/persistence/schema.ts"))
+        ? readText("packages/catalog/src/persistence/schema.ts")
         : "",
     ].join("\n");
 

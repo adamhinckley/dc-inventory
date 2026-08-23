@@ -5,11 +5,18 @@
  * OpenAPI spec version: 0.0.0
  */
 
+export * from './getWholesaleCatalogProduct200.js';
+export * from './getWholesaleCatalogProduct401.js';
+export * from './getWholesaleCatalogProduct401Error.js';
+export * from './getWholesaleCatalogProduct404.js';
+export * from './getWholesaleCatalogProduct404Error.js';
 export * from './getWholesaleSession200.js';
 export * from './getWholesaleSession401.js';
 export * from './getWholesaleSession401Error.js';
 export * from './listWholesaleCatalog200.js';
 export * from './listWholesaleCatalog200ItemsItem.js';
+export * from './listWholesaleCatalog401.js';
+export * from './listWholesaleCatalog401Error.js';
 export * from './listWholesaleCatalogParams.js';
 export * from './listWholesaleCatalogSortBy.js';
 export * from './listWholesaleCatalogSortOrder.js';

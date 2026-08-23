@@ -13,7 +13,7 @@ export {
   productImages,
   productPackaging,
   products,
-} from "./schema/catalog.js";
+} from "@dc-inventory/catalog/schema";
 export {
   purchaseOrderLines,
   purchaseOrders,
@@ -91,7 +91,7 @@ import {
   productImages,
   productPackaging,
   products,
-} from "./schema/catalog.js";
+} from "@dc-inventory/catalog/schema";
 import {
   purchaseOrderLines,
   purchaseOrders,

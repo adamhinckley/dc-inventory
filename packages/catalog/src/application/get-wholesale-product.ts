@@ -1,0 +1,37 @@
+import type { CustomerId, ProductId } from "@dc-inventory/shared-kernel";
+import type { IProductRepository } from "../domain/ports/product-repository.js";
+import type { IQtyReadPort } from "../domain/ports/qty-read.js";
+import { isShopVisible, type Product } from "../domain/product.js";
+import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
+
+export type GetWholesaleProductRequest = {
+  customerId: CustomerId;
+  productId: ProductId;
+};
+
+export type GetWholesaleProductResult =
+  | { ok: true; product: Product; qty: ProductQty }
+  | { ok: false; reason: "not_found" };
+
+export class GetWholesaleProductUseCase {
+  constructor(
+    private readonly products: IProductRepository,
+    private readonly qty: IQtyReadPort,
+  ) {}
+
+  async execute(
+    input: GetWholesaleProductRequest,
+  ): Promise<GetWholesaleProductResult> {
+    void input.customerId;
+    const product = await this.products.findById(input.productId);
+    if (product === null || !isShopVisible(product)) {
+      return { ok: false, reason: "not_found" };
+    }
+    const snapshots = await this.qty.readBySkus([product.sku]);
+    return {
+      ok: true,
+      product,
+      qty: snapshots.get(product.sku.value) ?? ZERO_QTY,
+    };
+  }
+}

@@ -1581,7 +1581,7 @@ paths:
   /internal/products:
     get:
       operationId: listInternalProducts
-      summary: Stub product list for DataTable (x-table)
+      summary: List products including shop-hidden SKUs
       tags:
         - internal
       parameters:
@@ -1627,12 +1627,16 @@ paths:
           name: sortOrder
           required: false
         - schema:
-            type: string
-            enum:
-              - active
-              - inactive
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
           in: query
-          name: status
+          name: inactive
           required: false
       x-table:
         rowId: id
@@ -1641,6 +1645,16 @@ paths:
             label: SKU
           - field: name
             label: Name
+          - field: memberPrice
+            label: Member price
+          - field: currency
+            label: Currency
+          - field: inactive
+            label: Inactive
+          - field: discontinued
+            label: Discontinued
+          - field: webWholesale
+            label: Web wholesale
           - field: onHand
             label: On hand
           - field: onOrder
@@ -1656,8 +1670,8 @@ paths:
             - name
           placeholder: Search SKU or name
         filters:
-          - param: status
-            control: select
+          - param: inactive
+            control: boolean
         sort:
           defaultBy: sku
           defaultOrder: asc
@@ -1687,6 +1701,18 @@ paths:
                           type: string
                         name:
                           type: string
+                        memberPrice:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        currency:
+                          type: string
+                        inactive:
+                          type: boolean
+                        discontinued:
+                          type: boolean
+                        webWholesale:
+                          type: boolean
                         onHand:
                           type: integer
                           minimum: -9007199254740991
@@ -1707,6 +1733,11 @@ paths:
                         - id
                         - sku
                         - name
+                        - memberPrice
+                        - currency
+                        - inactive
+                        - discontinued
+                        - webWholesale
                         - onHand
                         - onOrder
                         - allocated
@@ -1729,6 +1760,487 @@ paths:
                   - page
                   - pageSize
                   - total
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+    post:
+      operationId: createInternalProduct
+      summary: Create product
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sku:
+                  type: string
+                  minLength: 1
+                name:
+                  type: string
+                  minLength: 1
+                uom:
+                  type: string
+                  minLength: 1
+                memberPriceCents:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                inactive:
+                  type: boolean
+                discontinued:
+                  type: boolean
+                webWholesale:
+                  type: boolean
+                description:
+                  nullable: true
+                  type: string
+                taxCategoryCode:
+                  nullable: true
+                  type: string
+              required:
+                - sku
+                - name
+                - uom
+                - memberPriceCents
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  sku:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    nullable: true
+                    type: string
+                  uom:
+                    type: string
+                  memberPriceCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                  inactive:
+                    type: boolean
+                  discontinued:
+                    type: boolean
+                  webWholesale:
+                    type: boolean
+                  taxCategoryCode:
+                    nullable: true
+                    type: string
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - id
+                  - sku
+                  - name
+                  - description
+                  - uom
+                  - memberPriceCents
+                  - currency
+                  - inactive
+                  - discontinued
+                  - webWholesale
+                  - taxCategoryCode
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - duplicate_sku
+                required:
+                  - error
+                additionalProperties: false
+        "422":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - qty_not_allowed
+                required:
+                  - error
+                additionalProperties: false
+  /internal/products/{id}:
+    get:
+      operationId: getInternalProduct
+      summary: Get product
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  sku:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    nullable: true
+                    type: string
+                  uom:
+                    type: string
+                  memberPriceCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                  inactive:
+                    type: boolean
+                  discontinued:
+                    type: boolean
+                  webWholesale:
+                    type: boolean
+                  taxCategoryCode:
+                    nullable: true
+                    type: string
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - id
+                  - sku
+                  - name
+                  - description
+                  - uom
+                  - memberPriceCents
+                  - currency
+                  - inactive
+                  - discontinued
+                  - webWholesale
+                  - taxCategoryCode
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+    patch:
+      operationId: updateInternalProduct
+      summary: Update product (sku is immutable; no qty writes)
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                uom:
+                  type: string
+                  minLength: 1
+                memberPriceCents:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                inactive:
+                  type: boolean
+                discontinued:
+                  type: boolean
+                webWholesale:
+                  type: boolean
+                description:
+                  nullable: true
+                  type: string
+                taxCategoryCode:
+                  nullable: true
+                  type: string
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  sku:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    nullable: true
+                    type: string
+                  uom:
+                    type: string
+                  memberPriceCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                  inactive:
+                    type: boolean
+                  discontinued:
+                    type: boolean
+                  webWholesale:
+                    type: boolean
+                  taxCategoryCode:
+                    nullable: true
+                    type: string
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - id
+                  - sku
+                  - name
+                  - description
+                  - uom
+                  - memberPriceCents
+                  - currency
+                  - inactive
+                  - discontinued
+                  - webWholesale
+                  - taxCategoryCode
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - sku_immutable
+                required:
+                  - error
+                additionalProperties: false
+        "422":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - qty_not_allowed
+                required:
+                  - error
                 additionalProperties: false
 servers:
   - url: http://localhost:3001

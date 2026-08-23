@@ -1,0 +1,13 @@
+export { DrizzleProductRepository, type CatalogDrizzle } from "./adapters/drizzle-products.js";
+export { InMemoryProductRepository } from "./adapters/in-memory-product-repository.js";
+export { InMemoryQtyReadPort } from "./adapters/in-memory-qty-read.js";
+export { CreateProductUseCase } from "./application/create-product.js";
+export { GetProductUseCase } from "./application/get-product.js";
+export { GetWholesaleProductUseCase } from "./application/get-wholesale-product.js";
+export { ListStaffProductsUseCase } from "./application/list-staff-products.js";
+export { ListWholesaleCatalogUseCase } from "./application/list-wholesale-catalog.js";
+export { UpdateProductUseCase } from "./application/update-product.js";
+export { isShopVisible, type Product } from "./domain/product.js";
+export type { IProductRepository } from "./domain/ports/product-repository.js";
+export type { IQtyReadPort } from "./domain/ports/qty-read.js";
+export { ZERO_QTY, type ProductQty } from "./domain/qty.js";

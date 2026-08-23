@@ -10,7 +10,8 @@ export function ProductCardList() {
     return <p className="text-ink-muted">Loading catalog…</p>;
   }
 
-  if (catalog.isError) {
+  const payload = catalog.data?.data;
+  if (catalog.isError || !payload || !("items" in payload)) {
     return (
       <p className="text-sold-out" role="alert">
         Catalog is unavailable. Start the API with `pnpm dev:api` and reload.
@@ -18,7 +19,7 @@ export function ProductCardList() {
     );
   }
 
-  const items = catalog.data.data.items;
+  const items = payload.items;
 
   if (items.length === 0) {
     return <p className="text-ink-muted">No products in the catalog yet.</p>;
