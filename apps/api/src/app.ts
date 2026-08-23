@@ -1,3 +1,5 @@
+import cookie from "@fastify/cookie";
+import cors from "@fastify/cors";
 import swagger from "@fastify/swagger";
 import Fastify, {
   type FastifyInstance,
@@ -7,14 +9,21 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
+import { InMemoryDatabase } from "./adapters/in-memory-database.js";
 import { registerHealthRoutes } from "./adapters/http/health.js";
 import { registerPingRoute } from "./adapters/http/ping.js";
+import {
+  assertNoWildcardOrigins,
+  isAllowedCorsOrigin,
+  readCorsOrigins,
+} from "./adapters/http/cors-origins.js";
 import type { PingUseCase } from "./application/ping.js";
 import type { ReadyCheckUseCase } from "./application/ready.js";
 import { featuresAllCoreOn, type IFeatures } from "./features.js";
 import {
   composeAppServices,
   type AppServiceOverrides,
+  type IdentityHttpServices,
 } from "./infrastructure/composition.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
 import {
@@ -54,13 +63,38 @@ async function registerAudienceMounts(
   }
 }
 
+async function registerCookie(app: FastifyInstance): Promise<void> {
+  await app.register(cookie);
+}
+
+async function registerCors(app: FastifyInstance): Promise<void> {
+  const origins = readCorsOrigins();
+  assertNoWildcardOrigins(origins);
+  await app.register(cors, {
+    origin: (origin, callback) => {
+      if (origin === undefined || origin === null || origin.length === 0) {
+        callback(null, true);
+        return;
+      }
+      callback(null, isAllowedCorsOrigin(origin, origins));
+    },
+    credentials: true,
+  });
+}
+
 export async function buildAudienceApp(
   audience: Audience,
   features: IFeatures = featuresAllCoreOn(),
 ): Promise<FastifyInstance> {
+  const services = composeAppServices({
+    features,
+    database: new InMemoryDatabase(),
+  });
   const app = Fastify({ logger: false });
   app.decorate("features", features);
+  app.decorate("identity", services.identity);
   applyHttpCompilers(app);
+  await registerCookie(app);
 
   await app.register(swagger, {
     openapi: {
@@ -92,8 +126,11 @@ export async function buildApp(
   app.decorate("features", services.features);
   app.decorate("ping", services.ping);
   app.decorate("readyCheck", services.ready);
+  app.decorate("identity", services.identity);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
+  await registerCookie(app);
+  await registerCors(app);
   registerHealthRoutes(app);
   registerPingRoute(app);
   await registerAudienceMounts(app);
@@ -108,5 +145,15 @@ declare module "fastify" {
     features: IFeatures;
     ping: PingUseCase;
     readyCheck: ReadyCheckUseCase;
+    identity: IdentityHttpServices;
+  }
+
+  interface FastifyRequest {
+    staffAuth?: { staffUserId: string; email: string };
+    wholesaleAuth?: {
+      wholesaleUserId: string;
+      email: string;
+      customerId: string;
+    };
   }
 }

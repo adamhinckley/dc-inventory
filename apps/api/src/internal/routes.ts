@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { registerStaffAudienceGuard } from "../adapters/http/audience-guard.js";
+import { registerInternalAuthRoutes } from "../adapters/http/internal-auth.js";
 import {
   emptyProductList,
   listQuerySchema,
@@ -12,8 +14,10 @@ function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
 }
 
-/** Staff mount (`/internal`). Stubs from ADA-35; business routes come later. */
+/** Staff mount (`/internal`). Auth HTTP from ADA-77; product list remains a stub. */
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
+  registerInternalAuthRoutes(app);
+  registerStaffAudienceGuard(app);
   typed(app).route({
     method: "GET",
     url: "/products",

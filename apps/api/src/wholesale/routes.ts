@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { registerWholesaleAudienceGuard } from "../adapters/http/audience-guard.js";
+import { registerWholesaleAuthRoutes } from "../adapters/http/wholesale-auth.js";
 import {
   catalogListResponseSchema,
   catalogQuerySchema,
@@ -10,8 +12,10 @@ function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
 }
 
-/** Wholesale-client mount (`/wholesale`). */
+/** Wholesale-client mount (`/wholesale`). Auth HTTP from ADA-77; catalog remains a stub. */
 export async function wholesaleRoutes(app: FastifyInstance): Promise<void> {
+  registerWholesaleAuthRoutes(app);
+  registerWholesaleAudienceGuard(app);
   typed(app).route({
     method: "GET",
     url: "/catalog",

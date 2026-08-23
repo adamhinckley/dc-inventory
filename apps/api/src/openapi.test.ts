@@ -6,10 +6,13 @@ describe("OpenAPI stub export", () => {
     const specs = await exportOpenApiYaml();
 
     expect(specs.internal).toContain("/internal/products");
+    expect(specs.internal).toContain("/internal/auth/login");
     expect(specs.internal).toContain("x-table");
     expect(specs.internal).toContain("listInternalProducts");
+    expect(specs.internal).not.toContain("/ops/auth/");
 
     expect(specs.wholesale).toContain("/wholesale/catalog");
+    expect(specs.wholesale).toContain("/wholesale/auth/login");
     expect(specs.wholesale).toContain("listWholesaleCatalog");
     expect(specs.wholesale).not.toContain("x-table");
     expect(specs.wholesale).not.toContain("/internal/");

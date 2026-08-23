@@ -1,5 +1,29 @@
 import { z } from "zod";
 
+export const loginBodySchema = z.object({
+  email: z.string().min(1),
+  password: z.string().min(1),
+});
+
+export const unauthorizedResponseSchema = z.object({
+  error: z.literal("unauthorized"),
+});
+
+export const logoutResponseSchema = z.object({
+  ok: z.literal(true),
+});
+
+export const staffSessionResponseSchema = z.object({
+  staffUserId: z.string().uuid(),
+  email: z.string(),
+});
+
+export const wholesaleSessionResponseSchema = z.object({
+  wholesaleUserId: z.string().uuid(),
+  email: z.string(),
+  customerId: z.string().uuid(),
+});
+
 export const listQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
