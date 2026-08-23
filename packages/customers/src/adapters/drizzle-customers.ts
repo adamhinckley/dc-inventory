@@ -124,6 +124,19 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
     return rows[0] === undefined ? null : toCustomer(rows[0]);
   }
 
+  async findByName(name: string): Promise<Customer | null> {
+    const needle = name.trim();
+    if (needle.length === 0) {
+      return null;
+    }
+    const rows = await this.db
+      .select()
+      .from(customers)
+      .where(eq(customers.name, needle))
+      .limit(1);
+    return rows[0] === undefined ? null : toCustomer(rows[0]);
+  }
+
   async save(customer: Customer): Promise<void> {
     await this.db
       .insert(customers)

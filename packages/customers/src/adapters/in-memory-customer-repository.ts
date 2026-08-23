@@ -41,6 +41,19 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
     return this.byId.get(id)?.customer ?? null;
   }
 
+  async findByName(name: string): Promise<Customer | null> {
+    const needle = name.trim();
+    if (needle.length === 0) {
+      return null;
+    }
+    for (const row of this.byId.values()) {
+      if (row.customer.name === needle) {
+        return row.customer;
+      }
+    }
+    return null;
+  }
+
   async save(customer: Customer): Promise<void> {
     const existing = this.byId.get(customer.id);
     this.byId.set(customer.id, {
