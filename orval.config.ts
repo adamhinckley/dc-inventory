@@ -5,7 +5,9 @@ const reactQuery = {
   httpClient: "fetch" as const,
   override: {
     query: {
-      useQuery: true,
+      // Do not set useQuery: true globally — Orval then emits POST login/logout
+      // as useQuery hooks that fire on mount. GET still defaults to useQuery;
+      // POST defaults to useMutation.
       useInfinite: false,
     },
   },

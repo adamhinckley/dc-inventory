@@ -132,8 +132,8 @@ describe("composition root HTTP", () => {
       url: "/wholesale/catalog",
     });
     const ops = await app.inject({ method: "GET", url: "/ops/subscription" });
-    expect(internal.statusCode).toBe(200);
-    expect(wholesale.statusCode).toBe(200);
+    expect(internal.statusCode).toBe(401);
+    expect(wholesale.statusCode).toBe(401);
     expect(ops.statusCode).toBe(200);
   });
 

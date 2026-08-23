@@ -1,0 +1,58 @@
+import { StaffUserId } from "@dc-inventory/shared-kernel";
+import { eq } from "drizzle-orm";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { normalizeEmail } from "../domain/email.js";
+import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
+import type { StaffUser } from "../domain/staff-user.js";
+import { sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
+
+export type IdentityDrizzle = PostgresJsDatabase<{
+  staffUsers: typeof staffUsers;
+  wholesaleUsers: typeof wholesaleUsers;
+  sessions: typeof sessions;
+}>;
+
+export class DrizzleStaffUserRepository implements IStaffUserRepository {
+  constructor(private readonly db: IdentityDrizzle) {}
+
+  async findByEmail(email: string): Promise<StaffUser | null> {
+    const rows = await this.db
+      .select()
+      .from(staffUsers)
+      .where(eq(staffUsers.email, normalizeEmail(email)))
+      .limit(1);
+    return rows[0] === undefined ? null : toStaffUser(rows[0]);
+  }
+
+  async findById(id: StaffUserId): Promise<StaffUser | null> {
+    const rows = await this.db
+      .select()
+      .from(staffUsers)
+      .where(eq(staffUsers.id, id))
+      .limit(1);
+    return rows[0] === undefined ? null : toStaffUser(rows[0]);
+  }
+
+  async save(user: StaffUser): Promise<void> {
+    const email = normalizeEmail(user.email);
+    await this.db
+      .insert(staffUsers)
+      .values({
+        id: user.id,
+        email,
+        passwordHash: user.passwordHash,
+      })
+      .onConflictDoUpdate({
+        target: staffUsers.id,
+        set: { email, passwordHash: user.passwordHash, updatedAt: new Date() },
+      });
+  }
+}
+
+function toStaffUser(row: typeof staffUsers.$inferSelect): StaffUser {
+  return {
+    id: StaffUserId.parse(row.id),
+    email: row.email,
+    passwordHash: row.passwordHash,
+  };
+}

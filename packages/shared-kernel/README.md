@@ -8,7 +8,7 @@ Cross-context value objects (the only concepts other contexts should depend on):
 
 - `Money` — integer **minor units** + ISO 4217 currency, validated at construction
 - `Sku` — stock-keeping identity (not a product variant model)
-- Branded IDs — `ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId` (`DEFAULT` in v1), `TenantId`, `AddOnId`, `InstallationId`, `InvoiceId`, `SupplierId`
+- Branded IDs — `ProductId`, `CustomerId`, `OrderId`, `PurchaseOrderId`, `LocationId` (`DEFAULT` in v1), `TenantId`, `AddOnId`, `InstallationId`, `InvoiceId`, `SupplierId`, `StaffUserId`, `WholesaleUserId`, `SessionId`
 
 Also exported for callers of those types (not extra domain concepts):
 
@@ -22,7 +22,7 @@ Other packages may import **only** the symbols above from `@dc-inventory/shared-
 
 Domain / application layers must **not** pull Fastify, Drizzle, Zod, or any HTTP/ORM/SDK types onto these value objects. Zod belongs at HTTP adapters.
 
-Runtime consumers import the built `dist/` entry (`pnpm build`). Tests import TypeScript source via Vitest.
+Workspace consumers import TypeScript source (`src/index.ts`) so `tsx` / Vitest resolve without a prior `dist` build. `pnpm build` still emits `dist/` for a compiled artifact.
 
 ## Forbidden
 

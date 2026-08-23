@@ -49,6 +49,15 @@ export const InvoiceId = defineId("InvoiceId");
 export type SupplierId = Brand<string, "SupplierId">;
 export const SupplierId = defineId("SupplierId");
 
+export type StaffUserId = Brand<string, "StaffUserId">;
+export const StaffUserId = defineId("StaffUserId");
+
+export type WholesaleUserId = Brand<string, "WholesaleUserId">;
+export const WholesaleUserId = defineId("WholesaleUserId");
+
+export type SessionId = Brand<string, "SessionId">;
+export const SessionId = defineId("SessionId");
+
 export type LocationId = Brand<string, "LocationId">;
 
 export const LocationId = {
