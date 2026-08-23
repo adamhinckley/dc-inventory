@@ -19,15 +19,75 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateInternalCustomer201,
+  CreateInternalCustomer400,
+  CreateInternalCustomer401,
+  CreateInternalCustomerBody,
+  CreateInternalCustomerContact201,
+  CreateInternalCustomerContact400,
+  CreateInternalCustomerContact401,
+  CreateInternalCustomerContact404,
+  CreateInternalCustomerContact409,
+  CreateInternalCustomerContactBody,
+  CreateInternalCustomerExemptionCertificate201,
+  CreateInternalCustomerExemptionCertificate400,
+  CreateInternalCustomerExemptionCertificate401,
+  CreateInternalCustomerExemptionCertificate404,
+  CreateInternalCustomerExemptionCertificateBody,
+  CreateInternalCustomerShipTo201,
+  CreateInternalCustomerShipTo400,
+  CreateInternalCustomerShipTo401,
+  CreateInternalCustomerShipTo404,
+  CreateInternalCustomerShipToBody,
+  GetInternalCustomer200,
+  GetInternalCustomer400,
+  GetInternalCustomer401,
+  GetInternalCustomer404,
   GetInternalSession200,
   GetInternalSession401,
+  ListInternalCustomerContacts200,
+  ListInternalCustomerContacts400,
+  ListInternalCustomerContacts401,
+  ListInternalCustomerContacts404,
+  ListInternalCustomerExemptionCertificates200,
+  ListInternalCustomerExemptionCertificates400,
+  ListInternalCustomerExemptionCertificates401,
+  ListInternalCustomerExemptionCertificates404,
+  ListInternalCustomerShipTos200,
+  ListInternalCustomerShipTos400,
+  ListInternalCustomerShipTos401,
+  ListInternalCustomerShipTos404,
+  ListInternalCustomers200,
+  ListInternalCustomers401,
+  ListInternalCustomersParams,
   ListInternalProducts200,
   ListInternalProductsParams,
   LoginInternal200,
   LoginInternal401,
   LoginInternalBody,
   LogoutInternal200,
-  LogoutInternal401
+  LogoutInternal401,
+  UpdateInternalCustomer200,
+  UpdateInternalCustomer400,
+  UpdateInternalCustomer401,
+  UpdateInternalCustomer404,
+  UpdateInternalCustomerBody,
+  UpdateInternalCustomerContact200,
+  UpdateInternalCustomerContact400,
+  UpdateInternalCustomerContact401,
+  UpdateInternalCustomerContact404,
+  UpdateInternalCustomerContact409,
+  UpdateInternalCustomerContactBody,
+  UpdateInternalCustomerExemptionCertificate200,
+  UpdateInternalCustomerExemptionCertificate400,
+  UpdateInternalCustomerExemptionCertificate401,
+  UpdateInternalCustomerExemptionCertificate404,
+  UpdateInternalCustomerExemptionCertificateBody,
+  UpdateInternalCustomerShipTo200,
+  UpdateInternalCustomerShipTo400,
+  UpdateInternalCustomerShipTo401,
+  UpdateInternalCustomerShipTo404,
+  UpdateInternalCustomerShipToBody
 } from './model';
 
 import { customFetch } from '../custom-fetch.js';
@@ -331,6 +391,1399 @@ export function useGetInternalSession<TData = Awaited<ReturnType<typeof getInter
 
 
 
+
+export type listInternalCustomersResponse200 = {
+  data: ListInternalCustomers200
+  status: 200
+}
+
+export type listInternalCustomersResponse401 = {
+  data: ListInternalCustomers401
+  status: 401
+}
+
+export type listInternalCustomersResponseSuccess = (listInternalCustomersResponse200) & {
+  headers: Headers;
+};
+export type listInternalCustomersResponseError = (listInternalCustomersResponse401) & {
+  headers: Headers;
+};
+
+export type listInternalCustomersResponse = (listInternalCustomersResponseSuccess | listInternalCustomersResponseError)
+
+export const getListInternalCustomersUrl = (params?: ListInternalCustomersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/customers?${stringifiedParams}` : `/internal/customers`
+}
+
+/**
+ * @summary List customers
+ */
+export const listInternalCustomers = async (params?: ListInternalCustomersParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalCustomersResponse> => {
+
+  return customFetch<listInternalCustomersResponse>(getListInternalCustomersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalCustomersQueryKey = (params?: ListInternalCustomersParams,) => {
+    return [
+    `/internal/customers`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalCustomersQueryOptions = <TData = Awaited<ReturnType<typeof listInternalCustomers>>, TError = ListInternalCustomers401>(params?: ListInternalCustomersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalCustomersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalCustomers>>> = ({ signal }) => listInternalCustomers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalCustomersQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalCustomers>>>
+export type ListInternalCustomersQueryError = ListInternalCustomers401
+
+
+/**
+ * @summary List customers
+ */
+
+export function useListInternalCustomers<TData = Awaited<ReturnType<typeof listInternalCustomers>>, TError = ListInternalCustomers401>(
+ params?: ListInternalCustomersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalCustomersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createInternalCustomerResponse201 = {
+  data: CreateInternalCustomer201
+  status: 201
+}
+
+export type createInternalCustomerResponse400 = {
+  data: CreateInternalCustomer400
+  status: 400
+}
+
+export type createInternalCustomerResponse401 = {
+  data: CreateInternalCustomer401
+  status: 401
+}
+
+export type createInternalCustomerResponseSuccess = (createInternalCustomerResponse201) & {
+  headers: Headers;
+};
+export type createInternalCustomerResponseError = (createInternalCustomerResponse400 | createInternalCustomerResponse401) & {
+  headers: Headers;
+};
+
+export type createInternalCustomerResponse = (createInternalCustomerResponseSuccess | createInternalCustomerResponseError)
+
+export const getCreateInternalCustomerUrl = () => {
+
+
+
+
+  return `/internal/customers`
+}
+
+/**
+ * @summary Create customer
+ */
+export const createInternalCustomer = async (createInternalCustomerBody: CreateInternalCustomerBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalCustomerResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalCustomerResponse>(getCreateInternalCustomerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalCustomerBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalCustomerMutationOptions = <TError = CreateInternalCustomer400 | CreateInternalCustomer401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext> => {
+
+const mutationKey = ['createInternalCustomer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalCustomer>>, {data: CreateInternalCustomerBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInternalCustomer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalCustomer>>>
+    export type CreateInternalCustomerMutationBody = CreateInternalCustomerBody
+    export type CreateInternalCustomerMutationError = CreateInternalCustomer400 | CreateInternalCustomer401
+
+    /**
+ * @summary Create customer
+ */
+export const useCreateInternalCustomer = <TError = CreateInternalCustomer400 | CreateInternalCustomer401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalCustomer>>,
+        TError,
+        {data: CreateInternalCustomerBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalCustomerMutationOptions(options));
+    }
+
+export type getInternalCustomerResponse200 = {
+  data: GetInternalCustomer200
+  status: 200
+}
+
+export type getInternalCustomerResponse400 = {
+  data: GetInternalCustomer400
+  status: 400
+}
+
+export type getInternalCustomerResponse401 = {
+  data: GetInternalCustomer401
+  status: 401
+}
+
+export type getInternalCustomerResponse404 = {
+  data: GetInternalCustomer404
+  status: 404
+}
+
+export type getInternalCustomerResponseSuccess = (getInternalCustomerResponse200) & {
+  headers: Headers;
+};
+export type getInternalCustomerResponseError = (getInternalCustomerResponse400 | getInternalCustomerResponse401 | getInternalCustomerResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalCustomerResponse = (getInternalCustomerResponseSuccess | getInternalCustomerResponseError)
+
+export const getGetInternalCustomerUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}`
+}
+
+/**
+ * @summary Get customer
+ */
+export const getInternalCustomer = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalCustomerResponse> => {
+
+  return customFetch<getInternalCustomerResponse>(getGetInternalCustomerUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalCustomerQueryKey = (id: string,) => {
+    return [
+    `/internal/customers/${id}`
+    ] as const;
+    }
+
+
+export const getGetInternalCustomerQueryOptions = <TData = Awaited<ReturnType<typeof getInternalCustomer>>, TError = GetInternalCustomer400 | GetInternalCustomer401 | GetInternalCustomer404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalCustomerQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalCustomer>>> = ({ signal }) => getInternalCustomer(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomer>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalCustomerQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalCustomer>>>
+export type GetInternalCustomerQueryError = GetInternalCustomer400 | GetInternalCustomer401 | GetInternalCustomer404
+
+
+/**
+ * @summary Get customer
+ */
+
+export function useGetInternalCustomer<TData = Awaited<ReturnType<typeof getInternalCustomer>>, TError = GetInternalCustomer400 | GetInternalCustomer401 | GetInternalCustomer404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalCustomerQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type updateInternalCustomerResponse200 = {
+  data: UpdateInternalCustomer200
+  status: 200
+}
+
+export type updateInternalCustomerResponse400 = {
+  data: UpdateInternalCustomer400
+  status: 400
+}
+
+export type updateInternalCustomerResponse401 = {
+  data: UpdateInternalCustomer401
+  status: 401
+}
+
+export type updateInternalCustomerResponse404 = {
+  data: UpdateInternalCustomer404
+  status: 404
+}
+
+export type updateInternalCustomerResponseSuccess = (updateInternalCustomerResponse200) & {
+  headers: Headers;
+};
+export type updateInternalCustomerResponseError = (updateInternalCustomerResponse400 | updateInternalCustomerResponse401 | updateInternalCustomerResponse404) & {
+  headers: Headers;
+};
+
+export type updateInternalCustomerResponse = (updateInternalCustomerResponseSuccess | updateInternalCustomerResponseError)
+
+export const getUpdateInternalCustomerUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}`
+}
+
+/**
+ * @summary Update customer
+ */
+export const updateInternalCustomer = async (id: string,
+    updateInternalCustomerBody: UpdateInternalCustomerBody, options?: Parameters<typeof customFetch>[1]): Promise<updateInternalCustomerResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateInternalCustomerResponse>(getUpdateInternalCustomerUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInternalCustomerBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInternalCustomerMutationOptions = <TError = UpdateInternalCustomer400 | UpdateInternalCustomer401 | UpdateInternalCustomer404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomer>>, TError,{id: string;data: UpdateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomer>>, TError,{id: string;data: UpdateInternalCustomerBody}, TContext> => {
+
+const mutationKey = ['updateInternalCustomer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInternalCustomer>>, {id: string;data: UpdateInternalCustomerBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInternalCustomer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInternalCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof updateInternalCustomer>>>
+    export type UpdateInternalCustomerMutationBody = UpdateInternalCustomerBody
+    export type UpdateInternalCustomerMutationError = UpdateInternalCustomer400 | UpdateInternalCustomer401 | UpdateInternalCustomer404
+
+    /**
+ * @summary Update customer
+ */
+export const useUpdateInternalCustomer = <TError = UpdateInternalCustomer400 | UpdateInternalCustomer401 | UpdateInternalCustomer404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomer>>, TError,{id: string;data: UpdateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInternalCustomer>>,
+        TError,
+        {id: string;data: UpdateInternalCustomerBody},
+        TContext
+      > => {
+      return useMutation(getUpdateInternalCustomerMutationOptions(options));
+    }
+
+export type listInternalCustomerContactsResponse200 = {
+  data: ListInternalCustomerContacts200
+  status: 200
+}
+
+export type listInternalCustomerContactsResponse400 = {
+  data: ListInternalCustomerContacts400
+  status: 400
+}
+
+export type listInternalCustomerContactsResponse401 = {
+  data: ListInternalCustomerContacts401
+  status: 401
+}
+
+export type listInternalCustomerContactsResponse404 = {
+  data: ListInternalCustomerContacts404
+  status: 404
+}
+
+export type listInternalCustomerContactsResponseSuccess = (listInternalCustomerContactsResponse200) & {
+  headers: Headers;
+};
+export type listInternalCustomerContactsResponseError = (listInternalCustomerContactsResponse400 | listInternalCustomerContactsResponse401 | listInternalCustomerContactsResponse404) & {
+  headers: Headers;
+};
+
+export type listInternalCustomerContactsResponse = (listInternalCustomerContactsResponseSuccess | listInternalCustomerContactsResponseError)
+
+export const getListInternalCustomerContactsUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/contacts`
+}
+
+/**
+ * @summary List contacts for a customer
+ */
+export const listInternalCustomerContacts = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<listInternalCustomerContactsResponse> => {
+
+  return customFetch<listInternalCustomerContactsResponse>(getListInternalCustomerContactsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalCustomerContactsQueryKey = (id: string,) => {
+    return [
+    `/internal/customers/${id}/contacts`
+    ] as const;
+    }
+
+
+export const getListInternalCustomerContactsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalCustomerContacts>>, TError = ListInternalCustomerContacts400 | ListInternalCustomerContacts401 | ListInternalCustomerContacts404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerContacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalCustomerContactsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalCustomerContacts>>> = ({ signal }) => listInternalCustomerContacts(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerContacts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalCustomerContactsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalCustomerContacts>>>
+export type ListInternalCustomerContactsQueryError = ListInternalCustomerContacts400 | ListInternalCustomerContacts401 | ListInternalCustomerContacts404
+
+
+/**
+ * @summary List contacts for a customer
+ */
+
+export function useListInternalCustomerContacts<TData = Awaited<ReturnType<typeof listInternalCustomerContacts>>, TError = ListInternalCustomerContacts400 | ListInternalCustomerContacts401 | ListInternalCustomerContacts404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerContacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalCustomerContactsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createInternalCustomerContactResponse201 = {
+  data: CreateInternalCustomerContact201
+  status: 201
+}
+
+export type createInternalCustomerContactResponse400 = {
+  data: CreateInternalCustomerContact400
+  status: 400
+}
+
+export type createInternalCustomerContactResponse401 = {
+  data: CreateInternalCustomerContact401
+  status: 401
+}
+
+export type createInternalCustomerContactResponse404 = {
+  data: CreateInternalCustomerContact404
+  status: 404
+}
+
+export type createInternalCustomerContactResponse409 = {
+  data: CreateInternalCustomerContact409
+  status: 409
+}
+
+export type createInternalCustomerContactResponseSuccess = (createInternalCustomerContactResponse201) & {
+  headers: Headers;
+};
+export type createInternalCustomerContactResponseError = (createInternalCustomerContactResponse400 | createInternalCustomerContactResponse401 | createInternalCustomerContactResponse404 | createInternalCustomerContactResponse409) & {
+  headers: Headers;
+};
+
+export type createInternalCustomerContactResponse = (createInternalCustomerContactResponseSuccess | createInternalCustomerContactResponseError)
+
+export const getCreateInternalCustomerContactUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/contacts`
+}
+
+/**
+ * @summary Create contact
+ */
+export const createInternalCustomerContact = async (id: string,
+    createInternalCustomerContactBody: CreateInternalCustomerContactBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalCustomerContactResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalCustomerContactResponse>(getCreateInternalCustomerContactUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalCustomerContactBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalCustomerContactMutationOptions = <TError = CreateInternalCustomerContact400 | CreateInternalCustomerContact401 | CreateInternalCustomerContact404 | CreateInternalCustomerContact409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerContact>>, TError,{id: string;data: CreateInternalCustomerContactBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerContact>>, TError,{id: string;data: CreateInternalCustomerContactBody}, TContext> => {
+
+const mutationKey = ['createInternalCustomerContact'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalCustomerContact>>, {id: string;data: CreateInternalCustomerContactBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInternalCustomerContact(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalCustomerContactMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalCustomerContact>>>
+    export type CreateInternalCustomerContactMutationBody = CreateInternalCustomerContactBody
+    export type CreateInternalCustomerContactMutationError = CreateInternalCustomerContact400 | CreateInternalCustomerContact401 | CreateInternalCustomerContact404 | CreateInternalCustomerContact409
+
+    /**
+ * @summary Create contact
+ */
+export const useCreateInternalCustomerContact = <TError = CreateInternalCustomerContact400 | CreateInternalCustomerContact401 | CreateInternalCustomerContact404 | CreateInternalCustomerContact409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerContact>>, TError,{id: string;data: CreateInternalCustomerContactBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalCustomerContact>>,
+        TError,
+        {id: string;data: CreateInternalCustomerContactBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalCustomerContactMutationOptions(options));
+    }
+
+export type updateInternalCustomerContactResponse200 = {
+  data: UpdateInternalCustomerContact200
+  status: 200
+}
+
+export type updateInternalCustomerContactResponse400 = {
+  data: UpdateInternalCustomerContact400
+  status: 400
+}
+
+export type updateInternalCustomerContactResponse401 = {
+  data: UpdateInternalCustomerContact401
+  status: 401
+}
+
+export type updateInternalCustomerContactResponse404 = {
+  data: UpdateInternalCustomerContact404
+  status: 404
+}
+
+export type updateInternalCustomerContactResponse409 = {
+  data: UpdateInternalCustomerContact409
+  status: 409
+}
+
+export type updateInternalCustomerContactResponseSuccess = (updateInternalCustomerContactResponse200) & {
+  headers: Headers;
+};
+export type updateInternalCustomerContactResponseError = (updateInternalCustomerContactResponse400 | updateInternalCustomerContactResponse401 | updateInternalCustomerContactResponse404 | updateInternalCustomerContactResponse409) & {
+  headers: Headers;
+};
+
+export type updateInternalCustomerContactResponse = (updateInternalCustomerContactResponseSuccess | updateInternalCustomerContactResponseError)
+
+export const getUpdateInternalCustomerContactUrl = (id: string,
+    contactId: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/contacts/${contactId}`
+}
+
+/**
+ * @summary Update contact
+ */
+export const updateInternalCustomerContact = async (id: string,
+    contactId: string,
+    updateInternalCustomerContactBody: UpdateInternalCustomerContactBody, options?: Parameters<typeof customFetch>[1]): Promise<updateInternalCustomerContactResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateInternalCustomerContactResponse>(getUpdateInternalCustomerContactUrl(id,contactId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInternalCustomerContactBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInternalCustomerContactMutationOptions = <TError = UpdateInternalCustomerContact400 | UpdateInternalCustomerContact401 | UpdateInternalCustomerContact404 | UpdateInternalCustomerContact409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerContact>>, TError,{id: string;contactId: string;data: UpdateInternalCustomerContactBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerContact>>, TError,{id: string;contactId: string;data: UpdateInternalCustomerContactBody}, TContext> => {
+
+const mutationKey = ['updateInternalCustomerContact'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInternalCustomerContact>>, {id: string;contactId: string;data: UpdateInternalCustomerContactBody}> = (props) => {
+          const {id,contactId,data} = props ?? {};
+
+          return  updateInternalCustomerContact(id,contactId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInternalCustomerContactMutationResult = NonNullable<Awaited<ReturnType<typeof updateInternalCustomerContact>>>
+    export type UpdateInternalCustomerContactMutationBody = UpdateInternalCustomerContactBody
+    export type UpdateInternalCustomerContactMutationError = UpdateInternalCustomerContact400 | UpdateInternalCustomerContact401 | UpdateInternalCustomerContact404 | UpdateInternalCustomerContact409
+
+    /**
+ * @summary Update contact
+ */
+export const useUpdateInternalCustomerContact = <TError = UpdateInternalCustomerContact400 | UpdateInternalCustomerContact401 | UpdateInternalCustomerContact404 | UpdateInternalCustomerContact409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerContact>>, TError,{id: string;contactId: string;data: UpdateInternalCustomerContactBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInternalCustomerContact>>,
+        TError,
+        {id: string;contactId: string;data: UpdateInternalCustomerContactBody},
+        TContext
+      > => {
+      return useMutation(getUpdateInternalCustomerContactMutationOptions(options));
+    }
+
+export type listInternalCustomerShipTosResponse200 = {
+  data: ListInternalCustomerShipTos200
+  status: 200
+}
+
+export type listInternalCustomerShipTosResponse400 = {
+  data: ListInternalCustomerShipTos400
+  status: 400
+}
+
+export type listInternalCustomerShipTosResponse401 = {
+  data: ListInternalCustomerShipTos401
+  status: 401
+}
+
+export type listInternalCustomerShipTosResponse404 = {
+  data: ListInternalCustomerShipTos404
+  status: 404
+}
+
+export type listInternalCustomerShipTosResponseSuccess = (listInternalCustomerShipTosResponse200) & {
+  headers: Headers;
+};
+export type listInternalCustomerShipTosResponseError = (listInternalCustomerShipTosResponse400 | listInternalCustomerShipTosResponse401 | listInternalCustomerShipTosResponse404) & {
+  headers: Headers;
+};
+
+export type listInternalCustomerShipTosResponse = (listInternalCustomerShipTosResponseSuccess | listInternalCustomerShipTosResponseError)
+
+export const getListInternalCustomerShipTosUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/ship-tos`
+}
+
+/**
+ * @summary List ship-tos for a customer
+ */
+export const listInternalCustomerShipTos = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<listInternalCustomerShipTosResponse> => {
+
+  return customFetch<listInternalCustomerShipTosResponse>(getListInternalCustomerShipTosUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalCustomerShipTosQueryKey = (id: string,) => {
+    return [
+    `/internal/customers/${id}/ship-tos`
+    ] as const;
+    }
+
+
+export const getListInternalCustomerShipTosQueryOptions = <TData = Awaited<ReturnType<typeof listInternalCustomerShipTos>>, TError = ListInternalCustomerShipTos400 | ListInternalCustomerShipTos401 | ListInternalCustomerShipTos404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerShipTos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalCustomerShipTosQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalCustomerShipTos>>> = ({ signal }) => listInternalCustomerShipTos(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerShipTos>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalCustomerShipTosQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalCustomerShipTos>>>
+export type ListInternalCustomerShipTosQueryError = ListInternalCustomerShipTos400 | ListInternalCustomerShipTos401 | ListInternalCustomerShipTos404
+
+
+/**
+ * @summary List ship-tos for a customer
+ */
+
+export function useListInternalCustomerShipTos<TData = Awaited<ReturnType<typeof listInternalCustomerShipTos>>, TError = ListInternalCustomerShipTos400 | ListInternalCustomerShipTos401 | ListInternalCustomerShipTos404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerShipTos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalCustomerShipTosQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createInternalCustomerShipToResponse201 = {
+  data: CreateInternalCustomerShipTo201
+  status: 201
+}
+
+export type createInternalCustomerShipToResponse400 = {
+  data: CreateInternalCustomerShipTo400
+  status: 400
+}
+
+export type createInternalCustomerShipToResponse401 = {
+  data: CreateInternalCustomerShipTo401
+  status: 401
+}
+
+export type createInternalCustomerShipToResponse404 = {
+  data: CreateInternalCustomerShipTo404
+  status: 404
+}
+
+export type createInternalCustomerShipToResponseSuccess = (createInternalCustomerShipToResponse201) & {
+  headers: Headers;
+};
+export type createInternalCustomerShipToResponseError = (createInternalCustomerShipToResponse400 | createInternalCustomerShipToResponse401 | createInternalCustomerShipToResponse404) & {
+  headers: Headers;
+};
+
+export type createInternalCustomerShipToResponse = (createInternalCustomerShipToResponseSuccess | createInternalCustomerShipToResponseError)
+
+export const getCreateInternalCustomerShipToUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/ship-tos`
+}
+
+/**
+ * @summary Create ship-to
+ */
+export const createInternalCustomerShipTo = async (id: string,
+    createInternalCustomerShipToBody: CreateInternalCustomerShipToBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalCustomerShipToResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalCustomerShipToResponse>(getCreateInternalCustomerShipToUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalCustomerShipToBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalCustomerShipToMutationOptions = <TError = CreateInternalCustomerShipTo400 | CreateInternalCustomerShipTo401 | CreateInternalCustomerShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerShipTo>>, TError,{id: string;data: CreateInternalCustomerShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerShipTo>>, TError,{id: string;data: CreateInternalCustomerShipToBody}, TContext> => {
+
+const mutationKey = ['createInternalCustomerShipTo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalCustomerShipTo>>, {id: string;data: CreateInternalCustomerShipToBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInternalCustomerShipTo(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalCustomerShipToMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalCustomerShipTo>>>
+    export type CreateInternalCustomerShipToMutationBody = CreateInternalCustomerShipToBody
+    export type CreateInternalCustomerShipToMutationError = CreateInternalCustomerShipTo400 | CreateInternalCustomerShipTo401 | CreateInternalCustomerShipTo404
+
+    /**
+ * @summary Create ship-to
+ */
+export const useCreateInternalCustomerShipTo = <TError = CreateInternalCustomerShipTo400 | CreateInternalCustomerShipTo401 | CreateInternalCustomerShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerShipTo>>, TError,{id: string;data: CreateInternalCustomerShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalCustomerShipTo>>,
+        TError,
+        {id: string;data: CreateInternalCustomerShipToBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalCustomerShipToMutationOptions(options));
+    }
+
+export type updateInternalCustomerShipToResponse200 = {
+  data: UpdateInternalCustomerShipTo200
+  status: 200
+}
+
+export type updateInternalCustomerShipToResponse400 = {
+  data: UpdateInternalCustomerShipTo400
+  status: 400
+}
+
+export type updateInternalCustomerShipToResponse401 = {
+  data: UpdateInternalCustomerShipTo401
+  status: 401
+}
+
+export type updateInternalCustomerShipToResponse404 = {
+  data: UpdateInternalCustomerShipTo404
+  status: 404
+}
+
+export type updateInternalCustomerShipToResponseSuccess = (updateInternalCustomerShipToResponse200) & {
+  headers: Headers;
+};
+export type updateInternalCustomerShipToResponseError = (updateInternalCustomerShipToResponse400 | updateInternalCustomerShipToResponse401 | updateInternalCustomerShipToResponse404) & {
+  headers: Headers;
+};
+
+export type updateInternalCustomerShipToResponse = (updateInternalCustomerShipToResponseSuccess | updateInternalCustomerShipToResponseError)
+
+export const getUpdateInternalCustomerShipToUrl = (id: string,
+    shipToId: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/ship-tos/${shipToId}`
+}
+
+/**
+ * @summary Update ship-to
+ */
+export const updateInternalCustomerShipTo = async (id: string,
+    shipToId: string,
+    updateInternalCustomerShipToBody: UpdateInternalCustomerShipToBody, options?: Parameters<typeof customFetch>[1]): Promise<updateInternalCustomerShipToResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateInternalCustomerShipToResponse>(getUpdateInternalCustomerShipToUrl(id,shipToId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInternalCustomerShipToBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInternalCustomerShipToMutationOptions = <TError = UpdateInternalCustomerShipTo400 | UpdateInternalCustomerShipTo401 | UpdateInternalCustomerShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerShipTo>>, TError,{id: string;shipToId: string;data: UpdateInternalCustomerShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerShipTo>>, TError,{id: string;shipToId: string;data: UpdateInternalCustomerShipToBody}, TContext> => {
+
+const mutationKey = ['updateInternalCustomerShipTo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInternalCustomerShipTo>>, {id: string;shipToId: string;data: UpdateInternalCustomerShipToBody}> = (props) => {
+          const {id,shipToId,data} = props ?? {};
+
+          return  updateInternalCustomerShipTo(id,shipToId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInternalCustomerShipToMutationResult = NonNullable<Awaited<ReturnType<typeof updateInternalCustomerShipTo>>>
+    export type UpdateInternalCustomerShipToMutationBody = UpdateInternalCustomerShipToBody
+    export type UpdateInternalCustomerShipToMutationError = UpdateInternalCustomerShipTo400 | UpdateInternalCustomerShipTo401 | UpdateInternalCustomerShipTo404
+
+    /**
+ * @summary Update ship-to
+ */
+export const useUpdateInternalCustomerShipTo = <TError = UpdateInternalCustomerShipTo400 | UpdateInternalCustomerShipTo401 | UpdateInternalCustomerShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerShipTo>>, TError,{id: string;shipToId: string;data: UpdateInternalCustomerShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInternalCustomerShipTo>>,
+        TError,
+        {id: string;shipToId: string;data: UpdateInternalCustomerShipToBody},
+        TContext
+      > => {
+      return useMutation(getUpdateInternalCustomerShipToMutationOptions(options));
+    }
+
+export type listInternalCustomerExemptionCertificatesResponse200 = {
+  data: ListInternalCustomerExemptionCertificates200
+  status: 200
+}
+
+export type listInternalCustomerExemptionCertificatesResponse400 = {
+  data: ListInternalCustomerExemptionCertificates400
+  status: 400
+}
+
+export type listInternalCustomerExemptionCertificatesResponse401 = {
+  data: ListInternalCustomerExemptionCertificates401
+  status: 401
+}
+
+export type listInternalCustomerExemptionCertificatesResponse404 = {
+  data: ListInternalCustomerExemptionCertificates404
+  status: 404
+}
+
+export type listInternalCustomerExemptionCertificatesResponseSuccess = (listInternalCustomerExemptionCertificatesResponse200) & {
+  headers: Headers;
+};
+export type listInternalCustomerExemptionCertificatesResponseError = (listInternalCustomerExemptionCertificatesResponse400 | listInternalCustomerExemptionCertificatesResponse401 | listInternalCustomerExemptionCertificatesResponse404) & {
+  headers: Headers;
+};
+
+export type listInternalCustomerExemptionCertificatesResponse = (listInternalCustomerExemptionCertificatesResponseSuccess | listInternalCustomerExemptionCertificatesResponseError)
+
+export const getListInternalCustomerExemptionCertificatesUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/exemption-certificates`
+}
+
+/**
+ * @summary List exemption-certificate metadata
+ */
+export const listInternalCustomerExemptionCertificates = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<listInternalCustomerExemptionCertificatesResponse> => {
+
+  return customFetch<listInternalCustomerExemptionCertificatesResponse>(getListInternalCustomerExemptionCertificatesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalCustomerExemptionCertificatesQueryKey = (id: string,) => {
+    return [
+    `/internal/customers/${id}/exemption-certificates`
+    ] as const;
+    }
+
+
+export const getListInternalCustomerExemptionCertificatesQueryOptions = <TData = Awaited<ReturnType<typeof listInternalCustomerExemptionCertificates>>, TError = ListInternalCustomerExemptionCertificates400 | ListInternalCustomerExemptionCertificates401 | ListInternalCustomerExemptionCertificates404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerExemptionCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalCustomerExemptionCertificatesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalCustomerExemptionCertificates>>> = ({ signal }) => listInternalCustomerExemptionCertificates(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerExemptionCertificates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalCustomerExemptionCertificatesQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalCustomerExemptionCertificates>>>
+export type ListInternalCustomerExemptionCertificatesQueryError = ListInternalCustomerExemptionCertificates400 | ListInternalCustomerExemptionCertificates401 | ListInternalCustomerExemptionCertificates404
+
+
+/**
+ * @summary List exemption-certificate metadata
+ */
+
+export function useListInternalCustomerExemptionCertificates<TData = Awaited<ReturnType<typeof listInternalCustomerExemptionCertificates>>, TError = ListInternalCustomerExemptionCertificates400 | ListInternalCustomerExemptionCertificates401 | ListInternalCustomerExemptionCertificates404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerExemptionCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalCustomerExemptionCertificatesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createInternalCustomerExemptionCertificateResponse201 = {
+  data: CreateInternalCustomerExemptionCertificate201
+  status: 201
+}
+
+export type createInternalCustomerExemptionCertificateResponse400 = {
+  data: CreateInternalCustomerExemptionCertificate400
+  status: 400
+}
+
+export type createInternalCustomerExemptionCertificateResponse401 = {
+  data: CreateInternalCustomerExemptionCertificate401
+  status: 401
+}
+
+export type createInternalCustomerExemptionCertificateResponse404 = {
+  data: CreateInternalCustomerExemptionCertificate404
+  status: 404
+}
+
+export type createInternalCustomerExemptionCertificateResponseSuccess = (createInternalCustomerExemptionCertificateResponse201) & {
+  headers: Headers;
+};
+export type createInternalCustomerExemptionCertificateResponseError = (createInternalCustomerExemptionCertificateResponse400 | createInternalCustomerExemptionCertificateResponse401 | createInternalCustomerExemptionCertificateResponse404) & {
+  headers: Headers;
+};
+
+export type createInternalCustomerExemptionCertificateResponse = (createInternalCustomerExemptionCertificateResponseSuccess | createInternalCustomerExemptionCertificateResponseError)
+
+export const getCreateInternalCustomerExemptionCertificateUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/exemption-certificates`
+}
+
+/**
+ * @summary Create exemption-certificate metadata
+ */
+export const createInternalCustomerExemptionCertificate = async (id: string,
+    createInternalCustomerExemptionCertificateBody: CreateInternalCustomerExemptionCertificateBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalCustomerExemptionCertificateResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalCustomerExemptionCertificateResponse>(getCreateInternalCustomerExemptionCertificateUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalCustomerExemptionCertificateBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalCustomerExemptionCertificateMutationOptions = <TError = CreateInternalCustomerExemptionCertificate400 | CreateInternalCustomerExemptionCertificate401 | CreateInternalCustomerExemptionCertificate404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerExemptionCertificate>>, TError,{id: string;data: CreateInternalCustomerExemptionCertificateBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerExemptionCertificate>>, TError,{id: string;data: CreateInternalCustomerExemptionCertificateBody}, TContext> => {
+
+const mutationKey = ['createInternalCustomerExemptionCertificate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalCustomerExemptionCertificate>>, {id: string;data: CreateInternalCustomerExemptionCertificateBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInternalCustomerExemptionCertificate(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalCustomerExemptionCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalCustomerExemptionCertificate>>>
+    export type CreateInternalCustomerExemptionCertificateMutationBody = CreateInternalCustomerExemptionCertificateBody
+    export type CreateInternalCustomerExemptionCertificateMutationError = CreateInternalCustomerExemptionCertificate400 | CreateInternalCustomerExemptionCertificate401 | CreateInternalCustomerExemptionCertificate404
+
+    /**
+ * @summary Create exemption-certificate metadata
+ */
+export const useCreateInternalCustomerExemptionCertificate = <TError = CreateInternalCustomerExemptionCertificate400 | CreateInternalCustomerExemptionCertificate401 | CreateInternalCustomerExemptionCertificate404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerExemptionCertificate>>, TError,{id: string;data: CreateInternalCustomerExemptionCertificateBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalCustomerExemptionCertificate>>,
+        TError,
+        {id: string;data: CreateInternalCustomerExemptionCertificateBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalCustomerExemptionCertificateMutationOptions(options));
+    }
+
+export type updateInternalCustomerExemptionCertificateResponse200 = {
+  data: UpdateInternalCustomerExemptionCertificate200
+  status: 200
+}
+
+export type updateInternalCustomerExemptionCertificateResponse400 = {
+  data: UpdateInternalCustomerExemptionCertificate400
+  status: 400
+}
+
+export type updateInternalCustomerExemptionCertificateResponse401 = {
+  data: UpdateInternalCustomerExemptionCertificate401
+  status: 401
+}
+
+export type updateInternalCustomerExemptionCertificateResponse404 = {
+  data: UpdateInternalCustomerExemptionCertificate404
+  status: 404
+}
+
+export type updateInternalCustomerExemptionCertificateResponseSuccess = (updateInternalCustomerExemptionCertificateResponse200) & {
+  headers: Headers;
+};
+export type updateInternalCustomerExemptionCertificateResponseError = (updateInternalCustomerExemptionCertificateResponse400 | updateInternalCustomerExemptionCertificateResponse401 | updateInternalCustomerExemptionCertificateResponse404) & {
+  headers: Headers;
+};
+
+export type updateInternalCustomerExemptionCertificateResponse = (updateInternalCustomerExemptionCertificateResponseSuccess | updateInternalCustomerExemptionCertificateResponseError)
+
+export const getUpdateInternalCustomerExemptionCertificateUrl = (id: string,
+    certificateId: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/exemption-certificates/${certificateId}`
+}
+
+/**
+ * @summary Update exemption-certificate metadata
+ */
+export const updateInternalCustomerExemptionCertificate = async (id: string,
+    certificateId: string,
+    updateInternalCustomerExemptionCertificateBody: UpdateInternalCustomerExemptionCertificateBody, options?: Parameters<typeof customFetch>[1]): Promise<updateInternalCustomerExemptionCertificateResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateInternalCustomerExemptionCertificateResponse>(getUpdateInternalCustomerExemptionCertificateUrl(id,certificateId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInternalCustomerExemptionCertificateBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInternalCustomerExemptionCertificateMutationOptions = <TError = UpdateInternalCustomerExemptionCertificate400 | UpdateInternalCustomerExemptionCertificate401 | UpdateInternalCustomerExemptionCertificate404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerExemptionCertificate>>, TError,{id: string;certificateId: string;data: UpdateInternalCustomerExemptionCertificateBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerExemptionCertificate>>, TError,{id: string;certificateId: string;data: UpdateInternalCustomerExemptionCertificateBody}, TContext> => {
+
+const mutationKey = ['updateInternalCustomerExemptionCertificate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInternalCustomerExemptionCertificate>>, {id: string;certificateId: string;data: UpdateInternalCustomerExemptionCertificateBody}> = (props) => {
+          const {id,certificateId,data} = props ?? {};
+
+          return  updateInternalCustomerExemptionCertificate(id,certificateId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInternalCustomerExemptionCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof updateInternalCustomerExemptionCertificate>>>
+    export type UpdateInternalCustomerExemptionCertificateMutationBody = UpdateInternalCustomerExemptionCertificateBody
+    export type UpdateInternalCustomerExemptionCertificateMutationError = UpdateInternalCustomerExemptionCertificate400 | UpdateInternalCustomerExemptionCertificate401 | UpdateInternalCustomerExemptionCertificate404
+
+    /**
+ * @summary Update exemption-certificate metadata
+ */
+export const useUpdateInternalCustomerExemptionCertificate = <TError = UpdateInternalCustomerExemptionCertificate400 | UpdateInternalCustomerExemptionCertificate401 | UpdateInternalCustomerExemptionCertificate404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerExemptionCertificate>>, TError,{id: string;certificateId: string;data: UpdateInternalCustomerExemptionCertificateBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInternalCustomerExemptionCertificate>>,
+        TError,
+        {id: string;certificateId: string;data: UpdateInternalCustomerExemptionCertificateBody},
+        TContext
+      > => {
+      return useMutation(getUpdateInternalCustomerExemptionCertificateMutationOptions(options));
+    }
 
 export type listInternalProductsResponse200 = {
   data: ListInternalProducts200

@@ -20,6 +20,7 @@ function schemaSources(): string {
     "apps/api/src/infrastructure/schema.ts",
     "packages/identity/src/persistence/schema.ts",
     "apps/api/src/infrastructure/schema/identity.ts",
+    "packages/customers/src/persistence/schema.ts",
     "apps/api/src/infrastructure/schema/customers.ts",
     "apps/api/src/infrastructure/schema/sales.ts",
     "apps/api/src/infrastructure/schema/tax.ts",

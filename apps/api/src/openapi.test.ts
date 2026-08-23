@@ -7,6 +7,8 @@ describe("OpenAPI stub export", () => {
 
     expect(specs.internal).toContain("/internal/products");
     expect(specs.internal).toContain("/internal/auth/login");
+    expect(specs.internal).toContain("/internal/customers");
+    expect(specs.internal).toContain("listInternalCustomers");
     expect(specs.internal).toContain("x-table");
     expect(specs.internal).toContain("listInternalProducts");
     expect(specs.internal).not.toContain("/ops/auth/");

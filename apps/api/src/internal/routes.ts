@@ -3,6 +3,7 @@ import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { registerStaffAudienceGuard } from "../adapters/http/audience-guard.js";
 import { registerInternalAuthRoutes } from "../adapters/http/internal-auth.js";
+import { registerInternalCustomerRoutes } from "../adapters/http/internal-customers.js";
 import {
   emptyProductList,
   listQuerySchema,
@@ -18,6 +19,7 @@ function typed(app: FastifyInstance) {
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalAuthRoutes(app);
   registerStaffAudienceGuard(app);
+  registerInternalCustomerRoutes(app);
   typed(app).route({
     method: "GET",
     url: "/products",

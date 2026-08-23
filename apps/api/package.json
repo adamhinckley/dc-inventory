@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@dc-inventory/customers": "workspace:*",
     "@dc-inventory/identity": "workspace:*",
     "@dc-inventory/shared-kernel": "workspace:*",
     "@fastify/cookie": "^11.0.2",

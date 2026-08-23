@@ -23,6 +23,7 @@ import { featuresAllCoreOn, type IFeatures } from "./features.js";
 import {
   composeAppServices,
   type AppServiceOverrides,
+  type CustomersHttpServices,
   type IdentityHttpServices,
 } from "./infrastructure/composition.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
@@ -93,6 +94,7 @@ export async function buildAudienceApp(
   const app = Fastify({ logger: false });
   app.decorate("features", features);
   app.decorate("identity", services.identity);
+  app.decorate("customers", services.customers);
   applyHttpCompilers(app);
   await registerCookie(app);
 
@@ -127,6 +129,7 @@ export async function buildApp(
   app.decorate("ping", services.ping);
   app.decorate("readyCheck", services.ready);
   app.decorate("identity", services.identity);
+  app.decorate("customers", services.customers);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
   await registerCookie(app);
@@ -146,6 +149,7 @@ declare module "fastify" {
     ping: PingUseCase;
     readyCheck: ReadyCheckUseCase;
     identity: IdentityHttpServices;
+    customers: CustomersHttpServices;
   }
 
   interface FastifyRequest {
