@@ -6,7 +6,6 @@
  */
 import type { ListInternalProductsSortBy } from './listInternalProductsSortBy.js';
 import type { ListInternalProductsSortOrder } from './listInternalProductsSortOrder.js';
-import type { ListInternalProductsStatus } from './listInternalProductsStatus.js';
 
 export type ListInternalProductsParams = {
 q?: string;
@@ -22,5 +21,5 @@ page?: number;
 pageSize?: number;
 sortBy?: ListInternalProductsSortBy;
 sortOrder?: ListInternalProductsSortOrder;
-status?: ListInternalProductsStatus;
+inactive?: 'true' | 'false' | boolean;
 };

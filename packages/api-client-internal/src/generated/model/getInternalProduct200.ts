@@ -5,20 +5,25 @@
  * OpenAPI spec version: 0.0.0
  */
 
-export type ListInternalProducts200ItemsItem = {
+export type GetInternalProduct200 = {
   /** @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$ */
   id: string;
   sku: string;
   name: string;
+  /** @nullable */
+  description: string | null;
+  uom: string;
   /**
      * @minimum -9007199254740991
      * @maximum 9007199254740991
      */
-  memberPrice: number;
+  memberPriceCents: number;
   currency: string;
   inactive: boolean;
   discontinued: boolean;
   webWholesale: boolean;
+  /** @nullable */
+  taxCategoryCode: string | null;
   /**
      * @minimum -9007199254740991
      * @maximum 9007199254740991
