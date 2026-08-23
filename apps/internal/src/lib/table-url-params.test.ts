@@ -10,7 +10,7 @@ import {
 const dateRangeMeta = {
   ...productsListTable,
   filters: [
-    { param: "status", control: "select" as const },
+    { param: "inactive", control: "boolean" as const },
     {
       param: "createdFrom",
       control: "dateRange" as const,
@@ -27,7 +27,7 @@ describe("listParamsFromSearchParams", () => {
         q: "bolt",
         sortBy: "name",
         sortOrder: "desc",
-        status: "active",
+        inactive: "true",
         category: "hardware",
         pageSize: "50",
       }),
@@ -36,7 +36,7 @@ describe("listParamsFromSearchParams", () => {
       q: "bolt",
       sortBy: "name",
       sortOrder: "desc",
-      status: "active",
+      inactive: true,
     });
   });
 
@@ -82,7 +82,7 @@ describe("tableSearchFromParams", () => {
         sortBy: "name",
         sortOrder: "desc",
         q: "bolt",
-        status: "active",
+        inactive: true,
       },
       "?utm=keep",
     );
@@ -91,7 +91,7 @@ describe("tableSearchFromParams", () => {
     expect(params.get("q")).toBe("bolt");
     expect(params.get("sortBy")).toBe("name");
     expect(params.get("sortOrder")).toBe("desc");
-    expect(params.get("status")).toBe("active");
+    expect(params.get("inactive")).toBe("true");
     expect(params.get("utm")).toBe("keep");
     expect(params.has("pageSize")).toBe(false);
   });
@@ -115,7 +115,7 @@ describe("tableUrlKeys", () => {
       "sortBy",
       "sortOrder",
       "q",
-      "status",
+      "inactive",
     ]);
   });
 });

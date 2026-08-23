@@ -11,7 +11,7 @@ import type { TableMeta } from "../src/data-table/table-meta";
 const dateRangeMeta = {
   ...productsListTable,
   filters: [
-    { param: "status", control: "select" as const },
+    { param: "inactive", control: "boolean" as const },
     {
       param: "createdFrom",
       control: "dateRange" as const,
@@ -42,18 +42,18 @@ describe("listParamsFromState", () => {
   it("includes declared filter params from x-table", () => {
     const state: DataTableState = {
       ...defaultTableState(productsListTable),
-      filters: { status: "active" },
+      filters: { inactive: true },
     };
-    expect(listParamsFromState(productsListTable, state).status).toBe("active");
+    expect(listParamsFromState(productsListTable, state).inactive).toBe(true);
   });
 
   it("drops invented filters that are not in x-table", () => {
     const state: DataTableState = {
       ...defaultTableState(productsListTable),
-      filters: { status: "active", category: "hardware" },
+      filters: { inactive: true, category: "hardware" },
     };
     const params = listParamsFromState(productsListTable, state);
-    expect(params.status).toBe("active");
+    expect(params.inactive).toBe(true);
     expect(params).not.toHaveProperty("category");
   });
 
@@ -80,14 +80,14 @@ describe("tableStateFromInitial", () => {
       q: "bolt",
       sortBy: "name",
       sortOrder: "desc",
-      status: "active",
+      inactive: true,
       category: "hardware",
     });
     expect(state.page).toBe(2);
     expect(state.search).toBe("bolt");
     expect(state.sortBy).toBe("name");
     expect(state.sortOrder).toBe("desc");
-    expect(state.filters.status).toBe("active");
+    expect(state.filters.inactive).toBe(true);
     expect(state.filters).not.toHaveProperty("category");
   });
 

@@ -9,6 +9,11 @@ export const productsListTable = {
   columns: [
     { field: "sku", label: "SKU" },
     { field: "name", label: "Name" },
+    { field: "memberPrice", label: "Member price" },
+    { field: "currency", label: "Currency" },
+    { field: "inactive", label: "Inactive" },
+    { field: "discontinued", label: "Discontinued" },
+    { field: "webWholesale", label: "Web wholesale" },
     { field: "onHand", label: "On hand" },
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
@@ -19,15 +24,10 @@ export const productsListTable = {
     fields: ["sku", "name"],
     placeholder: "Search SKU or name",
   },
-  filters: [{ param: "status", control: "select" }],
+  filters: [{ param: "inactive", control: "boolean" }],
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
     fields: ["sku", "name", "available", "createdAt"],
   },
 } as const satisfies TableMeta;
-
-export const productStatusFilterOptions = [
-  { value: "active", label: "active" },
-  { value: "inactive", label: "inactive" },
-] as const;

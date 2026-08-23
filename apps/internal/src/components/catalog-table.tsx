@@ -6,10 +6,7 @@ import {
   type ListQueryParams,
 } from "@dc-inventory/ui-internal";
 import { useCallback } from "react";
-import {
-  productStatusFilterOptions,
-  productsListTable,
-} from "../lib/products-list-table";
+import { productsListTable } from "../lib/products-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
 type CatalogListParams = NonNullable<
@@ -29,7 +26,6 @@ export function CatalogTable({
     <DataTable.Root<CatalogListParams>
       meta={productsListTable}
       queryHook={useListInternalProducts}
-      filterOptions={{ status: productStatusFilterOptions }}
       initialParams={initialParams}
       onParamsChange={onParamsChange}
     >
