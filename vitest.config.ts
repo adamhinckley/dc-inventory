@@ -19,6 +19,12 @@ export default defineConfig({
       "@dc-inventory/customers": fileURLToPath(
         new URL("./packages/customers/src/index.ts", import.meta.url),
       ),
+      "@dc-inventory/catalog/schema": fileURLToPath(
+        new URL("./packages/catalog/src/persistence/schema.ts", import.meta.url),
+      ),
+      "@dc-inventory/catalog": fileURLToPath(
+        new URL("./packages/catalog/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {
@@ -30,6 +36,7 @@ export default defineConfig({
       "packages/shared-kernel/tests/**/*.test.ts",
       "packages/identity/tests/**/*.test.ts",
       "packages/customers/tests/**/*.test.ts",
+      "packages/catalog/tests/**/*.test.ts",
       "packages/ui/tests/**/*.test.ts",
       "packages/ui-internal/tests/**/*.test.ts",
     ],
