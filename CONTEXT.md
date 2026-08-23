@@ -59,3 +59,7 @@ _Avoid_: Hand-written fetch layer, API SDK (unless you mean these packages)
 **Agent-optimized scaffold**:
 Repo layout, scripts, tickets, and examples shaped so a coding agent can finish a slice from allowed paths + failing tests without inventing structure. Prefer boring, explicit, duplicated-if-clear over clever shared abstractions.
 _Avoid_: “DX”, developer experience (when you mean agent success), flexible folder conventions
+
+**Member price (MP)**:
+Wholesale shop price on a catalog product (`member_price_cents`). Demo lock: shop and order snapshots use this field only. LP (list price) is a nullable stub.
+_Avoid_: Bare `MP` in prose; write `MP (member price)`

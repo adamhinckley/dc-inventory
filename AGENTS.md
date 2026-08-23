@@ -46,6 +46,7 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 8. **Do not add** Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, LaunchDarkly-as-required-SDK, or a tax SDK outside `packages/tax/adapters`.
 9. **Linear:** all projects, issues, and sub-initiatives belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview).
 10. **One agent, one context, one branch.** Stop when the ticket’s tests are green. Do not expand scope.
+11. **Acronyms in prose.** In anything a human reads (chat, Linear, specs, docs, PR text), every acronym includes its expansion in parentheses on every use: `MP (member price)`. Do not expand inside code, paths, column names, or type identifiers.
 
 ## Work packets
 
