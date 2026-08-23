@@ -98,14 +98,22 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
       } as FastifySchema & { "x-table": typeof productsListTable },
     },
     async (request) => {
+      const query = request.query as {
+        q?: string;
+        page: number;
+        pageSize: number;
+        sortBy: "sku" | "name" | "available" | "createdAt";
+        sortOrder: "asc" | "desc";
+        inactive?: boolean;
+      };
       const result = await request.server.catalog.listStaffProducts.execute({
         staffUserId: staffUserId(request),
-        q: request.query.q,
-        page: request.query.page,
-        pageSize: request.query.pageSize,
-        sortBy: request.query.sortBy,
-        sortOrder: request.query.sortOrder,
-        inactive: request.query.inactive,
+        q: query.q,
+        page: query.page,
+        pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+        inactive: query.inactive,
       });
       return {
         items: result.items.map((row) => mapListItem(row.product, row.qty)),

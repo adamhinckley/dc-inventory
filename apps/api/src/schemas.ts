@@ -99,34 +99,30 @@ export const productIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
-export const productWriteBodySchema = z
-  .object({
-    sku: z.string().min(1),
-    name: z.string().min(1),
-    uom: z.string().min(1),
-    memberPriceCents: z.number().int(),
-    currency: z.string().length(3).optional(),
-    inactive: z.boolean().optional(),
-    discontinued: z.boolean().optional(),
-    webWholesale: z.boolean().optional(),
-    description: z.string().optional().nullable(),
-    taxCategoryCode: z.string().optional().nullable(),
-  })
-  .strict();
+export const productWriteBodySchema = z.object({
+  sku: z.string().min(1),
+  name: z.string().min(1),
+  uom: z.string().min(1),
+  memberPriceCents: z.number().int(),
+  currency: z.string().length(3).optional(),
+  inactive: z.boolean().optional(),
+  discontinued: z.boolean().optional(),
+  webWholesale: z.boolean().optional(),
+  description: z.string().optional().nullable(),
+  taxCategoryCode: z.string().optional().nullable(),
+});
 
-export const productPatchBodySchema = z
-  .object({
-    name: z.string().min(1).optional(),
-    uom: z.string().min(1).optional(),
-    memberPriceCents: z.number().int().optional(),
-    currency: z.string().length(3).optional(),
-    inactive: z.boolean().optional(),
-    discontinued: z.boolean().optional(),
-    webWholesale: z.boolean().optional(),
-    description: z.string().optional().nullable(),
-    taxCategoryCode: z.string().optional().nullable(),
-  })
-  .strict();
+export const productPatchBodySchema = z.object({
+  name: z.string().min(1).optional(),
+  uom: z.string().min(1).optional(),
+  memberPriceCents: z.number().int().optional(),
+  currency: z.string().length(3).optional(),
+  inactive: z.boolean().optional(),
+  discontinued: z.boolean().optional(),
+  webWholesale: z.boolean().optional(),
+  description: z.string().optional().nullable(),
+  taxCategoryCode: z.string().optional().nullable(),
+});
 
 export const productDetailSchema = z.object({
   id: z.string().uuid(),

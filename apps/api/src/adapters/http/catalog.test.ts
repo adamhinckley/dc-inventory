@@ -186,10 +186,10 @@ describe("catalog HTTP", () => {
     expect(hiddenGet.json()).toEqual({ error: "not_found" });
   });
 
-  it("rejects qty on create and sku on update over HTTP", async () => {
+  it("does not persist qty and keeps sku immutable over HTTP", async () => {
     const app = await startCatalogApp();
     const cookie = await staffCookie(app);
-    const withQty = await app.inject({
+    const created = await app.inject({
       method: "POST",
       url: "/internal/products",
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
@@ -201,28 +201,24 @@ describe("catalog HTTP", () => {
         available: 12,
       },
     });
-    expect(withQty.statusCode).toBe(400);
-
-    const created = await app.inject({
-      method: "POST",
-      url: "/internal/products",
-      cookies: { [STAFF_SESSION_COOKIE]: cookie },
-      payload: {
-        sku: "HEX-BOLT-GALV",
-        name: "Galvanized hex bolt",
-        uom: "EA",
-        memberPriceCents: 1250,
-      },
-    });
     expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({
+      sku: "HEX-BOLT-GALV",
+      available: 0,
+      onHand: 0,
+    });
     const id = created.json().id as string;
 
-    const skuPatch = await app.inject({
+    const patched = await app.inject({
       method: "PATCH",
       url: `/internal/products/${id}`,
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
-      payload: { sku: "NEW-SKU" },
+      payload: { sku: "NEW-SKU", name: "Renamed bolt" },
     });
-    expect(skuPatch.statusCode).toBe(400);
+    expect(patched.statusCode).toBe(200);
+    expect(patched.json()).toMatchObject({
+      sku: "HEX-BOLT-GALV",
+      name: "Renamed bolt",
+    });
   });
 });
