@@ -15,8 +15,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  GetInternalSession200,
+  GetInternalSession401,
   ListInternalProducts200,
-  ListInternalProductsParams
+  ListInternalProductsParams,
+  LoginInternal200,
+  LoginInternal401,
+  LoginInternalBody,
+  LogoutInternal200,
+  LogoutInternal401
 } from './model';
 
 import { customFetch } from '../custom-fetch.js';
@@ -38,6 +45,300 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export type loginInternalResponse200 = {
+  data: LoginInternal200
+  status: 200
+}
+
+export type loginInternalResponse401 = {
+  data: LoginInternal401
+  status: 401
+}
+
+export type loginInternalResponseSuccess = (loginInternalResponse200) & {
+  headers: Headers;
+};
+export type loginInternalResponseError = (loginInternalResponse401) & {
+  headers: Headers;
+};
+
+export type loginInternalResponse = (loginInternalResponseSuccess | loginInternalResponseError)
+
+export const getLoginInternalUrl = () => {
+
+
+
+
+  return `/internal/auth/login`
+}
+
+/**
+ * @summary Staff login; sets HttpOnly staff_session
+ */
+export const loginInternal = async (loginInternalBody: LoginInternalBody, options?: Parameters<typeof customFetch>[1]): Promise<loginInternalResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<loginInternalResponse>(getLoginInternalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(loginInternalBody)
+  }
+);}
+
+
+
+
+
+export const getLoginInternalQueryKey = (loginInternalBody?: LoginInternalBody,) => {
+    return [
+    'POST', `/internal/auth/login`, loginInternalBody
+    ] as const;
+    }
+
+
+export const getLoginInternalQueryOptions = <TData = Awaited<ReturnType<typeof loginInternal>>, TError = LoginInternal401>(loginInternalBody: LoginInternalBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLoginInternalQueryKey(loginInternalBody);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof loginInternal>>> = ({ signal }) => loginInternal(loginInternalBody, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof loginInternal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LoginInternalQueryResult = NonNullable<Awaited<ReturnType<typeof loginInternal>>>
+export type LoginInternalQueryError = LoginInternal401
+
+
+/**
+ * @summary Staff login; sets HttpOnly staff_session
+ */
+
+export function useLoginInternal<TData = Awaited<ReturnType<typeof loginInternal>>, TError = LoginInternal401>(
+ loginInternalBody: LoginInternalBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLoginInternalQueryOptions(loginInternalBody,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type logoutInternalResponse200 = {
+  data: LogoutInternal200
+  status: 200
+}
+
+export type logoutInternalResponse401 = {
+  data: LogoutInternal401
+  status: 401
+}
+
+export type logoutInternalResponseSuccess = (logoutInternalResponse200) & {
+  headers: Headers;
+};
+export type logoutInternalResponseError = (logoutInternalResponse401) & {
+  headers: Headers;
+};
+
+export type logoutInternalResponse = (logoutInternalResponseSuccess | logoutInternalResponseError)
+
+export const getLogoutInternalUrl = () => {
+
+
+
+
+  return `/internal/auth/logout`
+}
+
+/**
+ * @summary Revoke staff session and clear cookie
+ */
+export const logoutInternal = async ( options?: Parameters<typeof customFetch>[1]): Promise<logoutInternalResponse> => {
+
+  return customFetch<logoutInternalResponse>(getLogoutInternalUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutInternalQueryKey = () => {
+    return [
+    'POST', `/internal/auth/logout`
+    ] as const;
+    }
+
+
+export const getLogoutInternalQueryOptions = <TData = Awaited<ReturnType<typeof logoutInternal>>, TError = LogoutInternal401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLogoutInternalQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof logoutInternal>>> = ({ signal }) => logoutInternal({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof logoutInternal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LogoutInternalQueryResult = NonNullable<Awaited<ReturnType<typeof logoutInternal>>>
+export type LogoutInternalQueryError = LogoutInternal401
+
+
+/**
+ * @summary Revoke staff session and clear cookie
+ */
+
+export function useLogoutInternal<TData = Awaited<ReturnType<typeof logoutInternal>>, TError = LogoutInternal401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutInternal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLogoutInternalQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getInternalSessionResponse200 = {
+  data: GetInternalSession200
+  status: 200
+}
+
+export type getInternalSessionResponse401 = {
+  data: GetInternalSession401
+  status: 401
+}
+
+export type getInternalSessionResponseSuccess = (getInternalSessionResponse200) & {
+  headers: Headers;
+};
+export type getInternalSessionResponseError = (getInternalSessionResponse401) & {
+  headers: Headers;
+};
+
+export type getInternalSessionResponse = (getInternalSessionResponseSuccess | getInternalSessionResponseError)
+
+export const getGetInternalSessionUrl = () => {
+
+
+
+
+  return `/internal/auth/session`
+}
+
+/**
+ * @summary Current staff session
+ */
+export const getInternalSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<getInternalSessionResponse> => {
+
+  return customFetch<getInternalSessionResponse>(getGetInternalSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalSessionQueryKey = () => {
+    return [
+    `/internal/auth/session`
+    ] as const;
+    }
+
+
+export const getGetInternalSessionQueryOptions = <TData = Awaited<ReturnType<typeof getInternalSession>>, TError = GetInternalSession401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalSession>>> = ({ signal }) => getInternalSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalSession>>>
+export type GetInternalSessionQueryError = GetInternalSession401
+
+
+/**
+ * @summary Current staff session
+ */
+
+export function useGetInternalSession<TData = Awaited<ReturnType<typeof getInternalSession>>, TError = GetInternalSession401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type listInternalProductsResponse200 = {
   data: ListInternalProducts200

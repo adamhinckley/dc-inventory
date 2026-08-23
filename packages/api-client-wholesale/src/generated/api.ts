@@ -15,8 +15,15 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  GetWholesaleSession200,
+  GetWholesaleSession401,
   ListWholesaleCatalog200,
-  ListWholesaleCatalogParams
+  ListWholesaleCatalogParams,
+  LoginWholesale200,
+  LoginWholesale401,
+  LoginWholesaleBody,
+  LogoutWholesale200,
+  LogoutWholesale401
 } from './model';
 
 import { customFetch } from '../custom-fetch.js';
@@ -38,6 +45,300 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export type loginWholesaleResponse200 = {
+  data: LoginWholesale200
+  status: 200
+}
+
+export type loginWholesaleResponse401 = {
+  data: LoginWholesale401
+  status: 401
+}
+
+export type loginWholesaleResponseSuccess = (loginWholesaleResponse200) & {
+  headers: Headers;
+};
+export type loginWholesaleResponseError = (loginWholesaleResponse401) & {
+  headers: Headers;
+};
+
+export type loginWholesaleResponse = (loginWholesaleResponseSuccess | loginWholesaleResponseError)
+
+export const getLoginWholesaleUrl = () => {
+
+
+
+
+  return `/wholesale/auth/login`
+}
+
+/**
+ * @summary Wholesale login; sets HttpOnly wholesale_session
+ */
+export const loginWholesale = async (loginWholesaleBody: LoginWholesaleBody, options?: Parameters<typeof customFetch>[1]): Promise<loginWholesaleResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<loginWholesaleResponse>(getLoginWholesaleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(loginWholesaleBody)
+  }
+);}
+
+
+
+
+
+export const getLoginWholesaleQueryKey = (loginWholesaleBody?: LoginWholesaleBody,) => {
+    return [
+    'POST', `/wholesale/auth/login`, loginWholesaleBody
+    ] as const;
+    }
+
+
+export const getLoginWholesaleQueryOptions = <TData = Awaited<ReturnType<typeof loginWholesale>>, TError = LoginWholesale401>(loginWholesaleBody: LoginWholesaleBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLoginWholesaleQueryKey(loginWholesaleBody);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof loginWholesale>>> = ({ signal }) => loginWholesale(loginWholesaleBody, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof loginWholesale>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LoginWholesaleQueryResult = NonNullable<Awaited<ReturnType<typeof loginWholesale>>>
+export type LoginWholesaleQueryError = LoginWholesale401
+
+
+/**
+ * @summary Wholesale login; sets HttpOnly wholesale_session
+ */
+
+export function useLoginWholesale<TData = Awaited<ReturnType<typeof loginWholesale>>, TError = LoginWholesale401>(
+ loginWholesaleBody: LoginWholesaleBody, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof loginWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLoginWholesaleQueryOptions(loginWholesaleBody,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type logoutWholesaleResponse200 = {
+  data: LogoutWholesale200
+  status: 200
+}
+
+export type logoutWholesaleResponse401 = {
+  data: LogoutWholesale401
+  status: 401
+}
+
+export type logoutWholesaleResponseSuccess = (logoutWholesaleResponse200) & {
+  headers: Headers;
+};
+export type logoutWholesaleResponseError = (logoutWholesaleResponse401) & {
+  headers: Headers;
+};
+
+export type logoutWholesaleResponse = (logoutWholesaleResponseSuccess | logoutWholesaleResponseError)
+
+export const getLogoutWholesaleUrl = () => {
+
+
+
+
+  return `/wholesale/auth/logout`
+}
+
+/**
+ * @summary Revoke wholesale session and clear cookie
+ */
+export const logoutWholesale = async ( options?: Parameters<typeof customFetch>[1]): Promise<logoutWholesaleResponse> => {
+
+  return customFetch<logoutWholesaleResponse>(getLogoutWholesaleUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutWholesaleQueryKey = () => {
+    return [
+    'POST', `/wholesale/auth/logout`
+    ] as const;
+    }
+
+
+export const getLogoutWholesaleQueryOptions = <TData = Awaited<ReturnType<typeof logoutWholesale>>, TError = LogoutWholesale401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLogoutWholesaleQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof logoutWholesale>>> = ({ signal }) => logoutWholesale({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LogoutWholesaleQueryResult = NonNullable<Awaited<ReturnType<typeof logoutWholesale>>>
+export type LogoutWholesaleQueryError = LogoutWholesale401
+
+
+/**
+ * @summary Revoke wholesale session and clear cookie
+ */
+
+export function useLogoutWholesale<TData = Awaited<ReturnType<typeof logoutWholesale>>, TError = LogoutWholesale401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof logoutWholesale>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLogoutWholesaleQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getWholesaleSessionResponse200 = {
+  data: GetWholesaleSession200
+  status: 200
+}
+
+export type getWholesaleSessionResponse401 = {
+  data: GetWholesaleSession401
+  status: 401
+}
+
+export type getWholesaleSessionResponseSuccess = (getWholesaleSessionResponse200) & {
+  headers: Headers;
+};
+export type getWholesaleSessionResponseError = (getWholesaleSessionResponse401) & {
+  headers: Headers;
+};
+
+export type getWholesaleSessionResponse = (getWholesaleSessionResponseSuccess | getWholesaleSessionResponseError)
+
+export const getGetWholesaleSessionUrl = () => {
+
+
+
+
+  return `/wholesale/auth/session`
+}
+
+/**
+ * @summary Current wholesale session (server customerId)
+ */
+export const getWholesaleSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleSessionResponse> => {
+
+  return customFetch<getWholesaleSessionResponse>(getGetWholesaleSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWholesaleSessionQueryKey = () => {
+    return [
+    `/wholesale/auth/session`
+    ] as const;
+    }
+
+
+export const getGetWholesaleSessionQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleSession>>, TError = GetWholesaleSession401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWholesaleSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWholesaleSession>>> = ({ signal }) => getWholesaleSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWholesaleSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleSession>>>
+export type GetWholesaleSessionQueryError = GetWholesaleSession401
+
+
+/**
+ * @summary Current wholesale session (server customerId)
+ */
+
+export function useGetWholesaleSession<TData = Awaited<ReturnType<typeof getWholesaleSession>>, TError = GetWholesaleSession401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWholesaleSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type listWholesaleCatalogResponse200 = {
   data: ListWholesaleCatalog200
