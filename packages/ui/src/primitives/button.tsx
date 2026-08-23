@@ -1,34 +1,55 @@
+"use client";
+
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ButtonHTMLAttributes } from "react";
+import {
+  Button as DesignButton,
+  buttonVariants as designButtonVariants,
+} from "../ui/Button/Button";
 import { cn } from "../lib/cn";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center rounded-sm text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-background-brand text-on-color hover:opacity-90",
-        secondary: "bg-layer-01 text-primary hover:bg-layer-hover-01",
-        outline:
-          "border border-border-strong bg-background text-primary hover:bg-layer-01",
-        ghost: "text-primary hover:bg-layer-hover-01",
-        destructive: "bg-status-error text-on-color",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 px-3",
-        lg: "h-12 px-6",
-      },
+const buttonVariants = cva("", {
+  variants: {
+    variant: {
+      default: "",
+      primary: "",
+      secondary: "",
+      outline: "",
+      ghost: "",
+      destructive: "",
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      default: "",
+      sm: "",
+      md: "",
+      lg: "",
     },
   },
-);
+  defaultVariants: {
+    variant: "default",
+    size: "default",
+  },
+});
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants>;
+
+function mapVariant(
+  variant: ButtonProps["variant"],
+): "default" | "primary" | "secondary" | "ghost" | "destructive" {
+  if (variant === "outline") return "default";
+  if (variant === "secondary") return "secondary";
+  if (variant === "ghost") return "ghost";
+  if (variant === "destructive") return "destructive";
+  if (variant === "primary") return "primary";
+  return "primary";
+}
+
+function mapSize(size: ButtonProps["size"]): "sm" | "md" | "lg" {
+  if (size === "sm") return "sm";
+  if (size === "lg") return "lg";
+  return "md";
+}
 
 export function Button({
   className,
@@ -38,12 +59,14 @@ export function Button({
   ...props
 }: ButtonProps) {
   return (
-    <button
+    <DesignButton
       type={type}
-      className={cn(buttonVariants({ variant, size }), className)}
+      variant={mapVariant(variant)}
+      size={mapSize(size)}
+      className={cn(className)}
       {...props}
     />
   );
 }
 
-export { buttonVariants };
+export { buttonVariants, designButtonVariants };

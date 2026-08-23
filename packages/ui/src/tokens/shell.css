@@ -1,0 +1,23 @@
+/**
+ * Shell (elevation-0) — App background, sidebar navigation, topbar chrome.
+ *
+ * No container class — the shell background is applied directly via bg-surface-base.
+ * The shell has no elevation pseudo-elements.
+ */
+
+/* --- Text roles ------------------------------------------------------------- */
+
+@utility shell-nav-group {
+  /** Nav section divider — "EXPOSURE", "SOC", "ADMIN" */
+  @apply text-label uppercase text-fg-muted;
+}
+
+@utility shell-nav-item {
+  /** Default nav link — "Overview", "Source Mapping" */
+  @apply text-body text-fg-secondary;
+}
+
+@utility shell-nav-item-active {
+  /** Selected nav link — "Incident Explorer" */
+  @apply text-body-emphasis text-fg;
+}

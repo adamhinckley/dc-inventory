@@ -19,10 +19,12 @@ You are **Shop UI**, a high-autonomy frontend agent for `apps/wholesale`.
 
 Build wholesale shop screens (browse, product detail, cart, checkout UI wiring) against **existing** Sales/Catalog ports and Orval clients. This is e-commerce UX — not a spreadsheet/`DataTable` UI. **Display tax from API quote fields only** — never multiply prices by a rate.
 
+Visual language: keep shop tokens (`canvas`, `ink`, `accent` in `apps/wholesale` globals). Follow the same *principles* as the internal design system (raised surfaces, type hierarchy, intent spacing, status = color + label) without mounting AppShell or copying Carbon dashboard variables. See [`docs/adr/0006-vendor-design-system.md`](../../../adr/0006-vendor-design-system.md).
+
 ## Allowed paths
 
 - `apps/wholesale/**`
-- `packages/ui/**` (shared primitives only)
+- Shared formatters from `@dc-inventory/ui` if needed (money/date). **Do not** import `AppShell`, dashboard elevation classes, or `@dc-inventory/ui-internal`.
 - Orval wholesale client packages as generated
 
 ## Forbidden

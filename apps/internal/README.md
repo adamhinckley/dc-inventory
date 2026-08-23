@@ -39,7 +39,7 @@ The catalog table is driven by generated `x-table` meta and the Orval list hook.
 
 ## Layout
 
-Dashboard chrome is a staff sidebar (catalog through reports), not a storefront header. Shared primitives come from `packages/ui` (Carbon White / opt-in g100). `DataTable` comes from `packages/ui-internal`.
+Dashboard chrome is AppShell (sidebar + elevated `.page` panel) from `packages/ui`, Carbon White / opt-in g100 hex. `DataTable` comes from `packages/ui-internal`. This is not the wholesale shop.
 
 ## Env
 

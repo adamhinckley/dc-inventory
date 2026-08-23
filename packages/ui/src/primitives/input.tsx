@@ -8,7 +8,7 @@ export function Input({ className, type = "text", ...props }: InputProps) {
     <input
       type={type}
       className={cn(
-        "flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary placeholder:text-helper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-50",
+        "flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg placeholder:text-placeholder hover:border-border-field-hover focus-visible:border-primary focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
         className,
       )}
       {...props}

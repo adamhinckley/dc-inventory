@@ -3,11 +3,16 @@
   "compilerOptions": {
     "noEmit": true,
     "jsx": "react-jsx",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "paths": {
+      "#cn": ["./src/lib/cn.ts"],
+      "#ds/*": ["./src/*"],
+      "#shared/*": ["./src/shared/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "vitest.config.ts"],
-  "exclude": ["src/**/*.stories.tsx"]
+  "exclude": ["src/**/*.stories.tsx", "src/ui/Table/**"]
 }

@@ -1,0 +1,54 @@
+"use client";
+
+import { AppShell } from "@dc-inventory/ui";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { dashboardNav } from "../lib/dashboard-routes";
+
+function WorkspaceMark() {
+  return (
+    <span className="flex size-icon-lg items-center justify-center rounded-interactable bg-interactive text-overline text-fg">
+      DC
+    </span>
+  );
+}
+
+export function DashboardFrame({ children }: { children: ReactNode }) {
+  return (
+    <AppShell
+      nav={
+        <AppShell.Nav href="/catalog">
+          <AppShell.NavGroup id="workspace" label="Workspace" icon={<WorkspaceMark />}>
+            {dashboardNav.map((item) => (
+              <AppShell.NavItem
+                key={item.href}
+                href={item.href}
+                label={item.label}
+              />
+            ))}
+          </AppShell.NavGroup>
+        </AppShell.Nav>
+      }
+      topbar={
+        <AppShell.Topbar>
+          <p className="text-body-sm text-fg-secondary">Staff dashboard</p>
+          <AppShell.TopbarActions>
+            <Link
+              href="/login"
+              className="interactable ghost item-padding text-body-sm text-link hover:text-link-hover"
+            >
+              Sign in
+            </Link>
+          </AppShell.TopbarActions>
+        </AppShell.Topbar>
+      }
+    >
+      <div className="flex min-h-full flex-col">
+        <div className="flex-1 p-canvas">{children}</div>
+        <p className="px-region-x py-region-y text-caption text-fg-muted">
+          Staff dashboard — not the wholesale shop.
+        </p>
+      </div>
+    </AppShell>
+  );
+}

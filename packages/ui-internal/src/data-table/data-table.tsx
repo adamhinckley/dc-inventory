@@ -91,7 +91,7 @@ function FilterControl({
         <Label htmlFor={filterId}>{filter.param}</Label>
         <select
           id={filterId}
-          className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
+          className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
           value={String(state.filters[filter.param] ?? "")}
           onChange={(event) =>
             setFilter(filter.param, event.target.value || undefined)
@@ -223,7 +223,7 @@ export function DataTableRoot<
 
   return (
     <DataTableContext.Provider value={{ ...table, filterOptions, idBase }}>
-      <div className="flex flex-col gap-4">{children}</div>
+      <div className="flex flex-col gap-field-group">{children}</div>
     </DataTableContext.Provider>
   );
 }
@@ -294,7 +294,7 @@ export function DataTableFilters() {
   const sortOrderId = `${idBase}-sort-order`;
 
   return (
-    <div className="flex flex-wrap items-end gap-4">
+    <div className="flex flex-wrap items-end gap-field-group">
       {meta.filters.map((filter) => (
         <FilterControl
           key={filter.param}
@@ -309,7 +309,7 @@ export function DataTableFilters() {
         <Label htmlFor={sortId}>Sort</Label>
         <select
           id={sortId}
-          className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
+          className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
           value={state.sortBy}
           onChange={(event) =>
             setState((current) => ({
@@ -330,7 +330,7 @@ export function DataTableFilters() {
         <Label htmlFor={sortOrderId}>Order</Label>
         <select
           id={sortOrderId}
-          className="flex h-10 w-full rounded-sm border border-border-strong bg-field-01 px-3 py-2 text-sm text-primary"
+          className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
           value={state.sortOrder}
           onChange={(event) =>
             setState((current) => ({
@@ -367,15 +367,15 @@ export function DataTableTable() {
   const { meta, items, query, busy } = useDataTableContext();
 
   return (
-    <div className="overflow-x-auto rounded-sm border border-border-subtle">
-      <table className="w-full border-collapse text-left text-sm">
-        <thead className="bg-layer-01 text-secondary">
+    <div className="section-flat overflow-x-auto">
+      <table className="w-full border-collapse text-left text-body">
+        <thead>
           <tr>
             {meta.columns.map((column) => (
               <th
                 key={column.field}
                 scope="col"
-                className="border-b border-border-subtle px-4 py-3 font-medium"
+                className="section-content-column-header section-content-padding border-b border-border"
               >
                 {column.label}
               </th>
@@ -386,7 +386,7 @@ export function DataTableTable() {
           {busy ? (
             <tr>
               <td
-                className="px-4 py-6 text-helper"
+                className="section-content-padding text-placeholder"
                 colSpan={meta.columns.length}
               >
                 Loading…
@@ -395,7 +395,7 @@ export function DataTableTable() {
           ) : query.isError ? (
             <tr>
               <td
-                className="px-4 py-6 text-error"
+                className="section-content-padding text-error"
                 colSpan={meta.columns.length}
               >
                 {query.error instanceof Error
@@ -406,7 +406,7 @@ export function DataTableTable() {
           ) : items.length === 0 ? (
             <tr>
               <td
-                className="px-4 py-6 text-helper"
+                className="section-content-padding text-placeholder"
                 colSpan={meta.columns.length}
               >
                 No rows
@@ -417,19 +417,14 @@ export function DataTableTable() {
               const row = item as Record<string, unknown>;
               const rowKey = String(row[meta.rowId] ?? index);
               return (
-                <tr
-                  key={rowKey}
-                  className={
-                    index % 2 === 1 ? "bg-layer-accent-01" : "bg-background"
-                  }
-                >
+                <tr key={rowKey}>
                   {meta.columns.map((column) => (
                     <td
                       key={column.field}
                       className={
                         column.field === "sku"
-                          ? "border-b border-border-subtle px-4 py-3 font-mono"
-                          : "border-b border-border-subtle px-4 py-3"
+                          ? "section-content-padding section-content-value-mono border-b border-border"
+                          : "section-content-padding section-content-value border-b border-border"
                       }
                     >
                       {cellValue(row, column.field)}
@@ -464,11 +459,11 @@ export function DataTablePagination() {
   const { page, pageCount, total, busy, setState } = useDataTableContext();
 
   return (
-    <div className="flex items-center justify-between gap-4 text-sm text-secondary">
+    <div className="flex items-center justify-between gap-region text-body-sm text-fg-secondary">
       <p className="tabular-nums">
         Page {page} of {pageCount} · {total} rows
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-action">
         <Button
           variant="outline"
           size="sm"

@@ -1,0 +1,91 @@
+@utility section-content-padding {
+  /* ---- Content padding ---- */
+
+  /** Standard section content padding — table cells, panel rows, pagination bars (12×8). */
+  @apply px-section-content-x py-section-content-y;
+}
+
+@utility section-content-heading {
+  /* ---- Headings & structure ---- */
+
+  /** Card/panel identifier — "Incident", "Source", "Account Details" */
+  @apply text-title-xs font-semibold text-fg;
+}
+
+@utility section-content-title {
+  /** Bold primary line — event title, group card name, person name */
+  @apply text-body-emphasis text-fg;
+}
+
+@utility section-content-subtitle {
+  /** Small secondary line — event attribution, card subtitle */
+  @apply text-body-sm text-fg-tertiary;
+}
+
+@utility section-content-description {
+  /** Long-form text in cards — incident description, settings explanation */
+  @apply text-body text-fg-secondary;
+}
+
+@utility section-content-label {
+  /* ---- Labels & values ---- */
+
+  /** Data label — "Principal", "Status", metric labels */
+  @apply text-label text-fg-tertiary;
+}
+
+@utility section-content-value {
+  /** Primary data value — "Brandon Hamric", "Feb 21, 2026 5:10 PM" */
+  @apply text-body text-fg;
+}
+
+@utility section-content-value-mono {
+  /** Monospace value — incident IDs, hashes */
+  @apply text-code font-mono text-fg;
+}
+
+@utility section-content-stat-value {
+  /* ---- Dashboard ---- */
+
+  /** Large stat number — "14", "3.2" */
+  @apply text-title-md tabular-nums text-fg;
+}
+
+@utility section-content-stat-label {
+  /** Stat panel caption — "Total Incidents", "Avg. Exposure" */
+  @apply text-label text-fg-tertiary;
+}
+
+@utility section-content-column-header {
+  /* ---- Tables ---- */
+
+  /** Table column header — "Name", "Status", "Created" */
+  @apply text-body-sm font-medium text-fg-tertiary;
+}
+
+@utility section-content-timestamp {
+  /* ---- Shared ---- */
+
+  /** De-emphasized date — "Feb 21, 2026 5:42 PM" */
+  @apply text-body-sm tabular-nums text-fg-tertiary;
+}
+
+@utility tab-trigger {
+  /* ---- Tabs ---- */
+
+  /** Tab trigger chrome — shared by `Tabs` and `RouterTabs`. Pair with the
+      `section-tab` text role for the inactive label and
+      `aria-selected:section-tab-active aria-selected:border-accent-indicator`
+      for the active state. */
+  @apply cursor-pointer border-b-2 border-transparent px-card py-section-content-y transition-colors hover:text-primary;
+}
+
+@utility section-tab {
+  /** Inactive tab trigger label — "Sources", "Activity" */
+  @apply text-title-xs font-semibold text-fg-tertiary;
+}
+
+@utility section-tab-active {
+  /** Active tab trigger label — paired with `section-tab` via `aria-selected:` */
+  @apply text-title-xs font-semibold text-fg;
+}

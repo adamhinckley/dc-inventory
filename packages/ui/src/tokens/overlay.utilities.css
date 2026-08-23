@@ -1,0 +1,22 @@
+@utility overlay-title {
+  /** Dialog/drawer heading — "Confirm Deletion", "Incident Details" */
+  @apply text-title-base text-fg;
+}
+
+@utility overlay-description {
+  /** Dialog/drawer supporting text — "This action cannot be undone." */
+  @apply text-body text-fg-secondary;
+}
+
+@utility overlay-group-label {
+  /** Menu section divider — "ACTIONS", "SORT BY" */
+  @apply text-label uppercase text-fg-tertiary;
+}
+
+@utility overlay-region {
+  /* --- Region composites ---------------------------------------------------- */
+
+  /** Structural foundation for dialog/drawer header and footer zones.
+      Stacking + region padding + flex layout. Compose with alignment and border. */
+  @apply stacked flex flex-shrink-0 items-center px-region-x py-region-y;
+}

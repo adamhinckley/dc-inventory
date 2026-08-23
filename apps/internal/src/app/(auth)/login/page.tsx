@@ -9,15 +9,13 @@ export default function LoginPage() {
   }
 
   return (
-    <section className="w-full max-w-md rounded-sm border border-border-subtle bg-layer-02 p-8">
-      <h1 className="text-2xl font-semibold tracking-tight text-primary">
-        Sign in
-      </h1>
-      <p className="mt-2 text-sm text-secondary">
+    <section className="section-flat w-full max-w-md p-panel">
+      <h1 className="page-title">Sign in</h1>
+      <p className="page-description mt-2">
         Placeholder staff login. Session binding lands with Identity.
       </p>
-      <form className="mt-8 flex flex-col gap-4" onSubmit={onSubmit}>
-        <div className="flex flex-col gap-2">
+      <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
+        <div className="flex flex-col gap-field">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -26,7 +24,7 @@ export default function LoginPage() {
             autoComplete="username"
           />
         </div>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-field">
           <Label htmlFor="password">Password</Label>
           <Input
             id="password"

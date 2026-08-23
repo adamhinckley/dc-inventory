@@ -6,7 +6,12 @@
     "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "paths": {
+      "#cn": ["../ui/src/lib/cn.ts"],
+      "#ds/*": ["../ui/src/*"],
+      "#shared/*": ["../ui/src/shared/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "vitest.config.ts"],
   "exclude": ["src/**/*.stories.tsx"]

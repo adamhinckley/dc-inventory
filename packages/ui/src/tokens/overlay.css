@@ -1,0 +1,16 @@
+/**
+ * Overlay (elevation-3) — Floating surfaces.
+ * Dialogs, popovers, drawers, dropdowns, tooltips.
+ */
+
+/* --- Container -------------------------------------------------------------- */
+
+/** Solid border, no pseudo-element effects.
+    Shadow for depth is applied by component consumers (Dialog, Menu, Popover). */
+
+.overlay {
+  background-color: var(--color-surface-overlay);
+  border: 1px solid var(--color-border);
+}
+
+/* --- Text roles ------------------------------------------------------------- */

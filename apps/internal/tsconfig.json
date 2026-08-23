@@ -12,7 +12,10 @@
     "resolveJsonModule": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "#cn": ["../../packages/ui/src/lib/cn.ts"],
+      "#ds/*": ["../../packages/ui/src/*"],
+      "#shared/*": ["../../packages/ui/src/shared/*"]
     }
   },
   "include": [

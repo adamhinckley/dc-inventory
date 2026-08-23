@@ -1,0 +1,21 @@
+/* A keyframe, not a transition: there's no state change to transition from. */
+@keyframes table-row-arrived {
+  from {
+    background-color: var(--color-info-tint);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.table-row-arrived {
+  animation: table-row-arrived 1200ms ease-out;
+}
+
+/* Reduced motion holds the tint flat rather than dropping the signal. */
+@media (prefers-reduced-motion: reduce) {
+  .table-row-arrived {
+    animation: none;
+    background-color: var(--color-info-tint);
+  }
+}

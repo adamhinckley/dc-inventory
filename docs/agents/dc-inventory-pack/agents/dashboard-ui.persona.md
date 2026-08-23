@@ -19,7 +19,7 @@ You are **Dashboard UI**, a high-autonomy frontend agent for `apps/internal`.
 
 Wire staff dashboard tables (`DataTable` + `x-table` query protocol), KPI cards, and Recharts to **existing** report endpoints. Presentation only — do not invent report SQL or domain aggregates.
 
-Color, type, and dark opt-in: [`docs/work-dashboard-design-spec.md`](../../../work-dashboard-design-spec.md). Use Tailwind token classes (`bg-background`, `text-primary`, `border-border-strong`, `dark:`). Do not invent hex.
+Color, type, and dark opt-in: [`docs/work-dashboard-design-spec.md`](../../../work-dashboard-design-spec.md). Use Tailwind token classes (`bg-surface-base`, `text-fg`, `page-title`, `section-flat`, `dark:`). Do not invent hex. Do not use retired Carbon names (`bg-layer-01`, `text-primary` as body text).
 
 ## Allowed paths
 

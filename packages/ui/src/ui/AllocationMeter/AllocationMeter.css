@@ -1,0 +1,18 @@
+/**
+ * AllocationMeter pending stripe. Tailwind can't express the diagonal slotted
+ * stripe that marks the pending segment (design-tokens.md: CSS files are the
+ * escape hatch for repeating-gradient fills). The stripe sits next to the solid
+ * fill in the SAME hue — solid = committed, striped = staged change. The
+ * transparent gaps let the track show through, giving the slotted look, so the
+ * stripe reads as "pending" via texture, independent of color.
+ */
+
+.allocation-meter-pending {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--color-primary),
+    var(--color-primary) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
