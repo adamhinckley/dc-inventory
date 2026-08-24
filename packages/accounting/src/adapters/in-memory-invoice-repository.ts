@@ -47,6 +47,52 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
   private readonly paymentsByKey = new Map<string, PaymentIdempotencyRecord>();
   private nextSequence = 1;
 
+  snapshot(): {
+    byId: Map<InvoiceId, StoredInvoice>;
+    byOrderId: Map<OrderId, InvoiceId>;
+    applicationsByInvoice: Map<InvoiceId, PaymentApplication[]>;
+    paymentsByKey: Map<string, PaymentIdempotencyRecord>;
+    nextSequence: number;
+  } {
+    const applicationsByInvoice = new Map<InvoiceId, PaymentApplication[]>();
+    for (const [id, rows] of this.applicationsByInvoice) {
+      applicationsByInvoice.set(id, [...rows]);
+    }
+    return {
+      byId: new Map(this.byId),
+      byOrderId: new Map(this.byOrderId),
+      applicationsByInvoice,
+      paymentsByKey: new Map(this.paymentsByKey),
+      nextSequence: this.nextSequence,
+    };
+  }
+
+  restore(snapshot: {
+    byId: Map<InvoiceId, StoredInvoice>;
+    byOrderId: Map<OrderId, InvoiceId>;
+    applicationsByInvoice: Map<InvoiceId, PaymentApplication[]>;
+    paymentsByKey: Map<string, PaymentIdempotencyRecord>;
+    nextSequence: number;
+  }): void {
+    this.byId.clear();
+    for (const [id, row] of snapshot.byId) {
+      this.byId.set(id, row);
+    }
+    this.byOrderId.clear();
+    for (const [orderId, invoiceId] of snapshot.byOrderId) {
+      this.byOrderId.set(orderId, invoiceId);
+    }
+    this.applicationsByInvoice.clear();
+    for (const [id, rows] of snapshot.applicationsByInvoice) {
+      this.applicationsByInvoice.set(id, [...rows]);
+    }
+    this.paymentsByKey.clear();
+    for (const [key, record] of snapshot.paymentsByKey) {
+      this.paymentsByKey.set(key, record);
+    }
+    this.nextSequence = snapshot.nextSequence;
+  }
+
   async findById(id: InvoiceId): Promise<Invoice | null> {
     return this.byId.get(id)?.invoice ?? null;
   }
