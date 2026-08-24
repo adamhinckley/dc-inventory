@@ -29,7 +29,7 @@ export {
   reorderPolicies,
   stockMovements,
   stockSnapshots,
-} from "./schema/inventory.js";
+} from "@dc-inventory/inventory/schema";
 export {
   actorType,
   identity,
@@ -103,7 +103,7 @@ import {
   reorderPolicies,
   stockMovements,
   stockSnapshots,
-} from "./schema/inventory.js";
+} from "@dc-inventory/inventory/schema";
 import {
   opsUsers,
   sessions,

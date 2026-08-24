@@ -1,4 +1,10 @@
 import { LocationId } from "@dc-inventory/shared-kernel";
+import {
+  computeSnapshotDelta,
+  isOnceOnlyProvenanceType,
+  isPositiveIntegerQuantity,
+  movementMatchesCommand,
+} from "../domain/ledger-rules.js";
 import { MovementId, newUuid } from "../domain/ids.js";
 import type { Movement, MovementType } from "../domain/movement.js";
 import type {
@@ -17,8 +23,8 @@ import type {
 import type { InMemoryInventoryReadModel } from "./in-memory-inventory-read-model.js";
 
 /**
- * Stub ledger for ADA-106. Records movements for inspection but does not enforce
- * guards or update snapshot projections — a later packet implements real behavior.
+ * In-memory stock ledger. Records append-only movements and projects snapshots
+ * in the same unit of work scope as the read model.
  */
 export class InMemoryStockLedger implements IStockLedger {
   constructor(private readonly readModel: InMemoryInventoryReadModel) {}
@@ -63,10 +69,40 @@ export class InMemoryStockLedger implements IStockLedger {
     movementType: MovementType,
     command: StockCommandBase,
   ): Promise<StockCommandResult> {
+    const locationId = command.locationId ?? LocationId.DEFAULT;
+
+    if (!isPositiveIntegerQuantity(command.quantity)) {
+      return Promise.resolve({ ok: false, reason: "invalid_quantity" });
+    }
+
+    const existing = this.readModel.findMovementByIdempotency(
+      command.idempotencyKey,
+      command.sku,
+    );
+    if (existing) {
+      if (movementMatchesCommand(existing, movementType, command, locationId)) {
+        return Promise.resolve({ ok: true, movement: existing });
+      }
+      return Promise.resolve({ ok: false, reason: "idempotency_conflict" });
+    }
+
+    if (
+      isOnceOnlyProvenanceType(movementType) &&
+      this.readModel.hasProvenance(command.refType, command.refId, command.sku, movementType)
+    ) {
+      return Promise.resolve({ ok: false, reason: "provenance_conflict" });
+    }
+
+    const current = this.readModel.getSnapshotSync(command.sku, locationId);
+    const deltaResult = computeSnapshotDelta(movementType, command.quantity, current);
+    if (!deltaResult.ok) {
+      return Promise.resolve(deltaResult);
+    }
+
     const movement: Movement = Object.freeze({
       id: MovementId.parse(newUuid()),
       sku: command.sku,
-      locationId: command.locationId ?? LocationId.DEFAULT,
+      locationId,
       movementType,
       quantity: command.quantity,
       refType: command.refType,
@@ -74,7 +110,9 @@ export class InMemoryStockLedger implements IStockLedger {
       idempotencyKey: command.idempotencyKey,
       createdAt: new Date(),
     });
+
     this.readModel.appendMovement(movement);
+    this.readModel.applySnapshotDelta(command.sku, locationId, deltaResult.delta);
     return Promise.resolve({ ok: true, movement });
   }
 }

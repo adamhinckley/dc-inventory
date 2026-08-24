@@ -1,11 +1,13 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   integer,
   pgSchema,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -19,15 +21,18 @@ export const inventory = pgSchema("inventory");
 export const movementType = inventory.enum("movement_type", [
   "InboundFromPo",
   "GoodsReceived",
+  "InboundCancelled",
   "Allocated",
   "Deallocated",
   "Shipped",
-  "Adjustment",
+  "AdjustmentIncrease",
+  "AdjustmentDecrease",
 ]);
 
 export const movementRefType = inventory.enum("movement_ref_type", [
   "purchase_order",
   "sales_order",
+  "adjustment",
 ]);
 
 function timestamps() {
@@ -64,20 +69,36 @@ export const reorderPolicies = inventory.table(
   (table) => [unique().on(table.sku, table.locationId)],
 );
 
-export const stockMovements = inventory.table("stock_movements", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  sku: text("sku").notNull(),
-  locationId: uuid("location_id")
-    .notNull()
-    .references(() => locations.id),
-  movementType: movementType("movement_type").notNull(),
-  qty: integer("qty").notNull(),
-  refType: movementRefType("ref_type").notNull(),
-  refId: uuid("ref_id").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-});
+export const stockMovements = inventory.table(
+  "stock_movements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sku: text("sku").notNull(),
+    locationId: uuid("location_id")
+      .notNull()
+      .references(() => locations.id),
+    movementType: movementType("movement_type").notNull(),
+    qty: integer("qty").notNull(),
+    refType: movementRefType("ref_type").notNull(),
+    refId: uuid("ref_id").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check("stock_movements_qty_positive", sql`${table.qty} > 0`),
+    uniqueIndex("stock_movements_idempotency_key_sku").on(
+      table.idempotencyKey,
+      table.sku,
+    ),
+    uniqueIndex("stock_movements_once_only_provenance")
+      .on(table.refType, table.refId, table.sku, table.movementType)
+      .where(
+        sql`${table.movementType} in ('InboundFromPo', 'Allocated', 'Deallocated', 'Shipped')`,
+      ),
+  ],
+);
 
 export const stockSnapshots = inventory.table(
   "stock_snapshots",

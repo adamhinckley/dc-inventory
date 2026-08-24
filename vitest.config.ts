@@ -25,6 +25,9 @@ export default defineConfig({
       "@dc-inventory/catalog": fileURLToPath(
         new URL("./packages/catalog/src/index.ts", import.meta.url),
       ),
+      "@dc-inventory/inventory/schema": fileURLToPath(
+        new URL("./packages/inventory/src/persistence/schema.ts", import.meta.url),
+      ),
       "@dc-inventory/inventory": fileURLToPath(
         new URL("./packages/inventory/src/index.ts", import.meta.url),
       ),

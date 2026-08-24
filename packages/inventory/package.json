@@ -5,14 +5,16 @@
   "type": "module",
   "description": "Inventory context: stock ledger, movements, and snapshot read model.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./schema": "./src/persistence/schema.ts"
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@dc-inventory/shared-kernel": "workspace:*"
+    "@dc-inventory/shared-kernel": "workspace:*",
+    "drizzle-orm": "^0.45.2"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

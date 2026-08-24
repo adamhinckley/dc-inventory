@@ -1,6 +1,6 @@
 import { LocationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
-import type { Movement } from "../domain/movement.js";
+import type { Movement, MovementRefType, MovementType } from "../domain/movement.js";
 import type {
   IInventoryReadModel,
   MovementListFilter,
@@ -19,8 +19,6 @@ function snapshotKey(sku: Sku, locationId: LocationId): SnapshotKey {
 
 /**
  * In-memory read model for tests. Returns immutable snapshots; missing rows read as zero.
- * Snapshot projection updates are implemented in a later packet — this adapter does not
- * derive figures from movements yet.
  */
 export class InMemoryInventoryReadModel implements IInventoryReadModel {
   private readonly snapshots = new Map<SnapshotKey, StockFigures>();
@@ -31,9 +29,37 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     this.snapshots.set(snapshotKey(sku, locationId), Object.freeze({ ...figures }));
   }
 
-  /** Called by the in-memory ledger stub to expose recorded movements. */
   appendMovement(movement: Movement): void {
     this.movements.push(Object.freeze({ ...movement }));
+  }
+
+  findMovementByIdempotency(idempotencyKey: string, sku: Sku): Movement | undefined {
+    return this.movements.find(
+      (movement) => movement.idempotencyKey === idempotencyKey && movement.sku.equals(sku),
+    );
+  }
+
+  hasProvenance(
+    refType: MovementRefType,
+    refId: string,
+    sku: Sku,
+    movementType: MovementType,
+  ): boolean {
+    return this.movements.some(
+      (movement) =>
+        movement.refType === refType &&
+        movement.refId === refId &&
+        movement.sku.equals(sku) &&
+        movement.movementType === movementType,
+    );
+  }
+
+  getSnapshotSync(sku: Sku, locationId: LocationId): StockFigures {
+    const existing = this.snapshots.get(snapshotKey(sku, locationId));
+    if (existing) {
+      return Object.freeze({ ...existing });
+    }
+    return ZERO_STOCK_FIGURES;
   }
 
   async getSnapshot(sku: Sku, locationId: LocationId): Promise<StockFigures> {

@@ -1,7 +1,7 @@
 import type { IQtyReadPort, ProductQty } from "@dc-inventory/catalog";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray } from "drizzle-orm";
-import { locations, stockSnapshots } from "../infrastructure/schema/inventory.js";
+import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import type { AppDrizzle } from "../infrastructure/db.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
