@@ -1,4 +1,5 @@
 import { InMemoryInventoryUnitOfWork } from "@dc-inventory/inventory";
+import { InMemoryInvoiceRepository } from "@dc-inventory/accounting";
 import {
   InMemoryPurchaseOrderRepository,
   InMemorySupplierRepository,
@@ -10,6 +11,7 @@ import {
 } from "@dc-inventory/sales";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
+import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
 import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-command-port.js";
 
 /**
@@ -19,6 +21,7 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
   readonly purchaseOrders = new InMemoryPurchaseOrderRepository();
   readonly suppliers = new InMemorySupplierRepository();
   readonly salesOrders = new InMemorySalesOrderRepository();
+  readonly invoices = new InMemoryInvoiceRepository();
   private readonly inventoryUow = new InMemoryInventoryUnitOfWork();
   readonly inventory = {
     ledger: this.inventoryUow.ledger,
@@ -35,6 +38,7 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
   private readonly salesScope: ISalesUnitOfWork = {
     salesOrders: this.salesOrders,
     inventory: new SalesStockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
+    accounting: new SalesInvoiceAccountingCommandAdapter(this.invoices),
     run: (work) => this.run((scope) => work(scope.sales)),
   };
 
@@ -48,13 +52,21 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
 
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
     return this.inventoryUow.run(async () => {
-      const scope: IUnitOfWork = {
-        inventory: this.inventory,
-        purchasing: this.purchasingScope,
-        sales: this.salesScope,
-        run: (innerWork) => this.run(innerWork),
-      };
-      return work(scope);
+      const salesSnap = this.salesOrders.snapshot();
+      const invoiceSnap = this.invoices.snapshot();
+      try {
+        const scope: IUnitOfWork = {
+          inventory: this.inventory,
+          purchasing: this.purchasingScope,
+          sales: this.salesScope,
+          run: (innerWork) => this.run(innerWork),
+        };
+        return await work(scope);
+      } catch (error) {
+        this.salesOrders.restore(salesSnap);
+        this.invoices.restore(invoiceSnap);
+        throw error;
+      }
     });
   }
 

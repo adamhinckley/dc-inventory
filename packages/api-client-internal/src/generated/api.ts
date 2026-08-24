@@ -136,6 +136,12 @@ import type {
   RecordInternalInvoicePayment404,
   RecordInternalInvoicePayment409,
   RecordInternalInvoicePaymentBody,
+  ShipInternalSalesOrder200,
+  ShipInternalSalesOrder400,
+  ShipInternalSalesOrder401,
+  ShipInternalSalesOrder404,
+  ShipInternalSalesOrder409,
+  ShipInternalSalesOrderBody,
   UpdateInternalCustomer200,
   UpdateInternalCustomer400,
   UpdateInternalCustomer401,
@@ -3461,6 +3467,118 @@ export const useCancelInternalSalesOrder = <TError = CancelInternalSalesOrder401
         TContext
       > => {
       return useMutation(getCancelInternalSalesOrderMutationOptions(options));
+    }
+
+export type shipInternalSalesOrderResponse200 = {
+  data: ShipInternalSalesOrder200
+  status: 200
+}
+
+export type shipInternalSalesOrderResponse400 = {
+  data: ShipInternalSalesOrder400
+  status: 400
+}
+
+export type shipInternalSalesOrderResponse401 = {
+  data: ShipInternalSalesOrder401
+  status: 401
+}
+
+export type shipInternalSalesOrderResponse404 = {
+  data: ShipInternalSalesOrder404
+  status: 404
+}
+
+export type shipInternalSalesOrderResponse409 = {
+  data: ShipInternalSalesOrder409
+  status: 409
+}
+
+export type shipInternalSalesOrderResponseSuccess = (shipInternalSalesOrderResponse200) & {
+  headers: Headers;
+};
+export type shipInternalSalesOrderResponseError = (shipInternalSalesOrderResponse400 | shipInternalSalesOrderResponse401 | shipInternalSalesOrderResponse404 | shipInternalSalesOrderResponse409) & {
+  headers: Headers;
+};
+
+export type shipInternalSalesOrderResponse = (shipInternalSalesOrderResponseSuccess | shipInternalSalesOrderResponseError)
+
+export const getShipInternalSalesOrderUrl = (id: string,) => {
+
+
+
+
+  return `/internal/sales-orders/${id}/ship`
+}
+
+/**
+ * @summary Ship confirmed sales order and post zero-tax invoice
+ */
+export const shipInternalSalesOrder = async (id: string,
+    shipInternalSalesOrderBody: ShipInternalSalesOrderBody, options?: Parameters<typeof customFetch>[1]): Promise<shipInternalSalesOrderResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<shipInternalSalesOrderResponse>(getShipInternalSalesOrderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(shipInternalSalesOrderBody)
+  }
+);}
+
+
+
+
+
+export const getShipInternalSalesOrderMutationOptions = <TError = ShipInternalSalesOrder400 | ShipInternalSalesOrder401 | ShipInternalSalesOrder404 | ShipInternalSalesOrder409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shipInternalSalesOrder>>, TError,{id: string;data: ShipInternalSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof shipInternalSalesOrder>>, TError,{id: string;data: ShipInternalSalesOrderBody}, TContext> => {
+
+const mutationKey = ['shipInternalSalesOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof shipInternalSalesOrder>>, {id: string;data: ShipInternalSalesOrderBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  shipInternalSalesOrder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ShipInternalSalesOrderMutationResult = NonNullable<Awaited<ReturnType<typeof shipInternalSalesOrder>>>
+    export type ShipInternalSalesOrderMutationBody = ShipInternalSalesOrderBody
+    export type ShipInternalSalesOrderMutationError = ShipInternalSalesOrder400 | ShipInternalSalesOrder401 | ShipInternalSalesOrder404 | ShipInternalSalesOrder409
+
+    /**
+ * @summary Ship confirmed sales order and post zero-tax invoice
+ */
+export const useShipInternalSalesOrder = <TError = ShipInternalSalesOrder400 | ShipInternalSalesOrder401 | ShipInternalSalesOrder404 | ShipInternalSalesOrder409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof shipInternalSalesOrder>>, TError,{id: string;data: ShipInternalSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof shipInternalSalesOrder>>,
+        TError,
+        {id: string;data: ShipInternalSalesOrderBody},
+        TContext
+      > => {
+      return useMutation(getShipInternalSalesOrderMutationOptions(options));
     }
 
 export type getInternalInvoiceResponse200 = {

@@ -11,13 +11,18 @@ import {
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
-  DrizzleSalesOrderRepository,
-  type SalesDrizzle,
-} from "@dc-inventory/sales";
+  DrizzleInvoiceRepository,
+  type AccountingDrizzle,
+} from "@dc-inventory/accounting";
 import { LocationId } from "@dc-inventory/shared-kernel";
 import { eq } from "drizzle-orm";
 import { locations } from "@dc-inventory/inventory/schema";
+import {
+  DrizzleSalesOrderRepository,
+  type SalesDrizzle,
+} from "@dc-inventory/sales";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
+import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
 import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-command-port.js";
 
 /**
@@ -60,6 +65,9 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
       get inventory(): never {
         throw new Error("Access inventory commands inside unitOfWork.run");
       },
+      get accounting(): never {
+        throw new Error("Access accounting commands inside unitOfWork.run");
+      },
       run: (work) => self.run((scope) => work(scope.sales)),
     };
   }
@@ -68,7 +76,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const next = this.queue.then(() =>
       this.db.transaction(async (tx) =>
         this.runOnTransaction(
-          tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle,
+          tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
           work,
         ),
       ),
@@ -81,7 +89,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   }
 
   private async runOnTransaction<T>(
-    tx: InventoryDrizzle & PurchasingDrizzle & SalesDrizzle,
+    tx: InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
     work: (uow: IUnitOfWork) => Promise<T>,
   ): Promise<T> {
     const resolveLocationUuid = async (locationId: LocationId): Promise<string> => {
@@ -105,8 +113,10 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const purchaseOrders = new DrizzlePurchaseOrderRepository(tx);
     const suppliers = new DrizzleSupplierRepository(tx);
     const salesOrders = new DrizzleSalesOrderRepository(tx);
+    const invoices = new DrizzleInvoiceRepository(tx);
     const purchasingInventoryCommands = new StockLedgerInventoryCommandAdapter(ledger);
     const salesInventoryCommands = new SalesStockLedgerInventoryCommandAdapter(ledger);
+    const salesAccountingCommands = new SalesInvoiceAccountingCommandAdapter(invoices);
 
     const purchasingScope: IUnitOfWork["purchasing"] = {
       purchaseOrders,
@@ -118,6 +128,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const salesScope: IUnitOfWork["sales"] = {
       salesOrders,
       inventory: salesInventoryCommands,
+      accounting: salesAccountingCommands,
       run: (innerWork) => this.runOnTransaction(tx, (scope) => innerWork(scope.sales)),
     };
 

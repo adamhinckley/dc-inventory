@@ -1,6 +1,7 @@
 import {
   RecordAllocatedUseCase,
   RecordDeallocatedUseCase,
+  RecordShippedUseCase,
   type IStockLedger,
 } from "@dc-inventory/inventory";
 import type {
@@ -8,6 +9,7 @@ import type {
   DeallocatedCommand,
   IInventoryCommandPort as ISalesInventoryCommandPort,
   InventoryCommandResult as SalesInventoryCommandResult,
+  ShippedCommand,
 } from "@dc-inventory/sales";
 
 function mapResult(
@@ -27,10 +29,12 @@ function mapResult(
 export class SalesStockLedgerInventoryCommandAdapter implements ISalesInventoryCommandPort {
   private readonly allocated: RecordAllocatedUseCase;
   private readonly deallocated: RecordDeallocatedUseCase;
+  private readonly shipped: RecordShippedUseCase;
 
   constructor(ledger: IStockLedger) {
     this.allocated = new RecordAllocatedUseCase(ledger);
     this.deallocated = new RecordDeallocatedUseCase(ledger);
+    this.shipped = new RecordShippedUseCase(ledger);
   }
 
   async recordAllocated(command: AllocatedCommand): Promise<SalesInventoryCommandResult> {
@@ -46,6 +50,17 @@ export class SalesStockLedgerInventoryCommandAdapter implements ISalesInventoryC
 
   async recordDeallocated(command: DeallocatedCommand): Promise<SalesInventoryCommandResult> {
     const result = await this.deallocated.execute({
+      idempotencyKey: command.idempotencyKey,
+      sku: command.sku,
+      quantity: command.quantity,
+      refType: "sales_order",
+      refId: command.orderId,
+    });
+    return mapResult(result);
+  }
+
+  async recordShipped(command: ShippedCommand): Promise<SalesInventoryCommandResult> {
+    const result = await this.shipped.execute({
       idempotencyKey: command.idempotencyKey,
       sku: command.sku,
       quantity: command.quantity,
