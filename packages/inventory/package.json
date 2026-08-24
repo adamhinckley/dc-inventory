@@ -1,0 +1,25 @@
+{
+  "name": "@dc-inventory/inventory",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Inventory context: stock ledger, movements, and snapshot read model.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dc-inventory/shared-kernel": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
