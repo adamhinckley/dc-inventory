@@ -2,6 +2,18 @@ export { InMemoryInventoryReadModel } from "./adapters/in-memory-inventory-read-
 export { InMemoryInventoryUnitOfWork } from "./adapters/in-memory-inventory-unit-of-work.js";
 export type { InventoryUnitOfWorkScope } from "./adapters/in-memory-inventory-unit-of-work.js";
 export { InMemoryStockLedger } from "./adapters/in-memory-stock-ledger.js";
+export { DrizzleInventoryReadModel } from "./adapters/drizzle-inventory-read-model.js";
+export type { InventoryReadDrizzle } from "./adapters/drizzle-inventory-read-model.js";
+export { DrizzleStockLedger } from "./adapters/drizzle-stock-ledger.js";
+export type { InventoryDrizzle } from "./adapters/drizzle-stock-ledger.js";
+export {
+  PHASE2_DEFAULT_LOCATION_CODE,
+  PHASE2_SUPPLIER_NAME,
+  PHASE2_SUPPLIER_VENDOR_NUMBER,
+  runPhase2Bootstrap,
+  type Phase2BootstrapPorts,
+  type Phase2BootstrapResult,
+} from "./bootstrap/run-phase2-bootstrap.js";
 export { GetStockSnapshotUseCase } from "./application/get-stock-snapshot.js";
 export { RecordAdjustmentDecreaseUseCase } from "./application/record-adjustment-decrease.js";
 export { RecordAdjustmentIncreaseUseCase } from "./application/record-adjustment-increase.js";
@@ -11,6 +23,12 @@ export { RecordGoodsReceivedUseCase } from "./application/record-goods-received.
 export { RecordInboundCancelledUseCase } from "./application/record-inbound-cancelled.js";
 export { RecordInboundFromPoUseCase } from "./application/record-inbound-from-po.js";
 export { RecordShippedUseCase } from "./application/record-shipped.js";
+export {
+  computeSnapshotDelta,
+  isOnceOnlyProvenanceType,
+  isPositiveIntegerQuantity,
+  movementMatchesCommand,
+} from "./domain/ledger-rules.js";
 export { MovementId } from "./domain/ids.js";
 export {
   MOVEMENT_REF_TYPES,
