@@ -8,7 +8,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { customers } from "./customers.js";
-import { orders } from "./sales.js";
+import { orders } from "@dc-inventory/sales/schema";
 
 /**
  * Accounting persistence models. Wholesale AR only — no software payments.

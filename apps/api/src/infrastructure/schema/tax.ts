@@ -8,7 +8,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { invoices } from "./accounting.js";
-import { orders } from "./sales.js";
+import { orders } from "@dc-inventory/sales/schema";
 
 /**
  * Tax persistence models. Quote / commit / void only.

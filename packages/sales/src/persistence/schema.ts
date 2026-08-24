@@ -7,7 +7,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { customers } from "./customers.js";
+import { customers } from "@dc-inventory/customers/schema";
 
 /**
  * Sales persistence models. Cart is a draft order — no carts table.
@@ -38,7 +38,8 @@ export const orders = sales.table("orders", {
   customerId: uuid("customer_id")
     .notNull()
     .references(() => customers.id),
-  status: orderStatus("status").notNull(),
+  status: orderStatus("status").notNull().default("draft"),
+  documentNumber: text("document_number").notNull().unique(),
   shipLine1: text("ship_line_1"),
   shipLine2: text("ship_line_2"),
   shipCity: text("ship_city"),

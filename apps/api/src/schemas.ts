@@ -439,3 +439,96 @@ export const purchaseOrdersListTable = {
     fields: ["documentNumber", "status"],
   },
 };
+
+export const salesOrderStatusSchema = z.enum([
+  "draft",
+  "confirmed",
+  "shipped",
+  "cancelled",
+]);
+
+export const salesOrderLineSchema = z.object({
+  id: z.string().uuid(),
+  sku: z.string(),
+  name: z.string(),
+  qty: z.number().int(),
+  unitPriceCents: z.number().int(),
+  currency: z.string().length(3),
+  taxCategoryCode: z.string().optional(),
+});
+
+export const salesOrderItemSchema = z.object({
+  id: z.string().uuid(),
+  customerId: z.string().uuid(),
+  documentNumber: z.string(),
+  status: salesOrderStatusSchema,
+  shipLine1: z.string().optional(),
+  shipLine2: z.string().nullable().optional(),
+  shipCity: z.string().optional(),
+  shipRegion: z.string().optional(),
+  shipPostal: z.string().optional(),
+  shipCountry: z.string().optional(),
+  lines: z.array(salesOrderLineSchema),
+});
+
+export const salesOrderListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  status: salesOrderStatusSchema.optional(),
+  customerId: z.string().uuid().optional(),
+});
+
+export const salesOrderListResponseSchema = z.object({
+  items: z.array(salesOrderItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const salesOrderIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const salesOrderWriteBodySchema = z.object({
+  customerId: z.string().uuid(),
+  lines: z
+    .array(
+      z.object({
+        sku: z.string().min(1),
+        name: z.string().min(1),
+        qty: z.number().int().positive(),
+        unitPriceCents: z.number().int().nonnegative(),
+        currency: z.string().length(3),
+        taxCategoryCode: z.string().optional(),
+      }),
+    )
+    .min(1),
+  shipLine1: z.string().optional(),
+  shipLine2: z.string().nullable().optional(),
+  shipCity: z.string().optional(),
+  shipRegion: z.string().optional(),
+  shipPostal: z.string().optional(),
+  shipCountry: z.string().optional(),
+});
+
+export const salesOrderCommandBodySchema = z.object({
+  idempotencyKey: z.string().min(1),
+});
+
+export const insufficientAtpResponseSchema = z.object({
+  error: z.literal("insufficient_atp"),
+});
+
+export const salesOrdersListTable = {
+  rowId: "id",
+  columns: [
+    { field: "documentNumber", label: "SO #" },
+    { field: "status", label: "Status" },
+    { field: "customerId", label: "Customer" },
+  ],
+  sort: {
+    defaultBy: "documentNumber",
+    defaultOrder: "asc",
+    fields: ["documentNumber", "status"],
+  },
+};

@@ -46,7 +46,7 @@ export {
   exemptionCertificates,
   shipTos,
 } from "@dc-inventory/customers/schema";
-export { orderLines, orders, orderStatus, sales } from "./schema/sales.js";
+export { orderLines, orders, orderStatus, sales } from "@dc-inventory/sales/schema";
 export {
   tax,
   taxCommitLines,
@@ -116,7 +116,7 @@ import {
   exemptionCertificates,
   shipTos,
 } from "@dc-inventory/customers/schema";
-import { orderLines, orders } from "./schema/sales.js";
+import { orderLines, orders } from "@dc-inventory/sales/schema";
 import { taxCommitLines, taxCommits } from "./schema/tax.js";
 import {
   invoices,
