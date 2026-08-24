@@ -25,16 +25,17 @@ describe("Phase 2 inventory ledger schema (ADA-108)", () => {
     );
   });
 
-  it("adds ledger identity columns and constraints in migration 0005", () => {
-    const sql = readText("apps/api/drizzle/migrations/0005_inventory_ledger_identity.sql");
-    expect(sql).toMatch(/idempotency_key/i);
-    expect(sql).toMatch(/InboundCancelled/);
-    expect(sql).toMatch(/AdjustmentIncrease/);
-    expect(sql).toMatch(/AdjustmentDecrease/);
-    expect(sql).toMatch(/adjustment/);
-    expect(sql).toMatch(/stock_movements_idempotency_key_sku/i);
-    expect(sql).toMatch(/stock_movements_once_only_provenance/i);
-    expect(sql).toMatch(/qty" > 0|"qty" > 0/i);
+  it("adds ledger identity columns and constraints in migrations 0005–0006", () => {
+    const enumSql = readText("apps/api/drizzle/migrations/0005_inventory_ledger_enum_values.sql");
+    const identitySql = readText("apps/api/drizzle/migrations/0006_inventory_ledger_identity.sql");
+    expect(enumSql).toMatch(/InboundCancelled/);
+    expect(enumSql).toMatch(/AdjustmentIncrease/);
+    expect(enumSql).toMatch(/AdjustmentDecrease/);
+    expect(enumSql).toMatch(/adjustment/);
+    expect(identitySql).toMatch(/idempotency_key/i);
+    expect(identitySql).toMatch(/stock_movements_idempotency_key_sku/i);
+    expect(identitySql).toMatch(/stock_movements_once_only_provenance/i);
+    expect(identitySql).toMatch(/qty" > 0|"qty" > 0/i);
   });
 
   it("keeps generated available and movement enums aligned with ADA-105", () => {

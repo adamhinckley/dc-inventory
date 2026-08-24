@@ -41,7 +41,14 @@
       "idx": 5,
       "version": "7",
       "when": 1787455000000,
-      "tag": "0005_inventory_ledger_identity",
+      "tag": "0005_inventory_ledger_enum_values",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787455100000,
+      "tag": "0006_inventory_ledger_identity",
       "breakpoints": true
     }
   ]

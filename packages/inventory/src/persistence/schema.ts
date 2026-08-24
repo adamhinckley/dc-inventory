@@ -95,7 +95,7 @@ export const stockMovements = inventory.table(
     uniqueIndex("stock_movements_once_only_provenance")
       .on(table.refType, table.refId, table.sku, table.movementType)
       .where(
-        sql`${table.movementType} in ('InboundFromPo', 'InboundCancelled', 'Allocated', 'Deallocated', 'Shipped')`,
+        sql`${table.movementType} in ('InboundFromPo', 'Allocated', 'Deallocated', 'Shipped')`,
       ),
   ],
 );
