@@ -13,6 +13,7 @@
     "@dc-inventory/catalog": "workspace:*",
     "@dc-inventory/customers": "workspace:*",
     "@dc-inventory/identity": "workspace:*",
+    "@dc-inventory/inventory": "workspace:*",
     "@dc-inventory/shared-kernel": "workspace:*",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.1.0",

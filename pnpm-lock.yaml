@@ -65,6 +65,9 @@ importers:
       '@dc-inventory/identity':
         specifier: workspace:*
         version: link:../../packages/identity
+      '@dc-inventory/inventory':
+        specifier: workspace:*
+        version: link:../../packages/inventory
       '@dc-inventory/shared-kernel':
         specifier: workspace:*
         version: link:../../packages/shared-kernel
@@ -262,6 +265,22 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(postgres@3.4.9)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@26.2.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)(yaml@2.9.0)
+
+  packages/inventory:
+    dependencies:
+      '@dc-inventory/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
     devDependencies:
       '@types/node':
         specifier: ^26.2.0

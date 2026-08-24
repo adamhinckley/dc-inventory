@@ -10,7 +10,7 @@
     "test": "vitest run",
     "db:migrate": "pnpm --filter @dc-inventory/api db:migrate",
     "db:seed:phase1": "pnpm --filter @dc-inventory/api db:seed:phase1",
-    "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm --filter @dc-inventory/shared-kernel typecheck && pnpm --filter @dc-inventory/identity typecheck && pnpm --filter @dc-inventory/customers typecheck && pnpm --filter @dc-inventory/catalog typecheck && pnpm typecheck:clients && pnpm --filter @dc-inventory/wholesale typecheck && pnpm --filter @dc-inventory/internal typecheck && pnpm --filter @dc-inventory/ui typecheck && pnpm --filter @dc-inventory/ui-internal typecheck",
+    "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm --filter @dc-inventory/shared-kernel typecheck && pnpm --filter @dc-inventory/identity typecheck && pnpm --filter @dc-inventory/customers typecheck && pnpm --filter @dc-inventory/catalog typecheck && pnpm --filter @dc-inventory/inventory typecheck && pnpm typecheck:clients && pnpm --filter @dc-inventory/wholesale typecheck && pnpm --filter @dc-inventory/internal typecheck && pnpm --filter @dc-inventory/ui typecheck && pnpm --filter @dc-inventory/ui-internal typecheck",
     "dev:api": "pnpm --filter @dc-inventory/api dev",
     "dev:wholesale": "pnpm --filter @dc-inventory/wholesale dev",
     "dev:internal": "pnpm --filter @dc-inventory/internal dev",
