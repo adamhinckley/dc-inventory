@@ -46,6 +46,12 @@ export class CorrectPaymentUseCase {
         return { ok: false, reason: "not_found" };
       }
 
+      const applied = applications.reduce((sum, row) => sum + row.amount.amountMinor, 0);
+      const afterApplied = applied + input.correctionAmountCents;
+      if (afterApplied < 0 || afterApplied > invoice.total.amountMinor) {
+        return { ok: false, reason: "invalid" };
+      }
+
       const compensating: PaymentApplication = {
         id: PaymentApplicationId.parse(crypto.randomUUID()),
         paymentId: input.paymentId,

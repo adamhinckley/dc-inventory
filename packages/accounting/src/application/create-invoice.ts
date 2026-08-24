@@ -5,7 +5,7 @@ import {
   OrderId,
 } from "@dc-inventory/shared-kernel";
 import { newUuid } from "../domain/ids.js";
-import type { IInvoiceRepository } from "../domain/ports/invoice-repository.js";
+import type { IAccountingUnitOfWork } from "../domain/ports/invoice-repository.js";
 import type { Invoice } from "../domain/invoice.js";
 
 export type CreateInvoiceRequest = {
@@ -21,7 +21,7 @@ export type CreateInvoiceResult =
   | { ok: false; reason: "invalid" };
 
 export class CreateInvoiceUseCase {
-  constructor(private readonly invoices: IInvoiceRepository) {}
+  constructor(private readonly unitOfWork: IAccountingUnitOfWork) {}
 
   async execute(input: CreateInvoiceRequest): Promise<CreateInvoiceResult> {
     void input.staffUserId;
@@ -33,27 +33,29 @@ export class CreateInvoiceUseCase {
       return { ok: false, reason: "invalid" };
     }
 
-    const existing = await this.invoices.findByOrderId(input.orderId);
-    if (existing !== null) {
-      return { ok: true, invoice: existing, created: false };
-    }
+    return this.unitOfWork.run(async (uow) => {
+      const existing = await uow.invoices.findByOrderId(input.orderId);
+      if (existing !== null) {
+        return { ok: true, invoice: existing, created: false };
+      }
 
-    const currency = input.currency.trim().toUpperCase();
-    const subtotal = Money.fromMinorUnits(input.subtotalCents, currency);
-    const zero = Money.fromMinorUnits(0, currency);
-    const documentNumber = await this.invoices.nextDocumentNumber();
-    const invoice: Invoice = {
-      id: InvoiceId.parse(newUuid()),
-      orderId: input.orderId,
-      customerId: input.customerId,
-      documentNumber,
-      status: "posted",
-      postedAt: new Date(),
-      subtotal,
-      taxTotal: zero,
-      total: subtotal,
-    };
-    await this.invoices.save(invoice);
-    return { ok: true, invoice, created: true };
+      const currency = input.currency.trim().toUpperCase();
+      const subtotal = Money.fromMinorUnits(input.subtotalCents, currency);
+      const zero = Money.fromMinorUnits(0, currency);
+      const documentNumber = await uow.invoices.nextDocumentNumber();
+      const invoice: Invoice = {
+        id: InvoiceId.parse(newUuid()),
+        orderId: input.orderId,
+        customerId: input.customerId,
+        documentNumber,
+        status: "posted",
+        postedAt: new Date(),
+        subtotal,
+        taxTotal: zero,
+        total: subtotal,
+      };
+      await uow.invoices.save(invoice);
+      return { ok: true, invoice, created: true };
+    });
   }
 }

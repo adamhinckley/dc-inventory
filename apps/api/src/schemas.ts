@@ -567,3 +567,7 @@ export const recordPaymentResponseSchema = z.object({
 export const overpayResponseSchema = z.object({
   error: z.literal("overpay"),
 });
+
+export const wrongCurrencyResponseSchema = z.object({
+  error: z.literal("wrong_currency"),
+});

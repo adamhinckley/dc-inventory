@@ -38,6 +38,10 @@ function sendOverpay(reply: FastifyReply) {
   return reply.code(409).send({ error: "overpay" as const });
 }
 
+function sendWrongCurrency(reply: FastifyReply) {
+  return reply.code(400).send({ error: "wrong_currency" as const });
+}
+
 const readErrors = {
   401: unauthorizedResponseSchema,
   404: notFoundResponseSchema,
@@ -114,6 +118,9 @@ export function registerInternalInvoiceRoutes(app: FastifyInstance): void {
         }
         if (result.reason === "overpay") {
           return sendOverpay(reply);
+        }
+        if (result.reason === "wrong_currency") {
+          return sendWrongCurrency(reply);
         }
         return sendInvalid(reply);
       }

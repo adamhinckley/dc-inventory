@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
-import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
+import { STAFF_SESSION_COOKIE, WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
@@ -43,7 +43,7 @@ async function startAccountingApp() {
     passwordHash: await passwords.hash("staff-secret"),
   });
 
-  const createInvoice = new CreateInvoiceUseCase(accountingUow.invoices);
+  const createInvoice = new CreateInvoiceUseCase(accountingUow);
   const created = await createInvoice.execute({
     staffUserId: STAFF_ID,
     orderId: ORDER_ID,
@@ -81,11 +81,33 @@ async function staffCookie(app: Awaited<ReturnType<typeof buildApp>>) {
 }
 
 describe("internal invoices HTTP", () => {
-  it("requires staff_session", async () => {
+  it("requires staff_session on GET and POST", async () => {
+    const { app, invoice } = await startAccountingApp();
+    const getResponse = await app.inject({
+      method: "GET",
+      url: `/internal/invoices/${invoice.id}`,
+    });
+    expect(getResponse.statusCode).toBe(401);
+
+    const postResponse = await app.inject({
+      method: "POST",
+      url: `/internal/invoices/${invoice.id}/record-payment`,
+      payload: {
+        amountCents: 100,
+        currency: "USD",
+        idempotencyKey: "no-auth",
+      },
+    });
+    expect(postResponse.statusCode).toBe(401);
+    expect(postResponse.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("rejects wholesale cookie without staff_session", async () => {
     const { app, invoice } = await startAccountingApp();
     const response = await app.inject({
       method: "GET",
       url: `/internal/invoices/${invoice.id}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: "fake-wholesale-token" },
     });
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({ error: "unauthorized" });

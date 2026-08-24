@@ -21,7 +21,7 @@ async function harness() {
   const uow = new InMemoryAccountingUnitOfWork();
   return {
     uow,
-    create: new CreateInvoiceUseCase(uow.invoices),
+    create: new CreateInvoiceUseCase(uow),
     get: new GetInvoiceUseCase(uow.invoices),
     record: new RecordPaymentUseCase(uow),
     correct: new CorrectPaymentUseCase(uow),
@@ -253,5 +253,38 @@ describe("Accounting (in-memory)", () => {
     expect(after).toHaveLength(2);
     expect(after[0]!.amount.amountMinor).toBe(1000);
     expect(after[1]!.amount.amountMinor).toBe(-200);
+  });
+
+  it("rejects corrections that would over-apply or under-apply past bounds", async () => {
+    const h = await harness();
+    const invoice = await createInvoice(h, 500);
+    const payment = await h.record.execute({
+      staffUserId: STAFF_ID,
+      invoiceId: invoice.id,
+      amountCents: 200,
+      currency: "USD",
+      idempotencyKey: "partial-pay",
+    });
+    expect(payment.ok).toBe(true);
+    const applications = await h.uow.invoices.listApplications(invoice.id);
+    const paymentId = applications[0]!.paymentId;
+
+    const tooPositive = await h.correct.execute({
+      staffUserId: STAFF_ID,
+      invoiceId: invoice.id,
+      paymentId,
+      correctionAmountCents: 400,
+      currency: "USD",
+    });
+    expect(tooPositive.ok).toBe(false);
+
+    const tooNegative = await h.correct.execute({
+      staffUserId: STAFF_ID,
+      invoiceId: invoice.id,
+      paymentId,
+      correctionAmountCents: -500,
+      currency: "USD",
+    });
+    expect(tooNegative.ok).toBe(false);
   });
 });
