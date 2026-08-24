@@ -299,18 +299,18 @@ export function composeAppServices(
     overrides.qtyRead ??
     (appDb ? new StockSnapshotQtyReadAdapter(appDb) : new InMemoryQtyReadPort());
 
+  const unitOfWork =
+    overrides.unitOfWork ??
+    (appDb ? new PostgresInventoryUnitOfWork(appDb) : new InMemoryUnitOfWork());
+
   const purchaseOrderRepo =
     overrides.purchaseOrderRepo ??
     (purchasingDb
       ? new DrizzlePurchaseOrderRepository(purchasingDb)
-      : new InMemoryPurchaseOrderRepository());
+      : unitOfWork.purchasing.purchaseOrders);
   const supplierRepo =
     overrides.supplierRepo ??
-    (purchasingDb ? new DrizzleSupplierRepository(purchasingDb) : new InMemorySupplierRepository());
-
-  const unitOfWork =
-    overrides.unitOfWork ??
-    (appDb ? new PostgresInventoryUnitOfWork(appDb) : new InMemoryUnitOfWork());
+    (purchasingDb ? new DrizzleSupplierRepository(purchasingDb) : unitOfWork.purchasing.suppliers);
 
   return {
     features,

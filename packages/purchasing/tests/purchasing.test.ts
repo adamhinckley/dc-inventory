@@ -165,6 +165,23 @@ describe("Purchasing (in-memory)", () => {
     expect(snap.onOrder).toBe(2);
   });
 
+  it("rejects duplicate SKU lines at create", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [
+        { sku: SKU.value, name: "Bolt A", qty: 2 },
+        { sku: SKU.value, name: "Bolt B", qty: 3 },
+      ],
+    });
+    expect(created.ok).toBe(false);
+    if (created.ok) {
+      return;
+    }
+    expect(created.reason).toBe("invalid");
+  });
+
   it("cancels confirmed remainder with InboundCancelled", async () => {
     const h = await harness();
     const created = await h.create.execute({
