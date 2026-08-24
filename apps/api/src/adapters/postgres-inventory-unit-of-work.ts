@@ -20,12 +20,10 @@ import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js"
  * Serializes callers and runs each callback in one Drizzle transaction.
  */
 export class PostgresInventoryUnitOfWork implements IUnitOfWork {
-  private readonly defaultLocationUuid: Promise<string>;
+  private defaultLocationUuid: Promise<string> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly db: AppDrizzle) {
-    this.defaultLocationUuid = this.loadDefaultLocationUuid();
-  }
+  constructor(private readonly db: AppDrizzle) {}
 
   readonly inventory = {
     ledger: null as unknown as DrizzleStockLedger,
@@ -65,7 +63,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   ): Promise<T> {
     const resolveLocationUuid = async (locationId: LocationId): Promise<string> => {
       if (locationId === LocationId.DEFAULT) {
-        return this.defaultLocationUuid;
+        return this.getDefaultLocationUuid();
       }
       const rows = await tx
         .select({ id: locations.id })
@@ -98,6 +96,13 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
       run: (innerWork) => this.runOnTransaction(tx, innerWork),
     };
     return work(scope);
+  }
+
+  private getDefaultLocationUuid(): Promise<string> {
+    if (this.defaultLocationUuid === null) {
+      this.defaultLocationUuid = this.loadDefaultLocationUuid();
+    }
+    return this.defaultLocationUuid;
   }
 
   private async loadDefaultLocationUuid(): Promise<string> {

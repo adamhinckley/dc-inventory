@@ -5,7 +5,6 @@ import {
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
-import { PurchasingTransactionError } from "../domain/errors.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 
