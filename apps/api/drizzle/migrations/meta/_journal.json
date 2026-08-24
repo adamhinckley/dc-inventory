@@ -57,6 +57,13 @@
       "when": 1787455400000,
       "tag": "0008_sales_order_document_number",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787455600000,
+      "tag": "0009_accounting_document_number_payment_idempotency",
+      "breakpoints": true
     }
   ]
 }

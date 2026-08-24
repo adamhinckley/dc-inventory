@@ -3921,5 +3921,241 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/invoices/{id}:
+    get:
+      operationId: getInternalInvoice
+      summary: Get invoice by id
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  orderId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  customerId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  documentNumber:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - unposted
+                      - posted
+                  postedAt:
+                    nullable: true
+                    type: string
+                    format: date-time
+                  subtotalCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  taxTotalCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  totalCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  remainingCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                    minLength: 3
+                    maxLength: 3
+                required:
+                  - id
+                  - orderId
+                  - customerId
+                  - documentNumber
+                  - status
+                  - postedAt
+                  - subtotalCents
+                  - taxTotalCents
+                  - totalCents
+                  - remainingCents
+                  - currency
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/invoices/{id}/record-payment:
+    post:
+      operationId: recordInternalInvoicePayment
+      summary: Record a payment applied to an invoice
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amountCents:
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+              required:
+                - amountCents
+                - currency
+                - idempotencyKey
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  remainingCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                    minLength: 3
+                    maxLength: 3
+                required:
+                  - remainingCents
+                  - currency
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: number
+                  code:
+                    type: string
+                  error:
+                    type: string
+                  message:
+                    type: string
+                required:
+                  - statusCode
+                  - code
+                  - error
+                  - message
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - conflict
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - overpay
+                    required:
+                      - error
+                    additionalProperties: false
 servers:
   - url: http://localhost:3001

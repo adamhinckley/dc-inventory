@@ -532,3 +532,38 @@ export const salesOrdersListTable = {
     fields: ["documentNumber", "status"],
   },
 };
+
+export const invoiceStatusSchema = z.enum(["unposted", "posted"]);
+
+export const invoiceItemSchema = z.object({
+  id: z.string().uuid(),
+  orderId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  documentNumber: z.string(),
+  status: invoiceStatusSchema,
+  postedAt: z.coerce.date().nullable(),
+  subtotalCents: z.number().int(),
+  taxTotalCents: z.number().int(),
+  totalCents: z.number().int(),
+  remainingCents: z.number().int(),
+  currency: z.string().length(3),
+});
+
+export const invoiceIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const recordPaymentBodySchema = z.object({
+  amountCents: z.number().int().positive(),
+  currency: z.string().length(3),
+  idempotencyKey: z.string().min(1),
+});
+
+export const recordPaymentResponseSchema = z.object({
+  remainingCents: z.number().int(),
+  currency: z.string().length(3),
+});
+
+export const overpayResponseSchema = z.object({
+  error: z.literal("overpay"),
+});

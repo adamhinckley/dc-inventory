@@ -56,6 +56,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@dc-inventory/accounting':
+        specifier: workspace:*
+        version: link:../../packages/accounting
       '@dc-inventory/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
@@ -188,6 +191,31 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+
+  packages/accounting:
+    dependencies:
+      '@dc-inventory/customers':
+        specifier: workspace:*
+        version: link:../customers
+      '@dc-inventory/sales':
+        specifier: workspace:*
+        version: link:../sales
+      '@dc-inventory/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
+      drizzle-orm:
+        specifier: ^0.45.2
+        version: 0.45.2(postgres@3.4.9)
+    devDependencies:
+      '@types/node':
+        specifier: ^26.2.0
+        version: 26.2.0
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.7(@types/node@26.2.0)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.12)(yaml@2.9.0)
 
   packages/api-client-internal:
     devDependencies:

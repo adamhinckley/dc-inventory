@@ -7,7 +7,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { invoices } from "./accounting.js";
+import { invoices } from "@dc-inventory/accounting/schema";
 import { orders } from "@dc-inventory/sales/schema";
 
 /**

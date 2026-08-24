@@ -81,6 +81,9 @@ import type {
   GetInternalCustomer400,
   GetInternalCustomer401,
   GetInternalCustomer404,
+  GetInternalInvoice200,
+  GetInternalInvoice401,
+  GetInternalInvoice404,
   GetInternalProduct200,
   GetInternalProduct401,
   GetInternalProduct404,
@@ -127,6 +130,12 @@ import type {
   ReceiveInternalPurchaseOrder404,
   ReceiveInternalPurchaseOrder409,
   ReceiveInternalPurchaseOrderBody,
+  RecordInternalInvoicePayment200,
+  RecordInternalInvoicePayment400,
+  RecordInternalInvoicePayment401,
+  RecordInternalInvoicePayment404,
+  RecordInternalInvoicePayment409,
+  RecordInternalInvoicePaymentBody,
   UpdateInternalCustomer200,
   UpdateInternalCustomer400,
   UpdateInternalCustomer401,
@@ -3452,4 +3461,217 @@ export const useCancelInternalSalesOrder = <TError = CancelInternalSalesOrder401
         TContext
       > => {
       return useMutation(getCancelInternalSalesOrderMutationOptions(options));
+    }
+
+export type getInternalInvoiceResponse200 = {
+  data: GetInternalInvoice200
+  status: 200
+}
+
+export type getInternalInvoiceResponse401 = {
+  data: GetInternalInvoice401
+  status: 401
+}
+
+export type getInternalInvoiceResponse404 = {
+  data: GetInternalInvoice404
+  status: 404
+}
+
+export type getInternalInvoiceResponseSuccess = (getInternalInvoiceResponse200) & {
+  headers: Headers;
+};
+export type getInternalInvoiceResponseError = (getInternalInvoiceResponse401 | getInternalInvoiceResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalInvoiceResponse = (getInternalInvoiceResponseSuccess | getInternalInvoiceResponseError)
+
+export const getGetInternalInvoiceUrl = (id: string,) => {
+
+
+
+
+  return `/internal/invoices/${id}`
+}
+
+/**
+ * @summary Get invoice by id
+ */
+export const getInternalInvoice = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalInvoiceResponse> => {
+
+  return customFetch<getInternalInvoiceResponse>(getGetInternalInvoiceUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalInvoiceQueryKey = (id: string,) => {
+    return [
+    `/internal/invoices/${id}`
+    ] as const;
+    }
+
+
+export const getGetInternalInvoiceQueryOptions = <TData = Awaited<ReturnType<typeof getInternalInvoice>>, TError = GetInternalInvoice401 | GetInternalInvoice404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalInvoice>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalInvoiceQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalInvoice>>> = ({ signal }) => getInternalInvoice(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalInvoice>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalInvoiceQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalInvoice>>>
+export type GetInternalInvoiceQueryError = GetInternalInvoice401 | GetInternalInvoice404
+
+
+/**
+ * @summary Get invoice by id
+ */
+
+export function useGetInternalInvoice<TData = Awaited<ReturnType<typeof getInternalInvoice>>, TError = GetInternalInvoice401 | GetInternalInvoice404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalInvoice>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalInvoiceQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type recordInternalInvoicePaymentResponse200 = {
+  data: RecordInternalInvoicePayment200
+  status: 200
+}
+
+export type recordInternalInvoicePaymentResponse400 = {
+  data: RecordInternalInvoicePayment400
+  status: 400
+}
+
+export type recordInternalInvoicePaymentResponse401 = {
+  data: RecordInternalInvoicePayment401
+  status: 401
+}
+
+export type recordInternalInvoicePaymentResponse404 = {
+  data: RecordInternalInvoicePayment404
+  status: 404
+}
+
+export type recordInternalInvoicePaymentResponse409 = {
+  data: RecordInternalInvoicePayment409
+  status: 409
+}
+
+export type recordInternalInvoicePaymentResponseSuccess = (recordInternalInvoicePaymentResponse200) & {
+  headers: Headers;
+};
+export type recordInternalInvoicePaymentResponseError = (recordInternalInvoicePaymentResponse400 | recordInternalInvoicePaymentResponse401 | recordInternalInvoicePaymentResponse404 | recordInternalInvoicePaymentResponse409) & {
+  headers: Headers;
+};
+
+export type recordInternalInvoicePaymentResponse = (recordInternalInvoicePaymentResponseSuccess | recordInternalInvoicePaymentResponseError)
+
+export const getRecordInternalInvoicePaymentUrl = (id: string,) => {
+
+
+
+
+  return `/internal/invoices/${id}/record-payment`
+}
+
+/**
+ * @summary Record a payment applied to an invoice
+ */
+export const recordInternalInvoicePayment = async (id: string,
+    recordInternalInvoicePaymentBody: RecordInternalInvoicePaymentBody, options?: Parameters<typeof customFetch>[1]): Promise<recordInternalInvoicePaymentResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<recordInternalInvoicePaymentResponse>(getRecordInternalInvoicePaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordInternalInvoicePaymentBody)
+  }
+);}
+
+
+
+
+
+export const getRecordInternalInvoicePaymentMutationOptions = <TError = RecordInternalInvoicePayment400 | RecordInternalInvoicePayment401 | RecordInternalInvoicePayment404 | RecordInternalInvoicePayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordInternalInvoicePayment>>, TError,{id: string;data: RecordInternalInvoicePaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordInternalInvoicePayment>>, TError,{id: string;data: RecordInternalInvoicePaymentBody}, TContext> => {
+
+const mutationKey = ['recordInternalInvoicePayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordInternalInvoicePayment>>, {id: string;data: RecordInternalInvoicePaymentBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordInternalInvoicePayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordInternalInvoicePaymentMutationResult = NonNullable<Awaited<ReturnType<typeof recordInternalInvoicePayment>>>
+    export type RecordInternalInvoicePaymentMutationBody = RecordInternalInvoicePaymentBody
+    export type RecordInternalInvoicePaymentMutationError = RecordInternalInvoicePayment400 | RecordInternalInvoicePayment401 | RecordInternalInvoicePayment404 | RecordInternalInvoicePayment409
+
+    /**
+ * @summary Record a payment applied to an invoice
+ */
+export const useRecordInternalInvoicePayment = <TError = RecordInternalInvoicePayment400 | RecordInternalInvoicePayment401 | RecordInternalInvoicePayment404 | RecordInternalInvoicePayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordInternalInvoicePayment>>, TError,{id: string;data: RecordInternalInvoicePaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordInternalInvoicePayment>>,
+        TError,
+        {id: string;data: RecordInternalInvoicePaymentBody},
+        TContext
+      > => {
+      return useMutation(getRecordInternalInvoicePaymentMutationOptions(options));
     }
