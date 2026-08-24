@@ -1,5 +1,6 @@
 import type {
   CustomerId,
+  InvoiceId,
   OrderId,
   Sku,
 } from "@dc-inventory/shared-kernel";
@@ -54,13 +55,44 @@ export type DeallocatedCommand = {
   orderId: OrderId;
 };
 
+export type ShippedCommand = {
+  idempotencyKey: string;
+  sku: Sku;
+  quantity: number;
+  orderId: OrderId;
+};
+
+export type CreateInvoiceForOrderCommand = {
+  orderId: OrderId;
+  customerId: CustomerId;
+  subtotalCents: number;
+  currency: string;
+};
+
+export type AccountingCommandResult =
+  | {
+      ok: true;
+      invoiceId: InvoiceId;
+      documentNumber: string;
+      created: boolean;
+    }
+  | { ok: false; reason: "invalid" };
+
 export interface IInventoryCommandPort {
   recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult>;
   recordDeallocated(command: DeallocatedCommand): Promise<InventoryCommandResult>;
+  recordShipped(command: ShippedCommand): Promise<InventoryCommandResult>;
+}
+
+export interface IAccountingCommandPort {
+  createInvoiceForOrder(
+    command: CreateInvoiceForOrderCommand,
+  ): Promise<AccountingCommandResult>;
 }
 
 export interface ISalesUnitOfWork {
   readonly salesOrders: ISalesOrderRepository;
   readonly inventory: IInventoryCommandPort;
+  readonly accounting: IAccountingCommandPort;
   run<T>(work: (uow: ISalesUnitOfWork) => Promise<T>): Promise<T>;
 }

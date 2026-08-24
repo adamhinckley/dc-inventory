@@ -7,7 +7,7 @@ import {
 import {
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, LocationId, OrderId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
@@ -93,7 +93,7 @@ describe("internal sales orders HTTP", () => {
     expect(response.statusCode).toBe(400);
   });
 
-  it("runs create, confirm, and cancel", async () => {
+  it("runs create, confirm, ship, and cancel", async () => {
     const { app, unitOfWork } = await startSalesApp();
     const cookie = await staffCookie(app);
 
@@ -138,13 +138,51 @@ describe("internal sales orders HTTP", () => {
     expect(confirmed.statusCode).toBe(200);
     expect(confirmed.json()).toMatchObject({ status: "confirmed" });
 
+    const shipped = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${order.id}/ship`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-ship" },
+    });
+    expect(shipped.statusCode).toBe(200);
+    expect(shipped.json()).toMatchObject({ status: "shipped" });
+
+    const invoice = await unitOfWork.invoices.findByOrderId(
+      OrderId.parse(order.id),
+    );
+    expect(invoice).not.toBeNull();
+    if (invoice === null) {
+      return;
+    }
+
+    const invoiceRead = await app.inject({
+      method: "GET",
+      url: `/internal/invoices/${invoice.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(invoiceRead.statusCode).toBe(200);
+    expect(invoiceRead.json()).toMatchObject({
+      documentNumber: "INV-00001",
+      taxTotalCents: 0,
+      totalCents: 1250,
+    });
+
     const cancelled = await app.inject({
       method: "POST",
       url: `/internal/sales-orders/${order.id}/cancel`,
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
       payload: { idempotencyKey: "http-cancel" },
     });
-    expect(cancelled.statusCode).toBe(200);
-    expect(cancelled.json()).toMatchObject({ status: "cancelled" });
+    expect(cancelled.statusCode).toBe(409);
+  });
+
+  it("rejects ship without staff_session", async () => {
+    const { app } = await startSalesApp();
+    const response = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders/11111111-1111-4111-8111-111111111111/ship",
+      payload: { idempotencyKey: "no-auth" },
+    });
+    expect(response.statusCode).toBe(401);
   });
 });

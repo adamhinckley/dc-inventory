@@ -265,4 +265,46 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
       return mapSalesOrder(result.salesOrder);
     },
   );
+
+  routes.post(
+    "/sales-orders/:id/ship",
+    {
+      schema: {
+        operationId: "shipInternalSalesOrder",
+        tags: ["internal"],
+        summary: "Ship confirmed sales order and post zero-tax invoice",
+        params: salesOrderIdParamsSchema,
+        body: salesOrderCommandBodySchema,
+        response: {
+          200: salesOrderItemSchema,
+          400: invalidResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.sales.shipSalesOrder.execute({
+        staffUserId: staffUserId(request),
+        salesOrderId: OrderId.parse(request.params.id),
+        idempotencyKey: request.body.idempotencyKey,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return sendNotFound(reply);
+        }
+        if (
+          result.reason === "illegal_transition" ||
+          result.reason === "idempotency_conflict" ||
+          result.reason === "inventory_conflict" ||
+          result.reason === "accounting_invalid"
+        ) {
+          return sendConflict(reply);
+        }
+        return sendInvalid(reply);
+      }
+      return mapSalesOrder(result.salesOrder);
+    },
+  );
 }

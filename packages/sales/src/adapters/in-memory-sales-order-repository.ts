@@ -46,6 +46,24 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
   private readonly byId = new Map<OrderId, Stored>();
   private nextSequence = 1;
 
+  snapshot(): {
+    byId: Map<OrderId, Stored>;
+    nextSequence: number;
+  } {
+    return {
+      byId: new Map(this.byId),
+      nextSequence: this.nextSequence,
+    };
+  }
+
+  restore(snapshot: { byId: Map<OrderId, Stored>; nextSequence: number }): void {
+    this.byId.clear();
+    for (const [id, row] of snapshot.byId) {
+      this.byId.set(id, row);
+    }
+    this.nextSequence = snapshot.nextSequence;
+  }
+
   async list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage> {
     const rows = [...this.byId.values()].filter((row) => {
       if (query.status !== undefined && row.order.status !== query.status) {

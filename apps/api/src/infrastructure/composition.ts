@@ -91,6 +91,7 @@ import {
   GetSalesOrderUseCase,
   InMemorySalesOrderRepository,
   ListSalesOrdersUseCase,
+  ShipSalesOrderUseCase,
   type ICustomerLookupPort,
   type ISalesOrderRepository,
   type SalesDrizzle,
@@ -158,6 +159,7 @@ export type SalesHttpServices = {
   getSalesOrder: GetSalesOrderUseCase;
   confirmSalesOrder: ConfirmSalesOrderUseCase;
   cancelSalesOrder: CancelSalesOrderUseCase;
+  shipSalesOrder: ShipSalesOrderUseCase;
 };
 
 export type AccountingHttpServices = {
@@ -290,6 +292,7 @@ function salesServices(
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
     confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales),
     cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
+    shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales),
   };
 }
 
@@ -382,6 +385,8 @@ export function composeAppServices(
     overrides.unitOfWork ??
     (appDb ? new PostgresInventoryUnitOfWork(appDb) : new InMemoryUnitOfWork());
 
+  const inMemoryUow = unitOfWork instanceof InMemoryUnitOfWork ? unitOfWork : null;
+
   const purchaseOrderRepo =
     overrides.purchaseOrderRepo ??
     (purchasingDb
@@ -399,13 +404,19 @@ export function composeAppServices(
 
   const accountingUnitOfWork =
     overrides.accountingUnitOfWork ??
-    (appDb ? new PostgresAccountingUnitOfWork(appDb) : defaultInMemoryAccountingUow);
+    (appDb
+      ? new PostgresAccountingUnitOfWork(appDb)
+      : inMemoryUow
+        ? new InMemoryAccountingUnitOfWork(inMemoryUow.invoices)
+        : defaultInMemoryAccountingUow);
 
   const invoiceRepo =
     overrides.invoiceRepo ??
     (accountingDb
       ? new DrizzleInvoiceRepository(accountingDb)
-      : defaultInMemoryAccountingUow.invoices);
+      : inMemoryUow
+        ? inMemoryUow.invoices
+        : defaultInMemoryAccountingUow.invoices);
 
   return {
     features,

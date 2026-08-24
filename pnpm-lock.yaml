@@ -353,6 +353,9 @@ importers:
 
   packages/sales:
     dependencies:
+      '@dc-inventory/accounting':
+        specifier: workspace:*
+        version: link:../accounting
       '@dc-inventory/customers':
         specifier: workspace:*
         version: link:../customers

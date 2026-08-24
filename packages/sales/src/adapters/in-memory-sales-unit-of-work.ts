@@ -2,15 +2,19 @@ import {
   InMemoryInventoryUnitOfWork,
   RecordAllocatedUseCase,
   RecordDeallocatedUseCase,
+  RecordShippedUseCase,
   type IStockLedger,
 } from "@dc-inventory/inventory";
+import { InMemoryInvoiceRepository } from "@dc-inventory/accounting";
 import type {
   AllocatedCommand,
   DeallocatedCommand,
   IInventoryCommandPort,
   InventoryCommandResult,
   ISalesUnitOfWork,
+  ShippedCommand,
 } from "../domain/ports/sales-order-repository.js";
+import { AccountingCommandAdapter } from "./accounting-command-adapter.js";
 import { InMemorySalesOrderRepository } from "./in-memory-sales-order-repository.js";
 
 function mapResult(
@@ -53,15 +57,39 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
       }),
     );
   }
+
+  async recordShipped(command: ShippedCommand): Promise<InventoryCommandResult> {
+    return mapResult(
+      await new RecordShippedUseCase(this.ledger).execute({
+        idempotencyKey: command.idempotencyKey,
+        sku: command.sku,
+        quantity: command.quantity,
+        refType: "sales_order",
+        refId: command.orderId,
+      }),
+    );
+  }
 }
 
 export class InMemorySalesUnitOfWork implements ISalesUnitOfWork {
   readonly salesOrders = new InMemorySalesOrderRepository();
+  readonly invoices = new InMemoryInvoiceRepository();
   private readonly inventoryUow = new InMemoryInventoryUnitOfWork();
   readonly inventory = new InventoryCommandAdapter(this.inventoryUow.ledger);
+  readonly accounting = new AccountingCommandAdapter(this.invoices);
 
   run<T>(work: (uow: ISalesUnitOfWork) => Promise<T>): Promise<T> {
-    return this.inventoryUow.run(async () => work(this));
+    return this.inventoryUow.run(async () => {
+      const salesSnap = this.salesOrders.snapshot();
+      const invoiceSnap = this.invoices.snapshot();
+      try {
+        return await work(this);
+      } catch (error) {
+        this.salesOrders.restore(salesSnap);
+        this.invoices.restore(invoiceSnap);
+        throw error;
+      }
+    });
   }
 
   get inventoryReadModel() {

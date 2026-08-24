@@ -9,7 +9,9 @@ import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
+  ShipSalesOrderUseCase,
 } from "../src/index.js";
+import type { ISalesUnitOfWork } from "../src/domain/ports/sales-order-repository.js";
 
 const SKU = Sku.parse("SO-TEST-SKU");
 const SKU_B = Sku.parse("SO-TEST-SKU-B");
@@ -29,6 +31,7 @@ async function harness() {
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers),
     confirm: new ConfirmSalesOrderUseCase(uow),
     cancel: new CancelSalesOrderUseCase(uow),
+    ship: new ShipSalesOrderUseCase(uow),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
   };
@@ -260,5 +263,194 @@ describe("Sales (in-memory)", () => {
       return;
     }
     expect(secondConfirm.reason).toBe("insufficient_atp");
+  });
+
+  it("ships confirmed orders atomically with zero-tax invoice", async () => {
+    const h = await harness();
+    await seedStock(h, SKU, 10);
+
+    const created = await h.create.execute({
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [
+        { sku: SKU.value, name: "Widget", qty: 4, unitPriceCents: 500, currency: "USD" },
+      ],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "confirm-ship",
+    });
+
+    const shipped = await h.ship.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "ship-once",
+    });
+    expect(shipped.ok).toBe(true);
+    if (!shipped.ok) {
+      return;
+    }
+    expect(shipped.salesOrder.status).toBe("shipped");
+
+    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    expect(snap.allocated).toBe(0);
+    expect(snap.onHand).toBe(6);
+    expect(snap.available).toBe(6);
+
+    const invoice = await h.uow.invoices.findByOrderId(created.salesOrder.id);
+    expect(invoice).not.toBeNull();
+    expect(invoice?.taxTotal.amountMinor).toBe(0);
+    expect(invoice?.total.amountMinor).toBe(2000);
+    expect(invoice?.subtotal.amountMinor).toBe(2000);
+    expect(invoice?.documentNumber).toBe("INV-00001");
+  });
+
+  it("retrying ship does not duplicate invoice or shipment", async () => {
+    const h = await harness();
+    await seedStock(h, SKU, 5);
+
+    const created = await h.create.execute({
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 300, currency: "USD" }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "confirm-retry",
+    });
+
+    const first = await h.ship.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "ship-retry",
+    });
+    expect(first.ok).toBe(true);
+
+    const second = await h.ship.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "ship-retry-again",
+    });
+    expect(second.ok).toBe(true);
+
+    const invoices = await h.uow.invoices.findByOrderId(created.salesOrder.id);
+    expect(invoices).not.toBeNull();
+    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    expect(snap.onHand).toBe(3);
+  });
+
+  it("rejects cancel after ship", async () => {
+    const h = await harness();
+    await seedStock(h, SKU, 4);
+
+    const created = await h.create.execute({
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 500, currency: "USD" }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "confirm-no-cancel",
+    });
+    await h.ship.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "ship-no-cancel",
+    });
+
+    const cancelled = await h.cancel.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "cancel-after-ship",
+    });
+    expect(cancelled.ok).toBe(false);
+    if (cancelled.ok) {
+      return;
+    }
+    expect(cancelled.reason).toBe("illegal_transition");
+  });
+
+  it("rolls back ship when invoice creation fails", async () => {
+    const base = new InMemorySalesUnitOfWork();
+    const failingAccounting: ISalesUnitOfWork["accounting"] = {
+      createInvoiceForOrder: async () => ({ ok: false, reason: "invalid" }),
+    };
+    const failingUow: ISalesUnitOfWork = {
+      salesOrders: base.salesOrders,
+      inventory: base.inventory,
+      accounting: failingAccounting,
+      run: (work) => base.run(() => work(failingUow)),
+    };
+
+    const customers = {
+      findById: async (id: CustomerId) => (id === CUSTOMER_ID ? { id } : null),
+    };
+    const create = new CreateSalesOrderUseCase(failingUow.salesOrders, customers);
+    const confirm = new ConfirmSalesOrderUseCase(failingUow);
+    const ship = new ShipSalesOrderUseCase(failingUow);
+    const snapshot = new GetStockSnapshotUseCase(base.inventoryReadModel);
+    const adjustmentIncrease = new RecordAdjustmentIncreaseUseCase(base.ledger);
+
+    await base.run(async () => {
+      await adjustmentIncrease.execute({
+        idempotencyKey: "rollback-seed",
+        sku: SKU,
+        quantity: 6,
+        refType: "adjustment",
+        refId: "rollback-seed",
+      });
+    });
+
+    const created = await create.execute({
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 100, currency: "USD" }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await confirm.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "rollback-confirm",
+    });
+
+    const result = await ship.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "rollback-ship",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.reason).toBe("accounting_invalid");
+
+    const reloaded = await failingUow.salesOrders.findById(created.salesOrder.id);
+    expect(reloaded?.status).toBe("confirmed");
+    const snap = await snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    expect(snap.allocated).toBe(3);
+    expect(snap.onHand).toBe(6);
+    expect(await base.invoices.findByOrderId(created.salesOrder.id)).toBeNull();
   });
 });
