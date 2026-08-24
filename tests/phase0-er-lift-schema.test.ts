@@ -22,7 +22,7 @@ function schemaSources(): string {
     "apps/api/src/infrastructure/schema/identity.ts",
     "packages/customers/src/persistence/schema.ts",
     "apps/api/src/infrastructure/schema/customers.ts",
-    "apps/api/src/infrastructure/schema/sales.ts",
+    "packages/sales/src/persistence/schema.ts",
     "apps/api/src/infrastructure/schema/tax.ts",
     "apps/api/src/infrastructure/schema/accounting.ts",
   ];
@@ -37,7 +37,6 @@ const inventedLeftovers = [
   "better_auth",
   "role",
   "rbac",
-  "document_number",
   "ship_to_id",
   "due_date",
   "stripe_customer",

@@ -37,6 +37,12 @@ export default defineConfig({
       "@dc-inventory/purchasing": fileURLToPath(
         new URL("./packages/purchasing/src/index.ts", import.meta.url),
       ),
+      "@dc-inventory/sales/schema": fileURLToPath(
+        new URL("./packages/sales/src/persistence/schema.ts", import.meta.url),
+      ),
+      "@dc-inventory/sales": fileURLToPath(
+        new URL("./packages/sales/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {
@@ -51,6 +57,7 @@ export default defineConfig({
       "packages/catalog/tests/**/*.test.ts",
       "packages/inventory/tests/**/*.test.ts",
       "packages/purchasing/tests/**/*.test.ts",
+      "packages/sales/tests/**/*.test.ts",
       "packages/ui/tests/**/*.test.ts",
       "packages/ui-internal/tests/**/*.test.ts",
     ],
