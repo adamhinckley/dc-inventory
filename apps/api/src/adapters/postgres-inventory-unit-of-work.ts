@@ -10,10 +10,15 @@ import {
   DrizzleSupplierRepository,
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
+import {
+  DrizzleSalesOrderRepository,
+  type SalesDrizzle,
+} from "@dc-inventory/sales";
 import { LocationId } from "@dc-inventory/shared-kernel";
 import { eq } from "drizzle-orm";
 import { locations } from "@dc-inventory/inventory/schema";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
+import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-command-port.js";
 
 /**
  * Postgres-backed unit of work for the composition root.
@@ -46,9 +51,27 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     };
   }
 
+  get sales(): IUnitOfWork["sales"] {
+    const self = this;
+    return {
+      get salesOrders(): never {
+        throw new Error("Access sales repositories inside unitOfWork.run");
+      },
+      get inventory(): never {
+        throw new Error("Access inventory commands inside unitOfWork.run");
+      },
+      run: (work) => self.run((scope) => work(scope.sales)),
+    };
+  }
+
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
     const next = this.queue.then(() =>
-      this.db.transaction(async (tx) => this.runOnTransaction(tx as InventoryDrizzle & PurchasingDrizzle, work)),
+      this.db.transaction(async (tx) =>
+        this.runOnTransaction(
+          tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle,
+          work,
+        ),
+      ),
     );
     this.queue = next.then(
       () => undefined,
@@ -58,7 +81,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   }
 
   private async runOnTransaction<T>(
-    tx: InventoryDrizzle & PurchasingDrizzle,
+    tx: InventoryDrizzle & PurchasingDrizzle & SalesDrizzle,
     work: (uow: IUnitOfWork) => Promise<T>,
   ): Promise<T> {
     const resolveLocationUuid = async (locationId: LocationId): Promise<string> => {
@@ -81,18 +104,27 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const ledger = new DrizzleStockLedger(tx, readModel, resolveLocationUuid);
     const purchaseOrders = new DrizzlePurchaseOrderRepository(tx);
     const suppliers = new DrizzleSupplierRepository(tx);
-    const inventoryCommands = new StockLedgerInventoryCommandAdapter(ledger);
+    const salesOrders = new DrizzleSalesOrderRepository(tx);
+    const purchasingInventoryCommands = new StockLedgerInventoryCommandAdapter(ledger);
+    const salesInventoryCommands = new SalesStockLedgerInventoryCommandAdapter(ledger);
 
     const purchasingScope: IUnitOfWork["purchasing"] = {
       purchaseOrders,
       suppliers,
-      inventory: inventoryCommands,
+      inventory: purchasingInventoryCommands,
       run: (innerWork) => this.runOnTransaction(tx, (scope) => innerWork(scope.purchasing)),
+    };
+
+    const salesScope: IUnitOfWork["sales"] = {
+      salesOrders,
+      inventory: salesInventoryCommands,
+      run: (innerWork) => this.runOnTransaction(tx, (scope) => innerWork(scope.sales)),
     };
 
     const scope: IUnitOfWork = {
       inventory: { ledger, readModel },
       purchasing: purchasingScope,
+      sales: salesScope,
       run: (innerWork) => this.runOnTransaction(tx, innerWork),
     };
     return work(scope);

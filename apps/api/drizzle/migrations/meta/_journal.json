@@ -50,6 +50,13 @@
       "when": 1787455200000,
       "tag": "0007_purchasing_po_status_document_number",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787455400000,
+      "tag": "0008_sales_order_document_number",
+      "breakpoints": true
     }
   ]
 }

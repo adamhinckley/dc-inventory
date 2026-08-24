@@ -75,6 +75,18 @@ import {
   type ISupplierRepository,
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
+import {
+  CancelSalesOrderUseCase,
+  ConfirmSalesOrderUseCase,
+  CreateSalesOrderUseCase,
+  DrizzleSalesOrderRepository,
+  GetSalesOrderUseCase,
+  InMemorySalesOrderRepository,
+  ListSalesOrdersUseCase,
+  type ICustomerLookupPort,
+  type ISalesOrderRepository,
+  type SalesDrizzle,
+} from "@dc-inventory/sales";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
@@ -131,6 +143,14 @@ export type PurchasingHttpServices = {
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
 };
 
+export type SalesHttpServices = {
+  listSalesOrders: ListSalesOrdersUseCase;
+  createSalesOrder: CreateSalesOrderUseCase;
+  getSalesOrder: GetSalesOrderUseCase;
+  confirmSalesOrder: ConfirmSalesOrderUseCase;
+  cancelSalesOrder: CancelSalesOrderUseCase;
+};
+
 /**
  * Composition root services. Domain/application never import this file —
  * only `app.ts` / `server.ts` wire ports to adapters here.
@@ -145,6 +165,7 @@ export type AppServices = {
   customers: CustomersHttpServices;
   catalog: CatalogHttpServices;
   purchasing: PurchasingHttpServices;
+  sales: SalesHttpServices;
   unitOfWork: IUnitOfWork;
 };
 
@@ -164,6 +185,7 @@ export type AppServiceOverrides = {
   qtyRead?: IQtyReadPort;
   purchaseOrderRepo?: IPurchaseOrderRepository;
   supplierRepo?: ISupplierRepository;
+  salesOrderRepo?: ISalesOrderRepository;
   unitOfWork?: IUnitOfWork;
 };
 
@@ -228,6 +250,32 @@ function purchasingServices(
   };
 }
 
+function customerLookupPort(customerRepo: ICustomerRepository): ICustomerLookupPort {
+  return {
+    findById: async (id) => {
+      const customer = await customerRepo.findById(id);
+      return customer === null ? null : { id: customer.id };
+    },
+  };
+}
+
+function salesServices(
+  salesOrderRepo: ISalesOrderRepository,
+  customerRepo: ICustomerRepository,
+  unitOfWork: IUnitOfWork,
+): SalesHttpServices {
+  return {
+    listSalesOrders: new ListSalesOrdersUseCase(salesOrderRepo),
+    createSalesOrder: new CreateSalesOrderUseCase(
+      salesOrderRepo,
+      customerLookupPort(customerRepo),
+    ),
+    getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
+    confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales),
+    cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
+  };
+}
+
 export function composeAppServices(
   overrides: AppServiceOverrides = {},
 ): AppServices {
@@ -239,6 +287,7 @@ export function composeAppServices(
   let customersDb: CustomersDrizzle | undefined;
   let catalogDb: CatalogDrizzle | undefined;
   let purchasingDb: PurchasingDrizzle | undefined;
+  let salesDb: SalesDrizzle | undefined;
   let appDb: AppDrizzle | undefined;
   if (overrides.database) {
     database = overrides.database;
@@ -249,6 +298,7 @@ export function composeAppServices(
     customersDb = connection.db as unknown as CustomersDrizzle;
     catalogDb = connection.db as unknown as CatalogDrizzle;
     purchasingDb = connection.db as unknown as PurchasingDrizzle;
+    salesDb = connection.db as unknown as SalesDrizzle;
     appDb = connection.db;
   }
 
@@ -312,6 +362,10 @@ export function composeAppServices(
     overrides.supplierRepo ??
     (purchasingDb ? new DrizzleSupplierRepository(purchasingDb) : unitOfWork.purchasing.suppliers);
 
+  const salesOrderRepo =
+    overrides.salesOrderRepo ??
+    (salesDb ? new DrizzleSalesOrderRepository(salesDb) : unitOfWork.sales.salesOrders);
+
   return {
     features,
     clock,
@@ -338,6 +392,7 @@ export function composeAppServices(
     customers: customersServices(customerRepo, contactRepo, shipToRepo, exemptionRepo),
     catalog: catalogServices(productRepo, qtyRead),
     purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork),
+    sales: salesServices(salesOrderRepo, customerRepo, unitOfWork),
     unitOfWork,
   };
 }

@@ -27,6 +27,7 @@ import {
   type CustomersHttpServices,
   type IdentityHttpServices,
   type PurchasingHttpServices,
+  type SalesHttpServices,
 } from "./infrastructure/composition.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
 import {
@@ -99,6 +100,7 @@ export async function buildAudienceApp(
   app.decorate("customers", services.customers);
   app.decorate("catalog", services.catalog);
   app.decorate("purchasing", services.purchasing);
+  app.decorate("sales", services.sales);
   applyHttpCompilers(app);
   await registerCookie(app);
 
@@ -136,6 +138,7 @@ export async function buildApp(
   app.decorate("customers", services.customers);
   app.decorate("catalog", services.catalog);
   app.decorate("purchasing", services.purchasing);
+  app.decorate("sales", services.sales);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
   await registerCookie(app);
@@ -158,6 +161,7 @@ declare module "fastify" {
     customers: CustomersHttpServices;
     catalog: CatalogHttpServices;
     purchasing: PurchasingHttpServices;
+    sales: SalesHttpServices;
   }
 
   interface FastifyRequest {
