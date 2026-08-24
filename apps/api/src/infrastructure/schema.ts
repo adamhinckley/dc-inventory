@@ -20,7 +20,7 @@ export {
   purchasing,
   supplierProducts,
   suppliers,
-} from "./schema/purchasing.js";
+} from "@dc-inventory/purchasing/schema";
 export {
   inventory,
   locations,
@@ -97,7 +97,7 @@ import {
   purchaseOrders,
   supplierProducts,
   suppliers,
-} from "./schema/purchasing.js";
+} from "@dc-inventory/purchasing/schema";
 import {
   locations,
   reorderPolicies,

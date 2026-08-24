@@ -2,6 +2,7 @@ import type {
   IInventoryReadModel,
   IStockLedger,
 } from "@dc-inventory/inventory";
+import type { IPurchasingUnitOfWork } from "@dc-inventory/purchasing";
 
 /**
  * Composition-root unit of work seam. Cross-context orchestration extends this
@@ -12,5 +13,6 @@ export interface IUnitOfWork {
     readonly ledger: IStockLedger;
     readonly readModel: IInventoryReadModel;
   };
+  readonly purchasing: IPurchasingUnitOfWork;
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T>;
 }

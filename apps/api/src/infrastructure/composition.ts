@@ -60,8 +60,26 @@ import {
   type IWholesaleUserRepository,
   type IdentityDrizzle,
 } from "@dc-inventory/identity";
+import {
+  CancelPurchaseOrderUseCase,
+  ConfirmPurchaseOrderUseCase,
+  CreatePurchaseOrderUseCase,
+  DrizzlePurchaseOrderRepository,
+  DrizzleSupplierRepository,
+  GetPurchaseOrderUseCase,
+  InMemoryPurchaseOrderRepository,
+  InMemorySupplierRepository,
+  ListPurchaseOrdersUseCase,
+  ReceivePurchaseOrderUseCase,
+  type IPurchaseOrderRepository,
+  type ISupplierRepository,
+  type PurchasingDrizzle,
+} from "@dc-inventory/purchasing";
+import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
+import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
+import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
@@ -104,6 +122,15 @@ export type CustomersHttpServices = {
   updateExemptionCertificate: UpdateExemptionCertificateUseCase;
 };
 
+export type PurchasingHttpServices = {
+  listPurchaseOrders: ListPurchaseOrdersUseCase;
+  createPurchaseOrder: CreatePurchaseOrderUseCase;
+  getPurchaseOrder: GetPurchaseOrderUseCase;
+  confirmPurchaseOrder: ConfirmPurchaseOrderUseCase;
+  receivePurchaseOrder: ReceivePurchaseOrderUseCase;
+  cancelPurchaseOrder: CancelPurchaseOrderUseCase;
+};
+
 /**
  * Composition root services. Domain/application never import this file —
  * only `app.ts` / `server.ts` wire ports to adapters here.
@@ -117,6 +144,8 @@ export type AppServices = {
   identity: IdentityHttpServices;
   customers: CustomersHttpServices;
   catalog: CatalogHttpServices;
+  purchasing: PurchasingHttpServices;
+  unitOfWork: IUnitOfWork;
 };
 
 export type AppServiceOverrides = {
@@ -133,6 +162,9 @@ export type AppServiceOverrides = {
   exemptionRepo?: IExemptionCertificateRepository;
   productRepo?: IProductRepository;
   qtyRead?: IQtyReadPort;
+  purchaseOrderRepo?: IPurchaseOrderRepository;
+  supplierRepo?: ISupplierRepository;
+  unitOfWork?: IUnitOfWork;
 };
 
 function catalogServices(
@@ -181,6 +213,21 @@ function customersServices(
   };
 }
 
+function purchasingServices(
+  purchaseOrderRepo: IPurchaseOrderRepository,
+  supplierRepo: ISupplierRepository,
+  unitOfWork: IUnitOfWork,
+): PurchasingHttpServices {
+  return {
+    listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo),
+    createPurchaseOrder: new CreatePurchaseOrderUseCase(purchaseOrderRepo, supplierRepo),
+    getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
+    confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
+    receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
+    cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
+  };
+}
+
 export function composeAppServices(
   overrides: AppServiceOverrides = {},
 ): AppServices {
@@ -191,6 +238,7 @@ export function composeAppServices(
   let identityDb: IdentityDrizzle | undefined;
   let customersDb: CustomersDrizzle | undefined;
   let catalogDb: CatalogDrizzle | undefined;
+  let purchasingDb: PurchasingDrizzle | undefined;
   let appDb: AppDrizzle | undefined;
   if (overrides.database) {
     database = overrides.database;
@@ -200,6 +248,7 @@ export function composeAppServices(
     identityDb = connection.db as unknown as IdentityDrizzle;
     customersDb = connection.db as unknown as CustomersDrizzle;
     catalogDb = connection.db as unknown as CatalogDrizzle;
+    purchasingDb = connection.db as unknown as PurchasingDrizzle;
     appDb = connection.db;
   }
 
@@ -250,6 +299,19 @@ export function composeAppServices(
     overrides.qtyRead ??
     (appDb ? new StockSnapshotQtyReadAdapter(appDb) : new InMemoryQtyReadPort());
 
+  const purchaseOrderRepo =
+    overrides.purchaseOrderRepo ??
+    (purchasingDb
+      ? new DrizzlePurchaseOrderRepository(purchasingDb)
+      : new InMemoryPurchaseOrderRepository());
+  const supplierRepo =
+    overrides.supplierRepo ??
+    (purchasingDb ? new DrizzleSupplierRepository(purchasingDb) : new InMemorySupplierRepository());
+
+  const unitOfWork =
+    overrides.unitOfWork ??
+    (appDb ? new PostgresInventoryUnitOfWork(appDb) : new InMemoryUnitOfWork());
+
   return {
     features,
     clock,
@@ -275,5 +337,7 @@ export function composeAppServices(
     },
     customers: customersServices(customerRepo, contactRepo, shipToRepo, exemptionRepo),
     catalog: catalogServices(productRepo, qtyRead),
+    purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork),
+    unitOfWork,
   };
 }

@@ -122,7 +122,9 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
   });
 
   it("defines sales orders as carts-in-draft with typed ship snapshots and frozen lines", () => {
-    const sql = listSqlMigrations().join("\n");
+    const sql = readText(
+      "apps/api/drizzle/migrations/0001_identity_customers_sales_tax_accounting.sql",
+    );
 
     expect(sql).toMatch(/CREATE TABLE "sales"\."orders"/);
     expect(sql).toMatch(/draft/);

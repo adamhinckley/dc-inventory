@@ -167,6 +167,13 @@ export const invalidResponseSchema = z.object({
   error: z.literal("invalid"),
 });
 
+export const zodValidationErrorResponseSchema = z.object({
+  statusCode: z.number(),
+  code: z.string(),
+  error: z.string(),
+  message: z.string(),
+});
+
 export const duplicateEmailResponseSchema = z.object({
   error: z.literal("duplicate_email"),
 });
@@ -342,5 +349,93 @@ export const productsListTable = {
     defaultBy: "sku",
     defaultOrder: "asc",
     fields: ["sku", "name", "available", "createdAt"],
+  },
+};
+
+export const purchaseOrderStatusSchema = z.enum([
+  "draft",
+  "confirmed",
+  "received",
+  "cancelled",
+]);
+
+export const purchaseOrderLineSchema = z.object({
+  id: z.string().uuid(),
+  sku: z.string(),
+  name: z.string(),
+  qty: z.number().int(),
+  receivedQty: z.number().int(),
+});
+
+export const purchaseOrderItemSchema = z.object({
+  id: z.string().uuid(),
+  supplierId: z.string().uuid(),
+  documentNumber: z.string(),
+  status: purchaseOrderStatusSchema,
+  lines: z.array(purchaseOrderLineSchema),
+});
+
+export const purchaseOrderListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  status: purchaseOrderStatusSchema.optional(),
+  supplierId: z.string().uuid().optional(),
+});
+
+export const purchaseOrderListResponseSchema = z.object({
+  items: z.array(purchaseOrderItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const purchaseOrderIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const purchaseOrderWriteBodySchema = z.object({
+  supplierId: z.string().uuid(),
+  lines: z
+    .array(
+      z.object({
+        sku: z.string().min(1),
+        name: z.string().min(1),
+        qty: z.number().int().positive(),
+      }),
+    )
+    .min(1),
+});
+
+export const purchaseOrderCommandBodySchema = z.object({
+  idempotencyKey: z.string().min(1),
+});
+
+export const purchaseOrderReceiveBodySchema = z.object({
+  idempotencyKey: z.string().min(1),
+  lines: z
+    .array(
+      z.object({
+        lineId: z.string().uuid(),
+        quantity: z.number().int().positive(),
+      }),
+    )
+    .min(1),
+});
+
+export const conflictResponseSchema = z.object({
+  error: z.literal("conflict"),
+});
+
+export const purchaseOrdersListTable = {
+  rowId: "id",
+  columns: [
+    { field: "documentNumber", label: "PO #" },
+    { field: "status", label: "Status" },
+    { field: "supplierId", label: "Supplier" },
+  ],
+  sort: {
+    defaultBy: "documentNumber",
+    defaultOrder: "asc",
+    fields: ["documentNumber", "status"],
   },
 };
