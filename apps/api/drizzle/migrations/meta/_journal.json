@@ -36,6 +36,13 @@
       "when": 1787453400000,
       "tag": "0004_customers_contact_columns_exemption_object_key",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787455000000,
+      "tag": "0005_inventory_ledger_identity",
+      "breakpoints": true
     }
   ]
 }
