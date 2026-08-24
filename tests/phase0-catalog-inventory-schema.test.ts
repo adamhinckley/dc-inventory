@@ -53,6 +53,7 @@ describe("Phase 0 catalog / purchasing / inventory schemas (ADA-52)", () => {
     expect(barrel).toMatch(/suppliers/);
     expect(barrel).toMatch(/supplierProducts|supplier_products/);
     expect(barrel).toMatch(/purchaseOrders|purchase_orders/);
+    expect(barrel).toMatch(/@dc-inventory\/purchasing\/schema/);
     expect(barrel).toMatch(/purchaseOrderLines|purchase_order_lines/);
     expect(barrel).toMatch(/locations/);
     expect(barrel).toMatch(/reorderPolicies|reorder_policies/);
@@ -107,7 +108,7 @@ describe("Phase 0 catalog / purchasing / inventory schemas (ADA-52)", () => {
   });
 
   it("defines purchasing suppliers, terms, thin POs, and frozen PO lines", () => {
-    const sql = listSqlMigrations().join("\n");
+    const sql = readText("apps/api/drizzle/migrations/0000_catalog_purchasing_inventory.sql");
     expect(sql).toMatch(/vendor_number/);
     expect(sql).toMatch(/supplier_products/);
     expect(sql).toMatch(/last_po_cost_cents/);

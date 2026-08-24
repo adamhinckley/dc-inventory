@@ -2,12 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { registerStaffAudienceGuard } from "../adapters/http/audience-guard.js";
 import { registerInternalAuthRoutes } from "../adapters/http/internal-auth.js";
 import { registerInternalCustomerRoutes } from "../adapters/http/internal-customers.js";
+import { registerInternalPurchaseOrderRoutes } from "../adapters/http/internal-purchase-orders.js";
 import { registerInternalProductRoutes } from "../adapters/http/internal-products.js";
 
-/** Staff mount (`/internal`). Auth, customers, and catalog products. */
+/** Staff mount (`/internal`). Auth, customers, catalog products, and purchasing. */
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalAuthRoutes(app);
   registerStaffAudienceGuard(app);
   registerInternalCustomerRoutes(app);
   registerInternalProductRoutes(app);
+  registerInternalPurchaseOrderRoutes(app);
 }

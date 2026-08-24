@@ -7,7 +7,7 @@ import {
   type Phase2BootstrapPorts,
 } from "@dc-inventory/inventory";
 import { locations } from "@dc-inventory/inventory/schema";
-import { suppliers } from "../infrastructure/schema/purchasing.js";
+import { suppliers } from "@dc-inventory/purchasing/schema";
 import type { AppDrizzle } from "../infrastructure/db.js";
 
 export async function runPhase2BootstrapOnDb(db: AppDrizzle) {

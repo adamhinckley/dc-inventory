@@ -1,21 +1,47 @@
 import { InMemoryInventoryUnitOfWork } from "@dc-inventory/inventory";
+import {
+  InMemoryPurchaseOrderRepository,
+  InMemorySupplierRepository,
+  type IPurchasingUnitOfWork,
+} from "@dc-inventory/purchasing";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
+import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 
-/** Composition-root in-memory unit of work for tests and local wiring. */
+/**
+ * In-memory composition-root unit of work for purchasing + inventory tests.
+ */
 export class InMemoryUnitOfWork implements IUnitOfWork {
-  private readonly inner = new InMemoryInventoryUnitOfWork();
-
+  readonly purchaseOrders = new InMemoryPurchaseOrderRepository();
+  readonly suppliers = new InMemorySupplierRepository();
+  private readonly inventoryUow = new InMemoryInventoryUnitOfWork();
   readonly inventory = {
-    ledger: this.inner.ledger,
-    readModel: this.inner.readModel,
+    ledger: this.inventoryUow.ledger,
+    readModel: this.inventoryUow.readModel,
   };
 
+  private readonly purchasingScope: IPurchasingUnitOfWork = {
+    purchaseOrders: this.purchaseOrders,
+    suppliers: this.suppliers,
+    inventory: new StockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
+    run: (work) => this.run((scope) => work(scope.purchasing)),
+  };
+
+  get purchasing(): IPurchasingUnitOfWork {
+    return this.purchasingScope;
+  }
+
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
-    return this.inner.run((scope) =>
-      work({
-        inventory: scope,
+    return this.inventoryUow.run(async () => {
+      const scope: IUnitOfWork = {
+        inventory: this.inventory,
+        purchasing: this.purchasingScope,
         run: (innerWork) => this.run(innerWork),
-      }),
-    );
+      };
+      return work(scope);
+    });
+  }
+
+  get purchasingScopeForTests(): IPurchasingUnitOfWork {
+    return this.purchasingScope;
   }
 }

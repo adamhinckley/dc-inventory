@@ -2,6 +2,7 @@ import {
   bigint,
   char,
   integer,
+  pgEnum,
   pgSchema,
   text,
   timestamp,
@@ -22,6 +23,13 @@ function timestamps() {
       .defaultNow(),
   };
 }
+
+export const poStatus = pgEnum("po_status", [
+  "draft",
+  "confirmed",
+  "received",
+  "cancelled",
+]);
 
 export const suppliers = purchasing.table("suppliers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -48,12 +56,13 @@ export const supplierProducts = purchasing.table(
   (table) => [unique().on(table.supplierId, table.sku)],
 );
 
-/** Thin PO header — no document number, no G9 status machine. */
 export const purchaseOrders = purchasing.table("purchase_orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   supplierId: uuid("supplier_id")
     .notNull()
     .references(() => suppliers.id),
+  status: poStatus("status").notNull().default("draft"),
+  documentNumber: text("document_number").notNull().unique(),
   ...timestamps(),
 });
 
@@ -66,5 +75,6 @@ export const purchaseOrderLines = purchasing.table("purchase_order_lines", {
   sku: text("sku").notNull(),
   name: text("name").notNull(),
   qty: integer("qty").notNull(),
+  receivedQty: integer("received_qty").notNull().default(0),
   ...timestamps(),
 });
