@@ -60,7 +60,7 @@ export {
   invoiceTaxLines,
   paymentApplications,
   payments,
-} from "./schema/accounting.js";
+} from "@dc-inventory/accounting/schema";
 export {
   addOnGrantSource,
   addOnGrants,
@@ -123,7 +123,7 @@ import {
   invoiceTaxLines,
   paymentApplications,
   payments,
-} from "./schema/accounting.js";
+} from "@dc-inventory/accounting/schema";
 import {
   addOnGrants,
   flagOverrides,

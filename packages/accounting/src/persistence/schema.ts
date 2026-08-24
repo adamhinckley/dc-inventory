@@ -5,9 +5,10 @@ import {
   pgSchema,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { customers } from "./customers.js";
+import { customers } from "@dc-inventory/customers/schema";
 import { orders } from "@dc-inventory/sales/schema";
 
 /**
@@ -32,22 +33,27 @@ function timestamps() {
   };
 }
 
-export const invoices = accounting.table("invoices", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  orderId: uuid("order_id")
-    .notNull()
-    .references(() => orders.id),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => customers.id),
-  status: invoiceStatus("status").notNull(),
-  postedAt: timestamp("posted_at", { withTimezone: true, mode: "date" }),
-  subtotalCents: bigint("subtotal_cents", { mode: "number" }).notNull(),
-  taxTotalCents: bigint("tax_total_cents", { mode: "number" }).notNull(),
-  totalCents: bigint("total_cents", { mode: "number" }).notNull(),
-  currency: char("currency", { length: 3 }).notNull().default("USD"),
-  ...timestamps(),
-});
+export const invoices = accounting.table(
+  "invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    documentNumber: text("document_number").notNull().unique(),
+    status: invoiceStatus("status").notNull(),
+    postedAt: timestamp("posted_at", { withTimezone: true, mode: "date" }),
+    subtotalCents: bigint("subtotal_cents", { mode: "number" }).notNull(),
+    taxTotalCents: bigint("tax_total_cents", { mode: "number" }).notNull(),
+    totalCents: bigint("total_cents", { mode: "number" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("USD"),
+    ...timestamps(),
+  },
+  (table) => [uniqueIndex("invoices_order_id_unique").on(table.orderId)],
+);
 
 /** Same shape as tax_commit_lines. Frozen. No live FK to tax. */
 export const invoiceTaxLines = accounting.table("invoice_tax_lines", {
@@ -64,15 +70,20 @@ export const invoiceTaxLines = accounting.table("invoice_tax_lines", {
   ...timestamps(),
 });
 
-export const payments = accounting.table("payments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => customers.id),
-  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
-  currency: char("currency", { length: 3 }).notNull().default("USD"),
-  ...timestamps(),
-});
+export const payments = accounting.table(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("USD"),
+    idempotencyKey: text("idempotency_key").notNull(),
+    ...timestamps(),
+  },
+  (table) => [uniqueIndex("payments_idempotency_key_unique").on(table.idempotencyKey)],
+);
 
 export const paymentApplications = accounting.table("payment_applications", {
   id: uuid("id").primaryKey().defaultRandom(),

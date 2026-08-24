@@ -23,8 +23,8 @@ function schemaSources(): string {
     "packages/customers/src/persistence/schema.ts",
     "apps/api/src/infrastructure/schema/customers.ts",
     "packages/sales/src/persistence/schema.ts",
+    "packages/accounting/src/persistence/schema.ts",
     "apps/api/src/infrastructure/schema/tax.ts",
-    "apps/api/src/infrastructure/schema/accounting.ts",
   ];
   return files
     .filter((path) => existsSync(resolve(root, path)))

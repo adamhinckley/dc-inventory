@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@dc-inventory/accounting": "workspace:*",
     "@dc-inventory/catalog": "workspace:*",
     "@dc-inventory/customers": "workspace:*",
     "@dc-inventory/identity": "workspace:*",

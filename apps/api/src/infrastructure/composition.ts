@@ -76,6 +76,14 @@ import {
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
+  DrizzleInvoiceRepository,
+  GetInvoiceUseCase,
+  InMemoryAccountingUnitOfWork,
+  RecordPaymentUseCase,
+  type AccountingDrizzle,
+  type IInvoiceRepository,
+} from "@dc-inventory/accounting";
+import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
@@ -88,6 +96,7 @@ import {
   type SalesDrizzle,
 } from "@dc-inventory/sales";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
+import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
@@ -151,6 +160,11 @@ export type SalesHttpServices = {
   cancelSalesOrder: CancelSalesOrderUseCase;
 };
 
+export type AccountingHttpServices = {
+  getInvoice: GetInvoiceUseCase;
+  recordPayment: RecordPaymentUseCase;
+};
+
 /**
  * Composition root services. Domain/application never import this file —
  * only `app.ts` / `server.ts` wire ports to adapters here.
@@ -166,6 +180,7 @@ export type AppServices = {
   catalog: CatalogHttpServices;
   purchasing: PurchasingHttpServices;
   sales: SalesHttpServices;
+  accounting: AccountingHttpServices;
   unitOfWork: IUnitOfWork;
 };
 
@@ -186,6 +201,8 @@ export type AppServiceOverrides = {
   purchaseOrderRepo?: IPurchaseOrderRepository;
   supplierRepo?: ISupplierRepository;
   salesOrderRepo?: ISalesOrderRepository;
+  invoiceRepo?: IInvoiceRepository;
+  accountingUnitOfWork?: import("@dc-inventory/accounting").IAccountingUnitOfWork;
   unitOfWork?: IUnitOfWork;
 };
 
@@ -276,6 +293,16 @@ function salesServices(
   };
 }
 
+function accountingServices(
+  invoiceRepo: IInvoiceRepository,
+  accountingUnitOfWork: import("@dc-inventory/accounting").IAccountingUnitOfWork,
+): AccountingHttpServices {
+  return {
+    getInvoice: new GetInvoiceUseCase(invoiceRepo),
+    recordPayment: new RecordPaymentUseCase(accountingUnitOfWork),
+  };
+}
+
 export function composeAppServices(
   overrides: AppServiceOverrides = {},
 ): AppServices {
@@ -288,6 +315,7 @@ export function composeAppServices(
   let catalogDb: CatalogDrizzle | undefined;
   let purchasingDb: PurchasingDrizzle | undefined;
   let salesDb: SalesDrizzle | undefined;
+  let accountingDb: AccountingDrizzle | undefined;
   let appDb: AppDrizzle | undefined;
   if (overrides.database) {
     database = overrides.database;
@@ -299,6 +327,7 @@ export function composeAppServices(
     catalogDb = connection.db as unknown as CatalogDrizzle;
     purchasingDb = connection.db as unknown as PurchasingDrizzle;
     salesDb = connection.db as unknown as SalesDrizzle;
+    accountingDb = connection.db as unknown as AccountingDrizzle;
     appDb = connection.db;
   }
 
@@ -366,6 +395,18 @@ export function composeAppServices(
     overrides.salesOrderRepo ??
     (salesDb ? new DrizzleSalesOrderRepository(salesDb) : unitOfWork.sales.salesOrders);
 
+  const defaultInMemoryAccountingUow = new InMemoryAccountingUnitOfWork();
+
+  const accountingUnitOfWork =
+    overrides.accountingUnitOfWork ??
+    (appDb ? new PostgresAccountingUnitOfWork(appDb) : defaultInMemoryAccountingUow);
+
+  const invoiceRepo =
+    overrides.invoiceRepo ??
+    (accountingDb
+      ? new DrizzleInvoiceRepository(accountingDb)
+      : defaultInMemoryAccountingUow.invoices);
+
   return {
     features,
     clock,
@@ -393,6 +434,7 @@ export function composeAppServices(
     catalog: catalogServices(productRepo, qtyRead),
     purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork),
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork),
+    accounting: accountingServices(invoiceRepo, accountingUnitOfWork),
     unitOfWork,
   };
 }
