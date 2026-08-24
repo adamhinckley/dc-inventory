@@ -59,3 +59,11 @@ _Avoid_: Hand-written fetch layer, API SDK (unless you mean these packages)
 **Agent-optimized scaffold**:
 Repo layout, scripts, tickets, and examples shaped so a coding agent can finish a slice from allowed paths + failing tests without inventing structure. Prefer boring, explicit, duplicated-if-clear over clever shared abstractions.
 _Avoid_: “DX”, developer experience (when you mean agent success), flexible folder conventions
+
+**Phase 1 seed**:
+Tiny committed fixture (`pnpm db:seed:phase1`): five shop-visible catalog products plus local staff and wholesale logins. Development bootstrap so lists light up after migrate. Not the stakeholder demo bench.
+_Avoid_: Using this as five years of history, calling it the demo seed
+
+**Demo seed**:
+The Phase 3 command `pnpm seed:demo` that fills Postgres with the full synthetic demo dataset: catalog, suppliers, customers, users, then ~5 years of purchase orders, sales orders, invoices, payments, and stock movements that reconcile. Distinct from Phase 1 seed.
+_Avoid_: Dump import, migration seed, a second command named “history generator” (that is the Linear project; the command is `seed:demo`)
