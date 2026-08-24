@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
 import { InvoiceId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
@@ -10,6 +11,7 @@ import {
   overpayResponseSchema,
   recordPaymentBodySchema,
   recordPaymentResponseSchema,
+  wrongCurrencyResponseSchema,
   unauthorizedResponseSchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
@@ -88,7 +90,7 @@ export function registerInternalInvoiceRoutes(app: FastifyInstance): void {
         body: recordPaymentBodySchema,
         response: {
           200: recordPaymentResponseSchema,
-          400: zodValidationErrorResponseSchema,
+          400: z.union([zodValidationErrorResponseSchema, wrongCurrencyResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
           409: conflictResponseSchema.or(overpayResponseSchema),

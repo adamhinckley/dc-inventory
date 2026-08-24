@@ -10,4 +10,6 @@ export type RecordInternalInvoicePayment400 = {
   code: string;
   error: string;
   message: string;
+} | {
+  error: 'wrong_currency';
 };

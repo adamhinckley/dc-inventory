@@ -287,4 +287,34 @@ describe("Accounting (in-memory)", () => {
     });
     expect(tooNegative.ok).toBe(false);
   });
+
+  it("rejects per-payment correction that would drive one payment negative", async () => {
+    const h = await harness();
+    const invoice = await createInvoice(h, 500);
+    await h.record.execute({
+      staffUserId: STAFF_ID,
+      invoiceId: invoice.id,
+      amountCents: 200,
+      currency: "USD",
+      idempotencyKey: "pay-a",
+    });
+    await h.record.execute({
+      staffUserId: STAFF_ID,
+      invoiceId: invoice.id,
+      amountCents: 200,
+      currency: "USD",
+      idempotencyKey: "pay-b",
+    });
+    const applications = await h.uow.invoices.listApplications(invoice.id);
+    const paymentId = applications[0]!.paymentId;
+
+    const tooNegativeForPayment = await h.correct.execute({
+      staffUserId: STAFF_ID,
+      invoiceId: invoice.id,
+      paymentId,
+      correctionAmountCents: -300,
+      currency: "USD",
+    });
+    expect(tooNegativeForPayment.ok).toBe(false);
+  });
 });

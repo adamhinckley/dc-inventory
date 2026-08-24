@@ -4089,22 +4089,32 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  statusCode:
-                    type: number
-                  code:
-                    type: string
-                  error:
-                    type: string
-                  message:
-                    type: string
-                required:
-                  - statusCode
-                  - code
-                  - error
-                  - message
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      statusCode:
+                        type: number
+                      code:
+                        type: string
+                      error:
+                        type: string
+                      message:
+                        type: string
+                    required:
+                      - statusCode
+                      - code
+                      - error
+                      - message
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - wrong_currency
+                    required:
+                      - error
+                    additionalProperties: false
         "401":
           description: Default Response
           content:
