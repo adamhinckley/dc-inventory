@@ -1,0 +1,28 @@
+{
+  "name": "@dc-inventory/purchasing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Purchasing context: PO create/confirm/receive/cancel with inventory command ports.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/persistence/schema.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dc-inventory/inventory": "workspace:*",
+    "@dc-inventory/shared-kernel": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
