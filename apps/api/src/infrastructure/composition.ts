@@ -99,6 +99,7 @@ import {
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
+import { InventoryReadModelQtyReadAdapter } from "../adapters/inventory-read-model-qty-read.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
@@ -377,15 +378,19 @@ export function composeAppServices(
     (catalogDb
       ? new DrizzleProductRepository(catalogDb)
       : new InMemoryProductRepository());
-  const qtyRead =
-    overrides.qtyRead ??
-    (appDb ? new StockSnapshotQtyReadAdapter(appDb) : new InMemoryQtyReadPort());
-
   const unitOfWork =
     overrides.unitOfWork ??
     (appDb ? new PostgresInventoryUnitOfWork(appDb) : new InMemoryUnitOfWork());
 
   const inMemoryUow = unitOfWork instanceof InMemoryUnitOfWork ? unitOfWork : null;
+
+  const qtyRead =
+    overrides.qtyRead ??
+    (appDb
+      ? new StockSnapshotQtyReadAdapter(appDb)
+      : inMemoryUow
+        ? new InventoryReadModelQtyReadAdapter(inMemoryUow.inventory.readModel)
+        : new InMemoryQtyReadPort());
 
   const purchaseOrderRepo =
     overrides.purchaseOrderRepo ??
