@@ -95,20 +95,20 @@ describe("Inventory ledger (in-memory)", () => {
       ],
       [
         "InboundCancelled",
-        { onHand: 0, onOrder: 0, allocated: 0, available: 0 },
+        { onHand: 0, onOrder: 7, allocated: 0, available: 0 },
         async () => {
           const h = harness();
           await h.inboundFromPo.execute({
             idempotencyKey: "inbound-cancel-setup",
             sku: SKU,
-            quantity: 5,
+            quantity: 10,
             refType: "purchase_order",
             refId: PO_ID,
           });
           await h.inboundCancelled.execute({
             idempotencyKey: "cancel-inbound-1",
             sku: SKU,
-            quantity: 5,
+            quantity: 3,
             refType: "purchase_order",
             refId: PO_ID,
           });
