@@ -59,3 +59,17 @@ _Avoid_: Hand-written fetch layer, API SDK (unless you mean these packages)
 **Agent-optimized scaffold**:
 Repo layout, scripts, tickets, and examples shaped so a coding agent can finish a slice from allowed paths + failing tests without inventing structure. Prefer boring, explicit, duplicated-if-clear over clever shared abstractions.
 _Avoid_: “DX”, developer experience (when you mean agent success), flexible folder conventions
+
+### Demo data
+
+**Named demo customer**:
+A Customer whose `name` is pinned in the Phase 3 spec so staff can search it after `pnpm seed:demo`. There are four: **Acme Wholesale**, **Northstar Big Box** (big retailer), **Harvest Seasonal Co.** (seasonal), **Idle Park Distributors** (dormant with old AR). Upsert key is `name`.
+_Avoid_: Recasting Acme as one of the three personas; treating the other 56 customers as named accounts
+
+**Demo customer persona**:
+One of the three named demo customers whose generated history is a required story, not a random draw: high-volume retailer, Q4-heavy seasonal, or dormant with unpaid aged invoices.
+_Avoid_: Persona as a wholesale login; persona as a staff user
+
+**Phase 1 shop login**:
+The only wholesale user `seed:demo` must keep: `wholesale@local.test` bound to Acme Wholesale. Staff stays `staff@local.test` only.
+_Avoid_: Extra staff users; extra wholesale users for the three personas

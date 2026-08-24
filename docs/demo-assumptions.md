@@ -13,6 +13,7 @@ Do not edit `invariants.md` §18 or tick `open-questions.md` because of this fil
 | Block oversell | Confirm/allocate fails when `available` is insufficient. | Does not invent inbound-sell or multi-warehouse ATP. |
 | MP is shop price | Wholesale shop and order snapshots use `member_price_cents` only. | List price is a nullable stub; the shop must not read it. |
 | In-memory tax for later demo **behavior** | When a later ticket wires checkout, tests and the demo calculator stay in-memory. | Tax **tables** exist empty. Hosted engine stays behind `ITaxCalculator`. Never `price * rate`. |
+| Named demo customers | After `pnpm seed:demo`, four stable Customer names exist: **Acme Wholesale**, **Northstar Big Box**, **Harvest Seasonal Co.**, **Idle Park Distributors**. Logins stay `staff@local.test` and `wholesale@local.test` (Acme only). The other 56 customers are unnamed mix. | Not extra staff/wholesale users. Not G6 credit policy. Not recasting Acme as a persona. |
 
 ## Explicitly out of this demo phase
 
