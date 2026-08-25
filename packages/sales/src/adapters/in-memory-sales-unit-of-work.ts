@@ -6,6 +6,7 @@ import {
   type IStockLedger,
 } from "@dc-inventory/inventory";
 import { InMemoryInvoiceRepository } from "@dc-inventory/accounting";
+import type { IClock } from "../domain/clock.js";
 import type {
   AllocatedCommand,
   DeallocatedCommand,
@@ -74,9 +75,15 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
 export class InMemorySalesUnitOfWork implements ISalesUnitOfWork {
   readonly salesOrders = new InMemorySalesOrderRepository();
   readonly invoices = new InMemoryInvoiceRepository();
-  private readonly inventoryUow = new InMemoryInventoryUnitOfWork();
-  readonly inventory = new InventoryCommandAdapter(this.inventoryUow.ledger);
-  readonly accounting = new AccountingCommandAdapter(this.invoices);
+  private readonly inventoryUow: InMemoryInventoryUnitOfWork;
+  readonly inventory: InventoryCommandAdapter;
+  readonly accounting: AccountingCommandAdapter;
+
+  constructor(clock?: IClock) {
+    this.inventoryUow = new InMemoryInventoryUnitOfWork(clock);
+    this.inventory = new InventoryCommandAdapter(this.inventoryUow.ledger);
+    this.accounting = new AccountingCommandAdapter(this.invoices, clock);
+  }
 
   run<T>(work: (uow: ISalesUnitOfWork) => Promise<T>): Promise<T> {
     return this.inventoryUow.run(async () => {

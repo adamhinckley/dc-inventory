@@ -5,10 +5,14 @@ import type {
   CreateInvoiceForOrderCommand,
   IAccountingCommandPort,
 } from "../domain/ports/sales-order-repository.js";
+import type { IClock } from "../domain/clock.js";
 import { newUuid } from "../domain/ids.js";
 
 export class AccountingCommandAdapter implements IAccountingCommandPort {
-  constructor(private readonly invoices: IInvoiceRepository) {}
+  constructor(
+    private readonly invoices: IInvoiceRepository,
+    private readonly clock?: IClock,
+  ) {}
 
   async createInvoiceForOrder(
     command: CreateInvoiceForOrderCommand,
@@ -41,7 +45,7 @@ export class AccountingCommandAdapter implements IAccountingCommandPort {
       customerId: CustomerId.parse(command.customerId),
       documentNumber,
       status: "posted",
-      postedAt: new Date(),
+      postedAt: this.clock?.now() ?? new Date(),
       subtotal,
       taxTotal: zero,
       total: subtotal,
