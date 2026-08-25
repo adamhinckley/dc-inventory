@@ -59,20 +59,32 @@ export function planPurchaseOrders(input: {
   let quantityCursor = 0;
   const phase1Coverage = new Set<string>();
 
+  const vend001 = input.suppliers.find((row) => row.key === "vend-001");
+  if (!vend001) {
+    throw new Error("missing VEND-001 supplier");
+  }
+
   for (let index = 0; index < receivedCount; index += 1) {
-    const supplier = input.rng.pick(input.suppliers);
+    const phase1Sku = index < PHASE1_PRODUCT_SKUS.length ? PHASE1_PRODUCT_SKUS[index] : undefined;
+    const supplier = phase1Sku !== undefined ? vend001 : input.rng.pick(input.suppliers);
     const supplierSkus = skusForSupplier(supplier.key, input.supplierProducts);
     const lineCount = lineCounts[index];
     if (lineCount === undefined) {
       throw new Error("missing PO line count");
     }
-    let chosenSkus = pickDistinct(input.rng, supplierSkus, lineCount);
-    if (index < PHASE1_PRODUCT_SKUS.length) {
-      const phase1Sku = PHASE1_PRODUCT_SKUS[index];
-      if (phase1Sku !== undefined && supplierSkus.includes(phase1Sku) && !chosenSkus.includes(phase1Sku)) {
-        chosenSkus = [phase1Sku, ...chosenSkus.filter((sku) => sku !== phase1Sku)].slice(0, lineCount);
-      }
-    }
+    let chosenSkus =
+      phase1Sku !== undefined
+        ? lineCount === 1
+          ? [phase1Sku]
+          : [
+              phase1Sku,
+              ...pickDistinct(
+                input.rng,
+                supplierSkus.filter((sku) => sku !== phase1Sku),
+                lineCount - 1,
+              ),
+            ]
+        : pickDistinct(input.rng, supplierSkus, lineCount);
     const lines = chosenSkus.map((sku) => {
       const qty = lineQuantities[quantityCursor];
       quantityCursor += 1;

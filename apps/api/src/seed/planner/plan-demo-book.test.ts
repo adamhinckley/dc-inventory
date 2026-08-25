@@ -5,8 +5,12 @@ import { utcDayDiff, demoArBucket } from "../reconciliation/assert-demo-book.js"
 import {
   DEFAULT_DEMO_SEED,
   DEMO_COUNTS,
+  PO_LINE_COUNT_MAX,
   PO_LINE_COUNT_MEAN,
+  PO_LINE_COUNT_MIN,
+  PO_LINE_QTY_MAX,
   PO_LINE_QTY_MEAN,
+  PO_LINE_QTY_MIN,
   SO_LINE_COUNT_DEFAULT_MAX,
   SO_LINE_COUNT_DEFAULT_MEAN,
   SO_LINE_COUNT_DEFAULT_MIN,
@@ -14,10 +18,12 @@ import {
   SO_LINE_COUNT_IDLE_PARK_MIN,
   SO_LINE_COUNT_NORTHSTAR_MAX,
   SO_LINE_COUNT_NORTHSTAR_MIN,
+  SO_LINE_QTY_MAX,
   SO_LINE_QTY_MEAN,
+  SO_LINE_QTY_MIN,
 } from "./constants.js";
 import { mean } from "./corpus-samplers.js";
-import { demoHistoricalStart, isQ4Month, isWithinLastDays } from "./dates.js";
+import { demoHistoricalStart, expectedQ4Fraction, isQ4Month, isWithinLastDays } from "./dates.js";
 import { selectPaymentReplay, selectUnpaidReplay } from "./payments.js";
 import {
   DEFAULT_DEMO_SEED as EXPORTED_DEFAULT,
@@ -27,7 +33,6 @@ import {
   toReplayComparablePlan,
   type DemoBookPlan,
 } from "./plan-demo-book.js";
-import { createSeededRandom } from "./seeded-random.js";
 
 const SEED_TODAY = new Date("2026-08-24T15:30:00.000Z");
 
@@ -98,10 +103,13 @@ describe("planDemoBook", () => {
     const poQtys = plan.purchaseOrders.flatMap((row) => row.lines.map((line) => line.qty));
     expect(mean(poLineCounts)).toBe(PO_LINE_COUNT_MEAN);
     expect(mean(poQtys)).toBe(PO_LINE_QTY_MEAN);
+    expect(poLineCounts.every((count) => count >= PO_LINE_COUNT_MIN && count <= PO_LINE_COUNT_MAX)).toBe(true);
+    expect(poQtys.every((qty) => qty >= PO_LINE_QTY_MIN && qty <= PO_LINE_QTY_MAX)).toBe(true);
     expect(plan.purchaseOrders).toHaveLength(DEMO_COUNTS.purchaseOrders);
 
     const soQtys = plan.salesOrders.flatMap((row) => row.lines.map((line) => line.qty));
     expect(mean(soQtys)).toBe(SO_LINE_QTY_MEAN);
+    expect(soQtys.every((qty) => qty >= SO_LINE_QTY_MIN && qty <= SO_LINE_QTY_MAX)).toBe(true);
 
     for (const order of plan.purchaseOrders) {
       expect(new Set(order.lines.map((line) => line.sku)).size).toBe(order.lines.length);
@@ -134,6 +142,18 @@ describe("planDemoBook", () => {
     );
     const harvestQ4 = harvestShipped.filter((row) => isQ4Month(row.plannedInstant)).length;
     expect(harvestQ4 / harvestShipped.length).toBeGreaterThanOrEqual(0.7);
+
+    const receivedPoQ4 = receivedPo.filter((row) => isQ4Month(row.plannedInstant)).length;
+    expect(receivedPoQ4 / receivedPo.length).toBeGreaterThan(expectedQ4Fraction() - 0.02);
+
+    const baseShipped = plan.salesOrders.filter((row) => {
+      if (row.status !== "shipped") {
+        return false;
+      }
+      return row.customerKey === "acme" || row.customerKey === "northstar" || row.customerKey.startsWith("mix-");
+    });
+    const baseQ4 = baseShipped.filter((row) => isQ4Month(row.plannedInstant)).length;
+    expect(baseQ4 / baseShipped.length).toBeGreaterThan(expectedQ4Fraction() - 0.02);
 
     const idleShipped = plan.salesOrders.filter(
       (row) => row.customerKey === "idlePark" && row.status === "shipped",
@@ -185,11 +205,12 @@ describe("planDemoBook", () => {
       throw new Error("Math.random is forbidden in demo planner tests");
     });
     try {
-      createSeededRandom(DEFAULT_DEMO_SEED).int(1, 10);
+      planDemoBook({ seedToday: SEED_TODAY });
+      planDemoBook({ seed: "dc-inventory-demo-2", seedToday: SEED_TODAY });
     } finally {
       randomSpy.mockRestore();
     }
-  });
+  }, 60_000);
 
   it("keeps persona-specific sales line bands", () => {
     const byCustomer = new Map(plan.master.customers.map((row) => [row.key, row.persona]));

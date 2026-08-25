@@ -277,11 +277,11 @@ export function planSalesOrders(input: {
     for (let index = 0; index < shippedCount; index += 1) {
       orderSequence += 1;
       const lineCount = nextLineCount(customer.key);
-      const skus = pickDistinct(input.rng, allSkus, lineCount);
+      let skus = pickDistinct(input.rng, allSkus, lineCount);
       if (customer.persona === "acme" && index === 0) {
         const phase1Sku = PHASE1_PRODUCT_SKUS[0];
         if (phase1Sku !== undefined) {
-          skus[0] = phase1Sku;
+          skus = [phase1Sku, ...skus.filter((sku) => sku !== phase1Sku)].slice(0, lineCount);
         }
       }
       skus.forEach((sku) => phase1Coverage.add(sku));

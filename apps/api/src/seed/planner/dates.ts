@@ -6,6 +6,19 @@ import {
 import type { SeededRandom } from "./seeded-random.js";
 
 const MS_PER_DAY = 86_400_000;
+const WEIGHT_SCALE = 10;
+
+type HistoricalSampleOptions = {
+  q4Only?: boolean;
+  excludeLastDays?: number;
+  seedToday?: Date;
+};
+
+const weightedOffsetCache = new Map<string, readonly number[]>();
+
+export function clearHistoricalInstantCache(): void {
+  weightedOffsetCache.clear();
+}
 
 export function utcStartOfDay(date: Date): Date {
   return new Date(
@@ -41,11 +54,54 @@ export function monthWeight(monthIndex: number): number {
   return monthIndex >= 9 && monthIndex <= 11 ? Q4_MONTH_WEIGHT : BASE_MONTH_WEIGHT;
 }
 
+function cacheKey(
+  startDay: Date,
+  endDay: Date,
+  options: HistoricalSampleOptions | undefined,
+): string {
+  const excludeLastDays = options?.excludeLastDays ?? 0;
+  const seedToday = options?.seedToday ?? endDay;
+  return [
+    startDay.getTime(),
+    endDay.getTime(),
+    options?.q4Only ? "q4" : "all",
+    excludeLastDays,
+    seedToday.getTime(),
+  ].join("|");
+}
+
+function buildWeightedOffsets(
+  startDay: Date,
+  totalDays: number,
+  latestAllowed: Date,
+  q4Only: boolean,
+): readonly number[] {
+  const weightedDays: number[] = [];
+  for (let offset = 0; offset <= totalDays; offset += 1) {
+    const day = addUtcDays(startDay, offset);
+    if (day.getTime() > utcStartOfDay(latestAllowed).getTime()) {
+      continue;
+    }
+    const month = day.getUTCMonth();
+    if (q4Only && !(month >= 9 && month <= 11)) {
+      continue;
+    }
+    const repeat = Math.round(monthWeight(month) * WEIGHT_SCALE);
+    for (let index = 0; index < repeat; index += 1) {
+      weightedDays.push(offset);
+    }
+  }
+  if (weightedDays.length === 0) {
+    throw new Error("historical sampler produced no eligible days");
+  }
+  return weightedDays;
+}
+
 export function sampleHistoricalInstant(
   rng: SeededRandom,
   startInclusive: Date,
   endInclusive: Date,
-  options?: { q4Only?: boolean; excludeLastDays?: number; seedToday?: Date },
+  options?: HistoricalSampleOptions,
 ): Date {
   const startDay = utcStartOfDay(startInclusive);
   const endDay = utcStartOfDay(endInclusive);
@@ -57,25 +113,16 @@ export function sampleHistoricalInstant(
   const excludeLastDays = options?.excludeLastDays ?? 0;
   const seedToday = options?.seedToday ?? endInclusive;
   const latestAllowed = addUtcDays(seedToday, -excludeLastDays);
-
-  const weightedDays: number[] = [];
-  for (let offset = 0; offset <= totalDays; offset += 1) {
-    const day = addUtcDays(startDay, offset);
-    if (day.getTime() > utcStartOfDay(latestAllowed).getTime()) {
-      continue;
-    }
-    const month = day.getUTCMonth();
-    if (options?.q4Only && !(month >= 9 && month <= 11)) {
-      continue;
-    }
-    const weight = monthWeight(month);
-    for (let repeat = 0; repeat < Math.round(weight * 10); repeat += 1) {
-      weightedDays.push(offset);
-    }
-  }
-
-  if (weightedDays.length === 0) {
-    throw new Error("historical sampler produced no eligible days");
+  const key = cacheKey(startDay, endDay, options);
+  let weightedDays = weightedOffsetCache.get(key);
+  if (!weightedDays) {
+    weightedDays = buildWeightedOffsets(
+      startDay,
+      totalDays,
+      latestAllowed,
+      options?.q4Only ?? false,
+    );
+    weightedOffsetCache.set(key, weightedDays);
   }
 
   const pickedOffset = rng.pick(weightedDays);
@@ -101,4 +148,10 @@ export function utcMonth(instant: Date): number {
 export function isQ4Month(instant: Date): boolean {
   const month = utcMonth(instant);
   return month >= 9 && month <= 11;
+}
+
+export function expectedQ4Fraction(): number {
+  const q4Weight = Q4_MONTH_WEIGHT * 3;
+  const baseWeight = BASE_MONTH_WEIGHT * 9;
+  return q4Weight / (q4Weight + baseWeight);
 }
