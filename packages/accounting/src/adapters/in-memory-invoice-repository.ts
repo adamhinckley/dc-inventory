@@ -140,6 +140,7 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
       paymentId: payment.id,
       invoiceId,
       amount: Money.fromMinorUnits(applicationAmountCents, payment.amount.currency),
+      createdAt: new Date(payment.createdAt.getTime()),
     };
     const rows = this.applicationsByInvoice.get(invoiceId) ?? [];
     rows.push(application);
@@ -161,6 +162,7 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
         application.amount.amountMinor,
         application.amount.currency,
       ),
+      createdAt: new Date(application.createdAt.getTime()),
     });
     this.applicationsByInvoice.set(application.invoiceId, rows);
   }

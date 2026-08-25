@@ -1,3 +1,4 @@
+import type { IClock } from "../domain/clock.js";
 import type { IInventoryReadModel, IStockLedger } from "../domain/ports/stock-ledger.js";
 import { InMemoryInventoryReadModel } from "./in-memory-inventory-read-model.js";
 import { InMemoryStockLedger } from "./in-memory-stock-ledger.js";
@@ -17,9 +18,9 @@ export class InMemoryInventoryUnitOfWork implements InventoryUnitOfWorkScope {
 
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor() {
+  constructor(clock?: IClock) {
     this.readModel = new InMemoryInventoryReadModel();
-    this.ledger = new InMemoryStockLedger(this.readModel);
+    this.ledger = new InMemoryStockLedger(this.readModel, clock);
   }
 
   run<T>(work: (scope: InventoryUnitOfWorkScope) => Promise<T>): Promise<T> {

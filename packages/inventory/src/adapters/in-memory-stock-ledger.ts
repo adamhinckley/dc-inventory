@@ -1,4 +1,5 @@
 import { LocationId } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
 import {
   computeSnapshotDelta,
   isOnceOnlyProvenanceType,
@@ -27,7 +28,10 @@ import type { InMemoryInventoryReadModel } from "./in-memory-inventory-read-mode
  * in the same unit of work scope as the read model.
  */
 export class InMemoryStockLedger implements IStockLedger {
-  constructor(private readonly readModel: InMemoryInventoryReadModel) {}
+  constructor(
+    private readonly readModel: InMemoryInventoryReadModel,
+    private readonly clock?: IClock,
+  ) {}
 
   recordInboundFromPo(command: RecordInboundFromPoCommand): Promise<StockCommandResult> {
     return this.record("InboundFromPo", command);
@@ -99,6 +103,7 @@ export class InMemoryStockLedger implements IStockLedger {
       return Promise.resolve(deltaResult);
     }
 
+    void this.clock;
     const movement: Movement = Object.freeze({
       id: MovementId.parse(newUuid()),
       sku: command.sku,

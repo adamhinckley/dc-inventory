@@ -1,3 +1,4 @@
+export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { InMemoryInventoryReadModel } from "./adapters/in-memory-inventory-read-model.js";
 export { InMemoryInventoryUnitOfWork } from "./adapters/in-memory-inventory-unit-of-work.js";
 export type { InventoryUnitOfWorkScope } from "./adapters/in-memory-inventory-unit-of-work.js";
@@ -30,6 +31,7 @@ export {
   movementMatchesCommand,
 } from "./domain/ledger-rules.js";
 export { MovementId } from "./domain/ids.js";
+export type { IClock } from "./domain/clock.js";
 export {
   MOVEMENT_REF_TYPES,
   MOVEMENT_TYPES,

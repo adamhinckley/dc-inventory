@@ -32,6 +32,7 @@ function toOrder(order: SalesOrder): SalesOrder {
     customerId: CustomerId.parse(order.customerId),
     documentNumber: order.documentNumber,
     status: order.status,
+    createdAt: new Date(order.createdAt.getTime()),
     lines: order.lines.map(toLine),
     shipLine1: order.shipLine1,
     shipLine2: order.shipLine2,
@@ -100,7 +101,7 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
     const existing = this.byId.get(normalized.id);
     this.byId.set(normalized.id, {
       order: normalized,
-      createdAt: existing?.createdAt ?? new Date(),
+      createdAt: existing?.createdAt ?? normalized.createdAt,
     });
     const sequence = parseDocumentSequence(normalized.documentNumber);
     if (sequence !== null && sequence >= this.nextSequence) {

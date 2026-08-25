@@ -30,6 +30,7 @@ function toOrder(order: PurchaseOrder): PurchaseOrder {
     supplierId: SupplierId.parse(order.supplierId),
     documentNumber: order.documentNumber,
     status: order.status,
+    createdAt: new Date(order.createdAt.getTime()),
     lines: order.lines.map(toLine),
   };
 }
@@ -74,7 +75,7 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     const existing = this.byId.get(normalized.id);
     this.byId.set(normalized.id, {
       order: normalized,
-      createdAt: existing?.createdAt ?? new Date(),
+      createdAt: existing?.createdAt ?? normalized.createdAt,
     });
     const sequence = parseDocumentSequence(normalized.documentNumber);
     if (sequence !== null && sequence >= this.nextSequence) {

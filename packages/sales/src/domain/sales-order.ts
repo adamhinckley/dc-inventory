@@ -33,5 +33,6 @@ export type SalesOrder = {
   readonly customerId: import("@dc-inventory/shared-kernel").CustomerId;
   readonly documentNumber: string;
   readonly status: SalesOrderStatus;
+  readonly createdAt: Date;
   readonly lines: readonly SalesOrderLine[];
 } & SalesOrderShipSnapshot;

@@ -1,4 +1,5 @@
 import { InvoiceId, Money } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
 import { newUuid, PaymentId } from "../domain/ids.js";
 import { computeRemainingCents } from "../domain/invoice.js";
 import type { IAccountingUnitOfWork } from "../domain/ports/invoice-repository.js";
@@ -17,7 +18,10 @@ export type RecordPaymentResult =
   | { ok: false; reason: "not_found" | "invalid" | "conflict" | "overpay" | "wrong_currency" };
 
 export class RecordPaymentUseCase {
-  constructor(private readonly unitOfWork: IAccountingUnitOfWork) {}
+  constructor(
+    private readonly unitOfWork: IAccountingUnitOfWork,
+    private readonly clock?: IClock,
+  ) {}
 
   async execute(input: RecordPaymentRequest): Promise<RecordPaymentResult> {
     void input.staffUserId;
@@ -29,6 +33,7 @@ export class RecordPaymentUseCase {
       return { ok: false, reason: "invalid" };
     }
 
+    void this.clock;
     return this.unitOfWork.run(async (uow) => {
       const existingPayment = await uow.invoices.findPaymentByIdempotencyKey(key);
       if (existingPayment !== null) {
@@ -71,6 +76,7 @@ export class RecordPaymentUseCase {
         customerId: invoice.customerId,
         amount: Money.fromMinorUnits(input.amountCents, currency),
         idempotencyKey: key,
+        createdAt: new Date(),
       };
       await uow.invoices.insertPaymentWithApplication(
         payment,
