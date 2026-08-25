@@ -1,3 +1,5 @@
+import type { DemoCounts, PersonaOrderBudgets } from "./constants.js";
+
 export type PlannedProduct = {
   key: string;
   sku: string;

@@ -1,4 +1,10 @@
-import { DEFAULT_DEMO_SEED } from "./constants.js";
+import {
+  DEFAULT_DEMO_SEED,
+  FULL_DEMO_COUNTS,
+  PERSONA_ORDER_BUDGETS,
+  type DemoCounts,
+  type PersonaOrderBudgets,
+} from "./constants.js";
 import { demoHistoricalStart } from "./dates.js";
 import {
   assertNamedCustomerPins,
@@ -22,26 +28,37 @@ import {
 import { createSeededRandom, type SeededRandom } from "./seeded-random.js";
 import type { DemoBookPlan, PlanDemoBookInput } from "./types.js";
 
+type PlanDemoBookOptions = PlanDemoBookInput & {
+  counts?: DemoCounts;
+  personaOrderBudgets?: PersonaOrderBudgets;
+};
+
 function scopedRandom(seed: string, label: string): SeededRandom {
   return createSeededRandom(`${seed}:${label}`);
 }
 
-export function planDemoBook(input: PlanDemoBookInput): DemoBookPlan {
+export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
   const seed = input.seed ?? DEFAULT_DEMO_SEED;
   const seedToday = input.seedToday;
   const historicalStart = demoHistoricalStart(seedToday);
+  const counts = input.counts ?? FULL_DEMO_COUNTS;
+  const personaOrderBudgets = input.personaOrderBudgets ?? PERSONA_ORDER_BUDGETS;
 
-  const products = planProducts(scopedRandom(seed, "products"));
+  const products = planProducts(scopedRandom(seed, "products"), counts);
   assertPhase1FixturesPreserved(products);
 
-  const suppliers = planSuppliers(scopedRandom(seed, "suppliers"));
-  const supplierProducts = planSupplierProducts(products, suppliers);
-  const { customers, shipTos } = planCustomersAndShipTos(scopedRandom(seed, "customers"));
+  const suppliers = planSuppliers(scopedRandom(seed, "suppliers"), counts);
+  const supplierProducts = planSupplierProducts(products, suppliers, counts);
+  const { customers, shipTos } = planCustomersAndShipTos(
+    scopedRandom(seed, "customers"),
+    counts,
+  );
   assertNamedCustomerPins(customers);
   const identity = planIdentityEmails();
 
   const leftoverConfirmedPurchaseOrderCount = chooseLeftoverPurchaseOrderCount(
     scopedRandom(seed, "po-leftover-count"),
+    counts,
   );
   const purchaseOrders = planPurchaseOrders({
     rng: scopedRandom(seed, "purchase-orders"),
@@ -50,10 +67,12 @@ export function planDemoBook(input: PlanDemoBookInput): DemoBookPlan {
     suppliers,
     supplierProducts,
     leftoverConfirmedCount: leftoverConfirmedPurchaseOrderCount,
+    counts,
   });
 
   const leftoverConfirmedSalesOrderCount = chooseLeftoverSalesOrderCounts(
     scopedRandom(seed, "so-leftover-count"),
+    counts,
   );
   const salesOrders = planSalesOrders({
     rng: scopedRandom(seed, "sales-orders"),
@@ -63,6 +82,8 @@ export function planDemoBook(input: PlanDemoBookInput): DemoBookPlan {
     shipTos,
     products,
     leftoverConfirmedCount: leftoverConfirmedSalesOrderCount,
+    counts,
+    personaOrderBudgets,
   });
 
   const idleParkShipped = salesOrders.filter(
@@ -72,14 +93,23 @@ export function planDemoBook(input: PlanDemoBookInput): DemoBookPlan {
     rng: scopedRandom(seed, "idle-park-ages"),
     seedToday,
     idleParkShippedOrders: idleParkShipped,
-    currentOrderKey: "so-idle-current",
+    currentOrderKey: counts.salesOrders > 20 ? "so-idle-current" : null,
   });
+  if (counts.salesOrders <= 20) {
+    for (const order of idleParkShipped) {
+      const instant = idleParkInstants.get(order.key);
+      if (instant !== undefined) {
+        order.plannedInstant = instant;
+      }
+    }
+  }
 
   const shippedInvoices = planShippedInvoices({
     salesOrders,
     customers,
     seedToday,
     idleParkInstants,
+    counts,
   });
 
   return {

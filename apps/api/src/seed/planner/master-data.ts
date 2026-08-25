@@ -10,12 +10,12 @@ import { DEMO_NAMED_CUSTOMERS } from "../reconciliation/expectations.js";
 import {
   DEMO_COUNTS,
   EXEMPTION_CUSTOMER_FRACTION,
-  GENERATED_SKU_COUNT,
   GENERATED_SKU_FIRST,
   GENERATED_SKU_PREFIX,
   MEMBER_PRICE_MAX_CENTS,
   MEMBER_PRICE_MIN_CENTS,
   SUPPLIER_SKU_TARGET,
+  type DemoCounts,
 } from "./constants.js";
 import type { SeededRandom } from "./seeded-random.js";
 import type {
@@ -50,7 +50,7 @@ function generatedSku(sequence: number): string {
   return `${GENERATED_SKU_PREFIX}${String(sequence).padStart(5, "0")}`;
 }
 
-export function planProducts(rng: SeededRandom): PlannedProduct[] {
+export function planProducts(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS): PlannedProduct[] {
   const products: PlannedProduct[] = PHASE1_PRODUCTS.map((row) => ({
     key: row.sku,
     sku: row.sku,
@@ -68,7 +68,7 @@ export function planProducts(rng: SeededRandom): PlannedProduct[] {
   }));
 
   const usedNames = new Set<string>([...RESERVED_PRODUCT_NAMES]);
-  for (let sequence = GENERATED_SKU_FIRST; sequence <= GENERATED_SKU_FIRST + GENERATED_SKU_COUNT - 1; sequence += 1) {
+  for (let sequence = GENERATED_SKU_FIRST; sequence <= GENERATED_SKU_FIRST + counts.generatedSkuCount - 1; sequence += 1) {
     const sku = generatedSku(sequence);
     let name = "";
     for (let attempt = 0; attempt < 10_000; attempt += 1) {
@@ -101,13 +101,13 @@ export function planProducts(rng: SeededRandom): PlannedProduct[] {
     });
   }
 
-  if (products.length !== DEMO_COUNTS.products) {
-    throw new Error(`expected ${String(DEMO_COUNTS.products)} products`);
+  if (products.length !== counts.products) {
+    throw new Error(`expected ${String(counts.products)} products`);
   }
   return products;
 }
 
-export function planSuppliers(rng: SeededRandom): PlannedSupplier[] {
+export function planSuppliers(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS): PlannedSupplier[] {
   const suppliers: PlannedSupplier[] = [
     {
       key: "vend-001",
@@ -116,7 +116,7 @@ export function planSuppliers(rng: SeededRandom): PlannedSupplier[] {
     },
   ];
   const suffixes = rng.shuffle([...SUPPLIER_MILL_SUFFIXES]);
-  for (let index = 2; index <= DEMO_COUNTS.suppliers; index += 1) {
+  for (let index = 2; index <= counts.suppliers; index += 1) {
     const suffix = suffixes[index - 2];
     if (suffix === undefined) {
       throw new Error("supplier suffix list exhausted");
@@ -139,6 +139,7 @@ export function planSuppliers(rng: SeededRandom): PlannedSupplier[] {
 export function planSupplierProducts(
   products: readonly PlannedProduct[],
   suppliers: readonly PlannedSupplier[],
+  counts: DemoCounts = DEMO_COUNTS,
 ): PlannedSupplierProduct[] {
   const generated = products.filter((row) => !row.isPhase1Fixture).map((row) => row.sku);
   const assignments: PlannedSupplierProduct[] = PHASE1_PRODUCTS.map((row) => ({
@@ -147,7 +148,11 @@ export function planSupplierProducts(
     minOrderQty: null,
   }));
 
-  const vend001GeneratedTake = Math.max(0, SUPPLIER_SKU_TARGET - PHASE1_PRODUCTS.length);
+  const supplierSkuTarget = Math.ceil(counts.products / counts.suppliers);
+  const vend001GeneratedTake = Math.max(
+    0,
+    Math.min(supplierSkuTarget - PHASE1_PRODUCTS.length, generated.length),
+  );
   const vend001Generated = generated.slice(0, vend001GeneratedTake);
   const remainingGenerated = generated.slice(vend001GeneratedTake);
   for (const sku of vend001Generated) {
@@ -225,7 +230,10 @@ function buildMixAddress(
   throw new Error("unable to generate enough unique mix addresses");
 }
 
-export function planCustomersAndShipTos(rng: SeededRandom): {
+export function planCustomersAndShipTos(
+  rng: SeededRandom,
+  counts: DemoCounts = DEMO_COUNTS,
+): {
   customers: PlannedCustomer[];
   shipTos: PlannedShipTo[];
 } {
@@ -268,7 +276,7 @@ export function planCustomersAndShipTos(rng: SeededRandom): {
     });
   }
 
-  for (let index = 1; index <= DEMO_COUNTS.mixCustomers; index += 1) {
+  for (let index = 1; index <= counts.mixCustomers; index += 1) {
     const key = `mix-${String(index).padStart(3, "0")}`;
     const name = buildMixCustomerName(rng, usedNames);
     const shipToKey = `ship-${key}`;
@@ -286,7 +294,7 @@ export function planCustomersAndShipTos(rng: SeededRandom): {
     });
   }
 
-  const exemptionTarget = Math.round(DEMO_COUNTS.customers * EXEMPTION_CUSTOMER_FRACTION);
+  const exemptionTarget = Math.round(counts.customers * EXEMPTION_CUSTOMER_FRACTION);
   const exemptionKeys = rng
     .shuffle(customers.map((row) => row.key))
     .slice(0, exemptionTarget);
@@ -295,8 +303,8 @@ export function planCustomersAndShipTos(rng: SeededRandom): {
     customer.hasExemptionCertificate = exempt.has(customer.key);
   }
 
-  if (customers.length !== DEMO_COUNTS.customers) {
-    throw new Error(`expected ${String(DEMO_COUNTS.customers)} customers`);
+  if (customers.length !== counts.customers) {
+    throw new Error(`expected ${String(counts.customers)} customers`);
   }
   return { customers, shipTos };
 }

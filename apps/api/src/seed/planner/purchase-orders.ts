@@ -1,5 +1,4 @@
 import { PHASE1_PRODUCT_SKUS } from "../phase1-fixture.js";
-import { FULL_DEMO_RECONCILIATION_EXPECTATIONS } from "../reconciliation/expectations.js";
 import {
   DEMO_COUNTS,
   PO_LINE_COUNT_MAX,
@@ -8,13 +7,14 @@ import {
   PO_LINE_QTY_MAX,
   PO_LINE_QTY_MEAN,
   PO_LINE_QTY_MIN,
+  type DemoCounts,
 } from "./constants.js";
 import {
   buildCorpusIntegers,
   mean,
   pickDistinct,
 } from "./corpus-samplers.js";
-import { sampleHistoricalInstant, sampleLeftoverInstant } from "./dates.js";
+import { addUtcDays, sampleHistoricalInstant, sampleLeftoverInstant } from "./dates.js";
 import type { SeededRandom } from "./seeded-random.js";
 import type {
   PlannedProduct,
@@ -30,6 +30,34 @@ function skusForSupplier(
   return supplierProducts.filter((row) => row.supplierKey === supplierKey).map((row) => row.sku);
 }
 
+function poLineProfile(counts: DemoCounts): {
+  lineMin: number;
+  lineMax: number;
+  lineMean: number;
+  qtyMin: number;
+  qtyMax: number;
+  qtyMean: number;
+} {
+  if (counts.purchaseOrders <= 20) {
+    return {
+      lineMin: 1,
+      lineMax: 1,
+      lineMean: 1,
+      qtyMin: 24,
+      qtyMax: 24,
+      qtyMean: 24,
+    };
+  }
+  return {
+    lineMin: PO_LINE_COUNT_MIN,
+    lineMax: PO_LINE_COUNT_MAX,
+    lineMean: PO_LINE_COUNT_MEAN,
+    qtyMin: PO_LINE_QTY_MIN,
+    qtyMax: PO_LINE_QTY_MAX,
+    qtyMean: PO_LINE_QTY_MEAN,
+  };
+}
+
 export function planPurchaseOrders(input: {
   rng: SeededRandom;
   seedToday: Date;
@@ -37,22 +65,25 @@ export function planPurchaseOrders(input: {
   suppliers: readonly PlannedSupplier[];
   supplierProducts: readonly PlannedSupplierProduct[];
   leftoverConfirmedCount: number;
+  counts?: DemoCounts;
 }): PlannedPurchaseOrder[] {
-  const receivedCount = DEMO_COUNTS.purchaseOrders - input.leftoverConfirmedCount;
+  const counts = input.counts ?? DEMO_COUNTS;
+  const lineProfile = poLineProfile(counts);
+  const receivedCount = counts.purchaseOrders - input.leftoverConfirmedCount;
   const lineCounts = buildCorpusIntegers(
     input.rng,
-    DEMO_COUNTS.purchaseOrders,
-    PO_LINE_COUNT_MIN,
-    PO_LINE_COUNT_MAX,
-    PO_LINE_COUNT_MEAN,
+    counts.purchaseOrders,
+    lineProfile.lineMin,
+    lineProfile.lineMax,
+    lineProfile.lineMean,
   );
   const totalLines = lineCounts.reduce((sum, value) => sum + value, 0);
   const lineQuantities = buildCorpusIntegers(
     input.rng,
     totalLines,
-    PO_LINE_QTY_MIN,
-    PO_LINE_QTY_MAX,
-    PO_LINE_QTY_MEAN,
+    lineProfile.qtyMin,
+    lineProfile.qtyMax,
+    lineProfile.qtyMean,
   );
 
   const orders: PlannedPurchaseOrder[] = [];
@@ -131,24 +162,71 @@ export function planPurchaseOrders(input: {
       plannedInstant: sampleLeftoverInstant(
         input.rng,
         input.seedToday,
-        FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays,
+        counts.leftoverWindowDays,
       ),
       status: "leftoverConfirmed",
       lines,
     });
   }
 
-  for (const sku of PHASE1_PRODUCT_SKUS) {
-    if (!phase1Coverage.has(sku)) {
-      throw new Error(`Phase 1 SKU ${sku} missing from received PO plan`);
+  if (counts.purchaseOrders <= 20) {
+    const generatedSkus = [
+      ...new Set(
+        input.supplierProducts
+          .map((row) => row.sku)
+          .filter(
+            (sku) =>
+              !PHASE1_PRODUCT_SKUS.includes(sku as (typeof PHASE1_PRODUCT_SKUS)[number]),
+          ),
+      ),
+    ].sort((left, right) => left.localeCompare(right));
+    const receivedOrders = orders.filter((row) => row.status === "received");
+    for (const [index, order] of receivedOrders.entries()) {
+      const line = order.lines[0];
+      if (line === undefined) {
+        throw new Error(`reduced received PO ${order.key} is missing a line`);
+      }
+      const phase1Sku = PHASE1_PRODUCT_SKUS[index];
+      if (phase1Sku !== undefined) {
+        line.sku = phase1Sku;
+        order.supplierKey = vend001.key;
+        phase1Coverage.add(phase1Sku);
+        continue;
+      }
+      const offset = index - PHASE1_PRODUCT_SKUS.length;
+      const sku = generatedSkus[offset % generatedSkus.length];
+      if (sku === undefined) {
+        throw new Error("reduced received PO is missing a generated SKU");
+      }
+      const supplierProduct = input.supplierProducts.find((row) => row.sku === sku);
+      if (supplierProduct === undefined) {
+        throw new Error(`missing supplier product for ${sku}`);
+      }
+      line.sku = sku;
+      order.supplierKey = supplierProduct.supplierKey;
+      phase1Coverage.add(sku);
+    }
+    for (const [index, order] of receivedOrders.entries()) {
+      order.plannedInstant = addUtcDays(
+        input.seedToday,
+        -(200 + (receivedOrders.length - index)),
+      );
     }
   }
 
-  if (Math.abs(mean(lineCounts) - PO_LINE_COUNT_MEAN) > 1e-9) {
-    throw new Error(`PO line corpus mean ${String(mean(lineCounts))}, expected ${String(PO_LINE_COUNT_MEAN)}`);
+  if (counts.purchaseOrders > 20) {
+    for (const sku of PHASE1_PRODUCT_SKUS) {
+      if (!phase1Coverage.has(sku)) {
+        throw new Error(`Phase 1 SKU ${sku} missing from received PO plan`);
+      }
+    }
   }
-  if (Math.abs(mean(lineQuantities) - PO_LINE_QTY_MEAN) > 1e-9) {
-    throw new Error(`PO qty corpus mean ${String(mean(lineQuantities))}, expected ${String(PO_LINE_QTY_MEAN)}`);
+
+  if (Math.abs(mean(lineCounts) - lineProfile.lineMean) > 1e-9) {
+    throw new Error(`PO line corpus mean ${String(mean(lineCounts))}, expected ${String(lineProfile.lineMean)}`);
+  }
+  if (Math.abs(mean(lineQuantities) - lineProfile.qtyMean) > 1e-9) {
+    throw new Error(`PO qty corpus mean ${String(mean(lineQuantities))}, expected ${String(lineProfile.qtyMean)}`);
   }
   for (const order of orders) {
     const uniqueSkus = new Set(order.lines.map((line) => line.sku));
@@ -160,9 +238,9 @@ export function planPurchaseOrders(input: {
   return orders;
 }
 
-export function chooseLeftoverPurchaseOrderCount(rng: SeededRandom): number {
-  return rng.int(
-    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedPurchaseOrderMin,
-    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedPurchaseOrderMax,
-  );
+export function chooseLeftoverPurchaseOrderCount(
+  rng: SeededRandom,
+  counts: DemoCounts = DEMO_COUNTS,
+): number {
+  return rng.int(counts.leftoverConfirmedPurchaseOrderMin, counts.leftoverConfirmedPurchaseOrderMax);
 }

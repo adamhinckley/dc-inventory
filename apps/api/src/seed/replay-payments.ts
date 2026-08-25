@@ -34,6 +34,7 @@ export type ReplayPaymentsPorts = {
 export type ReplayPaymentsInput = {
   plan: DemoBookPlan;
   staffUserId: StaffUserId;
+  assertWithinBudget?: () => void;
 };
 
 export type ReplayPaymentsResult = {
@@ -77,6 +78,7 @@ export async function runReplayPayments(
   let paymentCount = 0;
 
   for (const planned of paidInvoicesInReplayOrder(input.plan)) {
+    input.assertWithinBudget?.();
     const orderId = salesOrderIdByKey.get(planned.salesOrderKey);
     if (orderId === undefined) {
       throw new ReplayPaymentsError(`missing sales order key ${planned.salesOrderKey}`);

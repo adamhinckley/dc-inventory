@@ -1,5 +1,4 @@
 import { PHASE1_PRODUCT_SKUS } from "../phase1-fixture.js";
-import { FULL_DEMO_RECONCILIATION_EXPECTATIONS } from "../reconciliation/expectations.js";
 import { utcDayDiff, demoArBucket } from "../reconciliation/assert-demo-book.js";
 import {
   DEMO_COUNTS,
@@ -16,6 +15,8 @@ import {
   SO_LINE_QTY_MAX,
   SO_LINE_QTY_MEAN,
   SO_LINE_QTY_MIN,
+  type DemoCounts,
+  type PersonaOrderBudgets,
 } from "./constants.js";
 import {
   allocateExactCounts,
@@ -44,9 +45,13 @@ function buildCustomerLineCounts(
   rng: SeededRandom,
   customer: PlannedCustomer,
   orderCount: number,
+  counts: DemoCounts,
 ): number[] {
   if (orderCount === 0) {
     return [];
+  }
+  if (counts.salesOrders <= 20) {
+    return Array.from({ length: orderCount }, () => 1);
   }
   if (customer.persona === "northstar") {
     return Array.from({ length: orderCount }, () =>
@@ -70,26 +75,32 @@ function buildCustomerLineCounts(
 function allocateCustomerOrderCounts(
   rng: SeededRandom,
   customers: readonly PlannedCustomer[],
+  counts: DemoCounts,
+  personaOrderBudgets: PersonaOrderBudgets,
 ): CustomerOrderCounts {
-  const counts = new Map<string, number>();
-  counts.set("northstar", PERSONA_ORDER_BUDGETS.northstar);
-  counts.set("harvest", PERSONA_ORDER_BUDGETS.harvest);
-  counts.set("idlePark", PERSONA_ORDER_BUDGETS.idlePark);
+  const orderCounts = new Map<string, number>();
+  orderCounts.set("northstar", personaOrderBudgets.northstar);
+  orderCounts.set("harvest", personaOrderBudgets.harvest);
+  orderCounts.set("idlePark", personaOrderBudgets.idlePark);
 
   const remainderKeys = customers
     .filter((row) => row.persona === "acme" || row.persona === "mix")
     .map((row) => row.key);
-  const remainder = DEMO_COUNTS.salesOrders - PERSONA_ORDER_BUDGETS.northstar - PERSONA_ORDER_BUDGETS.harvest - PERSONA_ORDER_BUDGETS.idlePark;
+  const remainder =
+    counts.salesOrders -
+    personaOrderBudgets.northstar -
+    personaOrderBudgets.harvest -
+    personaOrderBudgets.idlePark;
   const allocated = allocateExactCounts(rng, remainderKeys, remainder);
   for (const [key, value] of allocated.entries()) {
-    counts.set(key, value);
+    orderCounts.set(key, value);
   }
 
-  const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
-  if (total !== DEMO_COUNTS.salesOrders) {
+  const total = [...orderCounts.values()].reduce((sum, value) => sum + value, 0);
+  if (total !== counts.salesOrders) {
     throw new Error(`sales order budget total ${String(total)}`);
   }
-  return counts;
+  return orderCounts;
 }
 
 function assignLeftoverCounts(
@@ -97,8 +108,10 @@ function assignLeftoverCounts(
   customers: readonly PlannedCustomer[],
   orderCounts: CustomerOrderCounts,
   leftoverConfirmedCount: number,
+  counts: DemoCounts,
 ): Map<string, { confirmed: number; draft: number }> {
-  const leftoverDraftTotal = DEMO_COUNTS.salesOrders - DEMO_COUNTS.shippedSalesOrders - leftoverConfirmedCount;
+  const leftoverDraftTotal =
+    counts.salesOrders - counts.shippedSalesOrders - leftoverConfirmedCount;
   const result = new Map<string, { confirmed: number; draft: number }>(
     customers.map((row) => [row.key, { confirmed: 0, draft: 0 }]),
   );
@@ -216,11 +229,14 @@ function sampleShippedInstant(
   return sampleHistoricalInstant(rng, historicalStart, seedToday, { seedToday });
 }
 
-export function chooseLeftoverSalesOrderCounts(rng: SeededRandom): number {
-  return rng.int(
-    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMin,
-    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMax,
-  );
+export function chooseLeftoverSalesOrderCounts(
+  rng: SeededRandom,
+  counts: DemoCounts = DEMO_COUNTS,
+): number {
+  if (counts.salesOrders <= 20) {
+    return 0;
+  }
+  return rng.int(counts.leftoverConfirmedSalesOrderMin, counts.leftoverConfirmedSalesOrderMax);
 }
 
 export function planSalesOrders(input: {
@@ -231,13 +247,23 @@ export function planSalesOrders(input: {
   shipTos: readonly PlannedShipTo[];
   products: readonly PlannedProduct[];
   leftoverConfirmedCount: number;
+  counts?: DemoCounts;
+  personaOrderBudgets?: PersonaOrderBudgets;
 }): PlannedSalesOrder[] {
-  const orderCounts = allocateCustomerOrderCounts(input.rng, input.customers);
+  const counts = input.counts ?? DEMO_COUNTS;
+  const personaOrderBudgets = input.personaOrderBudgets ?? PERSONA_ORDER_BUDGETS;
+  const orderCounts = allocateCustomerOrderCounts(
+    input.rng,
+    input.customers,
+    counts,
+    personaOrderBudgets,
+  );
   const leftovers = assignLeftoverCounts(
     input.rng,
     input.customers,
     orderCounts,
     input.leftoverConfirmedCount,
+    counts,
   );
 
   const lineCounts: number[] = [];
@@ -249,7 +275,7 @@ export function planSalesOrders(input: {
   const lineCountQueues = new Map<string, number[]>(
     input.customers.map((customer) => {
       const orderCount = orderCounts.get(customer.key) ?? 0;
-      return [customer.key, buildCustomerLineCounts(input.rng, customer, orderCount)];
+      return [customer.key, buildCustomerLineCounts(input.rng, customer, orderCount, counts)];
     }),
   );
 
@@ -266,8 +292,8 @@ export function planSalesOrders(input: {
     return lineCount;
   };
 
-  const idleParkCurrentKey = `so-idle-current`;
-  let idleParkCurrentAssigned = false;
+  const idleParkCurrentKey = counts.salesOrders > 20 ? `so-idle-current` : null;
+  let idleParkCurrentAssigned = counts.salesOrders <= 20;
 
   for (const customer of input.customers) {
     const totalForCustomer = orderCounts.get(customer.key) ?? 0;
@@ -286,7 +312,7 @@ export function planSalesOrders(input: {
       }
       skus.forEach((sku) => phase1Coverage.add(sku));
       let orderKey = `so-${String(orderSequence).padStart(5, "0")}`;
-      if (customer.persona === "idlePark" && !idleParkCurrentAssigned) {
+      if (customer.persona === "idlePark" && !idleParkCurrentAssigned && idleParkCurrentKey !== null) {
         orderKey = idleParkCurrentKey;
         idleParkCurrentAssigned = true;
       }
@@ -321,7 +347,7 @@ export function planSalesOrders(input: {
         plannedInstant: sampleLeftoverInstant(
           input.rng,
           input.seedToday,
-          FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays,
+          counts.leftoverWindowDays,
         ),
         status: "leftoverConfirmed",
         shipTo: shipToSnapshot(input.shipTos, customer),
@@ -343,7 +369,7 @@ export function planSalesOrders(input: {
         plannedInstant: sampleLeftoverInstant(
           input.rng,
           input.seedToday,
-          FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays,
+          counts.leftoverWindowDays,
         ),
         status: "leftoverDraft",
         shipTo: shipToSnapshot(input.shipTos, customer),
@@ -356,13 +382,47 @@ export function planSalesOrders(input: {
     }
   }
 
+  if (counts.salesOrders <= 20) {
+    const generatedSkus = allSkus.filter(
+      (sku) => !PHASE1_PRODUCT_SKUS.includes(sku as (typeof PHASE1_PRODUCT_SKUS)[number]),
+    );
+    const shippedOrders = orders.filter((row) => row.status === "shipped");
+    for (const [index, order] of shippedOrders.entries()) {
+      const line = order.lines[0];
+      if (line === undefined) {
+        throw new Error(`reduced shipped order ${order.key} is missing a line`);
+      }
+      const phase1Sku = PHASE1_PRODUCT_SKUS[index];
+      if (phase1Sku !== undefined) {
+        line.sku = phase1Sku;
+        line.unitPriceCents = priceBySku.get(phase1Sku) ?? 0;
+        phase1Coverage.add(phase1Sku);
+        continue;
+      }
+      const offset = index - PHASE1_PRODUCT_SKUS.length;
+      const sku = generatedSkus[offset % generatedSkus.length];
+      if (sku === undefined) {
+        throw new Error("reduced shipped order is missing a generated SKU");
+      }
+      line.sku = sku;
+      line.unitPriceCents = priceBySku.get(sku) ?? 0;
+      phase1Coverage.add(sku);
+    }
+    for (const [index, order] of shippedOrders.entries()) {
+      order.plannedInstant = addUtcDays(input.seedToday, -(shippedOrders.length - index));
+    }
+  }
+
   const totalLines = lineCounts.reduce((sum, value) => sum + value, 0);
+  const soQtyMin = counts.salesOrders <= 20 ? 1 : SO_LINE_QTY_MIN;
+  const soQtyMax = counts.salesOrders <= 20 ? 1 : SO_LINE_QTY_MAX;
+  const soQtyMean = counts.salesOrders <= 20 ? 1 : SO_LINE_QTY_MEAN;
   const quantities = buildCorpusIntegers(
     input.rng,
     totalLines,
-    SO_LINE_QTY_MIN,
-    SO_LINE_QTY_MAX,
-    SO_LINE_QTY_MEAN,
+    soQtyMin,
+    soQtyMax,
+    soQtyMean,
   );
   let quantityCursor = 0;
   for (const order of orders) {
@@ -380,16 +440,18 @@ export function planSalesOrders(input: {
     }
   }
 
-  for (const sku of PHASE1_PRODUCT_SKUS) {
-    if (!phase1Coverage.has(sku)) {
-      throw new Error(`Phase 1 SKU ${sku} missing from shipped SO plan`);
+  if (counts.salesOrders > 20) {
+    for (const sku of PHASE1_PRODUCT_SKUS) {
+      if (!phase1Coverage.has(sku)) {
+        throw new Error(`Phase 1 SKU ${sku} missing from shipped SO plan`);
+      }
     }
   }
 
-  if (orders.length !== DEMO_COUNTS.salesOrders) {
-    throw new Error(`expected ${String(DEMO_COUNTS.salesOrders)} sales orders`);
+  if (orders.length !== counts.salesOrders) {
+    throw new Error(`expected ${String(counts.salesOrders)} sales orders`);
   }
-  if (orders.filter((row) => row.status === "shipped").length !== DEMO_COUNTS.shippedSalesOrders) {
+  if (orders.filter((row) => row.status === "shipped").length !== counts.shippedSalesOrders) {
     throw new Error("shipped sales order count mismatch");
   }
   const defaultPersonaLineCounts = orders
@@ -399,6 +461,7 @@ export function planSalesOrders(input: {
     })
     .flatMap((row) => [row.lines.length]);
   if (
+    counts.salesOrders > 20 &&
     defaultPersonaLineCounts.length > 0 &&
     Math.abs(mean(defaultPersonaLineCounts) - SO_LINE_COUNT_DEFAULT_MEAN) > 1e-9
   ) {
@@ -406,7 +469,7 @@ export function planSalesOrders(input: {
       `default SO line corpus mean ${String(mean(defaultPersonaLineCounts))}, expected ${String(SO_LINE_COUNT_DEFAULT_MEAN)}`,
     );
   }
-  if (Math.abs(mean(quantities) - SO_LINE_QTY_MEAN) > 1e-9) {
+  if (counts.salesOrders > 20 && Math.abs(mean(quantities) - SO_LINE_QTY_MEAN) > 1e-9) {
     throw new Error(`SO qty corpus mean ${String(mean(quantities))}, expected ${String(SO_LINE_QTY_MEAN)}`);
   }
 
@@ -415,28 +478,30 @@ export function planSalesOrders(input: {
     throw new Error("Acme Wholesale has no leftover draft");
   }
 
-  const harvestShipped = orders.filter((row) => row.customerKey === "harvest" && row.status === "shipped");
-  const harvestQ4 = harvestShipped.filter((row) => isQ4Month(row.plannedInstant)).length;
-  const harvestTarget = Math.round(harvestShipped.length * HARVEST_Q4_SHIPPED_FRACTION);
-  if (harvestQ4 < harvestTarget) {
-    throw new Error("Harvest Q4 shipped fraction not met");
+  if (counts.salesOrders > 20) {
+    const harvestShipped = orders.filter((row) => row.customerKey === "harvest" && row.status === "shipped");
+    const harvestQ4 = harvestShipped.filter((row) => isQ4Month(row.plannedInstant)).length;
+    const harvestTarget = Math.round(harvestShipped.length * HARVEST_Q4_SHIPPED_FRACTION);
+    if (harvestQ4 < harvestTarget) {
+      throw new Error("Harvest Q4 shipped fraction not met");
+    }
   }
 
   const idleOutside = orders.filter(
     (row) =>
       row.customerKey === "idlePark" &&
       row.status === "shipped" &&
-      row.key !== idleParkCurrentKey &&
+      (idleParkCurrentKey === null || row.key !== idleParkCurrentKey) &&
       utcDayDiff(row.plannedInstant, input.seedToday) >= IDLE_PARK_DORMANCY_DAYS,
   );
-  if (idleOutside.length === 0) {
+  if (idleOutside.length === 0 && counts.salesOrders > 20) {
     throw new Error("Idle Park dormancy plan missing older shipped history");
   }
 
   const leftoversAllRecent = orders
     .filter((row) => row.status !== "shipped")
     .every((row) =>
-      isWithinLastDays(row.plannedInstant, input.seedToday, FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays),
+      isWithinLastDays(row.plannedInstant, input.seedToday, counts.leftoverWindowDays),
     );
   if (!leftoversAllRecent) {
     throw new Error("leftover sales orders are not all recent");
@@ -449,11 +514,14 @@ export function planIdleParkAges(input: {
   rng: SeededRandom;
   seedToday: Date;
   idleParkShippedOrders: readonly PlannedSalesOrder[];
-  currentOrderKey: string;
+  currentOrderKey: string | null;
 }): Map<string, Date> {
   const buckets = ["current", "30_59", "60_89", "90_plus"] as const;
   const planned = new Map<string, Date>();
-  const historical = input.idleParkShippedOrders.filter((row) => row.key !== input.currentOrderKey);
+  const historical =
+    input.currentOrderKey === null
+      ? [...input.idleParkShippedOrders]
+      : input.idleParkShippedOrders.filter((row) => row.key !== input.currentOrderKey);
   if (historical.length < buckets.length) {
     throw new Error("not enough Idle Park shipped orders to cover AR buckets");
   }
@@ -487,7 +555,10 @@ export function planIdleParkAges(input: {
     );
   }
 
-  const current = input.idleParkShippedOrders.find((row) => row.key === input.currentOrderKey);
+  const current =
+    input.currentOrderKey === null
+      ? undefined
+      : input.idleParkShippedOrders.find((row) => row.key === input.currentOrderKey);
   if (current) {
     planned.set(current.key, addUtcDays(input.seedToday, -5));
   }
