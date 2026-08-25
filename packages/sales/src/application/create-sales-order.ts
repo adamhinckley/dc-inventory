@@ -109,14 +109,14 @@ export class CreateSalesOrderUseCase {
       taxCategoryCode: line.taxCategoryCode,
     }));
 
-    void this.clock;
+    const createdAt = this.clock?.now() ?? new Date();
     const documentNumber = await this.salesOrders.nextDocumentNumber();
     const salesOrder: SalesOrder = {
       id: OrderId.parse(newUuid()),
       customerId: input.customerId,
       documentNumber,
       status: "draft",
-      createdAt: new Date(),
+      createdAt,
       lines,
       shipLine1: input.shipLine1,
       shipLine2: input.shipLine2,

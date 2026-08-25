@@ -120,7 +120,10 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const invoices = new DrizzleInvoiceRepository(tx);
     const purchasingInventoryCommands = new StockLedgerInventoryCommandAdapter(ledger);
     const salesInventoryCommands = new SalesStockLedgerInventoryCommandAdapter(ledger);
-    const salesAccountingCommands = new SalesInvoiceAccountingCommandAdapter(invoices);
+    const salesAccountingCommands = new SalesInvoiceAccountingCommandAdapter(
+      invoices,
+      this.clock,
+    );
 
     const purchasingScope: IUnitOfWork["purchasing"] = {
       purchaseOrders,

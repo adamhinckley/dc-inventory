@@ -284,12 +284,14 @@ function salesServices(
   salesOrderRepo: ISalesOrderRepository,
   customerRepo: ICustomerRepository,
   unitOfWork: IUnitOfWork,
+  clock: import("@dc-inventory/sales").IClock,
 ): SalesHttpServices {
   return {
     listSalesOrders: new ListSalesOrdersUseCase(salesOrderRepo),
     createSalesOrder: new CreateSalesOrderUseCase(
       salesOrderRepo,
       customerLookupPort(customerRepo),
+      clock,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
     confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales),
@@ -451,7 +453,7 @@ export function composeAppServices(
     customers: customersServices(customerRepo, contactRepo, shipToRepo, exemptionRepo),
     catalog: catalogServices(productRepo, qtyRead),
     purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork, clock),
-    sales: salesServices(salesOrderRepo, customerRepo, unitOfWork),
+    sales: salesServices(salesOrderRepo, customerRepo, unitOfWork, clock),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     unitOfWork,
   };

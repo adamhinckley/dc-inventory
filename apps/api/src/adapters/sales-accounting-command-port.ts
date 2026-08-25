@@ -1,5 +1,5 @@
 import type { IInvoiceRepository } from "@dc-inventory/accounting";
-import { AccountingCommandAdapter } from "@dc-inventory/sales";
+import { AccountingCommandAdapter, type IClock } from "@dc-inventory/sales";
 import type {
   AccountingCommandResult,
   CreateInvoiceForOrderCommand,
@@ -9,8 +9,8 @@ import type {
 export class SalesInvoiceAccountingCommandAdapter implements IAccountingCommandPort {
   private readonly adapter: AccountingCommandAdapter;
 
-  constructor(invoices: IInvoiceRepository) {
-    this.adapter = new AccountingCommandAdapter(invoices);
+  constructor(invoices: IInvoiceRepository, clock?: IClock) {
+    this.adapter = new AccountingCommandAdapter(invoices, clock);
   }
 
   createInvoiceForOrder(command: CreateInvoiceForOrderCommand): Promise<AccountingCommandResult> {

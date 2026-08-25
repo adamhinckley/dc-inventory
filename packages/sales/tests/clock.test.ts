@@ -21,7 +21,7 @@ const FIXED = new Date("2021-06-15T12:00:00.000Z");
 
 async function harness() {
   const clock = new InMemoryClock(FIXED);
-  const uow = new InMemorySalesUnitOfWork();
+  const uow = new InMemorySalesUnitOfWork(clock);
   const customers = {
     findById: async (id: CustomerId) => (id === CUSTOMER_ID ? { id } : null),
   };
@@ -92,7 +92,7 @@ describe("Sales seed clock (in-memory)", () => {
     expect(invoice?.documentNumber).toBe("INV-00001");
   });
 
-  it.fails("persists the injected posting instant on the invoice created at ship", async () => {
+  it("persists the injected posting instant on the invoice created at ship", async () => {
     const h = await harness();
     await h.uow.run(async () => {
       const stock = await h.adjustmentIncrease.execute({
@@ -134,7 +134,7 @@ describe("Sales seed clock (in-memory)", () => {
     expect(invoice?.postedAt?.getTime()).toBe(FIXED.getTime());
   });
 
-  it.fails("persists the injected creation instant on a sales order", async () => {
+  it("persists the injected creation instant on a sales order", async () => {
     const h = await harness();
     const created = await h.create.execute({
       staffUserId: STAFF_ID,
