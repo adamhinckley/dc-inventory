@@ -22,6 +22,7 @@ export type { DemoReconciliationContract, DemoReconciliationResult } from "./con
 export { DEMO_RECONCILIATION_CONTRACTS } from "./contracts.js";
 export type { DemoBook, IDemoBookReader } from "./demo-book.js";
 export { InMemoryDemoBookReader } from "./in-memory-demo-book-reader.js";
+export { PostgresDemoBookReader } from "./postgres-demo-book-reader.js";
 export { recomputeStockFromMovements, stockKey };
 
 const NAMED_CUSTOMER_NAMES: ReadonlySet<string> = new Set(
