@@ -5,6 +5,7 @@ import {
   RecordInboundFromPoUseCase,
   type IStockLedger,
 } from "@dc-inventory/inventory";
+import type { IClock } from "../domain/clock.js";
 import type {
   GoodsReceivedCommand,
   IInventoryCommandPort,
@@ -73,8 +74,13 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
 export class InMemoryPurchasingUnitOfWork implements IPurchasingUnitOfWork {
   readonly purchaseOrders = new InMemoryPurchaseOrderRepository();
   readonly suppliers = new InMemorySupplierRepository();
-  private readonly inventoryUow = new InMemoryInventoryUnitOfWork();
-  readonly inventory = new InventoryCommandAdapter(this.inventoryUow.ledger);
+  private readonly inventoryUow: InMemoryInventoryUnitOfWork;
+  readonly inventory: InventoryCommandAdapter;
+
+  constructor(clock?: IClock) {
+    this.inventoryUow = new InMemoryInventoryUnitOfWork(clock);
+    this.inventory = new InventoryCommandAdapter(this.inventoryUow.ledger);
+  }
 
   run<T>(work: (uow: IPurchasingUnitOfWork) => Promise<T>): Promise<T> {
     return this.inventoryUow.run(async () => work(this));

@@ -21,7 +21,7 @@ const FIXED = new Date("2021-06-15T12:00:00.000Z");
 
 async function harness() {
   const clock = new InMemoryClock(FIXED);
-  const uow = new InMemoryPurchasingUnitOfWork();
+  const uow = new InMemoryPurchasingUnitOfWork(clock);
   const supplierId = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await uow.suppliers.save({
     id: supplierId,
@@ -83,7 +83,7 @@ describe("Purchasing seed clock (in-memory)", () => {
     expect(snap.onOrder).toBe(0);
   });
 
-  it.fails("persists the injected creation instant on a purchase order", async () => {
+  it("persists the injected creation instant on a purchase order", async () => {
     const h = await harness();
     const created = await h.create.execute({
       staffUserId: STAFF_ID,
