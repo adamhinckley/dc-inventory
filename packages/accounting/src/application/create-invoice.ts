@@ -37,7 +37,7 @@ export class CreateInvoiceUseCase {
       return { ok: false, reason: "invalid" };
     }
 
-    void this.clock;
+    const postedAt = this.clock?.now() ?? new Date();
     return this.unitOfWork.run(async (uow) => {
       const existing = await uow.invoices.findByOrderId(input.orderId);
       if (existing !== null) {
@@ -54,7 +54,7 @@ export class CreateInvoiceUseCase {
         customerId: input.customerId,
         documentNumber,
         status: "posted",
-        postedAt: new Date(),
+        postedAt,
         subtotal,
         taxTotal: zero,
         total: subtotal,

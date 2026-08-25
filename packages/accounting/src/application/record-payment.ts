@@ -33,7 +33,7 @@ export class RecordPaymentUseCase {
       return { ok: false, reason: "invalid" };
     }
 
-    void this.clock;
+    const createdAt = this.clock?.now() ?? new Date();
     return this.unitOfWork.run(async (uow) => {
       const existingPayment = await uow.invoices.findPaymentByIdempotencyKey(key);
       if (existingPayment !== null) {
@@ -76,7 +76,7 @@ export class RecordPaymentUseCase {
         customerId: invoice.customerId,
         amount: Money.fromMinorUnits(input.amountCents, currency),
         idempotencyKey: key,
-        createdAt: new Date(),
+        createdAt,
       };
       await uow.invoices.insertPaymentWithApplication(
         payment,

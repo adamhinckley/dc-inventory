@@ -25,7 +25,7 @@ export class CorrectPaymentUseCase {
 
   async execute(input: CorrectPaymentRequest): Promise<CorrectPaymentResult> {
     void input.staffUserId;
-    void this.clock;
+    const createdAt = this.clock?.now() ?? new Date();
     if (
       !Number.isInteger(input.correctionAmountCents) ||
       input.correctionAmountCents === 0 ||
@@ -69,7 +69,7 @@ export class CorrectPaymentUseCase {
         paymentId: input.paymentId,
         invoiceId: invoice.id,
         amount: Money.fromMinorUnits(input.correctionAmountCents, currency),
-        createdAt: new Date(),
+        createdAt,
       };
       await uow.invoices.insertApplication(compensating);
 

@@ -300,10 +300,11 @@ function salesServices(
 function accountingServices(
   invoiceRepo: IInvoiceRepository,
   accountingUnitOfWork: import("@dc-inventory/accounting").IAccountingUnitOfWork,
+  clock: import("@dc-inventory/accounting").IClock,
 ): AccountingHttpServices {
   return {
     getInvoice: new GetInvoiceUseCase(invoiceRepo),
-    recordPayment: new RecordPaymentUseCase(accountingUnitOfWork),
+    recordPayment: new RecordPaymentUseCase(accountingUnitOfWork, clock),
   };
 }
 
@@ -450,7 +451,7 @@ export function composeAppServices(
     catalog: catalogServices(productRepo, qtyRead),
     purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork),
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork),
-    accounting: accountingServices(invoiceRepo, accountingUnitOfWork),
+    accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     unitOfWork,
   };
 }

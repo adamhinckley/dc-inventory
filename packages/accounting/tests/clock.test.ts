@@ -70,7 +70,7 @@ describe("Accounting seed clock (in-memory)", () => {
     expect(view.invoice.taxTotalCents).toBe(0);
   });
 
-  it.fails("persists the injected posting instant on invoices", async () => {
+  it("persists the injected posting instant on invoices", async () => {
     const h = harness();
     const created = await h.create.execute({
       staffUserId: STAFF_ID,
@@ -95,7 +95,7 @@ describe("Accounting seed clock (in-memory)", () => {
     expect(view.invoice.postedAt?.getTime()).toBe(FIXED.getTime());
   });
 
-  it.fails("persists the injected posting instant on payments", async () => {
+  it("persists the injected posting instant on payments", async () => {
     const h = harness();
     const created = await h.create.execute({
       staffUserId: STAFF_ID,
@@ -122,7 +122,7 @@ describe("Accounting seed clock (in-memory)", () => {
     expect(payment?.payment.createdAt.getTime()).toBe(FIXED.getTime());
   });
 
-  it.fails("persists the injected posting instant on payment applications", async () => {
+  it("persists the injected posting instant on payment applications", async () => {
     const h = harness();
     const created = await h.create.execute({
       staffUserId: STAFF_ID,
@@ -150,7 +150,7 @@ describe("Accounting seed clock (in-memory)", () => {
     expect(applications[0]?.createdAt.getTime()).toBe(FIXED.getTime());
   });
 
-  it.fails("persists the injected posting instant on compensating applications", async () => {
+  it("persists the injected posting instant on compensating applications", async () => {
     const h = harness();
     const created = await h.create.execute({
       staffUserId: STAFF_ID,
