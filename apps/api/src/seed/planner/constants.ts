@@ -1,4 +1,5 @@
 import { FULL_DEMO_RECONCILIATION_EXPECTATIONS } from "../reconciliation/expectations.js";
+import { REDUCED_DEMO_RECONCILIATION_EXPECTATIONS } from "../reconciliation/valid-reduced-demo-book.js";
 
 export const DEFAULT_DEMO_SEED = "dc-inventory-demo-1";
 
@@ -54,7 +55,33 @@ export const SUPPLIER_SKU_TARGET = Math.floor(
     FULL_DEMO_RECONCILIATION_EXPECTATIONS.supplierCount,
 );
 
-export const DEMO_COUNTS = {
+export type DemoCounts = {
+  products: number;
+  suppliers: number;
+  customers: number;
+  mixCustomers: number;
+  purchaseOrders: number;
+  salesOrders: number;
+  shippedSalesOrders: number;
+  invoices: number;
+  payments: number;
+  unpaidInvoices: number;
+  mixUnpaidInvoices: number;
+  generatedSkuCount: number;
+  leftoverConfirmedPurchaseOrderMin: number;
+  leftoverConfirmedPurchaseOrderMax: number;
+  leftoverConfirmedSalesOrderMin: number;
+  leftoverConfirmedSalesOrderMax: number;
+  leftoverWindowDays: number;
+};
+
+export type PersonaOrderBudgets = {
+  northstar: number;
+  harvest: number;
+  idlePark: number;
+};
+
+export const FULL_DEMO_COUNTS: DemoCounts = {
   products: FULL_DEMO_RECONCILIATION_EXPECTATIONS.productCount,
   suppliers: FULL_DEMO_RECONCILIATION_EXPECTATIONS.supplierCount,
   customers: FULL_DEMO_RECONCILIATION_EXPECTATIONS.customerCount,
@@ -70,4 +97,47 @@ export const DEMO_COUNTS = {
   mixUnpaidInvoices:
     FULL_DEMO_RECONCILIATION_EXPECTATIONS.unpaidInvoiceCount -
     PERSONA_ORDER_BUDGETS.idlePark,
-} as const;
+  generatedSkuCount: GENERATED_SKU_COUNT,
+  leftoverConfirmedPurchaseOrderMin:
+    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedPurchaseOrderMin,
+  leftoverConfirmedPurchaseOrderMax:
+    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedPurchaseOrderMax,
+  leftoverConfirmedSalesOrderMin:
+    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMin,
+  leftoverConfirmedSalesOrderMax:
+    FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMax,
+  leftoverWindowDays: FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays,
+};
+
+/** Test-only counts for in-memory orchestration. Not selectable from the CLI. */
+export const REDUCED_DEMO_COUNTS: DemoCounts = {
+  products: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.productCount,
+  suppliers: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.supplierCount,
+  customers: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.customerCount,
+  mixCustomers: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.customerCount - 4,
+  purchaseOrders: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.purchaseOrderCount,
+  salesOrders: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.salesOrderCount,
+  shippedSalesOrders: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.shippedSalesOrderCount,
+  invoices: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.invoiceCount,
+  payments: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.paymentCount,
+  unpaidInvoices: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.unpaidInvoiceCount,
+  mixUnpaidInvoices: 1,
+  generatedSkuCount: 3,
+  leftoverConfirmedPurchaseOrderMin:
+    REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedPurchaseOrderMin,
+  leftoverConfirmedPurchaseOrderMax:
+    REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedPurchaseOrderMax,
+  leftoverConfirmedSalesOrderMin:
+    REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMin,
+  leftoverConfirmedSalesOrderMax:
+    REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMax,
+  leftoverWindowDays: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays,
+};
+
+export const REDUCED_PERSONA_ORDER_BUDGETS: PersonaOrderBudgets = {
+  northstar: 3,
+  harvest: 2,
+  idlePark: 4,
+};
+
+export const DEMO_COUNTS = FULL_DEMO_COUNTS;

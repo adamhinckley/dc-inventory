@@ -1,4 +1,4 @@
-import { DEMO_COUNTS } from "./constants.js";
+import { DEMO_COUNTS, type DemoCounts } from "./constants.js";
 import type {
   PlannedCustomer,
   PlannedSalesOrder,
@@ -14,7 +14,9 @@ export function planShippedInvoices(input: {
   customers: readonly PlannedCustomer[];
   seedToday: Date;
   idleParkInstants: ReadonlyMap<string, Date>;
+  counts?: DemoCounts;
 }): PlannedShippedInvoice[] {
+  const counts = input.counts ?? DEMO_COUNTS;
   const shipped = input.salesOrders
     .filter((row) => row.status === "shipped")
     .map((order, index) => {
@@ -30,8 +32,8 @@ export function planShippedInvoices(input: {
       } satisfies PlannedShippedInvoice;
     });
 
-  if (shipped.length !== DEMO_COUNTS.invoices) {
-    throw new Error(`expected ${String(DEMO_COUNTS.invoices)} shipped invoices`);
+  if (shipped.length !== counts.invoices) {
+    throw new Error(`expected ${String(counts.invoices)} shipped invoices`);
   }
 
   const customerByKey = new Map(input.customers.map((row) => [row.key, row]));
@@ -46,7 +48,7 @@ export function planShippedInvoices(input: {
   }
 
   const mixInvoices = shipped.filter((row) => customerByKey.get(row.customerKey)?.persona === "mix");
-  const mixUnpaidTarget = DEMO_COUNTS.mixUnpaidInvoices;
+  const mixUnpaidTarget = counts.mixUnpaidInvoices;
   if (mixInvoices.length < mixUnpaidTarget) {
     throw new Error(
       `mix shipped invoices ${String(mixInvoices.length)} cannot supply ${String(mixUnpaidTarget)} unpaid rows`,
@@ -70,10 +72,10 @@ export function planShippedInvoices(input: {
 
   const paidCount = shipped.filter((row) => row.paid).length;
   const unpaidCount = shipped.length - paidCount;
-  if (paidCount !== DEMO_COUNTS.payments) {
+  if (paidCount !== counts.payments) {
     throw new Error(`paid invoice count ${String(paidCount)}`);
   }
-  if (unpaidCount !== DEMO_COUNTS.unpaidInvoices) {
+  if (unpaidCount !== counts.unpaidInvoices) {
     throw new Error(`unpaid invoice count ${String(unpaidCount)}`);
   }
 

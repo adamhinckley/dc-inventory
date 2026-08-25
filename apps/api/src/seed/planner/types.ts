@@ -1,3 +1,5 @@
+import type { DemoCounts, PersonaOrderBudgets } from "./constants.js";
+
 export type PlannedProduct = {
   key: string;
   sku: string;
@@ -111,6 +113,8 @@ export type DemoBookPlan = {
 export type PlanDemoBookInput = {
   seed?: string;
   seedToday: Date;
+  counts?: DemoCounts;
+  personaOrderBudgets?: PersonaOrderBudgets;
 };
 
 export type ReplayComparablePlan = Omit<

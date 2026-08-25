@@ -23,4 +23,8 @@ export class InMemorySupplierRepository implements ISupplierRepository {
     this.byId.set(normalized.id, normalized);
     this.byVendorNumber.set(normalized.vendorNumber, normalized);
   }
+
+  async listAll(): Promise<readonly Supplier[]> {
+    return [...this.byId.values()];
+  }
 }
