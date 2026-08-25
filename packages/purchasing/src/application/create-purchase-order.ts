@@ -4,6 +4,7 @@ import {
   SupplierId,
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
 import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
@@ -28,6 +29,7 @@ export class CreatePurchaseOrderUseCase {
   constructor(
     private readonly purchaseOrders: IPurchaseOrderRepository,
     private readonly suppliers: ISupplierRepository,
+    private readonly clock?: IClock,
   ) {}
 
   async execute(input: CreatePurchaseOrderRequest): Promise<CreatePurchaseOrderResult> {
@@ -66,12 +68,14 @@ export class CreatePurchaseOrderUseCase {
       }
     }
 
+    void this.clock;
     const documentNumber = await this.purchaseOrders.nextDocumentNumber();
     const purchaseOrder: PurchaseOrder = {
       id: PurchaseOrderId.parse(newUuid()),
       supplierId: input.supplierId,
       documentNumber,
       status: "draft",
+      createdAt: new Date(),
       lines,
     };
     await this.purchaseOrders.save(purchaseOrder);

@@ -20,6 +20,7 @@ export type PurchaseOrder = {
   readonly supplierId: import("@dc-inventory/shared-kernel").SupplierId;
   readonly documentNumber: string;
   readonly status: PurchaseOrderStatus;
+  readonly createdAt: Date;
   readonly lines: readonly PurchaseOrderLine[];
 };
 

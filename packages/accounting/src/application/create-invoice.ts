@@ -4,6 +4,7 @@ import {
   Money,
   OrderId,
 } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
 import { newUuid } from "../domain/ids.js";
 import type { IAccountingUnitOfWork } from "../domain/ports/invoice-repository.js";
 import type { Invoice } from "../domain/invoice.js";
@@ -21,7 +22,10 @@ export type CreateInvoiceResult =
   | { ok: false; reason: "invalid" };
 
 export class CreateInvoiceUseCase {
-  constructor(private readonly unitOfWork: IAccountingUnitOfWork) {}
+  constructor(
+    private readonly unitOfWork: IAccountingUnitOfWork,
+    private readonly clock?: IClock,
+  ) {}
 
   async execute(input: CreateInvoiceRequest): Promise<CreateInvoiceResult> {
     void input.staffUserId;
@@ -33,6 +37,7 @@ export class CreateInvoiceUseCase {
       return { ok: false, reason: "invalid" };
     }
 
+    void this.clock;
     return this.unitOfWork.run(async (uow) => {
       const existing = await uow.invoices.findByOrderId(input.orderId);
       if (existing !== null) {

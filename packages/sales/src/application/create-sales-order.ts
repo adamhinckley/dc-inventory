@@ -5,6 +5,7 @@ import {
   Sku,
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
 import { newUuid, SalesOrderLineId } from "../domain/ids.js";
 import type {
   ICustomerLookupPort,
@@ -49,6 +50,7 @@ export class CreateSalesOrderUseCase {
   constructor(
     private readonly salesOrders: ISalesOrderRepository,
     private readonly customers: ICustomerLookupPort,
+    private readonly clock?: IClock,
   ) {}
 
   async execute(input: CreateSalesOrderRequest): Promise<CreateSalesOrderResult> {
@@ -107,12 +109,14 @@ export class CreateSalesOrderUseCase {
       taxCategoryCode: line.taxCategoryCode,
     }));
 
+    void this.clock;
     const documentNumber = await this.salesOrders.nextDocumentNumber();
     const salesOrder: SalesOrder = {
       id: OrderId.parse(newUuid()),
       customerId: input.customerId,
       documentNumber,
       status: "draft",
+      createdAt: new Date(),
       lines,
       shipLine1: input.shipLine1,
       shipLine2: input.shipLine2,

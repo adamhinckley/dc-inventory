@@ -38,6 +38,7 @@ function toOrder(header: typeof orders.$inferSelect, lines: SalesOrderLine[]): S
     customerId: CustomerId.parse(header.customerId),
     documentNumber: header.documentNumber,
     status: header.status,
+    createdAt: header.createdAt,
     lines,
     shipLine1: header.shipLine1 ?? undefined,
     shipLine2: header.shipLine2,

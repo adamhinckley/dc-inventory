@@ -9,6 +9,7 @@ export type PaymentApplication = {
   readonly paymentId: import("./ids.js").PaymentId;
   readonly invoiceId: import("@dc-inventory/shared-kernel").InvoiceId;
   readonly amount: Money;
+  readonly createdAt: Date;
 };
 
 export type Invoice = {
@@ -28,6 +29,7 @@ export type Payment = {
   readonly customerId: import("@dc-inventory/shared-kernel").CustomerId;
   readonly amount: Money;
   readonly idempotencyKey: string;
+  readonly createdAt: Date;
 };
 
 export function computeRemainingCents(

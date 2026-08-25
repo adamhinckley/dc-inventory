@@ -64,6 +64,7 @@ export class CorrectPaymentUseCase {
         paymentId: input.paymentId,
         invoiceId: invoice.id,
         amount: Money.fromMinorUnits(input.correctionAmountCents, currency),
+        createdAt: new Date(),
       };
       await uow.invoices.insertApplication(compensating);
 

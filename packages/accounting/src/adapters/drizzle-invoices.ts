@@ -45,6 +45,7 @@ function toApplication(row: typeof paymentApplications.$inferSelect): PaymentApp
     paymentId: PaymentId.parse(row.paymentId),
     invoiceId: InvoiceId.parse(row.invoiceId),
     amount: Money.fromMinorUnits(row.amountCents, row.currency),
+    createdAt: row.createdAt,
   };
 }
 
@@ -130,6 +131,7 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
       customerId: CustomerId.parse(paymentRow.customerId),
       amount: Money.fromMinorUnits(paymentRow.amountCents, paymentRow.currency),
       idempotencyKey: paymentRow.idempotencyKey,
+      createdAt: paymentRow.createdAt,
     };
     return {
       payment,

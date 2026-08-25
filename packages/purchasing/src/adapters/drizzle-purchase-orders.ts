@@ -51,6 +51,7 @@ function toOrder(
     supplierId: SupplierId.parse(header.supplierId),
     documentNumber: header.documentNumber,
     status: header.status,
+    createdAt: header.createdAt,
     lines,
   };
 }
