@@ -380,7 +380,7 @@ export function composeAppServices(
       : new InMemoryProductRepository());
   const unitOfWork =
     overrides.unitOfWork ??
-    (appDb ? new PostgresInventoryUnitOfWork(appDb) : new InMemoryUnitOfWork());
+    (appDb ? new PostgresInventoryUnitOfWork(appDb, clock) : new InMemoryUnitOfWork());
 
   const inMemoryUow = unitOfWork instanceof InMemoryUnitOfWork ? unitOfWork : null;
 
