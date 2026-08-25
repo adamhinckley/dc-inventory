@@ -1,3 +1,4 @@
+import type { IClock } from "../domain/clock.js";
 import { LocationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
@@ -37,6 +38,7 @@ export class DrizzleStockLedger implements IStockLedger {
     private readonly db: InventoryDrizzle,
     private readonly readModel: DrizzleInventoryReadModel,
     private readonly resolveLocationUuid: (locationId: LocationId) => Promise<string>,
+    private readonly clock: IClock,
   ) {}
 
   recordInboundFromPo(command: RecordInboundFromPoCommand): Promise<StockCommandResult> {
@@ -124,7 +126,7 @@ export class DrizzleStockLedger implements IStockLedger {
       refType: command.refType,
       refId: command.refId,
       idempotencyKey: command.idempotencyKey,
-      createdAt: new Date(),
+      createdAt: this.clock.now(),
     });
 
     await this.db.insert(stockMovements).values({

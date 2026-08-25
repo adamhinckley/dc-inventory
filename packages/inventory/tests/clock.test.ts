@@ -50,7 +50,7 @@ describe("Inventory seed clock (in-memory)", () => {
     expect(snap).toEqual({ onHand: 6, onOrder: 0, allocated: 0, available: 6 });
   });
 
-  it.fails("persists the injected creation instant on stock movements", async () => {
+  it("persists the injected creation instant on stock movements", async () => {
     const h = harness();
     const inbound = await h.inboundFromPo.execute({
       idempotencyKey: "clock-inbound-time",

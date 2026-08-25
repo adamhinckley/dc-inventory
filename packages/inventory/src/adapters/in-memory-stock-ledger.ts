@@ -103,7 +103,6 @@ export class InMemoryStockLedger implements IStockLedger {
       return Promise.resolve(deltaResult);
     }
 
-    void this.clock;
     const movement: Movement = Object.freeze({
       id: MovementId.parse(newUuid()),
       sku: command.sku,
@@ -113,7 +112,7 @@ export class InMemoryStockLedger implements IStockLedger {
       refType: command.refType,
       refId: command.refId,
       idempotencyKey: command.idempotencyKey,
-      createdAt: new Date(),
+      createdAt: this.clock?.now() ?? new Date(),
     });
 
     this.readModel.appendMovement(movement);
