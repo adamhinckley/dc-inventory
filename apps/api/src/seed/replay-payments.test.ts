@@ -32,7 +32,7 @@ import { selectPaymentReplay, selectUnpaidReplay } from "./planner/payments.js";
 import { InMemoryProductImageSeedRepository } from "./ports/in-memory-product-image-seed.js";
 import { InMemorySupplierProductSeedRepository } from "./ports/in-memory-supplier-product-seed.js";
 import type { StaticDemoSeedPorts } from "./ports/static-seed-types.js";
-import { DEMO_AR_BUCKETS } from "./reconciliation/expectations.js";
+import { DEMO_AR_BUCKETS, DEMO_NAMED_CUSTOMERS } from "./reconciliation/expectations.js";
 import {
   demoArBucket,
   utcDayDiff,
@@ -241,24 +241,45 @@ describe("replay payments (in-memory)", () => {
         .map((row) => row.key),
     );
     expect(mixUnpaidKeys.size).toBe(DEMO_COUNTS.mixUnpaidInvoices);
+    const expectedMixUnpaidKeys = [...plan.shippedInvoices]
+      .filter((row) => row.customerKey.startsWith("mix-"))
+      .sort((left, right) => {
+        const byInstant = right.plannedInstant.getTime() - left.plannedInstant.getTime();
+        if (byInstant !== 0) {
+          return byInstant;
+        }
+        return right.replaySequence - left.replaySequence;
+      })
+      .slice(0, DEMO_COUNTS.mixUnpaidInvoices)
+      .map((row) => row.key);
+    expect([...mixUnpaidKeys].sort()).toEqual([...expectedMixUnpaidKeys].sort());
     for (const key of unpaidInvoiceKeys) {
       const row = plan.shippedInvoices.find((invoice) => invoice.key === key);
       expect(row).toBeDefined();
       expect(row!.customerKey === "idlePark" || row!.customerKey.startsWith("mix-")).toBe(true);
     }
 
-    const idleParkBuckets = new Set(
-      idleParkUnpaid.map((row) => demoArBucket(utcDayDiff(row.plannedInstant, SEED_TODAY))),
-    );
-    for (const bucket of DEMO_AR_BUCKETS) {
-      expect(idleParkBuckets.has(bucket)).toBe(true);
+    const idleParkCustomerId = staticResult.customers.find(
+      (row) => row.name === DEMO_NAMED_CUSTOMERS.idlePark.name,
+    )!.id;
+    const persistedIdleParkBuckets = new Set<string>();
+    const persistedUnpaidBuckets = new Set<string>();
+    for (const planned of plan.shippedInvoices.filter((row) => !row.paid)) {
+      const invoice = await uow.invoices.findByOrderId(
+        salesOrderIdByKey.get(planned.salesOrderKey)!,
+      );
+      expect(invoice).not.toBeNull();
+      expect(invoice!.postedAt).not.toBeNull();
+      const bucket = demoArBucket(utcDayDiff(invoice!.postedAt!, SEED_TODAY));
+      persistedUnpaidBuckets.add(bucket);
+      if (invoice!.customerId === idleParkCustomerId) {
+        persistedIdleParkBuckets.add(bucket);
+        expect(invoice!.postedAt!.getTime()).toBe(planned.plannedInstant.getTime());
+      }
     }
-
-    const unpaidWithAge = plan.shippedInvoices
-      .filter((row) => !row.paid)
-      .map((row) => demoArBucket(utcDayDiff(row.plannedInstant, SEED_TODAY)));
     for (const bucket of DEMO_AR_BUCKETS) {
-      expect(unpaidWithAge.includes(bucket)).toBe(true);
+      expect(persistedIdleParkBuckets.has(bucket)).toBe(true);
+      expect(persistedUnpaidBuckets.has(bucket)).toBe(true);
     }
 
     for (const invoice of plan.shippedInvoices) {

@@ -171,6 +171,9 @@ describe("replay sales orders (in-memory)", () => {
     expect(listed.items.every((row) => row.status !== "cancelled")).toBe(true);
 
     const plannedByIndex = plan.salesOrders;
+    const shipInstantBySalesOrderKey = new Map(
+      plan.shippedInvoices.map((row) => [row.salesOrderKey, row.plannedInstant]),
+    );
     const plannedForDocumentNumber = (documentNumber: string) => {
       const sequence = Number.parseInt(documentNumber.slice(3), 10);
       return plannedByIndex[sequence - 1];
@@ -248,7 +251,10 @@ describe("replay sales orders (in-memory)", () => {
       expect(invoice?.subtotal.amountMinor).toBe(subtotal);
       expect(invoice?.total.amountMinor).toBe(subtotal);
       expect(invoice?.total.amountMinor).toBe(invoice?.subtotal.amountMinor);
-      expect(invoice?.postedAt?.getTime()).toBe(order.createdAt.getTime());
+      const planned = plannedForDocumentNumber(order.documentNumber);
+      const expectedPostedAt =
+        shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
+      expect(invoice?.postedAt?.getTime()).toBe(expectedPostedAt.getTime());
     }
 
     const soLineCounts = listed.items.map((row) => row.lines.length);
@@ -307,19 +313,19 @@ describe("replay sales orders (in-memory)", () => {
     expect(shippedMovements.length).toBe(expectedShippedLines);
     expect(allocated.length).toBeGreaterThan(shippedMovements.length);
 
-    const instantBySoId = new Map(
-      listed.items.map((order) => {
-        const planned = plannedForDocumentNumber(order.documentNumber);
-        return [order.id, planned!.plannedInstant] as const;
-      }),
-    );
     for (const movement of movements) {
       if (movement.refType !== "sales_order") {
         continue;
       }
-      const expectedInstant = instantBySoId.get(movement.refId);
-      expect(expectedInstant).toBeDefined();
-      expect(movement.createdAt.getTime()).toBe(expectedInstant!.getTime());
+      const order = listed.items.find((row) => row.id === movement.refId);
+      expect(order).toBeDefined();
+      const planned = plannedForDocumentNumber(order!.documentNumber);
+      let expectedInstant = planned!.plannedInstant;
+      if (movement.movementType === "Shipped") {
+        expectedInstant =
+          shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
+      }
+      expect(movement.createdAt.getTime()).toBe(expectedInstant.getTime());
     }
 
     for (const order of confirmed) {
