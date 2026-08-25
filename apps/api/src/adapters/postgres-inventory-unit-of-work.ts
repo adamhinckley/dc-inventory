@@ -1,3 +1,4 @@
+import type { IClock } from "@dc-inventory/inventory";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import {
@@ -33,7 +34,10 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   private defaultLocationUuid: Promise<string> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly db: AppDrizzle) {}
+  constructor(
+    private readonly db: AppDrizzle,
+    private readonly clock: IClock,
+  ) {}
 
   readonly inventory = {
     ledger: null as unknown as DrizzleStockLedger,
@@ -109,7 +113,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     };
 
     const readModel = new DrizzleInventoryReadModel(tx, resolveLocationUuid);
-    const ledger = new DrizzleStockLedger(tx, readModel, resolveLocationUuid);
+    const ledger = new DrizzleStockLedger(tx, readModel, resolveLocationUuid, this.clock);
     const purchaseOrders = new DrizzlePurchaseOrderRepository(tx);
     const suppliers = new DrizzleSupplierRepository(tx);
     const salesOrders = new DrizzleSalesOrderRepository(tx);
