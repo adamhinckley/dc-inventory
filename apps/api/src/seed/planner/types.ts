@@ -113,8 +113,6 @@ export type DemoBookPlan = {
 export type PlanDemoBookInput = {
   seed?: string;
   seedToday: Date;
-  counts?: DemoCounts;
-  personaOrderBudgets?: PersonaOrderBudgets;
 };
 
 export type ReplayComparablePlan = Omit<

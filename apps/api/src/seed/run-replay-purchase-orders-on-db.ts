@@ -22,7 +22,7 @@ import {
 export async function runReplayPurchaseOrdersOnDb(
   db: AppDrizzle,
   plan: DemoBookPlan,
-  input: { staffUserId: StaffUserId },
+  input: { staffUserId: StaffUserId; assertWithinBudget?: () => void },
 ): Promise<ReplayPurchaseOrdersResult> {
   const firstInstant = plan.purchaseOrders[0]?.plannedInstant ?? plan.seedToday;
   const clock = new SeedPlaybackClock(firstInstant);
@@ -46,6 +46,7 @@ export async function runReplayPurchaseOrdersOnDb(
       supplierIdByKey: await supplierIdByKeyFromPlan(plan, suppliers),
       productNameBySku: productNameBySkuFromPlan(plan),
       staffUserId: input.staffUserId,
+      assertWithinBudget: input.assertWithinBudget,
     },
   );
 }

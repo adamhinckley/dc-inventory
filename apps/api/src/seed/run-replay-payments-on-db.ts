@@ -17,7 +17,7 @@ import {
 export async function runReplayPaymentsOnDb(
   db: AppDrizzle,
   plan: DemoBookPlan,
-  input: { staffUserId: StaffUserId },
+  input: { staffUserId: StaffUserId; assertWithinBudget?: () => void },
 ): Promise<ReplayPaymentsResult> {
   const paidInstant =
     plan.shippedInvoices.find((row) => row.paid)?.plannedInstant ?? plan.seedToday;
@@ -31,6 +31,7 @@ export async function runReplayPaymentsOnDb(
     {
       plan,
       staffUserId: input.staffUserId,
+      assertWithinBudget: input.assertWithinBudget,
     },
   );
 }

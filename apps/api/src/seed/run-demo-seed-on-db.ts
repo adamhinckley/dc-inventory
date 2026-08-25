@@ -46,6 +46,9 @@ export async function runDemoSeedOnDb(
   input: RunDemoSeedOnDbInput,
 ): Promise<RunDemoSeedOnDbResult> {
   const startedAt = Date.now();
+  const assertWithinBudget = (): void => {
+    input.deadline?.assertWithinBudget();
+  };
 
   tick(input, "static master data");
   const staticResult = await runWriteStaticDemoBookOnDb(input.db, input.plan, input.secrets);
@@ -53,6 +56,7 @@ export async function runDemoSeedOnDb(
   tick(input, "purchase order playback");
   await runReplayPurchaseOrdersOnDb(input.db, input.plan, {
     staffUserId: staticResult.staff.id,
+    assertWithinBudget,
   });
 
   const customers = new DrizzleCustomerRepository(input.db as never);
@@ -62,11 +66,13 @@ export async function runDemoSeedOnDb(
   await runReplaySalesOrdersOnDb(input.db, input.plan, {
     staffUserId: staticResult.staff.id,
     customerIdByKey,
+    assertWithinBudget,
   });
 
   tick(input, "payment playback");
   await runReplayPaymentsOnDb(input.db, input.plan, {
     staffUserId: staticResult.staff.id,
+    assertWithinBudget,
   });
 
   tick(input, "reorder policies");

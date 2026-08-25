@@ -135,6 +135,9 @@ export async function runDemoSeedInMemory(
   input: RunDemoSeedInMemoryInput,
 ): Promise<RunDemoSeedInMemoryResult> {
   const staticPorts = staticSeedPorts();
+  const assertWithinBudget = (): void => {
+    input.deadline?.assertWithinBudget();
+  };
 
   tick(input, "static master data");
   const staticResult = await runWriteStaticDemoBook(staticPorts, input.plan, input.secrets);
@@ -152,6 +155,7 @@ export async function runDemoSeedInMemory(
       supplierIdByKey: await supplierIdByKeyFromPlan(input.plan, uow.suppliers),
       productNameBySku: productNameBySkuFromPlan(input.plan),
       staffUserId: staticResult.staff.id,
+      assertWithinBudget,
     },
   );
 
@@ -165,6 +169,7 @@ export async function runDemoSeedInMemory(
       currencyBySku: currencyBySkuFromPlan(input.plan),
       taxCategoryBySku: taxCategoryBySkuFromPlan(input.plan),
       staffUserId: staticResult.staff.id,
+      assertWithinBudget,
     },
   );
 
@@ -179,6 +184,7 @@ export async function runDemoSeedInMemory(
     {
       plan: input.plan,
       staffUserId: staticResult.staff.id,
+      assertWithinBudget,
     },
   );
 

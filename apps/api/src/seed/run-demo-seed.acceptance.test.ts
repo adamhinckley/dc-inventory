@@ -1,9 +1,11 @@
+import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseDemoSeedConfig } from "./demo-seed-config.js";
 import { DEMO_SEED_TIME_LIMIT_MS } from "./demo-seed-config.js";
+import { startDemoSeedDeadline } from "./demo-seed-deadline.js";
 import { createDatabaseConnection } from "../infrastructure/db.js";
 import {
   assertDemoSeedPreflight,
@@ -16,6 +18,15 @@ import { runDemoSeedOnDb } from "./run-demo-seed-on-db.js";
 
 const acceptanceEnabled = process.env.DEMO_SEED_ACCEPTANCE === "1";
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
+
+function runMigrations(url: string): void {
+  const apiRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+  execSync("pnpm db:migrate", {
+    cwd: apiRoot,
+    env: { ...process.env, DATABASE_URL: url },
+    stdio: "pipe",
+  });
+}
 
 describe.skipIf(!acceptanceEnabled || !databaseUrl)(
   "runDemoSeedOnDb acceptance (opt-in Postgres)",
@@ -34,7 +45,8 @@ describe.skipIf(!acceptanceEnabled || !databaseUrl)(
             process.env.PHASE1_WHOLESALE_PASSWORD?.trim() || "phase1-wholesale-placeholder",
         });
 
-        const startedAt = Date.now();
+        runMigrations(config.databaseUrl);
+
         const connection = createDatabaseConnection(config.databaseUrl);
 
         await assertDemoSeedPreflight({
@@ -46,14 +58,17 @@ describe.skipIf(!acceptanceEnabled || !databaseUrl)(
 
         const seedToday = new Date();
         const plan = planDemoBook({ seed: config.seed, seedToday });
+        const deadline = startDemoSeedDeadline();
 
         const first = await runDemoSeedOnDb({
           db: connection.db,
           sql: connection.sql,
           plan,
           secrets: config.secrets,
+          deadline,
         });
         expect(first.reconciliation.ok).toBe(true);
+        expect(first.elapsedMs).toBeLessThan(DEMO_SEED_TIME_LIMIT_MS);
 
         await assertDemoSeedPreflight({
           databaseUrl: config.databaseUrl,
@@ -62,20 +77,20 @@ describe.skipIf(!acceptanceEnabled || !databaseUrl)(
           reset: new PostgresDemoBookReset(connection.sql),
         });
 
+        const replayDeadline = startDemoSeedDeadline();
         const replay = await runDemoSeedOnDb({
           db: connection.db,
           sql: connection.sql,
           plan: planDemoBook({ seed: config.seed, seedToday: new Date() }),
           secrets: config.secrets,
+          deadline: replayDeadline,
         });
         expect(replay.reconciliation.ok).toBe(true);
+        expect(replay.elapsedMs).toBeLessThan(DEMO_SEED_TIME_LIMIT_MS);
 
         await connection.sql.end({ timeout: 5 });
-
-        const elapsed = Date.now() - startedAt;
-        expect(elapsed).toBeLessThan(DEMO_SEED_TIME_LIMIT_MS);
       },
-      DEMO_SEED_TIME_LIMIT_MS + 60_000,
+      DEMO_SEED_TIME_LIMIT_MS * 2 + 60_000,
     );
   },
 );

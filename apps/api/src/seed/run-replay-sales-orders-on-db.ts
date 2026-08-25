@@ -28,6 +28,7 @@ export async function runReplaySalesOrdersOnDb(
   input: {
     staffUserId: StaffUserId;
     customerIdByKey: ReadonlyMap<string, CustomerId>;
+    assertWithinBudget?: () => void;
   },
 ): Promise<ReplaySalesOrdersResult> {
   const firstInstant = plan.salesOrders[0]?.plannedInstant ?? plan.seedToday;
@@ -57,6 +58,7 @@ export async function runReplaySalesOrdersOnDb(
       currencyBySku: currencyBySkuFromPlan(plan),
       taxCategoryBySku: taxCategoryBySkuFromPlan(plan),
       staffUserId: input.staffUserId,
+      assertWithinBudget: input.assertWithinBudget,
     },
   );
 }

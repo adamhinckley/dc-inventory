@@ -2,6 +2,8 @@ import {
   DEFAULT_DEMO_SEED,
   FULL_DEMO_COUNTS,
   PERSONA_ORDER_BUDGETS,
+  type DemoCounts,
+  type PersonaOrderBudgets,
 } from "./constants.js";
 import { demoHistoricalStart } from "./dates.js";
 import {
@@ -26,11 +28,16 @@ import {
 import { createSeededRandom, type SeededRandom } from "./seeded-random.js";
 import type { DemoBookPlan, PlanDemoBookInput } from "./types.js";
 
+type PlanDemoBookOptions = PlanDemoBookInput & {
+  counts?: DemoCounts;
+  personaOrderBudgets?: PersonaOrderBudgets;
+};
+
 function scopedRandom(seed: string, label: string): SeededRandom {
   return createSeededRandom(`${seed}:${label}`);
 }
 
-export function planDemoBook(input: PlanDemoBookInput): DemoBookPlan {
+export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
   const seed = input.seed ?? DEFAULT_DEMO_SEED;
   const seedToday = input.seedToday;
   const historicalStart = demoHistoricalStart(seedToday);

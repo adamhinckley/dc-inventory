@@ -15,8 +15,11 @@ export type DemoSeedConfig = {
   secrets: DemoSeedSecrets;
 };
 
-function readSecret(name: "PHASE1_STAFF_PASSWORD" | "PHASE1_WHOLESALE_PASSWORD"): string {
-  const value = process.env[name]?.trim() ?? "";
+function readSecret(
+  env: NodeJS.ProcessEnv,
+  name: "PHASE1_STAFF_PASSWORD" | "PHASE1_WHOLESALE_PASSWORD",
+): string {
+  const value = env[name]?.trim() ?? "";
   if (value.length === 0) {
     throw new Phase1SeedError(
       `${name} is missing. Copy the placeholder from apps/api/.env.example — do not commit a real secret.`,
@@ -34,8 +37,8 @@ export function parseDemoSeedConfig(env: NodeJS.ProcessEnv = process.env): DemoS
     seed,
     resetOptIn: env.DEMO_SEED_RESET,
     secrets: {
-      staffPassword: readSecret("PHASE1_STAFF_PASSWORD"),
-      wholesalePassword: readSecret("PHASE1_WHOLESALE_PASSWORD"),
+      staffPassword: readSecret(env, "PHASE1_STAFF_PASSWORD"),
+      wholesalePassword: readSecret(env, "PHASE1_WHOLESALE_PASSWORD"),
     },
   };
 }

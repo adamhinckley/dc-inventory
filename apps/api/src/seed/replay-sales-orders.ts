@@ -35,6 +35,7 @@ export type ReplaySalesOrdersInput = {
   currencyBySku: ReadonlyMap<string, string>;
   taxCategoryBySku: ReadonlyMap<string, string | undefined>;
   staffUserId: StaffUserId;
+  assertWithinBudget?: () => void;
 };
 
 export type ReplaySalesOrdersResult = {
@@ -95,6 +96,7 @@ export async function runReplaySalesOrders(
   let lastInvoiceDocumentNumber = "";
 
   for (const planned of input.plan.salesOrders) {
+    input.assertWithinBudget?.();
     ports.clock.setInstant(planned.plannedInstant);
 
     const customerId = input.customerIdByKey.get(planned.customerKey);

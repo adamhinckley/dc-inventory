@@ -30,6 +30,7 @@ export type ReplayPurchaseOrdersInput = {
   supplierIdByKey: ReadonlyMap<string, SupplierId>;
   productNameBySku: ReadonlyMap<string, string>;
   staffUserId: StaffUserId;
+  assertWithinBudget?: () => void;
 };
 
 export type ReplayPurchaseOrdersResult = {
@@ -75,6 +76,7 @@ export async function runReplayPurchaseOrders(
   let lastDocumentNumber = "";
 
   for (const planned of input.plan.purchaseOrders) {
+    input.assertWithinBudget?.();
     ports.clock.setInstant(planned.plannedInstant);
 
     const supplierId = input.supplierIdByKey.get(planned.supplierKey);
