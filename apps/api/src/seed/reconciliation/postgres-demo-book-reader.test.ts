@@ -75,6 +75,10 @@ function pick<T extends Record<string, unknown>>(row: T, keys: readonly string[]
   return out;
 }
 
+function isImageJoinShape(keys: readonly string[]): boolean {
+  return keys.includes("productId") && keys.includes("sku") && keys.includes("objectKey");
+}
+
 function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
   const parallelRows = [
     bundle.products,
@@ -108,30 +112,39 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
     bundle.reorderPolicies,
   ];
 
-  const capturedSelectShapes: string[][] = [];
+  const shapesPerLoad: string[][] = [];
   let parallelIndex = 0;
 
   const db = {
     select: vi.fn((shape: Record<string, unknown>) => {
       const keys = Object.keys(shape);
-      capturedSelectShapes.push(keys);
+
+      const locationLookup = {
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn(async () => {
+              parallelIndex = 0;
+              shapesPerLoad.push([]);
+              return [{ id: bundle.defaultLocationId }];
+            }),
+          })),
+        })),
+      };
 
       if (keys.length === 1 && keys[0] === "id") {
-        parallelIndex = 0;
-        return {
-          from: vi.fn(() => ({
-            where: vi.fn(() => ({
-              limit: vi.fn(async () => [{ id: bundle.defaultLocationId }]),
-            })),
-          })),
-        };
+        return locationLookup;
       }
 
+      const loadShapes = shapesPerLoad[shapesPerLoad.length - 1];
+      if (!loadShapes) {
+        throw new Error("parallel select before DEFAULT location lookup");
+      }
+      loadShapes.push(keys);
+
       const rows = parallelRows[parallelIndex] ?? [];
-      const index = parallelIndex;
       parallelIndex += 1;
 
-      if (index === 1) {
+      if (isImageJoinShape(keys)) {
         return {
           from: vi.fn(() => ({
             innerJoin: vi.fn(async () => rows.map((row) => pick(row as Record<string, unknown>, keys))),
@@ -145,14 +158,14 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
     }),
   };
 
-  return { db, capturedSelectShapes };
+  return { db, shapesPerLoad };
 }
 
 describe("PostgresDemoBookReader", () => {
   it("loads the same reconciliation facts as the in-memory reduced book", async () => {
     const source = buildValidReducedDemoBook();
     const bundle = demoBookToRowBundle(source);
-    const { db, capturedSelectShapes } = mockDbFromBundle(bundle);
+    const { db, shapesPerLoad } = mockDbFromBundle(bundle);
     const options = {
       seedToday: reducedDemoSeedToday(),
       expectations: REDUCED_DEMO_RECONCILIATION_EXPECTATIONS,
@@ -164,10 +177,13 @@ describe("PostgresDemoBookReader", () => {
     const postgresViaLoad = await assertDemoBook(new InMemoryDemoBookReader(loaded), options);
     const postgresDirect = await assertDemoBook(reader, options);
 
-    const parallelShapes = capturedSelectShapes.filter(
-      (shape) => shape.length !== 1 || shape[0] !== "id",
+    expect(shapesPerLoad).toHaveLength(2);
+    for (const loadShapes of shapesPerLoad) {
+      expect(loadShapes).toEqual(EXPECTED_SELECT_SHAPES);
+    }
+    expect(db.select).toHaveBeenCalledTimes(
+      2 * (1 + EXPECTED_SELECT_SHAPES.length),
     );
-    expect(parallelShapes.slice(0, EXPECTED_SELECT_SHAPES.length)).toEqual(EXPECTED_SELECT_SHAPES);
     expect(memoryResult).toEqual({ ok: true });
     expect(postgresViaLoad).toEqual({ ok: true });
     expect(postgresDirect).toEqual({ ok: true });
