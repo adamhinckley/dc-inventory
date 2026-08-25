@@ -13,6 +13,19 @@ function quoteIdent(identifier: string): string {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
+export function buildSchemaTruncateSql(
+  schemaName: DemoOwnedSchema,
+  tableNames: readonly string[],
+): string | null {
+  if (tableNames.length === 0) {
+    return null;
+  }
+  const qualified = tableNames
+    .map((tableName) => `${quoteIdent(schemaName)}.${quoteIdent(tableName)}`)
+    .join(", ");
+  return `TRUNCATE TABLE ${qualified} RESTART IDENTITY CASCADE`;
+}
+
 async function listBaseTables(
   sql: PostgresQueryable,
   schemaName: DemoOwnedSchema,
@@ -57,15 +70,11 @@ export class PostgresDemoBookReset implements IDemoBookResetPort {
     await this.sql.begin(async (tx) => {
       for (const schemaName of DEMO_OWNED_SCHEMAS) {
         const tables = await listBaseTables(tx, schemaName);
-        if (tables.length === 0) {
+        const truncateSql = buildSchemaTruncateSql(schemaName, tables);
+        if (truncateSql === null) {
           continue;
         }
-        const qualified = tables
-          .map((tableName) => `${quoteIdent(schemaName)}.${quoteIdent(tableName)}`)
-          .join(", ");
-        await tx.unsafe(
-          `TRUNCATE TABLE ${qualified} RESTART IDENTITY CASCADE`,
-        );
+        await tx.unsafe(truncateSql);
       }
     });
   }

@@ -24,4 +24,5 @@ export {
 export {
   PostgresDemoBookOccupancy,
   PostgresDemoBookReset,
+  buildSchemaTruncateSql,
 } from "./postgres-ports.js";
