@@ -6,7 +6,9 @@
   "description": "Inventory context: stock ledger, movements, and snapshot read model.",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/persistence/schema.ts"
+    "./schema": "./src/persistence/schema.ts",
+    "./ledger-rules": "./src/domain/ledger-rules.ts",
+    "./snapshot": "./src/domain/snapshot.ts"
   },
   "scripts": {
     "test": "vitest run",
