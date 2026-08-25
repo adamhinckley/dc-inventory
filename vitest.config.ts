@@ -28,6 +28,12 @@ export default defineConfig({
       "@dc-inventory/inventory/schema": fileURLToPath(
         new URL("./packages/inventory/src/persistence/schema.ts", import.meta.url),
       ),
+      "@dc-inventory/inventory/ledger-rules": fileURLToPath(
+        new URL("./packages/inventory/src/domain/ledger-rules.ts", import.meta.url),
+      ),
+      "@dc-inventory/inventory/snapshot": fileURLToPath(
+        new URL("./packages/inventory/src/domain/snapshot.ts", import.meta.url),
+      ),
       "@dc-inventory/inventory": fileURLToPath(
         new URL("./packages/inventory/src/index.ts", import.meta.url),
       ),

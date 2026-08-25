@@ -59,3 +59,7 @@ _Avoid_: Hand-written fetch layer, API SDK (unless you mean these packages)
 **Agent-optimized scaffold**:
 Repo layout, scripts, tickets, and examples shaped so a coding agent can finish a slice from allowed paths + failing tests without inventing structure. Prefer boring, explicit, duplicated-if-clear over clever shared abstractions.
 _Avoid_: “DX”, developer experience (when you mean agent success), flexible folder conventions
+
+**Demo reconciliation**:
+The assertions `pnpm seed:demo` runs against the finished book before it reports success. Exact master and document counts, engine-issued document-number endpoints, stock recomputed from movements, invoice remainder, Demo payment completeness, Demo AR age buckets, leftover open documents, and Demo low-stock. Callers inject a read port. The assertion module owns the calculations. A mismatch names the failed contract and exits 1.
+_Avoid_: Treating `available` as an input, duplicating these formulas in dashboard SQL, presenting a partial book as ready
