@@ -163,12 +163,33 @@ describe("static demo book writer (in-memory)", () => {
     );
     for (const planned of plan.master.products.filter((row) => !row.isPhase1Fixture)) {
       const product = first.products.find((row) => row.sku.value === planned.sku);
+      expect(product?.name).toBe(planned.name);
       expect(product?.uom).toBe(planned.uom);
       expect(product?.description).toBeNull();
       expect(product?.memberPrice.amountMinor).toBe(planned.memberPriceCents);
       expect(product?.memberPrice.currency).toBe(planned.currency);
       expect(product?.webWholesale).toBe(true);
       expect(product?.taxCategoryCode).toBe(planned.taxCategoryCode);
+    }
+
+    const shipToByCustomerKey = new Map(
+      plan.master.shipTos.map((row) => [row.customerKey, row]),
+    );
+    for (const customer of first.customers) {
+      const plannedCustomer = plan.master.customers.find(
+        (row) => row.name === customer.name,
+      );
+      expect(plannedCustomer).toBeDefined();
+      if (!plannedCustomer) {
+        continue;
+      }
+      const plannedShipTo = shipToByCustomerKey.get(plannedCustomer.key);
+      expect(plannedShipTo).toBeDefined();
+      const shipTo = first.shipTos.find((row) => row.customerId === customer.id);
+      expect(shipTo?.line1).toBe(plannedShipTo?.line1);
+      expect(shipTo?.city).toBe(plannedShipTo?.city);
+      expect(shipTo?.region).toBe(plannedShipTo?.region);
+      expect(shipTo?.postal).toBe(plannedShipTo?.postal);
     }
 
     for (const customer of first.customers) {
