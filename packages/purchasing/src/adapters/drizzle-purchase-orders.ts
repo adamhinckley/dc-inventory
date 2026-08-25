@@ -116,6 +116,7 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
         supplierId: order.supplierId,
         status: order.status,
         documentNumber: order.documentNumber,
+        createdAt: order.createdAt,
       });
       for (const line of order.lines) {
         await this.db.insert(purchaseOrderLines).values({

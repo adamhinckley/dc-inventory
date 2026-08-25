@@ -151,6 +151,7 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
       amountCents: payment.amount.amountMinor,
       currency: payment.amount.currency,
       idempotencyKey: payment.idempotencyKey,
+      createdAt: payment.createdAt,
     });
     await this.db.insert(paymentApplications).values({
       id: PaymentApplicationId.parse(newUuid()),
@@ -158,6 +159,7 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
       invoiceId,
       amountCents: applicationAmountCents,
       currency: payment.amount.currency,
+      createdAt: payment.createdAt,
     });
   }
 
@@ -168,6 +170,7 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
       invoiceId: application.invoiceId,
       amountCents: application.amount.amountMinor,
       currency: application.amount.currency,
+      createdAt: application.createdAt,
     });
   }
 }

@@ -92,6 +92,48 @@ describe("Sales seed clock (in-memory)", () => {
     expect(invoice?.documentNumber).toBe("INV-00001");
   });
 
+  it.fails("persists the injected posting instant on the invoice created at ship", async () => {
+    const h = await harness();
+    await h.uow.run(async () => {
+      const stock = await h.adjustmentIncrease.execute({
+        idempotencyKey: "clock-seed-stock-posted",
+        sku: SKU,
+        quantity: 8,
+        refType: "adjustment",
+        refId: "clock-seed-posted",
+      });
+      expect(stock.ok).toBe(true);
+    });
+
+    const created = await h.create.execute({
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 500, currency: "USD" }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const confirmed = await h.confirm.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "clock-confirm-posted",
+    });
+    expect(confirmed.ok).toBe(true);
+
+    const shipped = await h.ship.execute({
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "clock-ship-posted",
+    });
+    expect(shipped.ok).toBe(true);
+
+    const invoice = await h.uow.invoices.findByOrderId(created.salesOrder.id);
+    expect(invoice).not.toBeNull();
+    expect(invoice?.postedAt?.getTime()).toBe(FIXED.getTime());
+  });
+
   it.fails("persists the injected creation instant on a sales order", async () => {
     const h = await harness();
     const created = await h.create.execute({

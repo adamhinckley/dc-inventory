@@ -105,6 +105,7 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         customerId: order.customerId,
         status: order.status,
         documentNumber: order.documentNumber,
+        createdAt: order.createdAt,
         shipLine1: order.shipLine1,
         shipLine2: order.shipLine2,
         shipCity: order.shipCity,

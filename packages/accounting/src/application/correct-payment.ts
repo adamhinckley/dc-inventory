@@ -1,4 +1,5 @@
 import { InvoiceId, Money } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
 import { PaymentApplicationId } from "../domain/ids.js";
 import { computeRemainingCents } from "../domain/invoice.js";
 import type { IAccountingUnitOfWork } from "../domain/ports/invoice-repository.js";
@@ -17,10 +18,14 @@ export type CorrectPaymentResult =
   | { ok: false; reason: "not_found" | "invalid" | "wrong_currency" };
 
 export class CorrectPaymentUseCase {
-  constructor(private readonly unitOfWork: IAccountingUnitOfWork) {}
+  constructor(
+    private readonly unitOfWork: IAccountingUnitOfWork,
+    private readonly clock?: IClock,
+  ) {}
 
   async execute(input: CorrectPaymentRequest): Promise<CorrectPaymentResult> {
     void input.staffUserId;
+    void this.clock;
     if (
       !Number.isInteger(input.correctionAmountCents) ||
       input.correctionAmountCents === 0 ||
