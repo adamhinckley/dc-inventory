@@ -84,6 +84,9 @@ export async function runReplaySalesOrders(
   );
   const confirm = new ConfirmSalesOrderUseCase(ports.uow);
   const ship = new ShipSalesOrderUseCase(ports.uow);
+  const shipInstantBySalesOrderKey = new Map(
+    input.plan.shippedInvoices.map((row) => [row.salesOrderKey, row.plannedInstant]),
+  );
 
   let shippedCount = 0;
   let leftoverConfirmedCount = 0;
@@ -152,6 +155,9 @@ export async function runReplaySalesOrders(
       leftoverConfirmedCount += 1;
       continue;
     }
+
+    const shipInstant = shipInstantBySalesOrderKey.get(planned.key) ?? planned.plannedInstant;
+    ports.clock.setInstant(shipInstant);
 
     const shipped = await ship.execute({
       staffUserId: input.staffUserId,
