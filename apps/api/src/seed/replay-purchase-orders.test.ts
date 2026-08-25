@@ -29,6 +29,7 @@ import {
   PO_LINE_QTY_MIN,
 } from "./planner/constants.js";
 import { mean } from "./planner/corpus-samplers.js";
+import { isWithinLastDays } from "./planner/dates.js";
 import { planDemoBook } from "./planner/plan-demo-book.js";
 import { PHASE1_PRODUCT_SKUS } from "./phase1-fixture.js";
 import { InMemoryProductImageSeedRepository } from "./ports/in-memory-product-image-seed.js";
@@ -150,10 +151,45 @@ describe("replay purchase orders (in-memory)", () => {
       true,
     );
 
+    const plannedByKey = new Map(plan.purchaseOrders.map((row) => [row.key, row]));
+    const supplierSkusByKey = new Map(
+      plan.master.suppliers.map((supplier) => [
+        supplier.key,
+        new Set(
+          plan.master.supplierProducts
+            .filter((row) => row.supplierKey === supplier.key)
+            .map((row) => row.sku),
+        ),
+      ]),
+    );
+
     const confirmedUnreceived = listed.items.filter((row) => row.status === "confirmed");
     expect(confirmedUnreceived).toHaveLength(plan.leftoverConfirmedPurchaseOrderCount);
     for (const order of confirmedUnreceived) {
       expect(order.lines.every((line) => line.receivedQty === 0)).toBe(true);
+      const sequence = Number.parseInt(order.documentNumber.slice(3), 10);
+      const planned = plannedByKey.get(`po-${String(sequence).padStart(5, "0")}`);
+      expect(planned?.status).toBe("leftoverConfirmed");
+      expect(
+        isWithinLastDays(
+          order.createdAt,
+          SEED_TODAY,
+          FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays,
+        ),
+      ).toBe(true);
+    }
+
+    for (const order of listed.items) {
+      expect(new Set(order.lines.map((line) => line.sku.value)).size).toBe(order.lines.length);
+      const sequence = Number.parseInt(order.documentNumber.slice(3), 10);
+      const planned = plannedByKey.get(`po-${String(sequence).padStart(5, "0")}`);
+      expect(planned).toBeDefined();
+      expect(order.createdAt.getTime()).toBe(planned!.plannedInstant.getTime());
+      const supplierSkus = supplierSkusByKey.get(planned!.supplierKey);
+      expect(supplierSkus).toBeDefined();
+      for (const line of order.lines) {
+        expect(supplierSkus!.has(line.sku.value)).toBe(true);
+      }
     }
 
     const received = listed.items.filter((row) => row.status === "received");
@@ -181,14 +217,6 @@ describe("replay purchase orders (in-memory)", () => {
       expect(receivedPhase1Skus.has(sku)).toBe(true);
     }
 
-    const plannedByKey = new Map(plan.purchaseOrders.map((row) => [row.key, row]));
-    for (const order of listed.items) {
-      const sequence = Number.parseInt(order.documentNumber.slice(3), 10);
-      const planned = plannedByKey.get(`po-${String(sequence).padStart(5, "0")}`);
-      expect(planned).toBeDefined();
-      expect(order.createdAt.getTime()).toBe(planned!.plannedInstant.getTime());
-    }
-
     const movements = await uow.inventory.readModel.listMovements({ locationId: LocationId.DEFAULT });
     const inbound = movements.filter((row) => row.movementType === "InboundFromPo");
     const goodsReceived = movements.filter((row) => row.movementType === "GoodsReceived");
@@ -202,8 +230,27 @@ describe("replay purchase orders (in-memory)", () => {
     expect(inbound.length).toBe(expectedInboundLines);
     expect(goodsReceived.length).toBe(expectedReceivedLines);
     expect(inbound.length).toBeGreaterThan(goodsReceived.length);
+
+    const instantByPoId = new Map(
+      listed.items.map((order) => {
+        const sequence = Number.parseInt(order.documentNumber.slice(3), 10);
+        const planned = plannedByKey.get(`po-${String(sequence).padStart(5, "0")}`);
+        return [order.id, planned!.plannedInstant] as const;
+      }),
+    );
     for (const movement of movements) {
-      expect(movement.createdAt.getTime()).toBeGreaterThan(0);
+      if (movement.refType !== "purchase_order") {
+        continue;
+      }
+      const expectedInstant = instantByPoId.get(movement.refId);
+      expect(expectedInstant).toBeDefined();
+      expect(movement.createdAt.getTime()).toBe(expectedInstant!.getTime());
+    }
+
+    for (const order of confirmedUnreceived) {
+      const inboundForPo = inbound.filter((row) => row.refId === order.id);
+      expect(inboundForPo.length).toBe(order.lines.length);
+      expect(goodsReceived.some((row) => row.refId === order.id)).toBe(false);
     }
   }, 120_000);
 });
