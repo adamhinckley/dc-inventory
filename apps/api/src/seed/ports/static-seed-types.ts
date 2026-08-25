@@ -34,6 +34,18 @@ export interface ISupplierProductSeedRepository {
   listAll(): Promise<readonly SupplierProductSeedRow[]>;
 }
 
+export type ReorderPolicySeedRow = {
+  sku: string;
+  locationId: string;
+  minOnHand: number;
+  maxOnHand: number;
+};
+
+export interface IReorderPolicySeedRepository {
+  save(row: ReorderPolicySeedRow): Promise<void>;
+  listAll(): Promise<readonly ReorderPolicySeedRow[]>;
+}
+
 export type StaticDemoSeedPorts = {
   products: IProductRepository;
   productImages: IProductImageSeedRepository;
