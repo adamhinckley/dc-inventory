@@ -21,7 +21,12 @@ import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import {
   DEMO_COUNTS,
   DEFAULT_DEMO_SEED,
+  PERSONA_ORDER_BUDGETS,
   SO_LINE_COUNT_DEFAULT_MEAN,
+  SO_LINE_COUNT_IDLE_PARK_MAX,
+  SO_LINE_COUNT_IDLE_PARK_MIN,
+  SO_LINE_COUNT_NORTHSTAR_MAX,
+  SO_LINE_COUNT_NORTHSTAR_MIN,
   SO_LINE_QTY_MAX,
   SO_LINE_QTY_MEAN,
   SO_LINE_QTY_MIN,
@@ -193,6 +198,20 @@ describe("replay sales orders (in-memory)", () => {
       ),
     ).toBe(true);
 
+    const personaCounts = new Map<string, number>();
+    for (const order of listed.items) {
+      const key = customerKeyById.get(order.customerId);
+      if (key !== undefined) {
+        personaCounts.set(key, (personaCounts.get(key) ?? 0) + 1);
+      }
+    }
+    expect(personaCounts.get("northstar")).toBe(PERSONA_ORDER_BUDGETS.northstar);
+    expect(personaCounts.get("harvest")).toBe(PERSONA_ORDER_BUDGETS.harvest);
+    expect(personaCounts.get("idlePark")).toBe(PERSONA_ORDER_BUDGETS.idlePark);
+    expect([...personaCounts.values()].reduce((sum, value) => sum + value, 0)).toBe(
+      DEMO_COUNTS.salesOrders,
+    );
+
     for (const order of [...confirmed, ...drafts]) {
       expect(
         isWithinLastDays(
@@ -207,6 +226,7 @@ describe("replay sales orders (in-memory)", () => {
       expect(new Set(order.lines.map((line) => line.sku.value)).size).toBe(order.lines.length);
       const planned = plannedForDocumentNumber(order.documentNumber);
       expect(planned).toBeDefined();
+      expect(customerKeyById.get(order.customerId)).toBe(planned!.customerKey);
       expect(order.createdAt.getTime()).toBe(planned!.plannedInstant.getTime());
       expect(order.shipLine1).toBe(planned!.shipTo.line1);
       expect(order.shipCity).toBe(planned!.shipTo.city);
@@ -219,6 +239,7 @@ describe("replay sales orders (in-memory)", () => {
       expect(order.lines.every((line) => line.qty > 0)).toBe(true);
       const invoice = await uow.invoices.findByOrderId(order.id);
       expect(invoice).not.toBeNull();
+      // In-memory omitted-tax path: AccountingCommandAdapter never writes tax lines or commits.
       expect(invoice?.taxTotal.amountMinor).toBe(0);
       const subtotal = order.lines.reduce(
         (sum, line) => sum + line.qty * line.unitPrice.amountMinor,
@@ -226,6 +247,7 @@ describe("replay sales orders (in-memory)", () => {
       );
       expect(invoice?.subtotal.amountMinor).toBe(subtotal);
       expect(invoice?.total.amountMinor).toBe(subtotal);
+      expect(invoice?.total.amountMinor).toBe(invoice?.subtotal.amountMinor);
       expect(invoice?.postedAt?.getTime()).toBe(order.createdAt.getTime());
     }
 
@@ -243,6 +265,24 @@ describe("replay sales orders (in-memory)", () => {
     if (defaultPersonaLineCounts.length > 0) {
       expect(mean(defaultPersonaLineCounts)).toBe(SO_LINE_COUNT_DEFAULT_MEAN);
     }
+
+    const northstarLineCounts = listed.items
+      .filter((row) => customerKeyById.get(row.customerId) === "northstar")
+      .map((row) => row.lines.length);
+    expect(
+      northstarLineCounts.every(
+        (count) => count >= SO_LINE_COUNT_NORTHSTAR_MIN && count <= SO_LINE_COUNT_NORTHSTAR_MAX,
+      ),
+    ).toBe(true);
+
+    const idleParkLineCounts = listed.items
+      .filter((row) => customerKeyById.get(row.customerId) === "idlePark")
+      .map((row) => row.lines.length);
+    expect(
+      idleParkLineCounts.every(
+        (count) => count >= SO_LINE_COUNT_IDLE_PARK_MIN && count <= SO_LINE_COUNT_IDLE_PARK_MAX,
+      ),
+    ).toBe(true);
 
     const shippedPhase1Skus = new Set<string>();
     for (const order of shipped) {
