@@ -11,4 +11,8 @@ export class InMemoryClock implements IClock {
   advance(ms: number): void {
     this.instant = new Date(this.instant.getTime() + ms);
   }
+
+  setInstant(instant: Date): void {
+    this.instant = instant;
+  }
 }
