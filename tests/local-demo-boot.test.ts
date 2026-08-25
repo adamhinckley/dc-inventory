@@ -53,6 +53,8 @@ describe("local demo boot (ADA-51)", () => {
     expect(apiEnv).toContain(
       "PHASE1_WHOLESALE_PASSWORD=phase1-wholesale-placeholder",
     );
+    expect(apiEnv).toContain("DEMO_SEED=dc-inventory-demo-1");
+    expect(apiEnv).toMatch(/^DEMO_SEED_RESET=/m);
     expect(rootEnv).not.toMatch(/scrypt\$/);
     expect(apiEnv).not.toMatch(/scrypt\$/);
 
