@@ -1,3 +1,4 @@
+import type { IClock } from "@dc-inventory/inventory";
 import { InMemoryInventoryUnitOfWork } from "@dc-inventory/inventory";
 import { InMemoryInvoiceRepository } from "@dc-inventory/accounting";
 import {
@@ -22,25 +23,33 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
   readonly suppliers = new InMemorySupplierRepository();
   readonly salesOrders = new InMemorySalesOrderRepository();
   readonly invoices = new InMemoryInvoiceRepository();
-  private readonly inventoryUow = new InMemoryInventoryUnitOfWork();
-  readonly inventory = {
-    ledger: this.inventoryUow.ledger,
-    readModel: this.inventoryUow.readModel,
+  private readonly inventoryUow: InMemoryInventoryUnitOfWork;
+  readonly inventory: {
+    ledger: InMemoryInventoryUnitOfWork["ledger"];
+    readModel: InMemoryInventoryUnitOfWork["readModel"];
   };
+  private readonly purchasingScope: IPurchasingUnitOfWork;
+  private readonly salesScope: ISalesUnitOfWork;
 
-  private readonly purchasingScope: IPurchasingUnitOfWork = {
-    purchaseOrders: this.purchaseOrders,
-    suppliers: this.suppliers,
-    inventory: new StockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
-    run: (work) => this.run((scope) => work(scope.purchasing)),
-  };
-
-  private readonly salesScope: ISalesUnitOfWork = {
-    salesOrders: this.salesOrders,
-    inventory: new SalesStockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
-    accounting: new SalesInvoiceAccountingCommandAdapter(this.invoices),
-    run: (work) => this.run((scope) => work(scope.sales)),
-  };
+  constructor(clock?: IClock) {
+    this.inventoryUow = new InMemoryInventoryUnitOfWork(clock);
+    this.inventory = {
+      ledger: this.inventoryUow.ledger,
+      readModel: this.inventoryUow.readModel,
+    };
+    this.purchasingScope = {
+      purchaseOrders: this.purchaseOrders,
+      suppliers: this.suppliers,
+      inventory: new StockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
+      run: (work) => this.run((scope) => work(scope.purchasing)),
+    };
+    this.salesScope = {
+      salesOrders: this.salesOrders,
+      inventory: new SalesStockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
+      accounting: new SalesInvoiceAccountingCommandAdapter(this.invoices),
+      run: (work) => this.run((scope) => work(scope.sales)),
+    };
+  }
 
   get purchasing(): IPurchasingUnitOfWork {
     return this.purchasingScope;
