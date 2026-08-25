@@ -68,14 +68,14 @@ export class CreatePurchaseOrderUseCase {
       }
     }
 
-    void this.clock;
+    const createdAt = this.clock?.now() ?? new Date();
     const documentNumber = await this.purchaseOrders.nextDocumentNumber();
     const purchaseOrder: PurchaseOrder = {
       id: PurchaseOrderId.parse(newUuid()),
       supplierId: input.supplierId,
       documentNumber,
       status: "draft",
-      createdAt: new Date(),
+      createdAt,
       lines,
     };
     await this.purchaseOrders.save(purchaseOrder);

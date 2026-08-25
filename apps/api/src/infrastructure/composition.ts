@@ -259,10 +259,11 @@ function purchasingServices(
   purchaseOrderRepo: IPurchaseOrderRepository,
   supplierRepo: ISupplierRepository,
   unitOfWork: IUnitOfWork,
+  clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
   return {
     listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo),
-    createPurchaseOrder: new CreatePurchaseOrderUseCase(purchaseOrderRepo, supplierRepo),
+    createPurchaseOrder: new CreatePurchaseOrderUseCase(purchaseOrderRepo, supplierRepo, clock),
     getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
@@ -381,7 +382,7 @@ export function composeAppServices(
       : new InMemoryProductRepository());
   const unitOfWork =
     overrides.unitOfWork ??
-    (appDb ? new PostgresInventoryUnitOfWork(appDb, clock) : new InMemoryUnitOfWork());
+    (appDb ? new PostgresInventoryUnitOfWork(appDb, clock) : new InMemoryUnitOfWork(clock));
 
   const inMemoryUow = unitOfWork instanceof InMemoryUnitOfWork ? unitOfWork : null;
 
@@ -449,7 +450,7 @@ export function composeAppServices(
     },
     customers: customersServices(customerRepo, contactRepo, shipToRepo, exemptionRepo),
     catalog: catalogServices(productRepo, qtyRead),
-    purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork),
+    purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork, clock),
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     unitOfWork,
