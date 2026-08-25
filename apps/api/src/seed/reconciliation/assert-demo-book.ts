@@ -64,6 +64,7 @@ type Ctx = {
   book: DemoBook;
   seedToday: Date;
   expectations: DemoReconciliationExpectations;
+  appliedCentsByInvoice: Map<string, number>;
 };
 
 type Check = (ctx: Ctx) => DemoReconciliationResult | undefined;
@@ -88,8 +89,8 @@ function padDocument(prefix: string, sequence: number): string {
   return `${prefix}-${String(sequence).padStart(5, "0")}`;
 }
 
-function sequenceOf(documentNumber: string): number | null {
-  const match = /^(?:PO|SO|INV)-(\d{5})$/.exec(documentNumber);
+function sequenceOf(documentNumber: string, prefix: string): number | null {
+  const match = new RegExp(`^${prefix}-(\\d{5})$`).exec(documentNumber);
   if (!match) {
     return null;
   }
@@ -100,8 +101,20 @@ function sequenceOf(documentNumber: string): number | null {
   return Number.parseInt(digits, 10);
 }
 
-function leftoverCutoff(seedToday: Date, windowDays: number): Date {
-  return new Date(seedToday.getTime() - windowDays * 86_400_000);
+function isCompleteDocumentRun(sequences: readonly number[], expected: number): boolean {
+  if (sequences.length !== expected) {
+    return false;
+  }
+  const uniqueSorted = [...new Set(sequences)].sort((left, right) => left - right);
+  return uniqueSorted.length === expected && uniqueSorted.every((value, index) => value === index + 1);
+}
+
+function indexAppliedCents(applications: DemoBook["paymentApplications"]): Map<string, number> {
+  const applied = new Map<string, number>();
+  for (const row of applications) {
+    applied.set(row.invoiceId, (applied.get(row.invoiceId) ?? 0) + row.amountCents);
+  }
+  return applied;
 }
 
 function customerIdByName(book: DemoBook, name: string): string | undefined {
@@ -243,16 +256,18 @@ function checkDocumentNumberEndpoints(ctx: Ctx): DemoReconciliationResult | unde
     },
   ];
   for (const group of groups) {
-    const sequences = group.rows.map((row) => sequenceOf(row.documentNumber));
+    const sequences = group.rows.map((row) => sequenceOf(row.documentNumber, group.prefix));
     if (sequences.some((value) => value === null)) {
-      return failContract("document_number_endpoints", `${group.label} failed to parse`);
-    }
-    const max = Math.max(...(sequences as number[]));
-    const min = Math.min(...(sequences as number[]));
-    if (min !== 1 || max !== group.expected) {
       return failContract(
         "document_number_endpoints",
-        `${group.label} run from ${padDocument(group.prefix, min)} to ${padDocument(group.prefix, max)}, expected ${padDocument(group.prefix, 1)} through ${padDocument(group.prefix, group.expected)}`,
+        `${group.label} are not a ${group.prefix} run`,
+      );
+    }
+    const numbers = sequences as number[];
+    if (!isCompleteDocumentRun(numbers, group.expected)) {
+      return failContract(
+        "document_number_endpoints",
+        `${group.label} are not ${padDocument(group.prefix, 1)} through ${padDocument(group.prefix, group.expected)}`,
       );
     }
   }
@@ -269,7 +284,8 @@ function checkPhase1Fixtures(ctx: Ctx): DemoReconciliationResult | undefined {
     if (
       product.name !== fixture.name ||
       product.uom !== fixture.uom ||
-      product.memberPriceCents !== fixture.memberPriceCents
+      product.memberPriceCents !== fixture.memberPriceCents ||
+      product.currency !== fixture.currency
     ) {
       return failContract("phase1_fixture_preservation", `${sku} drifted from the Phase 1 fixture`);
     }
@@ -426,15 +442,22 @@ function checkImageKeyFormat(ctx: Ctx): DemoReconciliationResult | undefined {
   const seen = new Set<string>();
   for (const image of ctx.book.images) {
     const product = products.get(image.productId);
-    const sku = product?.sku ?? image.sku;
-    const expected = `demo/catalog/${sku}.jpg`;
+    if (!product) {
+      return failContract("image_key_format", "image is not attached to a product");
+    }
+    const expected = `demo/catalog/${product.sku}.jpg`;
     if (image.objectKey !== expected || image.contentType !== "image/jpeg") {
       return failContract("image_key_format", `${image.objectKey} is not a placeholder JPEG key`);
     }
     if (seen.has(image.productId)) {
-      return failContract("image_key_format", `${sku} has more than one image row`);
+      return failContract("image_key_format", `${product.sku} has more than one image row`);
     }
     seen.add(image.productId);
+  }
+  for (const product of ctx.book.products) {
+    if (!seen.has(product.id)) {
+      return failContract("image_key_format", `${product.sku} has no image row`);
+    }
   }
   return undefined;
 }
@@ -473,7 +496,6 @@ function checkNoExtraUsers(ctx: Ctx): DemoReconciliationResult | undefined {
 }
 
 function checkVendorPartition(ctx: Ctx): DemoReconciliationResult | undefined {
-  const suppliers = byId(ctx.book.suppliers);
   const vend001 = ctx.book.suppliers.find((row) => row.vendorNumber === "VEND-001");
   if (!vend001 || vend001.name !== "Demo Supplier") {
     return failContract("vendor_partition", "VEND-001 is not Demo Supplier");
@@ -500,12 +522,12 @@ function checkVendorPartition(ctx: Ctx): DemoReconciliationResult | undefined {
       return failContract("vendor_partition", `${sku} is not on VEND-001`);
     }
   }
-  for (const [supplierId, count] of perSupplier) {
+  for (const supplier of ctx.book.suppliers) {
+    const count = perSupplier.get(supplier.id) ?? 0;
     if (count < ctx.expectations.supplierSkuMin || count > ctx.expectations.supplierSkuMax) {
-      const vendor = suppliers.get(supplierId)?.vendorNumber ?? supplierId;
       return failContract(
         "vendor_partition",
-        `${vendor} owns ${String(count)} SKUs, outside ${String(ctx.expectations.supplierSkuMin)}–${String(ctx.expectations.supplierSkuMax)}`,
+        `${supplier.vendorNumber} owns ${String(count)} SKUs, outside ${String(ctx.expectations.supplierSkuMin)}–${String(ctx.expectations.supplierSkuMax)}`,
       );
     }
   }
@@ -567,14 +589,34 @@ function checkStockFromMovements(ctx: Ctx): DemoReconciliationResult | undefined
 }
 
 function checkInvoiceTotals(ctx: Ctx): DemoReconciliationResult | undefined {
+  const ordersById = byId(ctx.book.salesOrders);
+  const linesByOrder = new Map<string, DemoBook["salesOrderLines"]>();
+  for (const line of ctx.book.salesOrderLines) {
+    const rows = linesByOrder.get(line.orderId) ?? [];
+    rows.push(line);
+    linesByOrder.set(line.orderId, rows);
+  }
   for (const invoice of ctx.book.invoices) {
+    const order = ordersById.get(invoice.orderId);
+    if (!order || order.status !== "shipped") {
+      return failContract(
+        "invoice_totals",
+        `${invoice.documentNumber} is not invoice-on-ship`,
+      );
+    }
+    if (invoice.customerId !== order.customerId) {
+      return failContract(
+        "invoice_totals",
+        `${invoice.documentNumber} customer does not match the order`,
+      );
+    }
     if (invoice.taxTotalCents !== 0 || invoice.totalCents !== invoice.subtotalCents) {
       return failContract(
         "invoice_totals",
         `${invoice.documentNumber} tax/total does not equal omitted-tax subtotal`,
       );
     }
-    const lines = ctx.book.salesOrderLines.filter((row) => row.orderId === invoice.orderId);
+    const lines = linesByOrder.get(invoice.orderId) ?? [];
     const subtotal = lines.reduce((sum, line) => sum + line.unitPriceCents * line.qty, 0);
     if (invoice.subtotalCents !== subtotal) {
       return failContract(
@@ -594,10 +636,7 @@ function checkOmittedTax(ctx: Ctx): DemoReconciliationResult | undefined {
 }
 
 function remainingCents(ctx: Ctx, invoiceId: string, totalCents: number): number {
-  const applied = ctx.book.paymentApplications
-    .filter((row) => row.invoiceId === invoiceId)
-    .reduce((sum, row) => sum + row.amountCents, 0);
-  return totalCents - applied;
+  return totalCents - (ctx.appliedCentsByInvoice.get(invoiceId) ?? 0);
 }
 
 function checkInvoiceRemainder(ctx: Ctx): DemoReconciliationResult | undefined {
@@ -606,11 +645,7 @@ function checkInvoiceRemainder(ctx: Ctx): DemoReconciliationResult | undefined {
     if (remaining < 0) {
       return failContract("invoice_remainder", `${invoice.documentNumber} is over-applied`);
     }
-    const apps = ctx.book.paymentApplications.filter((row) => row.invoiceId === invoice.id);
-    if (apps.length === 0 && remaining !== invoice.totalCents) {
-      return failContract("invoice_remainder", `${invoice.documentNumber} unpaid remainder drifted`);
-    }
-    if (apps.length > 0 && remaining !== 0) {
+    if (remaining !== 0 && remaining !== invoice.totalCents) {
       return failContract("invoice_remainder", `${invoice.documentNumber} is not fully applied`);
     }
   }
@@ -644,6 +679,12 @@ function checkPaymentCompleteness(ctx: Ctx): DemoReconciliationResult | undefine
     }
     if (application.amountCents !== invoice.totalCents || payment.amountCents !== invoice.totalCents) {
       return failContract("payment_completeness", `${invoice.documentNumber} is not paid in full`);
+    }
+    if (payment.customerId !== invoice.customerId) {
+      return failContract(
+        "payment_completeness",
+        `${invoice.documentNumber} payment is not on the invoice customer`,
+      );
     }
   }
   const unpaid = unpaidInvoices(ctx);
@@ -797,12 +838,14 @@ function checkOpenDocumentMix(ctx: Ctx): DemoReconciliationResult | undefined {
 }
 
 function checkLeftoverRecency(ctx: Ctx): DemoReconciliationResult | undefined {
-  const cutoff = leftoverCutoff(ctx.seedToday, ctx.expectations.leftoverWindowDays);
   const leftover = [
     ...ctx.book.purchaseOrders.filter((row) => row.status === "confirmed"),
     ...ctx.book.salesOrders.filter((row) => row.status === "draft" || row.status === "confirmed"),
   ];
-  const stale = leftover.find((row) => row.createdAt < cutoff || row.createdAt > ctx.seedToday);
+  const stale = leftover.find((row) => {
+    const ageDays = utcDayDiff(row.createdAt, ctx.seedToday);
+    return ageDays > ctx.expectations.leftoverWindowDays || ageDays < 0;
+  });
   if (stale) {
     return failContract("leftover_recency", `${stale.documentNumber} is outside the last 7 seed-clock days`);
   }
@@ -840,7 +883,18 @@ function leftoverOnHand(ctx: Ctx, sku: string): number {
 }
 
 function checkLowStock(ctx: Ctx): DemoReconciliationResult | undefined {
-  if (ctx.book.reorderPolicies.length !== ctx.book.products.length) {
+  const productSkus = new Set(ctx.book.products.map((row) => row.sku));
+  const policySkus = new Set<string>();
+  for (const policy of ctx.book.reorderPolicies) {
+    if (policySkus.has(policy.sku)) {
+      return failContract("low_stock", `${policy.sku} has more than one reorder policy`);
+    }
+    if (!productSkus.has(policy.sku)) {
+      return failContract("low_stock", `${policy.sku} policy is not a shop-visible SKU`);
+    }
+    policySkus.add(policy.sku);
+  }
+  if (policySkus.size !== productSkus.size) {
     return failContract("low_stock", "reorder policies do not cover every shop-visible SKU");
   }
   let lowCount = 0;
@@ -883,10 +937,12 @@ export async function assertDemoBook(
   reader: IDemoBookReader,
   options: AssertDemoBookOptions,
 ): Promise<DemoReconciliationResult> {
+  const book = await reader.load();
   const ctx: Ctx = {
-    book: await reader.load(),
+    book,
     seedToday: options.seedToday,
     expectations: options.expectations ?? FULL_DEMO_RECONCILIATION_EXPECTATIONS,
+    appliedCentsByInvoice: indexAppliedCents(book.paymentApplications),
   };
   for (const check of checks) {
     const failed = check(ctx);

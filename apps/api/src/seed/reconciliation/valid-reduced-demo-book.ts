@@ -14,7 +14,8 @@ import { recomputeStockFromMovements, stockKey } from "./stock-from-movements.js
 /** Reduced in-memory book for reconciliation tests. Not a public seed profile. */
 
 const LOCATION = "loc-default";
-const SEED_TODAY = new Date("2026-08-24T00:00:00.000Z");
+const SEED_TODAY = new Date("2026-08-24T15:30:00.000Z");
+const LEFTOVER_DAY_SEVEN = new Date("2026-08-17T00:00:00.000Z");
 
 function daysAgo(days: number): Date {
   return new Date(SEED_TODAY.getTime() - days * 86_400_000);
@@ -227,7 +228,7 @@ export function buildValidReducedDemoBook(): DemoBook {
     supplierId: "sup-003",
     status: "confirmed",
     documentNumber: pad("PO", 10),
-    createdAt: daysAgo(2),
+    createdAt: LEFTOVER_DAY_SEVEN,
   });
 
   const purchaseOrderLines: DemoBook["purchaseOrderLines"] = [

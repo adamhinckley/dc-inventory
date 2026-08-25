@@ -1,4 +1,4 @@
-import { computeSnapshotDelta } from "@dc-inventory/inventory/ledger-rules";
+import { computeSnapshotDelta, isPositiveIntegerQuantity } from "@dc-inventory/inventory/ledger-rules";
 import {
   freezeStockFigures,
   ZERO_STOCK_FIGURES,
@@ -33,6 +33,9 @@ export function recomputeStockFromMovements(
   });
   const figures = new Map<string, StockFigures>();
   for (const movement of sorted) {
+    if (!isPositiveIntegerQuantity(movement.quantity)) {
+      return { error: `${movement.sku} ${movement.movementType}: quantity must be a positive integer` };
+    }
     const key = stockKey(movement.sku, movement.locationId);
     const current = figures.get(key) ?? ZERO_STOCK_FIGURES;
     const delta = computeSnapshotDelta(movement.movementType, movement.quantity, current);

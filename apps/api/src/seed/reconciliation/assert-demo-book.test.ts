@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { assertDemoBook, type DemoReconciliationContract } from "./assert-demo-book.js";
+import {
+  assertDemoBook,
+  DEMO_RECONCILIATION_CONTRACTS,
+  type DemoReconciliationContract,
+} from "./assert-demo-book.js";
 import type { DemoBook } from "./demo-book.js";
 import { InMemoryDemoBookReader } from "./in-memory-demo-book-reader.js";
 import {
@@ -159,7 +163,7 @@ const breaks: Array<{
     mutate: (book) => {
       const image = book.images[0];
       if (image) {
-        image.objectKey = "not-a-placeholder.png";
+        image.productId = "prod-missing";
       }
     },
   },
@@ -343,6 +347,12 @@ describe("Demo reconciliation", () => {
   it("accepts a valid reduced book", async () => {
     const result = await reconcile(buildValidReducedDemoBook());
     expect(result).toEqual({ ok: true });
+  });
+
+  it("covers every named contract with a break case", () => {
+    expect([...new Set(breaks.map((row) => row.contract))].sort()).toEqual(
+      [...DEMO_RECONCILIATION_CONTRACTS].sort(),
+    );
   });
 
   it.each(breaks)("names $contract on the smallest relevant mismatch", async ({ contract, mutate }) => {
