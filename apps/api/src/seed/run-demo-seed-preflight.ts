@@ -1,10 +1,10 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readDatabaseUrl } from "../infrastructure/database-url.js";
 import { createDatabaseConnection } from "../infrastructure/db.js";
 import {
   assertDemoSeedPreflight,
+  assertLocalDatabaseHost,
   DemoSeedGuardError,
   PostgresDemoBookOccupancy,
   PostgresDemoBookReset,
@@ -25,7 +25,9 @@ function loadLocalEnvFiles(): void {
 loadLocalEnvFiles();
 
 try {
-  const databaseUrl = readDatabaseUrl();
+  const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
+  assertLocalDatabaseHost(databaseUrl);
+
   const connection = createDatabaseConnection(databaseUrl);
   await assertDemoSeedPreflight({
     databaseUrl,

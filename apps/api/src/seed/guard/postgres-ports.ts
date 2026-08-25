@@ -1,4 +1,4 @@
-import type { Sql } from "postgres";
+import type { Sql, TransactionSql } from "postgres";
 import { DEMO_OWNED_SCHEMAS } from "./constants.js";
 import type { DemoOwnedSchema } from "./constants.js";
 import type {
@@ -7,12 +7,14 @@ import type {
   IDemoBookResetPort,
 } from "./ports.js";
 
+type PostgresQueryable = Sql | TransactionSql;
+
 function quoteIdent(identifier: string): string {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
 async function listBaseTables(
-  sql: Sql,
+  sql: PostgresQueryable,
   schemaName: DemoOwnedSchema,
 ): Promise<string[]> {
   const rows = await sql<{ table_name: string }[]>`
@@ -52,17 +54,19 @@ export class PostgresDemoBookReset implements IDemoBookResetPort {
   constructor(private readonly sql: Sql) {}
 
   async resetDemoOwnedSchemas(): Promise<void> {
-    for (const schemaName of DEMO_OWNED_SCHEMAS) {
-      const tables = await listBaseTables(this.sql, schemaName);
-      if (tables.length === 0) {
-        continue;
+    await this.sql.begin(async (tx) => {
+      for (const schemaName of DEMO_OWNED_SCHEMAS) {
+        const tables = await listBaseTables(tx, schemaName);
+        if (tables.length === 0) {
+          continue;
+        }
+        const qualified = tables
+          .map((tableName) => `${quoteIdent(schemaName)}.${quoteIdent(tableName)}`)
+          .join(", ");
+        await tx.unsafe(
+          `TRUNCATE TABLE ${qualified} RESTART IDENTITY CASCADE`,
+        );
       }
-      const qualified = tables
-        .map((tableName) => `${quoteIdent(schemaName)}.${quoteIdent(tableName)}`)
-        .join(", ");
-      await this.sql.unsafe(
-        `TRUNCATE TABLE ${qualified} RESTART IDENTITY CASCADE`,
-      );
-    }
+    });
   }
 }

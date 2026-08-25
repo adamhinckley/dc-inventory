@@ -13,5 +13,5 @@ export const OCCUPIED_DATABASE_MESSAGE =
 
 export const INVALID_RESET_OPT_IN_MESSAGE =
   "Demo seed refuses to reset: DEMO_SEED_RESET must be exactly 1 (after trimming whitespace). " +
-  "Values such as true, yes, or 1 with surrounding spaces are not accepted. " +
+  "Values such as true, yes, or 01 are not accepted. " +
   "Alternatively, remove the Postgres volume with `docker compose down -v`, run `pnpm db:migrate`, and seed again.";
