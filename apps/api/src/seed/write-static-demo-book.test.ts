@@ -1,6 +1,5 @@
 import { InMemoryProductRepository } from "@dc-inventory/catalog";
 import {
-  InMemoryContactRepository,
   InMemoryCustomerRepository,
   InMemoryExemptionCertificateRepository,
   InMemoryShipToRepository,
@@ -22,10 +21,12 @@ import {
 import { InMemorySupplierRepository } from "@dc-inventory/purchasing";
 import { SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DEMO_SEED } from "./planner/constants.js";
+import { DEFAULT_DEMO_SEED, GENERATED_SKU_COUNT, GENERATED_SKU_FIRST } from "./planner/constants.js";
 import { planDemoBook } from "./planner/plan-demo-book.js";
 import {
+  PHASE1_CUSTOMER_CURRENCY,
   PHASE1_CUSTOMER_NAME,
+  PHASE1_CUSTOMER_TERMS,
   PHASE1_PRODUCT_SKUS,
   PHASE1_PRODUCTS,
   PHASE1_STAFF_EMAIL,
@@ -44,6 +45,10 @@ import {
 } from "./write-static-demo-book.js";
 
 const SEED_TODAY = new Date("2026-08-24T15:30:00.000Z");
+
+function inMemoryUserCount(repo: InMemoryStaffUserRepository | InMemoryWholesaleUserRepository): number {
+  return (repo as unknown as { byEmail: Map<string, unknown> }).byEmail.size;
+}
 
 function staticSeedPorts(): StaticDemoSeedPorts & {
   locations: Map<string, { id: string; code: string }>;
@@ -97,7 +102,6 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
 describe("static demo book writer (in-memory)", () => {
   it("writes the full static master book from a deterministic plan", async () => {
     const ports = staticSeedPorts();
-    const contacts = new InMemoryContactRepository();
     const sessions = new InMemorySessionStore();
     const plan = planDemoBook({ seed: DEFAULT_DEMO_SEED, seedToday: SEED_TODAY });
 
@@ -150,6 +154,39 @@ describe("static demo book writer (in-memory)", () => {
       expect(product.taxCategoryCode).toBe("TANGIBLE");
     }
 
+    const generatedProducts = first.products.filter((row) => row.sku.value.startsWith("DEM-"));
+    expect(generatedProducts).toHaveLength(GENERATED_SKU_COUNT);
+    const generatedSkus = generatedProducts.map((row) => row.sku.value).sort();
+    expect(generatedSkus[0]).toBe("DEM-00001");
+    expect(generatedSkus[GENERATED_SKU_COUNT - 1]).toBe(
+      `DEM-${String(GENERATED_SKU_FIRST + GENERATED_SKU_COUNT - 1).padStart(5, "0")}`,
+    );
+    for (const planned of plan.master.products.filter((row) => !row.isPhase1Fixture)) {
+      const product = first.products.find((row) => row.sku.value === planned.sku);
+      expect(product?.uom).toBe(planned.uom);
+      expect(product?.description).toBeNull();
+      expect(product?.memberPrice.amountMinor).toBe(planned.memberPriceCents);
+      expect(product?.memberPrice.currency).toBe(planned.currency);
+      expect(product?.webWholesale).toBe(true);
+      expect(product?.taxCategoryCode).toBe(planned.taxCategoryCode);
+    }
+
+    for (const customer of first.customers) {
+      expect(customer.terms).toBe(PHASE1_CUSTOMER_TERMS);
+      expect(customer.creditLimit.currency).toBe(PHASE1_CUSTOMER_CURRENCY);
+      const isNamed = Object.values(DEMO_NAMED_CUSTOMERS).some((pin) => pin.name === customer.name);
+      if (!isNamed) {
+        expect(customer.creditLimit.amountMinor).toBe(
+          FULL_DEMO_RECONCILIATION_EXPECTATIONS.mixCustomerCreditLimitCents,
+        );
+      }
+      const shipTosForCustomer = first.shipTos.filter((row) => row.customerId === customer.id);
+      expect(shipTosForCustomer).toHaveLength(1);
+      const shipTo = shipTosForCustomer[0];
+      expect(shipTo?.isDefault).toBe(true);
+      expect(shipTo?.country).toBe("US");
+    }
+
     const acme = first.customers.find((row) => row.name === PHASE1_CUSTOMER_NAME);
     expect(acme).toBeDefined();
     if (acme) {
@@ -196,7 +233,29 @@ describe("static demo book writer (in-memory)", () => {
     expect(first.staff.email).toBe(PHASE1_STAFF_EMAIL);
     expect(first.wholesale.email).toBe(PHASE1_WHOLESALE_EMAIL);
     expect(first.wholesale.customerId).toBe(acme?.id);
-    expect(await contacts.listByCustomer(acme!.id)).toEqual([]);
+    expect(inMemoryUserCount(ports.staffUsers)).toBe(1);
+    expect(inMemoryUserCount(ports.wholesaleUsers)).toBe(1);
+    expect(await ports.staffUsers.findByEmail("other@local.test")).toBeNull();
+    expect(await ports.wholesaleUsers.findByEmail("other@local.test")).toBeNull();
+
+    const vend001 = await ports.suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
+    expect(vend001?.name).toBe(PHASE2_SUPPLIER_NAME);
+    const supplierProducts = await ports.supplierProducts.listAll();
+    const skuToSupplier = new Map(supplierProducts.map((row) => [row.sku, row.supplierId]));
+    for (const sku of PHASE1_PRODUCT_SKUS) {
+      expect(skuToSupplier.get(sku)).toBe(vend001?.id);
+    }
+    const perSupplier = new Map<string, number>();
+    for (const row of supplierProducts) {
+      perSupplier.set(row.supplierId, (perSupplier.get(row.supplierId) ?? 0) + 1);
+      expect(row.minOrderQty).toBeNull();
+    }
+    for (const supplier of plan.master.suppliers) {
+      const persisted = await ports.suppliers.findByVendorNumber(supplier.vendorNumber);
+      const count = perSupplier.get(persisted?.id ?? "") ?? 0;
+      expect(count).toBeGreaterThanOrEqual(FULL_DEMO_RECONCILIATION_EXPECTATIONS.supplierSkuMin);
+      expect(count).toBeLessThanOrEqual(FULL_DEMO_RECONCILIATION_EXPECTATIONS.supplierSkuMax);
+    }
 
     const vendorPartition = new Map<string, string>();
     for (const row of await ports.supplierProducts.listAll()) {

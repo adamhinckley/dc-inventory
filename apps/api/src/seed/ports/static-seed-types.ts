@@ -43,6 +43,7 @@ export type StaticDemoSeedPorts = {
   staffUsers: IStaffUserRepository;
   wholesaleUsers: IWholesaleUserRepository;
   passwords: IPasswordHasher;
+  /** Must be the same persistence as `phase2Bootstrap.upsertPrerequisiteSupplier`. */
   suppliers: ISupplierRepository;
   supplierProducts: ISupplierProductSeedRepository;
   phase2Bootstrap: Phase2BootstrapPorts;
