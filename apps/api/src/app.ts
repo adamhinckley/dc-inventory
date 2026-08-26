@@ -169,11 +169,12 @@ declare module "fastify" {
   }
 
   interface FastifyRequest {
-    staffAuth?: { staffUserId: string; email: string };
+    staffAuth?: { staffUserId: string; email: string; organizationId: string };
     wholesaleAuth?: {
       wholesaleUserId: string;
       email: string;
       customerId: string;
+      organizationId: string;
     };
   }
 }

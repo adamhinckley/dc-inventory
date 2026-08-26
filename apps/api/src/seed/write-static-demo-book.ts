@@ -244,9 +244,13 @@ export async function runWriteStaticDemoBook(
   };
   await ports.staffUsers.save(staff);
 
-  const existingWholesale = await ports.wholesaleUsers.findByEmail(plan.master.wholesaleEmail);
+  const existingWholesale = await ports.wholesaleUsers.findByEmail(
+    OrganizationId.DEFAULT,
+    plan.master.wholesaleEmail,
+  );
   const wholesale: WholesaleUser = {
     id: existingWholesale?.id ?? WholesaleUserId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     email: plan.master.wholesaleEmail,
     passwordHash: await ports.passwords.hash(wholesalePassword),
     customerId: acme.id,

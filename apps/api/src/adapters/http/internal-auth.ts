@@ -46,7 +46,11 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
       setSessionCookie(reply, STAFF_SESSION_COOKIE, result.sessionId, request);
-      return { staffUserId: result.staffUserId, email: result.email };
+      return {
+        staffUserId: result.staffUserId,
+        email: result.email,
+        organizationId: result.organizationId,
+      };
     },
   );
 
@@ -93,7 +97,11 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
       if (!result.ok) {
         return unauthorized(reply, request, token);
       }
-      return { staffUserId: result.staffUserId, email: result.email };
+      return {
+        staffUserId: result.staffUserId,
+        email: result.email,
+        organizationId: result.organizationId,
+      };
     },
   );
 }
