@@ -37,13 +37,14 @@ export const invoices = accounting.table(
   "invoices",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
     orderId: uuid("order_id")
       .notNull()
       .references(() => orders.id),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id),
-    documentNumber: text("document_number").notNull().unique(),
+    documentNumber: text("document_number").notNull(),
     status: invoiceStatus("status").notNull(),
     postedAt: timestamp("posted_at", { withTimezone: true, mode: "date" }),
     subtotalCents: bigint("subtotal_cents", { mode: "number" }).notNull(),
@@ -52,7 +53,13 @@ export const invoices = accounting.table(
     currency: char("currency", { length: 3 }).notNull().default("USD"),
     ...timestamps(),
   },
-  (table) => [uniqueIndex("invoices_order_id_unique").on(table.orderId)],
+  (table) => [
+    uniqueIndex("invoices_organization_id_document_number_unique").on(
+      table.organizationId,
+      table.documentNumber,
+    ),
+    uniqueIndex("invoices_order_id_unique").on(table.orderId),
+  ],
 );
 
 /** Same shape as tax_commit_lines. Frozen. No live FK to tax. */
@@ -74,6 +81,7 @@ export const payments = accounting.table(
   "payments",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => customers.id),
@@ -82,7 +90,12 @@ export const payments = accounting.table(
     idempotencyKey: text("idempotency_key").notNull(),
     ...timestamps(),
   },
-  (table) => [uniqueIndex("payments_idempotency_key_unique").on(table.idempotencyKey)],
+  (table) => [
+    uniqueIndex("payments_organization_id_idempotency_key_unique").on(
+      table.organizationId,
+      table.idempotencyKey,
+    ),
+  ],
 );
 
 export const paymentApplications = accounting.table("payment_applications", {
