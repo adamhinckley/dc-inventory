@@ -18,6 +18,7 @@ export const productsListTable = {
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
     { field: "available", label: "Available" },
+    { field: "createdAt", label: "Created" },
   ],
   search: {
     param: "q",
@@ -28,6 +29,6 @@ export const productsListTable = {
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
-    fields: ["sku", "name", "available", "createdAt"],
+    fields: ["sku", "name", "onHand", "available", "createdAt"],
   },
 } as const satisfies TableMeta;

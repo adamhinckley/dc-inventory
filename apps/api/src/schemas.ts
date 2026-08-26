@@ -38,7 +38,7 @@ export const listQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  sortBy: z.enum(["sku", "name", "available", "createdAt"]).default("sku"),
+  sortBy: z.enum(["sku", "name", "onHand", "available", "createdAt"]).default("sku"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
   inactive: optionalBooleanQuery,
 });
@@ -56,6 +56,7 @@ export const productListItemSchema = z.object({
   onOrder: z.number().int(),
   allocated: z.number().int(),
   available: z.number().int(),
+  createdAt: z.string().datetime(),
 });
 
 export const productListResponseSchema = z.object({
@@ -338,6 +339,7 @@ export const productsListTable = {
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
     { field: "available", label: "Available" },
+    { field: "createdAt", label: "Created" },
   ],
   search: {
     param: "q",
@@ -348,7 +350,7 @@ export const productsListTable = {
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
-    fields: ["sku", "name", "available", "createdAt"],
+    fields: ["sku", "name", "onHand", "available", "createdAt"],
   },
 };
 

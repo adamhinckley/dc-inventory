@@ -43,9 +43,15 @@ describe("folder-per-surface layout", () => {
 
   it("scopes form-control IDs per Root instance", () => {
     const source = readFileSync(join(srcDir, "data-table/data-table.tsx"), "utf8");
-    expect(source).toContain("useId");
     expect(source).toContain("idBase");
+    expect(source).toContain("tableControlIdBase");
+    expect(source).not.toContain("useId");
     expect(source).not.toMatch(/id="datatable-search"/);
     expect(source).not.toMatch(/id="datatable-sort"/);
+    expect(source).toContain("aria-sort");
+    expect(source).toContain('scope="col"');
+    expect(source).toContain("<button");
+    expect(source).not.toMatch(/role=\{canSort \? "button"/);
+    expect(source).not.toMatch(/<Label htmlFor=\{sortId\}>Sort<\/Label>/);
   });
 });

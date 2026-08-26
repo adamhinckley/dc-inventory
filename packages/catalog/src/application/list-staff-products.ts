@@ -4,7 +4,7 @@ import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import type { Product } from "../domain/product.js";
 import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
 
-export type StaffProductSortBy = "sku" | "name" | "available" | "createdAt";
+export type StaffProductSortBy = "sku" | "name" | "onHand" | "available" | "createdAt";
 export type SortOrder = "asc" | "desc";
 
 export type ListStaffProductsRequest = {
@@ -20,6 +20,7 @@ export type ListStaffProductsRequest = {
 export type StaffProductListRow = {
   product: Product;
   qty: ProductQty;
+  createdAt: Date;
 };
 
 export type ListStaffProductsResult = {
@@ -44,12 +45,10 @@ export class ListStaffProductsUseCase {
     const snapshots = await this.qty.readBySkus(
       listed.map((row) => row.product.sku),
     );
-    const createdAtById = new Map(
-      listed.map((row) => [row.product.id, row.createdAt.getTime()] as const),
-    );
     const rows: StaffProductListRow[] = listed.map((row) => ({
       product: row.product,
       qty: snapshots.get(row.product.sku.value) ?? ZERO_QTY,
+      createdAt: row.createdAt,
     }));
     rows.sort((a, b) => {
       let cmp = 0;
@@ -57,10 +56,12 @@ export class ListStaffProductsUseCase {
         cmp = a.product.sku.value.localeCompare(b.product.sku.value);
       } else if (input.sortBy === "name") {
         cmp = a.product.name.localeCompare(b.product.name);
+      } else if (input.sortBy === "onHand") {
+        cmp = a.qty.onHand - b.qty.onHand;
       } else if (input.sortBy === "available") {
         cmp = a.qty.available - b.qty.available;
       } else {
-        cmp = (createdAtById.get(a.product.id) ?? 0) - (createdAtById.get(b.product.id) ?? 0);
+        cmp = a.createdAt.getTime() - b.createdAt.getTime();
       }
       return input.sortOrder === "desc" ? -cmp : cmp;
     });

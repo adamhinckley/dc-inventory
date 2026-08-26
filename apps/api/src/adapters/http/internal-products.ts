@@ -36,7 +36,7 @@ function mapQty(qty: ProductQty) {
   };
 }
 
-function mapListItem(product: Product, qty: ProductQty) {
+function mapListItem(product: Product, qty: ProductQty, createdAt: Date) {
   return {
     id: product.id,
     sku: product.sku.value,
@@ -47,6 +47,7 @@ function mapListItem(product: Product, qty: ProductQty) {
     discontinued: product.discontinued,
     webWholesale: product.webWholesale,
     ...mapQty(qty),
+    createdAt: createdAt.toISOString(),
   };
 }
 
@@ -102,7 +103,7 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
         q?: string;
         page: number;
         pageSize: number;
-        sortBy: "sku" | "name" | "available" | "createdAt";
+        sortBy: "sku" | "name" | "onHand" | "available" | "createdAt";
         sortOrder: "asc" | "desc";
         inactive?: boolean;
       };
@@ -116,7 +117,9 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
         inactive: query.inactive,
       });
       return {
-        items: result.items.map((row) => mapListItem(row.product, row.qty)),
+        items: result.items.map((row) =>
+          mapListItem(row.product, row.qty, row.createdAt),
+        ),
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,

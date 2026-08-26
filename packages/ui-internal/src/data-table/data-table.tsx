@@ -1,16 +1,24 @@
 "use client";
 
 import { Button, Input, Label } from "@dc-inventory/ui";
+import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
 import {
   createContext,
   useContext,
-  useId,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
 } from "react";
-import type { DataTableState, ListQueryParams } from "./list-params";
-import type { TableFilterMeta, TableMeta } from "./table-meta";
+import {
+  nextTableSort,
+  type DataTableState,
+  type ListQueryParams,
+} from "./list-params";
+import {
+  tableControlIdBase,
+  type TableFilterMeta,
+  type TableMeta,
+} from "./table-meta";
 import {
   useDataTable,
   type ListQueryHook,
@@ -33,6 +41,8 @@ export type DataTableRootProps<
   initialParams?: ListQueryParams;
   /** Page-owned URL adapter. Omit in Storybook. */
   onParamsChange?: (params: ListQueryParams) => void;
+  /** Set whenever more than one Root renders on a page so form-control ids stay unique. */
+  idPrefix?: string;
   children: ReactNode;
 };
 
@@ -211,9 +221,10 @@ export function DataTableRoot<
   filterOptions,
   initialParams,
   onParamsChange,
+  idPrefix,
   children,
 }: DataTableRootProps<TParams, TRow>) {
-  const idBase = useId();
+  const idBase = tableControlIdBase(meta, idPrefix);
   const table = useDataTable({
     meta,
     queryHook,
@@ -270,7 +281,7 @@ export function DataTableSearch() {
 }
 
 /**
- * Declared `x-table` filters plus sort/order chrome.
+ * Declared `x-table` filters.
  *
  * When to use: catalog-style lists that need status (or other declared) filters.
  * When not to use: inventing filters that are not on `meta.filters`.
@@ -290,8 +301,9 @@ export function DataTableSearch() {
  */
 export function DataTableFilters() {
   const { meta, state, setState, filterOptions, idBase } = useDataTableContext();
-  const sortId = `${idBase}-sort`;
-  const sortOrderId = `${idBase}-sort-order`;
+  if (meta.filters.length === 0) {
+    return null;
+  }
 
   return (
     <div className="flex flex-wrap items-end gap-field-group">
@@ -305,45 +317,6 @@ export function DataTableFilters() {
           idBase={idBase}
         />
       ))}
-      <div className="flex min-w-40 flex-col gap-2">
-        <Label htmlFor={sortId}>Sort</Label>
-        <select
-          id={sortId}
-          className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
-          value={state.sortBy}
-          onChange={(event) =>
-            setState((current) => ({
-              ...current,
-              page: 1,
-              sortBy: event.target.value,
-            }))
-          }
-        >
-          {meta.sort.fields.map((field) => (
-            <option key={field} value={field}>
-              {field}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex min-w-28 flex-col gap-2">
-        <Label htmlFor={sortOrderId}>Order</Label>
-        <select
-          id={sortOrderId}
-          className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
-          value={state.sortOrder}
-          onChange={(event) =>
-            setState((current) => ({
-              ...current,
-              page: 1,
-              sortOrder: event.target.value === "desc" ? "desc" : "asc",
-            }))
-          }
-        >
-          <option value="asc">asc</option>
-          <option value="desc">desc</option>
-        </select>
-      </div>
     </div>
   );
 }
@@ -364,22 +337,63 @@ export function DataTableFilters() {
  * ```
  */
 export function DataTableTable() {
-  const { meta, items, query, busy } = useDataTableContext();
+  const { meta, items, query, busy, state, setState } = useDataTableContext();
+
+  function applySort(field: string) {
+    setState((current) => ({
+      ...current,
+      page: 1,
+      ...nextTableSort(meta, current, field),
+    }));
+  }
 
   return (
     <div className="section-flat overflow-x-auto">
       <table className="w-full border-collapse text-left text-body">
         <thead>
           <tr>
-            {meta.columns.map((column) => (
-              <th
-                key={column.field}
-                scope="col"
-                className="section-content-column-header section-content-padding border-b border-border"
-              >
-                {column.label}
-              </th>
-            ))}
+            {meta.columns.map((column) => {
+              const canSort = meta.sort.fields.includes(column.field);
+              const isSorted = canSort && state.sortBy === column.field;
+              const chevron = canSort ? (
+                isSorted ? (
+                  state.sortOrder === "asc" ? (
+                    <ChevronUp className="size-icon" />
+                  ) : (
+                    <ChevronDown className="size-icon" />
+                  )
+                ) : (
+                  <ChevronsUpDown className="size-icon opacity-30" />
+                )
+              ) : null;
+              return (
+                <th
+                  key={column.field}
+                  scope="col"
+                  aria-sort={
+                    isSorted
+                      ? state.sortOrder === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
+                  className="section-content-column-header section-content-padding border-b border-border"
+                >
+                  {canSort ? (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-tight bg-transparent p-0 text-inherit hover:text-fg"
+                      onClick={() => applySort(column.field)}
+                    >
+                      {column.label}
+                      {chevron}
+                    </button>
+                  ) : (
+                    column.label
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
