@@ -96,6 +96,7 @@ import {
   type ISalesOrderRepository,
   type SalesDrizzle,
 } from "@dc-inventory/sales";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
@@ -274,7 +275,7 @@ function purchasingServices(
 function customerLookupPort(customerRepo: ICustomerRepository): ICustomerLookupPort {
   return {
     findById: async (id) => {
-      const customer = await customerRepo.findById(id);
+      const customer = await customerRepo.findById(OrganizationId.DEFAULT, id);
       return customer === null ? null : { id: customer.id };
     },
   };

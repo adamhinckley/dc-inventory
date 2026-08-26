@@ -29,6 +29,7 @@ function timestamps() {
 
 export const customers = customersSchema.table("customers", {
   id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: text("organization_id").notNull().default("DEFAULT"),
   name: text("name").notNull(),
   creditLimitCents: bigint("credit_limit_cents", { mode: "number" }).notNull(),
   currency: char("currency", { length: 3 }).notNull().default("USD"),

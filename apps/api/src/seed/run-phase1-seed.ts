@@ -64,9 +64,10 @@ function newId(): string {
 }
 
 async function upsertCustomer(ports: Phase1SeedPorts): Promise<Customer> {
-  const existing = await ports.customers.findByName(PHASE1_CUSTOMER_NAME);
+  const existing = await ports.customers.findByName(OrganizationId.DEFAULT, PHASE1_CUSTOMER_NAME);
   const customer: Customer = {
     id: existing?.id ?? CustomerId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     name: PHASE1_CUSTOMER_NAME,
     creditLimit: Money.fromMinorUnits(
       PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS,

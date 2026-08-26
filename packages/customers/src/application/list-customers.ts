@@ -1,4 +1,4 @@
-import type { StaffUserId } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../domain/customer.js";
 import type {
   CustomerListSortBy,
@@ -7,6 +7,7 @@ import type {
 } from "../domain/ports/customer-repository.js";
 
 export type ListCustomersRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   q?: string;
   page: number;
@@ -28,6 +29,7 @@ export class ListCustomersUseCase {
   async execute(input: ListCustomersRequest): Promise<ListCustomersResult> {
     void input.staffUserId;
     const page = await this.customers.list({
+      organizationId: input.organizationId,
       q: input.q,
       page: input.page,
       pageSize: input.pageSize,

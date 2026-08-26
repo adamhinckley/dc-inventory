@@ -1,4 +1,4 @@
-import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { Contact } from "../domain/contact.js";
 import { normalizeEmail } from "../domain/email.js";
 import { ContactId, newUuid } from "../domain/ids.js";
@@ -6,6 +6,7 @@ import type { IContactRepository } from "../domain/ports/contact-repository.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 
 export type CreateContactRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
   name: string;
@@ -30,7 +31,7 @@ export class CreateContactUseCase {
     if (name.length === 0 || email.length === 0 || !email.includes("@")) {
       return { ok: false, reason: "invalid" };
     }
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }

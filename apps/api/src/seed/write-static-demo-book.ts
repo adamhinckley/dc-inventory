@@ -90,9 +90,10 @@ async function upsertCustomer(
   ports: StaticDemoSeedPorts,
   planned: DemoBookPlan["master"]["customers"][number],
 ): Promise<Customer> {
-  const existing = await ports.customers.findByName(planned.name);
+  const existing = await ports.customers.findByName(OrganizationId.DEFAULT, planned.name);
   const customer: Customer = {
     id: existing?.id ?? CustomerId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     name: planned.name,
     creditLimit: Money.fromMinorUnits(planned.creditLimitCents, planned.currency),
     terms: planned.terms,

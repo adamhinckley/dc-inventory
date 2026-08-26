@@ -1,10 +1,11 @@
-import type { CustomerId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../customer.js";
 
 export type CustomerListSortBy = "name" | "createdAt" | "creditLimitCents";
 export type SortOrder = "asc" | "desc";
 
 export type ListCustomersQuery = {
+  organizationId: OrganizationId;
   q?: string;
   page: number;
   pageSize: number;
@@ -19,7 +20,7 @@ export type CustomerListPage = {
 
 export interface ICustomerRepository {
   list(query: ListCustomersQuery): Promise<CustomerListPage>;
-  findById(id: CustomerId): Promise<Customer | null>;
-  findByName(name: string): Promise<Customer | null>;
+  findById(organizationId: OrganizationId, id: CustomerId): Promise<Customer | null>;
+  findByName(organizationId: OrganizationId, name: string): Promise<Customer | null>;
   save(customer: Customer): Promise<void>;
 }

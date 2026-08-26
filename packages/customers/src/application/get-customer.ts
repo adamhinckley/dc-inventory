@@ -1,8 +1,9 @@
-import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../domain/customer.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 
 export type GetCustomerRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
 };
@@ -16,7 +17,7 @@ export class GetCustomerUseCase {
 
   async execute(input: GetCustomerRequest): Promise<GetCustomerResult> {
     void input.staffUserId;
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }

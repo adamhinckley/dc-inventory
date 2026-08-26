@@ -1,9 +1,10 @@
-import { CustomerId, Money, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, Money, type OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../domain/customer.js";
 import { newUuid } from "../domain/ids.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 
 export type CreateCustomerRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   name: string;
   creditLimitCents: number;
@@ -28,6 +29,7 @@ export class CreateCustomerUseCase {
     try {
       const customer: Customer = {
         id: CustomerId.parse(newUuid()),
+        organizationId: input.organizationId,
         name,
         creditLimit: Money.fromMinorUnits(input.creditLimitCents, input.currency ?? "USD"),
         terms,

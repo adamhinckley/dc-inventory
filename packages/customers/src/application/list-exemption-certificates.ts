@@ -1,9 +1,10 @@
-import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { ExemptionCertificate } from "../domain/exemption-certificate.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 import type { IExemptionCertificateRepository } from "../domain/ports/exemption-certificate-repository.js";
 
 export type ListExemptionCertificatesRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
 };
@@ -22,7 +23,7 @@ export class ListExemptionCertificatesUseCase {
     input: ListExemptionCertificatesRequest,
   ): Promise<ListExemptionCertificatesResult> {
     void input.staffUserId;
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }

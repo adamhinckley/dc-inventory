@@ -1,10 +1,11 @@
-import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { newUuid, ShipToId } from "../domain/ids.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 import type { IShipToRepository } from "../domain/ports/ship-to-repository.js";
 import type { ShipTo } from "../domain/ship-to.js";
 
 export type CreateShipToRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
   line1: string;
@@ -41,7 +42,7 @@ export class CreateShipToUseCase {
     if (line1 === null || city === null || region === null || postal === null || country === null) {
       return { ok: false, reason: "invalid" };
     }
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }
