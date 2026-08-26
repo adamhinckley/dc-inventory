@@ -31,12 +31,17 @@ export const poStatus = pgEnum("po_status", [
   "cancelled",
 ]);
 
-export const suppliers = purchasing.table("suppliers", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  vendorNumber: text("vendor_number").notNull().unique(),
-  name: text("name").notNull(),
-  ...timestamps(),
-});
+export const suppliers = purchasing.table(
+  "suppliers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    vendorNumber: text("vendor_number").notNull(),
+    name: text("name").notNull(),
+    ...timestamps(),
+  },
+  (table) => [unique().on(table.organizationId, table.vendorNumber)],
+);
 
 export const supplierProducts = purchasing.table(
   "supplier_products",
@@ -56,15 +61,20 @@ export const supplierProducts = purchasing.table(
   (table) => [unique().on(table.supplierId, table.sku)],
 );
 
-export const purchaseOrders = purchasing.table("purchase_orders", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  supplierId: uuid("supplier_id")
-    .notNull()
-    .references(() => suppliers.id),
-  status: poStatus("status").notNull().default("draft"),
-  documentNumber: text("document_number").notNull().unique(),
-  ...timestamps(),
-});
+export const purchaseOrders = purchasing.table(
+  "purchase_orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    status: poStatus("status").notNull().default("draft"),
+    documentNumber: text("document_number").notNull(),
+    ...timestamps(),
+  },
+  (table) => [unique().on(table.organizationId, table.documentNumber)],
+);
 
 /** Frozen sku/name + qty. No live catalog FK. */
 export const purchaseOrderLines = purchasing.table("purchase_order_lines", {

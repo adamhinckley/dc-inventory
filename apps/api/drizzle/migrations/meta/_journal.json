@@ -106,6 +106,13 @@
       "when": 1788155600000,
       "tag": "0015_inventory_organization_id",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1788255600000,
+      "tag": "0016_purchasing_organization_id",
+      "breakpoints": true
     }
   ]
 }

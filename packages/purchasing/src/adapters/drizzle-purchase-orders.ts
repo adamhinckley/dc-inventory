@@ -1,5 +1,5 @@
-import { PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
+import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
@@ -48,6 +48,7 @@ function toOrder(
 ): PurchaseOrder {
   return {
     id: PurchaseOrderId.parse(header.id),
+    organizationId: OrganizationId.parse(header.organizationId),
     supplierId: SupplierId.parse(header.supplierId),
     documentNumber: header.documentNumber,
     status: header.status,
@@ -60,7 +61,10 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
   constructor(private readonly db: PurchasingDrizzle) {}
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
-    const rows = await this.db.select().from(purchaseOrders);
+    const rows = await this.db
+      .select()
+      .from(purchaseOrders)
+      .where(eq(purchaseOrders.organizationId, query.organizationId));
     const filtered = [];
     for (const row of rows) {
       if (query.status !== undefined && row.status !== query.status) {
@@ -80,11 +84,11 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
     };
   }
 
-  async findById(id: PurchaseOrderId): Promise<PurchaseOrder | null> {
+  async findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null> {
     const rows = await this.db
       .select()
       .from(purchaseOrders)
-      .where(eq(purchaseOrders.id, id))
+      .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.organizationId, organizationId)))
       .limit(1);
     const header = rows[0];
     if (header === undefined) {
@@ -94,11 +98,19 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
     return toOrder(header, lines);
   }
 
-  async findByDocumentNumber(documentNumber: string): Promise<PurchaseOrder | null> {
+  async findByDocumentNumber(
+    organizationId: OrganizationId,
+    documentNumber: string,
+  ): Promise<PurchaseOrder | null> {
     const rows = await this.db
       .select()
       .from(purchaseOrders)
-      .where(eq(purchaseOrders.documentNumber, documentNumber))
+      .where(
+        and(
+          eq(purchaseOrders.organizationId, organizationId),
+          eq(purchaseOrders.documentNumber, documentNumber),
+        ),
+      )
       .limit(1);
     const header = rows[0];
     if (header === undefined) {
@@ -109,10 +121,11 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
   }
 
   async save(order: PurchaseOrder): Promise<void> {
-    const existing = await this.findById(order.id);
+    const existing = await this.findById(order.organizationId, order.id);
     if (existing === null) {
       await this.db.insert(purchaseOrders).values({
         id: order.id,
+        organizationId: order.organizationId,
         supplierId: order.supplierId,
         status: order.status,
         documentNumber: order.documentNumber,
@@ -171,8 +184,11 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
     }
   }
 
-  async nextDocumentNumber(): Promise<string> {
-    const rows = await this.db.select({ documentNumber: purchaseOrders.documentNumber }).from(purchaseOrders);
+  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
+    const rows = await this.db
+      .select({ documentNumber: purchaseOrders.documentNumber })
+      .from(purchaseOrders)
+      .where(eq(purchaseOrders.organizationId, organizationId));
     let max = 0;
     for (const row of rows) {
       const sequence = parseDocumentSequence(row.documentNumber);

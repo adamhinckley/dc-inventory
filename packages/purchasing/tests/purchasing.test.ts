@@ -3,18 +3,29 @@ import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
 } from "@dc-inventory/inventory";
-import { LocationId, Sku, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
+import {
+  LocationId,
+  OrganizationId,
+  PurchaseOrderId,
+  Sku,
+  StaffUserId,
+  SupplierId,
+} from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
+import { newUuid, PurchaseOrderLineId } from "../src/domain/ids.js";
 import {
   CancelPurchaseOrderUseCase,
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
+  ListPurchaseOrdersUseCase,
   ReceivePurchaseOrderUseCase,
 } from "../src/index.js";
 
 const SKU = Sku.parse("PO-TEST-SKU");
 const DEFAULT = LocationId.DEFAULT;
+const DEFAULT_ORG = OrganizationId.DEFAULT;
+const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 
 async function harness() {
@@ -22,6 +33,7 @@ async function harness() {
   const supplierId = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await uow.suppliers.save({
     id: supplierId,
+    organizationId: DEFAULT_ORG,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
   });
@@ -30,6 +42,7 @@ async function harness() {
     uow,
     supplierId,
     create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers),
+    list: new ListPurchaseOrdersUseCase(uow.purchaseOrders),
     confirm: new ConfirmPurchaseOrderUseCase(uow),
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
@@ -41,6 +54,7 @@ describe("Purchasing (in-memory)", () => {
   it("assigns PO-00001 document numbers with gaps allowed after cancel", async () => {
     const h = await harness();
     const first = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [{ sku: SKU.value, name: "Bolt", qty: 5 }],
@@ -52,12 +66,14 @@ describe("Purchasing (in-memory)", () => {
     expect(first.purchaseOrder.documentNumber).toBe("PO-00001");
 
     await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: first.purchaseOrder.id,
       idempotencyKey: "cancel-draft",
     });
 
     const second = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [{ sku: SKU.value, name: "Bolt", qty: 3 }],
@@ -72,6 +88,7 @@ describe("Purchasing (in-memory)", () => {
   it("confirms, partially receives, and completes with inventory movements", async () => {
     const h = await harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
@@ -82,6 +99,7 @@ describe("Purchasing (in-memory)", () => {
     }
 
     const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "confirm-1",
@@ -97,6 +115,7 @@ describe("Purchasing (in-memory)", () => {
 
     const lineId = created.purchaseOrder.lines[0]!.id;
     const partial = await h.receive.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "receive-partial",
@@ -114,6 +133,7 @@ describe("Purchasing (in-memory)", () => {
     expect(snap.onOrder).toBe(6);
 
     const complete = await h.receive.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "receive-rest",
@@ -132,6 +152,7 @@ describe("Purchasing (in-memory)", () => {
   it("rejects over-receive and rolls back inventory on failed confirm", async () => {
     const h = await harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [{ sku: SKU.value, name: "Bolt", qty: 2 }],
@@ -142,6 +163,7 @@ describe("Purchasing (in-memory)", () => {
     }
 
     await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "confirm-over",
@@ -149,6 +171,7 @@ describe("Purchasing (in-memory)", () => {
 
     const lineId = created.purchaseOrder.lines[0]!.id;
     const over = await h.receive.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "receive-over",
@@ -168,6 +191,7 @@ describe("Purchasing (in-memory)", () => {
   it("rejects duplicate SKU lines at create", async () => {
     const h = await harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [
@@ -185,6 +209,7 @@ describe("Purchasing (in-memory)", () => {
   it("cancels confirmed remainder with InboundCancelled", async () => {
     const h = await harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [{ sku: SKU.value, name: "Bolt", qty: 8 }],
@@ -195,6 +220,7 @@ describe("Purchasing (in-memory)", () => {
     }
 
     await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "confirm-cancel",
@@ -202,6 +228,7 @@ describe("Purchasing (in-memory)", () => {
 
     const lineId = created.purchaseOrder.lines[0]!.id;
     await h.receive.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "receive-some",
@@ -209,6 +236,7 @@ describe("Purchasing (in-memory)", () => {
     });
 
     const cancelled = await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: "cancel-remainder",
@@ -222,5 +250,75 @@ describe("Purchasing (in-memory)", () => {
     const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(3);
     expect(snap.onOrder).toBe(0);
+  });
+
+  it("scopes purchase orders by organizationId and allows duplicate vendor numbers and PO numbers across orgs", async () => {
+    const h = await harness();
+    const acmeSupplierId = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    const betaSupplierId = SupplierId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+
+    await h.uow.suppliers.save({
+      id: betaSupplierId,
+      organizationId: BETA_ORG,
+      vendorNumber: "V-1",
+      name: "Beta vendor",
+    });
+    await h.uow.suppliers.save({
+      id: acmeSupplierId,
+      organizationId: DEFAULT_ORG,
+      vendorNumber: "V-1",
+      name: "Acme vendor",
+    });
+
+    const acmePoId = PurchaseOrderId.parse(newUuid());
+    const betaPoId = PurchaseOrderId.parse(newUuid());
+    const lineId = PurchaseOrderLineId.parse(newUuid());
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+
+    await h.uow.purchaseOrders.save({
+      id: acmePoId,
+      organizationId: DEFAULT_ORG,
+      supplierId: acmeSupplierId,
+      documentNumber: "PO-1001",
+      status: "draft",
+      createdAt,
+      lines: [{ id: lineId, sku: SKU, name: "Acme bolt", qty: 5, receivedQty: 0 }],
+    });
+    await h.uow.purchaseOrders.save({
+      id: betaPoId,
+      organizationId: BETA_ORG,
+      supplierId: betaSupplierId,
+      documentNumber: "PO-1001",
+      status: "draft",
+      createdAt,
+      lines: [
+        {
+          id: PurchaseOrderLineId.parse(newUuid()),
+          sku: SKU,
+          name: "Beta bolt",
+          qty: 3,
+          receivedQty: 0,
+        },
+      ],
+    });
+
+    const acmeList = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+    });
+    expect(acmeList.total).toBe(1);
+    expect(acmeList.items[0]?.documentNumber).toBe("PO-1001");
+    expect(acmeList.items[0]?.id).toBe(acmePoId);
+
+    const betaList = await h.list.execute({
+      organizationId: BETA_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+    });
+    expect(betaList.total).toBe(1);
+    expect(betaList.items[0]?.id).toBe(betaPoId);
   });
 });

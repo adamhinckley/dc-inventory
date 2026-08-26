@@ -1,9 +1,10 @@
-import { PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IPurchasingUnitOfWork } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
 import { PurchasingTransactionError } from "../domain/errors.js";
 
 export type ConfirmPurchaseOrderRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   purchaseOrderId: PurchaseOrderId;
   idempotencyKey: string;
@@ -28,7 +29,10 @@ export class ConfirmPurchaseOrderUseCase {
     void input.staffUserId;
     try {
       return await this.uow.run(async (scope) => {
-        const existing = await scope.purchaseOrders.findById(input.purchaseOrderId);
+        const existing = await scope.purchaseOrders.findById(
+          input.organizationId,
+          input.purchaseOrderId,
+        );
         if (existing === null) {
           return { ok: false, reason: "not_found" };
         }

@@ -17,6 +17,7 @@ export type PurchaseOrderLine = {
 
 export type PurchaseOrder = {
   readonly id: import("@dc-inventory/shared-kernel").PurchaseOrderId;
+  readonly organizationId: import("@dc-inventory/shared-kernel").OrganizationId;
   readonly supplierId: import("@dc-inventory/shared-kernel").SupplierId;
   readonly documentNumber: string;
   readonly status: PurchaseOrderStatus;

@@ -1,4 +1,5 @@
 import {
+  OrganizationId,
   PurchaseOrderId,
   Sku,
   SupplierId,
@@ -16,6 +17,7 @@ export type CreatePurchaseOrderLineInput = {
 };
 
 export type CreatePurchaseOrderRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   supplierId: SupplierId;
   lines: readonly CreatePurchaseOrderLineInput[];
@@ -38,7 +40,7 @@ export class CreatePurchaseOrderUseCase {
       return { ok: false, reason: "empty_order" };
     }
 
-    const supplier = await this.suppliers.findById(input.supplierId);
+    const supplier = await this.suppliers.findById(input.organizationId, input.supplierId);
     if (supplier === null) {
       return { ok: false, reason: "supplier_not_found" };
     }
@@ -69,9 +71,10 @@ export class CreatePurchaseOrderUseCase {
     }
 
     const createdAt = this.clock?.now() ?? new Date();
-    const documentNumber = await this.purchaseOrders.nextDocumentNumber();
+    const documentNumber = await this.purchaseOrders.nextDocumentNumber(input.organizationId);
     const purchaseOrder: PurchaseOrder = {
       id: PurchaseOrderId.parse(newUuid()),
+      organizationId: input.organizationId,
       supplierId: input.supplierId,
       documentNumber,
       status: "draft",

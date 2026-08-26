@@ -1,4 +1,5 @@
 import type {
+  OrganizationId,
   PurchaseOrderId,
   Sku,
   SupplierId,
@@ -11,6 +12,7 @@ export type PurchaseOrderListPage = {
 };
 
 export type ListPurchaseOrdersQuery = {
+  organizationId: OrganizationId;
   page: number;
   pageSize: number;
   status?: PurchaseOrderStatus;
@@ -19,16 +21,22 @@ export type ListPurchaseOrdersQuery = {
 
 export interface IPurchaseOrderRepository {
   list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage>;
-  findById(id: PurchaseOrderId): Promise<PurchaseOrder | null>;
+  findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null>;
   save(order: PurchaseOrder): Promise<void>;
-  nextDocumentNumber(): Promise<string>;
-  findByDocumentNumber(documentNumber: string): Promise<PurchaseOrder | null>;
+  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
+  findByDocumentNumber(
+    organizationId: OrganizationId,
+    documentNumber: string,
+  ): Promise<PurchaseOrder | null>;
 }
 
 export interface ISupplierRepository {
-  findById(id: SupplierId): Promise<import("../supplier.js").Supplier | null>;
+  findById(organizationId: OrganizationId, id: SupplierId): Promise<import("../supplier.js").Supplier | null>;
   save(supplier: import("../supplier.js").Supplier): Promise<void>;
-  findByVendorNumber(vendorNumber: string): Promise<import("../supplier.js").Supplier | null>;
+  findByVendorNumber(
+    organizationId: OrganizationId,
+    vendorNumber: string,
+  ): Promise<import("../supplier.js").Supplier | null>;
 }
 
 export type InventoryCommandFailureReason =
