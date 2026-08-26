@@ -1,8 +1,9 @@
-import { PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IPurchaseOrderRepository } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
 
 export type GetPurchaseOrderRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   purchaseOrderId: PurchaseOrderId;
 };
@@ -16,7 +17,10 @@ export class GetPurchaseOrderUseCase {
 
   async execute(input: GetPurchaseOrderRequest): Promise<GetPurchaseOrderResult> {
     void input.staffUserId;
-    const purchaseOrder = await this.purchaseOrders.findById(input.purchaseOrderId);
+    const purchaseOrder = await this.purchaseOrders.findById(
+      input.organizationId,
+      input.purchaseOrderId,
+    );
     if (purchaseOrder === null) {
       return { ok: false, reason: "not_found" };
     }

@@ -1,4 +1,4 @@
-import type { StaffUserId } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type {
   IPurchaseOrderRepository,
   ListPurchaseOrdersQuery,
@@ -14,6 +14,7 @@ export class ListPurchaseOrdersUseCase {
   async execute(input: ListPurchaseOrdersRequest) {
     void input.staffUserId;
     const page = await this.purchaseOrders.list({
+      organizationId: input.organizationId,
       page: input.page,
       pageSize: input.pageSize,
       status: input.status,

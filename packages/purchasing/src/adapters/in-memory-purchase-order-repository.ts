@@ -1,4 +1,5 @@
 import {
+  OrganizationId,
   PurchaseOrderId,
   Sku,
   SupplierId,
@@ -27,6 +28,7 @@ function toLine(line: PurchaseOrderLine): PurchaseOrderLine {
 function toOrder(order: PurchaseOrder): PurchaseOrder {
   return {
     id: PurchaseOrderId.parse(order.id),
+    organizationId: OrganizationId.parse(order.organizationId),
     supplierId: SupplierId.parse(order.supplierId),
     documentNumber: order.documentNumber,
     status: order.status,
@@ -37,10 +39,13 @@ function toOrder(order: PurchaseOrder): PurchaseOrder {
 
 export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository {
   private readonly byId = new Map<PurchaseOrderId, Stored>();
-  private nextSequence = 1;
+  private readonly nextSequenceByOrg = new Map<string, number>();
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
     const rows = [...this.byId.values()].filter((row) => {
+      if (row.order.organizationId !== query.organizationId) {
+        return false;
+      }
       if (query.status !== undefined && row.order.status !== query.status) {
         return false;
       }
@@ -57,13 +62,23 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     };
   }
 
-  async findById(id: PurchaseOrderId): Promise<PurchaseOrder | null> {
-    return this.byId.get(id)?.order ?? null;
+  async findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null> {
+    const row = this.byId.get(id);
+    if (row === undefined || row.order.organizationId !== organizationId) {
+      return null;
+    }
+    return row.order;
   }
 
-  async findByDocumentNumber(documentNumber: string): Promise<PurchaseOrder | null> {
+  async findByDocumentNumber(
+    organizationId: OrganizationId,
+    documentNumber: string,
+  ): Promise<PurchaseOrder | null> {
     for (const row of this.byId.values()) {
-      if (row.order.documentNumber === documentNumber) {
+      if (
+        row.order.organizationId === organizationId &&
+        row.order.documentNumber === documentNumber
+      ) {
         return row.order;
       }
     }
@@ -78,14 +93,20 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
       createdAt: existing?.createdAt ?? normalized.createdAt,
     });
     const sequence = parseDocumentSequence(normalized.documentNumber);
-    if (sequence !== null && sequence >= this.nextSequence) {
-      this.nextSequence = sequence + 1;
+    if (sequence !== null) {
+      const orgKey = normalized.organizationId;
+      const current = this.nextSequenceByOrg.get(orgKey) ?? 1;
+      if (sequence >= current) {
+        this.nextSequenceByOrg.set(orgKey, sequence + 1);
+      }
     }
   }
 
-  async nextDocumentNumber(): Promise<string> {
-    const number = formatDocumentNumber(this.nextSequence);
-    this.nextSequence += 1;
+  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
+    const orgKey = organizationId;
+    const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
+    const number = formatDocumentNumber(next);
+    this.nextSequenceByOrg.set(orgKey, next + 1);
     return number;
   }
 }

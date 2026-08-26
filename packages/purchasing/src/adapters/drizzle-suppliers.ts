@@ -1,5 +1,5 @@
-import { SupplierId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
+import { and, eq } from "drizzle-orm";
 import type { ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { Supplier } from "../domain/supplier.js";
 import { suppliers } from "../persistence/schema.js";
@@ -8,6 +8,7 @@ import type { PurchasingDrizzle } from "./drizzle-purchase-orders.js";
 function toSupplier(row: typeof suppliers.$inferSelect): Supplier {
   return {
     id: SupplierId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
     vendorNumber: row.vendorNumber,
     name: row.name,
   };
@@ -16,25 +17,35 @@ function toSupplier(row: typeof suppliers.$inferSelect): Supplier {
 export class DrizzleSupplierRepository implements ISupplierRepository {
   constructor(private readonly db: PurchasingDrizzle) {}
 
-  async findById(id: SupplierId): Promise<Supplier | null> {
-    const rows = await this.db.select().from(suppliers).where(eq(suppliers.id, id)).limit(1);
-    return rows[0] === undefined ? null : toSupplier(rows[0]);
-  }
-
-  async findByVendorNumber(vendorNumber: string): Promise<Supplier | null> {
+  async findById(organizationId: OrganizationId, id: SupplierId): Promise<Supplier | null> {
     const rows = await this.db
       .select()
       .from(suppliers)
-      .where(eq(suppliers.vendorNumber, vendorNumber))
+      .where(and(eq(suppliers.id, id), eq(suppliers.organizationId, organizationId)))
+      .limit(1);
+    return rows[0] === undefined ? null : toSupplier(rows[0]);
+  }
+
+  async findByVendorNumber(
+    organizationId: OrganizationId,
+    vendorNumber: string,
+  ): Promise<Supplier | null> {
+    const rows = await this.db
+      .select()
+      .from(suppliers)
+      .where(
+        and(eq(suppliers.organizationId, organizationId), eq(suppliers.vendorNumber, vendorNumber)),
+      )
       .limit(1);
     return rows[0] === undefined ? null : toSupplier(rows[0]);
   }
 
   async save(supplier: Supplier): Promise<void> {
-    const existing = await this.findById(supplier.id);
+    const existing = await this.findById(supplier.organizationId, supplier.id);
     if (existing === null) {
       await this.db.insert(suppliers).values({
         id: supplier.id,
+        organizationId: supplier.organizationId,
         vendorNumber: supplier.vendorNumber,
         name: supplier.name,
       });

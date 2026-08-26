@@ -15,7 +15,7 @@ import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
 } from "@dc-inventory/inventory";
-import { LocationId, SupplierId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import {
@@ -80,13 +80,17 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
         return row;
       },
       async upsertPrerequisiteSupplier() {
-        const existing = await suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
+        const existing = await suppliers.findByVendorNumber(
+          OrganizationId.DEFAULT,
+          PHASE2_SUPPLIER_VENDOR_NUMBER,
+        );
         if (existing) {
           return { id: existing.id, vendorNumber: existing.vendorNumber };
         }
         const id = SupplierId.parse(crypto.randomUUID());
         await suppliers.save({
           id,
+          organizationId: OrganizationId.DEFAULT,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
         });
@@ -102,7 +106,7 @@ async function copySuppliers(
   to: InMemorySupplierRepository,
 ): Promise<void> {
   for (const planned of plan.master.suppliers) {
-    const supplier = await from.findByVendorNumber(planned.vendorNumber);
+    const supplier = await from.findByVendorNumber(OrganizationId.DEFAULT, planned.vendorNumber);
     if (supplier !== null) {
       await to.save(supplier);
     }
@@ -145,7 +149,11 @@ describe("replay purchase orders (in-memory)", () => {
       DEMO_COUNTS.purchaseOrders - plan.leftoverConfirmedPurchaseOrderCount,
     );
 
-    const listed = await uow.purchaseOrders.list({ page: 1, pageSize: 10_000 });
+    const listed = await uow.purchaseOrders.list({
+      organizationId: OrganizationId.DEFAULT,
+      page: 1,
+      pageSize: 10_000,
+    });
     expect(listed.total).toBe(DEMO_COUNTS.purchaseOrders);
     expect(listed.items.every((row) => row.status !== "draft" && row.status !== "cancelled")).toBe(
       true,

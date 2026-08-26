@@ -84,13 +84,17 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
         return row;
       },
       async upsertPrerequisiteSupplier() {
-        const existing = await suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
+        const existing = await suppliers.findByVendorNumber(
+          OrganizationId.DEFAULT,
+          PHASE2_SUPPLIER_VENDOR_NUMBER,
+        );
         if (existing) {
           return { id: existing.id, vendorNumber: existing.vendorNumber };
         }
         const id = SupplierId.parse(crypto.randomUUID());
         await suppliers.save({
           id,
+          organizationId: OrganizationId.DEFAULT,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
         });
@@ -131,12 +135,15 @@ describe("static demo book writer (in-memory)", () => {
     });
     expect(listedProducts).toHaveLength(FULL_DEMO_RECONCILIATION_EXPECTATIONS.productCount);
 
-    const supplierRows = await ports.suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
+    const supplierRows = await ports.suppliers.findByVendorNumber(
+      OrganizationId.DEFAULT,
+      PHASE2_SUPPLIER_VENDOR_NUMBER,
+    );
     expect(supplierRows?.name).toBe(PHASE2_SUPPLIER_NAME);
 
     const listedSuppliers = new Set<string>();
     for (const vendorNumber of plan.master.suppliers.map((row) => row.vendorNumber)) {
-      const supplier = await ports.suppliers.findByVendorNumber(vendorNumber);
+      const supplier = await ports.suppliers.findByVendorNumber(OrganizationId.DEFAULT, vendorNumber);
       expect(supplier).not.toBeNull();
       if (supplier) {
         listedSuppliers.add(supplier.vendorNumber);
@@ -263,7 +270,10 @@ describe("static demo book writer (in-memory)", () => {
     expect(await ports.staffUsers.findByEmail(OrganizationId.DEFAULT, "other@local.test")).toBeNull();
     expect(await ports.wholesaleUsers.findByEmail(OrganizationId.DEFAULT, "other@local.test")).toBeNull();
 
-    const vend001 = await ports.suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
+    const vend001 = await ports.suppliers.findByVendorNumber(
+      OrganizationId.DEFAULT,
+      PHASE2_SUPPLIER_VENDOR_NUMBER,
+    );
     expect(vend001?.name).toBe(PHASE2_SUPPLIER_NAME);
     const supplierProducts = await ports.supplierProducts.listAll();
     const skuToSupplier = new Map(supplierProducts.map((row) => [row.sku, row.supplierId]));
@@ -276,7 +286,10 @@ describe("static demo book writer (in-memory)", () => {
       expect(row.minOrderQty).toBeNull();
     }
     for (const supplier of plan.master.suppliers) {
-      const persisted = await ports.suppliers.findByVendorNumber(supplier.vendorNumber);
+      const persisted = await ports.suppliers.findByVendorNumber(
+        OrganizationId.DEFAULT,
+        supplier.vendorNumber,
+      );
       const count = perSupplier.get(persisted?.id ?? "") ?? 0;
       expect(count).toBeGreaterThanOrEqual(FULL_DEMO_RECONCILIATION_EXPECTATIONS.supplierSkuMin);
       expect(count).toBeLessThanOrEqual(FULL_DEMO_RECONCILIATION_EXPECTATIONS.supplierSkuMax);

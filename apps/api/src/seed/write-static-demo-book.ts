@@ -76,9 +76,10 @@ async function upsertSupplier(
   ports: StaticDemoSeedPorts,
   planned: DemoBookPlan["master"]["suppliers"][number],
 ): Promise<Supplier> {
-  const existing = await ports.suppliers.findByVendorNumber(planned.vendorNumber);
+  const existing = await ports.suppliers.findByVendorNumber(OrganizationId.DEFAULT, planned.vendorNumber);
   const supplier: Supplier = {
     id: existing?.id ?? SupplierId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     vendorNumber: planned.vendorNumber,
     name: planned.name,
   };

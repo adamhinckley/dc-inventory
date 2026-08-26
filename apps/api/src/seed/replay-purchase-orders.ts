@@ -6,7 +6,7 @@ import {
   type ISupplierRepository,
   type IPurchasingUnitOfWork,
 } from "@dc-inventory/purchasing";
-import { SupplierId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, SupplierId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { DemoBookPlan } from "./planner/types.js";
 
 export class ReplayPurchaseOrdersError extends Error {
@@ -50,7 +50,7 @@ export async function supplierIdByKeyFromPlan(
 ): Promise<Map<string, SupplierId>> {
   const map = new Map<string, SupplierId>();
   for (const planned of plan.master.suppliers) {
-    const supplier = await suppliers.findByVendorNumber(planned.vendorNumber);
+    const supplier = await suppliers.findByVendorNumber(OrganizationId.DEFAULT, planned.vendorNumber);
     if (supplier === null) {
       throw new ReplayPurchaseOrdersError(`missing supplier ${planned.vendorNumber}`);
     }
@@ -93,6 +93,7 @@ export async function runReplayPurchaseOrders(
     });
 
     const created = await create.execute({
+      organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       supplierId,
       lines,
@@ -102,6 +103,7 @@ export async function runReplayPurchaseOrders(
     }
 
     const confirmed = await confirm.execute({
+      organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       purchaseOrderId: created.purchaseOrder.id,
       idempotencyKey: `demo:${planned.key}:confirm`,
@@ -123,6 +125,7 @@ export async function runReplayPurchaseOrders(
     }));
 
     const received = await receive.execute({
+      organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       purchaseOrderId: confirmed.purchaseOrder.id,
       idempotencyKey: `demo:${planned.key}:receive`,

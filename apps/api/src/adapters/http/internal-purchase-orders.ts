@@ -3,7 +3,7 @@ import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { PurchaseOrderLineId, type PurchaseOrder } from "@dc-inventory/purchasing";
-import { PurchaseOrderId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
+import { PurchaseOrderId, OrganizationId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
   invalidResponseSchema,
@@ -87,6 +87,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         supplierId?: string;
       };
       const result = await request.server.purchasing.listPurchaseOrders.execute({
+        organizationId: OrganizationId.DEFAULT,
         staffUserId: staffUserId(request),
         page: query.page,
         pageSize: query.pageSize,
@@ -121,6 +122,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request, reply) => {
       const result = await request.server.purchasing.createPurchaseOrder.execute({
+        organizationId: OrganizationId.DEFAULT,
         staffUserId: staffUserId(request),
         supplierId: SupplierId.parse(request.body.supplierId),
         lines: request.body.lines,
@@ -154,6 +156,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request, reply) => {
       const result = await request.server.purchasing.getPurchaseOrder.execute({
+        organizationId: OrganizationId.DEFAULT,
         staffUserId: staffUserId(request),
         purchaseOrderId: PurchaseOrderId.parse(request.params.id),
       });
@@ -184,6 +187,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request, reply) => {
       const result = await request.server.purchasing.confirmPurchaseOrder.execute({
+        organizationId: OrganizationId.DEFAULT,
         staffUserId: staffUserId(request),
         purchaseOrderId: PurchaseOrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
@@ -225,6 +229,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request, reply) => {
       const result = await request.server.purchasing.receivePurchaseOrder.execute({
+        organizationId: OrganizationId.DEFAULT,
         staffUserId: staffUserId(request),
         purchaseOrderId: PurchaseOrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
@@ -270,6 +275,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request, reply) => {
       const result = await request.server.purchasing.cancelPurchaseOrder.execute({
+        organizationId: OrganizationId.DEFAULT,
         staffUserId: staffUserId(request),
         purchaseOrderId: PurchaseOrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,

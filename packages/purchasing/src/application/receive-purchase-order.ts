@@ -1,4 +1,4 @@
-import { PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import {
   isFullyReceived,
@@ -15,6 +15,7 @@ export type ReceivePurchaseOrderLineInput = {
 };
 
 export type ReceivePurchaseOrderRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   purchaseOrderId: PurchaseOrderId;
   lines: readonly ReceivePurchaseOrderLineInput[];
@@ -46,7 +47,10 @@ export class ReceivePurchaseOrderUseCase {
 
     try {
       return await this.uow.run(async (scope) => {
-        const existing = await scope.purchaseOrders.findById(input.purchaseOrderId);
+        const existing = await scope.purchaseOrders.findById(
+          input.organizationId,
+          input.purchaseOrderId,
+        );
         if (existing === null) {
           return { ok: false, reason: "not_found" };
         }
@@ -71,6 +75,7 @@ export class ReceivePurchaseOrderUseCase {
           }
 
           const result = await scope.inventory.recordGoodsReceived({
+            organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:receive:${line.id}:${receive.quantity}`,
             sku: line.sku,
             quantity: receive.quantity,

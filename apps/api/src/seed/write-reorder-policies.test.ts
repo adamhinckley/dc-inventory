@@ -81,13 +81,17 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
         return row;
       },
       async upsertPrerequisiteSupplier() {
-        const existing = await suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
+        const existing = await suppliers.findByVendorNumber(
+          OrganizationId.DEFAULT,
+          PHASE2_SUPPLIER_VENDOR_NUMBER,
+        );
         if (existing) {
           return { id: existing.id, vendorNumber: existing.vendorNumber };
         }
         const id = SupplierId.parse(crypto.randomUUID());
         await suppliers.save({
           id,
+          organizationId: OrganizationId.DEFAULT,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
         });
@@ -103,7 +107,7 @@ async function copySuppliers(
   to: InMemorySupplierRepository,
 ): Promise<void> {
   for (const planned of plan.master.suppliers) {
-    const supplier = await from.findByVendorNumber(planned.vendorNumber);
+    const supplier = await from.findByVendorNumber(OrganizationId.DEFAULT, planned.vendorNumber);
     if (supplier !== null) {
       await to.save(supplier);
     }
