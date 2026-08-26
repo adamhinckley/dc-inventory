@@ -51,6 +51,7 @@ export class CancelPurchaseOrderUseCase {
             continue;
           }
           const result = await scope.inventory.recordInboundCancelled({
+            organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:cancel:${line.id}`,
             sku: line.sku,
             quantity: remainder,

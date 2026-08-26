@@ -51,6 +51,7 @@ export type InventoryCommandResult =
   | { ok: false; reason: InventoryCommandFailureReason };
 
 export type InboundFromPoCommand = {
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;
@@ -58,6 +59,7 @@ export type InboundFromPoCommand = {
 };
 
 export type GoodsReceivedCommand = {
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;
@@ -65,6 +67,7 @@ export type GoodsReceivedCommand = {
 };
 
 export type InboundCancelledCommand = {
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;

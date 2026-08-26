@@ -37,6 +37,7 @@ export class StockLedgerInventoryCommandAdapter implements IInventoryCommandPort
 
   async recordInboundFromPo(command: InboundFromPoCommand): Promise<InventoryCommandResult> {
     const result = await this.inboundFromPo.execute({
+      organizationId: command.organizationId,
       idempotencyKey: command.idempotencyKey,
       sku: command.sku,
       quantity: command.quantity,
@@ -48,6 +49,7 @@ export class StockLedgerInventoryCommandAdapter implements IInventoryCommandPort
 
   async recordGoodsReceived(command: GoodsReceivedCommand): Promise<InventoryCommandResult> {
     const result = await this.goodsReceived.execute({
+      organizationId: command.organizationId,
       idempotencyKey: command.idempotencyKey,
       sku: command.sku,
       quantity: command.quantity,
@@ -59,6 +61,7 @@ export class StockLedgerInventoryCommandAdapter implements IInventoryCommandPort
 
   async recordInboundCancelled(command: InboundCancelledCommand): Promise<InventoryCommandResult> {
     const result = await this.inboundCancelled.execute({
+      organizationId: command.organizationId,
       idempotencyKey: command.idempotencyKey,
       sku: command.sku,
       quantity: command.quantity,

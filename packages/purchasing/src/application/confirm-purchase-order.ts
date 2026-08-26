@@ -45,6 +45,7 @@ export class ConfirmPurchaseOrderUseCase {
 
         for (const line of existing.lines) {
           const result = await scope.inventory.recordInboundFromPo({
+            organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:confirm:${line.id}`,
             sku: line.sku,
             quantity: line.qty,

@@ -37,6 +37,7 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
   async recordInboundFromPo(command: InboundFromPoCommand): Promise<InventoryCommandResult> {
     return mapResult(
       await new RecordInboundFromPoUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
         idempotencyKey: command.idempotencyKey,
         sku: command.sku,
         quantity: command.quantity,
@@ -49,6 +50,7 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
   async recordGoodsReceived(command: GoodsReceivedCommand): Promise<InventoryCommandResult> {
     return mapResult(
       await new RecordGoodsReceivedUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
         idempotencyKey: command.idempotencyKey,
         sku: command.sku,
         quantity: command.quantity,
@@ -61,6 +63,7 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
   async recordInboundCancelled(command: InboundCancelledCommand): Promise<InventoryCommandResult> {
     return mapResult(
       await new RecordInboundCancelledUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
         idempotencyKey: command.idempotencyKey,
         sku: command.sku,
         quantity: command.quantity,

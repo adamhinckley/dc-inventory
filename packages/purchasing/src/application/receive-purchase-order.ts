@@ -75,6 +75,7 @@ export class ReceivePurchaseOrderUseCase {
           }
 
           const result = await scope.inventory.recordGoodsReceived({
+            organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:receive:${line.id}:${receive.quantity}`,
             sku: line.sku,
             quantity: receive.quantity,
