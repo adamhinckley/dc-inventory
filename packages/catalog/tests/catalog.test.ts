@@ -1,5 +1,6 @@
 import {
   CustomerId,
+  OrganizationId,
   ProductId,
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
@@ -18,6 +19,8 @@ import { UpdateProductUseCase } from "../src/application/update-product.js";
 const STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440010");
 const OTHER_STAFF = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440011");
 const CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-446655440020");
+const DEFAULT_ORG = OrganizationId.DEFAULT;
+const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 
 function harness() {
   const products = new InMemoryProductRepository();
@@ -47,6 +50,7 @@ async function createProduct(
   }> = {},
 ) {
   const created = await h.create.execute({
+    organizationId: DEFAULT_ORG,
     staffUserId: STAFF_ID,
     sku: overrides.sku ?? "HEX-BOLT-GALV",
     name: overrides.name ?? "Galvanized hex bolt",
@@ -75,6 +79,7 @@ describe("Catalog use cases (in-memory)", () => {
     });
 
     const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: OTHER_STAFF,
       page: 1,
       pageSize: 25,
@@ -112,6 +117,7 @@ describe("Catalog use cases (in-memory)", () => {
     });
 
     const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
       customerId: CUSTOMER_ID,
       page: 1,
       pageSize: 25,
@@ -127,6 +133,7 @@ describe("Catalog use cases (in-memory)", () => {
     const h = harness();
     const product = await createProduct(h);
     const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       page: 1,
       pageSize: 25,
@@ -147,6 +154,7 @@ describe("Catalog use cases (in-memory)", () => {
       available: 7,
     });
     const withSnapshot = await h.get.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       productId: product.id,
     });
@@ -175,6 +183,7 @@ describe("Catalog use cases (in-memory)", () => {
     });
 
     const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       page: 1,
       pageSize: 25,
@@ -191,6 +200,7 @@ describe("Catalog use cases (in-memory)", () => {
     const h = harness();
     const product = await createProduct(h);
     const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       page: 1,
       pageSize: 25,
@@ -204,6 +214,7 @@ describe("Catalog use cases (in-memory)", () => {
   it("rejects qty on create and update", async () => {
     const h = harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       sku: "HEX-BOLT-GALV",
       name: "Galvanized hex bolt",
@@ -215,6 +226,7 @@ describe("Catalog use cases (in-memory)", () => {
 
     const product = await createProduct(h);
     const updated = await h.update.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       productId: product.id,
       name: "Renamed",
@@ -227,6 +239,7 @@ describe("Catalog use cases (in-memory)", () => {
     const h = harness();
     const product = await createProduct(h);
     const updated = await h.update.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       productId: product.id,
       sku: "NEW-SKU",
@@ -235,6 +248,7 @@ describe("Catalog use cases (in-memory)", () => {
     expect(updated).toEqual({ ok: false, reason: "sku_immutable" });
 
     const ok = await h.update.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       productId: product.id,
       name: "Renamed bolt",
@@ -256,15 +270,75 @@ describe("Catalog use cases (in-memory)", () => {
       webWholesale: false,
     });
     const missing = await h.getWholesale.execute({
+      organizationId: DEFAULT_ORG,
       customerId: CUSTOMER_ID,
       productId: ProductId.parse("550e8400-e29b-41d4-a716-446655440099"),
     });
     expect(missing).toEqual({ ok: false, reason: "not_found" });
     const hiddenResult = await h.getWholesale.execute({
+      organizationId: DEFAULT_ORG,
       customerId: CUSTOMER_ID,
       productId: hidden.id,
     });
     expect(hiddenResult).toEqual({ ok: false, reason: "not_found" });
+  });
+
+  it("scopes products by organizationId and allows duplicate SKU across orgs", async () => {
+    const h = harness();
+    const acme = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      sku: "WIDGET-1",
+      name: "Acme widget",
+      uom: "EA",
+      memberPriceCents: 1000,
+    });
+    const beta = await h.create.execute({
+      organizationId: BETA_ORG,
+      staffUserId: STAFF_ID,
+      sku: "WIDGET-1",
+      name: "Beta widget",
+      uom: "EA",
+      memberPriceCents: 2000,
+    });
+    expect(acme.ok).toBe(true);
+    expect(beta.ok).toBe(true);
+
+    const acmeList = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+    expect(acmeList.total).toBe(1);
+    expect(acmeList.items[0]?.product.name).toBe("Acme widget");
+
+    const duplicateInAcme = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      sku: "WIDGET-1",
+      name: "Duplicate",
+      uom: "EA",
+      memberPriceCents: 999,
+    });
+    expect(duplicateInAcme).toEqual({ ok: false, reason: "duplicate_sku" });
+
+    if (!beta.ok) {
+      throw new Error("expected beta product");
+    }
+    const crossOrgGet = await h.get.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      productId: beta.product.id,
+    });
+    expect(crossOrgGet).toEqual({ ok: false, reason: "not_found" });
+
+    const betaBySku = await h.products.findBySku(BETA_ORG, beta.product.sku);
+    expect(betaBySku?.name).toBe("Beta widget");
+    const acmeBySku = await h.products.findBySku(DEFAULT_ORG, beta.product.sku);
+    expect(acmeBySku?.name).toBe("Acme widget");
   });
 
   it("keeps application/ free of Fastify, Drizzle, Zod, and adapter SDKs", () => {

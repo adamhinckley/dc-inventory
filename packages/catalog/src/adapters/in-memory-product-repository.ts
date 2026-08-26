@@ -1,4 +1,4 @@
-import type { ProductId, Sku } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
 import type { Product } from "../domain/product.js";
 import { isShopVisible } from "../domain/product.js";
 import type {
@@ -15,6 +15,9 @@ export class InMemoryProductRepository implements IProductRepository {
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
     const needle = query.q?.trim().toLowerCase() ?? "";
     return [...this.byId.values()].filter((row) => {
+      if (row.product.organizationId !== query.organizationId) {
+        return false;
+      }
       if (query.inactive !== undefined && row.product.inactive !== query.inactive) {
         return false;
       }
@@ -31,13 +34,20 @@ export class InMemoryProductRepository implements IProductRepository {
     });
   }
 
-  async findById(id: ProductId): Promise<Product | null> {
-    return this.byId.get(id)?.product ?? null;
+  async findById(organizationId: OrganizationId, id: ProductId): Promise<Product | null> {
+    const row = this.byId.get(id);
+    if (row === undefined || row.product.organizationId !== organizationId) {
+      return null;
+    }
+    return row.product;
   }
 
-  async findBySku(sku: Sku): Promise<Product | null> {
+  async findBySku(organizationId: OrganizationId, sku: Sku): Promise<Product | null> {
     for (const row of this.byId.values()) {
-      if (row.product.sku.equals(sku)) {
+      if (
+        row.product.organizationId === organizationId &&
+        row.product.sku.equals(sku)
+      ) {
         return row.product;
       }
     }

@@ -1,7 +1,8 @@
-import type { Money, ProductId, Sku } from "@dc-inventory/shared-kernel";
+import type { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
 
 export type Product = {
   id: ProductId;
+  organizationId: OrganizationId;
   sku: Sku;
   name: string;
   description: string | null;

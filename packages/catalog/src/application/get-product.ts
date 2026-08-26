@@ -1,10 +1,11 @@
-import type { ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import type { Product } from "../domain/product.js";
 import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
 
 export type GetProductRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   productId: ProductId;
 };
@@ -21,7 +22,7 @@ export class GetProductUseCase {
 
   async execute(input: GetProductRequest): Promise<GetProductResult> {
     void input.staffUserId;
-    const product = await this.products.findById(input.productId);
+    const product = await this.products.findById(input.organizationId, input.productId);
     if (product === null) {
       return { ok: false, reason: "not_found" };
     }

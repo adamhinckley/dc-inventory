@@ -34,9 +34,12 @@ function timestamps() {
   };
 }
 
-export const products = catalog.table("products", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  sku: text("sku").notNull().unique(),
+export const products = catalog.table(
+  "products",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    sku: text("sku").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   uom: text("uom").notNull(),
@@ -64,7 +67,9 @@ export const products = catalog.table("products", {
   webRetail: boolean("web_retail").notNull().default(false),
   taxCategoryCode: text("tax_category_code"),
   ...timestamps(),
-});
+  },
+  (table) => [unique().on(table.organizationId, table.sku)],
+);
 
 export const productIdentifiers = catalog.table(
   "product_identifiers",
@@ -106,11 +111,16 @@ export const productPackaging = catalog.table("product_packaging", {
   ...timestamps(),
 });
 
-export const categories = catalog.table("categories", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull().unique(),
-  ...timestamps(),
-});
+export const categories = catalog.table(
+  "categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    name: text("name").notNull(),
+    ...timestamps(),
+  },
+  (table) => [unique().on(table.organizationId, table.name)],
+);
 
 export const productCategories = catalog.table(
   "product_categories",
