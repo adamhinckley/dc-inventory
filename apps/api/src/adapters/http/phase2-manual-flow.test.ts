@@ -383,7 +383,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
     expect(shippedOrder.json()).toMatchObject({ status: "shipped" });
 
     const invoiceId = (
-      await unitOfWork.invoices.findByOrderId(OrderId.parse(order.id))
+      await unitOfWork.invoices.findByOrderId(OrganizationId.DEFAULT, OrderId.parse(order.id))
     )?.id;
     expect(invoiceId).toBeDefined();
     if (invoiceId === undefined) {

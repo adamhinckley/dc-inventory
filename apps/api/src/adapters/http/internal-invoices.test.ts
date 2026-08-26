@@ -48,6 +48,7 @@ async function startAccountingApp() {
   const createInvoice = new CreateInvoiceUseCase(accountingUow);
   const created = await createInvoice.execute({
     staffUserId: STAFF_ID,
+    organizationId: OrganizationId.DEFAULT,
     orderId: ORDER_ID,
     customerId: CUSTOMER_ID,
     subtotalCents: 1000,

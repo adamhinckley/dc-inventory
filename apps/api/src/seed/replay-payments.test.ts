@@ -190,7 +190,7 @@ describe("replay payments (in-memory)", () => {
     for (const planned of plan.shippedInvoices) {
       const orderId = salesOrderIdByKey.get(planned.salesOrderKey);
       expect(orderId).toBeDefined();
-      const invoice = await uow.invoices.findByOrderId(orderId!);
+      const invoice = await uow.invoices.findByOrderId(OrganizationId.DEFAULT, orderId!);
       expect(invoice).not.toBeNull();
 
       const applications = await uow.invoices.listApplications(invoice!.id);
@@ -203,6 +203,7 @@ describe("replay payments (in-memory)", () => {
         expect(applications[0]!.amount.amountMinor).toBe(invoice!.total.amountMinor);
 
         const paymentRecord = await uow.invoices.findPaymentByIdempotencyKey(
+          OrganizationId.DEFAULT,
           `demo:${planned.key}:payment`,
         );
         expect(paymentRecord).not.toBeNull();
@@ -220,7 +221,10 @@ describe("replay payments (in-memory)", () => {
         expect(applications).toHaveLength(0);
         expect(remaining).toBe(invoice!.total.amountMinor);
         expect(
-          await uow.invoices.findPaymentByIdempotencyKey(`demo:${planned.key}:payment`),
+          await uow.invoices.findPaymentByIdempotencyKey(
+            OrganizationId.DEFAULT,
+            `demo:${planned.key}:payment`,
+          ),
         ).toBeNull();
       }
     }
@@ -270,6 +274,7 @@ describe("replay payments (in-memory)", () => {
     const persistedUnpaidBuckets = new Set<string>();
     for (const planned of plan.shippedInvoices.filter((row) => !row.paid)) {
       const invoice = await uow.invoices.findByOrderId(
+        OrganizationId.DEFAULT,
         salesOrderIdByKey.get(planned.salesOrderKey)!,
       );
       expect(invoice).not.toBeNull();
@@ -288,7 +293,10 @@ describe("replay payments (in-memory)", () => {
 
     for (const invoice of plan.shippedInvoices) {
       const customerKey = customerKeyById.get(
-        (await uow.invoices.findByOrderId(salesOrderIdByKey.get(invoice.salesOrderKey)!))!
+        (await uow.invoices.findByOrderId(
+          OrganizationId.DEFAULT,
+          salesOrderIdByKey.get(invoice.salesOrderKey)!,
+        ))!
           .customerId,
       );
       if (customerKey === "idlePark") {

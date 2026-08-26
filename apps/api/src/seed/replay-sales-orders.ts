@@ -193,7 +193,10 @@ export async function runReplaySalesOrders(
     shippedCount += 1;
     lastSalesDocumentNumber = shipped.salesOrder.documentNumber;
 
-    const invoice = await ports.invoices.findByOrderId(shipped.salesOrder.id);
+    const invoice = await ports.invoices.findByOrderId(
+      OrganizationId.DEFAULT,
+      shipped.salesOrder.id,
+    );
     if (invoice === null) {
       throw new ReplaySalesOrdersError(`ship ${planned.key} did not create an invoice`);
     }

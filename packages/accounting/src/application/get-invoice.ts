@@ -1,9 +1,10 @@
-import { InvoiceId } from "@dc-inventory/shared-kernel";
+import { InvoiceId, OrganizationId } from "@dc-inventory/shared-kernel";
 import { computeRemainingCents } from "../domain/invoice.js";
 import type { IInvoiceRepository } from "../domain/ports/invoice-repository.js";
 
 export type GetInvoiceRequest = {
   staffUserId: import("@dc-inventory/shared-kernel").StaffUserId;
+  organizationId: OrganizationId;
   invoiceId: InvoiceId;
 };
 
@@ -30,7 +31,7 @@ export class GetInvoiceUseCase {
 
   async execute(input: GetInvoiceRequest): Promise<GetInvoiceResult> {
     void input.staffUserId;
-    const invoice = await this.invoices.findById(input.invoiceId);
+    const invoice = await this.invoices.findById(input.organizationId, input.invoiceId);
     if (invoice === null) {
       return { ok: false, reason: "not_found" };
     }

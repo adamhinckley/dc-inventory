@@ -3,8 +3,9 @@ import {
   InvoiceId,
   Money,
   OrderId,
+  OrganizationId,
 } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { newUuid, PaymentApplicationId, PaymentId } from "../domain/ids.js";
@@ -28,6 +29,7 @@ export type AccountingDrizzle = PostgresJsDatabase<{
 function toInvoice(row: typeof invoices.$inferSelect): Invoice {
   return {
     id: InvoiceId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
     orderId: OrderId.parse(row.orderId),
     customerId: CustomerId.parse(row.customerId),
     documentNumber: row.documentNumber,
@@ -52,29 +54,45 @@ function toApplication(row: typeof paymentApplications.$inferSelect): PaymentApp
 export class DrizzleInvoiceRepository implements IInvoiceRepository {
   constructor(private readonly db: AccountingDrizzle) {}
 
-  async findById(id: InvoiceId): Promise<Invoice | null> {
-    const rows = await this.db.select().from(invoices).where(eq(invoices.id, id)).limit(1);
-    const row = rows[0];
-    return row === undefined ? null : toInvoice(row);
-  }
-
-  async findByOrderId(orderId: OrderId): Promise<Invoice | null> {
+  async findById(organizationId: OrganizationId, id: InvoiceId): Promise<Invoice | null> {
     const rows = await this.db
       .select()
       .from(invoices)
-      .where(eq(invoices.orderId, orderId))
+      .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)))
       .limit(1);
     const row = rows[0];
     return row === undefined ? null : toInvoice(row);
   }
 
+  async findByOrderId(
+    organizationId: OrganizationId,
+    orderId: OrderId,
+  ): Promise<Invoice | null> {
+    const rows = await this.db
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.orderId, orderId), eq(invoices.organizationId, organizationId)))
+      .limit(1);
+    const row = rows[0];
+    return row === undefined ? null : toInvoice(row);
+  }
+
+  async list(organizationId: OrganizationId): Promise<readonly Invoice[]> {
+    const rows = await this.db
+      .select()
+      .from(invoices)
+      .where(eq(invoices.organizationId, organizationId));
+    return rows.map(toInvoice);
+  }
+
   async save(invoice: Invoice): Promise<void> {
-    const existing = await this.findById(invoice.id);
+    const existing = await this.findById(invoice.organizationId, invoice.id);
     if (existing !== null) {
       return;
     }
     await this.db.insert(invoices).values({
       id: invoice.id,
+      organizationId: invoice.organizationId,
       orderId: invoice.orderId,
       customerId: invoice.customerId,
       documentNumber: invoice.documentNumber,
@@ -87,8 +105,11 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
     });
   }
 
-  async nextDocumentNumber(): Promise<string> {
-    const rows = await this.db.select({ documentNumber: invoices.documentNumber }).from(invoices);
+  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
+    const rows = await this.db
+      .select({ documentNumber: invoices.documentNumber })
+      .from(invoices)
+      .where(eq(invoices.organizationId, organizationId));
     let max = 0;
     for (const row of rows) {
       const sequence = parseDocumentSequence(row.documentNumber);
@@ -107,11 +128,16 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
     return rows.map(toApplication);
   }
 
-  async findPaymentByIdempotencyKey(key: string): Promise<PaymentIdempotencyRecord | null> {
+  async findPaymentByIdempotencyKey(
+    organizationId: OrganizationId,
+    key: string,
+  ): Promise<PaymentIdempotencyRecord | null> {
     const paymentRows = await this.db
       .select()
       .from(payments)
-      .where(eq(payments.idempotencyKey, key))
+      .where(
+        and(eq(payments.organizationId, organizationId), eq(payments.idempotencyKey, key)),
+      )
       .limit(1);
     const paymentRow = paymentRows[0];
     if (paymentRow === undefined) {
@@ -128,6 +154,7 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
     }
     const payment: Payment = {
       id: PaymentId.parse(paymentRow.id),
+      organizationId: OrganizationId.parse(paymentRow.organizationId),
       customerId: CustomerId.parse(paymentRow.customerId),
       amount: Money.fromMinorUnits(paymentRow.amountCents, paymentRow.currency),
       idempotencyKey: paymentRow.idempotencyKey,
@@ -147,6 +174,7 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
   ): Promise<void> {
     await this.db.insert(payments).values({
       id: payment.id,
+      organizationId: payment.organizationId,
       customerId: payment.customerId,
       amountCents: payment.amount.amountMinor,
       currency: payment.amount.currency,

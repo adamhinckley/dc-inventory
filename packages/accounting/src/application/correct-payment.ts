@@ -1,4 +1,4 @@
-import { InvoiceId, Money } from "@dc-inventory/shared-kernel";
+import { InvoiceId, Money, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import { PaymentApplicationId } from "../domain/ids.js";
 import { computeRemainingCents } from "../domain/invoice.js";
@@ -7,6 +7,7 @@ import type { PaymentApplication } from "../domain/invoice.js";
 
 export type CorrectPaymentRequest = {
   staffUserId: import("@dc-inventory/shared-kernel").StaffUserId;
+  organizationId: OrganizationId;
   invoiceId: InvoiceId;
   paymentId: import("../domain/ids.js").PaymentId;
   correctionAmountCents: number;
@@ -35,7 +36,7 @@ export class CorrectPaymentUseCase {
     }
 
     return this.unitOfWork.run(async (uow) => {
-      const invoice = await uow.invoices.findById(input.invoiceId);
+      const invoice = await uow.invoices.findById(input.organizationId, input.invoiceId);
       if (invoice === null) {
         return { ok: false, reason: "not_found" };
       }

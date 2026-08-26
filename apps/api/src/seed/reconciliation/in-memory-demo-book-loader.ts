@@ -125,7 +125,7 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
     const paymentById = new Map<string, { id: string; customerId: string; amountCents: number }>();
 
     for (const order of salesOrderPage.items) {
-      const invoice = await this.ports.invoices.findByOrderId(order.id);
+      const invoice = await this.ports.invoices.findByOrderId(OrganizationId.DEFAULT, order.id);
       if (invoice === null) {
         continue;
       }

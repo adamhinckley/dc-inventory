@@ -3,7 +3,7 @@ import {
   InvoiceId,
   Money,
   OrderId,
-  type StaffUserId,
+  OrganizationId,
 } from "@dc-inventory/shared-kernel";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { newUuid, PaymentApplicationId, PaymentId } from "../domain/ids.js";
@@ -11,18 +11,18 @@ import type {
   IInvoiceRepository,
   PaymentIdempotencyRecord,
 } from "../domain/ports/invoice-repository.js";
-import {
-  computeRemainingCents,
-  type Invoice,
-  type Payment,
-  type PaymentApplication,
-} from "../domain/invoice.js";
+import type { Invoice, Payment, PaymentApplication } from "../domain/invoice.js";
 
 type StoredInvoice = { invoice: Invoice; createdAt: Date };
+
+function paymentKey(organizationId: OrganizationId, key: string): string {
+  return `${organizationId}\0${key}`;
+}
 
 function toInvoice(invoice: Invoice): Invoice {
   return {
     id: InvoiceId.parse(invoice.id),
+    organizationId: OrganizationId.parse(invoice.organizationId),
     orderId: OrderId.parse(invoice.orderId),
     customerId: CustomerId.parse(invoice.customerId),
     documentNumber: invoice.documentNumber,
@@ -45,14 +45,14 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
   private readonly byOrderId = new Map<OrderId, InvoiceId>();
   private readonly applicationsByInvoice = new Map<InvoiceId, PaymentApplication[]>();
   private readonly paymentsByKey = new Map<string, PaymentIdempotencyRecord>();
-  private nextSequence = 1;
+  private readonly nextSequenceByOrg = new Map<string, number>();
 
   snapshot(): {
     byId: Map<InvoiceId, StoredInvoice>;
     byOrderId: Map<OrderId, InvoiceId>;
     applicationsByInvoice: Map<InvoiceId, PaymentApplication[]>;
     paymentsByKey: Map<string, PaymentIdempotencyRecord>;
-    nextSequence: number;
+    nextSequenceByOrg: Map<string, number>;
   } {
     const applicationsByInvoice = new Map<InvoiceId, PaymentApplication[]>();
     for (const [id, rows] of this.applicationsByInvoice) {
@@ -63,7 +63,7 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
       byOrderId: new Map(this.byOrderId),
       applicationsByInvoice,
       paymentsByKey: new Map(this.paymentsByKey),
-      nextSequence: this.nextSequence,
+      nextSequenceByOrg: new Map(this.nextSequenceByOrg),
     };
   }
 
@@ -72,7 +72,7 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
     byOrderId: Map<OrderId, InvoiceId>;
     applicationsByInvoice: Map<InvoiceId, PaymentApplication[]>;
     paymentsByKey: Map<string, PaymentIdempotencyRecord>;
-    nextSequence: number;
+    nextSequenceByOrg: Map<string, number>;
   }): void {
     this.byId.clear();
     for (const [id, row] of snapshot.byId) {
@@ -90,16 +90,35 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
     for (const [key, record] of snapshot.paymentsByKey) {
       this.paymentsByKey.set(key, record);
     }
-    this.nextSequence = snapshot.nextSequence;
+    this.nextSequenceByOrg.clear();
+    for (const [orgKey, sequence] of snapshot.nextSequenceByOrg) {
+      this.nextSequenceByOrg.set(orgKey, sequence);
+    }
   }
 
-  async findById(id: InvoiceId): Promise<Invoice | null> {
-    return this.byId.get(id)?.invoice ?? null;
+  async findById(organizationId: OrganizationId, id: InvoiceId): Promise<Invoice | null> {
+    const row = this.byId.get(id);
+    if (row === undefined || row.invoice.organizationId !== organizationId) {
+      return null;
+    }
+    return row.invoice;
   }
 
-  async findByOrderId(orderId: OrderId): Promise<Invoice | null> {
+  async findByOrderId(
+    organizationId: OrganizationId,
+    orderId: OrderId,
+  ): Promise<Invoice | null> {
     const id = this.byOrderId.get(orderId);
-    return id === undefined ? null : (this.byId.get(id)?.invoice ?? null);
+    if (id === undefined) {
+      return null;
+    }
+    return this.findById(organizationId, id);
+  }
+
+  async list(organizationId: OrganizationId): Promise<readonly Invoice[]> {
+    return [...this.byId.values()]
+      .filter((row) => row.invoice.organizationId === organizationId)
+      .map((row) => row.invoice);
   }
 
   async save(invoice: Invoice): Promise<void> {
@@ -111,14 +130,20 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
     });
     this.byOrderId.set(normalized.orderId, normalized.id);
     const sequence = parseDocumentSequence(normalized.documentNumber);
-    if (sequence !== null && sequence >= this.nextSequence) {
-      this.nextSequence = sequence + 1;
+    if (sequence !== null) {
+      const orgKey = normalized.organizationId;
+      const current = this.nextSequenceByOrg.get(orgKey) ?? 1;
+      if (sequence >= current) {
+        this.nextSequenceByOrg.set(orgKey, sequence + 1);
+      }
     }
   }
 
-  async nextDocumentNumber(): Promise<string> {
-    const number = formatDocumentNumber(this.nextSequence);
-    this.nextSequence += 1;
+  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
+    const orgKey = organizationId;
+    const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
+    const number = formatDocumentNumber(next);
+    this.nextSequenceByOrg.set(orgKey, next + 1);
     return number;
   }
 
@@ -126,8 +151,11 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
     return [...(this.applicationsByInvoice.get(invoiceId) ?? [])];
   }
 
-  async findPaymentByIdempotencyKey(key: string): Promise<PaymentIdempotencyRecord | null> {
-    return this.paymentsByKey.get(key) ?? null;
+  async findPaymentByIdempotencyKey(
+    organizationId: OrganizationId,
+    key: string,
+  ): Promise<PaymentIdempotencyRecord | null> {
+    return this.paymentsByKey.get(paymentKey(organizationId, key)) ?? null;
   }
 
   async insertPaymentWithApplication(
@@ -145,7 +173,7 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
     const rows = this.applicationsByInvoice.get(invoiceId) ?? [];
     rows.push(application);
     this.applicationsByInvoice.set(invoiceId, rows);
-    this.paymentsByKey.set(payment.idempotencyKey, {
+    this.paymentsByKey.set(paymentKey(payment.organizationId, payment.idempotencyKey), {
       payment,
       invoiceId,
       applicationAmountCents,

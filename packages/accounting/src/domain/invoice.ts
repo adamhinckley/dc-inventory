@@ -14,6 +14,7 @@ export type PaymentApplication = {
 
 export type Invoice = {
   readonly id: import("@dc-inventory/shared-kernel").InvoiceId;
+  readonly organizationId: import("@dc-inventory/shared-kernel").OrganizationId;
   readonly orderId: import("@dc-inventory/shared-kernel").OrderId;
   readonly customerId: import("@dc-inventory/shared-kernel").CustomerId;
   readonly documentNumber: string;
@@ -26,6 +27,7 @@ export type Invoice = {
 
 export type Payment = {
   readonly id: import("./ids.js").PaymentId;
+  readonly organizationId: import("@dc-inventory/shared-kernel").OrganizationId;
   readonly customerId: import("@dc-inventory/shared-kernel").CustomerId;
   readonly amount: Money;
   readonly idempotencyKey: string;
