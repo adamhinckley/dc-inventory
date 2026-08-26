@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   PHASE2_DEFAULT_LOCATION_CODE,
   PHASE2_SUPPLIER_NAME,
@@ -9,6 +9,7 @@ import {
 import { locations } from "@dc-inventory/inventory/schema";
 import { suppliers } from "@dc-inventory/purchasing/schema";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import { DEMO_SEED_ORGANIZATION_ID } from "./demo-seed-organization.js";
 
 export async function runPhase2BootstrapOnDb(db: AppDrizzle) {
   const ports: Phase2BootstrapPorts = {
@@ -16,14 +17,22 @@ export async function runPhase2BootstrapOnDb(db: AppDrizzle) {
       const existing = await db
         .select({ id: locations.id, code: locations.code })
         .from(locations)
-        .where(eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE))
+        .where(
+          and(
+            eq(locations.organizationId, DEMO_SEED_ORGANIZATION_ID),
+            eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE),
+          ),
+        )
         .limit(1);
       if (existing[0] !== undefined) {
         return existing[0];
       }
       const inserted = await db
         .insert(locations)
-        .values({ code: PHASE2_DEFAULT_LOCATION_CODE })
+        .values({
+          code: PHASE2_DEFAULT_LOCATION_CODE,
+          organizationId: DEMO_SEED_ORGANIZATION_ID,
+        })
         .returning({ id: locations.id, code: locations.code });
       return inserted[0]!;
     },
@@ -31,7 +40,12 @@ export async function runPhase2BootstrapOnDb(db: AppDrizzle) {
       const existing = await db
         .select({ id: suppliers.id, vendorNumber: suppliers.vendorNumber })
         .from(suppliers)
-        .where(eq(suppliers.vendorNumber, PHASE2_SUPPLIER_VENDOR_NUMBER))
+        .where(
+          and(
+            eq(suppliers.organizationId, DEMO_SEED_ORGANIZATION_ID),
+            eq(suppliers.vendorNumber, PHASE2_SUPPLIER_VENDOR_NUMBER),
+          ),
+        )
         .limit(1);
       if (existing[0] !== undefined) {
         return existing[0];
@@ -39,6 +53,7 @@ export async function runPhase2BootstrapOnDb(db: AppDrizzle) {
       const inserted = await db
         .insert(suppliers)
         .values({
+          organizationId: DEMO_SEED_ORGANIZATION_ID,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
         })

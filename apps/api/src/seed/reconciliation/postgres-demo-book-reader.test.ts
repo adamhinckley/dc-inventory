@@ -1,6 +1,7 @@
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it, vi } from "vitest";
 import { assertDemoBook } from "./assert-demo-book.js";
+import { DEMO_SEED_ORGANIZATION_ID } from "../demo-seed-organization.js";
 import { demoBookToRowBundle } from "./demo-book-assembler.js";
 import { InMemoryDemoBookReader } from "./in-memory-demo-book-reader.js";
 import { PostgresDemoBookReader } from "./postgres-demo-book-reader.js";
@@ -84,6 +85,10 @@ function isTaxCommitShape(keys: readonly string[]): boolean {
   return keys.includes("organizationId") && keys.includes("invoiceId");
 }
 
+function rowsForShape(keys: readonly string[], rows: readonly unknown[]): Record<string, unknown>[] {
+  return rows.map((row) => pick(row as Record<string, unknown>, keys));
+}
+
 function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
   const parallelRows = [
     bundle.products,
@@ -152,7 +157,9 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
       if (isImageJoinShape(keys)) {
         return {
           from: vi.fn(() => ({
-            innerJoin: vi.fn(async () => rows.map((row) => pick(row as Record<string, unknown>, keys))),
+            innerJoin: vi.fn(() => ({
+              where: vi.fn(async () => rowsForShape(keys, rows)),
+            })),
           })),
         };
       }
@@ -165,7 +172,7 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
                 .filter(
                   (row) =>
                     (row as { organizationId?: string }).organizationId ===
-                      OrganizationId.DEFAULT ||
+                      DEMO_SEED_ORGANIZATION_ID ||
                     (row as { organizationId?: string }).organizationId ===
                       undefined,
                 )
@@ -176,7 +183,12 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
       }
 
       return {
-        from: vi.fn(async () => rows.map((row) => pick(row as Record<string, unknown>, keys))),
+        from: vi.fn(() => ({
+          where: vi.fn(async () => rowsForShape(keys, rows)),
+          innerJoin: vi.fn(() => ({
+            where: vi.fn(async () => rowsForShape(keys, rows)),
+          })),
+        })),
       };
     }),
   };

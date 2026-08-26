@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { reorderPolicies } from "@dc-inventory/inventory/schema";
+import { DEMO_SEED_ORGANIZATION_ID } from "../demo-seed-organization.js";
 import type {
   IReorderPolicySeedRepository,
   ReorderPolicySeedRow,
@@ -18,7 +19,11 @@ export class DrizzleReorderPolicySeedRepository implements IReorderPolicySeedRep
       .select({ id: reorderPolicies.id })
       .from(reorderPolicies)
       .where(
-        and(eq(reorderPolicies.sku, row.sku), eq(reorderPolicies.locationId, row.locationId)),
+        and(
+          eq(reorderPolicies.organizationId, DEMO_SEED_ORGANIZATION_ID),
+          eq(reorderPolicies.sku, row.sku),
+          eq(reorderPolicies.locationId, row.locationId),
+        ),
       )
       .limit(1);
     if (existing[0] !== undefined) {
@@ -33,6 +38,7 @@ export class DrizzleReorderPolicySeedRepository implements IReorderPolicySeedRep
       return;
     }
     await this.db.insert(reorderPolicies).values({
+      organizationId: DEMO_SEED_ORGANIZATION_ID,
       sku: row.sku,
       locationId: row.locationId,
       minOnHand: row.minOnHand,
@@ -48,7 +54,8 @@ export class DrizzleReorderPolicySeedRepository implements IReorderPolicySeedRep
         minOnHand: reorderPolicies.minOnHand,
         maxOnHand: reorderPolicies.maxOnHand,
       })
-      .from(reorderPolicies);
+      .from(reorderPolicies)
+      .where(eq(reorderPolicies.organizationId, DEMO_SEED_ORGANIZATION_ID));
     return rows.map((row) => ({
       sku: row.sku,
       locationId: row.locationId,

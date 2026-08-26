@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   invoiceTaxLines,
   invoices,
@@ -27,8 +27,8 @@ import {
   suppliers,
 } from "@dc-inventory/purchasing/schema";
 import { orderLines, orders } from "@dc-inventory/sales/schema";
-import { OrganizationId } from "@dc-inventory/shared-kernel";
 import type { AppDrizzle } from "../../infrastructure/db.js";
+import { DEMO_SEED_ORGANIZATION_ID } from "../demo-seed-organization.js";
 import { taxCommits } from "../../infrastructure/schema/tax.js";
 import { assembleDemoBook } from "./demo-book-assembler.js";
 import type { DemoBook, IDemoBookReader } from "./demo-book.js";
@@ -44,7 +44,12 @@ export class PostgresDemoBookReader implements IDemoBookReader {
     const defaultLocation = await this.db
       .select({ id: locations.id })
       .from(locations)
-      .where(eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE))
+      .where(
+        and(
+          eq(locations.organizationId, DEMO_SEED_ORGANIZATION_ID),
+          eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE),
+        ),
+      )
       .limit(1);
 
     const defaultLocationId = defaultLocation[0]?.id;
@@ -90,7 +95,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           webWholesale: products.webWholesale,
           taxCategoryCode: products.taxCategoryCode,
         })
-        .from(products),
+        .from(products)
+        .where(eq(products.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           productId: productImages.productId,
@@ -99,21 +105,25 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           contentType: productImages.contentType,
         })
         .from(productImages)
-        .innerJoin(products, eq(productImages.productId, products.id)),
+        .innerJoin(products, eq(productImages.productId, products.id))
+        .where(eq(products.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: suppliers.id,
           vendorNumber: suppliers.vendorNumber,
           name: suppliers.name,
         })
-        .from(suppliers),
+        .from(suppliers)
+        .where(eq(suppliers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           supplierId: supplierProducts.supplierId,
           sku: supplierProducts.sku,
           minOrderQty: supplierProducts.minOrderQty,
         })
-        .from(supplierProducts),
+        .from(supplierProducts)
+        .innerJoin(suppliers, eq(supplierProducts.supplierId, suppliers.id))
+        .where(eq(suppliers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: customers.id,
@@ -122,7 +132,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           currency: customers.currency,
           terms: customers.terms,
         })
-        .from(customers),
+        .from(customers)
+        .where(eq(customers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: shipTos.id,
@@ -135,14 +146,18 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           country: shipTos.country,
           isDefault: shipTos.isDefault,
         })
-        .from(shipTos),
+        .from(shipTos)
+        .innerJoin(customers, eq(shipTos.customerId, customers.id))
+        .where(eq(customers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           customerId: contacts.customerId,
           name: contacts.name,
           email: contacts.email,
         })
-        .from(contacts),
+        .from(contacts)
+        .innerJoin(customers, eq(contacts.customerId, customers.id))
+        .where(eq(customers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           customerId: exemptionCertificates.customerId,
@@ -152,26 +167,31 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           expiresAt: exemptionCertificates.expiresAt,
           status: exemptionCertificates.status,
         })
-        .from(exemptionCertificates),
+        .from(exemptionCertificates)
+        .innerJoin(customers, eq(exemptionCertificates.customerId, customers.id))
+        .where(eq(customers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: staffUsers.id,
           email: staffUsers.email,
         })
-        .from(staffUsers),
+        .from(staffUsers)
+        .where(eq(staffUsers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: wholesaleUsers.id,
           email: wholesaleUsers.email,
           customerId: wholesaleUsers.customerId,
         })
-        .from(wholesaleUsers),
+        .from(wholesaleUsers)
+        .where(eq(wholesaleUsers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: opsUsers.id,
           email: opsUsers.email,
         })
-        .from(opsUsers),
+        .from(opsUsers)
+        .where(eq(opsUsers.tenantId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: purchaseOrders.id,
@@ -180,7 +200,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           documentNumber: purchaseOrders.documentNumber,
           createdAt: purchaseOrders.createdAt,
         })
-        .from(purchaseOrders),
+        .from(purchaseOrders)
+        .where(eq(purchaseOrders.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           purchaseOrderId: purchaseOrderLines.purchaseOrderId,
@@ -188,7 +209,9 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           qty: purchaseOrderLines.qty,
           receivedQty: purchaseOrderLines.receivedQty,
         })
-        .from(purchaseOrderLines),
+        .from(purchaseOrderLines)
+        .innerJoin(purchaseOrders, eq(purchaseOrderLines.purchaseOrderId, purchaseOrders.id))
+        .where(eq(purchaseOrders.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: orders.id,
@@ -203,7 +226,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           shipPostal: orders.shipPostal,
           shipCountry: orders.shipCountry,
         })
-        .from(orders),
+        .from(orders)
+        .where(eq(orders.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           orderId: orderLines.orderId,
@@ -211,7 +235,9 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           qty: orderLines.qty,
           unitPriceCents: orderLines.unitPriceCents,
         })
-        .from(orderLines),
+        .from(orderLines)
+        .innerJoin(orders, eq(orderLines.orderId, orders.id))
+        .where(eq(orders.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: invoices.id,
@@ -223,26 +249,32 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           taxTotalCents: invoices.taxTotalCents,
           totalCents: invoices.totalCents,
         })
-        .from(invoices),
+        .from(invoices)
+        .where(eq(invoices.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           invoiceId: invoiceTaxLines.invoiceId,
         })
-        .from(invoiceTaxLines),
+        .from(invoiceTaxLines)
+        .innerJoin(invoices, eq(invoiceTaxLines.invoiceId, invoices.id))
+        .where(eq(invoices.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: payments.id,
           customerId: payments.customerId,
           amountCents: payments.amountCents,
         })
-        .from(payments),
+        .from(payments)
+        .where(eq(payments.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           paymentId: paymentApplications.paymentId,
           invoiceId: paymentApplications.invoiceId,
           amountCents: paymentApplications.amountCents,
         })
-        .from(paymentApplications),
+        .from(paymentApplications)
+        .innerJoin(payments, eq(paymentApplications.paymentId, payments.id))
+        .where(eq(payments.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           id: taxCommits.id,
@@ -250,7 +282,7 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           organizationId: taxCommits.organizationId,
         })
         .from(taxCommits)
-        .where(eq(taxCommits.organizationId, OrganizationId.DEFAULT)),
+        .where(eq(taxCommits.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           sku: stockMovements.sku,
@@ -259,7 +291,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           qty: stockMovements.qty,
           createdAt: stockMovements.createdAt,
         })
-        .from(stockMovements),
+        .from(stockMovements)
+        .where(eq(stockMovements.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           sku: stockSnapshots.sku,
@@ -268,7 +301,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           onOrder: stockSnapshots.onOrder,
           allocated: stockSnapshots.allocated,
         })
-        .from(stockSnapshots),
+        .from(stockSnapshots)
+        .where(eq(stockSnapshots.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
           sku: reorderPolicies.sku,
@@ -276,7 +310,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           minOnHand: reorderPolicies.minOnHand,
           maxOnHand: reorderPolicies.maxOnHand,
         })
-        .from(reorderPolicies),
+        .from(reorderPolicies)
+        .where(eq(reorderPolicies.organizationId, DEMO_SEED_ORGANIZATION_ID)),
     ]);
 
     return assembleDemoBook({

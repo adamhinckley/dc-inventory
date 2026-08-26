@@ -7,10 +7,10 @@ import type {
   IShipToRepository,
 } from "@dc-inventory/customers";
 import type { IStaffUserRepository, IWholesaleUserRepository } from "@dc-inventory/identity";
-import { OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IInventoryReadModel } from "@dc-inventory/inventory";
 import type { IPurchaseOrderRepository, Supplier } from "@dc-inventory/purchasing";
 import type { ISalesOrderRepository } from "@dc-inventory/sales";
+import { DEMO_SEED_ORGANIZATION_ID } from "../demo-seed-organization.js";
 import type {
   IProductImageSeedRepository,
   IReorderPolicySeedRepository,
@@ -52,16 +52,18 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
 
   async load(): Promise<DemoBook> {
     const products = await this.ports.products.listMatching({
-      organizationId: OrganizationId.DEFAULT,
+      organizationId: DEMO_SEED_ORGANIZATION_ID,
     });
     const skuByProductId = new Map(
       products.map((row) => [String(row.product.id), row.product.sku.value]),
     );
     const images = await this.ports.productImages.listAll();
-    const suppliers = await this.ports.suppliers.listAll();
+    const suppliers = (await this.ports.suppliers.listAll()).filter(
+      (row) => row.organizationId === DEMO_SEED_ORGANIZATION_ID,
+    );
     const supplierProducts = await this.ports.supplierProducts.listAll();
     const customerPage = await this.ports.customers.list({
-      organizationId: OrganizationId.DEFAULT,
+      organizationId: DEMO_SEED_ORGANIZATION_ID,
       page: 1,
       pageSize: 10_000,
       sortBy: "createdAt",
@@ -99,9 +101,12 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
       );
     }
 
-    const staff = await this.ports.staffUsers.findByEmail(OrganizationId.DEFAULT, this.ports.staffEmail);
+    const staff = await this.ports.staffUsers.findByEmail(
+      DEMO_SEED_ORGANIZATION_ID,
+      this.ports.staffEmail,
+    );
     const wholesale = await this.ports.wholesaleUsers.findByEmail(
-      OrganizationId.DEFAULT,
+      DEMO_SEED_ORGANIZATION_ID,
       this.ports.wholesaleEmail,
     );
     if (staff === null || wholesale === null) {
@@ -109,12 +114,12 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
     }
 
     const purchaseOrderPage = await this.ports.purchaseOrders.list({
-      organizationId: OrganizationId.DEFAULT,
+      organizationId: DEMO_SEED_ORGANIZATION_ID,
       page: 1,
       pageSize: 20_000,
     });
     const salesOrderPage = await this.ports.salesOrders.list({
-      organizationId: OrganizationId.DEFAULT,
+      organizationId: DEMO_SEED_ORGANIZATION_ID,
       page: 1,
       pageSize: 20_000,
     });
@@ -125,7 +130,10 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
     const paymentById = new Map<string, { id: string; customerId: string; amountCents: number }>();
 
     for (const order of salesOrderPage.items) {
-      const invoice = await this.ports.invoices.findByOrderId(OrganizationId.DEFAULT, order.id);
+      const invoice = await this.ports.invoices.findByOrderId(
+        DEMO_SEED_ORGANIZATION_ID,
+        order.id,
+      );
       if (invoice === null) {
         continue;
       }

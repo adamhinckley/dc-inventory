@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
+import { DEMO_SEED_ORGANIZATION_ID } from "./demo-seed-organization.js";
 import { planReducedDemoBook, REDUCED_PLAYBACK_COUNTS } from "./planner/plan-reduced-demo-book.js";
 import { REDUCED_DEMO_RECONCILIATION_EXPECTATIONS } from "./reconciliation/valid-reduced-demo-book.js";
 import { runDemoSeedInMemory } from "./run-demo-seed.js";
@@ -34,5 +36,6 @@ describe("runDemoSeedInMemory", () => {
 
     expect(result.reconciliation.ok).toBe(true);
     expect(result.defaultLocationId.length).toBeGreaterThan(0);
+    expect(DEMO_SEED_ORGANIZATION_ID).toBe(OrganizationId.DEFAULT);
   });
 });
