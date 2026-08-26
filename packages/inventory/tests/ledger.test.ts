@@ -1,4 +1,4 @@
-import { LocationId, PurchaseOrderId, Sku } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, PurchaseOrderId, Sku } from "@dc-inventory/shared-kernel";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -26,6 +26,9 @@ const PO_ID_2 = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440031");
 const SO_ID = "550e8400-e29b-41d4-a716-446655440040";
 const SO_ID_2 = "550e8400-e29b-41d4-a716-446655440041";
 const DEFAULT = LocationId.DEFAULT;
+const DEFAULT_ORG = OrganizationId.DEFAULT;
+const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
+const WIDGET_SKU = Sku.parse("WIDGET-1");
 
 function harness() {
   const uow = new InMemoryInventoryUnitOfWork();
@@ -647,6 +650,98 @@ describe("Inventory ledger (in-memory)", () => {
         onOrder: 0,
         allocated: 8,
         available: 2,
+      });
+    });
+  });
+
+  describe("organization isolation", () => {
+    it("receive and allocate in Acme does not change Beta available for the same SKU string", async () => {
+      const h = harness();
+
+      await h.adjustmentIncrease.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "acme-receive",
+        sku: WIDGET_SKU,
+        quantity: 10,
+        refType: "adjustment",
+        refId: "acme-receive",
+      });
+      await h.allocated.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "acme-alloc",
+        sku: WIDGET_SKU,
+        quantity: 4,
+        refType: "sales_order",
+        refId: SO_ID,
+      });
+
+      const acme = await h.getSnapshot.execute({
+        organizationId: DEFAULT_ORG,
+        sku: WIDGET_SKU,
+        locationId: DEFAULT,
+      });
+      expect(acme).toEqual({
+        onHand: 10,
+        onOrder: 0,
+        allocated: 4,
+        available: 6,
+      });
+
+      const beta = await h.getSnapshot.execute({
+        organizationId: BETA_ORG,
+        sku: WIDGET_SKU,
+        locationId: DEFAULT,
+      });
+      expect(beta).toEqual({
+        onHand: 0,
+        onOrder: 0,
+        allocated: 0,
+        available: 0,
+      });
+    });
+
+    it("allows the same idempotency key and SKU in two organizations independently", async () => {
+      const h = harness();
+      const sharedKey = "shared-idempotency-key";
+
+      const acme = await h.adjustmentIncrease.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: sharedKey,
+        sku: WIDGET_SKU,
+        quantity: 3,
+        refType: "adjustment",
+        refId: "acme-shared-key",
+      });
+      const beta = await h.adjustmentIncrease.execute({
+        organizationId: BETA_ORG,
+        idempotencyKey: sharedKey,
+        sku: WIDGET_SKU,
+        quantity: 5,
+        refType: "adjustment",
+        refId: "beta-shared-key",
+      });
+
+      expect(acme.ok).toBe(true);
+      expect(beta.ok).toBe(true);
+      expect(await h.getSnapshot.execute({
+        organizationId: DEFAULT_ORG,
+        sku: WIDGET_SKU,
+        locationId: DEFAULT,
+      })).toEqual({
+        onHand: 3,
+        onOrder: 0,
+        allocated: 0,
+        available: 3,
+      });
+      expect(await h.getSnapshot.execute({
+        organizationId: BETA_ORG,
+        sku: WIDGET_SKU,
+        locationId: DEFAULT,
+      })).toEqual({
+        onHand: 5,
+        onOrder: 0,
+        allocated: 0,
+        available: 5,
       });
     });
   });

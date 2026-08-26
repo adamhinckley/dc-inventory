@@ -1,4 +1,4 @@
-import type { LocationId } from "@dc-inventory/shared-kernel";
+import type { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import type { MovementId } from "./ids.js";
 
@@ -34,6 +34,7 @@ export const ONCE_ONLY_PROVENANCE_TYPES = [
 
 export type Movement = Readonly<{
   id: MovementId;
+  organizationId: OrganizationId;
   sku: Sku;
   locationId: LocationId;
   movementType: MovementType;

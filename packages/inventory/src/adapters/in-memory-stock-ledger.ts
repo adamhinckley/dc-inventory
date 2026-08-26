@@ -1,4 +1,4 @@
-import { LocationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import {
   computeSnapshotDelta,
@@ -73,6 +73,7 @@ export class InMemoryStockLedger implements IStockLedger {
     movementType: MovementType,
     command: StockCommandBase,
   ): Promise<StockCommandResult> {
+    const organizationId = command.organizationId ?? OrganizationId.DEFAULT;
     const locationId = command.locationId ?? LocationId.DEFAULT;
 
     if (!isPositiveIntegerQuantity(command.quantity)) {
@@ -80,11 +81,12 @@ export class InMemoryStockLedger implements IStockLedger {
     }
 
     const existing = this.readModel.findMovementByIdempotency(
+      organizationId,
       command.idempotencyKey,
       command.sku,
     );
     if (existing) {
-      if (movementMatchesCommand(existing, movementType, command, locationId)) {
+      if (movementMatchesCommand(existing, movementType, command, locationId, organizationId)) {
         return Promise.resolve({ ok: true, movement: existing });
       }
       return Promise.resolve({ ok: false, reason: "idempotency_conflict" });
@@ -92,12 +94,18 @@ export class InMemoryStockLedger implements IStockLedger {
 
     if (
       isOnceOnlyProvenanceType(movementType) &&
-      this.readModel.hasProvenance(command.refType, command.refId, command.sku, movementType)
+      this.readModel.hasProvenance(
+        organizationId,
+        command.refType,
+        command.refId,
+        command.sku,
+        movementType,
+      )
     ) {
       return Promise.resolve({ ok: false, reason: "provenance_conflict" });
     }
 
-    const current = this.readModel.getSnapshotSync(command.sku, locationId);
+    const current = this.readModel.getSnapshotSync(command.sku, locationId, organizationId);
     const deltaResult = computeSnapshotDelta(movementType, command.quantity, current);
     if (!deltaResult.ok) {
       return Promise.resolve(deltaResult);
@@ -105,6 +113,7 @@ export class InMemoryStockLedger implements IStockLedger {
 
     const movement: Movement = Object.freeze({
       id: MovementId.parse(newUuid()),
+      organizationId,
       sku: command.sku,
       locationId,
       movementType,
@@ -116,7 +125,12 @@ export class InMemoryStockLedger implements IStockLedger {
     });
 
     this.readModel.appendMovement(movement);
-    this.readModel.applySnapshotDelta(command.sku, locationId, deltaResult.delta);
+    this.readModel.applySnapshotDelta(
+      command.sku,
+      locationId,
+      deltaResult.delta,
+      organizationId,
+    );
     return Promise.resolve({ ok: true, movement });
   }
 }

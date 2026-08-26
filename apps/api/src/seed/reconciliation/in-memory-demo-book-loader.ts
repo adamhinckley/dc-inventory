@@ -168,10 +168,12 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
 
     const snapshots = [];
     for (const [key, figures] of this.ports.readModel.cloneSnapshots().entries()) {
-      const [sku, locationId] = key.split(":");
+      const parts = key.split(":");
+      const sku = parts[1] ?? "";
+      const locationId = parts[2] ?? this.ports.defaultLocationId;
       snapshots.push({
-        sku: sku ?? "",
-        locationId: locationId ?? this.ports.defaultLocationId,
+        sku,
+        locationId,
         onHand: figures.onHand,
         onOrder: figures.onOrder,
         allocated: figures.allocated,

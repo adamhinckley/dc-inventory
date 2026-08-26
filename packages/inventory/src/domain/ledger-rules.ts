@@ -1,4 +1,4 @@
-import type { LocationId } from "@dc-inventory/shared-kernel";
+import type { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import { ONCE_ONLY_PROVENANCE_TYPES, type Movement, type MovementType } from "./movement.js";
 import type { StockCommandBase, StockCommandFailureReason } from "./ports/stock-ledger.js";
@@ -19,8 +19,10 @@ export function movementMatchesCommand(
   movementType: MovementType,
   command: StockCommandBase,
   locationId: LocationId,
+  organizationId: OrganizationId,
 ): boolean {
   return (
+    movement.organizationId === organizationId &&
     movement.movementType === movementType &&
     movement.sku.equals(command.sku) &&
     movement.locationId === locationId &&

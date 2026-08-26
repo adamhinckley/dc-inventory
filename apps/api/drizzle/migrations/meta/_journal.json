@@ -99,6 +99,13 @@
       "when": 1788055600000,
       "tag": "0014_identity_organization_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1788155600000,
+      "tag": "0015_inventory_organization_id",
+      "breakpoints": true
     }
   ]
 }

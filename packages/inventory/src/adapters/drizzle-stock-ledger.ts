@@ -1,5 +1,5 @@
 import type { IClock } from "../domain/clock.js";
-import { LocationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -37,7 +37,10 @@ export class DrizzleStockLedger implements IStockLedger {
   constructor(
     private readonly db: InventoryDrizzle,
     private readonly readModel: DrizzleInventoryReadModel,
-    private readonly resolveLocationUuid: (locationId: LocationId) => Promise<string>,
+    private readonly resolveLocationUuid: (
+      organizationId: OrganizationId,
+      locationId: LocationId,
+    ) => Promise<string>,
     private readonly clock: IClock,
   ) {}
 
@@ -81,6 +84,7 @@ export class DrizzleStockLedger implements IStockLedger {
     movementType: MovementType,
     command: StockCommandBase,
   ): Promise<StockCommandResult> {
+    const organizationId = command.organizationId ?? OrganizationId.DEFAULT;
     const locationId = command.locationId ?? LocationId.DEFAULT;
 
     if (!isPositiveIntegerQuantity(command.quantity)) {
@@ -88,11 +92,12 @@ export class DrizzleStockLedger implements IStockLedger {
     }
 
     const existing = await this.readModel.findMovementByIdempotency(
+      organizationId,
       command.idempotencyKey,
       command.sku,
     );
     if (existing) {
-      if (movementMatchesCommand(existing, movementType, command, locationId)) {
+      if (movementMatchesCommand(existing, movementType, command, locationId, organizationId)) {
         return { ok: true, movement: existing };
       }
       return { ok: false, reason: "idempotency_conflict" };
@@ -101,6 +106,7 @@ export class DrizzleStockLedger implements IStockLedger {
     if (
       isOnceOnlyProvenanceType(movementType) &&
       (await this.readModel.hasProvenance(
+        organizationId,
         command.refType,
         command.refId,
         command.sku,
@@ -110,15 +116,16 @@ export class DrizzleStockLedger implements IStockLedger {
       return { ok: false, reason: "provenance_conflict" };
     }
 
-    const current = await this.readModel.getSnapshot(command.sku, locationId);
+    const current = await this.readModel.getSnapshot(command.sku, locationId, organizationId);
     const deltaResult = computeSnapshotDelta(movementType, command.quantity, current);
     if (!deltaResult.ok) {
       return deltaResult;
     }
 
-    const locationUuid = await this.resolveLocationUuid(locationId);
+    const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
     const movement: Movement = Object.freeze({
       id: MovementId.parse(newUuid()),
+      organizationId,
       sku: command.sku,
       locationId,
       movementType,
@@ -131,6 +138,7 @@ export class DrizzleStockLedger implements IStockLedger {
 
     await this.db.insert(stockMovements).values({
       id: movement.id,
+      organizationId: movement.organizationId,
       sku: movement.sku.value,
       locationId: locationUuid,
       movementType: movement.movementType,
@@ -152,6 +160,7 @@ export class DrizzleStockLedger implements IStockLedger {
       .from(stockSnapshots)
       .where(
         and(
+          eq(stockSnapshots.organizationId, organizationId),
           eq(stockSnapshots.sku, command.sku.value),
           eq(stockSnapshots.locationId, locationUuid),
         ),
@@ -160,6 +169,7 @@ export class DrizzleStockLedger implements IStockLedger {
 
     if (existingSnapshot[0] === undefined) {
       await this.db.insert(stockSnapshots).values({
+        organizationId,
         sku: command.sku.value,
         locationId: locationUuid,
         onHand: next.onHand,
