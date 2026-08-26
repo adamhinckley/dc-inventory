@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { Product, ProductQty } from "@dc-inventory/catalog";
-import { CustomerId, ProductId } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrganizationId, ProductId } from "@dc-inventory/shared-kernel";
 import {
   catalogListResponseSchema,
   catalogQuerySchema,
@@ -51,6 +51,7 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
     async (request) => {
       void request.query.category;
       const result = await request.server.catalog.listWholesaleCatalog.execute({
+        organizationId: OrganizationId.DEFAULT,
         customerId: customerId(request),
         q: request.query.q,
         page: request.query.page,
@@ -84,6 +85,7 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.catalog.getWholesaleProduct.execute({
+        organizationId: OrganizationId.DEFAULT,
         customerId: customerId(request),
         productId: ProductId.parse(request.params.id),
       });

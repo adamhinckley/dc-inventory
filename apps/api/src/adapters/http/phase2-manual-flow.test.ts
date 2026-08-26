@@ -86,6 +86,7 @@ async function startPhase2ManualFlowApp() {
 
   const createProduct = new CreateProductUseCase(productRepo);
   const seeded = await createProduct.execute({
+    organizationId: OrganizationId.DEFAULT,
     staffUserId: STAFF_ID,
     sku: SKU.value,
     name: "Galvanized hex bolt",

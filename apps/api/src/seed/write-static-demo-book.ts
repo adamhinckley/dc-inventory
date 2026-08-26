@@ -54,9 +54,10 @@ async function upsertProduct(
   planned: DemoBookPlan["master"]["products"][number],
 ): Promise<Product> {
   const sku = Sku.parse(planned.sku);
-  const existing = await ports.products.findBySku(sku);
+  const existing = await ports.products.findBySku(OrganizationId.DEFAULT, sku);
   const product: Product = {
     id: existing?.id ?? ProductId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     sku,
     name: planned.name,
     description: planned.description,

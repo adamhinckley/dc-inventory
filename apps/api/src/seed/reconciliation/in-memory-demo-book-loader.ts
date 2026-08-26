@@ -51,7 +51,9 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
   constructor(private readonly ports: InMemoryDemoBookLoadPorts) {}
 
   async load(): Promise<DemoBook> {
-    const products = await this.ports.products.listMatching({});
+    const products = await this.ports.products.listMatching({
+      organizationId: OrganizationId.DEFAULT,
+    });
     const skuByProductId = new Map(
       products.map((row) => [String(row.product.id), row.product.sku.value]),
     );

@@ -114,9 +114,10 @@ async function upsertProduct(
   fixture: Phase1ProductFixture,
 ): Promise<Product> {
   const sku = Sku.parse(fixture.sku);
-  const existing = await ports.products.findBySku(sku);
+  const existing = await ports.products.findBySku(OrganizationId.DEFAULT, sku);
   const product: Product = {
     id: existing?.id ?? ProductId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     sku,
     name: fixture.name,
     description: null,

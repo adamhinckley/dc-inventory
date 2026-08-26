@@ -1,6 +1,6 @@
 import type { IProductRepository } from "@dc-inventory/catalog";
 import type { IInventoryReadModel } from "@dc-inventory/inventory";
-import { LocationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import { planDemoReorderPolicies } from "./planner/reorder-policies.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import type { IReorderPolicySeedRepository } from "./ports/static-seed-types.js";
@@ -36,7 +36,10 @@ export async function runWriteReorderPolicies(
   ports: WriteReorderPoliciesPorts,
   input: WriteReorderPoliciesInput,
 ): Promise<WriteReorderPoliciesResult> {
-  const listed = await ports.products.listMatching({ shopVisibleOnly: true });
+  const listed = await ports.products.listMatching({
+    organizationId: OrganizationId.DEFAULT,
+    shopVisibleOnly: true,
+  });
   const skus = listed
     .map((row) => row.product.sku.value)
     .sort((left, right) => left.localeCompare(right));
