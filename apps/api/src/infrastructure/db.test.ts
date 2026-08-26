@@ -21,6 +21,7 @@ describe("PostgresDatabase", () => {
         "opsUsers",
         "orderLines",
         "orders",
+        "organizations",
         "paymentApplications",
         "payments",
         "productCategories",

@@ -4,7 +4,7 @@ import {
   InMemorySessionStore,
   InMemoryStaffUserRepository,
 } from "@dc-inventory/identity";
-import { StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";

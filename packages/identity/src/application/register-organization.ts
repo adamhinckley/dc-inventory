@@ -23,7 +23,7 @@ export type RegisterOrganizationResult =
       staffUserId: StaffUserId;
       slug: string;
     }
-  | { ok: false; reason: "invalid" | "slug_taken" | "email_taken" };
+  | { ok: false; reason: "invalid" | "slug_taken" };
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -53,10 +53,6 @@ export class RegisterOrganizationUseCase {
       }
 
       const organizationId = OrganizationId.parse(newUuid());
-      const existingEmail = await tx.staffUsers.findByEmail(organizationId, email);
-      if (existingEmail !== null) {
-        return { ok: false, reason: "email_taken" } as const;
-      }
 
       const organization: Organization = { id: organizationId, slug };
       const staffUser: StaffUser = {

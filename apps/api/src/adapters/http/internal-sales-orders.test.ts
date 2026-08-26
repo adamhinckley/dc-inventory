@@ -7,7 +7,7 @@ import {
 import {
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, OrderId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, LocationId, OrderId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";

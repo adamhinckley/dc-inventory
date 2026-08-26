@@ -7,6 +7,10 @@ export { InMemoryStaffUserRepository } from "./adapters/in-memory-staff-user-rep
 export { InMemoryWholesaleUserRepository } from "./adapters/in-memory-wholesale-user-repository.js";
 export { ScryptPasswordHasher } from "./adapters/scrypt-password-hasher.js";
 export {
+  DrizzleIdentityUnitOfWork,
+  type IdentityTransactionDrizzle,
+} from "./adapters/drizzle-identity-unit-of-work.js";
+export {
   DrizzleOrganizationRepository,
   type OrganizationDrizzle,
 } from "./adapters/drizzle-organization-repository.js";

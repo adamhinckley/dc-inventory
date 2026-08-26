@@ -10,4 +10,5 @@ ALTER TABLE "identity"."staff_users" ADD COLUMN IF NOT EXISTS "organization_id" 
 --> statement-breakpoint
 ALTER TABLE "identity"."staff_users" DROP CONSTRAINT IF EXISTS "staff_users_email_unique";
 --> statement-breakpoint
+-- DEFAULT sentinel staff rows remain valid without an organizations row; FK deferred.
 CREATE UNIQUE INDEX IF NOT EXISTS "staff_users_organization_id_email_unique" ON "identity"."staff_users" ("organization_id", "email");

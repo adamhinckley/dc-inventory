@@ -17,6 +17,7 @@ function harness() {
   return {
     passwords,
     staffUsers,
+    uow,
     registerOrganization: new RegisterOrganizationUseCase(uow, passwords),
   };
 }
@@ -44,6 +45,9 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(result.slug).toBe("beta-wholesale");
     expect(result.organizationId).not.toBe(OrganizationId.DEFAULT);
     expect(OrganizationId.parse(result.organizationId)).toBe(result.organizationId);
+
+    const betaOrg = await h.uow.organizations.findBySlug("beta-wholesale");
+    expect(betaOrg).toEqual({ id: result.organizationId, slug: "beta-wholesale" });
 
     const betaStaff = await h.staffUsers.findByEmail(result.organizationId, "owner@beta.test");
     expect(betaStaff).not.toBeNull();
