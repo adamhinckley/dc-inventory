@@ -28,6 +28,10 @@ function staffUserId(request: { staffAuth?: { staffUserId: string } }): StaffUse
   return StaffUserId.parse(request.staffAuth?.staffUserId ?? "");
 }
 
+function staffOrganizationId(request: { staffAuth?: { organizationId: string } }): OrganizationId {
+  return OrganizationId.parse(request.staffAuth?.organizationId ?? OrganizationId.DEFAULT);
+}
+
 function mapSalesOrder(order: SalesOrder) {
   return {
     id: order.id,
@@ -99,7 +103,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         customerId?: string;
       };
       const result = await request.server.sales.listSalesOrders.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         page: query.page,
         pageSize: query.pageSize,
@@ -134,7 +138,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.sales.createSalesOrder.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.body.customerId),
         lines: request.body.lines,
@@ -174,7 +178,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.sales.getSalesOrder.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         salesOrderId: OrderId.parse(request.params.id),
       });
@@ -205,7 +209,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.sales.confirmSalesOrder.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         salesOrderId: OrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
@@ -249,7 +253,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.sales.cancelSalesOrder.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         salesOrderId: OrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
@@ -291,7 +295,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.sales.shipSalesOrder.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         salesOrderId: OrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,

@@ -569,5 +569,17 @@ describe("Sales (in-memory)", () => {
       return;
     }
     expect(crossOrgCreate.reason).toBe("customer_not_found");
+
+    const crossOrgConfirm = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: betaOrderId,
+      idempotencyKey: "confirm-beta-from-acme",
+    });
+    expect(crossOrgConfirm.ok).toBe(false);
+    if (crossOrgConfirm.ok) {
+      return;
+    }
+    expect(crossOrgConfirm.reason).toBe("not_found");
   });
 });
