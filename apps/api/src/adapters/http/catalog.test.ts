@@ -105,6 +105,9 @@ describe("catalog HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
     expect(listed.statusCode).toBe(200);
+    const body = listed.json() as {
+      items: Array<{ sku: string; createdAt: string }>;
+    };
     expect(listed.json()).toMatchObject({
       page: 1,
       pageSize: 25,
@@ -125,6 +128,7 @@ describe("catalog HTTP", () => {
         },
       ],
     });
+    expect(body.items[0]?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
   });
 
   it("accepts sortBy=onHand on the staff product list", async () => {

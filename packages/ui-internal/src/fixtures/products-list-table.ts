@@ -18,6 +18,7 @@ export const productsListTable = {
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
     { field: "available", label: "Available" },
+    { field: "createdAt", label: "Created" },
   ],
   search: {
     param: "q",

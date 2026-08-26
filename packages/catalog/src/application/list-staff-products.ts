@@ -20,6 +20,7 @@ export type ListStaffProductsRequest = {
 export type StaffProductListRow = {
   product: Product;
   qty: ProductQty;
+  createdAt: Date;
 };
 
 export type ListStaffProductsResult = {
@@ -44,12 +45,10 @@ export class ListStaffProductsUseCase {
     const snapshots = await this.qty.readBySkus(
       listed.map((row) => row.product.sku),
     );
-    const createdAtById = new Map(
-      listed.map((row) => [row.product.id, row.createdAt.getTime()] as const),
-    );
     const rows: StaffProductListRow[] = listed.map((row) => ({
       product: row.product,
       qty: snapshots.get(row.product.sku.value) ?? ZERO_QTY,
+      createdAt: row.createdAt,
     }));
     rows.sort((a, b) => {
       let cmp = 0;
@@ -62,7 +61,7 @@ export class ListStaffProductsUseCase {
       } else if (input.sortBy === "available") {
         cmp = a.qty.available - b.qty.available;
       } else {
-        cmp = (createdAtById.get(a.product.id) ?? 0) - (createdAtById.get(b.product.id) ?? 0);
+        cmp = a.createdAt.getTime() - b.createdAt.getTime();
       }
       return input.sortOrder === "desc" ? -cmp : cmp;
     });

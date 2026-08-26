@@ -21,6 +21,7 @@ describe("generated x-table meta shape", () => {
       "onOrder",
       "allocated",
       "available",
+      "createdAt",
     ]);
     expect(meta.search?.param).toBe("q");
     expect(meta.search?.fields).toEqual(["sku", "name"]);

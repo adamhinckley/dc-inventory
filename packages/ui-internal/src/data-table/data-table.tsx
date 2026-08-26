@@ -6,7 +6,6 @@ import {
   createContext,
   useContext,
   type Dispatch,
-  type KeyboardEvent,
   type ReactNode,
   type SetStateAction,
 } from "react";
@@ -348,13 +347,6 @@ export function DataTableTable() {
     }));
   }
 
-  function onSortKeyDown(event: KeyboardEvent<HTMLTableCellElement>, field: string) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      applySort(field);
-    }
-  }
-
   return (
     <div className="section-flat overflow-x-auto">
       <table className="w-full border-collapse text-left text-body">
@@ -363,12 +355,21 @@ export function DataTableTable() {
             {meta.columns.map((column) => {
               const canSort = meta.sort.fields.includes(column.field);
               const isSorted = canSort && state.sortBy === column.field;
+              const chevron = canSort ? (
+                isSorted ? (
+                  state.sortOrder === "asc" ? (
+                    <ChevronUp className="size-icon" />
+                  ) : (
+                    <ChevronDown className="size-icon" />
+                  )
+                ) : (
+                  <ChevronsUpDown className="size-icon opacity-30" />
+                )
+              ) : null;
               return (
                 <th
                   key={column.field}
                   scope="col"
-                  tabIndex={canSort ? 0 : undefined}
-                  role={canSort ? "button" : undefined}
                   aria-sort={
                     isSorted
                       ? state.sortOrder === "asc"
@@ -376,32 +377,20 @@ export function DataTableTable() {
                         : "descending"
                       : undefined
                   }
-                  className={
-                    canSort
-                      ? "section-content-column-header section-content-padding cursor-pointer select-none border-b border-border hover:text-fg"
-                      : "section-content-column-header section-content-padding border-b border-border"
-                  }
-                  onClick={canSort ? () => applySort(column.field) : undefined}
-                  onKeyDown={
-                    canSort
-                      ? (event) => onSortKeyDown(event, column.field)
-                      : undefined
-                  }
+                  className="section-content-column-header section-content-padding border-b border-border"
                 >
-                  <span className="inline-flex items-center gap-tight">
-                    {column.label}
-                    {canSort ? (
-                      isSorted ? (
-                        state.sortOrder === "asc" ? (
-                          <ChevronUp className="size-icon" />
-                        ) : (
-                          <ChevronDown className="size-icon" />
-                        )
-                      ) : (
-                        <ChevronsUpDown className="size-icon opacity-30" />
-                      )
-                    ) : null}
-                  </span>
+                  {canSort ? (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-tight bg-transparent p-0 text-inherit hover:text-fg"
+                      onClick={() => applySort(column.field)}
+                    >
+                      {column.label}
+                      {chevron}
+                    </button>
+                  ) : (
+                    column.label
+                  )}
                 </th>
               );
             })}

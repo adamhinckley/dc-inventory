@@ -56,6 +56,7 @@ export const productListItemSchema = z.object({
   onOrder: z.number().int(),
   allocated: z.number().int(),
   available: z.number().int(),
+  createdAt: z.string().datetime(),
 });
 
 export const productListResponseSchema = z.object({
@@ -338,6 +339,7 @@ export const productsListTable = {
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
     { field: "available", label: "Available" },
+    { field: "createdAt", label: "Created" },
   ],
   search: {
     param: "q",

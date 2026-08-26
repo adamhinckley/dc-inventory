@@ -187,6 +187,20 @@ describe("Catalog use cases (in-memory)", () => {
     ]);
   });
 
+  it("includes createdAt on each staff list row", async () => {
+    const h = harness();
+    const product = await createProduct(h);
+    const listed = await h.listStaff.execute({
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+    expect(listed.items[0]?.product.id).toBe(product.id);
+    expect(listed.items[0]?.createdAt).toBeInstanceOf(Date);
+  });
+
   it("rejects qty on create and update", async () => {
     const h = harness();
     const created = await h.create.execute({
