@@ -41,7 +41,7 @@ export type DataTableRootProps<
   initialParams?: ListQueryParams;
   /** Page-owned URL adapter. Omit in Storybook. */
   onParamsChange?: (params: ListQueryParams) => void;
-  /** Override form-control ids when two Roots share the same meta. */
+  /** Set whenever more than one Root renders on a page so form-control ids stay unique. */
   idPrefix?: string;
   children: ReactNode;
 };

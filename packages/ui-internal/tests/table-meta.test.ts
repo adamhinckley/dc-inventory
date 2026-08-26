@@ -37,11 +37,29 @@ describe("generated x-table meta shape", () => {
   });
 });
 
+function staffListMeta(columns: readonly string[]): TableMeta {
+  return {
+    rowId: "id",
+    columns: columns.map((field) => ({ field, label: field })),
+    search: { param: "q", fields: ["sku"], placeholder: "Search" },
+    filters: [{ param: "inactive", control: "boolean" }],
+    sort: { defaultBy: "sku", defaultOrder: "asc", fields: ["sku"] },
+  };
+}
+
 describe("tableControlIdBase", () => {
   it("is deterministic from meta so SSR and hydration share form-control ids", () => {
-    expect(tableControlIdBase(productsListTable)).toBe("dt-q-inactive-sku-id");
+    expect(tableControlIdBase(productsListTable)).toBe(
+      "dt-q-inactive-sku-id-sku-name-memberPrice-currency-inactive-discontinued-webWholesale-onHand-onOrder-allocated-available-createdAt",
+    );
     expect(tableControlIdBase(productsListTable)).toBe(
       tableControlIdBase(productsListTable),
+    );
+  });
+
+  it("differs when two metas share search, filter, sort, and rowId but not columns", () => {
+    expect(tableControlIdBase(staffListMeta(["sku", "name"]))).not.toBe(
+      tableControlIdBase(staffListMeta(["sku", "onHand"])),
     );
   });
 
