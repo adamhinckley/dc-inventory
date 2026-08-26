@@ -90,7 +90,7 @@ describe("Sales seed clock (in-memory)", () => {
     expect(snap.onHand).toBe(5);
     expect(snap.allocated).toBe(0);
 
-    const invoice = await h.uow.invoices.findByOrderId(created.salesOrder.id);
+    const invoice = await h.uow.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id);
     expect(invoice).not.toBeNull();
     expect(invoice?.taxTotal.amountMinor).toBe(0);
     expect(invoice?.total.amountMinor).toBe(1500);
@@ -137,7 +137,7 @@ describe("Sales seed clock (in-memory)", () => {
     });
     expect(shipped.ok).toBe(true);
 
-    const invoice = await h.uow.invoices.findByOrderId(created.salesOrder.id);
+    const invoice = await h.uow.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id);
     expect(invoice).not.toBeNull();
     expect(invoice?.postedAt?.getTime()).toBe(FIXED.getTime());
   });
