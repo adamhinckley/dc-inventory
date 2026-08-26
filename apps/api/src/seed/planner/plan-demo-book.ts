@@ -25,6 +25,7 @@ import {
   planIdleParkAges,
   planSalesOrders,
 } from "./sales-orders.js";
+import { alignDemoPlanStockClock } from "./align-stock-clock.js";
 import { createSeededRandom, type SeededRandom } from "./seeded-random.js";
 import type { DemoBookPlan, PlanDemoBookInput } from "./types.js";
 
@@ -112,7 +113,7 @@ export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
     counts,
   });
 
-  return {
+  const plan: DemoBookPlan = {
     seed,
     seedToday,
     historicalStart,
@@ -132,6 +133,8 @@ export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
     leftoverConfirmedPurchaseOrderCount,
     leftoverConfirmedSalesOrderCount,
   };
+  alignDemoPlanStockClock(plan);
+  return plan;
 }
 
 export { DEFAULT_DEMO_SEED } from "./constants.js";

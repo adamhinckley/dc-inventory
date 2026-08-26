@@ -1,7 +1,7 @@
 import { DEFAULT_DEMO_SEED } from "./planner/constants.js";
 import { Phase1SeedError } from "./run-phase1-seed.js";
 
-export const DEMO_SEED_TIME_LIMIT_MS = 10 * 60 * 1000;
+export const DEMO_SEED_TIME_LIMIT_MS = 30 * 60 * 1000;
 
 export type DemoSeedSecrets = {
   staffPassword: string;
