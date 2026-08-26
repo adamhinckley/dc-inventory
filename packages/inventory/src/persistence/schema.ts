@@ -47,17 +47,23 @@ function timestamps() {
 }
 
 /** `code` may be DEFAULT for v1 ATP. Named bins are not Phase 0. */
-export const locations = inventory.table("locations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  code: text("code").notNull().unique(),
-  isPickBin: boolean("is_pick_bin").notNull().default(false),
-  ...timestamps(),
-});
+export const locations = inventory.table(
+  "locations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    code: text("code").notNull(),
+    isPickBin: boolean("is_pick_bin").notNull().default(false),
+    ...timestamps(),
+  },
+  (table) => [unique().on(table.organizationId, table.code)],
+);
 
 export const reorderPolicies = inventory.table(
   "reorder_policies",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
     sku: text("sku").notNull(),
     locationId: uuid("location_id")
       .notNull()
@@ -66,13 +72,14 @@ export const reorderPolicies = inventory.table(
     maxOnHand: integer("max_on_hand").notNull(),
     ...timestamps(),
   },
-  (table) => [unique().on(table.sku, table.locationId)],
+  (table) => [unique().on(table.organizationId, table.sku, table.locationId)],
 );
 
 export const stockMovements = inventory.table(
   "stock_movements",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
     sku: text("sku").notNull(),
     locationId: uuid("location_id")
       .notNull()
@@ -88,12 +95,13 @@ export const stockMovements = inventory.table(
   },
   (table) => [
     check("stock_movements_qty_positive", sql`${table.qty} > 0`),
-    uniqueIndex("stock_movements_idempotency_key_sku").on(
+    uniqueIndex("stock_movements_organization_id_idempotency_key_sku").on(
+      table.organizationId,
       table.idempotencyKey,
       table.sku,
     ),
-    uniqueIndex("stock_movements_once_only_provenance")
-      .on(table.refType, table.refId, table.sku, table.movementType)
+    uniqueIndex("stock_movements_organization_id_once_only_provenance")
+      .on(table.organizationId, table.refType, table.refId, table.sku, table.movementType)
       .where(
         sql`${table.movementType} in ('InboundFromPo', 'Allocated', 'Deallocated', 'Shipped')`,
       ),
@@ -104,6 +112,7 @@ export const stockSnapshots = inventory.table(
   "stock_snapshots",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
     sku: text("sku").notNull(),
     locationId: uuid("location_id")
       .notNull()
@@ -116,5 +125,5 @@ export const stockSnapshots = inventory.table(
       .notNull(),
     ...timestamps(),
   },
-  (table) => [unique().on(table.sku, table.locationId)],
+  (table) => [unique().on(table.organizationId, table.sku, table.locationId)],
 );
