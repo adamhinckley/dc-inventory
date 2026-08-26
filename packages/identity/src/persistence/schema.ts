@@ -36,13 +36,22 @@ function timestamps() {
   };
 }
 
-export const opsUsers = identity.table("ops_users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  kind: opsUserKind("kind").notNull(),
-  tenantId: text("tenant_id").notNull().default("DEFAULT"),
-  ...timestamps(),
-});
+export const opsUsers = identity.table(
+  "ops_users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    kind: opsUserKind("kind").notNull(),
+    tenantId: text("tenant_id").notNull().default("DEFAULT"),
+    ...timestamps(),
+  },
+  (table) => ({
+    tenantEmailUnique: uniqueIndex("ops_users_tenant_id_email_unique").on(
+      table.tenantId,
+      table.email,
+    ),
+  }),
+);
 
 export const organizations = identity.table("organizations", {
   id: text("id").primaryKey(),
@@ -67,21 +76,32 @@ export const staffUsers = identity.table(
   }),
 );
 
-export const wholesaleUsers = identity.table("wholesale_users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => customers.id),
-  ...timestamps(),
-});
+export const wholesaleUsers = identity.table(
+  "wholesale_users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    ...timestamps(),
+  },
+  (table) => ({
+    organizationEmailUnique: uniqueIndex("wholesale_users_organization_id_email_unique").on(
+      table.organizationId,
+      table.email,
+    ),
+  }),
+);
 
-/** Opaque session id. customer_id is snapshotted at wholesale login; null for staff. */
+/** Opaque session id. organization_id and customer_id are snapshotted at login. */
 export const sessions = identity.table("sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   actorType: actorType("actor_type").notNull(),
   actorId: uuid("actor_id").notNull(),
+  organizationId: text("organization_id").notNull().default("DEFAULT"),
   customerId: uuid("customer_id").references(() => customers.id),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" })
     .notNull()

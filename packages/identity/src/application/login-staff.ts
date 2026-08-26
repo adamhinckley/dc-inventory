@@ -16,6 +16,7 @@ export type LoginStaffResult =
       sessionId: SessionId;
       staffUserId: StaffUserId;
       email: string;
+      organizationId: OrganizationId;
     }
   | { ok: false };
 
@@ -41,6 +42,7 @@ export class LoginStaffUseCase {
     const now = this.clock.now();
     const session = await this.sessions.create({
       audience: "staff",
+      organizationId: user.organizationId,
       staffUserId: user.id,
       wholesaleUserId: null,
       customerId: null,
@@ -52,6 +54,7 @@ export class LoginStaffUseCase {
       sessionId: session.id,
       staffUserId: user.id,
       email: user.email,
+      organizationId: user.organizationId,
     };
   }
 }

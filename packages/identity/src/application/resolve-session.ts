@@ -1,6 +1,7 @@
 import {
   type CustomerId,
   InvalidIdError,
+  type OrganizationId,
   SessionId,
   type StaffUserId,
   type WholesaleUserId,
@@ -18,7 +19,7 @@ export type SessionFailureReason =
   | "wrong_audience";
 
 export type ResolveStaffSessionResult =
-  | { ok: true; staffUserId: StaffUserId; email: string }
+  | { ok: true; staffUserId: StaffUserId; email: string; organizationId: OrganizationId }
   | { ok: false; reason: SessionFailureReason };
 
 export type ResolveWholesaleSessionResult =
@@ -27,6 +28,7 @@ export type ResolveWholesaleSessionResult =
       wholesaleUserId: WholesaleUserId;
       email: string;
       customerId: CustomerId;
+      organizationId: OrganizationId;
     }
   | { ok: false; reason: SessionFailureReason };
 
@@ -73,8 +75,17 @@ export class ResolveStaffSessionUseCase {
       await this.sessions.delete(session.id);
       return { ok: false, reason: "invalid" };
     }
+    if (user.organizationId !== session.organizationId) {
+      await this.sessions.delete(session.id);
+      return { ok: false, reason: "invalid" };
+    }
     await this.sessions.touch(session.id, now);
-    return { ok: true, staffUserId: session.staffUserId, email: user.email };
+    return {
+      ok: true,
+      staffUserId: session.staffUserId,
+      email: user.email,
+      organizationId: session.organizationId,
+    };
   }
 }
 
@@ -116,12 +127,17 @@ export class ResolveWholesaleSessionUseCase {
       await this.sessions.delete(session.id);
       return { ok: false, reason: "invalid" };
     }
+    if (user.organizationId !== session.organizationId) {
+      await this.sessions.delete(session.id);
+      return { ok: false, reason: "invalid" };
+    }
     await this.sessions.touch(session.id, now);
     return {
       ok: true,
       wholesaleUserId: session.wholesaleUserId,
       email: user.email,
       customerId: session.customerId,
+      organizationId: session.organizationId,
     };
   }
 }

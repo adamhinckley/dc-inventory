@@ -1,4 +1,10 @@
-import { CustomerId, SessionId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
+import {
+  CustomerId,
+  OrganizationId,
+  SessionId,
+  StaffUserId,
+  WholesaleUserId,
+} from "@dc-inventory/shared-kernel";
 import { eq } from "drizzle-orm";
 import type { ISessionStore, NewSession } from "../domain/ports/session-store.js";
 import type { Session, SessionAudience } from "../domain/session.js";
@@ -19,6 +25,7 @@ export class DrizzleSessionStore implements ISessionStore {
       .values({
         actorType: input.audience,
         actorId,
+        organizationId: input.organizationId,
         customerId: input.customerId,
         lastSeenAt: input.lastSeenAt,
         createdAt: input.createdAt,
@@ -57,6 +64,7 @@ function toSession(row: typeof sessions.$inferSelect): Session {
   return {
     id: SessionId.parse(row.id),
     audience,
+    organizationId: OrganizationId.parse(row.organizationId),
     staffUserId: audience === "staff" ? StaffUserId.parse(row.actorId) : null,
     wholesaleUserId:
       audience === "wholesale" ? WholesaleUserId.parse(row.actorId) : null,
