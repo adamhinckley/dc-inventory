@@ -1,10 +1,11 @@
-import type { CustomerId, ProductId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, ProductId } from "@dc-inventory/shared-kernel";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import { isShopVisible, type Product } from "../domain/product.js";
 import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
 
 export type GetWholesaleProductRequest = {
+  organizationId: OrganizationId;
   customerId: CustomerId;
   productId: ProductId;
 };
@@ -23,7 +24,7 @@ export class GetWholesaleProductUseCase {
     input: GetWholesaleProductRequest,
   ): Promise<GetWholesaleProductResult> {
     void input.customerId;
-    const product = await this.products.findById(input.productId);
+    const product = await this.products.findById(input.organizationId, input.productId);
     if (product === null || !isShopVisible(product)) {
       return { ok: false, reason: "not_found" };
     }

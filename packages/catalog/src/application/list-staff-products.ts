@@ -1,4 +1,4 @@
-import type { StaffUserId } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import type { Product } from "../domain/product.js";
@@ -8,6 +8,7 @@ export type StaffProductSortBy = "sku" | "name" | "onHand" | "available" | "crea
 export type SortOrder = "asc" | "desc";
 
 export type ListStaffProductsRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   q?: string;
   page: number;
@@ -39,6 +40,7 @@ export class ListStaffProductsUseCase {
   async execute(input: ListStaffProductsRequest): Promise<ListStaffProductsResult> {
     void input.staffUserId;
     const listed = await this.products.listMatching({
+      organizationId: input.organizationId,
       q: input.q,
       inactive: input.inactive,
     });

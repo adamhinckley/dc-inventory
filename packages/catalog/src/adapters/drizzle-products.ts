@@ -1,4 +1,4 @@
-import { Money, ProductId, Sku } from "@dc-inventory/shared-kernel";
+import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, ilike, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Product } from "../domain/product.js";
@@ -16,6 +16,7 @@ export type CatalogDrizzle = PostgresJsDatabase<{
 function toProduct(row: typeof products.$inferSelect): Product {
   return {
     id: ProductId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
     sku: Sku.parse(row.sku),
     name: row.name,
     description: row.description,
@@ -32,7 +33,7 @@ export class DrizzleProductRepository implements IProductRepository {
   constructor(private readonly db: CatalogDrizzle) {}
 
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
-    const clauses = [];
+    const clauses = [eq(products.organizationId, query.organizationId)];
     if (query.inactive !== undefined) {
       clauses.push(eq(products.inactive, query.inactive));
     }
@@ -44,30 +45,29 @@ export class DrizzleProductRepository implements IProductRepository {
     const needle = query.q?.trim() ?? "";
     if (needle.length > 0) {
       const pattern = `%${needle}%`;
-      clauses.push(or(ilike(products.sku, pattern), ilike(products.name, pattern)));
+      clauses.push(or(ilike(products.sku, pattern), ilike(products.name, pattern))!);
     }
-    const where = clauses.length === 0 ? undefined : and(...clauses);
-    const rows = await this.db.select().from(products).where(where);
+    const rows = await this.db.select().from(products).where(and(...clauses));
     return rows.map((row) => ({
       product: toProduct(row),
       createdAt: row.createdAt,
     }));
   }
 
-  async findById(id: ProductId): Promise<Product | null> {
+  async findById(organizationId: OrganizationId, id: ProductId): Promise<Product | null> {
     const rows = await this.db
       .select()
       .from(products)
-      .where(eq(products.id, id))
+      .where(and(eq(products.id, id), eq(products.organizationId, organizationId)))
       .limit(1);
     return rows[0] === undefined ? null : toProduct(rows[0]);
   }
 
-  async findBySku(sku: Sku): Promise<Product | null> {
+  async findBySku(organizationId: OrganizationId, sku: Sku): Promise<Product | null> {
     const rows = await this.db
       .select()
       .from(products)
-      .where(eq(products.sku, sku.value))
+      .where(and(eq(products.organizationId, organizationId), eq(products.sku, sku.value)))
       .limit(1);
     return rows[0] === undefined ? null : toProduct(rows[0]);
   }
@@ -77,6 +77,7 @@ export class DrizzleProductRepository implements IProductRepository {
       .insert(products)
       .values({
         id: product.id,
+        organizationId: product.organizationId,
         sku: product.sku.value,
         name: product.name,
         description: product.description,

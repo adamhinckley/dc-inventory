@@ -18,7 +18,7 @@ import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
 } from "@dc-inventory/inventory";
-import { LocationId, SupplierId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { DEMO_COUNTS, DEFAULT_DEMO_SEED } from "./planner/constants.js";
@@ -184,7 +184,10 @@ describe("write reorder policies (in-memory)", () => {
     expect(new Set(policies.map((row) => row.sku)).size).toBe(DEMO_COUNTS.products);
     expect(policies.every((row) => row.locationId === LocationId.DEFAULT)).toBe(true);
 
-    const listedProducts = await staticPorts.products.listMatching({ shopVisibleOnly: true });
+    const listedProducts = await staticPorts.products.listMatching({
+      organizationId: OrganizationId.DEFAULT,
+      shopVisibleOnly: true,
+    });
     expect(listedProducts).toHaveLength(DEMO_COUNTS.products);
 
     let lowCount = 0;

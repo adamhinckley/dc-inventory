@@ -125,7 +125,10 @@ describe("static demo book writer (in-memory)", () => {
       FULL_DEMO_RECONCILIATION_EXPECTATIONS.supplierProductCount,
     );
 
-    const listedProducts = await ports.products.listMatching({ shopVisibleOnly: true });
+    const listedProducts = await ports.products.listMatching({
+      organizationId: OrganizationId.DEFAULT,
+      shopVisibleOnly: true,
+    });
     expect(listedProducts).toHaveLength(FULL_DEMO_RECONCILIATION_EXPECTATIONS.productCount);
 
     const supplierRows = await ports.suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);

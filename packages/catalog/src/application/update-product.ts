@@ -1,4 +1,4 @@
-import { Money, type ProductId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { Money, type OrganizationId, type ProductId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import type { Product } from "../domain/product.js";
@@ -6,6 +6,7 @@ import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
 import { hasQtyWriteFields, hasSkuField } from "./write-guards.js";
 
 export type UpdateProductRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   productId: ProductId;
   name?: string;
@@ -40,7 +41,7 @@ export class UpdateProductUseCase {
     if (hasQtyWriteFields(input)) {
       return { ok: false, reason: "qty_not_allowed" };
     }
-    const existing = await this.products.findById(input.productId);
+    const existing = await this.products.findById(input.organizationId, input.productId);
     if (existing === null) {
       return { ok: false, reason: "not_found" };
     }
@@ -66,6 +67,7 @@ export class UpdateProductUseCase {
       const cents = input.memberPriceCents ?? existing.memberPrice.amountMinor;
       const product: Product = {
         id: existing.id,
+        organizationId: existing.organizationId,
         sku: existing.sku,
         name,
         description,

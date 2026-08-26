@@ -1,5 +1,6 @@
 import {
   Money,
+  type OrganizationId,
   ProductId,
   Sku,
   type StaffUserId,
@@ -10,6 +11,7 @@ import type { Product } from "../domain/product.js";
 import { hasQtyWriteFields } from "./write-guards.js";
 
 export type CreateProductRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   sku: string;
   name: string;
@@ -50,12 +52,13 @@ export class CreateProductUseCase {
     }
     try {
       const sku = Sku.parse(input.sku);
-      const existing = await this.products.findBySku(sku);
+      const existing = await this.products.findBySku(input.organizationId, sku);
       if (existing !== null) {
         return { ok: false, reason: "duplicate_sku" };
       }
       const product: Product = {
         id: ProductId.parse(newUuid()),
+        organizationId: input.organizationId,
         sku,
         name,
         description,

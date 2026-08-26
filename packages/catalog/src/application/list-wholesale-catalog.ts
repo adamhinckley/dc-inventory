@@ -1,4 +1,4 @@
-import type { CustomerId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import type { Product } from "../domain/product.js";
@@ -8,6 +8,7 @@ export type WholesaleCatalogSortBy = "name" | "available";
 export type SortOrder = "asc" | "desc";
 
 export type ListWholesaleCatalogRequest = {
+  organizationId: OrganizationId;
   customerId: CustomerId;
   q?: string;
   page: number;
@@ -39,6 +40,7 @@ export class ListWholesaleCatalogUseCase {
   ): Promise<ListWholesaleCatalogResult> {
     void input.customerId;
     const listed = await this.products.listMatching({
+      organizationId: input.organizationId,
       q: input.q,
       shopVisibleOnly: true,
     });
