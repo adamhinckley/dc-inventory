@@ -1,5 +1,5 @@
 import { SupplierId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { Supplier } from "../domain/supplier.js";
 import { suppliers } from "../persistence/schema.js";
@@ -48,5 +48,10 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
         updatedAt: new Date(),
       })
       .where(eq(suppliers.id, supplier.id));
+  }
+
+  async list(): Promise<readonly Supplier[]> {
+    const rows = await this.db.select().from(suppliers).orderBy(asc(suppliers.vendorNumber));
+    return rows.map(toSupplier);
   }
 }

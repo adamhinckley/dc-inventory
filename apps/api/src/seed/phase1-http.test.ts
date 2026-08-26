@@ -10,6 +10,7 @@ import {
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
 } from "@dc-inventory/identity";
+import { InMemorySupplierRepository } from "@dc-inventory/purchasing";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app.js";
 import { InMemoryDatabase } from "../adapters/in-memory-database.js";
@@ -17,7 +18,12 @@ import {
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "../adapters/http/auth-cookies.js";
-import { PHASE1_PRODUCT_SKUS, PHASE1_PRODUCTS } from "./phase1-fixture.js";
+import {
+  PHASE1_PRODUCT_SKUS,
+  PHASE1_PRODUCTS,
+  PHASE1_SUPPLIER_NAME,
+  PHASE1_SUPPLIER_VENDOR_NUMBER,
+} from "./phase1-fixture.js";
 import { runPhase1Seed } from "./run-phase1-seed.js";
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
@@ -35,6 +41,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
     const productRepo = new InMemoryProductRepository();
     const customerRepo = new InMemoryCustomerRepository();
     const qtyRead = new InMemoryQtyReadPort();
+    const supplierRepo = new InMemorySupplierRepository();
 
     await runPhase1Seed(
       {
@@ -42,6 +49,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
         customers: customerRepo,
         staffUsers,
         wholesaleUsers,
+        suppliers: supplierRepo,
         passwords,
       },
       {
@@ -61,6 +69,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
       customerRepo,
       productRepo,
       qtyRead,
+      supplierRepo,
     });
     apps.push(app);
 
@@ -83,6 +92,20 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
     expect(staffList.json().items.map((row: { sku: string }) => row.sku).sort()).toEqual(
       [...PHASE1_PRODUCT_SKUS].sort(),
     );
+
+    const suppliers = await app.inject({
+      method: "GET",
+      url: "/internal/suppliers",
+      cookies: { [STAFF_SESSION_COOKIE]: staffCookie },
+    });
+    expect(suppliers.statusCode).toBe(200);
+    expect(suppliers.json().items).toEqual([
+      {
+        id: expect.any(String),
+        vendorNumber: PHASE1_SUPPLIER_VENDOR_NUMBER,
+        name: PHASE1_SUPPLIER_NAME,
+      },
+    ]);
     for (const item of staffList.json().items as Array<{
       available: number;
       imageUrl?: unknown;

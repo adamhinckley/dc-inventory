@@ -70,6 +70,7 @@ import {
   InMemoryPurchaseOrderRepository,
   InMemorySupplierRepository,
   ListPurchaseOrdersUseCase,
+  ListSuppliersUseCase,
   ReceivePurchaseOrderUseCase,
   type IPurchaseOrderRepository,
   type ISupplierRepository,
@@ -146,6 +147,7 @@ export type CustomersHttpServices = {
 };
 
 export type PurchasingHttpServices = {
+  listSuppliers: ListSuppliersUseCase;
   listPurchaseOrders: ListPurchaseOrdersUseCase;
   createPurchaseOrder: CreatePurchaseOrderUseCase;
   getPurchaseOrder: GetPurchaseOrderUseCase;
@@ -262,9 +264,10 @@ function purchasingServices(
   clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
   return {
-    listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo),
+    listSuppliers: new ListSuppliersUseCase(supplierRepo),
+    listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo, supplierRepo),
     createPurchaseOrder: new CreatePurchaseOrderUseCase(purchaseOrderRepo, supplierRepo, clock),
-    getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
+    getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo, supplierRepo),
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),

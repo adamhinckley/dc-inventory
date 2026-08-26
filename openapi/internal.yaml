@@ -2242,6 +2242,55 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/suppliers:
+    get:
+      operationId: listInternalSuppliers
+      summary: List suppliers for purchase-order create
+      tags:
+        - internal
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        vendorNumber:
+                          type: string
+                        name:
+                          type: string
+                      required:
+                        - id
+                        - vendorNumber
+                        - name
+                      additionalProperties: false
+                required:
+                  - items
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
   /internal/purchase-orders:
     get:
       operationId: listInternalPurchaseOrders
@@ -2282,6 +2331,24 @@ paths:
           in: query
           name: supplierId
           required: false
+        - schema:
+            default: documentNumber
+            type: string
+            enum:
+              - documentNumber
+              - status
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
+          required: false
       x-table:
         rowId: id
         columns:
@@ -2289,8 +2356,9 @@ paths:
             label: "PO #"
           - field: status
             label: Status
-          - field: supplierId
+          - field: supplierName
             label: Supplier
+        filters: []
         sort:
           defaultBy: documentNumber
           defaultOrder: asc
@@ -2318,6 +2386,10 @@ paths:
                           type: string
                           format: uuid
                           pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        supplierName:
+                          type: string
+                        supplierVendorNumber:
+                          type: string
                         documentNumber:
                           type: string
                         status:
@@ -2358,6 +2430,8 @@ paths:
                       required:
                         - id
                         - supplierId
+                        - supplierName
+                        - supplierVendorNumber
                         - documentNumber
                         - status
                         - lines
@@ -2450,6 +2524,10 @@ paths:
                     type: string
                     format: uuid
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  supplierName:
+                    type: string
+                  supplierVendorNumber:
+                    type: string
                   documentNumber:
                     type: string
                   status:
@@ -2490,6 +2568,8 @@ paths:
                 required:
                   - id
                   - supplierId
+                  - supplierName
+                  - supplierVendorNumber
                   - documentNumber
                   - status
                   - lines
@@ -2583,6 +2663,10 @@ paths:
                     type: string
                     format: uuid
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  supplierName:
+                    type: string
+                  supplierVendorNumber:
+                    type: string
                   documentNumber:
                     type: string
                   status:
@@ -2623,6 +2707,8 @@ paths:
                 required:
                   - id
                   - supplierId
+                  - supplierName
+                  - supplierVendorNumber
                   - documentNumber
                   - status
                   - lines
@@ -2697,6 +2783,10 @@ paths:
                     type: string
                     format: uuid
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  supplierName:
+                    type: string
+                  supplierVendorNumber:
+                    type: string
                   documentNumber:
                     type: string
                   status:
@@ -2737,6 +2827,8 @@ paths:
                 required:
                   - id
                   - supplierId
+                  - supplierName
+                  - supplierVendorNumber
                   - documentNumber
                   - status
                   - lines
@@ -2858,6 +2950,10 @@ paths:
                     type: string
                     format: uuid
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  supplierName:
+                    type: string
+                  supplierVendorNumber:
+                    type: string
                   documentNumber:
                     type: string
                   status:
@@ -2898,6 +2994,8 @@ paths:
                 required:
                   - id
                   - supplierId
+                  - supplierName
+                  - supplierVendorNumber
                   - documentNumber
                   - status
                   - lines
@@ -3017,6 +3115,10 @@ paths:
                     type: string
                     format: uuid
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  supplierName:
+                    type: string
+                  supplierVendorNumber:
+                    type: string
                   documentNumber:
                     type: string
                   status:
@@ -3057,6 +3159,8 @@ paths:
                 required:
                   - id
                   - supplierId
+                  - supplierName
+                  - supplierVendorNumber
                   - documentNumber
                   - status
                   - lines

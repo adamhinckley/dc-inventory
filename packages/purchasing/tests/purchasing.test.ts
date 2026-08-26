@@ -10,6 +10,7 @@ import {
   CancelPurchaseOrderUseCase,
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
+  ListSuppliersUseCase,
   ReceivePurchaseOrderUseCase,
 } from "../src/index.js";
 
@@ -34,10 +35,23 @@ async function harness() {
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
+    listSuppliers: new ListSuppliersUseCase(uow.suppliers),
   };
 }
 
 describe("Purchasing (in-memory)", () => {
+  it("lists suppliers by vendor number for the create-PO picker", async () => {
+    const h = await harness();
+    const listed = await h.listSuppliers.execute({ staffUserId: STAFF_ID });
+    expect(listed.items).toEqual([
+      {
+        id: h.supplierId,
+        vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
+        name: PHASE2_SUPPLIER_NAME,
+      },
+    ]);
+  });
+
   it("assigns PO-00001 document numbers with gaps allowed after cancel", async () => {
     const h = await harness();
     const first = await h.create.execute({

@@ -4,7 +4,8 @@
   "type": "module",
   "description": "Staff-only DataTable and Recharts wrappers. Not for the wholesale shop.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./list-params": "./src/data-table/list-params.ts"
   },
   "scripts": {
     "test": "vitest run",

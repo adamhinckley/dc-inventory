@@ -24,7 +24,13 @@ export class InMemorySupplierRepository implements ISupplierRepository {
     this.byVendorNumber.set(normalized.vendorNumber, normalized);
   }
 
+  async list(): Promise<readonly Supplier[]> {
+    return [...this.byId.values()].sort((left, right) =>
+      left.vendorNumber.localeCompare(right.vendorNumber),
+    );
+  }
+
   async listAll(): Promise<readonly Supplier[]> {
-    return [...this.byId.values()];
+    return this.list();
   }
 }

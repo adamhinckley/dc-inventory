@@ -9,6 +9,7 @@ export { ConfirmPurchaseOrderUseCase } from "./application/confirm-purchase-orde
 export { CreatePurchaseOrderUseCase } from "./application/create-purchase-order.js";
 export { GetPurchaseOrderUseCase } from "./application/get-purchase-order.js";
 export { ListPurchaseOrdersUseCase } from "./application/list-purchase-orders.js";
+export { ListSuppliersUseCase } from "./application/list-suppliers.js";
 export { ReceivePurchaseOrderUseCase } from "./application/receive-purchase-order.js";
 export { formatDocumentNumber } from "./domain/document-number.js";
 export type { IClock } from "./domain/clock.js";

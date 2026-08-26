@@ -26,16 +26,16 @@ pnpm dev:internal
 
 | Route | Purpose |
 |---|---|
-| `/login` | `(auth)/login` placeholder |
-| `/catalog` | Example `DataTable` + `useListInternalProducts` (Orval) |
+| `/login` | `(auth)/login` — staff cookie, then `/purchasing` |
+| `/catalog` | `DataTable` + `useListInternalProducts` |
 | `/customers` | Placeholder |
-| `/purchasing` | Placeholder |
+| `/purchasing` | Create draft PO + `DataTable` + `useListInternalPurchaseOrders` |
 | `/inventory` | Placeholder |
 | `/sales` | Placeholder |
 | `/accounting` | Placeholder |
 | `/reports` | Placeholder |
 
-The catalog table is driven by generated `x-table` meta and the Orval list hook. There is no hand-written API `fetch`. Other routes stay placeholders until their list endpoints exist — do not drop `DataTable` onto them without that contract.
+The catalog and purchasing tables are driven by generated `x-table` meta and Orval list hooks. There is no hand-written API `fetch`. Other routes stay placeholders until their list endpoints exist — do not drop `DataTable` onto them without that contract.
 
 ## Layout
 

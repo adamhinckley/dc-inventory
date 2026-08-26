@@ -1,5 +1,7 @@
 import type { TableMeta } from "./table-meta";
 
+export type { TableMeta } from "./table-meta";
+
 /** Shared list query params from api-contract.md plus declared filter keys. */
 export type ListQueryParams = {
   q?: string;

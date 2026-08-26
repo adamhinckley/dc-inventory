@@ -119,6 +119,8 @@ import type {
   ListInternalSalesOrders200,
   ListInternalSalesOrders401,
   ListInternalSalesOrdersParams,
+  ListInternalSuppliers200,
+  ListInternalSuppliers401,
   LoginInternal200,
   LoginInternal401,
   LoginInternalBody,
@@ -2298,6 +2300,102 @@ export const useUpdateInternalProduct = <TError = UpdateInternalProduct400 | Upd
       > => {
       return useMutation(getUpdateInternalProductMutationOptions(options));
     }
+
+export type listInternalSuppliersResponse200 = {
+  data: ListInternalSuppliers200
+  status: 200
+}
+
+export type listInternalSuppliersResponse401 = {
+  data: ListInternalSuppliers401
+  status: 401
+}
+
+export type listInternalSuppliersResponseSuccess = (listInternalSuppliersResponse200) & {
+  headers: Headers;
+};
+export type listInternalSuppliersResponseError = (listInternalSuppliersResponse401) & {
+  headers: Headers;
+};
+
+export type listInternalSuppliersResponse = (listInternalSuppliersResponseSuccess | listInternalSuppliersResponseError)
+
+export const getListInternalSuppliersUrl = () => {
+
+
+
+
+  return `/internal/suppliers`
+}
+
+/**
+ * @summary List suppliers for purchase-order create
+ */
+export const listInternalSuppliers = async ( options?: Parameters<typeof customFetch>[1]): Promise<listInternalSuppliersResponse> => {
+
+  return customFetch<listInternalSuppliersResponse>(getListInternalSuppliersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalSuppliersQueryKey = () => {
+    return [
+    `/internal/suppliers`
+    ] as const;
+    }
+
+
+export const getListInternalSuppliersQueryOptions = <TData = Awaited<ReturnType<typeof listInternalSuppliers>>, TError = ListInternalSuppliers401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalSuppliers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalSuppliersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalSuppliers>>> = ({ signal }) => listInternalSuppliers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalSuppliers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalSuppliersQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalSuppliers>>>
+export type ListInternalSuppliersQueryError = ListInternalSuppliers401
+
+
+/**
+ * @summary List suppliers for purchase-order create
+ */
+
+export function useListInternalSuppliers<TData = Awaited<ReturnType<typeof listInternalSuppliers>>, TError = ListInternalSuppliers401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalSuppliers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalSuppliersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type listInternalPurchaseOrdersResponse200 = {
   data: ListInternalPurchaseOrders200

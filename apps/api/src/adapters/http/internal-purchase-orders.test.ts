@@ -67,6 +67,29 @@ async function staffCookie(app: Awaited<ReturnType<typeof buildApp>>) {
 }
 
 describe("internal purchase orders HTTP", () => {
+  it("lists suppliers for the create form", async () => {
+    const app = await startPurchasingApp();
+    const missing = await app.inject({ method: "GET", url: "/internal/suppliers" });
+    expect(missing.statusCode).toBe(401);
+
+    const cookie = await staffCookie(app);
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/suppliers",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toEqual({
+      items: [
+        {
+          id: SUPPLIER_ID,
+          vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
+          name: PHASE2_SUPPLIER_NAME,
+        },
+      ],
+    });
+  });
+
   it("requires staff_session", async () => {
     const app = await startPurchasingApp();
     const response = await app.inject({ method: "GET", url: "/internal/purchase-orders" });
@@ -102,6 +125,23 @@ describe("internal purchase orders HTTP", () => {
     expect(created.statusCode).toBe(201);
     const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
     expect(po.documentNumber).toBe("PO-00001");
+    expect(created.json()).toMatchObject({
+      supplierId: SUPPLIER_ID,
+      supplierName: PHASE2_SUPPLIER_NAME,
+      supplierVendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
+    });
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().items[0]).toMatchObject({
+      id: po.id,
+      supplierName: PHASE2_SUPPLIER_NAME,
+      supplierVendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
+    });
 
     const confirmed = await app.inject({
       method: "POST",

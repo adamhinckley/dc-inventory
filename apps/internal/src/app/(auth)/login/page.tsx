@@ -20,7 +20,7 @@ export default function LoginPage() {
       { data: { email, password } },
       {
         onSuccess: () => {
-          router.push("/catalog");
+          router.push("/purchasing");
         },
         onError: () => {
           setError("Sign-in failed.");
@@ -34,7 +34,8 @@ export default function LoginPage() {
       <h1 className="page-title">Sign in</h1>
       <p className="page-description mt-2">
         Staff sign-in. After <code>pnpm db:seed:phase1</code>, use{" "}
-        <code>staff@local.test</code>.
+        <code>staff@local.test</code>. You land on Purchasing so you can create
+        a draft PO.
       </p>
       <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
         <div className="flex flex-col gap-field">

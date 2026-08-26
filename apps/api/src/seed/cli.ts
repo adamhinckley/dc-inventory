@@ -15,12 +15,17 @@ import {
   ScryptPasswordHasher,
   type IdentityDrizzle,
 } from "@dc-inventory/identity";
+import {
+  DrizzleSupplierRepository,
+  type PurchasingDrizzle,
+} from "@dc-inventory/purchasing";
 import { MissingDatabaseUrlError } from "../infrastructure/database-url.js";
 import { createDatabaseConnection } from "../infrastructure/db.js";
 import {
   PHASE1_CUSTOMER_NAME,
   PHASE1_PRODUCT_SKUS,
   PHASE1_STAFF_EMAIL,
+  PHASE1_SUPPLIER_VENDOR_NUMBER,
   PHASE1_WHOLESALE_EMAIL,
 } from "./phase1-fixture.js";
 import { Phase1SeedError, runPhase1Seed } from "./run-phase1-seed.js";
@@ -59,6 +64,9 @@ try {
       wholesaleUsers: new DrizzleWholesaleUserRepository(
         connection.db as unknown as IdentityDrizzle,
       ),
+      suppliers: new DrizzleSupplierRepository(
+        connection.db as unknown as PurchasingDrizzle,
+      ),
       passwords: new ScryptPasswordHasher(),
     },
     {
@@ -68,7 +76,7 @@ try {
   );
   await connection.sql.end({ timeout: 5 });
   console.log(
-    `Phase 1 seed upserted ${PHASE1_CUSTOMER_NAME}, ${PHASE1_STAFF_EMAIL}, ${PHASE1_WHOLESALE_EMAIL}, and ${String(PHASE1_PRODUCT_SKUS.length)} SKUs (customer ${result.customer.id}).`,
+    `Phase 1 seed upserted ${PHASE1_CUSTOMER_NAME}, ${PHASE1_STAFF_EMAIL}, ${PHASE1_WHOLESALE_EMAIL}, ${PHASE1_SUPPLIER_VENDOR_NUMBER}, and ${String(PHASE1_PRODUCT_SKUS.length)} SKUs (customer ${result.customer.id}).`,
   );
 } catch (error) {
   if (error instanceof MissingDatabaseUrlError || error instanceof Phase1SeedError) {

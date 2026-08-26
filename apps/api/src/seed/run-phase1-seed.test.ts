@@ -12,6 +12,11 @@ import {
   LoginStaffUseCase,
   LoginWholesaleUseCase,
 } from "@dc-inventory/identity";
+import {
+  PHASE2_SUPPLIER_NAME,
+  PHASE2_SUPPLIER_VENDOR_NUMBER,
+} from "@dc-inventory/inventory";
+import { InMemorySupplierRepository } from "@dc-inventory/purchasing";
 import { describe, expect, it } from "vitest";
 import {
   PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS,
@@ -21,6 +26,8 @@ import {
   PHASE1_PRODUCT_SKUS,
   PHASE1_PRODUCTS,
   PHASE1_STAFF_EMAIL,
+  PHASE1_SUPPLIER_NAME,
+  PHASE1_SUPPLIER_VENDOR_NUMBER,
   PHASE1_WHOLESALE_EMAIL,
 } from "./phase1-fixture.js";
 import { Phase1SeedError, runPhase1Seed } from "./run-phase1-seed.js";
@@ -31,6 +38,7 @@ function seedPorts() {
     customers: new InMemoryCustomerRepository(),
     staffUsers: new InMemoryStaffUserRepository(),
     wholesaleUsers: new InMemoryWholesaleUserRepository(),
+    suppliers: new InMemorySupplierRepository(),
     passwords: new InMemoryPasswordHasher(),
   };
 }
@@ -55,6 +63,10 @@ describe("Phase 1 seed (in-memory)", () => {
     expect(first.staff.email).toBe(PHASE1_STAFF_EMAIL);
     expect(first.wholesale.email).toBe(PHASE1_WHOLESALE_EMAIL);
     expect(first.wholesale.customerId).toBe(first.customer.id);
+    expect(PHASE1_SUPPLIER_VENDOR_NUMBER).toBe(PHASE2_SUPPLIER_VENDOR_NUMBER);
+    expect(PHASE1_SUPPLIER_NAME).toBe(PHASE2_SUPPLIER_NAME);
+    expect(first.supplier.vendorNumber).toBe(PHASE1_SUPPLIER_VENDOR_NUMBER);
+    expect(first.supplier.name).toBe(PHASE1_SUPPLIER_NAME);
     expect(first.products.map((row) => row.sku.value)).toEqual([...PHASE1_PRODUCT_SKUS]);
     expect(PHASE1_PRODUCTS).toHaveLength(5);
     for (const product of first.products) {
@@ -77,6 +89,7 @@ describe("Phase 1 seed (in-memory)", () => {
     expect(second.customer.id).toBe(first.customer.id);
     expect(second.staff.id).toBe(first.staff.id);
     expect(second.wholesale.id).toBe(first.wholesale.id);
+    expect(second.supplier.id).toBe(first.supplier.id);
     expect(second.products.map((row) => row.id)).toEqual(first.products.map((row) => row.id));
     expect(await ports.products.listMatching({})).toHaveLength(5);
     expect(await ports.customers.findByName(PHASE1_CUSTOMER_NAME)).toEqual(second.customer);

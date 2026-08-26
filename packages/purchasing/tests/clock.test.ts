@@ -34,7 +34,7 @@ async function harness() {
     uow,
     supplierId,
     create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers, clock),
-    get: new GetPurchaseOrderUseCase(uow.purchaseOrders),
+    get: new GetPurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers),
     confirm: new ConfirmPurchaseOrderUseCase(uow),
     receive: new ReceivePurchaseOrderUseCase(uow),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),

@@ -8,6 +8,7 @@ import {
 } from "../domain/purchase-order.js";
 import type { IPurchasingUnitOfWork } from "../domain/ports/purchase-order-repository.js";
 import { PurchasingTransactionError } from "../domain/errors.js";
+import { labelsForSupplier } from "./purchase-order-supplier-labels.js";
 
 export type ReceivePurchaseOrderLineInput = {
   lineId: PurchaseOrderLineId;
@@ -22,7 +23,12 @@ export type ReceivePurchaseOrderRequest = {
 };
 
 export type ReceivePurchaseOrderResult =
-  | { ok: true; purchaseOrder: PurchaseOrder }
+  | {
+      ok: true;
+      purchaseOrder: PurchaseOrder;
+      supplierName: string;
+      supplierVendorNumber: string;
+    }
   | {
       ok: false;
       reason:
@@ -100,7 +106,11 @@ export class ReceivePurchaseOrderUseCase {
           status: isFullyReceived({ ...existing, lines: updatedLines }) ? "received" : "confirmed",
         };
         await scope.purchaseOrders.save(purchaseOrder);
-        return { ok: true, purchaseOrder };
+        return {
+          ok: true as const,
+          purchaseOrder,
+          ...(await labelsForSupplier(scope.suppliers, purchaseOrder.supplierId)),
+        };
       });
     } catch (error) {
       if (error instanceof PurchasingTransactionError) {

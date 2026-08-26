@@ -7,12 +7,14 @@ import type {
   StaffUser,
   WholesaleUser,
 } from "@dc-inventory/identity";
+import type { ISupplierRepository, Supplier } from "@dc-inventory/purchasing";
 import {
   CustomerId,
   Money,
   ProductId,
   Sku,
   StaffUserId,
+  SupplierId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import {
@@ -22,6 +24,8 @@ import {
   PHASE1_CUSTOMER_TERMS,
   PHASE1_PRODUCTS,
   PHASE1_STAFF_EMAIL,
+  PHASE1_SUPPLIER_NAME,
+  PHASE1_SUPPLIER_VENDOR_NUMBER,
   PHASE1_WHOLESALE_EMAIL,
   type Phase1ProductFixture,
 } from "./phase1-fixture.js";
@@ -31,6 +35,7 @@ export type Phase1SeedPorts = {
   customers: ICustomerRepository;
   staffUsers: IStaffUserRepository;
   wholesaleUsers: IWholesaleUserRepository;
+  suppliers: ISupplierRepository;
   passwords: IPasswordHasher;
 };
 
@@ -44,6 +49,7 @@ export type Phase1SeedResult = {
   staff: StaffUser;
   wholesale: WholesaleUser;
   products: Product[];
+  supplier: Supplier;
 };
 
 export class Phase1SeedError extends Error {
@@ -107,6 +113,19 @@ async function upsertWholesale(
   return wholesale;
 }
 
+async function upsertSupplier(ports: Phase1SeedPorts): Promise<Supplier> {
+  const existing = await ports.suppliers.findByVendorNumber(
+    PHASE1_SUPPLIER_VENDOR_NUMBER,
+  );
+  const supplier: Supplier = {
+    id: existing?.id ?? SupplierId.parse(newId()),
+    vendorNumber: PHASE1_SUPPLIER_VENDOR_NUMBER,
+    name: PHASE1_SUPPLIER_NAME,
+  };
+  await ports.suppliers.save(supplier);
+  return supplier;
+}
+
 async function upsertProduct(
   ports: Phase1SeedPorts,
   fixture: Phase1ProductFixture,
@@ -146,10 +165,11 @@ export async function runPhase1Seed(
   const customer = await upsertCustomer(ports);
   const staff = await upsertStaff(ports, staffPassword);
   const wholesale = await upsertWholesale(ports, customer.id, wholesalePassword);
+  const supplier = await upsertSupplier(ports);
   const products: Product[] = [];
   for (const fixture of PHASE1_PRODUCTS) {
     products.push(await upsertProduct(ports, fixture));
   }
 
-  return { customer, staff, wholesale, products };
+  return { customer, staff, wholesale, products, supplier };
 }

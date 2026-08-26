@@ -1,6 +1,10 @@
 import { PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
-import type { IPurchaseOrderRepository } from "../domain/ports/purchase-order-repository.js";
+import type {
+  IPurchaseOrderRepository,
+  ISupplierRepository,
+} from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
+import { labelsForSupplier } from "./purchase-order-supplier-labels.js";
 
 export type GetPurchaseOrderRequest = {
   staffUserId: StaffUserId;
@@ -8,11 +12,19 @@ export type GetPurchaseOrderRequest = {
 };
 
 export type GetPurchaseOrderResult =
-  | { ok: true; purchaseOrder: PurchaseOrder }
+  | {
+      ok: true;
+      purchaseOrder: PurchaseOrder;
+      supplierName: string;
+      supplierVendorNumber: string;
+    }
   | { ok: false; reason: "not_found" };
 
 export class GetPurchaseOrderUseCase {
-  constructor(private readonly purchaseOrders: IPurchaseOrderRepository) {}
+  constructor(
+    private readonly purchaseOrders: IPurchaseOrderRepository,
+    private readonly suppliers: ISupplierRepository,
+  ) {}
 
   async execute(input: GetPurchaseOrderRequest): Promise<GetPurchaseOrderResult> {
     void input.staffUserId;
@@ -20,6 +32,10 @@ export class GetPurchaseOrderUseCase {
     if (purchaseOrder === null) {
       return { ok: false, reason: "not_found" };
     }
-    return { ok: true, purchaseOrder };
+    return {
+      ok: true,
+      purchaseOrder,
+      ...(await labelsForSupplier(this.suppliers, purchaseOrder.supplierId)),
+    };
   }
 }

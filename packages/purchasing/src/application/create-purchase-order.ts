@@ -22,7 +22,12 @@ export type CreatePurchaseOrderRequest = {
 };
 
 export type CreatePurchaseOrderResult =
-  | { ok: true; purchaseOrder: PurchaseOrder }
+  | {
+      ok: true;
+      purchaseOrder: PurchaseOrder;
+      supplierName: string;
+      supplierVendorNumber: string;
+    }
   | { ok: false; reason: "invalid" | "supplier_not_found" | "empty_order" };
 
 export class CreatePurchaseOrderUseCase {
@@ -79,6 +84,11 @@ export class CreatePurchaseOrderUseCase {
       lines,
     };
     await this.purchaseOrders.save(purchaseOrder);
-    return { ok: true, purchaseOrder };
+    return {
+      ok: true,
+      purchaseOrder,
+      supplierName: supplier.name,
+      supplierVendorNumber: supplier.vendorNumber,
+    };
   }
 }

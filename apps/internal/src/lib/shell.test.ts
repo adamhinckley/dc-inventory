@@ -26,7 +26,7 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "app/(auth)/login/page.tsx"))).toBe(true);
   });
 
-  it("puts DataTable only on the catalog example page", () => {
+  it("puts DataTable on catalog and purchasing list pages", () => {
     const catalogPage = readFileSync(
       join(srcRoot, "app/(dashboard)/catalog/page.tsx"),
       "utf8",
@@ -42,9 +42,31 @@ describe("internal dashboard shell", () => {
     expect(catalog).toMatch(/useListInternalProducts/);
     expect(catalog).toMatch(/replaceTableUrlParams/);
 
+    const purchasingPage = readFileSync(
+      join(srcRoot, "app/(dashboard)/purchasing/page.tsx"),
+      "utf8",
+    );
+    expect(purchasingPage).toMatch(/searchParams/);
+    expect(purchasingPage).toMatch(/listParamsFromSearchParams/);
+    expect(purchasingPage).toMatch(/CreatePurchaseOrderForm/);
+
+    const purchasingTable = readFileSync(
+      join(srcRoot, "components/purchase-orders-table.tsx"),
+      "utf8",
+    );
+    expect(purchasingTable).toMatch(/DataTable\.Root/);
+    expect(purchasingTable).toMatch(/useListInternalPurchaseOrders/);
+    expect(purchasingTable).toMatch(/replaceTableUrlParams/);
+
+    const createForm = readFileSync(
+      join(srcRoot, "components/create-purchase-order-form.tsx"),
+      "utf8",
+    );
+    expect(createForm).toMatch(/useCreateInternalPurchaseOrder/);
+    expect(createForm).toMatch(/useListInternalSuppliers/);
+
     const placeholders = [
       "customers",
-      "purchasing",
       "inventory",
       "sales",
       "accounting",

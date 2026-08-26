@@ -4,6 +4,8 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalPurchaseOrdersSortBy } from './listInternalPurchaseOrdersSortBy.js';
+import type { ListInternalPurchaseOrdersSortOrder } from './listInternalPurchaseOrdersSortOrder.js';
 import type { ListInternalPurchaseOrdersStatus } from './listInternalPurchaseOrdersStatus.js';
 
 export type ListInternalPurchaseOrdersParams = {
@@ -22,4 +24,6 @@ status?: ListInternalPurchaseOrdersStatus;
  * @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
  */
 supplierId?: string;
+sortBy?: ListInternalPurchaseOrdersSortBy;
+sortOrder?: ListInternalPurchaseOrdersSortOrder;
 };

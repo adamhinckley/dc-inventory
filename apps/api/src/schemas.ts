@@ -370,6 +370,8 @@ export const purchaseOrderLineSchema = z.object({
 export const purchaseOrderItemSchema = z.object({
   id: z.string().uuid(),
   supplierId: z.string().uuid(),
+  supplierName: z.string(),
+  supplierVendorNumber: z.string(),
   documentNumber: z.string(),
   status: purchaseOrderStatusSchema,
   lines: z.array(purchaseOrderLineSchema),
@@ -380,6 +382,8 @@ export const purchaseOrderListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   status: purchaseOrderStatusSchema.optional(),
   supplierId: z.string().uuid().optional(),
+  sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
 export const purchaseOrderListResponseSchema = z.object({
@@ -431,14 +435,25 @@ export const purchaseOrdersListTable = {
   columns: [
     { field: "documentNumber", label: "PO #" },
     { field: "status", label: "Status" },
-    { field: "supplierId", label: "Supplier" },
+    { field: "supplierName", label: "Supplier" },
   ],
+  filters: [] as const,
   sort: {
     defaultBy: "documentNumber",
     defaultOrder: "asc",
     fields: ["documentNumber", "status"],
   },
 };
+
+export const supplierItemSchema = z.object({
+  id: z.string().uuid(),
+  vendorNumber: z.string(),
+  name: z.string(),
+});
+
+export const supplierListResponseSchema = z.object({
+  items: z.array(supplierItemSchema),
+});
 
 export const salesOrderStatusSchema = z.enum([
   "draft",

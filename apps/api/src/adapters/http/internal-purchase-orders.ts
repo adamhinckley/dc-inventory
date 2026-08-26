@@ -28,10 +28,15 @@ function staffUserId(request: { staffAuth?: { staffUserId: string } }): StaffUse
   return StaffUserId.parse(request.staffAuth?.staffUserId ?? "");
 }
 
-function mapPurchaseOrder(order: PurchaseOrder) {
+function mapPurchaseOrder(
+  order: PurchaseOrder,
+  labels: { supplierName: string; supplierVendorNumber: string },
+) {
   return {
     id: order.id,
     supplierId: order.supplierId,
+    supplierName: labels.supplierName,
+    supplierVendorNumber: labels.supplierVendorNumber,
     documentNumber: order.documentNumber,
     status: order.status,
     lines: order.lines.map((line) => ({
@@ -95,7 +100,12 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           query.supplierId === undefined ? undefined : SupplierId.parse(query.supplierId),
       });
       return {
-        items: result.items.map(mapPurchaseOrder),
+        items: result.items.map((row) =>
+          mapPurchaseOrder(row.purchaseOrder, {
+            supplierName: row.supplierName,
+            supplierVendorNumber: row.supplierVendorNumber,
+          }),
+        ),
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
@@ -134,7 +144,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         return sendInvalid(reply);
       }
-      return reply.code(201).send(mapPurchaseOrder(result.purchaseOrder));
+      return reply.code(201).send(mapPurchaseOrder(result.purchaseOrder, result));
     },
   );
 
@@ -160,7 +170,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
       if (!result.ok) {
         return sendNotFound(reply);
       }
-      return mapPurchaseOrder(result.purchaseOrder);
+      return mapPurchaseOrder(result.purchaseOrder, result);
     },
   );
 
@@ -201,7 +211,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         return sendInvalid(reply);
       }
-      return mapPurchaseOrder(result.purchaseOrder);
+      return mapPurchaseOrder(result.purchaseOrder, result);
     },
   );
 
@@ -247,7 +257,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         return sendInvalid(reply);
       }
-      return mapPurchaseOrder(result.purchaseOrder);
+      return mapPurchaseOrder(result.purchaseOrder, result);
     },
   );
 
@@ -287,7 +297,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         return sendNotFound(reply);
       }
-      return mapPurchaseOrder(result.purchaseOrder);
+      return mapPurchaseOrder(result.purchaseOrder, result);
     },
   );
 }

@@ -11,6 +11,10 @@ export const PHASE1_CUSTOMER_CURRENCY = "USD";
 export const PHASE1_STAFF_EMAIL = "staff@local.test";
 export const PHASE1_WHOLESALE_EMAIL = "wholesale@local.test";
 
+/** Same vendor number as Phase 2 / demo `VEND-001` so later seeds upsert, not duplicate. */
+export const PHASE1_SUPPLIER_VENDOR_NUMBER = "VEND-001";
+export const PHASE1_SUPPLIER_NAME = "Demo Supplier";
+
 export const PHASE1_PRODUCT_SKUS = [
   "HEX-BOLT-GALV",
   "WASHER-SS-PACK",

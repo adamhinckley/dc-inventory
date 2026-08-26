@@ -2,6 +2,7 @@ import { PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { unreceivedQty, type PurchaseOrder } from "../domain/purchase-order.js";
 import type { IPurchasingUnitOfWork } from "../domain/ports/purchase-order-repository.js";
 import { PurchasingTransactionError } from "../domain/errors.js";
+import { labelsForSupplier } from "./purchase-order-supplier-labels.js";
 
 export type CancelPurchaseOrderRequest = {
   staffUserId: StaffUserId;
@@ -10,7 +11,12 @@ export type CancelPurchaseOrderRequest = {
 };
 
 export type CancelPurchaseOrderResult =
-  | { ok: true; purchaseOrder: PurchaseOrder }
+  | {
+      ok: true;
+      purchaseOrder: PurchaseOrder;
+      supplierName: string;
+      supplierVendorNumber: string;
+    }
   | {
       ok: false;
       reason:
@@ -38,7 +44,11 @@ export class CancelPurchaseOrderUseCase {
         if (existing.status === "draft") {
           const cancelled: PurchaseOrder = { ...existing, status: "cancelled" };
           await scope.purchaseOrders.save(cancelled);
-          return { ok: true, purchaseOrder: cancelled };
+          return {
+            ok: true as const,
+            purchaseOrder: cancelled,
+            ...(await labelsForSupplier(scope.suppliers, cancelled.supplierId)),
+          };
         }
 
         for (const line of existing.lines) {
@@ -62,7 +72,11 @@ export class CancelPurchaseOrderUseCase {
 
         const cancelled: PurchaseOrder = { ...existing, status: "cancelled" };
         await scope.purchaseOrders.save(cancelled);
-        return { ok: true, purchaseOrder: cancelled };
+        return {
+          ok: true as const,
+          purchaseOrder: cancelled,
+          ...(await labelsForSupplier(scope.suppliers, cancelled.supplierId)),
+        };
       });
     } catch (error) {
       if (error instanceof PurchasingTransactionError) {

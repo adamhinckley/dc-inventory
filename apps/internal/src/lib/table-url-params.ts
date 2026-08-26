@@ -3,7 +3,7 @@ import {
   parseBooleanFilterParam,
   type ListQueryParams,
   type TableMeta,
-} from "@dc-inventory/ui-internal";
+} from "@dc-inventory/ui-internal/list-params";
 
 export type SearchParamsRecord = Record<string, string | string[] | undefined>;
 

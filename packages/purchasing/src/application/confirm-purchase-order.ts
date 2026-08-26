@@ -2,6 +2,7 @@ import { PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IPurchasingUnitOfWork } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
 import { PurchasingTransactionError } from "../domain/errors.js";
+import { labelsForSupplier } from "./purchase-order-supplier-labels.js";
 
 export type ConfirmPurchaseOrderRequest = {
   staffUserId: StaffUserId;
@@ -10,7 +11,12 @@ export type ConfirmPurchaseOrderRequest = {
 };
 
 export type ConfirmPurchaseOrderResult =
-  | { ok: true; purchaseOrder: PurchaseOrder }
+  | {
+      ok: true;
+      purchaseOrder: PurchaseOrder;
+      supplierName: string;
+      supplierVendorNumber: string;
+    }
   | {
       ok: false;
       reason:
@@ -56,7 +62,11 @@ export class ConfirmPurchaseOrderUseCase {
 
         const updated: PurchaseOrder = { ...existing, status: "confirmed" };
         await scope.purchaseOrders.save(updated);
-        return { ok: true, purchaseOrder: updated };
+        return {
+          ok: true as const,
+          purchaseOrder: updated,
+          ...(await labelsForSupplier(scope.suppliers, updated.supplierId)),
+        };
       });
     } catch (error) {
       if (error instanceof PurchasingTransactionError) {

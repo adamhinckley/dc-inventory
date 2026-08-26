@@ -4,6 +4,7 @@ import type {
   SupplierId,
 } from "@dc-inventory/shared-kernel";
 import type { PurchaseOrder, PurchaseOrderStatus } from "../purchase-order.js";
+import type { Supplier } from "../supplier.js";
 
 export type PurchaseOrderListPage = {
   items: readonly PurchaseOrder[];
@@ -26,9 +27,10 @@ export interface IPurchaseOrderRepository {
 }
 
 export interface ISupplierRepository {
-  findById(id: SupplierId): Promise<import("../supplier.js").Supplier | null>;
-  save(supplier: import("../supplier.js").Supplier): Promise<void>;
-  findByVendorNumber(vendorNumber: string): Promise<import("../supplier.js").Supplier | null>;
+  findById(id: SupplierId): Promise<Supplier | null>;
+  save(supplier: Supplier): Promise<void>;
+  findByVendorNumber(vendorNumber: string): Promise<Supplier | null>;
+  list(): Promise<readonly Supplier[]>;
 }
 
 export type InventoryCommandFailureReason =
