@@ -82,6 +82,7 @@ describe("Identity login and sessions (in-memory)", () => {
       ok: true,
       staffUserId: STAFF_ID,
       email: "staff@local.test",
+      organizationId: OrganizationId.DEFAULT,
     });
   });
 
@@ -111,6 +112,7 @@ describe("Identity login and sessions (in-memory)", () => {
     const h = harness();
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
+      organizationId: OrganizationId.DEFAULT,
       email: "wholesale@local.test",
       passwordHash: await h.passwords.hash("wholesale-secret"),
       customerId: CUSTOMER_ID,
@@ -128,6 +130,7 @@ describe("Identity login and sessions (in-memory)", () => {
 
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
+      organizationId: OrganizationId.DEFAULT,
       email: "wholesale@local.test",
       passwordHash: await h.passwords.hash("wholesale-secret"),
       customerId: OTHER_CUSTOMER,
@@ -140,6 +143,7 @@ describe("Identity login and sessions (in-memory)", () => {
     }
     expect(session.customerId).toBe(CUSTOMER_ID);
     expect(session.wholesaleUserId).toBe(WHOLESALE_ID);
+    expect(session.organizationId).toBe(OrganizationId.DEFAULT);
   });
 
   it("expires a session after idle 30 minutes via the clock", async () => {
@@ -220,6 +224,70 @@ describe("Identity login and sessions (in-memory)", () => {
     expect(logout).toEqual({ ok: true });
     const after = await h.resolveStaff.execute(login.sessionId);
     expect(after).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("allows the same email in two organizations for staff and wholesale", async () => {
+    const h = harness();
+    const betaOrgId = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
+    const betaStaffId = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440099");
+    const betaWholesaleId = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440098");
+
+    await h.staffUsers.save({
+      id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "shared@local.test",
+      passwordHash: await h.passwords.hash("default-secret"),
+    });
+    await h.staffUsers.save({
+      id: betaStaffId,
+      organizationId: betaOrgId,
+      email: "shared@local.test",
+      passwordHash: await h.passwords.hash("beta-secret"),
+    });
+    await h.wholesaleUsers.save({
+      id: WHOLESALE_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "shared@local.test",
+      passwordHash: await h.passwords.hash("default-secret"),
+      customerId: CUSTOMER_ID,
+    });
+    await h.wholesaleUsers.save({
+      id: betaWholesaleId,
+      organizationId: betaOrgId,
+      email: "shared@local.test",
+      passwordHash: await h.passwords.hash("beta-secret"),
+      customerId: OTHER_CUSTOMER,
+    });
+
+    const defaultStaffLogin = await h.loginStaff.execute({
+      email: "shared@local.test",
+      password: "default-secret",
+    });
+    expect(defaultStaffLogin.ok).toBe(true);
+    if (!defaultStaffLogin.ok) {
+      return;
+    }
+    expect(defaultStaffLogin.staffUserId).toBe(STAFF_ID);
+    expect(defaultStaffLogin.organizationId).toBe(OrganizationId.DEFAULT);
+
+    const defaultStaffSession = await h.resolveStaff.execute(defaultStaffLogin.sessionId);
+    expect(defaultStaffSession).toEqual({
+      ok: true,
+      staffUserId: STAFF_ID,
+      email: "shared@local.test",
+      organizationId: OrganizationId.DEFAULT,
+    });
+
+    const defaultWholesaleLogin = await h.loginWholesale.execute({
+      email: "shared@local.test",
+      password: "default-secret",
+    });
+    expect(defaultWholesaleLogin.ok).toBe(true);
+    if (!defaultWholesaleLogin.ok) {
+      return;
+    }
+    expect(defaultWholesaleLogin.wholesaleUserId).toBe(WHOLESALE_ID);
+    expect(defaultWholesaleLogin.organizationId).toBe(OrganizationId.DEFAULT);
   });
 
   it("keeps application/ free of Fastify, Drizzle, Zod, and hash libraries", () => {

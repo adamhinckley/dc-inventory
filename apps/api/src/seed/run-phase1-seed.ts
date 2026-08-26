@@ -99,9 +99,13 @@ async function upsertWholesale(
   customerId: Customer["id"],
   password: string,
 ): Promise<WholesaleUser> {
-  const existing = await ports.wholesaleUsers.findByEmail(PHASE1_WHOLESALE_EMAIL);
+  const existing = await ports.wholesaleUsers.findByEmail(
+    OrganizationId.DEFAULT,
+    PHASE1_WHOLESALE_EMAIL,
+  );
   const wholesale: WholesaleUser = {
     id: existing?.id ?? WholesaleUserId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     email: PHASE1_WHOLESALE_EMAIL,
     passwordHash: await ports.passwords.hash(password),
     customerId,

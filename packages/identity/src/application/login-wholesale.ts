@@ -1,4 +1,5 @@
 import {
+  OrganizationId,
   type CustomerId,
   type SessionId,
   type WholesaleUserId,
@@ -21,6 +22,7 @@ export type LoginWholesaleResult =
       wholesaleUserId: WholesaleUserId;
       email: string;
       customerId: CustomerId;
+      organizationId: OrganizationId;
     }
   | { ok: false };
 
@@ -34,7 +36,7 @@ export class LoginWholesaleUseCase {
 
   async execute(input: LoginWholesaleRequest): Promise<LoginWholesaleResult> {
     const email = normalizeEmail(input.email);
-    const user = await this.wholesaleUsers.findByEmail(email);
+    const user = await this.wholesaleUsers.findByEmail(OrganizationId.DEFAULT, email);
     if (user === null) {
       await this.passwords.verifyDummy(input.password);
       return { ok: false };
@@ -46,6 +48,7 @@ export class LoginWholesaleUseCase {
     const now = this.clock.now();
     const session = await this.sessions.create({
       audience: "wholesale",
+      organizationId: user.organizationId,
       staffUserId: null,
       wholesaleUserId: user.id,
       customerId: user.customerId,
@@ -58,6 +61,7 @@ export class LoginWholesaleUseCase {
       wholesaleUserId: user.id,
       email: user.email,
       customerId: user.customerId,
+      organizationId: user.organizationId,
     };
   }
 }

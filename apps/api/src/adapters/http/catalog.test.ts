@@ -40,6 +40,7 @@ async function startCatalogApp() {
   });
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
+    organizationId: OrganizationId.DEFAULT,
     email: "wholesale@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_ID,

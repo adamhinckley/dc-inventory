@@ -16,12 +16,14 @@ export const logoutResponseSchema = z.object({
 export const staffSessionResponseSchema = z.object({
   staffUserId: z.string().uuid(),
   email: z.string(),
+  organizationId: z.string(),
 });
 
 export const wholesaleSessionResponseSchema = z.object({
   wholesaleUserId: z.string().uuid(),
   email: z.string(),
   customerId: z.string().uuid(),
+  organizationId: z.string(),
 });
 
 const optionalBooleanQuery = z

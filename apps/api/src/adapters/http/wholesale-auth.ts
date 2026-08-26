@@ -50,6 +50,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         wholesaleUserId: result.wholesaleUserId,
         email: result.email,
         customerId: result.customerId,
+        organizationId: result.organizationId,
       };
     },
   );
@@ -101,6 +102,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         wholesaleUserId: result.wholesaleUserId,
         email: result.email,
         customerId: result.customerId,
+        organizationId: result.organizationId,
       };
     },
   );

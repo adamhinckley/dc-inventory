@@ -43,6 +43,7 @@ async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00
   });
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
+    organizationId: OrganizationId.DEFAULT,
     email: "wholesale@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_ID,
@@ -79,6 +80,7 @@ describe("opaque session HTTP", () => {
     expect(login.json()).toEqual({
       staffUserId: STAFF_ID,
       email: "staff@local.test",
+      organizationId: OrganizationId.DEFAULT,
     });
     const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
     expect(cookie?.name).toBe(STAFF_SESSION_COOKIE);
@@ -105,6 +107,7 @@ describe("opaque session HTTP", () => {
     expect(session.json()).toEqual({
       staffUserId: STAFF_ID,
       email: "staff@local.test",
+      organizationId: OrganizationId.DEFAULT,
     });
   });
 
@@ -120,6 +123,7 @@ describe("opaque session HTTP", () => {
       wholesaleUserId: WHOLESALE_ID,
       email: "wholesale@local.test",
       customerId: CUSTOMER_ID,
+      organizationId: OrganizationId.DEFAULT,
     });
     const cookie = cookieValue(login, WHOLESALE_SESSION_COOKIE);
     expect(cookie?.httpOnly).toBe(true);
@@ -134,6 +138,7 @@ describe("opaque session HTTP", () => {
       wholesaleUserId: WHOLESALE_ID,
       email: "wholesale@local.test",
       customerId: CUSTOMER_ID,
+      organizationId: OrganizationId.DEFAULT,
     });
   });
 

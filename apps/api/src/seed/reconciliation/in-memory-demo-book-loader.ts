@@ -100,7 +100,10 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
     }
 
     const staff = await this.ports.staffUsers.findByEmail(OrganizationId.DEFAULT, this.ports.staffEmail);
-    const wholesale = await this.ports.wholesaleUsers.findByEmail(this.ports.wholesaleEmail);
+    const wholesale = await this.ports.wholesaleUsers.findByEmail(
+      OrganizationId.DEFAULT,
+      this.ports.wholesaleEmail,
+    );
     if (staff === null || wholesale === null) {
       throw new Error("demo identity rows are missing");
     }

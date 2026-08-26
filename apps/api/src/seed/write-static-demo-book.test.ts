@@ -261,7 +261,7 @@ describe("static demo book writer (in-memory)", () => {
     expect(inMemoryUserCount(ports.staffUsers)).toBe(1);
     expect(inMemoryUserCount(ports.wholesaleUsers)).toBe(1);
     expect(await ports.staffUsers.findByEmail(OrganizationId.DEFAULT, "other@local.test")).toBeNull();
-    expect(await ports.wholesaleUsers.findByEmail("other@local.test")).toBeNull();
+    expect(await ports.wholesaleUsers.findByEmail(OrganizationId.DEFAULT, "other@local.test")).toBeNull();
 
     const vend001 = await ports.suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
     expect(vend001?.name).toBe(PHASE2_SUPPLIER_NAME);

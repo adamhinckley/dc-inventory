@@ -1,5 +1,9 @@
-import { CustomerId, WholesaleUserId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import {
+  CustomerId,
+  OrganizationId,
+  WholesaleUserId,
+} from "@dc-inventory/shared-kernel";
+import { and, eq } from "drizzle-orm";
 import { normalizeEmail } from "../domain/email.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
 import type { WholesaleUser } from "../domain/wholesale-user.js";
@@ -9,11 +13,19 @@ import type { IdentityDrizzle } from "./drizzle-staff-user-repository.js";
 export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository {
   constructor(private readonly db: IdentityDrizzle) {}
 
-  async findByEmail(email: string): Promise<WholesaleUser | null> {
+  async findByEmail(
+    organizationId: OrganizationId,
+    email: string,
+  ): Promise<WholesaleUser | null> {
     const rows = await this.db
       .select()
       .from(wholesaleUsers)
-      .where(eq(wholesaleUsers.email, normalizeEmail(email)))
+      .where(
+        and(
+          eq(wholesaleUsers.organizationId, organizationId),
+          eq(wholesaleUsers.email, normalizeEmail(email)),
+        ),
+      )
       .limit(1);
     return rows[0] === undefined ? null : toWholesaleUser(rows[0]);
   }
@@ -33,6 +45,7 @@ export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository 
       .insert(wholesaleUsers)
       .values({
         id: user.id,
+        organizationId: user.organizationId,
         email,
         passwordHash: user.passwordHash,
         customerId: user.customerId,
@@ -40,6 +53,7 @@ export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository 
       .onConflictDoUpdate({
         target: wholesaleUsers.id,
         set: {
+          organizationId: user.organizationId,
           email,
           passwordHash: user.passwordHash,
           customerId: user.customerId,
@@ -52,6 +66,7 @@ export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository 
 function toWholesaleUser(row: typeof wholesaleUsers.$inferSelect): WholesaleUser {
   return {
     id: WholesaleUserId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
     email: row.email,
     passwordHash: row.passwordHash,
     customerId: CustomerId.parse(row.customerId),

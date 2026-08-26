@@ -30,6 +30,7 @@ export function registerStaffAudienceGuard(app: FastifyInstance): void {
     request.staffAuth = {
       staffUserId: result.staffUserId,
       email: result.email,
+      organizationId: result.organizationId,
     };
   });
 }
@@ -51,6 +52,7 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
       wholesaleUserId: result.wholesaleUserId,
       email: result.email,
       customerId: result.customerId,
+      organizationId: result.organizationId,
     };
   });
 }
