@@ -6,7 +6,7 @@ import {
   type IInvoiceRepository,
 } from "@dc-inventory/accounting";
 import type { ISalesOrderRepository } from "@dc-inventory/sales";
-import { type OrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { type OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { selectPaymentReplay } from "./planner/payments.js";
 import type { DemoBookPlan, PlannedShippedInvoice } from "./planner/types.js";
 
@@ -49,7 +49,11 @@ export async function buildSalesOrderIdByPlanKey(
   plan: DemoBookPlan,
   salesOrders: Pick<ISalesOrderRepository, "list">,
 ): Promise<Map<string, OrderId>> {
-  const listed = await salesOrders.list({ page: 1, pageSize: 20_000 });
+  const listed = await salesOrders.list({
+    organizationId: OrganizationId.DEFAULT,
+    page: 1,
+    pageSize: 20_000,
+  });
   const byDocumentNumber = new Map(listed.items.map((row) => [row.documentNumber, row.id]));
   const map = new Map<string, OrderId>();
   for (let index = 0; index < plan.salesOrders.length; index += 1) {
