@@ -22,7 +22,7 @@ import {
 } from "@dc-inventory/inventory";
 import { locations } from "@dc-inventory/inventory/schema";
 import { DrizzleSupplierRepository } from "@dc-inventory/purchasing";
-import { SupplierId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import { DrizzleProductImageSeedRepository } from "./ports/drizzle-product-image-seed.js";
@@ -74,13 +74,17 @@ export async function runWriteStaticDemoBookOnDb(
         return inserted[0]!;
       },
       async upsertPrerequisiteSupplier() {
-        const existing = await suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);
+        const existing = await suppliers.findByVendorNumber(
+          OrganizationId.DEFAULT,
+          PHASE2_SUPPLIER_VENDOR_NUMBER,
+        );
         if (existing !== null) {
           return { id: existing.id, vendorNumber: existing.vendorNumber };
         }
         const id = SupplierId.parse(crypto.randomUUID());
         await suppliers.save({
           id,
+          organizationId: OrganizationId.DEFAULT,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
         });

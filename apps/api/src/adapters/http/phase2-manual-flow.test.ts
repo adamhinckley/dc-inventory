@@ -57,6 +57,7 @@ async function startPhase2ManualFlowApp() {
 
   await unitOfWork.suppliers.save({
     id: SUPPLIER_ID,
+    organizationId: OrganizationId.DEFAULT,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
   });
