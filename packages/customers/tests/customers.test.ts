@@ -1,4 +1,4 @@
-import { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -17,6 +17,8 @@ import { UpdateCustomerUseCase } from "../src/application/update-customer.js";
 
 const STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440010");
 const OTHER_STAFF = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440011");
+const DEFAULT_ORG = OrganizationId.DEFAULT;
+const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 
 function harness() {
   const customers = new InMemoryCustomerRepository();
@@ -39,8 +41,13 @@ function harness() {
   };
 }
 
-async function createAcme(h: ReturnType<typeof harness>, name = "Acme Wholesale") {
+async function createAcme(
+  h: ReturnType<typeof harness>,
+  name = "Acme Wholesale",
+  organizationId = DEFAULT_ORG,
+) {
   const created = await h.createCustomer.execute({
+    organizationId,
     staffUserId: STAFF_ID,
     name,
     creditLimitCents: 1_000_000,
@@ -60,6 +67,7 @@ describe("Customers use cases (in-memory)", () => {
     await createAcme(h, "Beta Hardware");
 
     const listed = await h.listCustomers.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: OTHER_STAFF,
       page: 1,
       pageSize: 25,
@@ -76,19 +84,21 @@ describe("Customers use cases (in-memory)", () => {
     expect(listed.items[0]?.terms).toBe("Net 30");
 
     const got = await h.getCustomer.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
     });
     expect(got).toEqual({ ok: true, customer: acme });
-    expect(await h.customers.findByName("Acme Wholesale")).toEqual(acme);
-    expect(await h.customers.findByName("  Acme Wholesale  ")).toEqual(acme);
-    expect(await h.customers.findByName("missing")).toBeNull();
+    expect(await h.customers.findByName(DEFAULT_ORG, "Acme Wholesale")).toEqual(acme);
+    expect(await h.customers.findByName(DEFAULT_ORG, "  Acme Wholesale  ")).toEqual(acme);
+    expect(await h.customers.findByName(DEFAULT_ORG, "missing")).toBeNull();
   });
 
   it("updates customer fields without a credit formula", async () => {
     const h = harness();
     const acme = await createAcme(h);
     const updated = await h.updateCustomer.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
       name: "Acme Wholesale LLC",
@@ -110,6 +120,7 @@ describe("Customers use cases (in-memory)", () => {
     const beta = await createAcme(h, "Beta Hardware");
 
     const first = await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
       name: "Pat Buyer",
@@ -124,6 +135,7 @@ describe("Customers use cases (in-memory)", () => {
     expect(first.contact.phone).toBe("555-0100");
 
     const duplicate = await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
       name: "Other Pat",
@@ -132,6 +144,7 @@ describe("Customers use cases (in-memory)", () => {
     expect(duplicate).toEqual({ ok: false, reason: "duplicate_email" });
 
     const otherAccount = await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: beta.id,
       name: "Pat Other",
@@ -140,6 +153,7 @@ describe("Customers use cases (in-memory)", () => {
     expect(otherAccount.ok).toBe(true);
 
     const clashOnUpdate = await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
       name: "Sam",
@@ -149,6 +163,7 @@ describe("Customers use cases (in-memory)", () => {
       throw new Error("expected second contact");
     }
     const updated = await h.updateContact.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
       contactId: clashOnUpdate.contact.id,
@@ -161,6 +176,7 @@ describe("Customers use cases (in-memory)", () => {
     const h = harness();
     const acme = await createAcme(h);
     const created = await h.createExemption.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
       jurisdiction: "UT",
@@ -182,6 +198,7 @@ describe("Customers use cases (in-memory)", () => {
     const h = harness();
     const acme = await createAcme(h);
     const created = await h.createShipTo.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: acme.id,
       line1: "100 Warehouse Rd",
@@ -201,10 +218,53 @@ describe("Customers use cases (in-memory)", () => {
     expect(created.shipTo.isDefault).toBe(true);
   });
 
+  it("scopes customers by organizationId and allows duplicate names across orgs", async () => {
+    const h = harness();
+    const acme = await createAcme(h, "Acme Retail", DEFAULT_ORG);
+    const beta = await createAcme(h, "Acme Retail", BETA_ORG);
+    expect(acme.id).not.toEqual(beta.id);
+
+    const acmeList = await h.listCustomers.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+    });
+    expect(acmeList.total).toBe(1);
+    expect(acmeList.items[0]?.name).toBe("Acme Retail");
+
+    const crossOrgGet = await h.getCustomer.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: beta.id,
+    });
+    expect(crossOrgGet).toEqual({ ok: false, reason: "not_found" });
+
+    const acmeContact = await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: acme.id,
+      name: "Buyer",
+      email: "buyer@acme.test",
+    });
+    const betaContact = await h.createContact.execute({
+      organizationId: BETA_ORG,
+      staffUserId: STAFF_ID,
+      customerId: beta.id,
+      name: "Buyer",
+      email: "buyer@acme.test",
+    });
+    expect(acmeContact.ok).toBe(true);
+    expect(betaContact.ok).toBe(true);
+  });
+
   it("returns not_found for a missing customer and does not invent wholesale-user create", async () => {
     const h = harness();
     const missing = CustomerId.parse("550e8400-e29b-41d4-a716-446655440099");
     const contact = await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: missing,
       name: "Nobody",

@@ -1,8 +1,9 @@
-import { Money, type CustomerId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { Money, type CustomerId, type OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../domain/customer.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 
 export type UpdateCustomerRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
   name?: string;
@@ -20,7 +21,7 @@ export class UpdateCustomerUseCase {
 
   async execute(input: UpdateCustomerRequest): Promise<UpdateCustomerResult> {
     void input.staffUserId;
-    const existing = await this.customers.findById(input.customerId);
+    const existing = await this.customers.findById(input.organizationId, input.customerId);
     if (existing === null) {
       return { ok: false, reason: "not_found" };
     }
@@ -34,6 +35,7 @@ export class UpdateCustomerUseCase {
       const cents = input.creditLimitCents ?? existing.creditLimit.amountMinor;
       const customer: Customer = {
         id: existing.id,
+        organizationId: existing.organizationId,
         name,
         creditLimit: Money.fromMinorUnits(cents, currency),
         terms,

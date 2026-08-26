@@ -1,10 +1,11 @@
-import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { ExemptionCertificate } from "../domain/exemption-certificate.js";
 import { ExemptionCertificateId, newUuid } from "../domain/ids.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 import type { IExemptionCertificateRepository } from "../domain/ports/exemption-certificate-repository.js";
 
 export type CreateExemptionCertificateRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
   jurisdiction: string;
@@ -38,7 +39,7 @@ export class CreateExemptionCertificateUseCase {
     if (jurisdiction.length === 0 || status.length === 0) {
       return { ok: false, reason: "invalid" };
     }
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }

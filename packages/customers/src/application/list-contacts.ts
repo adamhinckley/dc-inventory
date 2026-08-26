@@ -1,9 +1,10 @@
-import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { Contact } from "../domain/contact.js";
 import type { IContactRepository } from "../domain/ports/contact-repository.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 
 export type ListContactsRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
 };
@@ -20,7 +21,7 @@ export class ListContactsUseCase {
 
   async execute(input: ListContactsRequest): Promise<ListContactsResult> {
     void input.staffUserId;
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }

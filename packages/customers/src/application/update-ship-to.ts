@@ -1,10 +1,11 @@
-import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { ShipToId } from "../domain/ids.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 import type { IShipToRepository } from "../domain/ports/ship-to-repository.js";
 import type { ShipTo } from "../domain/ship-to.js";
 
 export type UpdateShipToRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
   shipToId: ShipToId;
@@ -34,7 +35,7 @@ export class UpdateShipToUseCase {
 
   async execute(input: UpdateShipToRequest): Promise<UpdateShipToResult> {
     void input.staffUserId;
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }

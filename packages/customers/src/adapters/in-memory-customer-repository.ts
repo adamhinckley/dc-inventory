@@ -1,4 +1,4 @@
-import type { CustomerId } from "@dc-inventory/shared-kernel";
+import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../domain/customer.js";
 import type {
   CustomerListPage,
@@ -14,6 +14,9 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
   async list(query: ListCustomersQuery): Promise<CustomerListPage> {
     const needle = query.q?.trim().toLowerCase() ?? "";
     const rows = [...this.byId.values()].filter((row) => {
+      if (row.customer.organizationId !== query.organizationId) {
+        return false;
+      }
       if (needle.length === 0) {
         return true;
       }
@@ -37,17 +40,21 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
     };
   }
 
-  async findById(id: CustomerId): Promise<Customer | null> {
-    return this.byId.get(id)?.customer ?? null;
+  async findById(organizationId: OrganizationId, id: CustomerId): Promise<Customer | null> {
+    const row = this.byId.get(id);
+    if (row === undefined || row.customer.organizationId !== organizationId) {
+      return null;
+    }
+    return row.customer;
   }
 
-  async findByName(name: string): Promise<Customer | null> {
+  async findByName(organizationId: OrganizationId, name: string): Promise<Customer | null> {
     const needle = name.trim();
     if (needle.length === 0) {
       return null;
     }
     for (const row of this.byId.values()) {
-      if (row.customer.name === needle) {
+      if (row.customer.organizationId === organizationId && row.customer.name === needle) {
         return row.customer;
       }
     }

@@ -1,4 +1,4 @@
-import { CustomerId, Money } from "@dc-inventory/shared-kernel";
+import { CustomerId, Money, OrganizationId } from "@dc-inventory/shared-kernel";
 import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Contact } from "../domain/contact.js";
@@ -36,6 +36,7 @@ export type CustomersDrizzle = PostgresJsDatabase<{
 function toCustomer(row: typeof customers.$inferSelect): Customer {
   return {
     id: CustomerId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
     name: row.name,
     creditLimit: Money.fromMinorUnits(row.creditLimitCents, row.currency),
     terms: row.terms,
@@ -91,10 +92,11 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
           ? customers.createdAt
           : customers.name;
     const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
-    const where =
-      query.q !== undefined && query.q.trim().length > 0
-        ? ilike(customers.name, `%${query.q.trim()}%`)
-        : undefined;
+    const clauses = [eq(customers.organizationId, query.organizationId)];
+    if (query.q !== undefined && query.q.trim().length > 0) {
+      clauses.push(ilike(customers.name, `%${query.q.trim()}%`));
+    }
+    const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
     const [rows, countRows] = await Promise.all([
       this.db
@@ -115,16 +117,16 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
     };
   }
 
-  async findById(id: CustomerId): Promise<Customer | null> {
+  async findById(organizationId: OrganizationId, id: CustomerId): Promise<Customer | null> {
     const rows = await this.db
       .select()
       .from(customers)
-      .where(eq(customers.id, id))
+      .where(and(eq(customers.id, id), eq(customers.organizationId, organizationId)))
       .limit(1);
     return rows[0] === undefined ? null : toCustomer(rows[0]);
   }
 
-  async findByName(name: string): Promise<Customer | null> {
+  async findByName(organizationId: OrganizationId, name: string): Promise<Customer | null> {
     const needle = name.trim();
     if (needle.length === 0) {
       return null;
@@ -132,7 +134,7 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
     const rows = await this.db
       .select()
       .from(customers)
-      .where(eq(customers.name, needle))
+      .where(and(eq(customers.organizationId, organizationId), eq(customers.name, needle)))
       .limit(1);
     return rows[0] === undefined ? null : toCustomer(rows[0]);
   }
@@ -142,6 +144,7 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
       .insert(customers)
       .values({
         id: customer.id,
+        organizationId: customer.organizationId,
         name: customer.name,
         creditLimitCents: customer.creditLimit.amountMinor,
         currency: customer.creditLimit.currency,
