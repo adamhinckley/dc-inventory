@@ -64,6 +64,13 @@
       "when": 1787455600000,
       "tag": "0009_accounting_document_number_payment_idempotency",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787655600000,
+      "tag": "0010_inventory_ledger_identity",
+      "breakpoints": true
     }
   ]
 }

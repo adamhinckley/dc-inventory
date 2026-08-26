@@ -142,6 +142,12 @@ export async function runReplaySalesOrders(
       continue;
     }
 
+    const shipInstant = shipInstantBySalesOrderKey.get(planned.key) ?? planned.plannedInstant;
+    const confirmInstant = new Date(
+      Math.min(planned.plannedInstant.getTime(), shipInstant.getTime()),
+    );
+    ports.clock.setInstant(confirmInstant);
+
     const confirmed = await confirm.execute({
       staffUserId: input.staffUserId,
       salesOrderId: created.salesOrder.id,
@@ -158,7 +164,6 @@ export async function runReplaySalesOrders(
       continue;
     }
 
-    const shipInstant = shipInstantBySalesOrderKey.get(planned.key) ?? planned.plannedInstant;
     ports.clock.setInstant(shipInstant);
 
     const shipped = await ship.execute({

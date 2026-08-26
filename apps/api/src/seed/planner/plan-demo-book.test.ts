@@ -33,6 +33,7 @@ import {
   toReplayComparablePlan,
   type DemoBookPlan,
 } from "./plan-demo-book.js";
+import { demoPlanStockTimelineError } from "./stock-timeline.js";
 
 const SEED_TODAY = new Date("2026-08-24T15:30:00.000Z");
 
@@ -58,6 +59,10 @@ describe("planDemoBook", () => {
     const alternate = planDemoBook({ seed: "dc-inventory-demo-2", seedToday: SEED_TODAY });
     expect(replayFingerprint(plan)).not.toBe(replayFingerprint(alternate));
   }, 30_000);
+
+  it("keeps receive-before-allocate on the seed clock that reconciliation replays", () => {
+    expect(demoPlanStockTimelineError(plan)).toBeUndefined();
+  });
 
   it("preserves Phase 1 fixtures and generates DEM-00001..DEM-00795", () => {
     for (const fixture of PHASE1_PRODUCTS) {
