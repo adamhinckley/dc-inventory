@@ -74,6 +74,7 @@ export type ShippedCommand = {
 };
 
 export type CreateInvoiceForOrderCommand = {
+  organizationId: OrganizationId;
   orderId: OrderId;
   customerId: CustomerId;
   subtotalCents: number;

@@ -147,6 +147,7 @@ describe("internal sales orders HTTP", () => {
     expect(shipped.json()).toMatchObject({ status: "shipped" });
 
     const invoice = await unitOfWork.invoices.findByOrderId(
+      OrganizationId.DEFAULT,
       OrderId.parse(order.id),
     );
     expect(invoice).not.toBeNull();

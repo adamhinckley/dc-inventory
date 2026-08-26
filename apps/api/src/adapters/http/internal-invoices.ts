@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { InvoiceId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { InvoiceId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
   invoiceIdParamsSchema,
@@ -22,6 +22,10 @@ function typed(app: FastifyInstance) {
 
 function staffUserId(request: { staffAuth?: { staffUserId: string } }): StaffUserId {
   return StaffUserId.parse(request.staffAuth?.staffUserId ?? "");
+}
+
+function staffOrganizationId(request: { staffAuth?: { organizationId: string } }): OrganizationId {
+  return OrganizationId.parse(request.staffAuth?.organizationId ?? OrganizationId.DEFAULT);
 }
 
 function sendNotFound(reply: FastifyReply) {
@@ -70,6 +74,7 @@ export function registerInternalInvoiceRoutes(app: FastifyInstance): void {
       const params = request.params as { id: string };
       const result = await request.server.accounting.getInvoice.execute({
         staffUserId: staffUserId(request),
+        organizationId: staffOrganizationId(request),
         invoiceId: InvoiceId.parse(params.id),
       });
       if (!result.ok) {
@@ -106,6 +111,7 @@ export function registerInternalInvoiceRoutes(app: FastifyInstance): void {
       };
       const result = await request.server.accounting.recordPayment.execute({
         staffUserId: staffUserId(request),
+        organizationId: staffOrganizationId(request),
         invoiceId: InvoiceId.parse(params.id),
         amountCents: body.amountCents,
         currency: body.currency,

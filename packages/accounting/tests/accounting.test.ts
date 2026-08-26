@@ -1,7 +1,9 @@
 import {
   CustomerId,
   InvoiceId,
+  Money,
   OrderId,
+  OrganizationId,
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
@@ -16,6 +18,9 @@ import {
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const ORDER_ID = OrderId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+const DEFAULT_ORG = OrganizationId.DEFAULT;
+const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
+const BETA_CUSTOMER_ID = CustomerId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
 
 async function harness() {
   const uow = new InMemoryAccountingUnitOfWork();
@@ -31,6 +36,7 @@ async function harness() {
 async function createInvoice(h: Awaited<ReturnType<typeof harness>>, subtotal = 1000) {
   const result = await h.create.execute({
     staffUserId: STAFF_ID,
+    organizationId: DEFAULT_ORG,
     orderId: ORDER_ID,
     customerId: CUSTOMER_ID,
     subtotalCents: subtotal,
@@ -48,6 +54,7 @@ describe("Accounting (in-memory)", () => {
     const h = await harness();
     const first = await h.create.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       orderId: ORDER_ID,
       customerId: CUSTOMER_ID,
       subtotalCents: 500,
@@ -62,6 +69,7 @@ describe("Accounting (in-memory)", () => {
     const secondOrder = OrderId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
     const second = await h.create.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       orderId: secondOrder,
       customerId: CUSTOMER_ID,
       subtotalCents: 200,
@@ -79,6 +87,7 @@ describe("Accounting (in-memory)", () => {
     const first = await createInvoice(h, 800);
     const duplicate = await h.create.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       orderId: ORDER_ID,
       customerId: CUSTOMER_ID,
       subtotalCents: 800,
@@ -103,7 +112,11 @@ describe("Accounting (in-memory)", () => {
   it("derives remaining amount from append-only applications", async () => {
     const h = await harness();
     const invoice = await createInvoice(h, 1000);
-    const view = await h.get.execute({ staffUserId: STAFF_ID, invoiceId: invoice.id });
+    const view = await h.get.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId: invoice.id,
+    });
     expect(view.ok).toBe(true);
     if (!view.ok) {
       return;
@@ -112,12 +125,17 @@ describe("Accounting (in-memory)", () => {
 
     await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 400,
       currency: "USD",
       idempotencyKey: "pay-1",
     });
-    const afterPartial = await h.get.execute({ staffUserId: STAFF_ID, invoiceId: invoice.id });
+    const afterPartial = await h.get.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId: invoice.id,
+    });
     expect(afterPartial.ok).toBe(true);
     if (!afterPartial.ok) {
       return;
@@ -131,6 +149,7 @@ describe("Accounting (in-memory)", () => {
 
     const over = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 501,
       currency: "USD",
@@ -144,6 +163,7 @@ describe("Accounting (in-memory)", () => {
 
     const zero = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 0,
       currency: "USD",
@@ -153,6 +173,7 @@ describe("Accounting (in-memory)", () => {
 
     const wrongCurrency = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 100,
       currency: "EUR",
@@ -170,6 +191,7 @@ describe("Accounting (in-memory)", () => {
     const invoice = await createInvoice(h, 900);
     const first = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 300,
       currency: "USD",
@@ -178,6 +200,7 @@ describe("Accounting (in-memory)", () => {
     expect(first.ok).toBe(true);
     const second = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 300,
       currency: "USD",
@@ -188,7 +211,11 @@ describe("Accounting (in-memory)", () => {
       return;
     }
     expect(second.remainingCents).toBe(600);
-    const view = await h.get.execute({ staffUserId: STAFF_ID, invoiceId: invoice.id });
+    const view = await h.get.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId: invoice.id,
+    });
     expect(view.ok).toBe(true);
     if (!view.ok) {
       return;
@@ -201,6 +228,7 @@ describe("Accounting (in-memory)", () => {
     const invoice = await createInvoice(h, 900);
     await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 300,
       currency: "USD",
@@ -208,6 +236,7 @@ describe("Accounting (in-memory)", () => {
     });
     const conflict = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 400,
       currency: "USD",
@@ -225,6 +254,7 @@ describe("Accounting (in-memory)", () => {
     const invoice = await createInvoice(h, 1000);
     const payment = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 1000,
       currency: "USD",
@@ -238,6 +268,7 @@ describe("Accounting (in-memory)", () => {
 
     const corrected = await h.correct.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       paymentId,
       correctionAmountCents: -200,
@@ -260,6 +291,7 @@ describe("Accounting (in-memory)", () => {
     const invoice = await createInvoice(h, 500);
     const payment = await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 200,
       currency: "USD",
@@ -271,6 +303,7 @@ describe("Accounting (in-memory)", () => {
 
     const tooPositive = await h.correct.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       paymentId,
       correctionAmountCents: 400,
@@ -280,6 +313,7 @@ describe("Accounting (in-memory)", () => {
 
     const tooNegative = await h.correct.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       paymentId,
       correctionAmountCents: -500,
@@ -293,6 +327,7 @@ describe("Accounting (in-memory)", () => {
     const invoice = await createInvoice(h, 500);
     await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 200,
       currency: "USD",
@@ -300,6 +335,7 @@ describe("Accounting (in-memory)", () => {
     });
     await h.record.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       amountCents: 200,
       currency: "USD",
@@ -310,11 +346,76 @@ describe("Accounting (in-memory)", () => {
 
     const tooNegativeForPayment = await h.correct.execute({
       staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
       invoiceId: invoice.id,
       paymentId,
       correctionAmountCents: -300,
       currency: "USD",
     });
     expect(tooNegativeForPayment.ok).toBe(false);
+  });
+
+  it("scopes invoices by organizationId and rejects cross-org payment targeting", async () => {
+    const h = await harness();
+    const acmeOrderId = OrderId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
+    const betaOrderId = OrderId.parse("ffffffff-ffff-4fff-8fff-ffffffffffff");
+    const zero = Money.fromMinorUnits(0, "USD");
+    const subtotal = Money.fromMinorUnits(1000, "USD");
+
+    await h.uow.invoices.save({
+      id: InvoiceId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+      organizationId: DEFAULT_ORG,
+      orderId: acmeOrderId,
+      customerId: CUSTOMER_ID,
+      documentNumber: "INV-1001",
+      status: "posted",
+      postedAt: new Date("2026-01-01T00:00:00.000Z"),
+      subtotal,
+      taxTotal: zero,
+      total: subtotal,
+    });
+    const betaInvoiceId = InvoiceId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc");
+    await h.uow.invoices.save({
+      id: betaInvoiceId,
+      organizationId: BETA_ORG,
+      orderId: betaOrderId,
+      customerId: BETA_CUSTOMER_ID,
+      documentNumber: "INV-1001",
+      status: "posted",
+      postedAt: new Date("2026-01-01T00:00:00.000Z"),
+      subtotal,
+      taxTotal: zero,
+      total: subtotal,
+    });
+
+    const acmeList = await h.uow.invoices.list(DEFAULT_ORG);
+    expect(acmeList).toHaveLength(1);
+    expect(acmeList[0]?.documentNumber).toBe("INV-1001");
+    expect(acmeList[0]?.organizationId).toBe(DEFAULT_ORG);
+
+    const betaList = await h.uow.invoices.list(BETA_ORG);
+    expect(betaList).toHaveLength(1);
+    expect(betaList[0]?.id).toBe(betaInvoiceId);
+
+    const crossOrgGet = await h.get.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId: betaInvoiceId,
+    });
+    expect(crossOrgGet.ok).toBe(false);
+
+    const crossOrgPayment = await h.record.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId: betaInvoiceId,
+      amountCents: 100,
+      currency: "USD",
+      idempotencyKey: "cross-org-pay",
+    });
+    expect(crossOrgPayment.ok).toBe(false);
+    if (crossOrgPayment.ok) {
+      return;
+    }
+    expect(crossOrgPayment.reason).toBe("not_found");
   });
 });

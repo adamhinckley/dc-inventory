@@ -120,6 +120,13 @@
       "when": 1788355600000,
       "tag": "0017_sales_organization_id",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788455600000,
+      "tag": "0018_accounting_organization_id",
+      "breakpoints": true
     }
   ]
 }

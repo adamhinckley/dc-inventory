@@ -337,7 +337,7 @@ describe("Sales (in-memory)", () => {
     expect(snap.onHand).toBe(6);
     expect(snap.available).toBe(6);
 
-    const invoice = await h.uow.invoices.findByOrderId(created.salesOrder.id);
+    const invoice = await h.uow.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id);
     expect(invoice).not.toBeNull();
     expect(invoice?.taxTotal.amountMinor).toBe(0);
     expect(invoice?.total.amountMinor).toBe(2000);
@@ -383,7 +383,7 @@ describe("Sales (in-memory)", () => {
     });
     expect(second.ok).toBe(true);
 
-    const invoices = await h.uow.invoices.findByOrderId(created.salesOrder.id);
+    const invoices = await h.uow.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id);
     expect(invoices).not.toBeNull();
     const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(3);
@@ -501,7 +501,7 @@ describe("Sales (in-memory)", () => {
     const snap = await snapshot.execute({ sku: SKU, locationId: DEFAULT });
     expect(snap.allocated).toBe(3);
     expect(snap.onHand).toBe(6);
-    expect(await base.invoices.findByOrderId(created.salesOrder.id)).toBeNull();
+    expect(await base.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id)).toBeNull();
   });
 
   it("scopes sales orders by organizationId and rejects cross-org customers at create", async () => {

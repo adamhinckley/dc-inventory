@@ -25,7 +25,10 @@ export class AccountingCommandAdapter implements IAccountingCommandPort {
       return { ok: false, reason: "invalid" };
     }
 
-    const existing = await this.invoices.findByOrderId(command.orderId);
+    const existing = await this.invoices.findByOrderId(
+      command.organizationId,
+      command.orderId,
+    );
     if (existing !== null) {
       return {
         ok: true,
@@ -38,9 +41,10 @@ export class AccountingCommandAdapter implements IAccountingCommandPort {
     const currency = command.currency.trim().toUpperCase();
     const subtotal = Money.fromMinorUnits(command.subtotalCents, currency);
     const zero = Money.fromMinorUnits(0, currency);
-    const documentNumber = await this.invoices.nextDocumentNumber();
+    const documentNumber = await this.invoices.nextDocumentNumber(command.organizationId);
     const invoice: Invoice = {
       id: InvoiceId.parse(newUuid()),
+      organizationId: command.organizationId,
       orderId: OrderId.parse(command.orderId),
       customerId: CustomerId.parse(command.customerId),
       documentNumber,

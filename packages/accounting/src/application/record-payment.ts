@@ -1,4 +1,4 @@
-import { InvoiceId, Money } from "@dc-inventory/shared-kernel";
+import { InvoiceId, Money, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import { newUuid, PaymentId } from "../domain/ids.js";
 import { computeRemainingCents } from "../domain/invoice.js";
@@ -7,6 +7,7 @@ import type { Payment } from "../domain/invoice.js";
 
 export type RecordPaymentRequest = {
   staffUserId: import("@dc-inventory/shared-kernel").StaffUserId;
+  organizationId: OrganizationId;
   invoiceId: InvoiceId;
   amountCents: number;
   currency: string;
@@ -35,7 +36,10 @@ export class RecordPaymentUseCase {
 
     const createdAt = this.clock?.now() ?? new Date();
     return this.unitOfWork.run(async (uow) => {
-      const existingPayment = await uow.invoices.findPaymentByIdempotencyKey(key);
+      const existingPayment = await uow.invoices.findPaymentByIdempotencyKey(
+        input.organizationId,
+        key,
+      );
       if (existingPayment !== null) {
         if (
           existingPayment.invoiceId !== input.invoiceId ||
@@ -44,7 +48,7 @@ export class RecordPaymentUseCase {
         ) {
           return { ok: false, reason: "conflict" };
         }
-        const invoice = await uow.invoices.findById(input.invoiceId);
+        const invoice = await uow.invoices.findById(input.organizationId, input.invoiceId);
         if (invoice === null) {
           return { ok: false, reason: "not_found" };
         }
@@ -55,7 +59,7 @@ export class RecordPaymentUseCase {
         };
       }
 
-      const invoice = await uow.invoices.findById(input.invoiceId);
+      const invoice = await uow.invoices.findById(input.organizationId, input.invoiceId);
       if (invoice === null) {
         return { ok: false, reason: "not_found" };
       }
@@ -73,6 +77,7 @@ export class RecordPaymentUseCase {
 
       const payment: Payment = {
         id: PaymentId.parse(newUuid()),
+        organizationId: input.organizationId,
         customerId: invoice.customerId,
         amount: Money.fromMinorUnits(input.amountCents, currency),
         idempotencyKey: key,

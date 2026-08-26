@@ -2,6 +2,7 @@ import type {
   CustomerId,
   InvoiceId,
   OrderId,
+  OrganizationId,
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import type { Payment, PaymentApplication } from "../invoice.js";
@@ -15,12 +16,16 @@ export type PaymentIdempotencyRecord = {
 };
 
 export type IInvoiceRepository = {
-  findById(id: InvoiceId): Promise<Invoice | null>;
-  findByOrderId(orderId: OrderId): Promise<Invoice | null>;
+  findById(organizationId: OrganizationId, id: InvoiceId): Promise<Invoice | null>;
+  findByOrderId(organizationId: OrganizationId, orderId: OrderId): Promise<Invoice | null>;
+  list(organizationId: OrganizationId): Promise<readonly Invoice[]>;
   save(invoice: Invoice): Promise<void>;
-  nextDocumentNumber(): Promise<string>;
+  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
   listApplications(invoiceId: InvoiceId): Promise<readonly PaymentApplication[]>;
-  findPaymentByIdempotencyKey(key: string): Promise<PaymentIdempotencyRecord | null>;
+  findPaymentByIdempotencyKey(
+    organizationId: OrganizationId,
+    key: string,
+  ): Promise<PaymentIdempotencyRecord | null>;
   insertPaymentWithApplication(
     payment: Payment,
     invoiceId: InvoiceId,
@@ -36,6 +41,7 @@ export type IAccountingUnitOfWork = {
 
 export type CreateInvoiceRequest = {
   staffUserId: StaffUserId;
+  organizationId: OrganizationId;
   orderId: OrderId;
   customerId: CustomerId;
   subtotalCents: number;
@@ -44,6 +50,7 @@ export type CreateInvoiceRequest = {
 
 export type RecordPaymentRequest = {
   staffUserId: StaffUserId;
+  organizationId: OrganizationId;
   invoiceId: InvoiceId;
   amountCents: number;
   currency: string;
@@ -52,6 +59,7 @@ export type RecordPaymentRequest = {
 
 export type CorrectPaymentRequest = {
   staffUserId: StaffUserId;
+  organizationId: OrganizationId;
   invoiceId: InvoiceId;
   paymentId: PaymentId;
   correctionAmountCents: number;

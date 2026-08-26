@@ -88,7 +88,7 @@ export async function runReplayPayments(
       throw new ReplayPaymentsError(`missing sales order key ${planned.salesOrderKey}`);
     }
 
-    const invoice = await ports.invoices.findByOrderId(orderId);
+    const invoice = await ports.invoices.findByOrderId(OrganizationId.DEFAULT, orderId);
     if (invoice === null) {
       throw new ReplayPaymentsError(`missing invoice for ${planned.key}`);
     }
@@ -106,6 +106,7 @@ export async function runReplayPayments(
 
     const result = await record.execute({
       staffUserId: input.staffUserId,
+      organizationId: OrganizationId.DEFAULT,
       invoiceId: invoice.id,
       amountCents: remaining,
       currency: invoice.total.currency,

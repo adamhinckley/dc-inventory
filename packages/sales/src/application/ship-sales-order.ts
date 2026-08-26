@@ -72,6 +72,7 @@ export class ShipSalesOrderUseCase {
         const subtotalCents = computeSubtotalCents(existing);
         const currency = existing.lines[0]?.unitPrice.currency ?? "USD";
         const invoiceResult = await scope.accounting.createInvoiceForOrder({
+          organizationId: existing.organizationId,
           orderId: existing.id,
           customerId: existing.customerId,
           subtotalCents,

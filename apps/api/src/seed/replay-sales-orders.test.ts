@@ -248,7 +248,7 @@ describe("replay sales orders (in-memory)", () => {
 
     for (const order of shipped) {
       expect(order.lines.every((line) => line.qty > 0)).toBe(true);
-      const invoice = await uow.invoices.findByOrderId(order.id);
+      const invoice = await uow.invoices.findByOrderId(OrganizationId.DEFAULT, order.id);
       expect(invoice).not.toBeNull();
       // In-memory omitted-tax path: AccountingCommandAdapter never writes tax lines or commits.
       expect(invoice?.taxTotal.amountMinor).toBe(0);
