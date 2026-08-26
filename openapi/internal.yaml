@@ -1612,6 +1612,7 @@ paths:
             enum:
               - sku
               - name
+              - onHand
               - available
               - createdAt
           in: query
@@ -1678,6 +1679,7 @@ paths:
           fields:
             - sku
             - name
+            - onHand
             - available
             - createdAt
       responses:

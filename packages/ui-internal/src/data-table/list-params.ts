@@ -164,3 +164,21 @@ export function listParamsFromState(
 
   return params;
 }
+
+/** Column-header sort: toggle direction on the same field, else default order. */
+export function nextTableSort(
+  meta: TableMeta,
+  current: Pick<DataTableState, "sortBy" | "sortOrder">,
+  field: string,
+): Pick<DataTableState, "sortBy" | "sortOrder"> {
+  if (!meta.sort.fields.includes(field)) {
+    return { sortBy: current.sortBy, sortOrder: current.sortOrder };
+  }
+  if (current.sortBy === field) {
+    return {
+      sortBy: field,
+      sortOrder: current.sortOrder === "asc" ? "desc" : "asc",
+    };
+  }
+  return { sortBy: field, sortOrder: meta.sort.defaultOrder };
+}

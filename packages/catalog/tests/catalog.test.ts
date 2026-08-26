@@ -157,6 +157,36 @@ describe("Catalog use cases (in-memory)", () => {
     });
   });
 
+  it("sorts the staff list by onHand from qty snapshots", async () => {
+    const h = harness();
+    const low = await createProduct(h, { sku: "LOW-ON-HAND", name: "Low" });
+    const high = await createProduct(h, { sku: "HIGH-ON-HAND", name: "High" });
+    h.qty.set(low.sku.value, {
+      onHand: 2,
+      onOrder: 0,
+      allocated: 0,
+      available: 2,
+    });
+    h.qty.set(high.sku.value, {
+      onHand: 40,
+      onOrder: 0,
+      allocated: 0,
+      available: 40,
+    });
+
+    const listed = await h.listStaff.execute({
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "onHand",
+      sortOrder: "desc",
+    });
+    expect(listed.items.map((row) => row.product.sku.value)).toEqual([
+      "HIGH-ON-HAND",
+      "LOW-ON-HAND",
+    ]);
+  });
+
   it("rejects qty on create and update", async () => {
     const h = harness();
     const created = await h.create.execute({

@@ -127,6 +127,24 @@ describe("catalog HTTP", () => {
     });
   });
 
+  it("accepts sortBy=onHand on the staff product list", async () => {
+    const app = await startCatalogApp();
+    const cookie = await staffCookie(app);
+    const rejected = await app.inject({
+      method: "GET",
+      url: "/internal/products?sortBy=onOrder",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(rejected.statusCode).toBe(400);
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/products?sortBy=onHand&sortOrder=desc",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+  });
+
   it("requires wholesale_session on the shop catalog and hides non-shop SKUs", async () => {
     const app = await startCatalogApp();
     const missing = await app.inject({ method: "GET", url: "/wholesale/catalog" });

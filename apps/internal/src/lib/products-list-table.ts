@@ -28,6 +28,6 @@ export const productsListTable = {
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
-    fields: ["sku", "name", "available", "createdAt"],
+    fields: ["sku", "name", "onHand", "available", "createdAt"],
   },
 } as const satisfies TableMeta;

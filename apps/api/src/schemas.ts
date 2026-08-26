@@ -38,7 +38,7 @@ export const listQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  sortBy: z.enum(["sku", "name", "available", "createdAt"]).default("sku"),
+  sortBy: z.enum(["sku", "name", "onHand", "available", "createdAt"]).default("sku"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
   inactive: optionalBooleanQuery,
 });
@@ -348,7 +348,7 @@ export const productsListTable = {
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
-    fields: ["sku", "name", "available", "createdAt"],
+    fields: ["sku", "name", "onHand", "available", "createdAt"],
   },
 };
 

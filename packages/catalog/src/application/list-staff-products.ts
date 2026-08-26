@@ -4,7 +4,7 @@ import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import type { Product } from "../domain/product.js";
 import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
 
-export type StaffProductSortBy = "sku" | "name" | "available" | "createdAt";
+export type StaffProductSortBy = "sku" | "name" | "onHand" | "available" | "createdAt";
 export type SortOrder = "asc" | "desc";
 
 export type ListStaffProductsRequest = {
@@ -57,6 +57,8 @@ export class ListStaffProductsUseCase {
         cmp = a.product.sku.value.localeCompare(b.product.sku.value);
       } else if (input.sortBy === "name") {
         cmp = a.product.name.localeCompare(b.product.name);
+      } else if (input.sortBy === "onHand") {
+        cmp = a.qty.onHand - b.qty.onHand;
       } else if (input.sortBy === "available") {
         cmp = a.qty.available - b.qty.available;
       } else {

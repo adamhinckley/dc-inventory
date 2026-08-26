@@ -66,3 +66,21 @@ export type TableMeta = {
   export?: TableExportMeta;
   import?: TableImportMeta;
 };
+
+/**
+ * Form-control id prefix for one `DataTable.Root`.
+ * Derived from `x-table` meta so SSR HTML matches hydration (`useId` does not).
+ * Pass `idPrefix` when two Roots share the same meta on one page.
+ */
+export function tableControlIdBase(meta: TableMeta, idPrefix?: string): string {
+  if (idPrefix !== undefined && idPrefix.length > 0) {
+    return idPrefix;
+  }
+  const tokens = [
+    meta.search?.param,
+    ...meta.filters.map((filter) => filter.param),
+    meta.sort.defaultBy,
+    meta.rowId,
+  ].filter((token): token is string => token !== undefined && token.length > 0);
+  return `dt-${tokens.join("-")}`;
+}

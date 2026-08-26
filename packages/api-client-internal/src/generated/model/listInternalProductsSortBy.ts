@@ -11,6 +11,7 @@ export type ListInternalProductsSortBy = typeof ListInternalProductsSortBy[keyof
 export const ListInternalProductsSortBy = {
   sku: 'sku',
   name: 'name',
+  onHand: 'onHand',
   available: 'available',
   createdAt: 'createdAt',
 } as const;

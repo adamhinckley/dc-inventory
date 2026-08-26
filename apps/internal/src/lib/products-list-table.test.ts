@@ -29,5 +29,12 @@ describe("productsListTable", () => {
       "allocated",
       "available",
     ]);
+    expect(productsListTable.sort.fields).toEqual([
+      "sku",
+      "name",
+      "onHand",
+      "available",
+      "createdAt",
+    ]);
   });
 });

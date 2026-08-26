@@ -3,6 +3,7 @@ import { productsListTable } from "../src/fixtures/products-list-table";
 import {
   defaultTableState,
   listParamsFromState,
+  nextTableSort,
   tableStateFromInitial,
   type DataTableState,
 } from "../src/data-table/list-params";
@@ -124,5 +125,26 @@ describe("tableStateFromInitial", () => {
     });
     expect(state.page).toBe(1);
     expect(state.sortBy).toBe("sku");
+  });
+});
+
+describe("nextTableSort", () => {
+  it("toggles asc/desc on the active sortable column and ignores others", () => {
+    expect(
+      nextTableSort(productsListTable, { sortBy: "sku", sortOrder: "asc" }, "name"),
+    ).toEqual({ sortBy: "name", sortOrder: "asc" });
+    expect(
+      nextTableSort(productsListTable, { sortBy: "name", sortOrder: "asc" }, "name"),
+    ).toEqual({ sortBy: "name", sortOrder: "desc" });
+    expect(
+      nextTableSort(productsListTable, { sortBy: "name", sortOrder: "desc" }, "name"),
+    ).toEqual({ sortBy: "name", sortOrder: "asc" });
+    expect(
+      nextTableSort(
+        productsListTable,
+        { sortBy: "sku", sortOrder: "asc" },
+        "memberPrice",
+      ),
+    ).toEqual({ sortBy: "sku", sortOrder: "asc" });
   });
 });

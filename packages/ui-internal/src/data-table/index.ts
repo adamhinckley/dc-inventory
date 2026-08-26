@@ -14,6 +14,7 @@ export {
   listParamsFromState,
   parseBooleanFilterParam,
   tableStateFromInitial,
+  nextTableSort,
   type DataTableState,
   type ListQueryParams,
 } from "./list-params";
@@ -27,6 +28,7 @@ export type {
   TableSearchMeta,
   TableSortMeta,
 } from "./table-meta";
+export { tableControlIdBase } from "./table-meta";
 export {
   unwrapListData,
   useDataTable,

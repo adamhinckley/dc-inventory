@@ -33,6 +33,11 @@ describe("Recharts stub tokens", () => {
     expect(source).toContain("recharts");
     expect(source).toContain("CHART_SERIES_COLORS");
   });
+
+  it("marks ReportChart as a client module so Recharts is not evaluated in RSC", () => {
+    const source = readFileSync(join(chartDir, "report-chart.tsx"), "utf8");
+    expect(source.startsWith('"use client";')).toBe(true);
+  });
 });
 
 describe("formatChartY", () => {

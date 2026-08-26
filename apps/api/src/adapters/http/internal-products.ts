@@ -102,7 +102,7 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
         q?: string;
         page: number;
         pageSize: number;
-        sortBy: "sku" | "name" | "available" | "createdAt";
+        sortBy: "sku" | "name" | "onHand" | "available" | "createdAt";
         sortOrder: "asc" | "desc";
         inactive?: boolean;
       };

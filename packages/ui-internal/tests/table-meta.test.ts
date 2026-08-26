@@ -1,6 +1,9 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { productsListTable } from "../src/fixtures/products-list-table";
-import type { TableMeta } from "../src/data-table/table-meta";
+import {
+  tableControlIdBase,
+  type TableMeta,
+} from "../src/data-table/table-meta";
 
 describe("generated x-table meta shape", () => {
   it("accepts the internal products stub as TableMeta", () => {
@@ -22,13 +25,28 @@ describe("generated x-table meta shape", () => {
     expect(meta.search?.param).toBe("q");
     expect(meta.search?.fields).toEqual(["sku", "name"]);
     expect(meta.filters).toEqual([{ param: "inactive", control: "boolean" }]);
-    expect(meta.sort.fields).toEqual(["sku", "name", "available", "createdAt"]);
+    expect(meta.sort.fields).toEqual(["sku", "name", "onHand", "available", "createdAt"]);
   });
 
   it("types the stub as TableMeta without extra invented filters", () => {
     expectTypeOf(productsListTable).toExtend<TableMeta>();
     expect(productsListTable.filters.map((filter) => filter.param)).not.toContain(
       "category",
+    );
+  });
+});
+
+describe("tableControlIdBase", () => {
+  it("is deterministic from meta so SSR and hydration share form-control ids", () => {
+    expect(tableControlIdBase(productsListTable)).toBe("dt-q-inactive-sku-id");
+    expect(tableControlIdBase(productsListTable)).toBe(
+      tableControlIdBase(productsListTable),
+    );
+  });
+
+  it("lets a second Root on the same page pass an explicit prefix", () => {
+    expect(tableControlIdBase(productsListTable, "products-picker")).toBe(
+      "products-picker",
     );
   });
 });
