@@ -19,6 +19,10 @@ function resolveOrganizationId(organizationId?: OrganizationId): OrganizationId 
   return organizationId ?? OrganizationId.DEFAULT;
 }
 
+export function isUnknownLocationCodeError(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith("Unknown inventory location code");
+}
+
 export class DrizzleInventoryReadModel implements IInventoryReadModel {
   constructor(
     private readonly db: InventoryReadDrizzle,
@@ -84,7 +88,10 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
             rowOrganizationId,
             filter.locationId,
           );
-        } catch {
+        } catch (error) {
+          if (!isUnknownLocationCodeError(error)) {
+            throw error;
+          }
           continue;
         }
         if (row.locationId !== locationUuid) {
