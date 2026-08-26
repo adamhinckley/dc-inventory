@@ -12,6 +12,7 @@ import {
   Money,
   ProductId,
   Sku,
+  OrganizationId,
   StaffUserId,
   SupplierId,
   WholesaleUserId,
@@ -232,9 +233,10 @@ export async function runWriteStaticDemoBook(
     throw new Phase1SeedError(`missing wholesale customer key ${plan.master.wholesaleCustomerKey}`);
   }
 
-  const existingStaff = await ports.staffUsers.findByEmail(plan.master.staffEmail);
+  const existingStaff = await ports.staffUsers.findByEmail(OrganizationId.DEFAULT, plan.master.staffEmail);
   const staff: StaffUser = {
     id: existingStaff?.id ?? StaffUserId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     email: plan.master.staffEmail,
     passwordHash: await ports.passwords.hash(staffPassword),
   };

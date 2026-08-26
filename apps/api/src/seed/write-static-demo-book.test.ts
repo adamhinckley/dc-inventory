@@ -19,7 +19,7 @@ import {
   PHASE2_SUPPLIER_VENDOR_NUMBER,
 } from "@dc-inventory/inventory";
 import { InMemorySupplierRepository } from "@dc-inventory/purchasing";
-import { SupplierId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DEMO_SEED, GENERATED_SKU_COUNT, GENERATED_SKU_FIRST } from "./planner/constants.js";
 import { planDemoBook } from "./planner/plan-demo-book.js";
@@ -47,7 +47,8 @@ import {
 const SEED_TODAY = new Date("2026-08-24T15:30:00.000Z");
 
 function inMemoryUserCount(repo: InMemoryStaffUserRepository | InMemoryWholesaleUserRepository): number {
-  return (repo as unknown as { byEmail: Map<string, unknown> }).byEmail.size;
+  const internal = repo as unknown as { byOrgEmail?: Map<string, unknown>; byEmail?: Map<string, unknown> };
+  return (internal.byOrgEmail ?? internal.byEmail)?.size ?? 0;
 }
 
 function staticSeedPorts(): StaticDemoSeedPorts & {
@@ -256,7 +257,7 @@ describe("static demo book writer (in-memory)", () => {
     expect(first.wholesale.customerId).toBe(acme?.id);
     expect(inMemoryUserCount(ports.staffUsers)).toBe(1);
     expect(inMemoryUserCount(ports.wholesaleUsers)).toBe(1);
-    expect(await ports.staffUsers.findByEmail("other@local.test")).toBeNull();
+    expect(await ports.staffUsers.findByEmail(OrganizationId.DEFAULT, "other@local.test")).toBeNull();
     expect(await ports.wholesaleUsers.findByEmail("other@local.test")).toBeNull();
 
     const vend001 = await ports.suppliers.findByVendorNumber(PHASE2_SUPPLIER_VENDOR_NUMBER);

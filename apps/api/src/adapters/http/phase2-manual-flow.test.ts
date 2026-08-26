@@ -16,6 +16,7 @@ import {
   LocationId,
   OrderId,
   Sku,
+  OrganizationId,
   StaffUserId,
   SupplierId,
   WholesaleUserId,
@@ -71,6 +72,7 @@ async function startPhase2ManualFlowApp() {
 
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });

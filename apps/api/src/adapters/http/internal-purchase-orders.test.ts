@@ -38,6 +38,7 @@ async function startPurchasingApp() {
 
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });

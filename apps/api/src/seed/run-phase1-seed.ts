@@ -12,6 +12,7 @@ import {
   Money,
   ProductId,
   Sku,
+  OrganizationId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
@@ -81,9 +82,10 @@ async function upsertStaff(
   ports: Phase1SeedPorts,
   password: string,
 ): Promise<StaffUser> {
-  const existing = await ports.staffUsers.findByEmail(PHASE1_STAFF_EMAIL);
+  const existing = await ports.staffUsers.findByEmail(OrganizationId.DEFAULT, PHASE1_STAFF_EMAIL);
   const staff: StaffUser = {
     id: existing?.id ?? StaffUserId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
     email: PHASE1_STAFF_EMAIL,
     passwordHash: await ports.passwords.hash(password),
   };

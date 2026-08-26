@@ -7,6 +7,7 @@ import type {
   IShipToRepository,
 } from "@dc-inventory/customers";
 import type { IStaffUserRepository, IWholesaleUserRepository } from "@dc-inventory/identity";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IInventoryReadModel } from "@dc-inventory/inventory";
 import type { IPurchaseOrderRepository, Supplier } from "@dc-inventory/purchasing";
 import type { ISalesOrderRepository } from "@dc-inventory/sales";
@@ -95,7 +96,7 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
       );
     }
 
-    const staff = await this.ports.staffUsers.findByEmail(this.ports.staffEmail);
+    const staff = await this.ports.staffUsers.findByEmail(OrganizationId.DEFAULT, this.ports.staffEmail);
     const wholesale = await this.ports.wholesaleUsers.findByEmail(this.ports.wholesaleEmail);
     if (staff === null || wholesale === null) {
       throw new Error("demo identity rows are missing");

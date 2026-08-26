@@ -24,6 +24,7 @@ async function startCustomersApp() {
   const sessions = new InMemorySessionStore();
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });

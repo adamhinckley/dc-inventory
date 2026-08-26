@@ -52,8 +52,8 @@ export async function runWriteStaticDemoBookOnDb(
     exemptionCertificates: new DrizzleExemptionCertificateRepository(
       db as CustomersDrizzle,
     ),
-    staffUsers: new DrizzleStaffUserRepository(db as IdentityDrizzle),
-    wholesaleUsers: new DrizzleWholesaleUserRepository(db as IdentityDrizzle),
+    staffUsers: new DrizzleStaffUserRepository(db as unknown as IdentityDrizzle),
+    wholesaleUsers: new DrizzleWholesaleUserRepository(db as unknown as IdentityDrizzle),
     passwords: new ScryptPasswordHasher(),
     suppliers,
     supplierProducts: new DrizzleSupplierProductSeedRepository(db as never),

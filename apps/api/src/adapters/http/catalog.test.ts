@@ -34,6 +34,7 @@ async function startCatalogApp() {
   const qtyRead = new InMemoryQtyReadPort();
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });
