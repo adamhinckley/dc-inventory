@@ -38,6 +38,7 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
   async recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult> {
     return mapResult(
       await new RecordAllocatedUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
         idempotencyKey: command.idempotencyKey,
         sku: command.sku,
         quantity: command.quantity,
@@ -50,6 +51,7 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
   async recordDeallocated(command: DeallocatedCommand): Promise<InventoryCommandResult> {
     return mapResult(
       await new RecordDeallocatedUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
         idempotencyKey: command.idempotencyKey,
         sku: command.sku,
         quantity: command.quantity,
@@ -62,6 +64,7 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
   async recordShipped(command: ShippedCommand): Promise<InventoryCommandResult> {
     return mapResult(
       await new RecordShippedUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
         idempotencyKey: command.idempotencyKey,
         sku: command.sku,
         quantity: command.quantity,

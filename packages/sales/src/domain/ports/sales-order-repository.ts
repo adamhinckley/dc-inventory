@@ -2,6 +2,7 @@ import type {
   CustomerId,
   InvoiceId,
   OrderId,
+  OrganizationId,
   Sku,
 } from "@dc-inventory/shared-kernel";
 import type { SalesOrder, SalesOrderStatus } from "../sales-order.js";
@@ -12,6 +13,7 @@ export type SalesOrderListPage = {
 };
 
 export type ListSalesOrdersQuery = {
+  organizationId: OrganizationId;
   page: number;
   pageSize: number;
   status?: SalesOrderStatus;
@@ -20,14 +22,20 @@ export type ListSalesOrdersQuery = {
 
 export interface ISalesOrderRepository {
   list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage>;
-  findById(id: OrderId): Promise<SalesOrder | null>;
+  findById(organizationId: OrganizationId, id: OrderId): Promise<SalesOrder | null>;
   save(order: SalesOrder): Promise<void>;
-  nextDocumentNumber(): Promise<string>;
-  findByDocumentNumber(documentNumber: string): Promise<SalesOrder | null>;
+  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
+  findByDocumentNumber(
+    organizationId: OrganizationId,
+    documentNumber: string,
+  ): Promise<SalesOrder | null>;
 }
 
 export interface ICustomerLookupPort {
-  findById(id: CustomerId): Promise<{ id: CustomerId } | null>;
+  findById(
+    organizationId: OrganizationId,
+    id: CustomerId,
+  ): Promise<{ id: CustomerId } | null>;
 }
 
 export type InventoryCommandFailureReason =
@@ -42,6 +50,7 @@ export type InventoryCommandResult =
   | { ok: false; reason: InventoryCommandFailureReason };
 
 export type AllocatedCommand = {
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;
@@ -49,6 +58,7 @@ export type AllocatedCommand = {
 };
 
 export type DeallocatedCommand = {
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;
@@ -56,6 +66,7 @@ export type DeallocatedCommand = {
 };
 
 export type ShippedCommand = {
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;

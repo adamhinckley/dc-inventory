@@ -30,6 +30,7 @@ export type SalesOrderShipSnapshot = {
 
 export type SalesOrder = {
   readonly id: import("@dc-inventory/shared-kernel").OrderId;
+  readonly organizationId: import("@dc-inventory/shared-kernel").OrganizationId;
   readonly customerId: import("@dc-inventory/shared-kernel").CustomerId;
   readonly documentNumber: string;
   readonly status: SalesOrderStatus;

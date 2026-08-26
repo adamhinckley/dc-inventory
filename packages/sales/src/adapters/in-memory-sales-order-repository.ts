@@ -2,6 +2,7 @@ import {
   CustomerId,
   Money,
   OrderId,
+  OrganizationId,
   Sku,
 } from "@dc-inventory/shared-kernel";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
@@ -29,6 +30,7 @@ function toLine(line: SalesOrderLine): SalesOrderLine {
 function toOrder(order: SalesOrder): SalesOrder {
   return {
     id: OrderId.parse(order.id),
+    organizationId: OrganizationId.parse(order.organizationId),
     customerId: CustomerId.parse(order.customerId),
     documentNumber: order.documentNumber,
     status: order.status,
@@ -45,28 +47,37 @@ function toOrder(order: SalesOrder): SalesOrder {
 
 export class InMemorySalesOrderRepository implements ISalesOrderRepository {
   private readonly byId = new Map<OrderId, Stored>();
-  private nextSequence = 1;
+  private readonly nextSequenceByOrg = new Map<string, number>();
 
   snapshot(): {
     byId: Map<OrderId, Stored>;
-    nextSequence: number;
+    nextSequenceByOrg: Map<string, number>;
   } {
     return {
       byId: new Map(this.byId),
-      nextSequence: this.nextSequence,
+      nextSequenceByOrg: new Map(this.nextSequenceByOrg),
     };
   }
 
-  restore(snapshot: { byId: Map<OrderId, Stored>; nextSequence: number }): void {
+  restore(snapshot: {
+    byId: Map<OrderId, Stored>;
+    nextSequenceByOrg: Map<string, number>;
+  }): void {
     this.byId.clear();
     for (const [id, row] of snapshot.byId) {
       this.byId.set(id, row);
     }
-    this.nextSequence = snapshot.nextSequence;
+    this.nextSequenceByOrg.clear();
+    for (const [orgKey, sequence] of snapshot.nextSequenceByOrg) {
+      this.nextSequenceByOrg.set(orgKey, sequence);
+    }
   }
 
   async list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage> {
     const rows = [...this.byId.values()].filter((row) => {
+      if (row.order.organizationId !== query.organizationId) {
+        return false;
+      }
       if (query.status !== undefined && row.order.status !== query.status) {
         return false;
       }
@@ -83,13 +94,23 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
     };
   }
 
-  async findById(id: OrderId): Promise<SalesOrder | null> {
-    return this.byId.get(id)?.order ?? null;
+  async findById(organizationId: OrganizationId, id: OrderId): Promise<SalesOrder | null> {
+    const row = this.byId.get(id);
+    if (row === undefined || row.order.organizationId !== organizationId) {
+      return null;
+    }
+    return row.order;
   }
 
-  async findByDocumentNumber(documentNumber: string): Promise<SalesOrder | null> {
+  async findByDocumentNumber(
+    organizationId: OrganizationId,
+    documentNumber: string,
+  ): Promise<SalesOrder | null> {
     for (const row of this.byId.values()) {
-      if (row.order.documentNumber === documentNumber) {
+      if (
+        row.order.organizationId === organizationId &&
+        row.order.documentNumber === documentNumber
+      ) {
         return row.order;
       }
     }
@@ -104,14 +125,20 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
       createdAt: existing?.createdAt ?? normalized.createdAt,
     });
     const sequence = parseDocumentSequence(normalized.documentNumber);
-    if (sequence !== null && sequence >= this.nextSequence) {
-      this.nextSequence = sequence + 1;
+    if (sequence !== null) {
+      const orgKey = normalized.organizationId;
+      const current = this.nextSequenceByOrg.get(orgKey) ?? 1;
+      if (sequence >= current) {
+        this.nextSequenceByOrg.set(orgKey, sequence + 1);
+      }
     }
   }
 
-  async nextDocumentNumber(): Promise<string> {
-    const number = formatDocumentNumber(this.nextSequence);
-    this.nextSequence += 1;
+  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
+    const orgKey = organizationId;
+    const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
+    const number = formatDocumentNumber(next);
+    this.nextSequenceByOrg.set(orgKey, next + 1);
     return number;
   }
 }
