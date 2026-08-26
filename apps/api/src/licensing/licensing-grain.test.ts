@@ -7,7 +7,16 @@ const DEFAULT_ORG = OrganizationId.DEFAULT;
 const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 
 describe("licensing tenant grain (ADA-166)", () => {
-  it("isolates subscriptions and software payments by tenant_id", () => {
+  it("rejects duplicate provider_ref within the same tenant", () => {
+    const store = new InMemoryLicensingStore();
+    const subscription = store.createSubscription(DEFAULT_ORG, "core");
+    store.recordPayment(DEFAULT_ORG, subscription.id, "pi_shared_ref");
+    expect(() =>
+      store.recordPayment(DEFAULT_ORG, subscription.id, "pi_shared_ref"),
+    ).toThrow(/duplicate software payment provider_ref/);
+  });
+
+  it("allows the same provider_ref across different tenants", () => {
     const store = new InMemoryLicensingStore();
     const acmeSubscription = store.createSubscription(DEFAULT_ORG, "core");
     const betaSubscription = store.createSubscription(BETA_ORG, "core");

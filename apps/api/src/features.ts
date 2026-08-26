@@ -52,6 +52,9 @@ export class InMemoryFeatures implements IFeatures {
   isEnabled(organizationId: OrganizationId, name: string): boolean {
     const state = this.tenantStates.get(organizationId);
     if (!state) {
+      if (this.tenantStates.size > 0) {
+        return false;
+      }
       return this.defaultCoreOn.has(name);
     }
 

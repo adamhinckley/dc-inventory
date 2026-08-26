@@ -27,6 +27,7 @@ import {
   suppliers,
 } from "@dc-inventory/purchasing/schema";
 import { orderLines, orders } from "@dc-inventory/sales/schema";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
 import type { AppDrizzle } from "../../infrastructure/db.js";
 import { taxCommits } from "../../infrastructure/schema/tax.js";
 import { assembleDemoBook } from "./demo-book-assembler.js";
@@ -246,8 +247,10 @@ export class PostgresDemoBookReader implements IDemoBookReader {
         .select({
           id: taxCommits.id,
           invoiceId: taxCommits.invoiceId,
+          organizationId: taxCommits.organizationId,
         })
-        .from(taxCommits),
+        .from(taxCommits)
+        .where(eq(taxCommits.organizationId, OrganizationId.DEFAULT)),
       this.db
         .select({
           sku: stockMovements.sku,

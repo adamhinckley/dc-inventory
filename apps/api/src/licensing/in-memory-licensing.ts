@@ -44,6 +44,11 @@ export class InMemoryLicensingStore {
     providerRef: string,
     amountCents = 1000,
   ): SoftwarePaymentRecord {
+    if (this.findPaymentByProviderRef(tenantId, providerRef)) {
+      throw new Error(
+        `duplicate software payment provider_ref for tenant ${tenantId}`,
+      );
+    }
     const record: SoftwarePaymentRecord = {
       id: randomUUID(),
       tenantId,

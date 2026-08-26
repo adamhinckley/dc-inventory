@@ -147,6 +147,7 @@ export type DemoPaymentApplicationRow = {
 export type DemoTaxCommitRow = {
   id: string;
   invoiceId: string | null;
+  organizationId: string;
 };
 
 export type DemoMovementType =

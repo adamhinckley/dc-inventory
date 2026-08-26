@@ -1,3 +1,4 @@
+import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it, vi } from "vitest";
 import { assertDemoBook } from "./assert-demo-book.js";
 import { demoBookToRowBundle } from "./demo-book-assembler.js";
@@ -61,7 +62,7 @@ const EXPECTED_SELECT_SHAPES: readonly (readonly string[])[] = [
   ["invoiceId"],
   ["id", "customerId", "amountCents"],
   ["paymentId", "invoiceId", "amountCents"],
-  ["id", "invoiceId"],
+  ["id", "invoiceId", "organizationId"],
   ["sku", "locationId", "movementType", "qty", "createdAt"],
   ["sku", "locationId", "onHand", "onOrder", "allocated"],
   ["sku", "locationId", "minOnHand", "maxOnHand"],
@@ -77,6 +78,10 @@ function pick<T extends Record<string, unknown>>(row: T, keys: readonly string[]
 
 function isImageJoinShape(keys: readonly string[]): boolean {
   return keys.includes("productId") && keys.includes("sku") && keys.includes("objectKey");
+}
+
+function isTaxCommitShape(keys: readonly string[]): boolean {
+  return keys.includes("organizationId") && keys.includes("invoiceId");
 }
 
 function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
@@ -148,6 +153,24 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
         return {
           from: vi.fn(() => ({
             innerJoin: vi.fn(async () => rows.map((row) => pick(row as Record<string, unknown>, keys))),
+          })),
+        };
+      }
+
+      if (isTaxCommitShape(keys)) {
+        return {
+          from: vi.fn(() => ({
+            where: vi.fn(async () =>
+              rows
+                .filter(
+                  (row) =>
+                    (row as { organizationId?: string }).organizationId ===
+                      OrganizationId.DEFAULT ||
+                    (row as { organizationId?: string }).organizationId ===
+                      undefined,
+                )
+                .map((row) => pick(row as Record<string, unknown>, keys)),
+            ),
           })),
         };
       }

@@ -228,7 +228,11 @@ const breaks: Array<{
   {
     contract: "omitted_tax",
     mutate: (book) => {
-      book.taxCommits.push({ id: "tax-1", invoiceId: "inv-so-5" });
+      book.taxCommits.push({
+        id: "tax-1",
+        invoiceId: "inv-so-5",
+        organizationId: "DEFAULT",
+      });
     },
   },
   {
