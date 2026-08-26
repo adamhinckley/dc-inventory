@@ -1,12 +1,13 @@
-import { StaffUserId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { normalizeEmail } from "../domain/email.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { StaffUser } from "../domain/staff-user.js";
-import { sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
+import { organizations, sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
 
 export type IdentityDrizzle = PostgresJsDatabase<{
+  organizations: typeof organizations;
   staffUsers: typeof staffUsers;
   wholesaleUsers: typeof wholesaleUsers;
   sessions: typeof sessions;
@@ -15,11 +16,16 @@ export type IdentityDrizzle = PostgresJsDatabase<{
 export class DrizzleStaffUserRepository implements IStaffUserRepository {
   constructor(private readonly db: IdentityDrizzle) {}
 
-  async findByEmail(email: string): Promise<StaffUser | null> {
+  async findByEmail(organizationId: OrganizationId, email: string): Promise<StaffUser | null> {
     const rows = await this.db
       .select()
       .from(staffUsers)
-      .where(eq(staffUsers.email, normalizeEmail(email)))
+      .where(
+        and(
+          eq(staffUsers.organizationId, organizationId),
+          eq(staffUsers.email, normalizeEmail(email)),
+        ),
+      )
       .limit(1);
     return rows[0] === undefined ? null : toStaffUser(rows[0]);
   }
@@ -39,12 +45,18 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
       .insert(staffUsers)
       .values({
         id: user.id,
+        organizationId: user.organizationId,
         email,
         passwordHash: user.passwordHash,
       })
       .onConflictDoUpdate({
         target: staffUsers.id,
-        set: { email, passwordHash: user.passwordHash, updatedAt: new Date() },
+        set: {
+          organizationId: user.organizationId,
+          email,
+          passwordHash: user.passwordHash,
+          updatedAt: new Date(),
+        },
       });
   }
 }
@@ -52,6 +64,7 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
 function toStaffUser(row: typeof staffUsers.$inferSelect): StaffUser {
   return {
     id: StaffUserId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
     email: row.email,
     passwordHash: row.passwordHash,
   };
