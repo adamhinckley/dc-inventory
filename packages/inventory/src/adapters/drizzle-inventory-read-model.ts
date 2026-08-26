@@ -78,10 +78,15 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
       const rowOrganizationId = OrganizationId.parse(row.organizationId);
       const rowLocationId = filter?.locationId ?? LocationId.DEFAULT;
       if (filter?.locationId !== undefined) {
-        const locationUuid = await this.resolveLocationUuid(
-          rowOrganizationId,
-          filter.locationId,
-        );
+        let locationUuid: string;
+        try {
+          locationUuid = await this.resolveLocationUuid(
+            rowOrganizationId,
+            filter.locationId,
+          );
+        } catch {
+          continue;
+        }
         if (row.locationId !== locationUuid) {
           continue;
         }
