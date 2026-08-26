@@ -9,7 +9,7 @@ import {
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
 } from "@dc-inventory/identity";
-import { CustomerId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrganizationId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
@@ -34,6 +34,7 @@ async function startCatalogApp() {
   const qtyRead = new InMemoryQtyReadPort();
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });

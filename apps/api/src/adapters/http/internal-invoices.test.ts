@@ -12,6 +12,7 @@ import {
   CustomerId,
   InvoiceId,
   OrderId,
+  OrganizationId,
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
@@ -39,6 +40,7 @@ async function startAccountingApp() {
 
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });

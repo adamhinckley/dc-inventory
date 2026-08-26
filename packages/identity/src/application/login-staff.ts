@@ -1,4 +1,4 @@
-import { type StaffUserId, type SessionId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, type StaffUserId, type SessionId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import { normalizeEmail } from "../domain/email.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
@@ -29,7 +29,7 @@ export class LoginStaffUseCase {
 
   async execute(input: LoginStaffRequest): Promise<LoginStaffResult> {
     const email = normalizeEmail(input.email);
-    const user = await this.staffUsers.findByEmail(email);
+    const user = await this.staffUsers.findByEmail(OrganizationId.DEFAULT, email);
     if (user === null) {
       await this.passwords.verifyDummy(input.password);
       return { ok: false };

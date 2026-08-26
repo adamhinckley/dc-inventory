@@ -35,6 +35,7 @@ export {
   identity,
   opsUserKind,
   opsUsers,
+  organizations,
   sessions,
   staffUsers,
   wholesaleUsers,
@@ -106,6 +107,7 @@ import {
 } from "@dc-inventory/inventory/schema";
 import {
   opsUsers,
+  organizations,
   sessions,
   staffUsers,
   wholesaleUsers,
@@ -148,6 +150,7 @@ export const schema = {
   stockMovements,
   stockSnapshots,
   opsUsers,
+  organizations,
   staffUsers,
   wholesaleUsers,
   sessions,

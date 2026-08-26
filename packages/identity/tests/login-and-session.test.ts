@@ -1,5 +1,6 @@
 import {
   CustomerId,
+  OrganizationId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
@@ -60,6 +61,7 @@ describe("Identity login and sessions (in-memory)", () => {
     const h = harness();
     await h.staffUsers.save({
       id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
     });
@@ -87,6 +89,7 @@ describe("Identity login and sessions (in-memory)", () => {
     const h = harness();
     await h.staffUsers.save({
       id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
     });
@@ -143,6 +146,7 @@ describe("Identity login and sessions (in-memory)", () => {
     const h = harness();
     await h.staffUsers.save({
       id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
     });
@@ -167,6 +171,7 @@ describe("Identity login and sessions (in-memory)", () => {
     const h = harness();
     await h.staffUsers.save({
       id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
     });
@@ -196,6 +201,7 @@ describe("Identity login and sessions (in-memory)", () => {
     const h = harness();
     await h.staffUsers.save({
       id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
     });

@@ -4,7 +4,7 @@ import {
   InMemorySessionStore,
   InMemoryStaffUserRepository,
 } from "@dc-inventory/identity";
-import { StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
@@ -24,6 +24,7 @@ async function startCustomersApp() {
   const sessions = new InMemorySessionStore();
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });

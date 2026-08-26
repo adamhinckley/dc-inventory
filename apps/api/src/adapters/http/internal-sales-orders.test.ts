@@ -7,7 +7,7 @@ import {
 import {
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, OrderId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, LocationId, OrderId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
@@ -44,6 +44,7 @@ async function startSalesApp() {
 
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });

@@ -12,6 +12,7 @@ export {
   InstallationId,
   InvoiceId,
   LocationId,
+  OrganizationId,
   OrderId,
   ProductId,
   PurchaseOrderId,

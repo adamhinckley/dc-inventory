@@ -1,4 +1,4 @@
-import { pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgSchema, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /**
  * Persistence FK target only — not a Customers domain/application import.
@@ -44,12 +44,28 @@ export const opsUsers = identity.table("ops_users", {
   ...timestamps(),
 });
 
-export const staffUsers = identity.table("staff_users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+export const organizations = identity.table("organizations", {
+  id: text("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
   ...timestamps(),
 });
+
+export const staffUsers = identity.table(
+  "staff_users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    ...timestamps(),
+  },
+  (table) => ({
+    organizationEmailUnique: uniqueIndex("staff_users_organization_id_email_unique").on(
+      table.organizationId,
+      table.email,
+    ),
+  }),
+);
 
 export const wholesaleUsers = identity.table("wholesale_users", {
   id: uuid("id").primaryKey().defaultRandom(),

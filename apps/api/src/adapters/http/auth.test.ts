@@ -1,5 +1,6 @@
 import {
   CustomerId,
+  OrganizationId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
@@ -36,6 +37,7 @@ async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00
   const sessions = new InMemorySessionStore();
   await staffUsers.save({
     id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
   });
