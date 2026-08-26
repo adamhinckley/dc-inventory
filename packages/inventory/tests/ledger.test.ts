@@ -699,6 +699,51 @@ describe("Inventory ledger (in-memory)", () => {
         available: 0,
       });
     });
+
+    it("allows the same idempotency key and SKU in two organizations independently", async () => {
+      const h = harness();
+      const sharedKey = "shared-idempotency-key";
+
+      const acme = await h.adjustmentIncrease.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: sharedKey,
+        sku: WIDGET_SKU,
+        quantity: 3,
+        refType: "adjustment",
+        refId: "acme-shared-key",
+      });
+      const beta = await h.adjustmentIncrease.execute({
+        organizationId: BETA_ORG,
+        idempotencyKey: sharedKey,
+        sku: WIDGET_SKU,
+        quantity: 5,
+        refType: "adjustment",
+        refId: "beta-shared-key",
+      });
+
+      expect(acme.ok).toBe(true);
+      expect(beta.ok).toBe(true);
+      expect(await h.getSnapshot.execute({
+        organizationId: DEFAULT_ORG,
+        sku: WIDGET_SKU,
+        locationId: DEFAULT,
+      })).toEqual({
+        onHand: 3,
+        onOrder: 0,
+        allocated: 0,
+        available: 3,
+      });
+      expect(await h.getSnapshot.execute({
+        organizationId: BETA_ORG,
+        sku: WIDGET_SKU,
+        locationId: DEFAULT,
+      })).toEqual({
+        onHand: 5,
+        onOrder: 0,
+        allocated: 0,
+        available: 5,
+      });
+    });
   });
 
   it("keeps application/ free of Fastify, Drizzle, Zod, Better Auth, Stripe, tax SDKs, Sentry, or logger SDKs", () => {

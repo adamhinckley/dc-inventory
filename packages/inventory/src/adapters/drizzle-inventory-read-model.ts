@@ -70,26 +70,25 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
           ? undefined
           : eq(stockMovements.organizationId, organizationId),
       );
-    const locationUuid =
-      filter?.locationId === undefined
-        ? undefined
-        : await this.resolveLocationUuid(
-            organizationId ?? OrganizationId.DEFAULT,
-            filter.locationId,
-          );
-    return rows
-      .filter((row) => {
-        if (filter?.sku && row.sku !== filter.sku.value) {
-          return false;
+    const movements: Movement[] = [];
+    for (const row of rows) {
+      if (filter?.sku && row.sku !== filter.sku.value) {
+        continue;
+      }
+      const rowOrganizationId = OrganizationId.parse(row.organizationId);
+      const rowLocationId = filter?.locationId ?? LocationId.DEFAULT;
+      if (filter?.locationId !== undefined) {
+        const locationUuid = await this.resolveLocationUuid(
+          rowOrganizationId,
+          filter.locationId,
+        );
+        if (row.locationId !== locationUuid) {
+          continue;
         }
-        if (locationUuid && row.locationId !== locationUuid) {
-          return false;
-        }
-        return true;
-      })
-      .map((row) =>
-        this.toMovement(row, filter?.locationId ?? LocationId.DEFAULT, organizationId),
-      );
+      }
+      movements.push(this.toMovement(row, rowLocationId, rowOrganizationId));
+    }
+    return movements;
   }
 
   async findMovementByIdempotency(
