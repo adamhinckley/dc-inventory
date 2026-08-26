@@ -5,9 +5,10 @@ import {
   CreateSalesOrderUseCase,
   ShipSalesOrderUseCase,
   type IClock,
+  type ICustomerLookupPort,
   type ISalesUnitOfWork,
 } from "@dc-inventory/sales";
-import { CustomerId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { DemoBookPlan } from "./planner/types.js";
 
 export class ReplaySalesOrdersError extends Error {
@@ -65,7 +66,7 @@ export async function customerIdByKeyFromPlan(
 ): Promise<Map<string, CustomerId>> {
   const map = new Map<string, CustomerId>();
   for (const planned of plan.master.customers) {
-    const customer = await customers.findByName(planned.name);
+    const customer = await customers.findByName(OrganizationId.DEFAULT, planned.name);
     if (customer === null) {
       throw new ReplaySalesOrdersError(`missing customer ${planned.name}`);
     }
@@ -74,13 +75,24 @@ export async function customerIdByKeyFromPlan(
   return map;
 }
 
+function demoCustomerLookup(
+  customers: Pick<ICustomerRepository, "findById">,
+): ICustomerLookupPort {
+  return {
+    findById: async (id) => {
+      const customer = await customers.findById(OrganizationId.DEFAULT, id);
+      return customer === null ? null : { id: customer.id };
+    },
+  };
+}
+
 export async function runReplaySalesOrders(
   ports: ReplaySalesOrdersPorts,
   input: ReplaySalesOrdersInput,
 ): Promise<ReplaySalesOrdersResult> {
   const create = new CreateSalesOrderUseCase(
     ports.uow.salesOrders,
-    ports.customers,
+    demoCustomerLookup(ports.customers),
     ports.clock,
   );
   const confirm = new ConfirmSalesOrderUseCase(ports.uow);

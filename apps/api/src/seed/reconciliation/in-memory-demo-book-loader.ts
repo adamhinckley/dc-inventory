@@ -61,6 +61,7 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
     const suppliers = await this.ports.suppliers.listAll();
     const supplierProducts = await this.ports.supplierProducts.listAll();
     const customerPage = await this.ports.customers.list({
+      organizationId: OrganizationId.DEFAULT,
       page: 1,
       pageSize: 10_000,
       sortBy: "createdAt",

@@ -14,6 +14,7 @@ import {
 import {
   CustomerId,
   LocationId,
+  Money,
   OrderId,
   Sku,
   OrganizationId,
@@ -62,12 +63,10 @@ async function startPhase2ManualFlowApp() {
 
   await customerRepo.save({
     id: CUSTOMER_ID,
+    organizationId: OrganizationId.DEFAULT,
     name: "Acme Wholesale",
-    accountNumber: "ACME-001",
+    creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
-    creditLimitCents: 1_000_000,
-    currency: "USD",
-    inactive: false,
   });
 
   await staffUsers.save({

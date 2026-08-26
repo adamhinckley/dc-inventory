@@ -80,7 +80,7 @@ describe("Phase 1 seed (in-memory)", () => {
     expect(second.wholesale.id).toBe(first.wholesale.id);
     expect(second.products.map((row) => row.id)).toEqual(first.products.map((row) => row.id));
     expect(await ports.products.listMatching({ organizationId: OrganizationId.DEFAULT })).toHaveLength(5);
-    expect(await ports.customers.findByName(PHASE1_CUSTOMER_NAME)).toEqual(second.customer);
+    expect(await ports.customers.findByName(OrganizationId.DEFAULT, PHASE1_CUSTOMER_NAME)).toEqual(second.customer);
 
     const clock = new InMemoryClock(new Date("2026-08-23T04:00:00.000Z"));
     const staffLogin = await new LoginStaffUseCase(

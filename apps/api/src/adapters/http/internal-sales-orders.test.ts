@@ -7,7 +7,7 @@ import {
 import {
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, OrderId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, LocationId, Money, OrderId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
@@ -34,12 +34,10 @@ async function startSalesApp() {
 
   await customerRepo.save({
     id: CUSTOMER_ID,
+    organizationId: OrganizationId.DEFAULT,
     name: "Acme Wholesale",
-    accountNumber: "ACME-001",
+    creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
-    creditLimitCents: 1_000_000,
-    currency: "USD",
-    inactive: false,
   });
 
   await staffUsers.save({
