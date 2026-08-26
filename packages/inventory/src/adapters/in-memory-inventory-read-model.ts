@@ -1,4 +1,4 @@
-import { LocationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import type { Movement, MovementRefType, MovementType } from "../domain/movement.js";
 import type {
@@ -13,8 +13,16 @@ import {
 
 type SnapshotKey = string;
 
-function snapshotKey(sku: Sku, locationId: LocationId): SnapshotKey {
-  return `${sku.value}:${locationId}`;
+function snapshotKey(
+  organizationId: OrganizationId,
+  sku: Sku,
+  locationId: LocationId,
+): SnapshotKey {
+  return `${organizationId}:${sku.value}:${locationId}`;
+}
+
+function resolveOrganizationId(organizationId?: OrganizationId): OrganizationId {
+  return organizationId ?? OrganizationId.DEFAULT;
 }
 
 /**
@@ -25,21 +33,35 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   private readonly movements: Movement[] = [];
 
   /** Test-only seam: seed snapshot state without going through the ledger. */
-  seedSnapshot(sku: Sku, locationId: LocationId, figures: StockFigures): void {
-    this.snapshots.set(snapshotKey(sku, locationId), Object.freeze({ ...figures }));
+  seedSnapshot(
+    sku: Sku,
+    locationId: LocationId,
+    figures: StockFigures,
+    organizationId?: OrganizationId,
+  ): void {
+    const org = resolveOrganizationId(organizationId);
+    this.snapshots.set(snapshotKey(org, sku, locationId), Object.freeze({ ...figures }));
   }
 
   appendMovement(movement: Movement): void {
     this.movements.push(Object.freeze({ ...movement }));
   }
 
-  findMovementByIdempotency(idempotencyKey: string, sku: Sku): Movement | undefined {
+  findMovementByIdempotency(
+    organizationId: OrganizationId,
+    idempotencyKey: string,
+    sku: Sku,
+  ): Movement | undefined {
     return this.movements.find(
-      (movement) => movement.idempotencyKey === idempotencyKey && movement.sku.equals(sku),
+      (movement) =>
+        movement.organizationId === organizationId &&
+        movement.idempotencyKey === idempotencyKey &&
+        movement.sku.equals(sku),
     );
   }
 
   hasProvenance(
+    organizationId: OrganizationId,
     refType: MovementRefType,
     refId: string,
     sku: Sku,
@@ -47,6 +69,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   ): boolean {
     return this.movements.some(
       (movement) =>
+        movement.organizationId === organizationId &&
         movement.refType === refType &&
         movement.refId === refId &&
         movement.sku.equals(sku) &&
@@ -54,26 +77,38 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     );
   }
 
-  getSnapshotSync(sku: Sku, locationId: LocationId): StockFigures {
-    const existing = this.snapshots.get(snapshotKey(sku, locationId));
+  getSnapshotSync(
+    sku: Sku,
+    locationId: LocationId,
+    organizationId?: OrganizationId,
+  ): StockFigures {
+    const org = resolveOrganizationId(organizationId);
+    const existing = this.snapshots.get(snapshotKey(org, sku, locationId));
     if (existing) {
       return Object.freeze({ ...existing });
     }
     return ZERO_STOCK_FIGURES;
   }
 
-  async getSnapshot(sku: Sku, locationId: LocationId): Promise<StockFigures> {
-    const existing = this.snapshots.get(snapshotKey(sku, locationId));
-    if (existing) {
-      return Object.freeze({ ...existing });
-    }
-    return ZERO_STOCK_FIGURES;
+  async getSnapshot(
+    sku: Sku,
+    locationId: LocationId,
+    organizationId?: OrganizationId,
+  ): Promise<StockFigures> {
+    return this.getSnapshotSync(sku, locationId, organizationId);
   }
 
   async listMovements(filter?: MovementListFilter): Promise<readonly Movement[]> {
+    const organizationId =
+      filter?.organizationId === undefined
+        ? undefined
+        : resolveOrganizationId(filter.organizationId);
     const sku = filter?.sku;
     const locationId = filter?.locationId;
     return this.movements.filter((movement) => {
+      if (organizationId && movement.organizationId !== organizationId) {
+        return false;
+      }
       if (sku && !movement.sku.equals(sku)) {
         return false;
       }
@@ -110,10 +145,12 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     sku: Sku,
     locationId: LocationId,
     delta: Partial<Pick<StockFigures, "onHand" | "onOrder" | "allocated">>,
+    organizationId?: OrganizationId,
   ): void {
-    const current = this.snapshots.get(snapshotKey(sku, locationId)) ?? ZERO_STOCK_FIGURES;
+    const org = resolveOrganizationId(organizationId);
+    const current = this.snapshots.get(snapshotKey(org, sku, locationId)) ?? ZERO_STOCK_FIGURES;
     this.snapshots.set(
-      snapshotKey(sku, locationId),
+      snapshotKey(org, sku, locationId),
       freezeStockFigures(
         current.onHand + (delta.onHand ?? 0),
         current.onOrder + (delta.onOrder ?? 0),

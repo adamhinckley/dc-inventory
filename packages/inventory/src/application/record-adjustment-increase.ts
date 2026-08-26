@@ -1,4 +1,4 @@
-import { LocationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type {
   IStockLedger,
   RecordAdjustmentIncreaseCommand,
@@ -13,6 +13,7 @@ export class RecordAdjustmentIncreaseUseCase {
   async execute(input: RecordAdjustmentIncreaseRequest): Promise<StockCommandResult> {
     return this.ledger.recordAdjustmentIncrease({
       ...input,
+      organizationId: input.organizationId ?? OrganizationId.DEFAULT,
       locationId: input.locationId ?? LocationId.DEFAULT,
     });
   }

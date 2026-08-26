@@ -1,4 +1,4 @@
-import { LocationId, Sku } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { MovementId } from "../domain/ids.js";
@@ -15,14 +15,26 @@ export type InventoryReadDrizzle = PostgresJsDatabase<{
   stockSnapshots: typeof stockSnapshots;
 }>;
 
+function resolveOrganizationId(organizationId?: OrganizationId): OrganizationId {
+  return organizationId ?? OrganizationId.DEFAULT;
+}
+
 export class DrizzleInventoryReadModel implements IInventoryReadModel {
   constructor(
     private readonly db: InventoryReadDrizzle,
-    private readonly resolveLocationUuid: (locationId: LocationId) => Promise<string>,
+    private readonly resolveLocationUuid: (
+      organizationId: OrganizationId,
+      locationId: LocationId,
+    ) => Promise<string>,
   ) {}
 
-  async getSnapshot(sku: Sku, locationId: LocationId): Promise<ReturnType<typeof freezeStockFigures>> {
-    const locationUuid = await this.resolveLocationUuid(locationId);
+  async getSnapshot(
+    sku: Sku,
+    locationId: LocationId,
+    organizationId?: OrganizationId,
+  ): Promise<ReturnType<typeof freezeStockFigures>> {
+    const org = resolveOrganizationId(organizationId);
+    const locationUuid = await this.resolveLocationUuid(org, locationId);
     const rows = await this.db
       .select({
         onHand: stockSnapshots.onHand,
@@ -30,7 +42,13 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
         allocated: stockSnapshots.allocated,
       })
       .from(stockSnapshots)
-      .where(and(eq(stockSnapshots.sku, sku.value), eq(stockSnapshots.locationId, locationUuid)))
+      .where(
+        and(
+          eq(stockSnapshots.organizationId, org),
+          eq(stockSnapshots.sku, sku.value),
+          eq(stockSnapshots.locationId, locationUuid),
+        ),
+      )
       .limit(1);
     const row = rows[0];
     if (row === undefined) {
@@ -40,11 +58,25 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
   }
 
   async listMovements(filter?: MovementListFilter): Promise<readonly Movement[]> {
-    const rows = await this.db.select().from(stockMovements);
+    const organizationId =
+      filter?.organizationId === undefined
+        ? undefined
+        : resolveOrganizationId(filter.organizationId);
+    const rows = await this.db
+      .select()
+      .from(stockMovements)
+      .where(
+        organizationId === undefined
+          ? undefined
+          : eq(stockMovements.organizationId, organizationId),
+      );
     const locationUuid =
       filter?.locationId === undefined
         ? undefined
-        : await this.resolveLocationUuid(filter.locationId);
+        : await this.resolveLocationUuid(
+            organizationId ?? OrganizationId.DEFAULT,
+            filter.locationId,
+          );
     return rows
       .filter((row) => {
         if (filter?.sku && row.sku !== filter.sku.value) {
@@ -55,23 +87,35 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
         }
         return true;
       })
-      .map((row) => this.toMovement(row, filter?.locationId ?? LocationId.DEFAULT));
+      .map((row) =>
+        this.toMovement(row, filter?.locationId ?? LocationId.DEFAULT, organizationId),
+      );
   }
 
   async findMovementByIdempotency(
+    organizationId: OrganizationId,
     idempotencyKey: string,
     sku: Sku,
   ): Promise<Movement | undefined> {
     const rows = await this.db
       .select()
       .from(stockMovements)
-      .where(and(eq(stockMovements.idempotencyKey, idempotencyKey), eq(stockMovements.sku, sku.value)))
+      .where(
+        and(
+          eq(stockMovements.organizationId, organizationId),
+          eq(stockMovements.idempotencyKey, idempotencyKey),
+          eq(stockMovements.sku, sku.value),
+        ),
+      )
       .limit(1);
     const row = rows[0];
-    return row === undefined ? undefined : this.toMovement(row, LocationId.DEFAULT);
+    return row === undefined
+      ? undefined
+      : this.toMovement(row, LocationId.DEFAULT, organizationId);
   }
 
   async hasProvenance(
+    organizationId: OrganizationId,
     refType: MovementRefType,
     refId: string,
     sku: Sku,
@@ -82,6 +126,7 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
       .from(stockMovements)
       .where(
         and(
+          eq(stockMovements.organizationId, organizationId),
           eq(stockMovements.refType, refType),
           eq(stockMovements.refId, refId),
           eq(stockMovements.sku, sku.value),
@@ -95,9 +140,11 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
   private toMovement(
     row: typeof stockMovements.$inferSelect,
     locationId: LocationId,
+    organizationId?: OrganizationId,
   ): Movement {
     return Object.freeze({
       id: MovementId.parse(row.id),
+      organizationId: OrganizationId.parse(row.organizationId),
       sku: Sku.parse(row.sku),
       locationId,
       movementType: row.movementType,

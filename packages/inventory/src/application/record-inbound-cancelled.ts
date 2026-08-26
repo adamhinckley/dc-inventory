@@ -1,4 +1,4 @@
-import { LocationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type {
   IStockLedger,
   RecordInboundCancelledCommand,
@@ -13,6 +13,7 @@ export class RecordInboundCancelledUseCase {
   async execute(input: RecordInboundCancelledRequest): Promise<StockCommandResult> {
     return this.ledger.recordInboundCancelled({
       ...input,
+      organizationId: input.organizationId ?? OrganizationId.DEFAULT,
       locationId: input.locationId ?? LocationId.DEFAULT,
     });
   }

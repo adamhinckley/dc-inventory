@@ -1,4 +1,4 @@
-import type { LocationId } from "@dc-inventory/shared-kernel";
+import type { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import type { Movement, MovementRefType } from "../movement.js";
 import type { StockFigures } from "../snapshot.js";
@@ -15,6 +15,7 @@ export type StockCommandResult =
   | { ok: false; reason: StockCommandFailureReason };
 
 export type StockCommandBase = {
+  organizationId?: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;
@@ -75,6 +76,7 @@ export interface IStockLedger {
 }
 
 export type MovementListFilter = {
+  organizationId?: OrganizationId;
   sku?: Sku;
   locationId?: LocationId;
 };
@@ -83,6 +85,10 @@ export type MovementListFilter = {
  * Read-only inventory projection. Snapshots are immutable value objects.
  */
 export interface IInventoryReadModel {
-  getSnapshot(sku: Sku, locationId: LocationId): Promise<StockFigures>;
+  getSnapshot(
+    sku: Sku,
+    locationId: LocationId,
+    organizationId?: OrganizationId,
+  ): Promise<StockFigures>;
   listMovements(filter?: MovementListFilter): Promise<readonly Movement[]>;
 }
