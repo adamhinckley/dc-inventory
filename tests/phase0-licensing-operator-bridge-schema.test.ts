@@ -149,7 +149,9 @@ describe("Phase 0 licensing / operator_bridge schemas (ADA-54)", () => {
     expect(payments).toMatch(/provider_ref/);
     expect(payments).toMatch(/memo/);
     expect(payments).toMatch(/tenant_id/);
-    expect(payments).toMatch(/UNIQUE\("provider_ref"\)/);
+    expect(sql).toMatch(
+      /software_payments_tenant_id_provider_ref_unique[\s\S]*\("tenant_id", "provider_ref"\)/,
+    );
 
     expect(payments).not.toMatch(/invoice_id/);
     expect(licensing).not.toMatch(/REFERENCES "accounting"\./);
@@ -194,7 +196,9 @@ describe("Phase 0 licensing / operator_bridge schemas (ADA-54)", () => {
     expect(bridge).toMatch(/heartbeat/);
     expect(outbox).toMatch(/jsonb/i);
     expect(outbox).toMatch(/payload/);
-    expect(outbox).toMatch(/UNIQUE\("idempotency_key"\)/);
+    expect(sql).toMatch(
+      /operator_outbox_tenant_id_idempotency_key_unique[\s\S]*\("tenant_id", "idempotency_key"\)/,
+    );
 
     expect(bridge).not.toMatch(/order\.placed/);
     expect(bridge).not.toMatch(/kafka/i);

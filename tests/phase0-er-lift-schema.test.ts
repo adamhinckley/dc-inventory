@@ -153,6 +153,7 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     const sql = listSqlMigrations().join("\n");
 
     expect(sql).toMatch(/tax_commits/);
+    expect(sql).toMatch(/organization_id/);
     expect(sql).toMatch(/quoted/);
     expect(sql).toMatch(/committed/);
     expect(sql).toMatch(/voided/);

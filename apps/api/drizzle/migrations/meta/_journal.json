@@ -127,6 +127,13 @@
       "when": 1788455600000,
       "tag": "0018_accounting_organization_id",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788555600000,
+      "tag": "0019_licensing_tax_operator_org_grain",
+      "breakpoints": true
     }
   ]
 }
