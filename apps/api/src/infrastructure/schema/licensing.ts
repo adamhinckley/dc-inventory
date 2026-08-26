@@ -4,6 +4,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -94,23 +95,32 @@ export const flagOverrides = licensing.table("flag_overrides", {
 
 /**
  * Append-only history of money the tenant sent the software operator.
- * provider_ref is unique when present (Postgres UNIQUE allows multiple NULLs).
+ * provider_ref is unique per tenant when present (Postgres UNIQUE allows multiple NULLs).
  * No Stripe Event/Customer/Price objects. No FK to wholesale invoices.
  */
-export const softwarePayments = licensing.table("software_payments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: text("tenant_id").notNull().default("DEFAULT"),
-  subscriptionId: uuid("subscription_id")
-    .notNull()
-    .references(() => subscriptions.id),
-  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
-  currency: char("currency", { length: 3 }).notNull().default("USD"),
-  status: softwarePaymentStatus("status").notNull(),
-  kind: softwarePaymentKind("kind").notNull(),
-  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
-    .notNull(),
-  provider: softwarePaymentProvider("provider").notNull(),
-  providerRef: text("provider_ref").unique(),
-  memo: text("memo"),
-  ...timestamps(),
-});
+export const softwarePayments = licensing.table(
+  "software_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: text("tenant_id").notNull().default("DEFAULT"),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("USD"),
+    status: softwarePaymentStatus("status").notNull(),
+    kind: softwarePaymentKind("kind").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
+      .notNull(),
+    provider: softwarePaymentProvider("provider").notNull(),
+    providerRef: text("provider_ref"),
+    memo: text("memo"),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("software_payments_tenant_id_provider_ref_unique").on(
+      table.tenantId,
+      table.providerRef,
+    ),
+  ],
+);

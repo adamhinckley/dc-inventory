@@ -3,6 +3,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -62,17 +63,26 @@ export const issueReports = operatorBridge.table("issue_reports", {
 });
 
 /** Fail-soft envelope. Closed kinds only. */
-export const operatorOutbox = operatorBridge.table("operator_outbox", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  productCode: text("product_code").notNull().default("dc-inventory"),
-  installationId: uuid("installation_id").notNull(),
-  tenantId: text("tenant_id").notNull().default("DEFAULT"),
-  occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
-    .notNull(),
-  idempotencyKey: text("idempotency_key").notNull().unique(),
-  kind: operatorOutboxKind("kind").notNull(),
-  payload: jsonb("payload").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-});
+export const operatorOutbox = operatorBridge.table(
+  "operator_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productCode: text("product_code").notNull().default("dc-inventory"),
+    installationId: uuid("installation_id").notNull(),
+    tenantId: text("tenant_id").notNull().default("DEFAULT"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
+      .notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    kind: operatorOutboxKind("kind").notNull(),
+    payload: jsonb("payload").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("operator_outbox_tenant_id_idempotency_key_unique").on(
+      table.tenantId,
+      table.idempotencyKey,
+    ),
+  ],
+);

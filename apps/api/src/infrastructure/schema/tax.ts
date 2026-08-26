@@ -35,6 +35,7 @@ function timestamps() {
 
 export const taxCommits = tax.table("tax_commits", {
   id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: text("organization_id").notNull().default("DEFAULT"),
   orderId: uuid("order_id").references(() => orders.id),
   invoiceId: uuid("invoice_id").references(() => invoices.id),
   engineTransactionId: text("engine_transaction_id"),
