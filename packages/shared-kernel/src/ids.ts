@@ -69,3 +69,15 @@ export const LocationId = {
     return parseUuid("LocationId", value);
   },
 };
+
+export type OrganizationId = Brand<string, "OrganizationId">;
+
+export const OrganizationId = {
+  DEFAULT: "DEFAULT" as OrganizationId,
+  parse(value: string): OrganizationId {
+    if (value === "DEFAULT") {
+      return OrganizationId.DEFAULT;
+    }
+    return parseUuid("OrganizationId", value);
+  },
+};

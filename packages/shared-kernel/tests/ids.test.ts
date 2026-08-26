@@ -6,6 +6,7 @@ import {
   InvalidIdError,
   InvoiceId,
   LocationId,
+  OrganizationId,
   OrderId,
   ProductId,
   PurchaseOrderId,
@@ -44,5 +45,12 @@ describe("branded IDs", () => {
     expect(LocationId.DEFAULT).toBe("DEFAULT");
     expect(LocationId.parse("DEFAULT")).toBe(LocationId.DEFAULT);
     expect(LocationId.parse(UUID)).toBe(UUID);
+  });
+
+  it("exposes OrganizationId.DEFAULT for the v1 single organization", () => {
+    expect(OrganizationId.DEFAULT).toBe("DEFAULT");
+    expect(OrganizationId.parse("DEFAULT")).toBe(OrganizationId.DEFAULT);
+    expect(OrganizationId.parse(UUID)).toBe(UUID);
+    expect(() => OrganizationId.parse("acme")).toThrow(InvalidIdError);
   });
 });
