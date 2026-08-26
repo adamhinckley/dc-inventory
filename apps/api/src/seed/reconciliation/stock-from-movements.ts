@@ -35,20 +35,25 @@ function movementError(movement: DemoMovementRow, reason: string): string {
   return `${movement.sku} ${movement.movementType}: ${reason}`;
 }
 
-export function firstFailingStockMovement(
-  movements: readonly DemoMovementRow[],
-): DemoMovementRow | undefined {
+type ReplayOk = { ok: true; figures: Map<string, StockFigures> };
+type ReplayFail = { ok: false; movement: DemoMovementRow; error: string };
+
+function replayStockFromMovements(movements: readonly DemoMovementRow[]): ReplayOk | ReplayFail {
   const sorted = sortMovementsForReplay(movements);
   const figures = new Map<string, StockFigures>();
   for (const movement of sorted) {
     if (!isPositiveIntegerQuantity(movement.quantity)) {
-      return movement;
+      return {
+        ok: false,
+        movement,
+        error: movementError(movement, "quantity must be a positive integer"),
+      };
     }
     const key = stockKey(movement.sku, movement.locationId);
     const current = figures.get(key) ?? ZERO_STOCK_FIGURES;
     const delta = computeSnapshotDelta(movement.movementType, movement.quantity, current);
     if (!delta.ok) {
-      return movement;
+      return { ok: false, movement, error: movementError(movement, delta.reason) };
     }
     const next = freezeStockFigures(
       current.onHand + (delta.delta.onHand ?? 0),
@@ -56,37 +61,27 @@ export function firstFailingStockMovement(
       current.allocated + (delta.delta.allocated ?? 0),
     );
     if (next.onHand < 0 || next.onOrder < 0 || next.allocated < 0) {
-      return movement;
+      return {
+        ok: false,
+        movement,
+        error: `${movement.sku} went negative after ${movement.movementType}`,
+      };
     }
     figures.set(key, next);
   }
-  return undefined;
+  return { ok: true, figures };
+}
+
+export function firstFailingStockMovement(
+  movements: readonly DemoMovementRow[],
+): DemoMovementRow | undefined {
+  const replayed = replayStockFromMovements(movements);
+  return replayed.ok ? undefined : replayed.movement;
 }
 
 export function recomputeStockFromMovements(
   movements: readonly DemoMovementRow[],
 ): Map<string, StockFigures> | { error: string } {
-  const sorted = sortMovementsForReplay(movements);
-  const figures = new Map<string, StockFigures>();
-  for (const movement of sorted) {
-    if (!isPositiveIntegerQuantity(movement.quantity)) {
-      return { error: movementError(movement, "quantity must be a positive integer") };
-    }
-    const key = stockKey(movement.sku, movement.locationId);
-    const current = figures.get(key) ?? ZERO_STOCK_FIGURES;
-    const delta = computeSnapshotDelta(movement.movementType, movement.quantity, current);
-    if (!delta.ok) {
-      return { error: movementError(movement, delta.reason) };
-    }
-    const next = freezeStockFigures(
-      current.onHand + (delta.delta.onHand ?? 0),
-      current.onOrder + (delta.delta.onOrder ?? 0),
-      current.allocated + (delta.delta.allocated ?? 0),
-    );
-    if (next.onHand < 0 || next.onOrder < 0 || next.allocated < 0) {
-      return { error: `${movement.sku} went negative after ${movement.movementType}` };
-    }
-    figures.set(key, next);
-  }
-  return figures;
+  const replayed = replayStockFromMovements(movements);
+  return replayed.ok ? replayed.figures : { error: replayed.error };
 }
