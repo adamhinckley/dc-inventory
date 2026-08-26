@@ -7,6 +7,7 @@ export { GetWholesaleProductUseCase } from "./application/get-wholesale-product.
 export { ListStaffProductsUseCase } from "./application/list-staff-products.js";
 export { ListWholesaleCatalogUseCase } from "./application/list-wholesale-catalog.js";
 export { UpdateProductUseCase } from "./application/update-product.js";
+export { buildProductImageObjectKey } from "./domain/product-image-object-key.js";
 export { isShopVisible, type Product } from "./domain/product.js";
 export type { IProductRepository } from "./domain/ports/product-repository.js";
 export type { IQtyReadPort } from "./domain/ports/qty-read.js";
