@@ -1,6 +1,6 @@
 import type { IQtyReadPort, ProductQty } from "@dc-inventory/catalog";
 import type { IInventoryReadModel } from "@dc-inventory/inventory";
-import { LocationId, type Sku } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, type Sku } from "@dc-inventory/shared-kernel";
 
 /**
  * API adapter for the Catalog-owned qty read port.
@@ -13,7 +13,11 @@ export class InventoryReadModelQtyReadAdapter implements IQtyReadPort {
   async readBySkus(skus: readonly Sku[]): Promise<ReadonlyMap<string, ProductQty>> {
     const result = new Map<string, ProductQty>();
     for (const sku of skus) {
-      const snapshot = await this.readModel.getSnapshot(sku, LocationId.DEFAULT);
+      const snapshot = await this.readModel.getSnapshot(
+        sku,
+        LocationId.DEFAULT,
+        OrganizationId.DEFAULT,
+      );
       if (snapshot.onHand === 0 && snapshot.onOrder === 0 && snapshot.allocated === 0) {
         continue;
       }

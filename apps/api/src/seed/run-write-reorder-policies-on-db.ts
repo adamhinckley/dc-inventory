@@ -4,8 +4,8 @@ import {
   PHASE2_DEFAULT_LOCATION_CODE,
 } from "@dc-inventory/inventory";
 import { locations } from "@dc-inventory/inventory/schema";
-import { LocationId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { and, eq } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import { DrizzleReorderPolicySeedRepository } from "./ports/drizzle-reorder-policy-seed.js";
@@ -24,21 +24,34 @@ export async function runWriteReorderPoliciesOnDb(
   const locationRows = await db
     .select({ id: locations.id })
     .from(locations)
-    .where(eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE))
+    .where(
+      and(
+        eq(locations.organizationId, OrganizationId.DEFAULT),
+        eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE),
+      ),
+    )
     .limit(1);
   const locationUuid = locationRows[0]?.id;
   if (locationUuid === undefined) {
     throw new Error("DEFAULT inventory location is missing; run Phase 2 bootstrap");
   }
 
-  const resolveLocationUuid = async (locationId: LocationId): Promise<string> => {
+  const resolveLocationUuid = async (
+    organizationId: OrganizationId,
+    locationId: LocationId,
+  ): Promise<string> => {
     if (locationId === LocationId.DEFAULT || locationId === LocationId.parse(locationUuid)) {
       return locationUuid;
     }
     const rows = await db
       .select({ id: locations.id })
       .from(locations)
-      .where(eq(locations.code, locationId))
+      .where(
+        and(
+          eq(locations.organizationId, organizationId),
+          eq(locations.code, locationId),
+        ),
+      )
       .limit(1);
     const id = rows[0]?.id;
     if (id === undefined) {

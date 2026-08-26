@@ -15,8 +15,8 @@ import {
   DrizzleInvoiceRepository,
   type AccountingDrizzle,
 } from "@dc-inventory/accounting";
-import { LocationId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { and, eq } from "drizzle-orm";
 import { locations } from "@dc-inventory/inventory/schema";
 import {
   DrizzleSalesOrderRepository,
@@ -31,7 +31,7 @@ import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-comma
  * Serializes callers and runs each callback in one Drizzle transaction.
  */
 export class PostgresInventoryUnitOfWork implements IUnitOfWork {
-  private defaultLocationUuid: Promise<string> | null = null;
+  private readonly defaultLocationUuidByOrg = new Map<string, Promise<string>>();
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(
@@ -96,14 +96,22 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     tx: InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
     work: (uow: IUnitOfWork) => Promise<T>,
   ): Promise<T> {
-    const resolveLocationUuid = async (locationId: LocationId): Promise<string> => {
+    const resolveLocationUuid = async (
+      organizationId: OrganizationId,
+      locationId: LocationId,
+    ): Promise<string> => {
       if (locationId === LocationId.DEFAULT) {
-        return this.getDefaultLocationUuid();
+        return this.getDefaultLocationUuid(organizationId);
       }
       const rows = await tx
         .select({ id: locations.id })
         .from(locations)
-        .where(eq(locations.code, locationId))
+        .where(
+          and(
+            eq(locations.organizationId, organizationId),
+            eq(locations.code, locationId),
+          ),
+        )
         .limit(1);
       const id = rows[0]?.id;
       if (id === undefined) {
@@ -148,18 +156,26 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     return work(scope);
   }
 
-  private getDefaultLocationUuid(): Promise<string> {
-    if (this.defaultLocationUuid === null) {
-      this.defaultLocationUuid = this.loadDefaultLocationUuid();
+  private getDefaultLocationUuid(organizationId: OrganizationId): Promise<string> {
+    const cached = this.defaultLocationUuidByOrg.get(organizationId);
+    if (cached !== undefined) {
+      return cached;
     }
-    return this.defaultLocationUuid;
+    const loaded = this.loadDefaultLocationUuid(organizationId);
+    this.defaultLocationUuidByOrg.set(organizationId, loaded);
+    return loaded;
   }
 
-  private async loadDefaultLocationUuid(): Promise<string> {
+  private async loadDefaultLocationUuid(organizationId: OrganizationId): Promise<string> {
     const rows = await this.db
       .select({ id: locations.id })
       .from(locations)
-      .where(eq(locations.code, LocationId.DEFAULT))
+      .where(
+        and(
+          eq(locations.organizationId, organizationId),
+          eq(locations.code, LocationId.DEFAULT),
+        ),
+      )
       .limit(1);
     const id = rows[0]?.id;
     if (id === undefined) {
