@@ -39,6 +39,7 @@ export class SalesStockLedgerInventoryCommandAdapter implements ISalesInventoryC
 
   async recordAllocated(command: AllocatedCommand): Promise<SalesInventoryCommandResult> {
     const result = await this.allocated.execute({
+      organizationId: command.organizationId,
       idempotencyKey: command.idempotencyKey,
       sku: command.sku,
       quantity: command.quantity,
@@ -50,6 +51,7 @@ export class SalesStockLedgerInventoryCommandAdapter implements ISalesInventoryC
 
   async recordDeallocated(command: DeallocatedCommand): Promise<SalesInventoryCommandResult> {
     const result = await this.deallocated.execute({
+      organizationId: command.organizationId,
       idempotencyKey: command.idempotencyKey,
       sku: command.sku,
       quantity: command.quantity,
@@ -61,6 +63,7 @@ export class SalesStockLedgerInventoryCommandAdapter implements ISalesInventoryC
 
   async recordShipped(command: ShippedCommand): Promise<SalesInventoryCommandResult> {
     const result = await this.shipped.execute({
+      organizationId: command.organizationId,
       idempotencyKey: command.idempotencyKey,
       sku: command.sku,
       quantity: command.quantity,

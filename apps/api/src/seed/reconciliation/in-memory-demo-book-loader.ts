@@ -114,6 +114,7 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
       pageSize: 20_000,
     });
     const salesOrderPage = await this.ports.salesOrders.list({
+      organizationId: OrganizationId.DEFAULT,
       page: 1,
       pageSize: 20_000,
     });

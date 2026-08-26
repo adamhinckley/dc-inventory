@@ -2,6 +2,7 @@ import {
   CustomerId,
   Money,
   OrderId,
+  OrganizationId,
   Sku,
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
@@ -23,6 +24,7 @@ export type CreateSalesOrderLineInput = {
 };
 
 export type CreateSalesOrderRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   customerId: CustomerId;
   lines: readonly CreateSalesOrderLineInput[];
@@ -59,7 +61,7 @@ export class CreateSalesOrderUseCase {
       return { ok: false, reason: "empty_order" };
     }
 
-    const customer = await this.customers.findById(input.customerId);
+    const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "customer_not_found" };
     }
@@ -110,9 +112,10 @@ export class CreateSalesOrderUseCase {
     }));
 
     const createdAt = this.clock?.now() ?? new Date();
-    const documentNumber = await this.salesOrders.nextDocumentNumber();
+    const documentNumber = await this.salesOrders.nextDocumentNumber(input.organizationId);
     const salesOrder: SalesOrder = {
       id: OrderId.parse(newUuid()),
+      organizationId: input.organizationId,
       customerId: input.customerId,
       documentNumber,
       status: "draft",

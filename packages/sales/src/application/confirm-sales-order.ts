@@ -1,9 +1,10 @@
-import { OrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder } from "../domain/sales-order.js";
 
 export type ConfirmSalesOrderRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   salesOrderId: OrderId;
   idempotencyKey: string;
@@ -29,7 +30,10 @@ export class ConfirmSalesOrderUseCase {
     void input.staffUserId;
     try {
       return await this.uow.run(async (scope) => {
-        const existing = await scope.salesOrders.findById(input.salesOrderId);
+        const existing = await scope.salesOrders.findById(
+          input.organizationId,
+          input.salesOrderId,
+        );
         if (existing === null) {
           return { ok: false, reason: "not_found" };
         }
@@ -42,6 +46,7 @@ export class ConfirmSalesOrderUseCase {
 
         for (const line of existing.lines) {
           const result = await scope.inventory.recordAllocated({
+            organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:confirm:${line.id}`,
             sku: line.sku,
             quantity: line.qty,

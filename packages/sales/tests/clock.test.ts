@@ -2,7 +2,7 @@ import {
   GetStockSnapshotUseCase,
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, LocationId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
@@ -15,6 +15,7 @@ import {
 
 const SKU = Sku.parse("SO-CLOCK-SKU");
 const DEFAULT = LocationId.DEFAULT;
+const DEFAULT_ORG = OrganizationId.DEFAULT;
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const FIXED = new Date("2021-06-15T12:00:00.000Z");
@@ -23,7 +24,8 @@ async function harness() {
   const clock = new InMemoryClock(FIXED);
   const uow = new InMemorySalesUnitOfWork(clock);
   const customers = {
-    findById: async (id: CustomerId) => (id === CUSTOMER_ID ? { id } : null),
+    findById: async (organizationId: OrganizationId, id: CustomerId) =>
+      organizationId === DEFAULT_ORG && id === CUSTOMER_ID ? { id } : null,
   };
 
   return {
@@ -53,6 +55,7 @@ describe("Sales seed clock (in-memory)", () => {
     });
 
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 500, currency: "USD" }],
@@ -64,6 +67,7 @@ describe("Sales seed clock (in-memory)", () => {
     expect(created.salesOrder.documentNumber).toBe("SO-00001");
 
     const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "clock-confirm",
@@ -71,6 +75,7 @@ describe("Sales seed clock (in-memory)", () => {
     expect(confirmed.ok).toBe(true);
 
     const shipped = await h.ship.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "clock-ship",
@@ -106,6 +111,7 @@ describe("Sales seed clock (in-memory)", () => {
     });
 
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 500, currency: "USD" }],
@@ -116,6 +122,7 @@ describe("Sales seed clock (in-memory)", () => {
     }
 
     const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "clock-confirm-posted",
@@ -123,6 +130,7 @@ describe("Sales seed clock (in-memory)", () => {
     expect(confirmed.ok).toBe(true);
 
     const shipped = await h.ship.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "clock-ship-posted",
@@ -137,6 +145,7 @@ describe("Sales seed clock (in-memory)", () => {
   it("persists the injected creation instant on a sales order", async () => {
     const h = await harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 1, unitPriceCents: 500, currency: "USD" }],
@@ -147,6 +156,7 @@ describe("Sales seed clock (in-memory)", () => {
     }
 
     const loaded = await h.get.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
     });

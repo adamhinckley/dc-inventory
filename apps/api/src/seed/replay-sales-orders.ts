@@ -79,8 +79,8 @@ function demoCustomerLookup(
   customers: Pick<ICustomerRepository, "findById">,
 ): ICustomerLookupPort {
   return {
-    findById: async (id) => {
-      const customer = await customers.findById(OrganizationId.DEFAULT, id);
+    findById: async (organizationId, id) => {
+      const customer = await customers.findById(organizationId, id);
       return customer === null ? null : { id: customer.id };
     },
   };
@@ -133,6 +133,7 @@ export async function runReplaySalesOrders(
     });
 
     const created = await create.execute({
+      organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       customerId,
       lines,
@@ -161,6 +162,7 @@ export async function runReplaySalesOrders(
     ports.clock.setInstant(confirmInstant);
 
     const confirmed = await confirm.execute({
+      organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: `demo:${planned.key}:confirm`,
@@ -179,6 +181,7 @@ export async function runReplaySalesOrders(
     ports.clock.setInstant(shipInstant);
 
     const shipped = await ship.execute({
+      organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       salesOrderId: confirmed.salesOrder.id,
       idempotencyKey: `demo:${planned.key}:ship`,

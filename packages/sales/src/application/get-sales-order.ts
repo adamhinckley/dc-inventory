@@ -1,8 +1,9 @@
-import { OrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { ISalesOrderRepository } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder } from "../domain/sales-order.js";
 
 export type GetSalesOrderRequest = {
+  organizationId: OrganizationId;
   staffUserId: StaffUserId;
   salesOrderId: OrderId;
 };
@@ -16,7 +17,10 @@ export class GetSalesOrderUseCase {
 
   async execute(input: GetSalesOrderRequest): Promise<GetSalesOrderResult> {
     void input.staffUserId;
-    const salesOrder = await this.salesOrders.findById(input.salesOrderId);
+    const salesOrder = await this.salesOrders.findById(
+      input.organizationId,
+      input.salesOrderId,
+    );
     if (salesOrder === null) {
       return { ok: false, reason: "not_found" };
     }

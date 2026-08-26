@@ -2,33 +2,47 @@ import {
   GetStockSnapshotUseCase,
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, LocationId, Money, OrganizationId, OrderId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
+  ListSalesOrdersUseCase,
   ShipSalesOrderUseCase,
 } from "../src/index.js";
+import { newUuid, SalesOrderLineId } from "../src/domain/ids.js";
 import type { ISalesUnitOfWork } from "../src/domain/ports/sales-order-repository.js";
 
 const SKU = Sku.parse("SO-TEST-SKU");
 const SKU_B = Sku.parse("SO-TEST-SKU-B");
 const DEFAULT = LocationId.DEFAULT;
+const DEFAULT_ORG = OrganizationId.DEFAULT;
+const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+const BETA_CUSTOMER_ID = CustomerId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
 
 async function harness() {
   const uow = new InMemorySalesUnitOfWork();
   const customers = {
-    findById: async (id: CustomerId) => (id === CUSTOMER_ID ? { id } : null),
+    findById: async (organizationId: OrganizationId, id: CustomerId) => {
+      if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
+        return { id };
+      }
+      if (organizationId === BETA_ORG && id === BETA_CUSTOMER_ID) {
+        return { id };
+      }
+      return null;
+    },
   };
 
   return {
     uow,
     customers,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers),
+    list: new ListSalesOrdersUseCase(uow.salesOrders),
     confirm: new ConfirmSalesOrderUseCase(uow),
     cancel: new CancelSalesOrderUseCase(uow),
     ship: new ShipSalesOrderUseCase(uow),
@@ -58,6 +72,7 @@ describe("Sales (in-memory)", () => {
   it("assigns SO-00001 document numbers with gaps allowed after cancel", async () => {
     const h = await harness();
     const first = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 500, currency: "USD" }],
@@ -69,12 +84,14 @@ describe("Sales (in-memory)", () => {
     expect(first.salesOrder.documentNumber).toBe("SO-00001");
 
     await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: first.salesOrder.id,
       idempotencyKey: "cancel-draft",
     });
 
     const second = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 1, unitPriceCents: 500, currency: "USD" }],
@@ -89,6 +106,7 @@ describe("Sales (in-memory)", () => {
   it("merges duplicate SKU lines at create", async () => {
     const h = await harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [
@@ -107,6 +125,7 @@ describe("Sales (in-memory)", () => {
   it("rejects empty orders and non-positive lines", async () => {
     const h = await harness();
     const empty = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [],
@@ -118,6 +137,7 @@ describe("Sales (in-memory)", () => {
     expect(empty.reason).toBe("empty_order");
 
     const zero = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 0, unitPriceCents: 500, currency: "USD" }],
@@ -128,6 +148,7 @@ describe("Sales (in-memory)", () => {
   it("allows draft quantity over available", async () => {
     const h = await harness();
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 100, unitPriceCents: 500, currency: "USD" }],
@@ -142,6 +163,7 @@ describe("Sales (in-memory)", () => {
     await seedStock(h, SKU, 10);
 
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [
@@ -157,6 +179,7 @@ describe("Sales (in-memory)", () => {
     await seedStock(h, SKU_B, 2);
 
     const failed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-short",
@@ -167,11 +190,12 @@ describe("Sales (in-memory)", () => {
     }
     expect(failed.reason).toBe("insufficient_atp");
 
-    const reloaded = await h.uow.salesOrders.findById(created.salesOrder.id);
+    const reloaded = await h.uow.salesOrders.findById(DEFAULT_ORG, created.salesOrder.id);
     expect(reloaded?.status).toBe("draft");
 
     await seedStock(h, SKU_B, 1);
     const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-ok",
@@ -195,6 +219,7 @@ describe("Sales (in-memory)", () => {
     await seedStock(h, SKU, 8);
 
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 5, unitPriceCents: 500, currency: "USD" }],
@@ -205,12 +230,14 @@ describe("Sales (in-memory)", () => {
     }
 
     await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-cancel",
     });
 
     const cancelled = await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "cancel-confirmed",
@@ -231,11 +258,13 @@ describe("Sales (in-memory)", () => {
     await seedStock(h, SKU, 5);
 
     const firstOrder = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 4, unitPriceCents: 500, currency: "USD" }],
     });
     const secondOrder = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 4, unitPriceCents: 500, currency: "USD" }],
@@ -247,6 +276,7 @@ describe("Sales (in-memory)", () => {
     }
 
     const firstConfirm = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: firstOrder.salesOrder.id,
       idempotencyKey: "confirm-a",
@@ -254,6 +284,7 @@ describe("Sales (in-memory)", () => {
     expect(firstConfirm.ok).toBe(true);
 
     const secondConfirm = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: secondOrder.salesOrder.id,
       idempotencyKey: "confirm-b",
@@ -270,6 +301,7 @@ describe("Sales (in-memory)", () => {
     await seedStock(h, SKU, 10);
 
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [
@@ -282,12 +314,14 @@ describe("Sales (in-memory)", () => {
     }
 
     await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-ship",
     });
 
     const shipped = await h.ship.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "ship-once",
@@ -316,6 +350,7 @@ describe("Sales (in-memory)", () => {
     await seedStock(h, SKU, 5);
 
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 300, currency: "USD" }],
@@ -326,12 +361,14 @@ describe("Sales (in-memory)", () => {
     }
 
     await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-retry",
     });
 
     const first = await h.ship.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "ship-retry",
@@ -339,6 +376,7 @@ describe("Sales (in-memory)", () => {
     expect(first.ok).toBe(true);
 
     const second = await h.ship.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "ship-retry-again",
@@ -356,6 +394,7 @@ describe("Sales (in-memory)", () => {
     await seedStock(h, SKU, 4);
 
     const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 500, currency: "USD" }],
@@ -366,17 +405,20 @@ describe("Sales (in-memory)", () => {
     }
 
     await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-no-cancel",
     });
     await h.ship.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "ship-no-cancel",
     });
 
     const cancelled = await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "cancel-after-ship",
@@ -401,7 +443,12 @@ describe("Sales (in-memory)", () => {
     };
 
     const customers = {
-      findById: async (id: CustomerId) => (id === CUSTOMER_ID ? { id } : null),
+      findById: async (organizationId: OrganizationId, id: CustomerId) => {
+        if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
+          return { id };
+        }
+        return null;
+      },
     };
     const create = new CreateSalesOrderUseCase(failingUow.salesOrders, customers);
     const confirm = new ConfirmSalesOrderUseCase(failingUow);
@@ -420,6 +467,7 @@ describe("Sales (in-memory)", () => {
     });
 
     const created = await create.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 100, currency: "USD" }],
@@ -430,12 +478,14 @@ describe("Sales (in-memory)", () => {
     }
 
     await confirm.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "rollback-confirm",
     });
 
     const result = await ship.execute({
+      organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "rollback-ship",
@@ -446,11 +496,90 @@ describe("Sales (in-memory)", () => {
     }
     expect(result.reason).toBe("accounting_invalid");
 
-    const reloaded = await failingUow.salesOrders.findById(created.salesOrder.id);
+    const reloaded = await failingUow.salesOrders.findById(DEFAULT_ORG, created.salesOrder.id);
     expect(reloaded?.status).toBe("confirmed");
     const snap = await snapshot.execute({ sku: SKU, locationId: DEFAULT });
     expect(snap.allocated).toBe(3);
     expect(snap.onHand).toBe(6);
     expect(await base.invoices.findByOrderId(created.salesOrder.id)).toBeNull();
+  });
+
+  it("scopes sales orders by organizationId and rejects cross-org customers at create", async () => {
+    const h = await harness();
+    const acmeOrderId = OrderId.parse(newUuid());
+    const betaOrderId = OrderId.parse(newUuid());
+    const lineId = SalesOrderLineId.parse(newUuid());
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    const unitPrice = Money.fromMinorUnits(500, "USD");
+
+    await h.uow.salesOrders.save({
+      id: acmeOrderId,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      documentNumber: "SO-1001",
+      status: "draft",
+      createdAt,
+      lines: [{ id: lineId, sku: SKU, name: "Acme widget", qty: 2, unitPrice }],
+    });
+    await h.uow.salesOrders.save({
+      id: betaOrderId,
+      organizationId: BETA_ORG,
+      customerId: BETA_CUSTOMER_ID,
+      documentNumber: "SO-1001",
+      status: "draft",
+      createdAt,
+      lines: [
+        {
+          id: SalesOrderLineId.parse(newUuid()),
+          sku: SKU,
+          name: "Beta widget",
+          qty: 3,
+          unitPrice,
+        },
+      ],
+    });
+
+    const acmeList = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+    });
+    expect(acmeList.total).toBe(1);
+    expect(acmeList.items[0]?.documentNumber).toBe("SO-1001");
+    expect(acmeList.items[0]?.id).toBe(acmeOrderId);
+
+    const betaList = await h.list.execute({
+      organizationId: BETA_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+    });
+    expect(betaList.total).toBe(1);
+    expect(betaList.items[0]?.id).toBe(betaOrderId);
+
+    const crossOrgCreate = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: BETA_CUSTOMER_ID,
+      lines: [{ sku: SKU.value, name: "Widget", qty: 1, unitPriceCents: 500, currency: "USD" }],
+    });
+    expect(crossOrgCreate.ok).toBe(false);
+    if (crossOrgCreate.ok) {
+      return;
+    }
+    expect(crossOrgCreate.reason).toBe("customer_not_found");
+
+    const crossOrgConfirm = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: betaOrderId,
+      idempotencyKey: "confirm-beta-from-acme",
+    });
+    expect(crossOrgConfirm.ok).toBe(false);
+    if (crossOrgConfirm.ok) {
+      return;
+    }
+    expect(crossOrgConfirm.reason).toBe("not_found");
   });
 });

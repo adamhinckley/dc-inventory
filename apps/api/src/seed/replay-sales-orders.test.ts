@@ -170,7 +170,11 @@ describe("replay sales orders (in-memory)", () => {
       DEMO_COUNTS.salesOrders - DEMO_COUNTS.shippedSalesOrders - plan.leftoverConfirmedSalesOrderCount,
     );
 
-    const listed = await uow.salesOrders.list({ page: 1, pageSize: 20_000 });
+    const listed = await uow.salesOrders.list({
+      organizationId: OrganizationId.DEFAULT,
+      page: 1,
+      pageSize: 20_000,
+    });
     expect(listed.total).toBe(DEMO_COUNTS.salesOrders);
     expect(listed.items.every((row) => row.status !== "cancelled")).toBe(true);
 

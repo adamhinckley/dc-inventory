@@ -274,8 +274,8 @@ function purchasingServices(
 
 function customerLookupPort(customerRepo: ICustomerRepository): ICustomerLookupPort {
   return {
-    findById: async (id) => {
-      const customer = await customerRepo.findById(OrganizationId.DEFAULT, id);
+    findById: async (organizationId, id) => {
+      const customer = await customerRepo.findById(organizationId, id);
       return customer === null ? null : { id: customer.id };
     },
   };

@@ -14,6 +14,7 @@ export class ListSalesOrdersUseCase {
   async execute(input: ListSalesOrdersRequest) {
     void input.staffUserId;
     const page = await this.salesOrders.list({
+      organizationId: input.organizationId,
       page: input.page,
       pageSize: input.pageSize,
       status: input.status,

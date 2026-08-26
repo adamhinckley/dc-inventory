@@ -5,6 +5,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import { customers } from "@dc-inventory/customers/schema";
@@ -33,13 +34,16 @@ function timestamps() {
   };
 }
 
-export const orders = sales.table("orders", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => customers.id),
-  status: orderStatus("status").notNull().default("draft"),
-  documentNumber: text("document_number").notNull().unique(),
+export const orders = sales.table(
+  "orders",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    status: orderStatus("status").notNull().default("draft"),
+    documentNumber: text("document_number").notNull(),
   shipLine1: text("ship_line_1"),
   shipLine2: text("ship_line_2"),
   shipCity: text("ship_city"),
@@ -47,7 +51,9 @@ export const orders = sales.table("orders", {
   shipPostal: text("ship_postal"),
   shipCountry: text("ship_country"),
   ...timestamps(),
-});
+  },
+  (table) => [unique().on(table.organizationId, table.documentNumber)],
+);
 
 /** Frozen sku/name + MP unit price. No live catalog FK. */
 export const orderLines = sales.table("order_lines", {
