@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { Product, ProductQty } from "@dc-inventory/catalog";
-import { OrganizationId, ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   duplicateSkuResponseSchema,
   invalidResponseSchema,
@@ -18,6 +18,7 @@ import {
   skuImmutableResponseSchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
+import { staffOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -108,7 +109,7 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
         inactive?: boolean;
       };
       const result = await request.server.catalog.listStaffProducts.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         q: query.q,
         page: query.page,
@@ -147,7 +148,7 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.catalog.createProduct.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         ...request.body,
       });
@@ -188,7 +189,7 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.catalog.getProduct.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         productId: ProductId.parse(request.params.id),
       });
@@ -218,7 +219,7 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.catalog.updateProduct.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         productId: ProductId.parse(request.params.id),
         ...request.body,

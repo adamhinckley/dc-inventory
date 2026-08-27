@@ -3,7 +3,7 @@ import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import type { SalesOrder } from "@dc-inventory/sales";
-import { CustomerId, OrderId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrderId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
   insufficientAtpResponseSchema,
@@ -28,9 +28,7 @@ function staffUserId(request: { staffAuth?: { staffUserId: string } }): StaffUse
   return StaffUserId.parse(request.staffAuth?.staffUserId ?? "");
 }
 
-function staffOrganizationId(request: { staffAuth?: { organizationId: string } }): OrganizationId {
-  return OrganizationId.parse(request.staffAuth?.organizationId ?? OrganizationId.DEFAULT);
-}
+import { staffOrganizationId } from "./org-session.js";
 
 function mapSalesOrder(order: SalesOrder) {
   return {

@@ -110,6 +110,7 @@ import { ReadyCheckUseCase } from "../application/ready.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
 import { featuresAllCoreOn, type IFeatures } from "../features.js";
+import { InMemoryLicensingStore } from "../licensing/in-memory-licensing.js";
 import { createDatabaseConnection, PostgresDatabase } from "./db.js";
 
 export type IdentityHttpServices = {
@@ -186,6 +187,7 @@ export type AppServices = {
   sales: SalesHttpServices;
   accounting: AccountingHttpServices;
   unitOfWork: IUnitOfWork;
+  licensingStore: InMemoryLicensingStore;
 };
 
 export type AppServiceOverrides = {
@@ -208,6 +210,7 @@ export type AppServiceOverrides = {
   invoiceRepo?: IInvoiceRepository;
   accountingUnitOfWork?: import("@dc-inventory/accounting").IAccountingUnitOfWork;
   unitOfWork?: IUnitOfWork;
+  licensingStore?: InMemoryLicensingStore;
 };
 
 function catalogServices(
@@ -317,6 +320,7 @@ export function composeAppServices(
 ): AppServices {
   const features = overrides.features ?? featuresAllCoreOn();
   const clock = overrides.clock ?? new SystemClock();
+  const licensingStore = overrides.licensingStore ?? new InMemoryLicensingStore();
 
   let database: IDatabase;
   let identityDb: IdentityDrizzle | undefined;
@@ -457,5 +461,6 @@ export function composeAppServices(
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork, clock),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     unitOfWork,
+    licensingStore,
   };
 }

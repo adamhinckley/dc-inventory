@@ -162,6 +162,27 @@ export const stubOpsSubscription = {
   plan: null,
 };
 
+export const licensingSubscriptionItemSchema = z.object({
+  id: z.string().uuid(),
+  plan: z.string(),
+  status: z.enum(["trialing", "active", "past_due", "canceled"]),
+});
+
+export const licensingSubscriptionListResponseSchema = z.object({
+  items: z.array(licensingSubscriptionItemSchema),
+});
+
+export const licensingPaymentItemSchema = z.object({
+  id: z.string().uuid(),
+  subscriptionId: z.string().uuid(),
+  providerRef: z.string(),
+  amountCents: z.number().int(),
+});
+
+export const licensingPaymentListResponseSchema = z.object({
+  items: z.array(licensingPaymentItemSchema),
+});
+
 export const notFoundResponseSchema = z.object({
   error: z.literal("not_found"),
 });
