@@ -5,10 +5,13 @@ import {
 import { InMemoryCustomerRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
+  LoginStaffUseCase,
+  LoginWholesaleUseCase,
 } from "@dc-inventory/identity";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app.js";
@@ -17,7 +20,7 @@ import {
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "../adapters/http/auth-cookies.js";
-import { PHASE1_PRODUCT_SKUS, PHASE1_PRODUCTS } from "./phase1-fixture.js";
+import { PHASE1_PRODUCT_SKUS, PHASE1_PRODUCTS, PHASE1_ORGANIZATION_SLUG } from "./phase1-fixture.js";
 import { runPhase1Seed } from "./run-phase1-seed.js";
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
@@ -29,6 +32,7 @@ afterEach(async () => {
 describe("Phase 1 seed-shaped HTTP lists", () => {
   it("lets seeded staff and wholesale sessions list the five shop SKUs", async () => {
     const passwords = new InMemoryPasswordHasher();
+    const organizations = new InMemoryOrganizationRepository();
     const staffUsers = new InMemoryStaffUserRepository();
     const wholesaleUsers = new InMemoryWholesaleUserRepository();
     const sessions = new InMemorySessionStore();
@@ -40,6 +44,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
       {
         products: productRepo,
         customers: customerRepo,
+        organizations,
         staffUsers,
         wholesaleUsers,
         passwords,
@@ -58,6 +63,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
       wholesaleUsers,
       sessions,
       passwords,
+      organizationRepo: organizations,
       customerRepo,
       productRepo,
       qtyRead,
@@ -67,7 +73,11 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
     const staffLogin = await app.inject({
       method: "POST",
       url: "/internal/auth/login",
-      payload: { email: "staff@local.test", password: "staff-placeholder" },
+      payload: {
+        organizationSlug: PHASE1_ORGANIZATION_SLUG,
+        email: "staff@local.test",
+        password: "staff-placeholder",
+      },
     });
     expect(staffLogin.statusCode).toBe(200);
     const staffCookie =
@@ -93,7 +103,11 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
     const wholesaleLogin = await app.inject({
       method: "POST",
       url: "/wholesale/auth/login",
-      payload: { email: "wholesale@local.test", password: "wholesale-placeholder" },
+      payload: {
+        organizationSlug: PHASE1_ORGANIZATION_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-placeholder",
+      },
     });
     expect(wholesaleLogin.statusCode).toBe(200);
     const wholesaleCookie =

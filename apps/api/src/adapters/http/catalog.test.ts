@@ -4,6 +4,7 @@ import {
 } from "@dc-inventory/catalog";
 import {
   InMemoryClock,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
@@ -14,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE, WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
+import { loginBody } from "./test-login.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
@@ -27,6 +29,8 @@ afterEach(async () => {
 
 async function startCatalogApp() {
   const passwords = new InMemoryPasswordHasher();
+  const organizations = new InMemoryOrganizationRepository();
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -53,6 +57,7 @@ async function startCatalogApp() {
     wholesaleUsers,
     sessions,
     passwords,
+    organizationRepo: organizations,
     productRepo,
     qtyRead,
   });
@@ -64,7 +69,7 @@ async function staffCookie(app: Awaited<ReturnType<typeof buildApp>>) {
   const login = await app.inject({
     method: "POST",
     url: "/internal/auth/login",
-    payload: { email: "staff@local.test", password: "staff-secret" },
+    payload: loginBody("staff@local.test", "staff-secret"),
   });
   return login.cookies.find((row) => row.name === STAFF_SESSION_COOKIE)?.value ?? "";
 }
@@ -73,7 +78,7 @@ async function wholesaleCookie(app: Awaited<ReturnType<typeof buildApp>>) {
   const login = await app.inject({
     method: "POST",
     url: "/wholesale/auth/login",
-    payload: { email: "wholesale@local.test", password: "wholesale-secret" },
+    payload: loginBody("wholesale@local.test", "wholesale-secret"),
   });
   return login.cookies.find((row) => row.name === WHOLESALE_SESSION_COOKIE)?.value ?? "";
 }

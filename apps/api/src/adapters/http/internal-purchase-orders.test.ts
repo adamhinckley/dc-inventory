@@ -1,5 +1,6 @@
 import {
   InMemoryClock,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
@@ -10,6 +11,7 @@ import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
+import { loginBody } from "./test-login.js";
 import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
@@ -26,6 +28,8 @@ afterEach(async () => {
 
 async function startPurchasingApp() {
   const passwords = new InMemoryPasswordHasher();
+  const organizations = new InMemoryOrganizationRepository();
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const unitOfWork = new InMemoryUnitOfWork();
@@ -49,6 +53,7 @@ async function startPurchasingApp() {
     staffUsers,
     sessions,
     passwords,
+    organizationRepo: organizations,
     unitOfWork,
     purchaseOrderRepo: unitOfWork.purchaseOrders,
     supplierRepo: unitOfWork.suppliers,
@@ -61,7 +66,7 @@ async function staffCookie(app: Awaited<ReturnType<typeof buildApp>>) {
   const login = await app.inject({
     method: "POST",
     url: "/internal/auth/login",
-    payload: { email: "staff@local.test", password: "staff-secret" },
+    payload: loginBody("staff@local.test", "staff-secret"),
   });
   const cookie = login.cookies.find((row) => row.name === STAFF_SESSION_COOKIE);
   return cookie?.value ?? "";

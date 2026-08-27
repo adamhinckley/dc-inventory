@@ -6,6 +6,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import {
   InMemoryClock,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
@@ -23,6 +24,7 @@ import {
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
 const CUSTOMER_ID = CustomerId.parse("33333333-3333-4333-8333-333333333333");
+const ACME_SLUG = "acme";
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
@@ -32,6 +34,8 @@ afterEach(async () => {
 
 async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00:00.000Z"))) {
   const passwords = new InMemoryPasswordHasher();
+  const organizations = new InMemoryOrganizationRepository();
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -56,6 +60,7 @@ async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00
     wholesaleUsers,
     sessions,
     passwords,
+    organizationRepo: organizations,
   });
   apps.push(app);
   return { app, clock };
@@ -74,7 +79,11 @@ describe("opaque session HTTP", () => {
     const login = await app.inject({
       method: "POST",
       url: "/internal/auth/login",
-      payload: { email: "staff@local.test", password: "staff-secret" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
     });
     expect(login.statusCode).toBe(200);
     expect(login.json()).toEqual({
@@ -94,7 +103,11 @@ describe("opaque session HTTP", () => {
       method: "POST",
       url: "/internal/auth/login",
       headers: { "x-forwarded-proto": "https" },
-      payload: { email: "staff@local.test", password: "staff-secret" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
     });
     expect(cookieValue(tlsLogin, STAFF_SESSION_COOKIE)?.secure).toBe(true);
 
@@ -116,7 +129,11 @@ describe("opaque session HTTP", () => {
     const login = await app.inject({
       method: "POST",
       url: "/wholesale/auth/login",
-      payload: { email: "wholesale@local.test", password: "wholesale-secret" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
     });
     expect(login.statusCode).toBe(200);
     expect(login.json()).toEqual({
@@ -147,7 +164,11 @@ describe("opaque session HTTP", () => {
     const unknown = await app.inject({
       method: "POST",
       url: "/internal/auth/login",
-      payload: { email: "nobody@local.test", password: "staff-secret" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "nobody@local.test",
+        password: "staff-secret",
+      },
     });
     expect(unknown.statusCode).toBe(401);
     expect(unknown.json()).toEqual({ error: "unauthorized" });
@@ -162,7 +183,11 @@ describe("opaque session HTTP", () => {
     const wholesaleLogin = await app.inject({
       method: "POST",
       url: "/wholesale/auth/login",
-      payload: { email: "wholesale@local.test", password: "wholesale-secret" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
     });
     const wholesaleCookie = cookieValue(wholesaleLogin, WHOLESALE_SESSION_COOKIE);
     const wrongAudience = await app.inject({
@@ -176,7 +201,11 @@ describe("opaque session HTTP", () => {
     const staffLogin = await app.inject({
       method: "POST",
       url: "/internal/auth/login",
-      payload: { email: "staff@local.test", password: "staff-secret" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
     });
     const staffCookie = cookieValue(staffLogin, STAFF_SESSION_COOKIE);
     clock.advance(SESSION_IDLE_MS + 1);
@@ -197,7 +226,11 @@ describe("opaque session HTTP", () => {
     const login = await app.inject({
       method: "POST",
       url: "/internal/auth/login",
-      payload: { email: "staff@local.test", password: "staff-secret" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
     });
     const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
     const logout = await app.inject({
@@ -255,7 +288,7 @@ describe("opaque session HTTP", () => {
     const opsLogin = await app.inject({
       method: "POST",
       url: "/ops/auth/login",
-      payload: { email: "ops@local.test", password: "x" },
+      payload: { organizationSlug: ACME_SLUG, email: "ops@local.test", password: "x" },
     });
     expect(opsLogin.statusCode).toBe(404);
   });

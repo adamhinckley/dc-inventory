@@ -1,5 +1,6 @@
 import {
   InMemoryClock,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
@@ -20,6 +21,7 @@ import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE, WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
+import { loginBody } from "./test-login.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
@@ -33,6 +35,8 @@ afterEach(async () => {
 
 async function startAccountingApp() {
   const passwords = new InMemoryPasswordHasher();
+  const organizations = new InMemoryOrganizationRepository();
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const unitOfWork = new InMemoryUnitOfWork();
@@ -65,6 +69,7 @@ async function startAccountingApp() {
     staffUsers,
     sessions,
     passwords,
+    organizationRepo: organizations,
     unitOfWork,
     invoiceRepo: accountingUow.invoices,
     accountingUnitOfWork: accountingUow,
@@ -77,7 +82,7 @@ async function staffCookie(app: Awaited<ReturnType<typeof buildApp>>) {
   const login = await app.inject({
     method: "POST",
     url: "/internal/auth/login",
-    payload: { email: "staff@local.test", password: "staff-secret" },
+    payload: loginBody("staff@local.test", "staff-secret"),
   });
   const cookie = login.cookies.find((row) => row.name === STAFF_SESSION_COOKIE);
   return cookie?.value ?? "";
