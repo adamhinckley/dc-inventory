@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   DrizzleProductRepository,
   type CatalogDrizzle,
@@ -22,8 +22,9 @@ import {
 } from "@dc-inventory/inventory";
 import { locations } from "@dc-inventory/inventory/schema";
 import { DrizzleSupplierRepository } from "@dc-inventory/purchasing";
-import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
+import { SupplierId } from "@dc-inventory/shared-kernel";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import { DEMO_SEED_ORGANIZATION_ID } from "./demo-seed-organization.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import { DrizzleProductImageSeedRepository } from "./ports/drizzle-product-image-seed.js";
 import { DrizzleSupplierProductSeedRepository } from "./ports/drizzle-supplier-product-seed.js";
@@ -62,20 +63,28 @@ export async function runWriteStaticDemoBookOnDb(
         const existing = await db
           .select({ id: locations.id, code: locations.code })
           .from(locations)
-          .where(eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE))
+          .where(
+            and(
+              eq(locations.organizationId, DEMO_SEED_ORGANIZATION_ID),
+              eq(locations.code, PHASE2_DEFAULT_LOCATION_CODE),
+            ),
+          )
           .limit(1);
         if (existing[0] !== undefined) {
           return existing[0];
         }
         const inserted = await db
           .insert(locations)
-          .values({ code: PHASE2_DEFAULT_LOCATION_CODE })
+          .values({
+            code: PHASE2_DEFAULT_LOCATION_CODE,
+            organizationId: DEMO_SEED_ORGANIZATION_ID,
+          })
           .returning({ id: locations.id, code: locations.code });
         return inserted[0]!;
       },
       async upsertPrerequisiteSupplier() {
         const existing = await suppliers.findByVendorNumber(
-          OrganizationId.DEFAULT,
+          DEMO_SEED_ORGANIZATION_ID,
           PHASE2_SUPPLIER_VENDOR_NUMBER,
         );
         if (existing !== null) {
@@ -84,7 +93,7 @@ export async function runWriteStaticDemoBookOnDb(
         const id = SupplierId.parse(crypto.randomUUID());
         await suppliers.save({
           id,
-          organizationId: OrganizationId.DEFAULT,
+          organizationId: DEMO_SEED_ORGANIZATION_ID,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
         });
