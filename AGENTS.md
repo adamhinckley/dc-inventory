@@ -12,7 +12,7 @@ Canonical contract for any coding agent that clones this repo and opens a PR. Ve
 | [`docs/stack.md`](./docs/stack.md) | TypeScript, Fastify, Drizzle, Postgres, Better Auth, Next.js |
 | [`docs/api-contract.md`](./docs/api-contract.md) | OpenAPI, Orval, tables vs shop vs ops |
 
-Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md), [`docs/adr/0007-organization-id-current-not-deferred.md`](./docs/adr/0007-organization-id-current-not-deferred.md) (multi-org seam — current, not deferred; demo stays `DEFAULT`).
+Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md), [`docs/adr/0007-organization-id-current-not-deferred.md`](./docs/adr/0007-organization-id-current-not-deferred.md) (multi-org seam — current, not deferred; demo stays `DEFAULT`), [`docs/adr/0008-available-to-sell-open-locked.md`](./docs/adr/0008-available-to-sell-open-locked.md) (David's available-to-sell formula; per-SKU open/locked).
 
 ## Stack (do not replace)
 
@@ -38,7 +38,7 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 
 1. **Dependency rule:** `domain/` and `application/` import only domain or `packages/shared-kernel`. No Fastify, Drizzle, Zod, Better Auth, Stripe, tax SDKs, Sentry, or logger SDKs on entities or use cases.
 2. **Controllers** parse the request, call **one** use case, map the response. No business logic, no SQL.
-3. **Inventory** is the only writer of quantities. Never store or mutate `available` as source of truth — movements only.
+3. **Inventory** is the only writer of quantities. Never store or mutate `available` or `availableToSell` as source of truth — movements only. Do not conflate warehouse leftover (`available`) with sellability (`availableToSell`).
 4. **Frontends** use Orval hooks only — no hand-written API `fetch`.
 5. **Tax:** never `price * rate`. Quote/commit via `ITaxCalculator`. Fail closed if the engine is down.
 6. **Licensing** owns software subscription money and `IFeatures`. Do not mix into Accounting AR.

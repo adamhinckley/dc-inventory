@@ -25,3 +25,10 @@ Intended as a **Scaffold** sub-initiative under DC Inventory. The workspace plan
 | [Scaffold — Frontend](https://linear.app/adamhinckley/project/scaffold-frontend-ebcc04a0da47) | `apps/internal` + `apps/wholesale`, UI packages, Storybook |
 
 Frontend depends on Backend. Decisions: `CONTEXT.md`, `docs/adr/0001`–`0007`. When nested initiatives become available, re-parent these projects under a Scaffold sub-initiative without renaming them.
+
+## Product
+
+| Project | Role |
+|---|---|
+| [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) | `OrganizationId` seam. Isolation, not sellability math. |
+| [Demand model — backend](https://linear.app/adamhinckley/project/demand-model-backend-c0810f4afefe) | David's available-to-sell formula. Open vs locked per SKU. Ledger + sales confirm. No frontend. Map: [ADA-173](https://linear.app/adamhinckley/issue/ADA-173/demand-model-backend-implementation-map). ADR 0008. |

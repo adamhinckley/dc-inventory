@@ -45,7 +45,8 @@ What a staff user and a wholesale client can both see (different sessions; the c
 | Deferred |
 | --- |
 | Multiple warehouses / transfers |
-| Selling against inbound PO quantity |
+| Company-wide selling season as the infinity switch |
+| PO workspace UI, cube/container fill, CSV export screens |
 | Product variants as a separate model |
 | General ledger, AP, inventory valuation |
 | Tax quotes (need ship-to, origin, exemption first) |
