@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   CustomerId,
-  OrganizationId,
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import {
@@ -41,6 +40,7 @@ import {
   shipToWriteBodySchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
+import { staffOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -140,7 +140,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request) => {
       const result = await request.server.customers.listCustomers.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         q: request.query.q,
         page: request.query.page,
@@ -174,7 +174,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.createCustomer.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         ...request.body,
       });
@@ -198,7 +198,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.getCustomer.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
       });
@@ -223,7 +223,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.updateCustomer.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
         ...request.body,
@@ -248,7 +248,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.listContacts.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
       });
@@ -277,7 +277,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.createContact.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
         ...request.body,
@@ -310,7 +310,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.updateContact.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
         contactId: ContactId.parse(request.params.contactId),
@@ -339,7 +339,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.listShipTos.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
       });
@@ -364,7 +364,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.createShipTo.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
         ...request.body,
@@ -390,7 +390,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.updateShipTo.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
         shipToId: ShipToId.parse(request.params.shipToId),
@@ -416,7 +416,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.listExemptionCertificates.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
       });
@@ -441,7 +441,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.createExemptionCertificate.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
         jurisdiction: request.body.jurisdiction,
@@ -471,7 +471,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.customers.updateExemptionCertificate.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         customerId: CustomerId.parse(request.params.id),
         certificateId: ExemptionCertificateId.parse(request.params.certificateId),

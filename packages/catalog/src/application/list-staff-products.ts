@@ -45,6 +45,7 @@ export class ListStaffProductsUseCase {
       inactive: input.inactive,
     });
     const snapshots = await this.qty.readBySkus(
+      input.organizationId,
       listed.map((row) => row.product.sku),
     );
     const rows: StaffProductListRow[] = listed.map((row) => ({

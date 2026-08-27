@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { InvoiceId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { InvoiceId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
   invoiceIdParamsSchema,
@@ -15,6 +15,7 @@ import {
   unauthorizedResponseSchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
+import { staffOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -22,10 +23,6 @@ function typed(app: FastifyInstance) {
 
 function staffUserId(request: { staffAuth?: { staffUserId: string } }): StaffUserId {
   return StaffUserId.parse(request.staffAuth?.staffUserId ?? "");
-}
-
-function staffOrganizationId(request: { staffAuth?: { organizationId: string } }): OrganizationId {
-  return OrganizationId.parse(request.staffAuth?.organizationId ?? OrganizationId.DEFAULT);
 }
 
 function sendNotFound(reply: FastifyReply) {

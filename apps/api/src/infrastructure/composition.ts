@@ -107,9 +107,14 @@ import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
+import {
+  ListLicensingPaymentsUseCase,
+  ListLicensingSubscriptionsUseCase,
+} from "../application/list-licensing.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
 import { featuresAllCoreOn, type IFeatures } from "../features.js";
+import { InMemoryLicensingStore } from "../licensing/in-memory-licensing.js";
 import { createDatabaseConnection, PostgresDatabase } from "./db.js";
 
 export type IdentityHttpServices = {
@@ -169,6 +174,11 @@ export type AccountingHttpServices = {
   recordPayment: RecordPaymentUseCase;
 };
 
+export type LicensingHttpServices = {
+  listSubscriptions: ListLicensingSubscriptionsUseCase;
+  listPayments: ListLicensingPaymentsUseCase;
+};
+
 /**
  * Composition root services. Domain/application never import this file —
  * only `app.ts` / `server.ts` wire ports to adapters here.
@@ -185,7 +195,9 @@ export type AppServices = {
   purchasing: PurchasingHttpServices;
   sales: SalesHttpServices;
   accounting: AccountingHttpServices;
+  licensing: LicensingHttpServices;
   unitOfWork: IUnitOfWork;
+  licensingStore: InMemoryLicensingStore;
 };
 
 export type AppServiceOverrides = {
@@ -208,6 +220,7 @@ export type AppServiceOverrides = {
   invoiceRepo?: IInvoiceRepository;
   accountingUnitOfWork?: import("@dc-inventory/accounting").IAccountingUnitOfWork;
   unitOfWork?: IUnitOfWork;
+  licensingStore?: InMemoryLicensingStore;
 };
 
 function catalogServices(
@@ -312,11 +325,19 @@ function accountingServices(
   };
 }
 
+function licensingServices(store: InMemoryLicensingStore): LicensingHttpServices {
+  return {
+    listSubscriptions: new ListLicensingSubscriptionsUseCase(store),
+    listPayments: new ListLicensingPaymentsUseCase(store),
+  };
+}
+
 export function composeAppServices(
   overrides: AppServiceOverrides = {},
 ): AppServices {
   const features = overrides.features ?? featuresAllCoreOn();
   const clock = overrides.clock ?? new SystemClock();
+  const licensingStore = overrides.licensingStore ?? new InMemoryLicensingStore();
 
   let database: IDatabase;
   let identityDb: IdentityDrizzle | undefined;
@@ -456,6 +477,8 @@ export function composeAppServices(
     purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork, clock),
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork, clock),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
+    licensing: licensingServices(licensingStore),
     unitOfWork,
+    licensingStore,
   };
 }
