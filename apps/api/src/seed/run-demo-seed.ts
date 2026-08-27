@@ -69,7 +69,7 @@ function tick(
   input.onProgress?.(stage);
 }
 
-function staticSeedPorts(): StaticDemoSeedPorts & {
+function staticSeedPortsForDemo(): StaticDemoSeedPorts & {
   locations: Map<string, { id: string; code: string }>;
 } {
   const suppliers = new InMemorySupplierRepository();
@@ -138,7 +138,7 @@ async function copySuppliers(
 export async function runDemoSeedInMemory(
   input: RunDemoSeedInMemoryInput,
 ): Promise<RunDemoSeedInMemoryResult> {
-  const staticPorts = staticSeedPorts();
+  const staticPorts = staticSeedPortsForDemo();
   const assertWithinBudget = (): void => {
     input.deadline?.assertWithinBudget();
   };
@@ -245,3 +245,6 @@ export async function runDemoSeedInMemory(
     defaultLocationId,
   };
 }
+
+/** Test-only export: in-memory ports for static demo seed wiring. */
+export { staticSeedPortsForDemo };

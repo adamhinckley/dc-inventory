@@ -89,6 +89,19 @@ function rowsForShape(keys: readonly string[], rows: readonly unknown[]): Record
   return rows.map((row) => pick(row as Record<string, unknown>, keys));
 }
 
+function filterDemoOrgRows(rows: readonly unknown[]): readonly unknown[] {
+  return rows.filter((row) => {
+    const record = row as { organizationId?: string; tenantId?: string };
+    if (record.organizationId !== undefined && record.organizationId !== DEMO_SEED_ORGANIZATION_ID) {
+      return false;
+    }
+    if (record.tenantId !== undefined && record.tenantId !== DEMO_SEED_ORGANIZATION_ID) {
+      return false;
+    }
+    return true;
+  });
+}
+
 function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
   const parallelRows = [
     bundle.products,
@@ -158,7 +171,7 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
         return {
           from: vi.fn(() => ({
             innerJoin: vi.fn(() => ({
-              where: vi.fn(async () => rowsForShape(keys, rows)),
+              where: vi.fn(async () => rowsForShape(keys, filterDemoOrgRows(rows))),
             })),
           })),
         };
@@ -168,15 +181,7 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
         return {
           from: vi.fn(() => ({
             where: vi.fn(async () =>
-              rows
-                .filter(
-                  (row) =>
-                    (row as { organizationId?: string }).organizationId ===
-                      DEMO_SEED_ORGANIZATION_ID ||
-                    (row as { organizationId?: string }).organizationId ===
-                      undefined,
-                )
-                .map((row) => pick(row as Record<string, unknown>, keys)),
+              rowsForShape(keys, filterDemoOrgRows(rows)),
             ),
           })),
         };
@@ -184,9 +189,9 @@ function mockDbFromBundle(bundle: ReturnType<typeof demoBookToRowBundle>) {
 
       return {
         from: vi.fn(() => ({
-          where: vi.fn(async () => rowsForShape(keys, rows)),
+          where: vi.fn(async () => rowsForShape(keys, filterDemoOrgRows(rows))),
           innerJoin: vi.fn(() => ({
-            where: vi.fn(async () => rowsForShape(keys, rows)),
+            where: vi.fn(async () => rowsForShape(keys, filterDemoOrgRows(rows))),
           })),
         })),
       };
@@ -223,6 +228,39 @@ describe("PostgresDemoBookReader", () => {
     expect(postgresViaLoad).toEqual({ ok: true });
     expect(postgresDirect).toEqual({ ok: true });
     expect(postgresDirect).toEqual(memoryResult);
+    expect(loaded).toEqual(source);
+  });
+
+  it("excludes polluting rows from a second organization", async () => {
+    const source = buildValidReducedDemoBook();
+    const bundle = demoBookToRowBundle(source);
+    const pollutingBundle = {
+      ...bundle,
+      products: [
+        ...bundle.products,
+        {
+          ...bundle.products[0]!,
+          id: "beta-product-id",
+          sku: "BETA-WIDGET",
+          organizationId: "beta-org-uuid",
+        },
+      ],
+      suppliers: [
+        ...bundle.suppliers,
+        {
+          ...bundle.suppliers[0]!,
+          id: "beta-supplier-id",
+          vendorNumber: "VEND-BETA",
+          organizationId: "beta-org-uuid",
+        },
+      ],
+    };
+    const { db } = mockDbFromBundle(pollutingBundle);
+
+    const loaded = await new PostgresDemoBookReader(db as never).load();
+
+    expect(loaded.products.some((row) => row.sku === "BETA-WIDGET")).toBe(false);
+    expect(loaded.suppliers.some((row) => row.vendorNumber === "VEND-BETA")).toBe(false);
     expect(loaded).toEqual(source);
   });
 });

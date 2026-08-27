@@ -57,11 +57,17 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
     const skuByProductId = new Map(
       products.map((row) => [String(row.product.id), row.product.sku.value]),
     );
-    const images = await this.ports.productImages.listAll();
+    const productIds = new Set(skuByProductId.keys());
+    const images = (await this.ports.productImages.listAll()).filter((row) =>
+      productIds.has(row.productId),
+    );
     const suppliers = (await this.ports.suppliers.listAll()).filter(
       (row) => row.organizationId === DEMO_SEED_ORGANIZATION_ID,
     );
-    const supplierProducts = await this.ports.supplierProducts.listAll();
+    const supplierIds = new Set(suppliers.map((row) => String(row.id)));
+    const supplierProducts = (await this.ports.supplierProducts.listAll()).filter((row) =>
+      supplierIds.has(row.supplierId),
+    );
     const customerPage = await this.ports.customers.list({
       organizationId: DEMO_SEED_ORGANIZATION_ID,
       page: 1,

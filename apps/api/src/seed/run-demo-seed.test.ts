@@ -3,7 +3,8 @@ import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { DEMO_SEED_ORGANIZATION_ID } from "./demo-seed-organization.js";
 import { planReducedDemoBook, REDUCED_PLAYBACK_COUNTS } from "./planner/plan-reduced-demo-book.js";
 import { REDUCED_DEMO_RECONCILIATION_EXPECTATIONS } from "./reconciliation/valid-reduced-demo-book.js";
-import { runDemoSeedInMemory } from "./run-demo-seed.js";
+import { runDemoSeedInMemory, staticSeedPortsForDemo } from "./run-demo-seed.js";
+import { runWriteStaticDemoBook } from "./write-static-demo-book.js";
 
 const SEED_TODAY = new Date("2026-08-24T15:30:00.000Z");
 
@@ -36,6 +37,31 @@ describe("runDemoSeedInMemory", () => {
 
     expect(result.reconciliation.ok).toBe(true);
     expect(result.defaultLocationId.length).toBeGreaterThan(0);
-    expect(DEMO_SEED_ORGANIZATION_ID).toBe(OrganizationId.DEFAULT);
+  });
+
+  it("writes static master data only under DEMO_SEED_ORGANIZATION_ID", async () => {
+    const plan = planReducedDemoBook(SEED_TODAY);
+    const ports = staticSeedPortsForDemo();
+    await runWriteStaticDemoBook(ports, plan, {
+      staffPassword: "staff-placeholder",
+      wholesalePassword: "wholesale-placeholder",
+    });
+
+    const products = await ports.products.listMatching({
+      organizationId: DEMO_SEED_ORGANIZATION_ID,
+    });
+    expect(products.length).toBeGreaterThan(0);
+    for (const row of products) {
+      expect(row.product.organizationId).toBe(DEMO_SEED_ORGANIZATION_ID);
+    }
+
+    const suppliers = await ports.suppliers.listAll();
+    expect(suppliers.length).toBeGreaterThan(0);
+    expect(suppliers.every((row) => row.organizationId === DEMO_SEED_ORGANIZATION_ID)).toBe(
+      true,
+    );
+    expect(
+      suppliers.some((row) => row.organizationId !== OrganizationId.DEFAULT),
+    ).toBe(false);
   });
 });
