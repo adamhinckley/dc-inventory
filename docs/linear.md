@@ -24,4 +24,4 @@ Intended as a **Scaffold** sub-initiative under DC Inventory. The workspace plan
 | [Scaffold — Backend](https://linear.app/adamhinckley/project/scaffold-backend-43a46702b7e7) | Monorepo root, shared kernel, Fastify, OpenAPI/Orval, Drizzle wiring |
 | [Scaffold — Frontend](https://linear.app/adamhinckley/project/scaffold-frontend-ebcc04a0da47) | `apps/internal` + `apps/wholesale`, UI packages, Storybook |
 
-Frontend depends on Backend. Decisions: `CONTEXT.md`, `docs/adr/0001`–`0005`. When nested initiatives become available, re-parent these projects under a Scaffold sub-initiative without renaming them.
+Frontend depends on Backend. Decisions: `CONTEXT.md`, `docs/adr/0001`–`0007`. When nested initiatives become available, re-parent these projects under a Scaffold sub-initiative without renaming them.

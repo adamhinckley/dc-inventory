@@ -543,7 +543,7 @@ Without `IEmailSender`, agents will either skip a business-visible invariant or 
 
 **Close:**
 
-- **Single wholesale company per deployment in v1**, with `TenantId = DEFAULT` on Licensing so a later second tenant is additive (same pattern as `LocationId`).
+- **Single wholesale company in the v1 demo** (`OrganizationId.DEFAULT`, `TenantId = DEFAULT` on Licensing — same string, 1:1 grain per [ADR 0007](./adr/0007-organization-id-current-not-deferred.md)). The **multi-org seam is in progress** on the [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) project: composite uniqueness and session `organizationId` overwrite so SKU/email do not freeze global. Demo seed stays one org; self-serve signup UI is a later milestone.
 - **Currency:** store `Money.currency` but v1 operations are **one currency** (name it, likely USD). Mixing currencies on one order is rejected at construction. Software subscription currency should match or be documented.
 - **Clock / timezone:** report buckets (`from`, `to`, `granularity`) use one named timezone (company local). Domain tests inject a clock port; do not call `new Date()` in domain entities.
 

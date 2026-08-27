@@ -612,7 +612,7 @@ docs/
   work-dashboard-design-spec.md  # Carbon White + opt-in g100, Tailwind v4 tokens (internal UI)
   open-questions.md        # stakeholder questions (Slack copy)
   surfaces/                # dashboard, wholesale shop, owner insights
-  future-concepts/         # not v1; must stay additive (multi-organization, …)
+  future-concepts/         # additive contracts (multi-organization seam, …)
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
@@ -759,9 +759,9 @@ Do not sneak these into v1 modules:
 - LaunchDarkly (or similar) as a **required** runtime — allowed later only as an `IFeatures` adapter
 - Stripe Connect / marketplace splits; charging wholesale *customers’* cards through this app in v1
 - Feature flags that disable inventory ATP, credit checks, or session `customerId` binding
-- A second wholesale **Organization** on the same site (self-serve signup, `OrganizationId` on rows) — [`future-concepts/multi-organization.md`](./future-concepts/multi-organization.md)
+- Self-serve **signup UI** and org-slug routing before the Signup milestone packets open — see [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) (implementation map [ADA-157](https://linear.app/adamhinckley/issue/ADA-157/multi-organization-implementation-map))
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain. `OrganizationId` should exist the same way (v1 = one implicit org) so a second company is additive — do not implement signup or a database-per-tenant in v1.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain. **`OrganizationId` is current** ([ADR 0007](./adr/0007-organization-id-current-not-deferred.md)): one implicit org in v1 demo (`DEFAULT`), composite uniqueness and session overwrite in progress so a second company is additive without a database-per-tenant. Language and isolation rules: [`future-concepts/multi-organization.md`](./future-concepts/multi-organization.md). Do not stand up a second Postgres “for tenants.”
 
 ---
 
