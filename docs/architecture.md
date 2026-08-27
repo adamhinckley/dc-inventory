@@ -13,8 +13,8 @@ Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design
 Wholesale inventory control for a business that:
 
 - Maintains a product catalog (including images)
-- Tracks stock on hand, stock on order (purchase orders), and quantity clients have already ordered
-- Surfaces **available** quantity for any SKU
+- Tracks stock on hand, stock on order (purchase orders), and quantity clients have already pre-sold
+- Surfaces **available** (warehouse leftover) and **available to sell** (David’s formula) for any SKU
 - Creates and receives purchase orders
 - Lets wholesale clients place orders from a dedicated frontend
 - Manages customers (accounts, contacts, terms, credit, ship-to, tax exemption certificates)
@@ -48,7 +48,7 @@ One backend. Three HTTP adapters (`/internal`, `/wholesale`, `/ops`). Shared use
 
 **Requirements will change mid-build.** Stakeholders will reverse a rule, add a field, or invent a screen halfway through. The architecture exists so that kind of change is **local and additive**, not a rewrite. See [§2a](#2a-change-friendly-api-and-modules). HTTP evolution rules live in [`api-contract.md`](./api-contract.md#7-api-evolution-when-requirements-change).
 
-**Complex availability is a projection.** Stock on hand, stock on order, allocated-to-clients, and available are **not** independent columns that get mutated in three places. They are derived from a stock ledger. See [§6](#6-inventory-stock-ledger-not-a-qty-column).
+**Complex availability is a projection.** Stock on hand, stock on order, committed (pre-sold), allocated (warehouse cover), available, and available to sell are **not** independent columns that get mutated in three places. They are derived from a stock ledger. See [§6](#6-inventory-stock-ledger-not-a-qty-column) and [ADR 0008](./adr/0008-available-to-sell-open-locked.md).
 
 ---
 
@@ -64,7 +64,7 @@ This is a **hard requirement**, not a nice-to-have: mid-build mind-changes must 
 | New CRUD field on a form | Optional Zod field + use case mapping + migration if persisted — same Orval path |
 | New screen / report | New query or command use case + one HTTP route + Orval hook — no shared “god” endpoint |
 | Business rule change (e.g. invoice on ship vs confirm) | One use case + its unit tests; adapters only if the wire shape must change |
-| Policy change on availability (e.g. sell against inbound later) | New **projection rule** on the Inventory read model — ledger movement types stay |
+| Policy change on availability (open vs locked, sell against inbound) | New **projection rule** on the Inventory read model — ledger movement types stay additive ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)) |
 | Wholesale-only vs staff-only behavior | DTO mapping in the matching HTTP adapter — **do not fork** the use case |
 
 If a change requires editing three contexts, both OpenAPI specs, and hand-written `fetch` in React, the previous design was wrong — fix the seam, do not paper over it.
@@ -139,7 +139,7 @@ The module map and inventory model do not depend on Fastify vs another HTTP libr
 | Concern | v1 | Explicitly later |
 |---|---|---|
 | Warehouses | One warehouse, modeled as `LocationId` currently `DEFAULT` | Multi-location ATP |
-| Available qty | `on_hand - allocated` | Sell against inbound POs |
+| Available qty | Warehouse leftover `on_hand - allocated`; sellable is `availableToSell` ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)) | Company-wide season as the infinity switch; first-class drop-ship |
 | Accounting | Invoices, payments, AR **of wholesale customers** | General ledger |
 | Tax | Quote at checkout, commit on invoice post, hosted engine behind `ITaxCalculator` | Return filing, use tax on POs, certificate-lifecycle CMS |
 | Software billing | Licensing context + payment history + `IFeatures`; Stripe optional (manual record works) | Multi-tenant SaaS, LaunchDarkly as required runtime, Stripe Connect marketplace |
@@ -216,9 +216,9 @@ flowchart LR
 | **Identity** | Staff vs wholesale vs **ops** users, credentials, roles, sessions | Customer credit, product data, plan prices | Medium — owner reviews authz |
 | **Licensing** | Software subscription, **payment history to the developer**, paid add-ons, `IFeatures` | Wholesale AR, inventory qty, catalog SKUs | Low for billing/webhooks; high for “gate this route” once a flag exists |
 | **Catalog** | SKU, name, description, images, list/wholesale price, `taxCategoryCode` | Stock counts, tax rates | **High** |
-| **Inventory** | Stock **ledger**, ATP read model, `LocationId` | Product marketing copy, order totals | **Low** — owner specifies tests first |
+| **Inventory** | Stock **ledger**, ATP read model, `LocationId`, per-SKU open/locked | Product marketing copy, order totals | **Low** — owner specifies tests first |
 | **Purchasing** | Suppliers, purchase orders, receiving | On-hand qty (emits `GoodsReceived`) | Medium |
-| **Sales** | Wholesale orders, line items, status | Customer master beyond `CustomerId`; live stock | Medium — allocation is gated |
+| **Sales** | Wholesale orders, line items, status | Customer master beyond `CustomerId`; live stock | Medium — commit on confirm is gated |
 | **Customers** | Accounts, contacts, terms, credit limit, ship-to, exemption **files + metadata** | Invoices, tax math | **High** (exemption **enforcement** gated) |
 | **Tax** | `ITaxCalculator` quote/commit/void, frozen tax lines, engine transaction ids | Customer master, AR balance, filing returns | **Low** — owner specifies tests first |
 | **Accounting** | Invoices, payments, AR **owed by wholesale customers**; copies committed tax onto the invoice | Full GL, inventory valuation, **software** subscription, tax engine HTTP | Low–medium — money paths gated |
@@ -306,7 +306,7 @@ In-memory adapters are not optional. They are how unit tests and coding agents v
 
 ## 6. Inventory: stock ledger, not a qty column
 
-This is the hard problem. Get it wrong and every screen that shows “available” will drift. The full invariant checklist (including open ATP/credit/state-machine decisions) is [`invariants.md`](./invariants.md).
+This is the hard problem. Get it wrong and every screen that shows “available” will drift. The full invariant checklist (including open ATP/credit/state-machine decisions) is [`invariants.md`](./invariants.md). Product law for sellability is [ADR 0008](./adr/0008-available-to-sell-open-locked.md).
 
 ### Source of truth
 
@@ -316,11 +316,14 @@ Movement types:
 
 | Movement | Effect |
 |---|---|
-| `InboundFromPo` | Increases `on_order` when a PO is placed/confirmed |
-| `GoodsReceived` | Decreases `on_order`, increases `on_hand` |
-| `Allocated` | Increases `allocated` when a sales order is confirmed |
-| `Deallocated` | Decreases `allocated` on cancel / reject |
-| `Shipped` | Decreases `allocated` and `on_hand` |
+| `InboundFromPo` | Increases `on_order` when a PO is placed/confirmed. First inbound for the SKU **locks** sell state. |
+| `GoodsReceived` | Decreases `on_order`, increases `on_hand`. Then FIFO-cover committed qty that is not yet allocated. |
+| `InboundCancelled` | Decreases `on_order`. Does not reopen the SKU. |
+| `Committed` | Increases `committed` when a sales order is confirmed (demand / pre-sold). |
+| `Decommitted` | Decreases `committed` on cancel / reject / line-level manufacturer miss. |
+| `Allocated` | Increases `allocated` as warehouse cover against `on_hand`. May run at confirm and again on receive. |
+| `Deallocated` | Decreases `allocated` when cover is released. |
+| `Shipped` | Decreases `allocated`, `on_hand`, and `committed`. |
 | `Adjustment` | Explicit on-hand correction (shrink, count, damage) |
 
 ### Read model (what UIs show)
@@ -328,15 +331,18 @@ Movement types:
 For each `(sku, locationId)`:
 
 ```
-on_hand     = receipts − shipments − adjustments
-on_order    = open PO qty not yet received
-allocated   = open sales-order qty not yet shipped
-available   = on_hand − allocated
+on_hand           = receipts − shipments − adjustments
+on_order          = open PO qty not yet received
+committed         = confirmed sales qty not yet shipped or decommitted
+allocated         = warehouse cover against on_hand (never exceeds on_hand)
+available         = on_hand − allocated
+availableToSell   = open ? (no cap) : on_hand + on_order − committed
+uncovered         = max(0, committed − on_hand − on_order)
 ```
 
-**v1 policy:** inbound PO qty is **shown**, not **sellable**. Clients cannot order against stock that has not been received. Changing that policy later is a new projection rule, not a rewrite of the ledger.
+**Sellability (v1):** per-SKU **open** (no numeric cap until a factory PO exists) or **locked** (the three-part formula). Inbound PO qty is sellable when locked. Selling before any factory PO exists is open mode. `uncovered` is the factory to-order list, not a shop number. Changing these rules later is a new projection, not a rewrite of the ledger.
 
-`available` is never written by a use case as a raw field. It is computed (or stored only as a derived column maintained by the Inventory adapter).
+`available` and `availableToSell` are never written by a use case as raw fields. They are computed (or stored only as derived columns maintained by the Inventory adapter). Frontends never compute them.
 
 ```mermaid
 flowchart TD
@@ -348,12 +354,12 @@ flowchart TD
   subgraph inventory [Inventory context]
     Ports[Inventory ports]
     Ledger[Stock movement ledger]
-    ReadModel["Read model: on_hand / on_order / allocated / available"]
+    ReadModel["Read model: on_hand / on_order / committed / allocated / available / availableToSell"]
   end
-  Purchasing -->|"PO confirmed: InboundFromPo"| Ports
-  Purchasing -->|"Receipt: GoodsReceived"| Ports
-  Sales -->|"Order confirmed: Allocated"| Ports
-  Sales -->|"Cancel: Deallocated"| Ports
+  Purchasing -->|"PO confirmed: InboundFromPo (locks SKU)"| Ports
+  Purchasing -->|"Receipt: GoodsReceived + FIFO cover"| Ports
+  Sales -->|"Order confirmed: Committed (+ cover Allocated)"| Ports
+  Sales -->|"Cancel: Decommitted / Deallocated"| Ports
   Sales -->|"Fulfill: Shipped"| Ports
   Catalog -->|"SKU exists; no qty"| Ports
   Ports --> Ledger
@@ -364,7 +370,7 @@ flowchart TD
 
 - **Stock ledger + per-SKU snapshot** live in Inventory. Do not put on-hand on `Product` or on `SalesOrder`.
 - **PurchaseOrder** is its own aggregate (Purchasing). Receiving records a receipt against the PO, then Inventory records `GoodsReceived`.
-- **SalesOrder** is its own aggregate (Sales). Confirming it asks Inventory to allocate; Inventory may reject if `available` is insufficient.
+- **SalesOrder** is its own aggregate (Sales). Confirming it asks Inventory to **commit** demand; Inventory may reject if locked `availableToSell` is insufficient. Ship consumes warehouse `Allocated`.
 - Customer does not contain orders. Order holds `CustomerId`.
 
 If a use case needs both an order and a stock number, it is an **application** use case that talks to two ports, not a reason to merge aggregates.
@@ -409,7 +415,7 @@ sequenceDiagram
 Rules:
 
 - Wholesale adapters **force** `customerId` from the session. Clients cannot pass another account’s id. Checkout **quotes tax** via Tax ports; the shop does not compute tax.
-- Wholesale catalog reads may return price, images, and `available`; they never return cost, supplier, or other customers’ orders. Cart and checkout call Sales use cases with `customerId` from the session.
+- Wholesale catalog reads may return price, images, `available`, and `availableToSell`; they never return cost, supplier, or other customers’ orders. Cart and checkout call Sales use cases with `customerId` from the session.
 - Internal **reports** are query use cases that return KPIs and chart series (bucketed in Postgres). The dashboard does not download a list and aggregate in React.
 - Internal adapters may call the same `PlaceOrder` / `GetAvailability` use cases with staff privileges (e.g. place an order on behalf of a customer).
 - Gated capabilities check `IFeatures` at the adapter (or a use-case decorator), then still `403` if someone calls the route anyway. Internal/wholesale get a **bootstrap list** of enabled flag names, not flag admin.
@@ -459,7 +465,7 @@ v1 reports (internal spec only):
 | Dashboard summary | Open orders, low-stock SKU count, AR balance, inbound PO count |
 | Sales over time | Confirmed/shipped order totals by day/week (query: `from`, `to`, `granularity`) |
 | Orders by status | Counts for a pipeline chart |
-| Inventory snapshot | On-hand / on-order / allocated / available **totals or top-N SKUs** — from the Inventory read model |
+| Inventory snapshot | On-hand / on-order / committed / allocated / available / availableToSell **totals or top-N SKUs** — from the Inventory read model |
 | AR aging | Simple buckets (current / 30 / 60 / 90) once invoicing exists |
 
 `y` for money is **integer cents**. The chart library only formats for display.
@@ -542,14 +548,14 @@ The agent’s job is to make those tests pass **without changing the invariant**
 **Medium** (agent implements; owner glances at domain changes):
 
 - Purchasing PO create / receive **if** Inventory ports and tests already define movement effects
-- Sales order draft / line items; **allocation call is gated**
+- Sales order draft / line items; **commit on confirm is gated**
 
 **Low / human-gated** (owner writes or tightly specifies tests first; agent may then implement):
 
-- Inventory ledger math and ATP formula
+- Inventory ledger math and available-to-sell / open-locked ([ADR 0008](./adr/0008-available-to-sell-open-locked.md))
 - Stock **import** that creates `Adjustment` movements
 - Parsing supplier PDFs into PO lines
-- Allocation when `available` is insufficient
+- Commit when locked `availableToSell` is insufficient
 - Payment application and AR balance
 - Tax quote/commit/void, fail-closed, engine mapping, exemption **enforcement**
 - Authz / session binding of `customerId`
@@ -576,7 +582,7 @@ Given:
 Do:
 - Implement the adapter(s) and any HTTP DTO mapping
 - Keep application/ importing only domain/
-- Do not store available qty; do not add framework types to domain entities
+- Do not store available or availableToSell as inputs; do not add framework types to domain entities
 - Run the unit tests for this context; stop when green
 ```
 
@@ -587,7 +593,7 @@ After this document is accepted, add:
 - Root **`AGENTS.md`** (canonical) pointing here — this is what every agent should load
 - The same rules copied into vendor files only if you use that tool (`.cursor/rules/`, `CLAUDE.md`, Copilot instructions, etc.)
   - dependency rule (use cases do not import adapters)
-  - never mutate `available` as source of truth
+  - never mutate `available` or `availableToSell` as source of truth
   - controllers contain no business logic
   - Inventory module: movements only
 
@@ -728,12 +734,12 @@ Order is chosen so each step is a valid agent work packet and Inventory stays ga
 6. Inventory: ledger + read model **with owner-written tests first**
 7. Purchasing: PO + receive, calling Inventory ports; **generate PO PDF** (do not parse inbound PDFs)
 8. Tax: `ITaxCalculator` + in-memory + hosted-engine adapter **with owner-written tests first** ([`tax.md`](./tax.md))
-9. Sales: draft order → confirm (allocate) → ship; **wholesale shop** quotes tax before confirm; UI does not compute tax
+9. Sales: draft order → confirm (**commit** demand) → ship against `Allocated`; **wholesale shop** quotes tax before confirm; UI does not compute tax or sellability
 10. Accounting: invoice from order + **commit tax on post** + payment application (gated); invoice PDF prints frozen tax
 11. Spreadsheet import/export on Catalog/Customers first, then orders/POs; stock imports last and gated
 12. Internal dashboard reports/charts (summary KPIs, sales over time, inventory snapshot) — after the write models they read exist
 
-Do not start Sales allocation before Inventory tests exist. Do not launch wholesale checkout before Tax quote tests exist. Do not post invoices before Tax commit tests exist. Do not mix Licensing `SoftwarePayment` into Accounting. Do not start Stripe until `ISoftwareBillingGateway` + payment-history tests exist.
+Do not start Sales confirm/commit before Inventory available-to-sell tests exist. Do not launch wholesale checkout before Tax quote tests exist. Do not post invoices before Tax commit tests exist. Do not mix Licensing `SoftwarePayment` into Accounting. Do not start Stripe until `ISoftwareBillingGateway` + payment-history tests exist.
 
 ---
 
@@ -742,7 +748,10 @@ Do not start Sales allocation before Inventory tests exist. Do not launch wholes
 Do not sneak these into v1 modules:
 
 - Multiple warehouses / transfers / per-location ATP beyond `LocationId = DEFAULT`
-- Selling against inbound PO quantity
+- Company-wide selling season as the infinity switch (open/locked is per SKU; [ADR 0008](./adr/0008-available-to-sell-open-locked.md))
+- Zoho-style purchase-request document
+- First-class factory-to-customer drop-ship
+- Season forecast; native Faire API
 - Product variants as a separate aggregate (SKU is the stock-keeping identity)
 - General ledger, AP, inventory asset valuation
 - Tax **return filing**, remittance, nexus dashboards, use tax on POs, full certificate-lifecycle CMS (CertCapture-class). Calculation + commit **is** v1 — [`tax.md`](./tax.md)
@@ -776,7 +785,7 @@ Use this when reviewing an agent PR:
 - [ ] Frontends use Orval hooks only (no hand-written API `fetch`)
 - [ ] Spreadsheet import/export and PDFs go through file ports; UI does not parse workbooks
 - [ ] Quantities change only via Inventory movements
-- [ ] `available` is not assigned as a business input
+- [ ] `available` and `availableToSell` are not assigned as business inputs; the slice does not treat warehouse leftover as sellable
 - [ ] Tax is only via `ITaxCalculator`; no `price * rate` in Sales, Accounting, or UI; invoices freeze committed tax ([`tax.md`](./tax.md))
 - [ ] Sales uses `ProductSnapshot` / `CustomerId`, not foreign aggregates
 - [ ] New use cases have an in-memory unit test

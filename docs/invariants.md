@@ -37,7 +37,7 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | C6 | Inventory is the **only** writer of quantities. Catalog, Purchasing, and Sales do not `UPDATE` qty columns. They call Inventory ports (or emit events Inventory handles — see [G1](#g1-inventory-write-path-ports-vs-events-vs-one-transaction)). |
 | C7 | On-hand does not live on `Product` or on `SalesOrder`. Ledger + per-SKU snapshot live in Inventory. |
 | C8 | `PurchaseOrder` is its own aggregate (Purchasing). Receiving records a receipt against the PO, then Inventory records `GoodsReceived`. |
-| C9 | `SalesOrder` is its own aggregate (Sales). Confirming it asks Inventory to allocate; Inventory may reject if `available` is insufficient. |
+| C9 | `SalesOrder` is its own aggregate (Sales). Confirming it asks Inventory to **commit** demand; Inventory may reject if locked `availableToSell` is insufficient. Warehouse `Allocated` is cover against `on_hand`, not the confirm gate. |
 | C10 | A use case that needs both an order and a stock number talks to **two ports**. It is not a reason to merge aggregates. |
 | C11 | Reporting views may join later. They are not the write model. Use cases do not cross-schema join `catalog.products` from Sales (etc.). |
 | C12 | A PO is a purchasing document, not a journal entry. Accounting v1 is AR only — not GL, not AP from POs, not inventory valuation, **not software subscription**. |
@@ -99,13 +99,13 @@ This is the hard problem. Get it wrong and every “available” screen drifts.
 |---|---|
 | I1 | **Stock movements** are the source of truth. The availability snapshot is a **read model**. |
 | I2 | The snapshot for a SKU is updated in the **same database transaction** as the movement. v1 has no eventual-consistency gap on the number staff and clients see. |
-| I3 | `available` is never a business input and is never assigned by a use case as a raw field. It is `on_hand − allocated` (computed, or a derived column the Inventory adapter maintains). |
-| I4 | Frontends never compute `available` (or any stock figure). A list that shows stock figures is a query use case that reads the Inventory read model. |
-| I5 | Imports must not write `available` or raw on-hand. A stock-count import is an `Adjustment` movement and is owner-gated. |
-| I6 | v1 policy: inbound PO qty is **shown**, not **sellable**. Clients cannot order against stock that has not been received. Changing that is a new projection rule, not a ledger rewrite. |
-| I7 | Confirm order and insert `Allocated` happen in **one transaction**, with a row lock on that SKU’s snapshot (`SELECT … FOR UPDATE` or equivalent). |
+| I3 | `available` and `availableToSell` are never business inputs and are never assigned by a use case as raw fields. `available` is `on_hand − allocated` (computed, or a derived column the Inventory adapter maintains). `availableToSell` is computed per I6 ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)). |
+| I4 | Frontends never compute `available`, `availableToSell`, or any stock figure. A list that shows stock figures is a query use case that reads the Inventory read model. |
+| I5 | Imports must not write `available`, `availableToSell`, `committed`, or raw on-hand. A stock-count import is an `Adjustment` movement and is owner-gated. |
+| I6 | **Available to sell** ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)). Open vs locked is **per SKU per organization**, not a company-wide season flag. New SKUs start **open** (confirm has no numeric sellability cap). The first `InboundFromPo` **locks** the SKU. Optional `windowOpensAt` / `windowClosesAt` on the SKU: outside that window the SKU is locked even with no PO. First PO still locks immediately inside the window. Lock is sticky until staff reopen a list of SKUs. Locked formula: `availableToSell = on_hand + on_order − committed`. Clients buy against inbound and, while open, before any factory PO exists. `available` (warehouse leftover) stays `on_hand − allocated` and non-negative. |
+| I7 | Confirm order and insert `Committed` happen in **one transaction**, with a row lock on that SKU’s snapshot (`SELECT … FOR UPDATE` or equivalent). Effective sell state uses the **injected clock** vs the sell window. Cover (`Allocated` against leftover `available`) may run in that same transaction and/or later on `GoodsReceived`. |
 | I8 | Do not check availability in the app, then write in a second round trip with no lock. |
-| I9 | Inventory may reject allocation if `available` is insufficient. Confirm does not oversell. |
+| I9 | Inventory may reject **commit** if locked `availableToSell` is insufficient. Confirm does not oversell sellability. Warehouse `Allocated` may be less than `committed`. Ship consumes `Allocated` only. |
 | I10 | Snapshot grain is `(sku, locationId)`. |
 | I11 | Ledger math and the ATP formula are owner-specified (failing tests first). Agents do not invent or soften them. |
 | I12 | Inventory snapshot/ledger migrations are owner-gated. Agents may migrate **their** context’s schema only. |
@@ -114,25 +114,31 @@ This is the hard problem. Get it wrong and every “available” screen drifts.
 
 | Movement | Effect |
 |---|---|
-| `InboundFromPo` | Increases `on_order` when a PO is placed/confirmed |
-| `GoodsReceived` | Decreases `on_order`, increases `on_hand` |
-| `Allocated` | Increases `allocated` when a sales order is confirmed |
-| `Deallocated` | Decreases `allocated` on cancel / reject |
-| `Shipped` | Decreases `allocated` and `on_hand` |
-| `Adjustment` | Explicit on-hand correction (shrink, count, damage) |
+| `InboundFromPo` | Increases `on_order` when a PO is placed/confirmed. First inbound for the SKU **locks** sell state (even inside the sell window). |
+| `GoodsReceived` | Decreases `on_order`, increases `on_hand`. Then FIFO-cover committed qty that is not yet `Allocated`. |
+| `InboundCancelled` | Decreases `on_order`. Does not reopen the SKU. |
+| `Committed` | Increases `committed` when a sales order is confirmed (demand / pre-sold). |
+| `Decommitted` | Decreases `committed` on cancel, reject, or line-level manufacturer miss. |
+| `Allocated` | Increases `allocated` as warehouse cover against `on_hand`. May occur at confirm and again on receive. |
+| `Deallocated` | Decreases `allocated` when cover is released. |
+| `Shipped` | Decreases `allocated`, `on_hand`, and `committed`. |
+| `Adjustment` | Explicit on-hand correction (shrink, count, damage). |
 
 ### Read model (what UIs show)
 
 For each `(sku, locationId)`:
 
 ```
-on_hand     = receipts − shipments − adjustments
-on_order    = open PO qty not yet received
-allocated   = open sales-order qty not yet shipped
-available   = on_hand − allocated
+on_hand           = receipts − shipments − adjustments
+on_order          = open PO qty not yet received
+committed         = confirmed sales qty not yet shipped or decommitted
+allocated         = warehouse cover against on_hand (never exceeds on_hand)
+available         = on_hand − allocated
+availableToSell   = effectiveOpen ? (no cap) : on_hand + on_order − committed
+uncovered         = max(0, committed − on_hand − on_order)
 ```
 
-The `on_hand` line assumes a **signed** adjustment convention that is not yet closed — see [G3](#g3-adjustment-sign-and-negative-stock).
+`effectiveOpen` is persisted-open, inside the optional sell window, and not yet sticky-locked by a PO or by `windowClosesAt`. `uncovered` is the factory to-order list, not a shop number. The `on_hand` line assumes a **signed** adjustment convention that is not yet closed — see [G3](#g3-adjustment-sign-and-negative-stock).
 
 ---
 
@@ -155,11 +161,11 @@ The `on_hand` line assumes a **signed** adjustment convention that is not yet cl
 |---|---|
 | O1 | Sales owns wholesale orders, line items, and status. It does not own customer master beyond `CustomerId`, and it does not own live stock. |
 | O2 | Order lines freeze sku, name, and unit price at write time. Catalog edits must not rewrite order history. |
-| O3 | Draft / line-item work is medium autonomy. **Allocation on confirm is gated** (owner tests first). |
+| O3 | Draft / line-item work is medium autonomy. **Commit on confirm is gated** (owner tests first). |
 | O4 | Wholesale cart and checkout call Sales use cases with `customerId` from the session, never from the client body. |
-| O5 | Wholesale catalog may return price, images, and `available`. It never returns cost, supplier, or other customers’ orders. |
+| O5 | Wholesale catalog may return price, images, `available`, and `availableToSell`. It never returns cost, supplier, or other customers’ orders. |
 | O6 | Wholesale users never import into Catalog or Inventory. They do not get staff DataTables or report charts. |
-| O7 | Staff “place order on behalf of customer” is an **internal** use case: `customerId` comes from the staff DTO and still goes through credit + allocation ports. |
+| O7 | Staff “place order on behalf of customer” is an **internal** use case: `customerId` comes from the staff DTO and still goes through credit + commit ports. |
 | O8 | Wholesale `GetOrder` loads by id **and** session `customerId`. Missing row and other-customer’s row look the same (`404`), not a `403` that leaks existence. |
 | O9 | Cannot-modify-a-submitted-order is a **use-case / domain** rule, not middleware. (Exact statuses: [G5](#g5-sales-order-state-machine).) |
 | O10 | Wholesale browse is shop search/filter, not the internal `x-table` protocol. Do not put `DataTable` on the shop. |
@@ -172,7 +178,7 @@ The `on_hand` line assumes a **signed** adjustment convention that is not yet cl
 |---|---|
 | K1 | Catalog owns SKU, name, description, images, list/wholesale price. It does not own stock counts. |
 | K2 | Product image **bytes** live in object storage. Postgres stores metadata + object keys only. |
-| K3 | Catalog CRUD is high autonomy **except** it must not add qty columns or treat `available` as writable. |
+| K3 | Catalog CRUD is high autonomy **except** it must not add qty columns or treat `available` / `availableToSell` as writable. |
 
 ---
 
@@ -194,7 +200,7 @@ The credit-limit **formula** (what counts against the limit) is not closed — s
 | ID | Invariant |
 |---|---|
 | A1 | Accounting v1: invoices, payments, AR **owed by wholesale customers**. Out of scope: GL, inventory asset valuation, AP, tax **return filing**, **software subscription**. Tax **calculation** is Tax context (`ITaxCalculator`), not Accounting math. |
-| A2 | Invoice is created from a confirmed/shipped sales order. **Pick one trigger and keep it** — not yet chosen ([G7](#g7-invoice-on-confirm-vs-on-ship)). Tax **commits when that invoice posts**. |
+| A2 | Invoice is created when the sales order **ships**. One invoice per sales order in v1. Tax **commits when that invoice posts**. Confirmed-but-unshipped orders are not invoiced. Due date = invoice date + customer terms, copied onto the invoice. |
 | A3 | Payments are applied to invoices (`payment_applications` supports partial pay) against the invoice **total**, which includes committed tax. |
 | A4 | Payment application and AR balance are owner-gated. Agents do not invent AR rules or use float cash. |
 | A5 | Invoice PDF is a projection of our aggregates, same as PO PDF. |
@@ -302,7 +308,7 @@ The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matr
 | H9 | Search in v1 is Postgres (`ILIKE` / `pg_trgm`), not Elasticsearch. |
 | H10 | Internal charts are report query use cases returning a small bucketed payload. Never fetch list pages and aggregate in React. |
 | H11 | Do not add a general-purpose query builder or embed Metabase/Superset/Cube in v1. |
-| H12 | Packages `ui` may format money/dates for display. They must not contain domain math (ATP, AR, totals that disagree with the API). |
+| H12 | Packages `ui` may format money/dates for display. They must not contain domain math (ATP, available-to-sell, AR, totals that disagree with the API). |
 | H13 | Frontends must not import `packages/*/domain` or Drizzle schemas. |
 
 ---
@@ -345,7 +351,7 @@ The actual role × action matrix is not written — see [G8](#g8-staff-rbac-matr
 | AG3 | The agent’s job is to make those tests pass **without changing the invariant** and without importing adapters from use cases. |
 | AG4 | **One agent, one context, one branch.** Two agents must not write Inventory’s ledger or the shared kernel at the same time. |
 | AG5 | Human owns: ports, invariants, failing unit tests for gated zones, PR review of inventory / money / authz. |
-| AG6 | Gated (owner tests first): Inventory ledger/ATP, stock `Adjustment` import, allocation when `available` is insufficient, payment/AR, authz / `customerId` binding, software subscription / webhooks / `FeatureName` catalog, operator-bridge message kinds. |
+| AG6 | Gated (owner tests first): Inventory ledger / available-to-sell / open-locked, stock `Adjustment` import, commit when locked `availableToSell` is insufficient, payment/AR, authz / `customerId` binding, software subscription / webhooks / `FeatureName` catalog, operator-bridge message kinds. |
 | AG7 | Vendor instruction files are optional **mirrors** of `AGENTS.md`. Do not put rules in only one vendor’s folder. |
 | AG8 | Stop when the ticket’s unit tests are green. Do not expand scope. |
 | AG9 | Reject PRs that add Redis, Prisma-as-data-layer, Mongo, GraphQL, tRPC, Nest, Kafka, Elasticsearch, JWT-in-localStorage, hand-written API `fetch`, Datadog, a metrics/log microservice, or LaunchDarkly as a required SDK. |
@@ -377,7 +383,11 @@ Implementation order lock: do not start Sales allocation before Inventory tests 
 Do not sneak these into v1 modules. Naming them here keeps agents from “helpfully” adding them:
 
 - Multiple warehouses / transfers / per-location ATP beyond `LocationId = DEFAULT`
-- Selling against inbound PO quantity
+- Company-wide selling season as the infinity switch (open/locked and sell-window dates are per SKU; [ADR 0008](./adr/0008-available-to-sell-open-locked.md))
+- Zoho-style purchase-request document (demand-to-PO is `uncovered`, not a request queue)
+- First-class factory-to-customer drop-ship (keep fake receive-then-invoice; SKU+X workaround is operational)
+- Season forecast from prior-year sales
+- Native Faire API
 - Product variants as a separate aggregate
 - General ledger, AP, inventory asset valuation
 - Tax **return filing**, remittance, nexus dashboards, use tax on POs, full certificate-lifecycle CMS (calculation + commit **is** v1 — [`tax.md`](./tax.md))
@@ -407,18 +417,18 @@ Priority: **P0** = decide before that gated slice is implemented (inventory / sa
 
 ### G1. Inventory write path: ports vs events vs one transaction
 
-Architecture says Purchasing/Sales “call Inventory ports **or** emit events that Inventory handles,” and also that confirm + `Allocated` is **one transaction** with `FOR UPDATE`.
+Architecture says Purchasing/Sales “call Inventory ports **or** emit events that Inventory handles,” and also that confirm + `Committed` is **one transaction** with `FOR UPDATE`.
 
-**Close:** Stock mutations are **synchronous commands** through Inventory ports, in the same DB transaction as the order/PO write. In-process domain events may notify other contexts **after** that commit (e.g. “order confirmed” → Accounting). They must not be the mechanism that updates the ledger, or ATP will race.
+**Close:** Stock mutations are **synchronous commands** through Inventory ports, in the same DB transaction as the order/PO write. Confirm writes `Committed` (and as much `Allocated` cover as leftover `available` allows) in that transaction. Remaining cover is a synchronous command inside `GoodsReceived`, not an event after commit. In-process domain events may notify other contexts **after** that commit (e.g. “order confirmed” → Accounting). They must not be the mechanism that updates the ledger, or ATP will race.
 
 ### G2. Movement identity, idempotency, and ledger mutability
 
-The plan does not say whether the ledger is append-only, how a double-clicked Confirm is rejected, or what unique key prevents two `Allocated` rows for the same order line.
+The plan does not say whether the ledger is append-only, how a double-clicked Confirm is rejected, or what unique key prevents two `Committed` rows for the same order line.
 
 **Close for Inventory tests:**
 
-- Movements are **append-only**. Corrections are new movements (`Deallocated`, compensating `Adjustment`), not `UPDATE` of an old row.
-- A unique constraint on `(ref_type, ref_id, sku, movement_type)` (or an explicit idempotency key on the command) so confirm/receive/ship is safe to retry.
+- Movements are **append-only**. Corrections are new movements (`Decommitted`, `Deallocated`, compensating `Adjustment`), not `UPDATE` of an old row.
+- `Committed`, `Decommitted`, `InboundFromPo`, `Shipped` stay once-only at `(organization_id, ref_type, ref_id, sku, movement_type)`. `Allocated` / `Deallocated` may repeat for the same order line (cover at confirm, then on receive); uniqueness is the idempotency key.
 - Movement qty is a **positive integer**. Direction lives in the movement type, not a negative qty (except possibly signed `Adjustment` — [G3](#g3-adjustment-sign-and-negative-stock)).
 
 ### G3. Adjustment sign and negative stock
@@ -431,11 +441,11 @@ Read-model formula: `on_hand = receipts − shipments − adjustments`. That onl
 - Whether `on_hand` may go **negative**.
 - Whether an adjustment may drive `available` negative (on-hand below allocated). If yes, what Sales does on the next ship. If no, Inventory rejects the adjustment.
 
-### G4. Insufficient ATP on confirm
+### G4. Insufficient available-to-sell on confirm
 
-“Inventory may reject if `available` is insufficient” does not specify the unit of rejection.
+Locked sellability is `availableToSell`. Warehouse `available` is not the confirm gate ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)).
 
-**Close (v1 recommendation to write into tests):** reject the **entire confirm** if any line exceeds `available` after locking those SKUs in a stable order (avoid deadlocks). No partial allocation, no silent qty reduction, no backorder document in v1. Cart may display `available`; reservation happens at confirm, not while browsing.
+**Close (v1, write into tests):** reject the **entire confirm** if any **locked** line exceeds `availableToSell` after locking those SKUs in a stable order (avoid deadlocks). Open SKUs have no numeric sellability cap. No partial confirm, no silent qty reduction, no backorder document in v1. Cart may display `availableToSell`; reservation happens at confirm, not while browsing. Cover (`Allocated`) may be partial.
 
 ### G5. Sales order state machine
 
@@ -445,8 +455,8 @@ Statuses are sketched (draft → confirm/allocate → ship) but not closed. Stac
 
 | From | To | Stock effect | Notes |
 |---|---|---|---|
-| `draft` | `confirmed` | `Allocated` per line, or reject all | Lines editable only in `draft` |
-| `confirmed` | `cancelled` | `Deallocated` | Only if nothing shipped |
+| `draft` | `confirmed` | `Committed` per line (and cover `Allocated` up to leftover `available`), or reject all | Lines editable only in `draft`. Locked SKUs gated on `availableToSell`. |
+| `confirmed` | `cancelled` | `Decommitted` (+ `Deallocated` if covered) | Only if nothing shipped |
 | `confirmed` | `shipped` | `Shipped` | See partial ship below |
 | `draft` | `cancelled` | none | |
 
@@ -461,17 +471,11 @@ Still decide:
 
 Credit is named as a use-case invariant but not specified.
 
-**Close:** what counts against the limit at confirm — e.g. `open AR (invoiced unpaid) + this order total + confirmed-uninvoiced orders` vs invoices only. Same currency as `Money`. Fail the whole confirm (like ATP). Customers CRUD only stores the limit; it does not enforce it.
+**Close:** what counts against the limit at confirm — e.g. `open AR (invoiced unpaid) + this order total + confirmed-uninvoiced orders` vs invoices only. Same currency as `Money`. Fail the whole confirm (like locked `availableToSell`). Customers CRUD only stores the limit; it does not enforce it.
 
 ### G7. Invoice on confirm vs on ship
 
-Already flagged in architecture and database-design. Also decide:
-
-- **One invoice per sales order** in v1 (matches the ER “may create” / “billed as”).
-- Due date = invoice date + customer terms (Net 30/60/90), copied onto the invoice so later terms edits do not rewrite history — stakeholder language already assumes this.
-- Whether a confirmed-but-unshipped order can be invoiced if the trigger is “on ship” (no) or “on confirm” (yes).
-
-Until this is picked, Accounting tests cannot be written honestly. Tax **commits at the same moment the invoice posts**, whichever trigger is chosen.
+**Closed (2026-08-27 call + demo):** invoice when the sales order **ships**. One invoice per sales order. Confirmed-but-unshipped orders are not invoiced. Due date = invoice date + customer terms (Net 30/60/90), copied onto the invoice. Tax **commits at the same moment the invoice posts**. Statements are not invoices ([G13](#g13-customers-ship-to-terms-statements-confirmation-email)). Auto-dunning can stay weak; the AR ledger cannot.
 
 ### G8. Staff RBAC matrix
 
@@ -509,9 +513,9 @@ Credit memos, RMA, and blanket POs are already an open stakeholder question — 
 
 ### G11. Cross-context transaction boundary
 
-Confirm must write the sales order **and** the `Allocated` movement atomically (I7) while keeping aggregates separate (C10).
+Confirm must write the sales order **and** the `Committed` movement atomically (I7) while keeping aggregates separate (C10).
 
-**Close:** a composition-root / application unit of work wraps both ports in one Postgres transaction. In-memory tests use a single in-memory unit of work. Do not document “Inventory handles an event after commit” for allocation — that violates I2/I8.
+**Close:** a composition-root / application unit of work wraps both ports in one Postgres transaction. In-memory tests use a single in-memory unit of work. Do not document “Inventory handles an event after commit” for commit or cover — that violates I2/I8.
 
 ### G12. Catalog identity: SKU vs item number, delete, categories
 
@@ -579,9 +583,10 @@ Keep one word per concept in architecture + code + UI labels:
 
 From [`database-design.md`](./database-design.md), still open and restated here so they are not lost:
 
-1. Invoice on **confirm** or on **ship**? → [G7](#g7-invoice-on-confirm-vs-on-ship)
+1. Invoice on **confirm** or on **ship**? → **closed: on ship** ([G7](#g7-invoice-on-confirm-vs-on-ship))
 2. Separate **cart** table, or draft **orders**? → [G5](#g5-sales-order-state-machine)
 3. Day-one documents: credit memo, RMA, blanket PO? → default **none in v1**, named in [§17](#17-v1-scope-locks-explicitly-deferred)
+4. On-shelf only vs buy against inbound / before a factory PO? → **closed: David's formula** ([ADR 0008](./adr/0008-available-to-sell-open-locked.md), I6)
 
 ### G19. Licensing policy (subscription, grace, core vs paid)
 
@@ -619,10 +624,10 @@ Calculation + commit is locked ([§10a](#10a-tax-quote--commit), [`tax.md`](./ta
 
 These are the failing tests the architecture already says the owner writes; they cannot be honest until the gaps above have defaults:
 
-1. **Inventory:** movement effects, `available = on_hand − allocated`, reject oversell under concurrent confirms (in-memory lock/serial), adjustment sign, compensating deallocate.
-2. **Sales confirm:** all-or-nothing ATP, credit formula, session `customerId` overwrite, snapshot price frozen, draft not allocatable twice.
-3. **Purchasing receive:** `GoodsReceived` vs remaining `on_order`, cancel-compensates inbound, over-receive rejected.
-4. **Accounting:** chosen invoice trigger, partial payment, cannot over-apply, `Money` integer-only; invoice total includes committed tax.
+1. **Inventory:** movement effects, `available = on_hand − allocated`, locked `availableToSell = on_hand + on_order − committed`, open SKU has no sellability cap, first `InboundFromPo` locks, sell window can lock with no PO (injected clock), reject locked oversell under concurrent confirms (in-memory lock/serial), cover FIFO on receive, adjustment sign, compensating decommit/deallocate.
+2. **Sales confirm:** all-or-nothing `availableToSell` on locked lines, credit formula, session `customerId` overwrite, snapshot price frozen, draft not commitable twice. Ship only against `Allocated`.
+3. **Purchasing receive:** `GoodsReceived` vs remaining `on_order`, cancel-compensates inbound (does not reopen), over-receive rejected, FIFO cover of committed qty.
+4. **Accounting:** invoice on ship, partial payment, cannot over-apply, `Money` integer-only; invoice total includes committed tax.
 5. **Tax:** quote ≠ commit; fail-closed on engine error; commit idempotent; posted invoice tax lines do not change when a later quote would; no tax HTTP inside inventory lock.
 6. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
 7. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.
@@ -634,8 +639,9 @@ These are the failing tests the architecture already says the owner writes; they
 
 When reviewing an agent PR, the architecture checklist still applies ([architecture.md §15](./architecture.md#15-dependency-checklist)). Extra questions this document adds:
 
-- [ ] Did the slice invent a qty write, a second ATP formula, or a cart-side reservation?
-- [ ] Did a status change skip a movement (cancel without `Deallocated`, receive without `GoodsReceived`)?
+- [ ] Did the slice invent a qty write, a second sellability formula, or a cart-side reservation?
+- [ ] Did it treat warehouse `available` as available to sell, or compute either in a frontend?
+- [ ] Did a status change skip a movement (cancel without `Decommitted`/`Deallocated`, receive without `GoodsReceived`, confirm without `Committed`)?
 - [ ] Did money or qty become float anywhere on the path (DB, DTO, CSV, chart)?
 - [ ] Did wholesale trust a body `customerId` or return another customer’s row as `403`?
 - [ ] Did software billing land in Accounting or Catalog, or did a flag skip ATP/authz?

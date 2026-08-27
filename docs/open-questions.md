@@ -10,11 +10,11 @@ Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./data
 
 ## Orders and invoicing
 
-- [ ] When should a **customer invoice** be created: when the sales order is **confirmed**, or when it **ships**?
+- [x] When should a **customer invoice** be created: when the sales order is **confirmed**, or when it **ships**? **Ships.** Terms still apply. Statements are not invoices.
 - [ ] In the shop, is the cart a **separate cart**, or a **draft order** the customer can come back to?
 - [ ] Day one: do you need **credit memos**, **RMAs / returns**, or **blanket POs**? If yes, which ones?
-- [ ] Can customers order only what is **on the shelf** (`available` = on hand minus already allocated), or should they be able to buy against **stock still on a purchase order**?
-- [ ] If they order more than `available`, what should happen: **block the order**, **partial fill**, or **allow oversell**?
+- [x] Can customers order only what is **on the shelf**, or should they be able to buy against **stock still on a purchase order**, and **before any factory PO exists**? **David’s formula:** available to sell = on hand + on PO − pre-sold. Per-SKU **open** (no cap until a factory PO) then **locked**. Not a company-wide season. See [ADR 0008](./adr/0008-available-to-sell-open-locked.md).
+- [x] If they order more than sellable, what should happen: **block the order**, **partial fill**, or **allow oversell**? **Block the whole confirm** when the SKU is locked and the line exceeds available to sell. Open SKUs have no numeric cap. No partial confirm.
 
 ## Catalog and pricing
 

@@ -363,9 +363,12 @@ Written only by inventory, from `stock_movements`. **Never** a CRUD field on pro
 | Snapshot field | Source field | Meaning in v1 |
 | --- | --- | --- |
 | `on_hand` | `onhand_qty` / `loc_onhand` | Receipts − shipments − adjustments |
-| `allocated` | `onpicklist_qty` | Confirmed sales not yet shipped |
+| `committed` | — | Confirmed sales not yet shipped or decommitted (pre-sold) |
+| `allocated` | `onpicklist_qty` | Warehouse cover against `on_hand` (not the confirm gate) |
 | `on_order` | `on_order_qty` | Open PO qty not yet received |
-| `available` | — | `on_hand − allocated` (derived) |
+| `available` | — | `on_hand − allocated` (derived; warehouse leftover) |
+| `availableToSell` | — | Open: no cap. Locked: `on_hand + on_order − committed` ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)) |
+| `sell_state` | — | `open` \| `locked` per SKU per organization |
 
 If `onhand_qty` and `loc_onhand` diverge in the dump, that is a source-system bug or multi-bin total vs location qty — call it out on import, do not invent a third quantity.
 
@@ -395,10 +398,10 @@ Purchasing and sales never write quantity columns. They emit movements; inventor
 flowchart LR
   purchasing["purchasing<br/>PO confirm / receive"] --> movements
   sales["sales<br/>confirm / cancel / ship"] --> movements
-  movements["stock_movements"] --> snapshots["stock_snapshots<br/>on_hand · on_order · allocated · available"]
+  movements["stock_movements"] --> snapshots["stock_snapshots<br/>on_hand · on_order · committed · allocated · available · availableToSell"]
 ```
 
-`available` = `on_hand − allocated` (derived). v1 does not sell against inbound PO qty.
+`available` = `on_hand − allocated` (warehouse leftover). `availableToSell` is the shop/staff sellable number ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)). `uncovered = max(0, committed − on_hand − on_order)` is the factory to-order list.
 
 ---
 
