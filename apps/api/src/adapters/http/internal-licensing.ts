@@ -5,17 +5,13 @@ import {
   licensingSubscriptionListResponseSchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
-import type { InMemoryLicensingStore } from "../../licensing/in-memory-licensing.js";
 import { staffOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
 }
 
-export function registerInternalLicensingRoutes(
-  app: FastifyInstance,
-  licensingStore: InMemoryLicensingStore,
-): void {
+export function registerInternalLicensingRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
   routes.get(
@@ -32,13 +28,16 @@ export function registerInternalLicensingRoutes(
       },
     },
     async (request) => {
-      const organizationId = staffOrganizationId(request);
-      const items = licensingStore.listSubscriptions(organizationId).map((row) => ({
-        id: row.id,
-        plan: row.plan,
-        status: row.status,
-      }));
-      return { items };
+      const result = await request.server.licensing.listSubscriptions.execute({
+        organizationId: staffOrganizationId(request),
+      });
+      return {
+        items: result.items.map((row) => ({
+          id: row.id,
+          plan: row.plan,
+          status: row.status,
+        })),
+      };
     },
   );
 
@@ -56,14 +55,17 @@ export function registerInternalLicensingRoutes(
       },
     },
     async (request) => {
-      const organizationId = staffOrganizationId(request);
-      const items = licensingStore.listPayments(organizationId).map((row) => ({
-        id: row.id,
-        subscriptionId: row.subscriptionId,
-        providerRef: row.providerRef,
-        amountCents: row.amountCents,
-      }));
-      return { items };
+      const result = await request.server.licensing.listPayments.execute({
+        organizationId: staffOrganizationId(request),
+      });
+      return {
+        items: result.items.map((row) => ({
+          id: row.id,
+          subscriptionId: row.subscriptionId,
+          providerRef: row.providerRef,
+          amountCents: row.amountCents,
+        })),
+      };
     },
   );
 }

@@ -107,6 +107,10 @@ import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
+import {
+  ListLicensingPaymentsUseCase,
+  ListLicensingSubscriptionsUseCase,
+} from "../application/list-licensing.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
 import { featuresAllCoreOn, type IFeatures } from "../features.js";
@@ -170,6 +174,11 @@ export type AccountingHttpServices = {
   recordPayment: RecordPaymentUseCase;
 };
 
+export type LicensingHttpServices = {
+  listSubscriptions: ListLicensingSubscriptionsUseCase;
+  listPayments: ListLicensingPaymentsUseCase;
+};
+
 /**
  * Composition root services. Domain/application never import this file —
  * only `app.ts` / `server.ts` wire ports to adapters here.
@@ -186,6 +195,7 @@ export type AppServices = {
   purchasing: PurchasingHttpServices;
   sales: SalesHttpServices;
   accounting: AccountingHttpServices;
+  licensing: LicensingHttpServices;
   unitOfWork: IUnitOfWork;
   licensingStore: InMemoryLicensingStore;
 };
@@ -312,6 +322,13 @@ function accountingServices(
   return {
     getInvoice: new GetInvoiceUseCase(invoiceRepo),
     recordPayment: new RecordPaymentUseCase(accountingUnitOfWork, clock),
+  };
+}
+
+function licensingServices(store: InMemoryLicensingStore): LicensingHttpServices {
+  return {
+    listSubscriptions: new ListLicensingSubscriptionsUseCase(store),
+    listPayments: new ListLicensingPaymentsUseCase(store),
   };
 }
 
@@ -460,6 +477,7 @@ export function composeAppServices(
     purchasing: purchasingServices(purchaseOrderRepo, supplierRepo, unitOfWork, clock),
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork, clock),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
+    licensing: licensingServices(licensingStore),
     unitOfWork,
     licensingStore,
   };

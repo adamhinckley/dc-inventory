@@ -17,7 +17,5 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalPurchaseOrderRoutes(app);
   registerInternalSalesOrderRoutes(app);
   registerInternalInvoiceRoutes(app);
-  if (app.licensingStore) {
-    registerInternalLicensingRoutes(app, app.licensingStore);
-  }
+  registerInternalLicensingRoutes(app);
 }

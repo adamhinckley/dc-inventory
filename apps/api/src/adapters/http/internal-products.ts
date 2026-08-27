@@ -148,9 +148,9 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.catalog.createProduct.execute({
+        ...request.body,
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
-        ...request.body,
       });
       if (!result.ok) {
         if (result.reason === "duplicate_sku") {
@@ -219,10 +219,10 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const result = await request.server.catalog.updateProduct.execute({
+        ...request.body,
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         productId: ProductId.parse(request.params.id),
-        ...request.body,
       });
       if (!result.ok) {
         if (result.reason === "not_found") {

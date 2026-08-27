@@ -110,6 +110,10 @@ import type {
   ListInternalCustomers200,
   ListInternalCustomers401,
   ListInternalCustomersParams,
+  ListInternalLicensingPayments200,
+  ListInternalLicensingPayments401,
+  ListInternalLicensingSubscriptions200,
+  ListInternalLicensingSubscriptions401,
   ListInternalProducts200,
   ListInternalProducts401,
   ListInternalProductsParams,
@@ -3793,3 +3797,189 @@ export const useRecordInternalInvoicePayment = <TError = RecordInternalInvoicePa
       > => {
       return useMutation(getRecordInternalInvoicePaymentMutationOptions(options));
     }
+
+export type listInternalLicensingSubscriptionsResponse200 = {
+  data: ListInternalLicensingSubscriptions200
+  status: 200
+}
+
+export type listInternalLicensingSubscriptionsResponse401 = {
+  data: ListInternalLicensingSubscriptions401
+  status: 401
+}
+
+export type listInternalLicensingSubscriptionsResponseSuccess = (listInternalLicensingSubscriptionsResponse200) & {
+  headers: Headers;
+};
+export type listInternalLicensingSubscriptionsResponseError = (listInternalLicensingSubscriptionsResponse401) & {
+  headers: Headers;
+};
+
+export type listInternalLicensingSubscriptionsResponse = (listInternalLicensingSubscriptionsResponseSuccess | listInternalLicensingSubscriptionsResponseError)
+
+export const getListInternalLicensingSubscriptionsUrl = () => {
+
+
+
+
+  return `/internal/licensing/subscriptions`
+}
+
+/**
+ * @summary List software subscriptions for the staff session organization
+ */
+export const listInternalLicensingSubscriptions = async ( options?: Parameters<typeof customFetch>[1]): Promise<listInternalLicensingSubscriptionsResponse> => {
+
+  return customFetch<listInternalLicensingSubscriptionsResponse>(getListInternalLicensingSubscriptionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalLicensingSubscriptionsQueryKey = () => {
+    return [
+    `/internal/licensing/subscriptions`
+    ] as const;
+    }
+
+
+export const getListInternalLicensingSubscriptionsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError = ListInternalLicensingSubscriptions401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalLicensingSubscriptionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>> = ({ signal }) => listInternalLicensingSubscriptions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalLicensingSubscriptionsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>>
+export type ListInternalLicensingSubscriptionsQueryError = ListInternalLicensingSubscriptions401
+
+
+/**
+ * @summary List software subscriptions for the staff session organization
+ */
+
+export function useListInternalLicensingSubscriptions<TData = Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError = ListInternalLicensingSubscriptions401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalLicensingSubscriptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listInternalLicensingPaymentsResponse200 = {
+  data: ListInternalLicensingPayments200
+  status: 200
+}
+
+export type listInternalLicensingPaymentsResponse401 = {
+  data: ListInternalLicensingPayments401
+  status: 401
+}
+
+export type listInternalLicensingPaymentsResponseSuccess = (listInternalLicensingPaymentsResponse200) & {
+  headers: Headers;
+};
+export type listInternalLicensingPaymentsResponseError = (listInternalLicensingPaymentsResponse401) & {
+  headers: Headers;
+};
+
+export type listInternalLicensingPaymentsResponse = (listInternalLicensingPaymentsResponseSuccess | listInternalLicensingPaymentsResponseError)
+
+export const getListInternalLicensingPaymentsUrl = () => {
+
+
+
+
+  return `/internal/licensing/payments`
+}
+
+/**
+ * @summary List software subscription payments for the staff session organization
+ */
+export const listInternalLicensingPayments = async ( options?: Parameters<typeof customFetch>[1]): Promise<listInternalLicensingPaymentsResponse> => {
+
+  return customFetch<listInternalLicensingPaymentsResponse>(getListInternalLicensingPaymentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalLicensingPaymentsQueryKey = () => {
+    return [
+    `/internal/licensing/payments`
+    ] as const;
+    }
+
+
+export const getListInternalLicensingPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError = ListInternalLicensingPayments401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalLicensingPaymentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalLicensingPayments>>> = ({ signal }) => listInternalLicensingPayments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalLicensingPaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalLicensingPayments>>>
+export type ListInternalLicensingPaymentsQueryError = ListInternalLicensingPayments401
+
+
+/**
+ * @summary List software subscription payments for the staff session organization
+ */
+
+export function useListInternalLicensingPayments<TData = Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError = ListInternalLicensingPayments401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalLicensingPaymentsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

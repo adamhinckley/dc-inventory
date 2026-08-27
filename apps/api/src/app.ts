@@ -29,6 +29,7 @@ import {
   type PurchasingHttpServices,
   type SalesHttpServices,
   type AccountingHttpServices,
+  type LicensingHttpServices,
 } from "./infrastructure/composition.js";
 import type { InMemoryLicensingStore } from "./licensing/in-memory-licensing.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
@@ -104,6 +105,7 @@ export async function buildAudienceApp(
   app.decorate("purchasing", services.purchasing);
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
+  app.decorate("licensing", services.licensing);
   app.decorate("licensingStore", services.licensingStore);
   applyHttpCompilers(app);
   await registerCookie(app);
@@ -144,6 +146,7 @@ export async function buildApp(
   app.decorate("purchasing", services.purchasing);
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
+  app.decorate("licensing", services.licensing);
   app.decorate("licensingStore", services.licensingStore);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
@@ -169,6 +172,7 @@ declare module "fastify" {
     purchasing: PurchasingHttpServices;
     sales: SalesHttpServices;
     accounting: AccountingHttpServices;
+    licensing: LicensingHttpServices;
     licensingStore: InMemoryLicensingStore;
   }
 
