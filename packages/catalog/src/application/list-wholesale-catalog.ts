@@ -45,6 +45,7 @@ export class ListWholesaleCatalogUseCase {
       shopVisibleOnly: true,
     });
     const snapshots = await this.qty.readBySkus(
+      input.organizationId,
       listed.map((row) => row.product.sku),
     );
     const rows: WholesaleCatalogListRow[] = listed.map((row) => ({

@@ -1,5 +1,5 @@
 import type { IQtyReadPort, ProductQty } from "@dc-inventory/catalog";
-import type { Sku } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray } from "drizzle-orm";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import type { AppDrizzle } from "../infrastructure/db.js";
@@ -15,7 +15,10 @@ const DEFAULT_LOCATION_CODE = "DEFAULT";
 export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
   constructor(private readonly db: AppDrizzle) {}
 
-  async readBySkus(skus: readonly Sku[]): Promise<ReadonlyMap<string, ProductQty>> {
+  async readBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, ProductQty>> {
     const result = new Map<string, ProductQty>();
     if (skus.length === 0) {
       return result;
@@ -23,7 +26,12 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
     const locationRows = await this.db
       .select({ id: locations.id })
       .from(locations)
-      .where(eq(locations.code, DEFAULT_LOCATION_CODE))
+      .where(
+        and(
+          eq(locations.code, DEFAULT_LOCATION_CODE),
+          eq(locations.organizationId, organizationId),
+        ),
+      )
       .limit(1);
     const locationId = locationRows[0]?.id;
     if (locationId === undefined) {
@@ -41,6 +49,7 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
       .where(
         and(
           eq(stockSnapshots.locationId, locationId),
+          eq(stockSnapshots.organizationId, organizationId),
           inArray(
             stockSnapshots.sku,
             skus.map((sku) => sku.value),

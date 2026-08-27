@@ -79,7 +79,7 @@ export class UpdateProductUseCase {
         taxCategoryCode,
       };
       await this.products.save(product);
-      const snapshots = await this.qty.readBySkus([product.sku]);
+      const snapshots = await this.qty.readBySkus(input.organizationId, [product.sku]);
       return {
         ok: true,
         product,

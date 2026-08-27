@@ -10,13 +10,16 @@ import { LocationId, OrganizationId, type Sku } from "@dc-inventory/shared-kerne
 export class InventoryReadModelQtyReadAdapter implements IQtyReadPort {
   constructor(private readonly readModel: IInventoryReadModel) {}
 
-  async readBySkus(skus: readonly Sku[]): Promise<ReadonlyMap<string, ProductQty>> {
+  async readBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, ProductQty>> {
     const result = new Map<string, ProductQty>();
     for (const sku of skus) {
       const snapshot = await this.readModel.getSnapshot(
         sku,
         LocationId.DEFAULT,
-        OrganizationId.DEFAULT,
+        organizationId,
       );
       if (snapshot.onHand === 0 && snapshot.onOrder === 0 && snapshot.allocated === 0) {
         continue;

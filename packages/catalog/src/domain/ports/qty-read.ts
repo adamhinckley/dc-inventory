@@ -1,4 +1,4 @@
-import type { Sku } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import type { ProductQty } from "../qty.js";
 
 /**
@@ -7,5 +7,8 @@ import type { ProductQty } from "../qty.js";
  * Catalog never writes qty through this port.
  */
 export interface IQtyReadPort {
-  readBySkus(skus: readonly Sku[]): Promise<ReadonlyMap<string, ProductQty>>;
+  readBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, ProductQty>>;
 }

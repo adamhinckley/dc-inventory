@@ -147,7 +147,7 @@ describe("Catalog use cases (in-memory)", () => {
       available: 0,
     });
 
-    h.qty.set(product.sku.value, {
+    h.qty.set(DEFAULT_ORG, product.sku.value, {
       onHand: 10,
       onOrder: 4,
       allocated: 3,
@@ -169,13 +169,13 @@ describe("Catalog use cases (in-memory)", () => {
     const h = harness();
     const low = await createProduct(h, { sku: "LOW-ON-HAND", name: "Low" });
     const high = await createProduct(h, { sku: "HIGH-ON-HAND", name: "High" });
-    h.qty.set(low.sku.value, {
+    h.qty.set(DEFAULT_ORG, low.sku.value, {
       onHand: 2,
       onOrder: 0,
       allocated: 0,
       available: 2,
     });
-    h.qty.set(high.sku.value, {
+    h.qty.set(DEFAULT_ORG, high.sku.value, {
       onHand: 40,
       onOrder: 0,
       allocated: 0,

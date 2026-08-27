@@ -28,7 +28,7 @@ export class GetWholesaleProductUseCase {
     if (product === null || !isShopVisible(product)) {
       return { ok: false, reason: "not_found" };
     }
-    const snapshots = await this.qty.readBySkus([product.sku]);
+    const snapshots = await this.qty.readBySkus(input.organizationId, [product.sku]);
     return {
       ok: true,
       product,
