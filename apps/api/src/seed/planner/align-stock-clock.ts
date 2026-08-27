@@ -1,16 +1,10 @@
-import type { DemoBookPlan, PlannedPurchaseOrder, PlannedSalesOrder } from "./types.js";
+import { allocateInstant } from "./allocate-instant.js";
+import type { DemoBookPlan, PlannedPurchaseOrder } from "./types.js";
 
 function receivedQtyOnOrder(order: PlannedPurchaseOrder, sku: string): number {
   return order.lines
     .filter((line) => line.sku === sku)
     .reduce((sum, line) => sum + line.qty, 0);
-}
-
-function allocateAt(order: PlannedSalesOrder, shipAt: Date): Date {
-  if (order.status !== "shipped") {
-    return order.plannedInstant;
-  }
-  return new Date(Math.min(order.plannedInstant.getTime(), shipAt.getTime()));
 }
 
 type StockOp = {
@@ -66,7 +60,11 @@ function alignSku(
       continue;
     }
     const shipAt = shipInstantByKey.get(order.key) ?? order.plannedInstant;
-    const allocTime = allocateAt(order, shipAt).getTime();
+    const allocTime = allocateInstant(
+      order.plannedInstant,
+      shipAt,
+      order.status === "shipped",
+    ).getTime();
     ops.push({ time: allocTime, kind: "alloc", qty: line.qty });
     if (order.status === "shipped") {
       ops.push({ time: shipAt.getTime(), kind: "ship", qty: line.qty });
