@@ -4,6 +4,7 @@
  */
 
 export const PHASE1_CUSTOMER_NAME = "Acme Wholesale";
+export const PHASE1_ORGANIZATION_SLUG = "acme";
 export const PHASE1_CUSTOMER_TERMS = "Net 30";
 export const PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS = 1_000_000;
 export const PHASE1_CUSTOMER_CURRENCY = "USD";

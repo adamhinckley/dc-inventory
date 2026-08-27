@@ -18,6 +18,9 @@ paths:
             schema:
               type: object
               properties:
+                organizationSlug:
+                  type: string
+                  minLength: 1
                 email:
                   type: string
                   minLength: 1
@@ -25,6 +28,7 @@ paths:
                   type: string
                   minLength: 1
               required:
+                - organizationSlug
                 - email
                 - password
       responses:

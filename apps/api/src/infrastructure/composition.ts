@@ -44,6 +44,7 @@ import {
   DrizzleSessionStore,
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
@@ -54,7 +55,9 @@ import {
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   ScryptPasswordHasher,
+  DrizzleOrganizationRepository,
   type IPasswordHasher,
+  type IOrganizationRepository,
   type ISessionStore,
   type IStaffUserRepository,
   type IWholesaleUserRepository,
@@ -208,6 +211,7 @@ export type AppServiceOverrides = {
   wholesaleUsers?: IWholesaleUserRepository;
   sessions?: ISessionStore;
   passwords?: IPasswordHasher;
+  organizationRepo?: IOrganizationRepository;
   customerRepo?: ICustomerRepository;
   contactRepo?: IContactRepository;
   shipToRepo?: IShipToRepository;
@@ -377,6 +381,11 @@ export function composeAppServices(
   const passwords =
     overrides.passwords ??
     (identityDb ? new ScryptPasswordHasher() : new InMemoryPasswordHasher());
+  const organizationRepo =
+    overrides.organizationRepo ??
+    (identityDb
+      ? new DrizzleOrganizationRepository(identityDb)
+      : new InMemoryOrganizationRepository());
 
   const customerRepo =
     overrides.customerRepo ??
@@ -456,8 +465,15 @@ export function composeAppServices(
     ping: new PingUseCase(clock),
     ready: new ReadyCheckUseCase(database),
     identity: {
-      loginStaff: new LoginStaffUseCase(staffUsers, sessions, passwords, clock),
+      loginStaff: new LoginStaffUseCase(
+        organizationRepo,
+        staffUsers,
+        sessions,
+        passwords,
+        clock,
+      ),
       loginWholesale: new LoginWholesaleUseCase(
+        organizationRepo,
         wholesaleUsers,
         sessions,
         passwords,

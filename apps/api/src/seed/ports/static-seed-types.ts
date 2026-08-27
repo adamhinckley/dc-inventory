@@ -6,6 +6,7 @@ import type {
 } from "@dc-inventory/customers";
 import type {
   IPasswordHasher,
+  IOrganizationRepository,
   IStaffUserRepository,
   IWholesaleUserRepository,
 } from "@dc-inventory/identity";
@@ -52,6 +53,7 @@ export type StaticDemoSeedPorts = {
   customers: ICustomerRepository;
   shipTos: IShipToRepository;
   exemptionCertificates: IExemptionCertificateRepository;
+  organizations: IOrganizationRepository;
   staffUsers: IStaffUserRepository;
   wholesaleUsers: IWholesaleUserRepository;
   passwords: IPasswordHasher;

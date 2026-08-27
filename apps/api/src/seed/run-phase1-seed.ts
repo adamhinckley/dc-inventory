@@ -2,6 +2,7 @@ import type { IProductRepository, Product } from "@dc-inventory/catalog";
 import type { Customer, ICustomerRepository } from "@dc-inventory/customers";
 import type {
   IPasswordHasher,
+  IOrganizationRepository,
   IStaffUserRepository,
   IWholesaleUserRepository,
   StaffUser,
@@ -26,10 +27,12 @@ import {
   PHASE1_WHOLESALE_EMAIL,
   type Phase1ProductFixture,
 } from "./phase1-fixture.js";
+import { upsertDefaultOrganization } from "./upsert-default-organization.js";
 
 export type Phase1SeedPorts = {
   products: IProductRepository;
   customers: ICustomerRepository;
+  organizations: IOrganizationRepository;
   staffUsers: IStaffUserRepository;
   wholesaleUsers: IWholesaleUserRepository;
   passwords: IPasswordHasher;
@@ -152,6 +155,7 @@ export async function runPhase1Seed(
   );
 
   const customer = await upsertCustomer(ports);
+  await upsertDefaultOrganization(ports.organizations);
   const staff = await upsertStaff(ports, staffPassword);
   const wholesale = await upsertWholesale(ports, customer.id, wholesalePassword);
   const products: Product[] = [];

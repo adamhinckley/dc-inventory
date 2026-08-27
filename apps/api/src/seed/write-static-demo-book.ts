@@ -20,6 +20,7 @@ import {
 import type { DemoBookPlan } from "./planner/types.js";
 import { Phase1SeedError, type Phase1SeedSecrets } from "./run-phase1-seed.js";
 import type { StaticDemoSeedPorts } from "./ports/static-seed-types.js";
+import { upsertDefaultOrganization } from "./upsert-default-organization.js";
 
 export const STATIC_EXEMPTION_EXPIRY_DAYS = 365;
 
@@ -161,6 +162,8 @@ export async function runWriteStaticDemoBook(
     "PHASE1_WHOLESALE_PASSWORD",
     secrets.wholesalePassword,
   );
+
+  await upsertDefaultOrganization(ports.organizations);
 
   const bootstrap = await runPhase2Bootstrap(ports.phase2Bootstrap);
   const supplierByKey = new Map<string, Supplier>();

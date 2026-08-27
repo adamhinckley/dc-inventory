@@ -8,9 +8,12 @@ import type { IClock } from "../domain/clock.js";
 import { normalizeEmail } from "../domain/email.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { ISessionStore } from "../domain/ports/session-store.js";
+import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
+import { resolveLoginOrganizationId } from "./resolve-login-organization.js";
 
 export type LoginWholesaleRequest = {
+  organizationSlug: string;
   email: string;
   password: string;
 };
@@ -28,6 +31,7 @@ export type LoginWholesaleResult =
 
 export class LoginWholesaleUseCase {
   constructor(
+    private readonly organizations: IOrganizationRepository,
     private readonly wholesaleUsers: IWholesaleUserRepository,
     private readonly sessions: ISessionStore,
     private readonly passwords: IPasswordHasher,
@@ -35,8 +39,16 @@ export class LoginWholesaleUseCase {
   ) {}
 
   async execute(input: LoginWholesaleRequest): Promise<LoginWholesaleResult> {
+    const organizationId = await resolveLoginOrganizationId(
+      this.organizations,
+      input.organizationSlug,
+    );
+    if (organizationId === null) {
+      await this.passwords.verifyDummy(input.password);
+      return { ok: false };
+    }
     const email = normalizeEmail(input.email);
-    const user = await this.wholesaleUsers.findByEmail(OrganizationId.DEFAULT, email);
+    const user = await this.wholesaleUsers.findByEmail(organizationId, email);
     if (user === null) {
       await this.passwords.verifyDummy(input.password);
       return { ok: false };

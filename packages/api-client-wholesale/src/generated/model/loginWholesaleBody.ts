@@ -7,6 +7,8 @@
 
 export type LoginWholesaleBody = {
   /** @minLength 1 */
+  organizationSlug: string;
+  /** @minLength 1 */
   email: string;
   /** @minLength 1 */
   password: string;

@@ -6,6 +6,7 @@ import {
 } from "@dc-inventory/customers";
 import {
   InMemoryClock,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
@@ -27,6 +28,7 @@ import {
   PHASE1_CUSTOMER_CURRENCY,
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
+  PHASE1_ORGANIZATION_SLUG,
   PHASE1_PRODUCT_SKUS,
   PHASE1_PRODUCTS,
   PHASE1_STAFF_EMAIL,
@@ -64,6 +66,7 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
     customers: new InMemoryCustomerRepository(),
     shipTos: new InMemoryShipToRepository(),
     exemptionCertificates: new InMemoryExemptionCertificateRepository(),
+    organizations: new InMemoryOrganizationRepository(),
     staffUsers: new InMemoryStaffUserRepository(),
     wholesaleUsers: new InMemoryWholesaleUserRepository(),
     passwords: new InMemoryPasswordHasher(),
@@ -311,19 +314,29 @@ describe("static demo book writer (in-memory)", () => {
 
     const clock = new InMemoryClock(new Date("2026-08-24T16:00:00.000Z"));
     const staffLogin = await new LoginStaffUseCase(
+      ports.organizations,
       ports.staffUsers,
       sessions,
       ports.passwords,
       clock,
-    ).execute({ email: PHASE1_STAFF_EMAIL, password: "staff-rotated" });
+    ).execute({
+      organizationSlug: PHASE1_ORGANIZATION_SLUG,
+      email: PHASE1_STAFF_EMAIL,
+      password: "staff-rotated",
+    });
     expect(staffLogin.ok).toBe(true);
 
     const wholesaleLogin = await new LoginWholesaleUseCase(
+      ports.organizations,
       ports.wholesaleUsers,
       sessions,
       ports.passwords,
       clock,
-    ).execute({ email: PHASE1_WHOLESALE_EMAIL, password: "wholesale-rotated" });
+    ).execute({
+      organizationSlug: PHASE1_ORGANIZATION_SLUG,
+      email: PHASE1_WHOLESALE_EMAIL,
+      password: "wholesale-rotated",
+    });
     expect(wholesaleLogin.ok).toBe(true);
     if (wholesaleLogin.ok) {
       expect(wholesaleLogin.customerId).toBe(acme?.id);

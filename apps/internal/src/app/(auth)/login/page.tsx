@@ -13,11 +13,12 @@ export default function LoginPage() {
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const organizationSlug = String(form.get("organizationSlug") ?? "");
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
     setError(null);
     login.mutate(
-      { data: { email, password } },
+      { data: { organizationSlug, email, password } },
       {
         onSuccess: () => {
           router.push("/catalog");
@@ -33,10 +34,22 @@ export default function LoginPage() {
     <section className="section-flat w-full max-w-md p-panel">
       <h1 className="page-title">Sign in</h1>
       <p className="page-description mt-2">
-        Staff sign-in. After <code>pnpm db:seed:phase1</code>, use{" "}
-        <code>staff@local.test</code>.
+        Staff sign-in. After <code>pnpm db:seed:phase1</code>, use organization{" "}
+        <code>acme</code> with <code>staff@local.test</code>.
       </p>
       <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
+        <div className="flex flex-col gap-field">
+          <Label htmlFor="organizationSlug">Organization</Label>
+          <Input
+            id="organizationSlug"
+            type="text"
+            name="organizationSlug"
+            autoComplete="organization"
+            placeholder="acme"
+            defaultValue="acme"
+            required
+          />
+        </div>
         <div className="flex flex-col gap-field">
           <Label htmlFor="email">Email</Label>
           <Input

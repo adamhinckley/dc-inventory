@@ -5,6 +5,7 @@ import {
 import { InMemoryCustomerRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
@@ -35,6 +36,8 @@ import {
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
 const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
+const ACME_SLUG = "acme";
+const BETA_SLUG = "beta";
 const WIDGET_SKU = Sku.parse("WIDGET-1");
 
 const ACME_STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
@@ -52,6 +55,9 @@ afterEach(async () => {
 
 async function startTwoOrgIsolationApp() {
   const passwords = new InMemoryPasswordHasher();
+  const organizations = new InMemoryOrganizationRepository();
+  await organizations.save({ id: DEFAULT_ORG, slug: ACME_SLUG });
+  await organizations.save({ id: BETA_ORG, slug: BETA_SLUG });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -174,6 +180,7 @@ async function startTwoOrgIsolationApp() {
     wholesaleUsers,
     sessions,
     passwords,
+    organizationRepo: organizations,
     customerRepo,
     productRepo,
     unitOfWork,
@@ -192,11 +199,12 @@ async function startTwoOrgIsolationApp() {
 async function loginStaff(
   app: Awaited<ReturnType<typeof buildApp>>,
   email: string,
+  organizationSlug = ACME_SLUG,
 ): Promise<string> {
   const login = await app.inject({
     method: "POST",
     url: "/internal/auth/login",
-    payload: { email, password: "staff-secret" },
+    payload: { organizationSlug, email, password: "staff-secret" },
   });
   return login.cookies.find((row) => row.name === STAFF_SESSION_COOKIE)?.value ?? "";
 }
@@ -204,11 +212,12 @@ async function loginStaff(
 async function loginWholesale(
   app: Awaited<ReturnType<typeof buildApp>>,
   email: string,
+  organizationSlug = ACME_SLUG,
 ): Promise<string> {
   const login = await app.inject({
     method: "POST",
     url: "/wholesale/auth/login",
-    payload: { email, password: "wholesale-secret" },
+    payload: { organizationSlug, email, password: "wholesale-secret" },
   });
   return login.cookies.find((row) => row.name === WHOLESALE_SESSION_COOKIE)?.value ?? "";
 }
