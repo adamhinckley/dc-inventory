@@ -19,7 +19,7 @@ Two books, two ubiquitous languages. Mixing them is how agents will “just add 
 
 Licensing also owns **paid additions** (feature packs you can sell later) and the **feature-flag read model** every other context consults. It does **not** own catalog products, stock, or customer credit.
 
-`TenantId` exists from day one and is currently `DEFAULT` (same additive trick as `LocationId`). Multi-tenant SaaS is not v1; the grain is already there.
+`TenantId` exists from day one and is currently `DEFAULT` (same additive trick as `LocationId`). It is **1:1 with `OrganizationId`** — the same string, two names (Licensing vs business aggregates). See [ADR 0007](./adr/0007-organization-id-current-not-deferred.md). Multi-tenant SaaS billing UI is not the v1 demo; the grain is already there.
 
 ---
 

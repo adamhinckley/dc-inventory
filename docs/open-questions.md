@@ -41,5 +41,5 @@ Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./data
 
 ## Later — not v1, confirm we should not build it now
 
-- [ ] Confirm v1 is **this one wholesale company only**. A second company signing up on the same website is a later feature.
+- [ ] Confirm the v1 **demo** targets one wholesale company (`OrganizationId.DEFAULT`). A second company on the **same deploy** is in progress — [ADR 0007](./adr/0007-organization-id-current-not-deferred.md), [Multi-organization project](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) — not a separate Postgres per tenant.
 - [ ] Confirm we should **not** merge the same real-world buyer across two sellers into one customer record if that ever happens.

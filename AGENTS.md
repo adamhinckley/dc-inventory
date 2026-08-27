@@ -12,7 +12,7 @@ Canonical contract for any coding agent that clones this repo and opens a PR. Ve
 | [`docs/stack.md`](./docs/stack.md) | TypeScript, Fastify, Drizzle, Postgres, Better Auth, Next.js |
 | [`docs/api-contract.md`](./docs/api-contract.md) | OpenAPI, Orval, tables vs shop vs ops |
 
-Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md).
+Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md), [`docs/adr/0007-organization-id-current-not-deferred.md`](./docs/adr/0007-organization-id-current-not-deferred.md) (multi-org seam — current, not deferred; demo stays `DEFAULT`).
 
 ## Stack (do not replace)
 

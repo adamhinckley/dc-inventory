@@ -1,6 +1,8 @@
-# Multi-organization (future)
+# Multi-organization seam
 
-A second wholesale **company** signing up on the same website and getting to work. **Not v1.** Must stay additive: a migration and an Identity/session packet, not a new database product or a rewrite of the ledger.
+A second wholesale **company** on the same website, isolated by `OrganizationId` on every aggregate. **Current contract** ([ADR 0007](../adr/0007-organization-id-current-not-deferred.md)); implementation is tracked on the [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) Linear project ([ADA-157](https://linear.app/adamhinckley/issue/ADA-157/multi-organization-implementation-map)). Must stay additive: composite columns and session overwrite, not a new database product or a ledger rewrite.
+
+The v1 **demo** still runs one implicit org (`DEFAULT`). `pnpm seed:demo` does not add a second company.
 
 Related: [`../architecture.md`](../architecture.md) · [`../stack.md`](../stack.md) · [`../database-design.md`](../database-design.md)
 
@@ -8,7 +10,7 @@ Related: [`../architecture.md`](../architecture.md) · [`../stack.md`](../stack.
 
 ## Language
 
-**Organization** — the wholesale business that uses this software (staff, catalog, stock, suppliers, POs). v1 has exactly one, implicit.
+**Organization** — the wholesale business that uses this software (staff, catalog, stock, suppliers, POs). The v1 **demo** has exactly one implicit org (`DEFAULT`); the contract allows N orgs on one deploy.
 
 **Customer** — a buyer **of that Organization**: terms, credit, contacts, orders, invoices. Not the SaaS account.
 
@@ -22,11 +24,11 @@ v1 already isolates **Customers of one Organization** from each other (session `
 
 ---
 
-## What v1 is
+## What the v1 demo is
 
-One customer organization: a multi-employee wholesale company. One Postgres. Staff share one catalog and one stock ledger. Many wholesale clients log into the shop scoped to their `CustomerId`.
+One wholesale company in the stakeholder demo: a multi-employee business on one Postgres. Staff share one catalog and one stock ledger. Many wholesale clients log into the shop scoped to their `CustomerId`.
 
-That is enough for the first company. A second company today would be a **separate deploy** (or they would see each other’s catalog and stock). Self-serve signup is later.
+That is enough for the first demo. **Without** session `organizationId` overwrite and composite uniqueness, a second company on the same deploy would see the first company’s catalog and stock — which is why those packets are in progress ([ADR 0007](../adr/0007-organization-id-current-not-deferred.md)). Self-serve signup UI is a later milestone; the architecture is **not** a separate deploy or a second Postgres per company.
 
 ---
 
@@ -42,11 +44,11 @@ RLS stays optional defense-in-depth, not the v1 (or first multi-org) gate — sa
 
 ---
 
-## v1 seam (so later is not a blocker)
+## Seam (in progress)
 
-Treat Organization like `LocationId`: one implicit org now (`DEFAULT`). No signup UI. No second database.
+Treat Organization like `LocationId`: one implicit org in the demo (`DEFAULT`). Composite uniqueness and session `organizationId` are landing on the Multi-organization project. Signup UI and org slug on login are later milestones.
 
-Do in v1, or as soon as tables are real:
+Already specified or landing:
 
 | Seam | Why |
 | --- | --- |
@@ -70,16 +72,18 @@ The same legal name, tax id, or contact email may appear in both orgs. That is c
 
 **The uniqueness trap:** if `wholesale_users.email` is unique for the whole database, the second Organization cannot invite `buyer@acme.com`. Keep uniqueness per Organization. The same person then has two shop logins. One login that shops at many wholesalers is a separate identity product — not required for signup-and-work.
 
-v1 has one Organization, so this scenario cannot happen yet. When `OrganizationId` lands, keep Customers and wholesale users under the org. Do not build a shared buyer directory in order to “dedupe” Acme.
+The demo runs one Organization today, so the two-seller scenario is proven in tests, not in `pnpm seed:demo`. Keep Customers and wholesale users scoped under `organizationId`. Do not build a shared buyer directory in order to “dedupe” Acme.
 
 ---
 
-## Later packet (when an owner opens it)
+## Milestones on the implementation map
 
-1. `RegisterOrganization` use case: Organization + first staff user.
-2. Identity binds `organizationId` on both session cookies; wholesale still overwrites `customerId`.
-3. Every repository `WHERE` includes org. Unique constraints are composite.
-4. Shop may stay `shop.whatever.com` with org in session after login, or `org.whatever.com` if the tenant should be in the URL.
-5. Still one API and one Postgres unless a real ops reason appears for a dedicated database.
+| Milestone | Examples |
+| --- | --- |
+| **Seam — composite uniqueness** | `OrganizationId` kernel type; `organization_id` columns; `(organization_id, sku)` and document numbers |
+| **Isolation — session overwrite** | Staff/wholesale sessions carry `organizationId`; HTTP lists filter by session; two-org golden tests |
+| **Signup** | `RegisterOrganization`; org slug required on login once a second org exists |
 
-Owner-gated like inventory math and `customerId` binding ([`../architecture.md`](../architecture.md) §10).
+Shop may stay one hostname with org in session after login, or use subdomains for URL clarity — not for picking a database.
+
+Owner-gated like inventory math and `customerId` binding ([`../architecture.md`](../architecture.md) §10). Follow the packets on [ADA-157](https://linear.app/adamhinckley/issue/ADA-157/multi-organization-implementation-map); see also [ADR 0007](../adr/0007-organization-id-current-not-deferred.md) and [`AGENTS.md`](../../AGENTS.md) required reading.
