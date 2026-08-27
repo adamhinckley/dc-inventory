@@ -5,6 +5,7 @@ import {
   InMemoryShipToRepository,
 } from "@dc-inventory/customers";
 import {
+  InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
@@ -60,6 +61,7 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
     customers: new InMemoryCustomerRepository(),
     shipTos: new InMemoryShipToRepository(),
     exemptionCertificates: new InMemoryExemptionCertificateRepository(),
+    organizations: new InMemoryOrganizationRepository(),
     staffUsers: new InMemoryStaffUserRepository(),
     wholesaleUsers: new InMemoryWholesaleUserRepository(),
     passwords: new InMemoryPasswordHasher(),

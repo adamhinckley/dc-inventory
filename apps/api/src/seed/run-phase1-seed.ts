@@ -22,12 +22,12 @@ import {
   PHASE1_CUSTOMER_CURRENCY,
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
-  PHASE1_ORGANIZATION_SLUG,
   PHASE1_PRODUCTS,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
   type Phase1ProductFixture,
 } from "./phase1-fixture.js";
+import { upsertDefaultOrganization } from "./upsert-default-organization.js";
 
 export type Phase1SeedPorts = {
   products: IProductRepository;
@@ -64,19 +64,6 @@ function requirePassword(label: string, value: string): string {
 
 function newId(): string {
   return crypto.randomUUID();
-}
-
-async function upsertOrganization(ports: Phase1SeedPorts): Promise<void> {
-  const existing = await ports.organizations.findBySlug(PHASE1_ORGANIZATION_SLUG);
-  if (existing !== null && existing.id !== OrganizationId.DEFAULT) {
-    throw new Phase1SeedError(
-      `Phase 1 organization slug ${PHASE1_ORGANIZATION_SLUG} is already bound to another organization`,
-    );
-  }
-  await ports.organizations.save({
-    id: OrganizationId.DEFAULT,
-    slug: PHASE1_ORGANIZATION_SLUG,
-  });
 }
 
 async function upsertCustomer(ports: Phase1SeedPorts): Promise<Customer> {
@@ -168,7 +155,7 @@ export async function runPhase1Seed(
   );
 
   const customer = await upsertCustomer(ports);
-  await upsertOrganization(ports);
+  await upsertDefaultOrganization(ports.organizations);
   const staff = await upsertStaff(ports, staffPassword);
   const wholesale = await upsertWholesale(ports, customer.id, wholesalePassword);
   const products: Product[] = [];

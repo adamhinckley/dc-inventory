@@ -173,6 +173,54 @@ describe("opaque session HTTP", () => {
     expect(unknown.statusCode).toBe(401);
     expect(unknown.json()).toEqual({ error: "unauthorized" });
 
+    const unknownSlug = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: "missing",
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
+    });
+    expect(unknownSlug.statusCode).toBe(401);
+    expect(unknownSlug.json()).toEqual({ error: "unauthorized" });
+
+    const wrongPassword = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "nope",
+      },
+    });
+    expect(wrongPassword.statusCode).toBe(401);
+    expect(wrongPassword.json()).toEqual({ error: "unauthorized" });
+
+    const wholesaleUnknownSlug = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: "missing",
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
+    });
+    expect(wholesaleUnknownSlug.statusCode).toBe(401);
+    expect(wholesaleUnknownSlug.json()).toEqual({ error: "unauthorized" });
+
+    const wholesaleWrongPassword = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "nope",
+      },
+    });
+    expect(wholesaleWrongPassword.statusCode).toBe(401);
+    expect(wholesaleWrongPassword.json()).toEqual({ error: "unauthorized" });
+
     const missing = await app.inject({
       method: "GET",
       url: "/internal/products",

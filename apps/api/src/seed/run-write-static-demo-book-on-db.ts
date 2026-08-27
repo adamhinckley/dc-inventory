@@ -10,6 +10,7 @@ import {
   type CustomersDrizzle,
 } from "@dc-inventory/customers";
 import {
+  DrizzleOrganizationRepository,
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
   ScryptPasswordHasher,
@@ -53,6 +54,7 @@ export async function runWriteStaticDemoBookOnDb(
     exemptionCertificates: new DrizzleExemptionCertificateRepository(
       db as CustomersDrizzle,
     ),
+    organizations: new DrizzleOrganizationRepository(db as unknown as IdentityDrizzle),
     staffUsers: new DrizzleStaffUserRepository(db as unknown as IdentityDrizzle),
     wholesaleUsers: new DrizzleWholesaleUserRepository(db as unknown as IdentityDrizzle),
     passwords: new ScryptPasswordHasher(),

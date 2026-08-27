@@ -66,6 +66,7 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
     customers: new InMemoryCustomerRepository(),
     shipTos: new InMemoryShipToRepository(),
     exemptionCertificates: new InMemoryExemptionCertificateRepository(),
+    organizations: new InMemoryOrganizationRepository(),
     staffUsers: new InMemoryStaffUserRepository(),
     wholesaleUsers: new InMemoryWholesaleUserRepository(),
     passwords: new InMemoryPasswordHasher(),
@@ -312,10 +313,8 @@ describe("static demo book writer (in-memory)", () => {
     expect(second.customers.map((row) => row.id)).toEqual(first.customers.map((row) => row.id));
 
     const clock = new InMemoryClock(new Date("2026-08-24T16:00:00.000Z"));
-    const organizations = new InMemoryOrganizationRepository();
-    await organizations.save({ id: OrganizationId.DEFAULT, slug: PHASE1_ORGANIZATION_SLUG });
     const staffLogin = await new LoginStaffUseCase(
-      organizations,
+      ports.organizations,
       ports.staffUsers,
       sessions,
       ports.passwords,
@@ -328,7 +327,7 @@ describe("static demo book writer (in-memory)", () => {
     expect(staffLogin.ok).toBe(true);
 
     const wholesaleLogin = await new LoginWholesaleUseCase(
-      organizations,
+      ports.organizations,
       ports.wholesaleUsers,
       sessions,
       ports.passwords,
