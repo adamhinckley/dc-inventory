@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
+import { InMemoryOrganizationRepository } from "../src/adapters/in-memory-organization-repository.js";
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
 import { InMemorySessionStore } from "../src/adapters/in-memory-session-store.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
@@ -25,21 +26,33 @@ const STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440001");
 const WHOLESALE_ID = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440002");
 const CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-446655440003");
 const OTHER_CUSTOMER = CustomerId.parse("550e8400-e29b-41d4-a716-446655440004");
+const ACME_SLUG = "acme";
+const BETA_SLUG = "beta";
+const BETA_ORG_ID = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 
 function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   const clock = new InMemoryClock(at);
   const passwords = new InMemoryPasswordHasher();
+  const organizations = new InMemoryOrganizationRepository();
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
   return {
     clock,
     passwords,
+    organizations,
     staffUsers,
     wholesaleUsers,
     sessions,
-    loginStaff: new LoginStaffUseCase(staffUsers, sessions, passwords, clock),
+    loginStaff: new LoginStaffUseCase(
+      organizations,
+      staffUsers,
+      sessions,
+      passwords,
+      clock,
+    ),
     loginWholesale: new LoginWholesaleUseCase(
+      organizations,
       wholesaleUsers,
       sessions,
       passwords,
@@ -56,9 +69,14 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   };
 }
 
+async function seedAcmeOrg(h: ReturnType<typeof harness>) {
+  await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+}
+
 describe("Identity login and sessions (in-memory)", () => {
-  it("logs in staff with email + password", async () => {
+  it("logs in staff with org slug + email + password", async () => {
     const h = harness();
+    await seedAcmeOrg(h);
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -67,6 +85,7 @@ describe("Identity login and sessions (in-memory)", () => {
     });
 
     const result = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
       email: "Staff@Local.Test",
       password: "staff-secret",
     });
@@ -86,8 +105,9 @@ describe("Identity login and sessions (in-memory)", () => {
     });
   });
 
-  it("rejects unknown email and wrong password without leaking which failed", async () => {
+  it("rejects unknown slug, unknown email, and wrong password without leaking which failed", async () => {
     const h = harness();
+    await seedAcmeOrg(h);
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -95,21 +115,30 @@ describe("Identity login and sessions (in-memory)", () => {
       passwordHash: await h.passwords.hash("staff-secret"),
     });
 
+    const unknownSlug = await h.loginStaff.execute({
+      organizationSlug: "missing",
+      email: "staff@local.test",
+      password: "staff-secret",
+    });
     const unknown = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
       email: "missing@local.test",
       password: "staff-secret",
     });
     const wrong = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
       email: "staff@local.test",
       password: "nope",
     });
 
+    expect(unknownSlug).toEqual({ ok: false });
     expect(unknown).toEqual({ ok: false });
     expect(wrong).toEqual({ ok: false });
   });
 
   it("snapshots wholesale customerId onto the session at login", async () => {
     const h = harness();
+    await seedAcmeOrg(h);
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -119,6 +148,7 @@ describe("Identity login and sessions (in-memory)", () => {
     });
 
     const result = await h.loginWholesale.execute({
+      organizationSlug: ACME_SLUG,
       email: "wholesale@local.test",
       password: "wholesale-secret",
     });
@@ -148,6 +178,7 @@ describe("Identity login and sessions (in-memory)", () => {
 
   it("expires a session after idle 30 minutes via the clock", async () => {
     const h = harness();
+    await seedAcmeOrg(h);
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -155,6 +186,7 @@ describe("Identity login and sessions (in-memory)", () => {
       passwordHash: await h.passwords.hash("staff-secret"),
     });
     const login = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
       email: "staff@local.test",
       password: "staff-secret",
     });
@@ -173,6 +205,7 @@ describe("Identity login and sessions (in-memory)", () => {
 
   it("expires a session after absolute 8 hours even when idle is touched", async () => {
     const h = harness();
+    await seedAcmeOrg(h);
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -180,6 +213,7 @@ describe("Identity login and sessions (in-memory)", () => {
       passwordHash: await h.passwords.hash("staff-secret"),
     });
     const login = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
       email: "staff@local.test",
       password: "staff-secret",
     });
@@ -203,6 +237,7 @@ describe("Identity login and sessions (in-memory)", () => {
 
   it("revokes on logout and treats the other audience as wrong_audience", async () => {
     const h = harness();
+    await seedAcmeOrg(h);
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -210,6 +245,7 @@ describe("Identity login and sessions (in-memory)", () => {
       passwordHash: await h.passwords.hash("staff-secret"),
     });
     const login = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
       email: "staff@local.test",
       password: "staff-secret",
     });
@@ -226,68 +262,96 @@ describe("Identity login and sessions (in-memory)", () => {
     expect(after).toEqual({ ok: false, reason: "invalid" });
   });
 
-  it("allows the same email in two organizations for staff and wholesale", async () => {
+  it("allows the same email in two organizations; slug selects the password", async () => {
     const h = harness();
-    const betaOrgId = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
+    const betaOrgId = BETA_ORG_ID;
     const betaStaffId = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440099");
     const betaWholesaleId = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440098");
+
+    await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+    await h.organizations.save({ id: betaOrgId, slug: BETA_SLUG });
 
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
-      email: "shared@local.test",
-      passwordHash: await h.passwords.hash("default-secret"),
+      email: "buyer@acme.com",
+      passwordHash: await h.passwords.hash("acme-secret"),
     });
     await h.staffUsers.save({
       id: betaStaffId,
       organizationId: betaOrgId,
-      email: "shared@local.test",
+      email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("beta-secret"),
     });
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
-      email: "shared@local.test",
-      passwordHash: await h.passwords.hash("default-secret"),
+      email: "buyer@acme.com",
+      passwordHash: await h.passwords.hash("acme-secret"),
       customerId: CUSTOMER_ID,
     });
     await h.wholesaleUsers.save({
       id: betaWholesaleId,
       organizationId: betaOrgId,
-      email: "shared@local.test",
+      email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("beta-secret"),
       customerId: OTHER_CUSTOMER,
     });
 
-    const defaultStaffLogin = await h.loginStaff.execute({
-      email: "shared@local.test",
-      password: "default-secret",
+    const acmeStaffLogin = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
+      email: "buyer@acme.com",
+      password: "acme-secret",
     });
-    expect(defaultStaffLogin.ok).toBe(true);
-    if (!defaultStaffLogin.ok) {
+    expect(acmeStaffLogin.ok).toBe(true);
+    if (!acmeStaffLogin.ok) {
       return;
     }
-    expect(defaultStaffLogin.staffUserId).toBe(STAFF_ID);
-    expect(defaultStaffLogin.organizationId).toBe(OrganizationId.DEFAULT);
+    expect(acmeStaffLogin.staffUserId).toBe(STAFF_ID);
+    expect(acmeStaffLogin.organizationId).toBe(OrganizationId.DEFAULT);
 
-    const defaultStaffSession = await h.resolveStaff.execute(defaultStaffLogin.sessionId);
-    expect(defaultStaffSession).toEqual({
-      ok: true,
-      staffUserId: STAFF_ID,
-      email: "shared@local.test",
-      organizationId: OrganizationId.DEFAULT,
+    const betaStaffLogin = await h.loginStaff.execute({
+      organizationSlug: BETA_SLUG,
+      email: "buyer@acme.com",
+      password: "beta-secret",
     });
-
-    const defaultWholesaleLogin = await h.loginWholesale.execute({
-      email: "shared@local.test",
-      password: "default-secret",
-    });
-    expect(defaultWholesaleLogin.ok).toBe(true);
-    if (!defaultWholesaleLogin.ok) {
+    expect(betaStaffLogin.ok).toBe(true);
+    if (!betaStaffLogin.ok) {
       return;
     }
-    expect(defaultWholesaleLogin.wholesaleUserId).toBe(WHOLESALE_ID);
-    expect(defaultWholesaleLogin.organizationId).toBe(OrganizationId.DEFAULT);
+    expect(betaStaffLogin.staffUserId).toBe(betaStaffId);
+    expect(betaStaffLogin.organizationId).toBe(betaOrgId);
+
+    const wrongOrgPassword = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
+      email: "buyer@acme.com",
+      password: "beta-secret",
+    });
+    expect(wrongOrgPassword).toEqual({ ok: false });
+
+    const acmeWholesaleLogin = await h.loginWholesale.execute({
+      organizationSlug: ACME_SLUG,
+      email: "buyer@acme.com",
+      password: "acme-secret",
+    });
+    expect(acmeWholesaleLogin.ok).toBe(true);
+    if (!acmeWholesaleLogin.ok) {
+      return;
+    }
+    expect(acmeWholesaleLogin.wholesaleUserId).toBe(WHOLESALE_ID);
+    expect(acmeWholesaleLogin.organizationId).toBe(OrganizationId.DEFAULT);
+
+    const betaWholesaleLogin = await h.loginWholesale.execute({
+      organizationSlug: BETA_SLUG,
+      email: "buyer@acme.com",
+      password: "beta-secret",
+    });
+    expect(betaWholesaleLogin.ok).toBe(true);
+    if (!betaWholesaleLogin.ok) {
+      return;
+    }
+    expect(betaWholesaleLogin.wholesaleUserId).toBe(betaWholesaleId);
+    expect(betaWholesaleLogin.customerId).toBe(OTHER_CUSTOMER);
   });
 
   it("keeps application/ free of Fastify, Drizzle, Zod, and hash libraries", () => {
