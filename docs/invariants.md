@@ -392,9 +392,10 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - LaunchDarkly (or similar) as a **required** runtime — later only as an `IFeatures` adapter
 - Stripe Connect / marketplace; charging wholesale customers’ cards in v1
 - Feature flags that disable ATP, credit checks, or session `customerId` binding
+- Self-serve **signup UI** before the Signup milestone packets open — see [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) ([ADA-157](https://linear.app/adamhinckley/issue/ADA-157/multi-organization-implementation-map))
 - Building the operator platform **in this repo**; bidirectional tickets; streaming inventory/AR to that platform
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive. `InstallationId` exists so the operator platform can tell deploys apart.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive. `InstallationId` exists so the operator platform can tell deploys apart. **`OrganizationId` is current** ([ADR 0007](./adr/0007-organization-id-current-not-deferred.md)): one implicit org in the v1 demo (`DEFAULT`), composite uniqueness and session overwrite in progress — not database-per-company.
 
 ---
 

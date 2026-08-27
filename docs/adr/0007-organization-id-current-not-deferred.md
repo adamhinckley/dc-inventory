@@ -11,7 +11,7 @@ Earlier docs listed a second Organization under “explicitly deferred” and pa
 
 ## Decision
 
-1. **One Fastify, one Postgres.** Every business aggregate carries `organization_id text not null default 'DEFAULT'`. Isolation is application-layer: repositories and HTTP handlers take org from the session, never from an unauthenticated client body (same overwrite rule as wholesale `customerId`).
+1. **One Fastify, one Postgres.** Every business aggregate **must carry** `organization_id text not null default 'DEFAULT'` (migration in progress on ADA-157 children). Isolation is application-layer: repositories and HTTP handlers take org from the session, never from an unauthenticated client body (same overwrite rule as wholesale `customerId`).
 2. **`OrganizationId` in the shared kernel.** Same pattern as `LocationId`: `DEFAULT` or a UUID. Composite unique constraints — e.g. `(organization_id, sku)`, `(organization_id, email)` for staff and wholesale users.
 3. **Not database-per-company.** Login cannot pick a connection string per tenant without a shared directory and N migration/backup surfaces. Subdomains are optional URL sugar; they are not the isolation model.
 4. **RLS is not the gate.** Postgres row-level security may be defense-in-depth later; it is not the primary multi-org boundary (same stance as [`stack.md`](../stack.md)).

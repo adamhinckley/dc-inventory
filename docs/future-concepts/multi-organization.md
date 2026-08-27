@@ -10,7 +10,7 @@ Related: [`../architecture.md`](../architecture.md) · [`../stack.md`](../stack.
 
 ## Language
 
-**Organization** — the wholesale business that uses this software (staff, catalog, stock, suppliers, POs). v1 has exactly one, implicit.
+**Organization** — the wholesale business that uses this software (staff, catalog, stock, suppliers, POs). The v1 **demo** has exactly one implicit org (`DEFAULT`); the contract allows N orgs on one deploy.
 
 **Customer** — a buyer **of that Organization**: terms, credit, contacts, orders, invoices. Not the SaaS account.
 
@@ -24,11 +24,11 @@ v1 already isolates **Customers of one Organization** from each other (session `
 
 ---
 
-## What v1 is
+## What the v1 demo is
 
-One customer organization: a multi-employee wholesale company. One Postgres. Staff share one catalog and one stock ledger. Many wholesale clients log into the shop scoped to their `CustomerId`.
+One wholesale company in the stakeholder demo: a multi-employee business on one Postgres. Staff share one catalog and one stock ledger. Many wholesale clients log into the shop scoped to their `CustomerId`.
 
-That is enough for the first company. A second company today would be a **separate deploy** (or they would see each other’s catalog and stock). Self-serve signup is later.
+That is enough for the first demo. **Without** session `organizationId` overwrite and composite uniqueness, a second company on the same deploy would see the first company’s catalog and stock — which is why those packets are in progress ([ADR 0007](../adr/0007-organization-id-current-not-deferred.md)). Self-serve signup UI is a later milestone; the architecture is **not** a separate deploy or a second Postgres per company.
 
 ---
 
@@ -72,7 +72,7 @@ The same legal name, tax id, or contact email may appear in both orgs. That is c
 
 **The uniqueness trap:** if `wholesale_users.email` is unique for the whole database, the second Organization cannot invite `buyer@acme.com`. Keep uniqueness per Organization. The same person then has two shop logins. One login that shops at many wholesalers is a separate identity product — not required for signup-and-work.
 
-v1 has one Organization, so this scenario cannot happen yet. When `OrganizationId` lands, keep Customers and wholesale users under the org. Do not build a shared buyer directory in order to “dedupe” Acme.
+The demo runs one Organization today, so the two-seller scenario is proven in tests, not in `pnpm seed:demo`. Keep Customers and wholesale users scoped under `organizationId`. Do not build a shared buyer directory in order to “dedupe” Acme.
 
 ---
 
@@ -86,4 +86,4 @@ v1 has one Organization, so this scenario cannot happen yet. When `OrganizationI
 
 Shop may stay one hostname with org in session after login, or use subdomains for URL clarity — not for picking a database.
 
-Owner-gated like inventory math and `customerId` binding ([`../architecture.md`](../architecture.md) §10). Do **not** treat a second org or DB-per-tenant as forbidden when reading `AGENTS.md` and architecture — follow the packets on ADA-157.
+Owner-gated like inventory math and `customerId` binding ([`../architecture.md`](../architecture.md) §10). Follow the packets on [ADA-157](https://linear.app/adamhinckley/issue/ADA-157/multi-organization-implementation-map); see also [ADR 0007](../adr/0007-organization-id-current-not-deferred.md) and [`AGENTS.md`](../../AGENTS.md) required reading.
