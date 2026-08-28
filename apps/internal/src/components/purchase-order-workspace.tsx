@@ -25,6 +25,7 @@ import {
   type FormEvent,
 } from "react";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
+import { lineAdderSelectionForSupplier } from "../lib/purchase-order-line-adder";
 import type { PurchaseOrderLineDraft } from "../lib/purchase-order-types";
 
 function linesEqual(
@@ -60,10 +61,17 @@ function PurchaseOrderLineAdder({
   const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
   const [addQty, setAddQty] = useState("1");
   const [error, setError] = useState<string | null>(null);
+  const previousSupplierIdRef = useRef(supplierId);
 
   useEffect(() => {
-    setSelectedSkus([]);
-    setError(null);
+    const previousSupplierId = previousSupplierIdRef.current;
+    previousSupplierIdRef.current = supplierId;
+    const next = lineAdderSelectionForSupplier(previousSupplierId, supplierId);
+    if (!next) {
+      return;
+    }
+    setSelectedSkus(next.selectedSkus);
+    setError(next.error);
   }, [supplierId]);
 
   const productsQuery = useListInternalSupplierProducts(supplierId, {
