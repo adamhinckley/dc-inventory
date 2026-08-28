@@ -257,6 +257,7 @@ function PurchaseOrderWorkspaceBody({
   const lastSavedLinesRef = useRef(initialLines);
   const creatingRef = useRef(false);
   const replacingRef = useRef(false);
+  const pendingReplaceLinesRef = useRef<PurchaseOrderLineDraft[] | null>(null);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const suppliersQuery = useListInternalSuppliers({ page: 1, pageSize: 100 });
@@ -323,6 +324,7 @@ function PurchaseOrderWorkspaceBody({
         return;
       }
       if (replacingRef.current) {
+        pendingReplaceLinesRef.current = nextLines;
         return;
       }
       replacingRef.current = true;
@@ -351,6 +353,14 @@ function PurchaseOrderWorkspaceBody({
         setActionError("Autosave failed.");
       } finally {
         replacingRef.current = false;
+        const pending = pendingReplaceLinesRef.current;
+        pendingReplaceLinesRef.current = null;
+        if (
+          pending !== null &&
+          !linesEqual(pending, lastSavedLinesRef.current)
+        ) {
+          void persistReplace(pending);
+        }
       }
     },
     [purchaseOrderId, queryClient, replaceMutation],
