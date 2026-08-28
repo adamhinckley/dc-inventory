@@ -5,6 +5,11 @@ import { Button, Input, Label } from "@dc-inventory/ui";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
+const DEV_STAFF_LOGIN =
+  process.env.NODE_ENV === "development"
+    ? { email: "staff@local.test", password: "phase1-staff-placeholder" }
+    : undefined;
+
 export default function LoginPage() {
   const router = useRouter();
   const login = useLoginInternal();
@@ -57,6 +62,7 @@ export default function LoginPage() {
             type="email"
             name="email"
             autoComplete="username"
+            defaultValue={DEV_STAFF_LOGIN?.email}
             required
           />
         </div>
@@ -67,6 +73,7 @@ export default function LoginPage() {
             type="password"
             name="password"
             autoComplete="current-password"
+            defaultValue={DEV_STAFF_LOGIN?.password}
             required
           />
         </div>
