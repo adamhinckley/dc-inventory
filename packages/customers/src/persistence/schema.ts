@@ -27,15 +27,24 @@ function timestamps() {
   };
 }
 
-export const customers = customersSchema.table("customers", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  organizationId: text("organization_id").notNull().default("DEFAULT"),
-  name: text("name").notNull(),
-  creditLimitCents: bigint("credit_limit_cents", { mode: "number" }).notNull(),
-  currency: char("currency", { length: 3 }).notNull().default("USD"),
-  terms: text("terms").notNull(),
-  ...timestamps(),
-});
+export const customers = customersSchema.table(
+  "customers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    name: text("name").notNull(),
+    creditLimitCents: bigint("credit_limit_cents", { mode: "number" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("USD"),
+    terms: text("terms").notNull(),
+    ...timestamps(),
+  },
+  (table) => [
+    unique("customers_organization_id_id_unique").on(
+      table.organizationId,
+      table.id,
+    ),
+  ],
+);
 
 export const contacts = customersSchema.table(
   "contacts",

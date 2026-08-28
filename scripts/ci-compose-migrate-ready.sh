@@ -21,6 +21,8 @@ fi
 
 docker compose up -d --wait
 pnpm db:migrate
+RUN_ORGANIZATION_CONSTRAINT_ACCEPTANCE=1 pnpm exec vitest run \
+  apps/api/src/infrastructure/organization-reference-constraints.acceptance.test.ts
 
 api_log="$(mktemp)"
 pnpm dev:api >"$api_log" 2>&1 &

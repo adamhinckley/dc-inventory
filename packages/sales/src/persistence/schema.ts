@@ -1,11 +1,13 @@
 import {
   bigint,
   char,
+  foreignKey,
   integer,
   pgSchema,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { customers } from "@dc-inventory/customers/schema";
@@ -39,20 +41,29 @@ export const orders = sales.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: text("organization_id").notNull().default("DEFAULT"),
-    customerId: uuid("customer_id")
-      .notNull()
-      .references(() => customers.id),
+    customerId: uuid("customer_id").notNull(),
     status: orderStatus("status").notNull().default("draft"),
     documentNumber: text("document_number").notNull(),
-  shipLine1: text("ship_line_1"),
-  shipLine2: text("ship_line_2"),
-  shipCity: text("ship_city"),
-  shipRegion: text("ship_region"),
-  shipPostal: text("ship_postal"),
-  shipCountry: text("ship_country"),
-  ...timestamps(),
+    shipLine1: text("ship_line_1"),
+    shipLine2: text("ship_line_2"),
+    shipCity: text("ship_city"),
+    shipRegion: text("ship_region"),
+    shipPostal: text("ship_postal"),
+    shipCountry: text("ship_country"),
+    ...timestamps(),
   },
-  (table) => [unique().on(table.organizationId, table.documentNumber)],
+  (table) => [
+    unique("orders_organization_id_id_unique").on(table.organizationId, table.id),
+    uniqueIndex("orders_organization_id_document_number_unique").on(
+      table.organizationId,
+      table.documentNumber,
+    ),
+    foreignKey({
+      columns: [table.organizationId, table.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+      name: "orders_organization_id_customer_id_customers_fk",
+    }),
+  ],
 );
 
 /** Frozen sku/name + MP unit price. No live catalog FK. */
