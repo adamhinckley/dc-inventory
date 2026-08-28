@@ -1,8 +1,8 @@
 "use client";
 
-import { buttonVariants } from "@dc-inventory/ui";
-import { ExplorerView } from "@dc-inventory/ui";
+import { buttonVariants, ExplorerView } from "@dc-inventory/ui";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { DraftPurchaseOrdersTable } from "./draft-purchase-orders-table";
@@ -27,10 +27,10 @@ export function PurchasingDraftsExplorer({
               with confirm, and download XLS from the workspace.
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-tight">
+          <div className="flex shrink-0 flex-wrap items-center gap-action">
             <Link
               href="/purchasing/suppliers"
-              className="text-body-sm text-link hover:text-link-hover"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
               Suppliers
             </Link>
@@ -38,6 +38,7 @@ export function PurchasingDraftsExplorer({
               href="/purchasing/new"
               className={buttonVariants({ variant: "primary", size: "sm" })}
             >
+              <Plus className="size-icon-lg" />
               New draft PO
             </Link>
           </div>

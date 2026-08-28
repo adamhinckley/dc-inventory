@@ -11,7 +11,7 @@ import {
   useListInternalSuppliers,
   useReplaceInternalPurchaseOrderLines,
 } from "@dc-inventory/api-client-internal";
-import { Button, Combobox, Input, Label } from "@dc-inventory/ui";
+import { Button, Chip, Combobox, Input, Label, Table, useTable } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type FormEvent,
 } from "react";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
@@ -49,14 +50,14 @@ function PurchaseOrderLineAdder({
   supplierId,
   lines,
   disabled = false,
-  onAddLine,
+  onAddLines,
 }: {
   supplierId: string;
   lines: PurchaseOrderLineDraft[];
   disabled?: boolean;
-  onAddLine: (line: PurchaseOrderLineDraft) => void;
+  onAddLines: (next: PurchaseOrderLineDraft[]) => void;
 }) {
-  const [selectedSku, setSelectedSku] = useState<string | null>(null);
+  const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
   const [addQty, setAddQty] = useState("1");
   const [error, setError] = useState<string | null>(null);
 
@@ -68,11 +69,14 @@ function PurchaseOrderLineAdder({
   const productOptions = useMemo(() => {
     const items =
       productsQuery.data?.status === 200 ? productsQuery.data.data.items : [];
-    return items.map((product) => ({
-      value: product.sku,
-      label: `${product.sku} — ${product.catalogName}`,
-    }));
-  }, [productsQuery.data]);
+    const taken = new Set(lines.map((line) => line.sku));
+    return items
+      .filter((product) => !taken.has(product.sku))
+      .map((product) => ({
+        value: product.sku,
+        label: `${product.sku} — ${product.catalogName}`,
+      }));
+  }, [lines, productsQuery.data]);
 
   const productBySku = useMemo(() => {
     const items =
@@ -83,13 +87,8 @@ function PurchaseOrderLineAdder({
   const submit = (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (!selectedSku) {
-      setError("Pick a vendor product to add.");
-      return;
-    }
-    const product = productBySku.get(selectedSku);
-    if (!product) {
-      setError("Selected SKU is not on this vendor.");
+    if (selectedSkus.length === 0) {
+      setError("Pick at least one vendor product to add.");
       return;
     }
     const qty = Number(addQty);
@@ -97,16 +96,29 @@ function PurchaseOrderLineAdder({
       setError("Quantity must be a positive whole number.");
       return;
     }
-    if (lines.some((line) => line.sku === selectedSku)) {
-      setError("That SKU is already on this PO.");
+    const taken = new Set(lines.map((line) => line.sku));
+    const nextLines: PurchaseOrderLineDraft[] = [];
+    for (const sku of selectedSkus) {
+      if (taken.has(sku)) {
+        continue;
+      }
+      const product = productBySku.get(sku);
+      if (!product) {
+        setError("A selected SKU is not on this vendor.");
+        return;
+      }
+      nextLines.push({
+        sku: product.sku,
+        name: product.catalogName,
+        qty,
+      });
+    }
+    if (nextLines.length === 0) {
+      setError("Those SKUs are already on this PO.");
       return;
     }
-    onAddLine({
-      sku: product.sku,
-      name: product.catalogName,
-      qty,
-    });
-    setSelectedSku(null);
+    onAddLines(nextLines);
+    setSelectedSkus([]);
     setAddQty("1");
   };
 
@@ -117,13 +129,14 @@ function PurchaseOrderLineAdder({
           <Label htmlFor="po-product">Vendor product</Label>
           <Combobox
             id="po-product"
+            multiple
             options={productOptions}
-            value={selectedSku}
+            value={selectedSkus}
             onChange={(value) =>
-              setSelectedSku(typeof value === "string" ? value : null)
+              setSelectedSkus(Array.isArray(value) ? value : [])
             }
             disabled={disabled || productsQuery.isLoading}
-            placeholder="Select SKU"
+            placeholder="Select SKUs"
           />
         </div>
         <div className="flex flex-col gap-2">
@@ -142,9 +155,9 @@ function PurchaseOrderLineAdder({
           type="submit"
           variant="secondary"
           size="sm"
-          disabled={disabled || !selectedSku}
+          disabled={disabled || selectedSkus.length === 0}
         >
-          Add line
+          {selectedSkus.length > 1 ? "Add lines" : "Add line"}
         </Button>
       </div>
       {error ? (
@@ -167,64 +180,69 @@ function PurchaseOrderLinesTable({
   onRemoveLine: (sku: string) => void;
   qtyDisabled?: boolean;
 }) {
+  const columns = useMemo(
+    () => [
+      { id: "sku", label: "SKU", sort: false as const, width: 140 },
+      { id: "name", label: "Product", sort: false as const },
+      {
+        id: "qty",
+        label: "Qty",
+        sort: false as const,
+        width: 160,
+        truncate: false,
+        render: ({ record }: { record: PurchaseOrderLineDraft }) => (
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            className="max-w-28"
+            value={String(record.qty)}
+            onChange={(event) => onUpdateQty(record.sku, event.target.value)}
+            disabled={qtyDisabled}
+            aria-label={`Quantity for ${record.sku}`}
+          />
+        ),
+      },
+      {
+        id: "remove",
+        label: "Actions",
+        sort: false as const,
+        width: 120,
+        truncate: false,
+        render: ({ record }: { record: PurchaseOrderLineDraft }) => (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onRemoveLine(record.sku)}
+          >
+            Remove
+          </Button>
+        ),
+      },
+    ],
+    [onRemoveLine, onUpdateQty, qtyDisabled],
+  );
+
+  const table = useTable({
+    data: lines,
+    columns,
+    getRowId: (row) => row.sku,
+    fillColumn: "name",
+    enableSorting: false,
+    enableSelection: false,
+    enablePagination: false,
+  });
+
   return (
-    <div className="overflow-x-auto rounded-interactable border border-border">
-      <table className="w-full min-w-[36rem] text-left text-body-sm">
-        <thead className="border-b border-border bg-surface-muted text-label text-fg-secondary">
-          <tr>
-            <th className="px-table-cell-x py-table-cell-y">SKU</th>
-            <th className="px-table-cell-x py-table-cell-y">Product</th>
-            <th className="px-table-cell-x py-table-cell-y">Qty</th>
-            <th className="px-table-cell-x py-table-cell-y">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {lines.length === 0 ? (
-            <tr>
-              <td
-                className="px-table-cell-x py-table-cell-y text-fg-secondary"
-                colSpan={4}
-              >
-                Add at least one line from the vendor catalog.
-              </td>
-            </tr>
-          ) : (
-            lines.map((line) => (
-              <tr key={line.sku} className="border-b border-border last:border-0">
-                <td className="px-table-cell-x py-table-cell-y tabular-nums">
-                  {line.sku}
-                </td>
-                <td className="px-table-cell-x py-table-cell-y">{line.name}</td>
-                <td className="px-table-cell-x py-table-cell-y">
-                    <Input
-                      type="number"
-                      min={1}
-                      step={1}
-                      className="max-w-28"
-                      value={String(line.qty)}
-                      onChange={(event) => onUpdateQty(line.sku, event.target.value)}
-                      disabled={qtyDisabled}
-                      aria-label={`Quantity for ${line.sku}`}
-                    />
-                </td>
-                <td className="px-table-cell-x py-table-cell-y">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRemoveLine(line.sku)}
-                  >
-                    Remove
-                  </Button>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
+    <Table
+      table={table}
+      emptyMessage="Add at least one line from the vendor catalog."
+    >
+      <Table.Header />
+      <Table.Body />
+      <Table.Empty />
+    </Table>
   );
 }
 
@@ -392,13 +410,13 @@ function PurchaseOrderWorkspaceBody({
   const vendorLocked = Boolean(purchaseOrderId) || lines.length > 0;
   const workspaceLocked = isCreating;
 
-  const addLine = useCallback(
-    (line: PurchaseOrderLineDraft) => {
-      if (creatingRef.current || workspaceLocked) {
+  const addLines = useCallback(
+    (next: PurchaseOrderLineDraft[]) => {
+      if (creatingRef.current || workspaceLocked || next.length === 0) {
         return;
       }
       setActionError(null);
-      const nextLines = [...lines, line];
+      const nextLines = [...lines, ...next];
       if (!purchaseOrderId && activeSupplierId) {
         creatingRef.current = true;
         setIsCreating(true);
@@ -513,21 +531,39 @@ function PurchaseOrderWorkspaceBody({
     : (initialDocumentNumber ?? "Draft PO");
   const saveLabel =
     saveState === "saving"
-      ? "Saving…"
+      ? "Saving"
       : saveState === "saved"
         ? "Saved"
         : saveState === "error"
           ? "Save failed"
           : "Autosave on";
+  const saveChipColor =
+    saveState === "saving"
+      ? "var(--color-info)"
+      : saveState === "saved"
+        ? "var(--color-success)"
+        : saveState === "error"
+          ? "var(--color-error)"
+          : "var(--color-fg-secondary)";
 
   return (
     <section className="flex flex-col gap-region">
-      <nav className="text-body-sm text-fg-secondary">
-        <Link href="/purchasing" className="text-link hover:text-link-hover">
-          Purchasing
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span>{isNew ? "New" : title}</span>
+      <nav className="flex items-center justify-between gap-region">
+        <p className="text-body-sm text-fg-secondary">
+          <Link href="/purchasing" className="text-link hover:text-link-hover">
+            Purchasing
+          </Link>
+          <span aria-hidden="true"> / </span>
+          <span>{isNew ? "New" : title}</span>
+        </p>
+        <Chip
+          busy={saveState === "saving"}
+          icon={<Chip.Dot />}
+          aria-live="polite"
+          style={{ "--chip-color": saveChipColor } as CSSProperties}
+        >
+          {saveLabel}
+        </Chip>
       </nav>
 
       <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
@@ -539,41 +575,36 @@ function PurchaseOrderWorkspaceBody({
           </p>
           {activeSupplierId ? <SupplierName supplierId={activeSupplierId} /> : null}
         </div>
-        <div className="flex flex-wrap items-center gap-tight">
-          <span className="text-body-sm text-fg-secondary" aria-live="polite">
-            {saveLabel}
-          </span>
-          {purchaseOrderId ? (
-            <>
+        {purchaseOrderId ? (
+          <div className="flex flex-wrap items-center gap-tight">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={exporting || lines.length === 0}
+              onClick={() => void downloadXlsx()}
+            >
+              {exporting ? "Downloading…" : "Download XLS"}
+            </Button>
+            {isDraft ? (
               <Button
                 type="button"
-                variant="secondary"
+                variant="primary"
                 size="sm"
-                disabled={exporting || lines.length === 0}
-                onClick={() => void downloadXlsx()}
+                disabled={
+                  confirmMutation.isPending ||
+                  lines.length === 0 ||
+                  saveState === "saving" ||
+                  isCreating ||
+                  !linesEqual(lines, lastSavedLinesRef.current)
+                }
+                onClick={() => void finalize()}
               >
-                {exporting ? "Downloading…" : "Download XLS"}
+                {confirmMutation.isPending ? "Finalizing…" : "Finalize"}
               </Button>
-              {isDraft ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={
-                    confirmMutation.isPending ||
-                    lines.length === 0 ||
-                    saveState === "saving" ||
-                    isCreating ||
-                    !linesEqual(lines, lastSavedLinesRef.current)
-                  }
-                  onClick={() => void finalize()}
-                >
-                  {confirmMutation.isPending ? "Finalizing…" : "Finalize"}
-                </Button>
-              ) : null}
-            </>
-          ) : null}
-        </div>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       <div className="grid gap-field-group lg:grid-cols-[minmax(16rem,22rem)_1fr]">
@@ -591,6 +622,9 @@ function PurchaseOrderWorkspaceBody({
               }}
               disabled={vendorLocked || suppliersQuery.isLoading}
               placeholder="Select vendor"
+              helperText={
+                activeSupplierId ? undefined : "Select a vendor to add lines."
+              }
             />
           </div>
         </div>
@@ -600,13 +634,9 @@ function PurchaseOrderWorkspaceBody({
             supplierId={activeSupplierId}
             lines={lines}
             disabled={workspaceLocked}
-            onAddLine={addLine}
+            onAddLines={addLines}
           />
-        ) : (
-          <p className="text-body-sm text-fg-secondary self-end">
-            Select a vendor to add lines.
-          </p>
-        )}
+        ) : null}
       </div>
 
       {actionError ? (
@@ -738,7 +768,7 @@ function ConfirmedPurchaseOrderView({
       <div>
         <Button
           type="button"
-          variant="secondary"
+          variant="ghost"
           size="sm"
           disabled={exporting}
           onClick={() => void downloadXlsx()}

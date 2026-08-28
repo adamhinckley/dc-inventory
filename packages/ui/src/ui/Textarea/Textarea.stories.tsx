@@ -3,6 +3,7 @@ import { Textarea } from './index'
 
 const meta = {
   title: 'Design System/Textarea',
+  tags: ['autodocs'],
   component: Textarea,
   args: {
     placeholder: 'Receiving notes',

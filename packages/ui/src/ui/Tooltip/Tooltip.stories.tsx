@@ -4,6 +4,7 @@ import { Tooltip } from './index'
 
 const meta = {
   title: 'Design System/Tooltip',
+  tags: ['autodocs'],
   component: Tooltip,
 } satisfies Meta<typeof Tooltip>
 

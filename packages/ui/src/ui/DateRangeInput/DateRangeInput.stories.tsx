@@ -4,6 +4,7 @@ import { DateRangeInput, type DateRangeValue } from './index'
 
 const meta = {
   title: 'Design System/DateRangeInput',
+  tags: ['autodocs'],
   component: DateRangeInput,
 } satisfies Meta<typeof DateRangeInput>
 

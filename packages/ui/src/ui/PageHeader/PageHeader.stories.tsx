@@ -4,6 +4,7 @@ import { PageHeader } from './index'
 
 const meta = {
   title: 'Design System/PageHeader',
+  tags: ['autodocs'],
   component: PageHeader,
 } satisfies Meta<typeof PageHeader>
 

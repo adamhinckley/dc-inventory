@@ -3,6 +3,7 @@ import { Button } from './index'
 
 const meta = {
   title: 'Design System/Button',
+  tags: ['autodocs'],
   component: Button,
   args: {
     children: 'Save',

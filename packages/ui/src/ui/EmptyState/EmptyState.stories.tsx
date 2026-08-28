@@ -5,6 +5,7 @@ import { EmptyState } from './index'
 
 const meta = {
   title: 'Design System/EmptyState',
+  tags: ['autodocs'],
   component: EmptyState,
   args: {
     icon: <PackageOpen />,

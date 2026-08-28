@@ -4,6 +4,7 @@ import { DateInput } from './index'
 
 const meta = {
   title: 'Design System/DateInput',
+  tags: ['autodocs'],
   component: DateInput,
 } satisfies Meta<typeof DateInput>
 

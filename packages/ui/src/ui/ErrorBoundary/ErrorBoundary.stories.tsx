@@ -10,6 +10,7 @@ function Boom({ shouldThrow }: { shouldThrow: boolean }) {
 
 const meta = {
   title: 'Design System/ErrorBoundary',
+  tags: ['autodocs'],
   component: ErrorBoundary,
 } satisfies Meta<typeof ErrorBoundary>
 

@@ -3,6 +3,7 @@ import { ErrorState } from './index'
 
 const meta = {
   title: 'Design System/ErrorState',
+  tags: ['autodocs'],
   component: ErrorState,
   args: {
     title: 'Could not load catalog',

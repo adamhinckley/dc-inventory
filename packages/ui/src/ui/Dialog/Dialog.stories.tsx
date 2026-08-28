@@ -4,6 +4,7 @@ import { Dialog } from './index'
 
 const meta = {
   title: 'Design System/Dialog',
+  tags: ['autodocs'],
   component: Dialog,
 } satisfies Meta<typeof Dialog>
 

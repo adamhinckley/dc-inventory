@@ -3,6 +3,7 @@ import { Menu } from './index'
 
 const meta = {
   title: 'Design System/Menu',
+  tags: ['autodocs'],
   component: Menu,
 } satisfies Meta<typeof Menu>
 

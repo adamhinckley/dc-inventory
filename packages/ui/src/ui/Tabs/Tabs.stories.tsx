@@ -3,6 +3,7 @@ import { Tabs } from './index'
 
 const meta = {
   title: 'Design System/Tabs',
+  tags: ['autodocs'],
   component: Tabs,
 } satisfies Meta<typeof Tabs>
 

@@ -1,4 +1,10 @@
-import type { ComponentPropsWithRef, ReactNode, Ref } from 'react'
+import {
+  cloneElement,
+  isValidElement,
+  type ComponentPropsWithRef,
+  type ReactNode,
+  type Ref,
+} from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { X } from 'lucide-react'
 import { PII_MASK_CLASS } from '#shared/constants/pii-mask'
@@ -80,6 +86,12 @@ export interface ChipProps
   icon?: ReactNode
   onDismiss?: () => void
   /**
+   * In-flight action (autosave, refresh). Sets `aria-busy` and pulses the
+   * leading dot. Pass your own `icon` to pulse that instead; omit it to
+   * get `Chip.Dot`.
+   */
+  busy?: boolean
+  /**
    * When true, marks the chip label for marker.io PII masking. Use for
    * chips whose label is user data (a username, email, account name) —
    * skip for status / enum / filter chips.
@@ -98,13 +110,23 @@ export interface ChipProps
  * @avoid Do NOT use as a direct child — the children wrapper is not flex-laid-out,
  *   so the dot will stack vertically instead of sitting inline.
  */
-export function ChipDot() {
+export function ChipDot({ pulse = false }: { pulse?: boolean }) {
   return (
-    <span
-      className="stacked block size-1.5 flex-shrink-0 rounded-full bg-(--chip-ink)"
-      aria-hidden="true"
-    />
+    <span className="stacked relative flex size-1.5 flex-shrink-0" aria-hidden="true">
+      {pulse ? (
+        <span className="absolute inset-0 animate-ping rounded-full bg-(--chip-ink) opacity-75" />
+      ) : null}
+      <span className="relative block size-1.5 rounded-full bg-(--chip-ink)" />
+    </span>
   )
+}
+
+function leadingIcon(icon: ReactNode, busy: boolean | undefined): ReactNode {
+  if (!icon && busy) return <ChipDot pulse />
+  if (busy && isValidElement<{ pulse?: boolean }>(icon) && icon.type === ChipDot) {
+    return cloneElement(icon, { pulse: true })
+  }
+  return icon
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +177,7 @@ export function ChipRoot({
   ref,
   animation,
   icon,
+  busy,
   onDismiss,
   className,
   children,
@@ -163,18 +186,26 @@ export function ChipRoot({
 }: ChipProps) {
   const duration =
     animation === 'fast' || animation === 'slow' ? ANIMATION_DURATION_MS[animation] : undefined
+  const iconNode = leadingIcon(icon, busy)
 
   return (
     <span
       ref={createAnimatedChipRef(ref, duration)}
       className={cn(chipVariants({ animation }), className)}
       {...rest}
+      aria-busy={busy || undefined}
     >
-      {icon && (
-        <span className="stacked flex-shrink-0 text-(--chip-ink)" aria-hidden="true">
-          {icon}
+      {iconNode ? (
+        <span
+          className={cn(
+            'stacked flex-shrink-0 text-(--chip-ink)',
+            busy && !(isValidElement(iconNode) && iconNode.type === ChipDot) && 'animate-pulse',
+          )}
+          aria-hidden="true"
+        >
+          {iconNode}
         </span>
-      )}
+      ) : null}
       <span className={cn('stacked min-w-0 truncate', pii && PII_MASK_CLASS)}>{children}</span>
       {onDismiss && (
         <button

@@ -6,6 +6,7 @@ import { DetailView } from './index'
 
 const meta = {
   title: 'Design System/DetailView',
+  tags: ['autodocs'],
   component: DetailView,
 } satisfies Meta<typeof DetailView>
 

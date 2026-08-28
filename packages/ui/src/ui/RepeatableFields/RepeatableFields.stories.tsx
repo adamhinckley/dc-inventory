@@ -9,6 +9,7 @@ const schema = z.object({
 
 const meta = {
   title: 'Design System/RepeatableFields',
+  tags: ['autodocs'],
   component: RepeatableFields,
 } satisfies Meta<typeof RepeatableFields>
 

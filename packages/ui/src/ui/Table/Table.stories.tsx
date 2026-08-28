@@ -37,6 +37,7 @@ function CatalogTable() {
 
 const meta = {
   title: 'Design System/Table',
+  tags: ['autodocs'],
   component: Table,
 } satisfies Meta<typeof Table>
 

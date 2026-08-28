@@ -3,6 +3,7 @@ import { DescriptionList } from './index'
 
 const meta = {
   title: 'Design System/DescriptionList',
+  tags: ['autodocs'],
   component: DescriptionList,
 } satisfies Meta<typeof DescriptionList>
 

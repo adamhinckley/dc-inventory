@@ -3,6 +3,7 @@ import { RouteError } from './index'
 
 const meta = {
   title: 'Design System/RouteError',
+  tags: ['autodocs'],
   component: RouteError,
   args: {
     error: Object.assign(new Error('load failed'), { digest: 'ABC123' }),

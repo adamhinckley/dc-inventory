@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useImperativeHandle,
   useRef,
   useState,
@@ -145,6 +146,11 @@ export interface ComboboxProps
   clearable?: boolean
   /** Placeholder for the input. */
   placeholder?: string
+  /**
+   * Helper copy under the control. Omit inside `Form.Field`
+   * (`Form.Description` already owns that slot).
+   */
+  helperText?: string
   /** Standard `data-testid`. Lands on the input; options derive `${testid}-option-${value}`. */
   'data-testid'?: string
   /** Marks the input group as invalid; lands on the wrapper div so the
@@ -193,6 +199,8 @@ export function Combobox({
   name,
   onBlur,
   pii,
+  id: idProp,
+  helperText,
   'data-testid': testid,
   'data-invalid': dataInvalid,
   ...rest
@@ -234,8 +242,14 @@ export function Combobox({
   })
   const filterFn = (item: Option, q: string) => collator.contains(item, q, (o: Option) => o.label)
   const virtualItems = virtualize ? resolved.filter((o) => filterFn(o, query.trim())) : resolved
+  const hint = helperText && helperText.length > 0 ? helperText : undefined
+  const generatedId = useId()
+  const id = idProp ?? (hint ? generatedId : undefined)
+  const helperId = hint ? `${id}-help` : undefined
+  const describedBy =
+    [rest['aria-describedby'], helperId].filter(Boolean).join(' ') || undefined
 
-  return (
+  const combobox = (
     <BaseCombobox.Root
       items={resolved}
       itemToStringValue={(item: Option) => item.value}
@@ -321,6 +335,8 @@ export function Combobox({
           className={inputVariants({ density })}
           data-testid={testid}
           {...(rest as Record<string, unknown>)}
+          id={id}
+          aria-describedby={describedBy}
         />
         {clearable && (
           <BaseCombobox.Clear className="text-fg-tertiary hover:text-fg transition-colors">
@@ -384,6 +400,17 @@ export function Combobox({
         </BaseCombobox.Positioner>
       </BaseCombobox.Portal>
     </BaseCombobox.Root>
+  )
+
+  if (!hint) return combobox
+
+  return (
+    <div className="flex w-full flex-col gap-tight">
+      {combobox}
+      <p id={helperId} className="form-description">
+        {hint}
+      </p>
+    </div>
   )
 }
 

@@ -7,6 +7,8 @@ export { Label, type LabelProps } from "./primitives/label";
 export { AppShell, useAppShellContext } from "./shells/AppShell";
 
 export { Combobox, type ComboboxProps } from "./ui/Combobox";
+export { Chip, type ChipProps } from "./ui/Chip";
+export { Table, useTable } from "./ui/Table";
 export {
   Form,
   scrollToFirstError,

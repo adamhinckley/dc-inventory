@@ -1,7 +1,8 @@
 /**
  * Typeahead-filterable option picker backed by Base UI's Combobox.
  * Single or multi mode; static, async, or external-state options;
- * density variant for form vs filter chrome.
+ * density variant for form vs filter chrome. Optional `helperText`
+ * stacks under the control.
  *
  * @when Picking from a list where typeahead filtering matters — long
  *   option lists, FilterBar select / multiselect editors. Cube-backed

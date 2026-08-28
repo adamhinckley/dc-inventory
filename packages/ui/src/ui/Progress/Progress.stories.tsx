@@ -3,6 +3,7 @@ import { Progress } from './index'
 
 const meta = {
   title: 'Design System/Progress',
+  tags: ['autodocs'],
   component: Progress,
 } satisfies Meta<typeof Progress>
 

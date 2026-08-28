@@ -11,6 +11,7 @@ const queryClient = new QueryClient({
 });
 
 const preview: Preview = {
+  tags: ["autodocs"],
   decorators: [
     withThemeByClassName({
       themes: {
@@ -22,7 +23,7 @@ const preview: Preview = {
     (Story) => (
       <QueryClientProvider client={queryClient}>
         <Tooltip.Provider delay={300}>
-          <div className="min-h-screen bg-surface-base p-8 font-sans text-fg">
+          <div className="min-h-screen bg-surface-base p-8 font-sans text-fg antialiased">
             <Story />
           </div>
         </Tooltip.Provider>

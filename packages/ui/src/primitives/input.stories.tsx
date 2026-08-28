@@ -4,6 +4,7 @@ import { Label } from "./label";
 
 const meta = {
   title: "Primitives/Input",
+  tags: ['autodocs'],
   component: Input,
   args: {
     placeholder: "SKU",

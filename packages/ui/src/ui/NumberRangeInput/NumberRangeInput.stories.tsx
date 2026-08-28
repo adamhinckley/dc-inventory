@@ -4,6 +4,7 @@ import { NumberRangeInput, type NumberRangeValue } from './index'
 
 const meta = {
   title: 'Design System/NumberRangeInput',
+  tags: ['autodocs'],
   component: NumberRangeInput,
 } satisfies Meta<typeof NumberRangeInput>
 

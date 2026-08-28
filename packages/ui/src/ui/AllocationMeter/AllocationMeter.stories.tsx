@@ -3,6 +3,7 @@ import { AllocationMeter } from './index'
 
 const meta = {
   title: 'Design System/AllocationMeter',
+  tags: ['autodocs'],
   component: AllocationMeter,
   args: {
     max: 100,

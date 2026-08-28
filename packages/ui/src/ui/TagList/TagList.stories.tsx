@@ -3,6 +3,7 @@ import { TagList } from './index'
 
 const meta = {
   title: 'Design System/TagList',
+  tags: ['autodocs'],
   component: TagList,
   args: {
     values: ['fastener', 'zinc', 'trailer'],

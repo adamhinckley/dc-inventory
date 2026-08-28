@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 /*
@@ -52,8 +53,8 @@
   --color-primary: #0f62fe;
   --color-primary-strong: #0f62fe;
   --color-primary-content: #ffffff;
-  --color-secondary: #525252;
-  --color-secondary-content: #ffffff;
+  --color-secondary: #d0e2ff;
+  --color-secondary-content: #0043ce;
   --color-secondary-tint: #d0e2ff;
   --color-accent: #0043ce;
   --color-accent-content: #ffffff;
@@ -140,7 +141,7 @@
   --color-primary: #78a9ff;
   --color-primary-strong: #0f62fe;
   --color-primary-content: #ffffff;
-  --color-secondary: #c6c6c6;
+  --color-secondary: #4589ff;
   --color-secondary-content: #161616;
   --color-secondary-tint: #001d6c;
   --color-accent: #78a9ff;

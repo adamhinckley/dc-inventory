@@ -3,6 +3,7 @@ import { TooltipHelp } from './index'
 
 const meta = {
   title: 'Design System/TooltipHelp',
+  tags: ['autodocs'],
   component: TooltipHelp,
   args: {
     title: 'Available',

@@ -3,6 +3,7 @@ import { Popover } from './index'
 
 const meta = {
   title: 'Design System/Popover',
+  tags: ['autodocs'],
   component: Popover,
 } satisfies Meta<typeof Popover>
 

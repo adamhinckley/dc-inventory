@@ -4,6 +4,7 @@ import { Checkbox } from './index'
 
 const meta = {
   title: 'Design System/Checkbox',
+  tags: ['autodocs'],
   component: Checkbox,
   args: {
     'aria-label': 'Include inactive SKUs',

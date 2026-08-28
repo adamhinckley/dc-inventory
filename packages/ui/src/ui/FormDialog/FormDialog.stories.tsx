@@ -12,6 +12,7 @@ const schema = z.object({
 
 const meta = {
   title: 'Design System/FormDialog',
+  tags: ['autodocs'],
   component: FormDialog,
 } satisfies Meta<typeof FormDialog>
 

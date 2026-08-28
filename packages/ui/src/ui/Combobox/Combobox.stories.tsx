@@ -11,7 +11,11 @@ const warehouseOptions = [
 
 const meta = {
   title: 'Design System/Combobox',
+  tags: ['autodocs'],
   component: Combobox,
+  argTypes: {
+    helperText: { control: 'text' },
+  },
 } satisfies Meta<typeof Combobox>
 
 export default meta
@@ -29,6 +33,28 @@ export const Single: Story = {
           placeholder="Warehouse"
           clearable
           data-testid="story-combobox"
+        />
+      </div>
+    )
+  },
+}
+
+export const WithHelperText: Story = {
+  args: {
+    helperText: 'Ships to this warehouse.',
+  },
+  render: function WithHelperTextStory({ helperText }) {
+    const [value, setValue] = useState<string | null>('hsv')
+    return (
+      <div className="w-80">
+        <Combobox
+          options={warehouseOptions}
+          value={value}
+          onChange={setValue}
+          placeholder="Warehouse"
+          clearable
+          helperText={helperText}
+          data-testid="story-combobox-helper"
         />
       </div>
     )
