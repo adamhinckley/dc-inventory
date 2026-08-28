@@ -40,8 +40,10 @@ const inputVariants = cva(
   },
 )
 
+// Same chrome as Combobox: `p-0` kills UA padding; `size-5` keeps a 20px
+// hit target inside the 38px comfortable height.
 const chromeButtonClass =
-  'inline-flex shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
+  'inline-flex size-5 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
 
 // Async resolver — runs the async loader on mount, tracks internal loading
 // state, surfaces resolved options. Same shape as Combobox's

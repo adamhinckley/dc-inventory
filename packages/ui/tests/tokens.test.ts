@@ -75,7 +75,17 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
       "bg-interactive text-fg border border-border-field",
     );
     expect(combobox).toContain("min-h-(--space-input-height)");
-    expect(combobox).toContain("border-0 bg-transparent p-0");
+    expect(combobox).toContain(
+      "size-5 shrink-0 items-center justify-center border-0 bg-transparent p-0",
+    );
     expect(input).toContain("min-h-(--space-input-height)");
+    const autocomplete = readFileSync(
+      join(root, "ui/Autocomplete/Autocomplete.tsx"),
+      "utf8",
+    );
+    expect(autocomplete).toContain("min-h-(--space-input-height)");
+    expect(autocomplete).toContain(
+      "size-5 shrink-0 items-center justify-center border-0 bg-transparent p-0",
+    );
   });
 });

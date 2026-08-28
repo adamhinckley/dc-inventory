@@ -60,8 +60,10 @@ const inputVariants = cva(
 )
 
 // Native <button> UA padding is what made Combobox taller than Input.
+// `p-0` kills that. `size-5` (20px) is the largest square that still fits
+// in the 38px control after `py-input-y` (8px) and the 1px border.
 const chromeButtonClass =
-  'inline-flex shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
+  'inline-flex size-5 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
 
 // Async resolver hook — runs the async loader on mount, tracks internal
 // loading state, surfaces resolved options. For static arrays, returns
