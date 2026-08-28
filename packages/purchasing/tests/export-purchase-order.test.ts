@@ -11,6 +11,7 @@ import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasi
 import { ExportPurchaseOrderUseCase } from "../src/application/export-purchase-order.js";
 import { CreatePurchaseOrderUseCase } from "../src/application/create-purchase-order.js";
 import { ConfirmPurchaseOrderUseCase } from "../src/application/confirm-purchase-order.js";
+import { ReceivePurchaseOrderUseCase } from "../src/application/receive-purchase-order.js";
 import { PHASE2_SUPPLIER_NAME, PHASE2_SUPPLIER_VENDOR_NUMBER } from "@dc-inventory/inventory";
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
@@ -33,6 +34,7 @@ async function harness() {
     workbookWriter,
     create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers),
     confirm: new ConfirmPurchaseOrderUseCase(uow),
+    receive: new ReceivePurchaseOrderUseCase(uow),
     exportPo: new ExportPurchaseOrderUseCase(uow.purchaseOrders, workbookWriter),
   };
 }
@@ -106,6 +108,48 @@ describe("ExportPurchaseOrderUseCase", () => {
     }
     expect(h.workbookWriter.writes[0]?.rows).toEqual([
       { sku: SKU.value, name: "Bolt", qty: 10, receivedQty: 0 },
+    ]);
+  });
+
+  it("exports received quantities after partial receive", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "export-receive-confirm",
+    });
+    const lineId = created.purchaseOrder.lines[0]!.id;
+    await h.receive.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "export-receive",
+      lines: [{ lineId, quantity: 4 }],
+    });
+
+    const result = await h.exportPo.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      format: "xlsx",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(h.workbookWriter.writes[0]?.rows).toEqual([
+      { sku: SKU.value, name: "Bolt", qty: 10, receivedQty: 4 },
     ]);
   });
 

@@ -2875,10 +2875,16 @@ paths:
           required: true
       responses:
         "200":
-          description: Default Response
+          description: Spreadsheet file
           content:
-            application/json:
-              schema: {}
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
         "401":
           description: Default Response
           content:
