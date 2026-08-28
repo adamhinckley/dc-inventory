@@ -1,5 +1,5 @@
 import type { IClock } from "../domain/clock.js";
-import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -84,7 +84,7 @@ export class DrizzleStockLedger implements IStockLedger {
     movementType: MovementType,
     command: StockCommandBase,
   ): Promise<StockCommandResult> {
-    const organizationId = command.organizationId ?? OrganizationId.DEFAULT;
+    const organizationId = requireOrganizationId(command.organizationId);
     const locationId = command.locationId ?? LocationId.DEFAULT;
 
     if (!isPositiveIntegerQuantity(command.quantity)) {

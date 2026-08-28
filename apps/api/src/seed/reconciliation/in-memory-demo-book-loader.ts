@@ -174,7 +174,9 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
     }
     payments.push(...paymentById.values());
 
-    const movements = (await this.ports.readModel.listMovements()).map((row) => ({
+    const movements = (await this.ports.readModel.listMovements({
+      organizationId: DEMO_SEED_ORGANIZATION_ID,
+    })).map((row) => ({
       sku: row.sku.value,
       locationId: row.locationId,
       movementType: row.movementType,

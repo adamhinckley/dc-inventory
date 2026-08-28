@@ -112,7 +112,7 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(confirmed.purchaseOrder.status).toBe("confirmed");
 
-    let snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    let snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onOrder).toBe(10);
 
     const lineId = created.purchaseOrder.lines[0]!.id;
@@ -130,7 +130,7 @@ describe("Purchasing (in-memory)", () => {
     expect(partial.purchaseOrder.status).toBe("confirmed");
     expect(partial.purchaseOrder.lines[0]?.receivedQty).toBe(4);
 
-    snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(4);
     expect(snap.onOrder).toBe(6);
 
@@ -146,7 +146,7 @@ describe("Purchasing (in-memory)", () => {
       return;
     }
     expect(complete.purchaseOrder.status).toBe("received");
-    snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(10);
     expect(snap.onOrder).toBe(0);
   });
@@ -185,7 +185,7 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(over.reason).toBe("over_receive");
 
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(0);
     expect(snap.onOrder).toBe(2);
   });
@@ -353,7 +353,7 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(cancelled.purchaseOrder.status).toBe("cancelled");
 
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(3);
     expect(snap.onOrder).toBe(0);
   });

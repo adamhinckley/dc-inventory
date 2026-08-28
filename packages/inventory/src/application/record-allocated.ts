@@ -1,4 +1,4 @@
-import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { LocationId } from "@dc-inventory/shared-kernel";
 import type {
   IStockLedger,
   RecordAllocatedCommand,
@@ -13,7 +13,7 @@ export class RecordAllocatedUseCase {
   async execute(input: RecordAllocatedRequest): Promise<StockCommandResult> {
     return this.ledger.recordAllocated({
       ...input,
-      organizationId: input.organizationId ?? OrganizationId.DEFAULT,
+      organizationId: input.organizationId,
       locationId: input.locationId ?? LocationId.DEFAULT,
     });
   }

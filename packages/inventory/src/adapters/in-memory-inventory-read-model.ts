@@ -1,4 +1,4 @@
-import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import type { Movement, MovementRefType, MovementType } from "../domain/movement.js";
 import type {
@@ -21,8 +21,8 @@ function snapshotKey(
   return `${organizationId}:${sku.value}:${locationId}`;
 }
 
-function resolveOrganizationId(organizationId?: OrganizationId): OrganizationId {
-  return organizationId ?? OrganizationId.DEFAULT;
+function resolveOrganizationId(organizationId: OrganizationId | undefined): OrganizationId {
+  return requireOrganizationId(organizationId);
 }
 
 function idempotencyIndexKey(
@@ -60,7 +60,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     sku: Sku,
     locationId: LocationId,
     figures: StockFigures,
-    organizationId?: OrganizationId,
+    organizationId: OrganizationId,
   ): void {
     const org = resolveOrganizationId(organizationId);
     this.snapshots.set(snapshotKey(org, sku, locationId), Object.freeze({ ...figures }));
@@ -132,7 +132,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   getSnapshotSync(
     sku: Sku,
     locationId: LocationId,
-    organizationId?: OrganizationId,
+    organizationId: OrganizationId,
   ): StockFigures {
     const org = resolveOrganizationId(organizationId);
     const existing = this.snapshots.get(snapshotKey(org, sku, locationId));
@@ -145,20 +145,17 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   async getSnapshot(
     sku: Sku,
     locationId: LocationId,
-    organizationId?: OrganizationId,
+    organizationId: OrganizationId,
   ): Promise<StockFigures> {
     return this.getSnapshotSync(sku, locationId, organizationId);
   }
 
-  async listMovements(filter?: MovementListFilter): Promise<readonly Movement[]> {
-    const organizationId =
-      filter?.organizationId === undefined
-        ? undefined
-        : resolveOrganizationId(filter.organizationId);
-    const sku = filter?.sku;
-    const locationId = filter?.locationId;
+  async listMovements(filter: MovementListFilter): Promise<readonly Movement[]> {
+    const organizationId = resolveOrganizationId(filter.organizationId);
+    const sku = filter.sku;
+    const locationId = filter.locationId;
     return this.movements.filter((movement) => {
-      if (organizationId && movement.organizationId !== organizationId) {
+      if (movement.organizationId !== organizationId) {
         return false;
       }
       if (sku && !movement.sku.equals(sku)) {
@@ -199,7 +196,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     sku: Sku,
     locationId: LocationId,
     delta: Partial<Pick<StockFigures, "onHand" | "onOrder" | "allocated">>,
-    organizationId?: OrganizationId,
+    organizationId: OrganizationId,
   ): void {
     const org = resolveOrganizationId(organizationId);
     const current = this.snapshots.get(snapshotKey(org, sku, locationId)) ?? ZERO_STOCK_FIGURES;

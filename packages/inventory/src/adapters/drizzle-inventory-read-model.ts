@@ -1,4 +1,4 @@
-import { LocationId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, requireOrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { MovementId } from "../domain/ids.js";
@@ -15,8 +15,8 @@ export type InventoryReadDrizzle = PostgresJsDatabase<{
   stockSnapshots: typeof stockSnapshots;
 }>;
 
-function resolveOrganizationId(organizationId?: OrganizationId): OrganizationId {
-  return organizationId ?? OrganizationId.DEFAULT;
+function resolveOrganizationId(organizationId: OrganizationId | undefined): OrganizationId {
+  return requireOrganizationId(organizationId);
 }
 
 export function isUnknownLocationCodeError(error: unknown): boolean {
@@ -35,7 +35,7 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
   async getSnapshot(
     sku: Sku,
     locationId: LocationId,
-    organizationId?: OrganizationId,
+    organizationId: OrganizationId,
   ): Promise<ReturnType<typeof freezeStockFigures>> {
     const org = resolveOrganizationId(organizationId);
     const locationUuid = await this.resolveLocationUuid(org, locationId);
@@ -61,27 +61,20 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
     return freezeStockFigures(row.onHand, row.onOrder, row.allocated);
   }
 
-  async listMovements(filter?: MovementListFilter): Promise<readonly Movement[]> {
-    const organizationId =
-      filter?.organizationId === undefined
-        ? undefined
-        : resolveOrganizationId(filter.organizationId);
+  async listMovements(filter: MovementListFilter): Promise<readonly Movement[]> {
+    const organizationId = resolveOrganizationId(filter.organizationId);
     const rows = await this.db
       .select()
       .from(stockMovements)
-      .where(
-        organizationId === undefined
-          ? undefined
-          : eq(stockMovements.organizationId, organizationId),
-      );
+      .where(eq(stockMovements.organizationId, organizationId));
     const movements: Movement[] = [];
     for (const row of rows) {
-      if (filter?.sku && row.sku !== filter.sku.value) {
+      if (filter.sku && row.sku !== filter.sku.value) {
         continue;
       }
       const rowOrganizationId = OrganizationId.parse(row.organizationId);
-      const rowLocationId = filter?.locationId ?? LocationId.DEFAULT;
-      if (filter?.locationId !== undefined) {
+      const rowLocationId = filter.locationId ?? LocationId.DEFAULT;
+      if (filter.locationId !== undefined) {
         let locationUuid: string;
         try {
           locationUuid = await this.resolveLocationUuid(

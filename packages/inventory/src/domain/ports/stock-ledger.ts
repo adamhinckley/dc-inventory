@@ -15,7 +15,7 @@ export type StockCommandResult =
   | { ok: false; reason: StockCommandFailureReason };
 
 export type StockCommandBase = {
-  organizationId?: OrganizationId;
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;
@@ -76,7 +76,7 @@ export interface IStockLedger {
 }
 
 export type MovementListFilter = {
-  organizationId?: OrganizationId;
+  organizationId: OrganizationId;
   sku?: Sku;
   locationId?: LocationId;
 };
@@ -88,7 +88,7 @@ export interface IInventoryReadModel {
   getSnapshot(
     sku: Sku,
     locationId: LocationId,
-    organizationId?: OrganizationId,
+    organizationId: OrganizationId,
   ): Promise<StockFigures>;
-  listMovements(filter?: MovementListFilter): Promise<readonly Movement[]>;
+  listMovements(filter: MovementListFilter): Promise<readonly Movement[]>;
 }
