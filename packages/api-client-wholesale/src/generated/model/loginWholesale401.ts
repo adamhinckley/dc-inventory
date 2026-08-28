@@ -4,7 +4,7 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
-import type { LoginWholesale401Error } from './loginWholesale401Error.js';
+import type { LoginWholesale401Error } from './loginWholesale401Error';
 
 export type LoginWholesale401 = {
   error: LoginWholesale401Error;

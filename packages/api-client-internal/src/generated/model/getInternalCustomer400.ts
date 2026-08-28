@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { GetInternalCustomer400Error } from './getInternalCustomer400Error.js';
+import type { GetInternalCustomer400Error } from './getInternalCustomer400Error';
 
 export type GetInternalCustomer400 = {
   error: GetInternalCustomer400Error;

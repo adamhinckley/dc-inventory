@@ -4,8 +4,8 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
-import type { ListWholesaleCatalogSortBy } from './listWholesaleCatalogSortBy.js';
-import type { ListWholesaleCatalogSortOrder } from './listWholesaleCatalogSortOrder.js';
+import type { ListWholesaleCatalogSortBy } from './listWholesaleCatalogSortBy';
+import type { ListWholesaleCatalogSortOrder } from './listWholesaleCatalogSortOrder';
 
 export type ListWholesaleCatalogParams = {
 q?: string;

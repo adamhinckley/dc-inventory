@@ -4,7 +4,7 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
-import type { GetWholesaleSession401Error } from './getWholesaleSession401Error.js';
+import type { GetWholesaleSession401Error } from './getWholesaleSession401Error';
 
 export type GetWholesaleSession401 = {
   error: GetWholesaleSession401Error;

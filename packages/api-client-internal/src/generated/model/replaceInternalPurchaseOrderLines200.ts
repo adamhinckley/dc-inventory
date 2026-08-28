@@ -4,8 +4,8 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ReplaceInternalPurchaseOrderLines200LinesItem } from './replaceInternalPurchaseOrderLines200LinesItem.js';
-import type { ReplaceInternalPurchaseOrderLines200Status } from './replaceInternalPurchaseOrderLines200Status.js';
+import type { ReplaceInternalPurchaseOrderLines200LinesItem } from './replaceInternalPurchaseOrderLines200LinesItem';
+import type { ReplaceInternalPurchaseOrderLines200Status } from './replaceInternalPurchaseOrderLines200Status';
 
 export type ReplaceInternalPurchaseOrderLines200 = {
   /** @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$ */

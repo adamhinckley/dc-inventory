@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { UpdateInternalCustomerExemptionCertificate400Error } from './updateInternalCustomerExemptionCertificate400Error.js';
+import type { UpdateInternalCustomerExemptionCertificate400Error } from './updateInternalCustomerExemptionCertificate400Error';
 
 export type UpdateInternalCustomerExemptionCertificate400 = {
   error: UpdateInternalCustomerExemptionCertificate400Error;
