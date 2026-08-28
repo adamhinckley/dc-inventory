@@ -68,14 +68,20 @@ export class ExportPurchaseOrderUseCase {
     );
     const totCartons = totalCartons(purchaseOrder.lines, catalog);
 
-    const rows: WorkbookRow[] = [];
-    for (const line of purchaseOrder.lines) {
-      const link = await this.supplierProducts.findBySupplierAndSku(
-        purchaseOrder.supplierId,
-        line.sku,
-      );
-      rows.push(toFactoryRow(purchaseOrder, line, link, totCartons));
-    }
+    const uniqueSkus = [
+      ...new Map(purchaseOrder.lines.map((line) => [line.sku.value, line.sku])).values(),
+    ];
+    const links = await Promise.all(
+      uniqueSkus.map((sku) =>
+        this.supplierProducts.findBySupplierAndSku(purchaseOrder.supplierId, sku),
+      ),
+    );
+    const linkBySku = new Map(
+      uniqueSkus.map((sku, index) => [sku.value, links[index] ?? null]),
+    );
+    const rows = purchaseOrder.lines.map((line) =>
+      toFactoryRow(purchaseOrder, line, linkBySku.get(line.sku.value) ?? null, totCartons),
+    );
 
     const file = await this.workbookWriter.write({
       sheetName: purchaseOrder.documentNumber,

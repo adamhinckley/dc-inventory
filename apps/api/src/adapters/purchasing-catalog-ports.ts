@@ -4,7 +4,6 @@ import type {
   IQtyReadPort,
 } from "@dc-inventory/catalog";
 import type {
-  FactorySendCatalogRow,
   ICatalogSkuLookupPort,
   IFactorySendCatalogPort,
   ISupplierProductQtyReadPort,
@@ -32,17 +31,18 @@ export function factorySendCatalogPort(
 ): IFactorySendCatalogPort {
   return {
     async readBySkus(organizationId: OrganizationId, skus: readonly Sku[]) {
-      const result = new Map<string, FactorySendCatalogRow>();
-      for (const sku of skus) {
-        const product = await productRepo.findBySku(organizationId, sku);
-        if (product === null) {
-          result.set(sku.value, { caseQty: null });
-          continue;
-        }
-        const pack = await packaging.findByProductId(product.id);
-        result.set(sku.value, { caseQty: pack?.caseQty ?? null });
-      }
-      return result;
+      const uniqueSkus = [...new Map(skus.map((sku) => [sku.value, sku])).values()];
+      const rows = await Promise.all(
+        uniqueSkus.map(async (sku) => {
+          const product = await productRepo.findBySku(organizationId, sku);
+          if (product === null) {
+            return [sku.value, { caseQty: null }] as const;
+          }
+          const pack = await packaging.findByProductId(product.id);
+          return [sku.value, { caseQty: pack?.caseQty ?? null }] as const;
+        }),
+      );
+      return new Map(rows);
     },
   };
 }

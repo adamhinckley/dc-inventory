@@ -81,13 +81,14 @@ export function dollarsToCents(raw: string): { ok: true; cents: number } | { ok:
 
 function optionalPositiveInt(raw: string): { ok: true; value: number | null } | { ok: false } {
   const trimmed = raw.trim();
-  if (trimmed.length === 0 || trimmed === "0") {
+  if (trimmed.length === 0) {
     return { ok: true, value: null };
   }
   if (!/^\d+$/.test(trimmed)) {
     return { ok: false };
   }
-  return { ok: true, value: Number.parseInt(trimmed, 10) };
+  const parsed = Number.parseInt(trimmed, 10);
+  return { ok: true, value: parsed === 0 ? null : parsed };
 }
 
 function optionalText(raw: string): string | null {

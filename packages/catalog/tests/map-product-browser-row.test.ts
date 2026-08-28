@@ -89,6 +89,12 @@ describe("mapProductBrowserRow", () => {
     if (zero.ok) {
       expect(zero.value.caseQty).toBeNull();
     }
+    const paddedZero = mapProductBrowserRow(row({ cs_qty: "00", vendor_min_order: "000" }), 2);
+    expect(paddedZero.ok).toBe(true);
+    if (paddedZero.ok) {
+      expect(paddedZero.value.caseQty).toBeNull();
+      expect(paddedZero.value.minOrderQty).toBeNull();
+    }
   });
 
   it("rounds fractional dollars to integer cents", () => {
