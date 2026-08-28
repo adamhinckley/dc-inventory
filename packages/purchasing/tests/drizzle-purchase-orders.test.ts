@@ -116,11 +116,14 @@ class FakePurchasingDb {
     return {
       from: (table: unknown) => ({
         where: (clause: unknown) => {
-          const rows =
-            table === purchaseOrders
-              ? [...this.orders.values()].filter((row) => rowMatches(row, clause))
-              : [...this.lines.values()].filter((row) => rowMatches(row, clause));
-          return thenableRows(rows);
+          if (table === purchaseOrders) {
+            return thenableRows(
+              [...this.orders.values()].filter((row) => rowMatches(row, clause)),
+            );
+          }
+          return thenableRows(
+            [...this.lines.values()].filter((row) => rowMatches(row, clause)),
+          );
         },
       }),
     };
