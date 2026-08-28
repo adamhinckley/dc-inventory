@@ -25,12 +25,35 @@ function resolveOrganizationId(organizationId?: OrganizationId): OrganizationId 
   return organizationId ?? OrganizationId.DEFAULT;
 }
 
+function idempotencyIndexKey(
+  organizationId: OrganizationId,
+  idempotencyKey: string,
+  sku: Sku,
+): string {
+  return `${organizationId}:${idempotencyKey}:${sku.value}`;
+}
+
+function provenanceIndexKey(
+  organizationId: OrganizationId,
+  refType: MovementRefType,
+  refId: string,
+  sku: Sku,
+  movementType: MovementType,
+): string {
+  return `${organizationId}:${refType}:${refId}:${sku.value}:${movementType}`;
+}
+
 /**
  * In-memory read model for tests. Returns immutable snapshots; missing rows read as zero.
+ *
+ * Lookups are keyed maps. Unit-of-work rollback truncates the append-only
+ * movement list instead of cloning it, so demo seed playback stays linear.
  */
 export class InMemoryInventoryReadModel implements IInventoryReadModel {
   private readonly snapshots = new Map<SnapshotKey, StockFigures>();
   private readonly movements: Movement[] = [];
+  private readonly byIdempotency = new Map<string, Movement>();
+  private readonly byProvenance = new Set<string>();
 
   /** Test-only seam: seed snapshot state without going through the ledger. */
   seedSnapshot(
@@ -44,7 +67,46 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   }
 
   appendMovement(movement: Movement): void {
-    this.movements.push(Object.freeze({ ...movement }));
+    const frozen = Object.freeze({ ...movement });
+    this.movements.push(frozen);
+    this.byIdempotency.set(
+      idempotencyIndexKey(frozen.organizationId, frozen.idempotencyKey, frozen.sku),
+      frozen,
+    );
+    this.byProvenance.add(
+      provenanceIndexKey(
+        frozen.organizationId,
+        frozen.refType,
+        frozen.refId,
+        frozen.sku,
+        frozen.movementType,
+      ),
+    );
+  }
+
+  movementCount(): number {
+    return this.movements.length;
+  }
+
+  truncateMovements(length: number): void {
+    while (this.movements.length > length) {
+      const movement = this.movements.pop();
+      if (movement === undefined) {
+        return;
+      }
+      this.byIdempotency.delete(
+        idempotencyIndexKey(movement.organizationId, movement.idempotencyKey, movement.sku),
+      );
+      this.byProvenance.delete(
+        provenanceIndexKey(
+          movement.organizationId,
+          movement.refType,
+          movement.refId,
+          movement.sku,
+          movement.movementType,
+        ),
+      );
+    }
   }
 
   findMovementByIdempotency(
@@ -52,12 +114,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     idempotencyKey: string,
     sku: Sku,
   ): Movement | undefined {
-    return this.movements.find(
-      (movement) =>
-        movement.organizationId === organizationId &&
-        movement.idempotencyKey === idempotencyKey &&
-        movement.sku.equals(sku),
-    );
+    return this.byIdempotency.get(idempotencyIndexKey(organizationId, idempotencyKey, sku));
   }
 
   hasProvenance(
@@ -67,13 +124,8 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     sku: Sku,
     movementType: MovementType,
   ): boolean {
-    return this.movements.some(
-      (movement) =>
-        movement.organizationId === organizationId &&
-        movement.refType === refType &&
-        movement.refId === refId &&
-        movement.sku.equals(sku) &&
-        movement.movementType === movementType,
+    return this.byProvenance.has(
+      provenanceIndexKey(organizationId, refType, refId, sku, movementType),
     );
   }
 
@@ -120,25 +172,27 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   }
 
   cloneSnapshots(): Map<SnapshotKey, StockFigures> {
-    return new Map(
-      [...this.snapshots.entries()].map(([key, value]) => [key, Object.freeze({ ...value })]),
-    );
+    return new Map(this.snapshots);
   }
 
   cloneMovements(): Movement[] {
-    return this.movements.map((movement) => Object.freeze({ ...movement }));
+    return this.movements.slice();
   }
 
   restoreSnapshots(snapshots: Map<SnapshotKey, StockFigures>): void {
     this.snapshots.clear();
     for (const [key, value] of snapshots) {
-      this.snapshots.set(key, Object.freeze({ ...value }));
+      this.snapshots.set(key, value);
     }
   }
 
   restoreMovements(movements: Movement[]): void {
     this.movements.length = 0;
-    this.movements.push(...movements.map((movement) => Object.freeze({ ...movement })));
+    this.byIdempotency.clear();
+    this.byProvenance.clear();
+    for (const movement of movements) {
+      this.appendMovement(movement);
+    }
   }
 
   applySnapshotDelta(
