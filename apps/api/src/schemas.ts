@@ -432,6 +432,18 @@ export const purchaseOrderWriteBodySchema = z.object({
     .min(1),
 });
 
+export const purchaseOrderReplaceLinesBodySchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        sku: z.string().min(1),
+        name: z.string().min(1),
+        qty: z.number().int().positive(),
+      }),
+    )
+    .min(1),
+});
+
 export const purchaseOrderCommandBodySchema = z.object({
   idempotencyKey: z.string().min(1),
 });
