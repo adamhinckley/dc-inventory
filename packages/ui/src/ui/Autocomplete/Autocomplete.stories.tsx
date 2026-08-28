@@ -10,6 +10,7 @@ const skuOptions = [
 
 const meta = {
   title: 'Design System/Autocomplete',
+  tags: ['autodocs'],
   component: Autocomplete,
 } satisfies Meta<typeof Autocomplete>
 

@@ -5,6 +5,7 @@ import { Panel } from './index'
 
 const meta = {
   title: 'Design System/Panel',
+  tags: ['autodocs'],
   component: Panel,
 } satisfies Meta<typeof Panel>
 

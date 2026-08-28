@@ -10,6 +10,7 @@ const statusOptions = [
 
 const meta = {
   title: 'Design System/Select',
+  tags: ['autodocs'],
   component: Select,
 } satisfies Meta<typeof Select>
 

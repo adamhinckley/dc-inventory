@@ -4,6 +4,7 @@ import { PhoneInput } from './index'
 
 const meta = {
   title: 'Design System/PhoneInput',
+  tags: ['autodocs'],
   component: PhoneInput,
 } satisfies Meta<typeof PhoneInput>
 

@@ -3,6 +3,7 @@ import { Timestamp } from './index'
 
 const meta = {
   title: 'Design System/Timestamp',
+  tags: ['autodocs'],
   component: Timestamp,
   args: {
     value: '2026-03-20T10:00:00.000Z',

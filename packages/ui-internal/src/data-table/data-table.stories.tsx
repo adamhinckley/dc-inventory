@@ -80,6 +80,7 @@ const useMockProducts: ListQueryHook<ListQueryParams, ProductRow> = (params) => 
 
 const meta = {
   title: "ui-internal/DataTable",
+  tags: ['autodocs'],
   component: DataTable.Root,
   render: (args) => (
     <DataTable.Root {...args}>

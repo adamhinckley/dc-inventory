@@ -5,6 +5,7 @@ import { ExplorerView } from './index'
 
 const meta = {
   title: 'Design System/ExplorerView',
+  tags: ['autodocs'],
   component: ExplorerView,
 } satisfies Meta<typeof ExplorerView>
 

@@ -4,6 +4,7 @@ import { NavGroup } from './index'
 
 const meta = {
   title: 'Design System/NavGroup',
+  tags: ['autodocs'],
   component: NavGroup,
 } satisfies Meta<typeof NavGroup>
 

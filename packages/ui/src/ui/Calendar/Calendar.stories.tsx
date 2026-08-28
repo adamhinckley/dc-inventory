@@ -5,6 +5,7 @@ import { Calendar } from './index'
 
 const meta = {
   title: 'Design System/Calendar',
+  tags: ['autodocs'],
   component: Calendar,
 } satisfies Meta<typeof Calendar>
 

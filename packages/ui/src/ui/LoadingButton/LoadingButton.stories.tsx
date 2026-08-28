@@ -3,6 +3,7 @@ import { LoadingButton } from './index'
 
 const meta = {
   title: 'Design System/LoadingButton',
+  tags: ['autodocs'],
   component: LoadingButton,
   args: {
     children: 'Save product',

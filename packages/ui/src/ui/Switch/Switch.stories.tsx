@@ -4,6 +4,7 @@ import { Switch } from './index'
 
 const meta = {
   title: 'Design System/Switch',
+  tags: ['autodocs'],
   component: Switch,
   args: {
     'aria-label': 'Allow backorders',

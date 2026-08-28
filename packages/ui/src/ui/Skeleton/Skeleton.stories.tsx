@@ -3,6 +3,7 @@ import { Skeleton } from './index'
 
 const meta = {
   title: 'Design System/Skeleton',
+  tags: ['autodocs'],
   component: Skeleton,
 } satisfies Meta<typeof Skeleton>
 

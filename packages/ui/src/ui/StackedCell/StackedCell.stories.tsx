@@ -3,6 +3,7 @@ import { StackedCell } from './index'
 
 const meta = {
   title: 'Design System/StackedCell',
+  tags: ['autodocs'],
   component: StackedCell,
   args: {
     primary: 'BOLT-HEX-38',

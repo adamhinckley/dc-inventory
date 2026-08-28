@@ -3,6 +3,7 @@ import { CountryFlag } from './index'
 
 const meta = {
   title: 'Design System/CountryFlag',
+  tags: ['autodocs'],
   component: CountryFlag,
   args: {
     code: 'US',

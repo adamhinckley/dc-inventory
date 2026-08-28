@@ -3,6 +3,7 @@ import { ActiveStatusChip } from './index'
 
 const meta = {
   title: 'Design System/ActiveStatusChip',
+  tags: ['autodocs'],
   component: ActiveStatusChip,
   args: {
     active: true,

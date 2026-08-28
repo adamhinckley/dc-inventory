@@ -4,6 +4,7 @@ import { IconButton } from './index'
 
 const meta = {
   title: 'Design System/IconButton',
+  tags: ['autodocs'],
   component: IconButton,
   args: {
     icon: <Plus />,

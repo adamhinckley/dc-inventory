@@ -54,6 +54,7 @@ function ToastDemo() {
 
 const meta = {
   title: 'Design System/Toast',
+  tags: ['autodocs'],
   component: Toast,
 } satisfies Meta<typeof Toast>
 

@@ -3,6 +3,7 @@ import { RouterTabs } from './index'
 
 const meta = {
   title: 'Design System/RouterTabs',
+  tags: ['autodocs'],
   component: RouterTabs,
 } satisfies Meta<typeof RouterTabs>
 

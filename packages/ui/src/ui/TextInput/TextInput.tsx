@@ -1,7 +1,9 @@
-import { type ComponentPropsWithRef, type ReactNode } from 'react'
+import { useId, type ComponentPropsWithRef, type ReactNode } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
+import { CircleAlert } from 'lucide-react'
 import { PII_MASK_CLASS } from '#shared/constants/pii-mask'
 import { cn } from '#cn'
+import { Label } from '../../primitives/label'
 
 // Chrome lives on the wrapper `<label>` so adornments (leading / trailing
 // icons) and the editable `<input>` share one bordered surface. Mirrors the
@@ -58,6 +60,21 @@ export interface TextInputProps
    */
   iconTrailing?: ReactNode
   /**
+   * Visible field label stacked above the control. Omit inside `Form.Field`
+   * (`Form.Label` already owns that slot).
+   */
+  label?: string
+  /**
+   * Helper copy under the control. Hidden while `error` is set, same as
+   * `Form.Description`.
+   */
+  helperText?: string
+  /**
+   * Validation message under the control. A non-empty string marks the
+   * field invalid (`data-invalid` + `aria-invalid`) and replaces helper text.
+   */
+  error?: string
+  /**
    * Required. Format: `{feature}-{view}-{element}`.
    * Example: `accounts-create-form-name-input`.
    * See `.claude/rules/concepts/testid.md` for the full spec.
@@ -70,7 +87,8 @@ export interface TextInputProps
  * filter-compact chrome. Always renders a wrapping `<label>` so an
  * optional leading / trailing icon can share the bordered surface with
  * the editable `<input>` — even when no icon is set the structure is the
- * same. `ref` points at the inner `<input>`.
+ * same. Optional `label`, `helperText`, and `error` stack around that
+ * chrome. `ref` points at the inner `<input>`.
  *
  * @when The default text-style control in forms (via `Form.TextInput`)
  *   and the FilterBar's text editor (`density="compact"`). Single-line
@@ -91,16 +109,30 @@ export function TextInput({
   icon,
   iconTrailing,
   disabled,
+  id: idProp,
+  label,
+  helperText,
+  error,
   // `data-invalid` is extracted so it can be hoisted to the wrapper for the
   // border-error styling; we keep it on the input too so RHF and assistive
   // tech observe the same attribute they always have.
   'data-invalid': dataInvalid,
   ...rest
 }: TextInputProps) {
-  return (
+  const generatedId = useId()
+  const errorMessage = error && error.length > 0 ? error : undefined
+  const isInvalid = Boolean(errorMessage) || dataInvalid === true || dataInvalid === 'true'
+  const needsField = Boolean(label || helperText || errorMessage)
+  const id = idProp ?? (needsField ? generatedId : undefined)
+  const helperId = helperText && !errorMessage ? `${id}-help` : undefined
+  const errorId = errorMessage ? `${id}-error` : undefined
+  const describedBy =
+    [rest['aria-describedby'], helperId, errorId].filter(Boolean).join(' ') || undefined
+
+  const control = (
     <label
       className={cn(wrapperVariants({ density }), className)}
-      data-invalid={dataInvalid}
+      data-invalid={isInvalid ? true : dataInvalid}
       data-disabled={disabled || undefined}
     >
       {icon ? (
@@ -112,13 +144,16 @@ export function TextInput({
         ref={ref}
         type={type}
         disabled={disabled}
-        data-invalid={dataInvalid}
         className={cn(
           'min-w-0 flex-1 bg-transparent text-fg placeholder:text-fg-muted outline-none disabled:cursor-not-allowed',
           pii && PII_MASK_CLASS,
         )}
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         {...rest}
+        id={id}
+        data-invalid={isInvalid ? true : dataInvalid}
+        aria-invalid={isInvalid || undefined}
+        aria-describedby={describedBy}
       />
       {iconTrailing ? (
         <span className="flex shrink-0 items-center text-fg-tertiary" aria-hidden>
@@ -126,5 +161,24 @@ export function TextInput({
         </span>
       ) : null}
     </label>
+  )
+
+  if (!needsField) return control
+
+  return (
+    <div className="flex w-full flex-col gap-tight">
+      {label ? <Label htmlFor={id}>{label}</Label> : null}
+      {control}
+      {errorMessage ? (
+        <p id={errorId} role="alert" className="form-error inline-flex items-center gap-tight">
+          <CircleAlert className="size-icon-sm shrink-0" aria-hidden />
+          <span>{errorMessage}</span>
+        </p>
+      ) : helperText ? (
+        <p id={helperId} className="form-description">
+          {helperText}
+        </p>
+      ) : null}
+    </div>
   )
 }

@@ -3,6 +3,7 @@ import { Logo, LogoAnimated } from './index'
 
 const meta = {
   title: 'Design System/Logo',
+  tags: ['autodocs'],
   component: Logo,
 } satisfies Meta<typeof Logo>
 

@@ -3,6 +3,7 @@ import { CopyableLongText, CopyableText } from './index'
 
 const meta = {
   title: 'Design System/Copyable',
+  tags: ['autodocs'],
   component: CopyableText,
 } satisfies Meta<typeof CopyableText>
 

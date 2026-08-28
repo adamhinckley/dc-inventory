@@ -3,6 +3,7 @@ import { Spinner } from './index'
 
 const meta = {
   title: 'Design System/Spinner',
+  tags: ['autodocs'],
   component: Spinner,
   args: {
     label: 'Loading catalog',

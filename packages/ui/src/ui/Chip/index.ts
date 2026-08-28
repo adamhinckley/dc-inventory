@@ -12,6 +12,6 @@ export type { ChipProps } from './Chip'
  * @avoid Interactive selectable pills in a list (use a button or
  *   `interactable` archetype). Long-form labels (use `text-fg-secondary`
  *   inline).
- * @variants animation (`none`/`slow`/`fast`)
+ * @variants animation (`none`/`slow`/`fast`), busy (pulsing dot)
  */
 export const Chip = Object.assign(ChipRoot, { Dot: ChipDot })

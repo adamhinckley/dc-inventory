@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 
 const meta: Meta = {
   title: 'Design System/Tokens',
+  tags: ['autodocs'],
   parameters: {
     // This is a palette reference card: swatches intentionally render every
     // color — including vivid brand accents (primary/accent) not meant for

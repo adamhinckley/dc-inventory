@@ -8,7 +8,7 @@ import {
 } from "../ui/Button/Button";
 import { cn } from "../lib/cn";
 
-const buttonVariants = cva("", {
+const primitiveButtonVariants = cva("", {
   variants: {
     variant: {
       default: "",
@@ -32,7 +32,7 @@ const buttonVariants = cva("", {
 });
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants>;
+  VariantProps<typeof primitiveButtonVariants>;
 
 function mapVariant(
   variant: ButtonProps["variant"],
@@ -69,4 +69,4 @@ export function Button({
   );
 }
 
-export { buttonVariants, designButtonVariants };
+export { designButtonVariants as buttonVariants };

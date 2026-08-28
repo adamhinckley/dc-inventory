@@ -4,6 +4,7 @@ import { TagInput } from './index'
 
 const meta = {
   title: 'Design System/TagInput',
+  tags: ['autodocs'],
   component: TagInput,
 } satisfies Meta<typeof TagInput>
 

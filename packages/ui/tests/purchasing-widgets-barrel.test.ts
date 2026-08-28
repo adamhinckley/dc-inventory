@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  Chip,
   Combobox,
   DetailView,
   ExplorerView,
@@ -12,10 +13,13 @@ import {
   FormDialog,
   LabeledField,
   RepeatableFields,
+  Table,
+  buttonVariants,
   scrollToFirstError,
   useDetailView,
   useExplorerView,
   useFormSubmit,
+  useTable,
 } from "../src/index";
 
 const uiSrc = join(dirname(fileURLToPath(import.meta.url)), "../src");
@@ -23,6 +27,9 @@ const uiSrc = join(dirname(fileURLToPath(import.meta.url)), "../src");
 describe("@dc-inventory/ui purchasing widget barrel", () => {
   it("re-exports purchasing layout and form widgets", () => {
     expect(Combobox).toBeTypeOf("function");
+    expect(Chip).toBeTypeOf("function");
+    expect(Table).toBeTypeOf("function");
+    expect(useTable).toBeTypeOf("function");
     expect(FieldRow).toBeTypeOf("function");
     expect(LabeledField).toBeTypeOf("function");
     expect(Form).toBeTypeOf("function");
@@ -34,6 +41,12 @@ describe("@dc-inventory/ui purchasing widget barrel", () => {
     expect(useFormSubmit).toBeTypeOf("function");
     expect(useExplorerView).toBeTypeOf("function");
     expect(useDetailView).toBeTypeOf("function");
+  });
+
+  it("exports real buttonVariants so Link CTAs get primary chrome", () => {
+    expect(buttonVariants({ variant: "primary", size: "sm" })).toContain(
+      "bg-primary-strong",
+    );
   });
 
   it("marks Form and FormDialog as client modules so the App Router barrel is safe from RSC", () => {

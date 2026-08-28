@@ -42,6 +42,7 @@ function ConfirmDemo() {
 
 const meta = {
   title: 'Design System/ConfirmDialog',
+  tags: ['autodocs'],
   component: Button,
 } satisfies Meta<typeof Button>
 

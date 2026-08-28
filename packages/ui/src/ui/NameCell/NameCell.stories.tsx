@@ -3,6 +3,7 @@ import { NameCell } from './index'
 
 const meta = {
   title: 'Design System/NameCell',
+  tags: ['autodocs'],
   component: NameCell,
   args: {
     name: 'Galvanized hex bolt',

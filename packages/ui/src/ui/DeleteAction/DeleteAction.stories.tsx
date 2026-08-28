@@ -3,6 +3,7 @@ import { DeleteAction } from './index'
 
 const meta = {
   title: 'Design System/DeleteAction',
+  tags: ['autodocs'],
   component: DeleteAction,
   args: {
     name: 'BOLT-HEX-38',

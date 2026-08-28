@@ -5,6 +5,7 @@ import { DashboardLayout } from './index'
 
 const meta = {
   title: 'Design System/DashboardLayout',
+  tags: ['autodocs'],
   component: DashboardLayout,
 } satisfies Meta<typeof DashboardLayout>
 

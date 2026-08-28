@@ -24,12 +24,20 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     expect(css).toContain("@custom-variant dark");
   });
 
+  it("loads IBM Plex from the same Google Fonts stylesheet Storybook and the app share", () => {
+    expect(css).toContain(
+      "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap",
+    );
+  });
+
   it("locks Carbon White hex on :root under semantic names", () => {
     const root = block(":root");
     expect(root).toContain("--color-surface-base: #ffffff");
     expect(root).toContain("--color-fg: #161616");
     expect(root).toContain("--color-error: #da1e28");
     expect(root).toContain("--color-primary-strong: #0f62fe");
+    expect(root).toContain("--color-secondary: #d0e2ff");
+    expect(root).toContain("--color-secondary-content: #0043ce");
     expect(root).toContain("--color-chart-08: #000000");
   });
 
@@ -38,6 +46,7 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     expect(css).toMatch(/\.dark[\s\S]*--color-fg: #f4f4f4/);
     expect(css).toMatch(/\.dark[\s\S]*--color-error: #fa4d56/);
     expect(css).toMatch(/\.dark[\s\S]*--color-fg-tertiary: #a8a8a8/);
+    expect(css).toMatch(/\.dark[\s\S]*--color-secondary: #4589ff/);
     expect(css).toMatch(/\.dark[\s\S]*--color-highlight: #001d6c/);
     expect(css).toMatch(/\.dark[\s\S]*--color-success: #42be65/);
     expect(css).toMatch(/\.dark[\s\S]*--color-chart-08: #f4f4f4/);

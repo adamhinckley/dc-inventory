@@ -3,6 +3,7 @@ import { ReportChart } from "./report-chart";
 
 const meta = {
   title: "ui-internal/ReportChart",
+  tags: ['autodocs'],
   component: ReportChart,
 } satisfies Meta<typeof ReportChart>;
 
