@@ -23,13 +23,11 @@
                                                 Distinct token from item-padding despite the shared value — these are
                                                 input chrome, not selectable items (match by intent, not value). */
   --space-input-padding-y-compact: 0.25rem; /* 4px — Compact-density (FilterBar) input/select vertical padding */
-  --space-input-height: 2.375rem;    /* 38px — Comfortable-density input/select/picker chrome min-height floor.
-                                                Applied as `min-h-(--space-input-height)` (a floor, NOT a fixed
-                                                height) so primitives that share `px-input-x py-input-y text-input`
-                                                (TextInput, DateInput, DateRangeInput, Select, Combobox, …)
-                                                align in filter rows regardless of internal content (button vs
-                                                input element, icon-wrapper differences) yet still grow if a
-                                                contributing property changes. See design-tokens.md § Heights. */
+  --space-input-height: 2.375rem;    /* 38px — Comfortable-density control height. Input, Select, Combobox,
+                                                Autocomplete, TagInput, NumberInput, DateInput, and Button `md`/`lg`
+                                                all use `min-h-(--space-input-height)`. A floor, not a fixed height,
+                                                so chip-wrapping comboboxes can grow. Do not set h-* on a single
+                                                control to "make it fit". See work-dashboard-design-spec.md §12. */
   --space-button-padding-x: 1rem;    /* 16px — Horizontal padding inside buttons */
   --space-button-padding-y: 0.625rem; /* 10px — Vertical padding inside buttons */
   --space-item-padding-x: 0.5rem;    /* 8px — Horizontal padding for interactive list/menu items */

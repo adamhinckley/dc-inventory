@@ -9,6 +9,7 @@ import {
   type ISalesUnitOfWork,
 } from "@dc-inventory/sales";
 import { CustomerId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { allocateInstant } from "./planner/allocate-instant.js";
 import type { DemoBookPlan } from "./planner/types.js";
 
 export class ReplaySalesOrdersError extends Error {
@@ -156,10 +157,9 @@ export async function runReplaySalesOrders(
     }
 
     const shipInstant = shipInstantBySalesOrderKey.get(planned.key) ?? planned.plannedInstant;
-    const confirmInstant = new Date(
-      Math.min(planned.plannedInstant.getTime(), shipInstant.getTime()),
+    ports.clock.setInstant(
+      allocateInstant(planned.plannedInstant, shipInstant, planned.status === "shipped"),
     );
-    ports.clock.setInstant(confirmInstant);
 
     const confirmed = await confirm.execute({
       organizationId: OrganizationId.DEFAULT,

@@ -42,6 +42,111 @@ async function loadLines(
   return rows.map(toLine);
 }
 
+async function findOrder(
+  db: PurchasingDrizzle,
+  organizationId: OrganizationId,
+  id: PurchaseOrderId,
+): Promise<PurchaseOrder | null> {
+  const rows = await db
+    .select()
+    .from(purchaseOrders)
+    .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.organizationId, organizationId)))
+    .limit(1);
+  const header = rows[0];
+  if (header === undefined) {
+    return null;
+  }
+  const lines = await loadLines(db, header.id);
+  return toOrder(header, lines);
+}
+
+function purchaseOrderHeaderMatch(order: PurchaseOrder) {
+  return and(
+    eq(purchaseOrders.id, order.id),
+    eq(purchaseOrders.organizationId, order.organizationId),
+  );
+}
+
+function purchaseOrderLineMatch(purchaseOrderId: string, lineId: string) {
+  return and(
+    eq(purchaseOrderLines.id, lineId),
+    eq(purchaseOrderLines.purchaseOrderId, purchaseOrderId),
+  );
+}
+
+async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder): Promise<void> {
+  const existing = await findOrder(db, order.organizationId, order.id);
+  if (existing === null) {
+    await db.insert(purchaseOrders).values({
+      id: order.id,
+      organizationId: order.organizationId,
+      supplierId: order.supplierId,
+      status: order.status,
+      documentNumber: order.documentNumber,
+      createdAt: order.createdAt,
+    });
+    for (const line of order.lines) {
+      await db.insert(purchaseOrderLines).values({
+        id: line.id,
+        purchaseOrderId: order.id,
+        sku: line.sku.value,
+        name: line.name,
+        qty: line.qty,
+        receivedQty: line.receivedQty,
+      });
+    }
+    return;
+  }
+
+  await db
+    .update(purchaseOrders)
+    .set({
+      supplierId: order.supplierId,
+      status: order.status,
+      documentNumber: order.documentNumber,
+      updatedAt: new Date(),
+    })
+    .where(purchaseOrderHeaderMatch(order));
+
+  const keepIds = new Set(order.lines.map((line) => line.id));
+  for (const stale of existing.lines) {
+    if (!keepIds.has(stale.id)) {
+      await db
+        .delete(purchaseOrderLines)
+        .where(purchaseOrderLineMatch(order.id, stale.id));
+    }
+  }
+
+  for (const line of order.lines) {
+    const lineRows = await db
+      .select()
+      .from(purchaseOrderLines)
+      .where(purchaseOrderLineMatch(order.id, line.id))
+      .limit(1);
+    if (lineRows[0] === undefined) {
+      await db.insert(purchaseOrderLines).values({
+        id: line.id,
+        purchaseOrderId: order.id,
+        sku: line.sku.value,
+        name: line.name,
+        qty: line.qty,
+        receivedQty: line.receivedQty,
+      });
+    } else {
+      await db
+        .update(purchaseOrderLines)
+        .set({
+          sku: line.sku.value,
+          name: line.name,
+          qty: line.qty,
+          receivedQty: line.receivedQty,
+          updatedAt: new Date(),
+        })
+        .where(purchaseOrderLineMatch(order.id, line.id));
+    }
+  }
+}
+
 function toOrder(
   header: typeof purchaseOrders.$inferSelect,
   lines: PurchaseOrderLine[],
@@ -85,17 +190,7 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
   }
 
   async findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null> {
-    const rows = await this.db
-      .select()
-      .from(purchaseOrders)
-      .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.organizationId, organizationId)))
-      .limit(1);
-    const header = rows[0];
-    if (header === undefined) {
-      return null;
-    }
-    const lines = await loadLines(this.db, header.id);
-    return toOrder(header, lines);
+    return findOrder(this.db, organizationId, id);
   }
 
   async findByDocumentNumber(
@@ -121,67 +216,9 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
   }
 
   async save(order: PurchaseOrder): Promise<void> {
-    const existing = await this.findById(order.organizationId, order.id);
-    if (existing === null) {
-      await this.db.insert(purchaseOrders).values({
-        id: order.id,
-        organizationId: order.organizationId,
-        supplierId: order.supplierId,
-        status: order.status,
-        documentNumber: order.documentNumber,
-        createdAt: order.createdAt,
-      });
-      for (const line of order.lines) {
-        await this.db.insert(purchaseOrderLines).values({
-          id: line.id,
-          purchaseOrderId: order.id,
-          sku: line.sku.value,
-          name: line.name,
-          qty: line.qty,
-          receivedQty: line.receivedQty,
-        });
-      }
-      return;
-    }
-
-    await this.db
-      .update(purchaseOrders)
-      .set({
-        supplierId: order.supplierId,
-        status: order.status,
-        documentNumber: order.documentNumber,
-        updatedAt: new Date(),
-      })
-      .where(eq(purchaseOrders.id, order.id));
-
-    for (const line of order.lines) {
-      const lineRows = await this.db
-        .select()
-        .from(purchaseOrderLines)
-        .where(eq(purchaseOrderLines.id, line.id))
-        .limit(1);
-      if (lineRows[0] === undefined) {
-        await this.db.insert(purchaseOrderLines).values({
-          id: line.id,
-          purchaseOrderId: order.id,
-          sku: line.sku.value,
-          name: line.name,
-          qty: line.qty,
-          receivedQty: line.receivedQty,
-        });
-      } else {
-        await this.db
-          .update(purchaseOrderLines)
-          .set({
-            sku: line.sku.value,
-            name: line.name,
-            qty: line.qty,
-            receivedQty: line.receivedQty,
-            updatedAt: new Date(),
-          })
-          .where(eq(purchaseOrderLines.id, line.id));
-      }
-    }
+    await this.db.transaction(async (tx) => {
+      await persistPurchaseOrder(tx as PurchasingDrizzle, order);
+    });
   }
 
   async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {

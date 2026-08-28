@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { GetInternalPurchaseOrder404Error } from './getInternalPurchaseOrder404Error.js';
+import type { GetInternalPurchaseOrder404Error } from './getInternalPurchaseOrder404Error';
 
 export type GetInternalPurchaseOrder404 = {
   error: GetInternalPurchaseOrder404Error;

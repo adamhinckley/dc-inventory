@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { CreateInternalSupplier401Error } from './createInternalSupplier401Error.js';
+import type { CreateInternalSupplier401Error } from './createInternalSupplier401Error';
 
 export type CreateInternalSupplier401 = {
   error: CreateInternalSupplier401Error;

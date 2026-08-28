@@ -1,6 +1,6 @@
+// @ts-nocheck — resource FieldConfig wiring is stubbed until x-table maps here.
 'use client'
 
-// @ts-nocheck — resource FieldConfig wiring is stubbed until x-table maps here.
 import { use, useEffect, type ComponentPropsWithRef, type ReactNode } from 'react'
 import {
   Controller,
@@ -704,7 +704,7 @@ function FormReadOnlyValue({
         <div
           {...props}
           className={cn(
-            'w-full bg-transparent text-fg',
+            'w-full min-h-(--space-input-height) bg-transparent text-fg',
             'rounded-interactable border border-border-field px-input-x py-input-y text-input',
             'select-text cursor-default',
             pii && PII_MASK_CLASS,
@@ -1621,7 +1621,7 @@ export function FormActions({ ref, className, children, ...rest }: ComponentProp
 export interface FormSubmitProps extends Omit<ComponentPropsWithRef<'button'>, 'type'> {
   /** Label while the form is submitting. Defaults to `children`. */
   pendingLabel?: ReactNode
-  /** Button size — defaults to `md`. Use `lg` when sitting next to comfortable-density form inputs in a single row. */
+  /** Button size. Defaults to `md`, which matches `--space-input-height`. Do not pass `sm` in a field row. */
   size?: LoadingButtonProps['size']
   /** Visual variant — `destructive` for forms whose submit deletes. Defaults to `primary`. */
   variant?: 'primary' | 'destructive'

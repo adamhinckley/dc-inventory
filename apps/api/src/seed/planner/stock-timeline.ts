@@ -1,6 +1,7 @@
 import { LocationId } from "@dc-inventory/shared-kernel";
 import type { DemoMovementRow } from "../reconciliation/demo-book.js";
 import { recomputeStockFromMovements } from "../reconciliation/stock-from-movements.js";
+import { allocateInstant } from "./allocate-instant.js";
 import type { DemoBookPlan } from "./types.js";
 
 const LOCATION = LocationId.DEFAULT;
@@ -23,8 +24,9 @@ function pushMovement(
 
 /**
  * Seed-clock movements as reconciliation will sort them: received POs inbound+receive
- * at the PO instant; confirmed SOs allocate at the SO instant; shipped SOs ship at
- * the invoice instant (Idle Park ages may differ from the SO instant).
+ * at the PO instant; confirmed SOs allocate at the SO instant; shipped SOs allocate
+ * at min(SO instant, invoice instant) and ship at the invoice instant (Idle Park ages
+ * may precede the SO instant).
  */
 export function movementsFromDemoPlan(plan: DemoBookPlan): DemoMovementRow[] {
   const rows: DemoMovementRow[] = [];
@@ -50,11 +52,13 @@ export function movementsFromDemoPlan(plan: DemoBookPlan): DemoMovementRow[] {
         order.status === "shipped"
           ? (shipInstantByKey.get(order.key) ?? order.plannedInstant)
           : order.plannedInstant;
-      const allocateAt =
-        order.status === "shipped"
-          ? new Date(Math.min(order.plannedInstant.getTime(), shipAt.getTime()))
-          : order.plannedInstant;
-      pushMovement(rows, line.sku, "Allocated", line.qty, allocateAt);
+      pushMovement(
+        rows,
+        line.sku,
+        "Allocated",
+        line.qty,
+        allocateInstant(order.plannedInstant, shipAt, order.status === "shipped"),
+      );
       if (order.status === "shipped") {
         pushMovement(rows, line.sku, "Shipped", line.qty, shipAt);
       }

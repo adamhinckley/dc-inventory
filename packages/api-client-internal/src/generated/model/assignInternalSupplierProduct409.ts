@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { AssignInternalSupplierProduct409Error } from './assignInternalSupplierProduct409Error.js';
+import type { AssignInternalSupplierProduct409Error } from './assignInternalSupplierProduct409Error';
 
 export type AssignInternalSupplierProduct409 = {
   error: AssignInternalSupplierProduct409Error;

@@ -277,3 +277,31 @@ Recharts consumes **report** series from the API ([`architecture.md`](./architec
 - Internal dashboard copies [`packages/ui/src/globals.css`](../packages/ui/src/globals.css). Do not re-derive hex.
 - Wholesale shop and ops licensing UI do **not** consume this token file. Wholesale may mirror elevation / type / spacing *ideas* with shop tokens ([ADR 0006](./adr/0006-vendor-design-system.md)).
 - ResourceTable / echarts from the source kit stay out of this repo. Lists stay `DataTable` + `x-table`. Charts stay Recharts.
+
+---
+
+## 12. Form controls (internal dashboard)
+
+One height. Readable actions. Agents copy this; they do not invent `h-*` on a single control.
+
+**Height.** Comfortable-density Input, TextInput, Select, Combobox, Autocomplete, TagInput, NumberInput, DateInput, DateRangeInput, PhoneInput, and Button `md` / `lg` all use `min-h-(--space-input-height)` (38px, `--space-input-height` in `packages/ui/src/tokens/shared.css`). Compact density is FilterBar only.
+
+**Components.** Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledField` from `@dc-inventory/ui`. Do not drop a raw `<input>` or `<select>` with one-off padding.
+
+**Field rows.** Horizontal labeled fields plus a trailing button:
+
+```tsx
+<FieldRow>
+  <LabeledField className="min-w-56 flex-1">
+    <Label htmlFor="vendor">Vendor</Label>
+    <Combobox id="vendor" ... />
+  </LabeledField>
+  <Button type="submit" variant="primary">Add line</Button>
+</FieldRow>
+```
+
+`FieldRow` is `flex flex-wrap items-end gap-field-group`. `LabeledField` is `flex flex-col gap-field`. The row action is `variant="primary"` at default `md` size. `sm` / `ghost` belong in toolbars and tables, not this row.
+
+**Buttons.** `primary` is the form-row action (blue, `text-primary-content`). `secondary` is Gray 70 fill + white text. `default` is bordered Gray 10 + `text-fg`. Do not use `ghost` or `secondary`+`size="sm"` as the only action next to inputs. If a size is wrong, change `packages/ui/src/ui/Button/Button.tsx`, not the page.
+
+**Done when** every control in the row shares `--space-input-height`, the trailing button reads as an action at rest, labels sit `gap-field` above controls, and the next block uses `gap-form-section` or `gap-field-group` rather than sitting on the controls.

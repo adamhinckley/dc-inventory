@@ -7,10 +7,10 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 describe("ADR 0006 parked Table surface", () => {
-  it("is not on the public @dc-inventory/ui barrel", () => {
+  it("is on the public @dc-inventory/ui barrel for local editors", () => {
     const barrel = readFileSync(join(pkgRoot, "src/index.ts"), "utf8");
-    expect(barrel).not.toMatch(/ui\/Table/);
-    expect(barrel).not.toMatch(/\bTable\b/);
+    expect(barrel).toMatch(/ui\/Table/);
+    expect(barrel).toMatch(/\buseTable\b/);
   });
 
   it("is excluded from package typecheck", () => {

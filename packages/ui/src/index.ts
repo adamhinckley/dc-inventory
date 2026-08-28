@@ -4,6 +4,12 @@ export { formatMoneyMinorUnits } from "./lib/format-money";
 export { Button, buttonVariants, type ButtonProps } from "./primitives/button";
 export { Input, type InputProps } from "./primitives/input";
 export { Label, type LabelProps } from "./primitives/label";
+export {
+  FieldRow,
+  LabeledField,
+  type FieldRowProps,
+  type LabeledFieldProps,
+} from "./ui/FieldRow";
 export { AppShell, useAppShellContext } from "./shells/AppShell";
 
 export { Combobox, type ComboboxProps } from "./ui/Combobox";

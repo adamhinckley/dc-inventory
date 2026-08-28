@@ -539,7 +539,7 @@ The agent’s job is to make those tests pass **without changing the invariant**
 - CSV/XLSX **export** and import **dry-run** adapters behind existing ports (not stock qty columns)
 - PO/invoice **PDF render** adapters when the use case and fixture HTML/layout already exist
 - Wholesale **shop** UI (browse, PDP, cart) against existing Sales/Catalog ports — tax **display only** from quoted API fields
-- Internal dashboard tables, KPI cards, and Recharts wired to **existing** report endpoints
+- Internal dashboard tables, KPI cards, and Recharts wired to **existing** report endpoints. Form rows follow [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) §12.
 - Internal CRUD screens that call existing use cases
 - In-memory and Postgres adapter mapping when tests already specify behavior
 - Gating an existing route behind an **already named** `FeatureName` via `IFeatures`

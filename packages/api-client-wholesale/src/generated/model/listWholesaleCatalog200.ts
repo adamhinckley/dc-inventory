@@ -4,7 +4,7 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
-import type { ListWholesaleCatalog200ItemsItem } from './listWholesaleCatalog200ItemsItem.js';
+import type { ListWholesaleCatalog200ItemsItem } from './listWholesaleCatalog200ItemsItem';
 
 export type ListWholesaleCatalog200 = {
   items: ListWholesaleCatalog200ItemsItem[];

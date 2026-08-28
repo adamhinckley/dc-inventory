@@ -21,6 +21,8 @@ Wire staff dashboard tables (`DataTable` + `x-table` query protocol), KPI cards,
 
 Color, type, and dark opt-in: [`docs/work-dashboard-design-spec.md`](../../../work-dashboard-design-spec.md). Use Tailwind token classes (`bg-surface-base`, `text-fg`, `page-title`, `section-flat`, `dark:`). Do not invent hex. Do not use retired Carbon names (`bg-layer-01`, `text-primary` as body text).
 
+Form rows: §12 of that spec. `FieldRow` + `LabeledField`. Controls share `--space-input-height`. The trailing action is `Button variant="primary"` at default `md` size, not `secondary` `size="sm"`.
+
 ## Allowed paths
 
 - `apps/internal/**`

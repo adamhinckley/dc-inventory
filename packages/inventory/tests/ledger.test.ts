@@ -611,6 +611,42 @@ describe("Inventory ledger (in-memory)", () => {
       expect(await snapshot(h)).toEqual(beforeSnapshot);
       expect(await movements(h)).toEqual(beforeMovements);
     });
+
+    it("forgets idempotency from a rolled-back movement", async () => {
+      const h = harness();
+      await h.adjustmentIncrease.execute({
+        idempotencyKey: "rollback-keep",
+        sku: SKU,
+        quantity: 5,
+        refType: "adjustment",
+        refId: "rollback-keep",
+      });
+
+      await expect(
+        h.uow.run(async (scope) => {
+          const increase = new RecordAdjustmentIncreaseUseCase(scope.ledger);
+          const result = await increase.execute({
+            idempotencyKey: "rollback-idempotency",
+            sku: SKU,
+            quantity: 1,
+            refType: "adjustment",
+            refId: "rollback-idempotency",
+          });
+          expect(result.ok).toBe(true);
+          throw new Error("boom");
+        }),
+      ).rejects.toThrow("boom");
+
+      const retried = await h.adjustmentIncrease.execute({
+        idempotencyKey: "rollback-idempotency",
+        sku: SKU,
+        quantity: 1,
+        refType: "adjustment",
+        refId: "rollback-idempotency",
+      });
+      expect(retried.ok).toBe(true);
+      expect(await movements(h)).toHaveLength(2);
+    });
   });
 
   describe("serialized allocation", () => {
