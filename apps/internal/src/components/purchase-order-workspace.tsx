@@ -11,7 +11,7 @@ import {
   useListInternalSuppliers,
   useReplaceInternalPurchaseOrderLines,
 } from "@dc-inventory/api-client-internal";
-import { Button, Combobox, Input, Label } from "@dc-inventory/ui";
+import { Button, Combobox, FieldRow, Input, Label, LabeledField } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,17 +21,18 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
+  type SubmitEvent,
 } from "react";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
+import {
+  appendPurchaseOrderLine,
+  coalescePurchaseOrderLines,
+  purchaseOrderLineRowKey,
+  purchaseOrderLineWritesEqual,
+  purchaseOrderLinesSavedForConfirm,
+  purchaseOrderWriteLines,
+} from "../lib/purchase-order-lines";
 import type { PurchaseOrderLineDraft } from "../lib/purchase-order-types";
-
-function linesEqual(
-  left: PurchaseOrderLineDraft[],
-  right: PurchaseOrderLineDraft[],
-): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
 
 function SupplierName({ supplierId }: { supplierId: string }) {
   const supplierQuery = useGetInternalSupplier(supplierId);
@@ -47,12 +48,10 @@ function SupplierName({ supplierId }: { supplierId: string }) {
 
 function PurchaseOrderLineAdder({
   supplierId,
-  lines,
   disabled = false,
   onAddLine,
 }: {
   supplierId: string;
-  lines: PurchaseOrderLineDraft[];
   disabled?: boolean;
   onAddLine: (line: PurchaseOrderLineDraft) => void;
 }) {
@@ -80,7 +79,7 @@ function PurchaseOrderLineAdder({
     return new Map(items.map((product) => [product.sku, product]));
   }, [productsQuery.data]);
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     if (!selectedSku) {
@@ -97,11 +96,8 @@ function PurchaseOrderLineAdder({
       setError("Quantity must be a positive whole number.");
       return;
     }
-    if (lines.some((line) => line.sku === selectedSku)) {
-      setError("That SKU is already on this PO.");
-      return;
-    }
     onAddLine({
+      id: crypto.randomUUID(),
       sku: product.sku,
       name: product.catalogName,
       qty,
@@ -111,44 +107,37 @@ function PurchaseOrderLineAdder({
   };
 
   return (
-    <form className="flex flex-col gap-field-group" onSubmit={submit}>
-      <div className="grid gap-field-group sm:grid-cols-[1fr_8rem_auto] sm:items-end">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="po-product">Vendor product</Label>
-          <Combobox
-            id="po-product"
-            options={productOptions}
-            value={selectedSku}
-            onChange={(value) =>
-              setSelectedSku(typeof value === "string" ? value : null)
-            }
-            disabled={disabled || productsQuery.isLoading}
-            placeholder="Select SKU"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="po-qty">Qty</Label>
-          <Input
-            id="po-qty"
-            type="number"
-            min={1}
-            step={1}
-            value={addQty}
-            onChange={(event) => setAddQty(event.target.value)}
-            disabled={disabled}
-          />
-        </div>
-        <Button
-          type="submit"
-          variant="secondary"
-          size="sm"
-          disabled={disabled || !selectedSku}
-        >
-          Add line
-        </Button>
-      </div>
+    <form className="flex min-w-0 flex-1 flex-wrap items-end gap-field-group" onSubmit={submit}>
+      <LabeledField className="min-w-56 flex-1">
+        <Label htmlFor="po-product">Vendor product</Label>
+        <Combobox
+          id="po-product"
+          options={productOptions}
+          value={selectedSku}
+          onChange={(value) =>
+            setSelectedSku(typeof value === "string" ? value : null)
+          }
+          disabled={disabled || productsQuery.isLoading}
+          placeholder="Select SKU"
+        />
+      </LabeledField>
+      <LabeledField className="w-24">
+        <Label htmlFor="po-qty">Qty</Label>
+        <Input
+          id="po-qty"
+          type="number"
+          min={1}
+          step={1}
+          value={addQty}
+          onChange={(event) => setAddQty(event.target.value)}
+          disabled={disabled}
+        />
+      </LabeledField>
+      <Button type="submit" variant="primary" className="shrink-0" disabled={disabled}>
+        Add line
+      </Button>
       {error ? (
-        <p className="text-body-sm text-error" role="alert">
+        <p className="basis-full text-body-sm text-error" role="alert">
           {error}
         </p>
       ) : null}
@@ -163,8 +152,8 @@ function PurchaseOrderLinesTable({
   qtyDisabled = false,
 }: {
   lines: PurchaseOrderLineDraft[];
-  onUpdateQty: (sku: string, qtyRaw: string) => void;
-  onRemoveLine: (sku: string) => void;
+  onUpdateQty: (index: number, qtyRaw: string) => void;
+  onRemoveLine: (index: number) => void;
   qtyDisabled?: boolean;
 }) {
   return (
@@ -191,8 +180,11 @@ function PurchaseOrderLinesTable({
               </td>
             </tr>
           ) : (
-            lines.map((line) => (
-              <tr key={line.sku} className="border-b border-border last:border-0">
+            lines.map((line, index) => (
+              <tr
+                key={purchaseOrderLineRowKey(line, index)}
+                className="border-b border-border last:border-0"
+              >
                 <td className="px-table-cell-x py-table-cell-y tabular-nums">
                   {line.sku}
                 </td>
@@ -204,7 +196,7 @@ function PurchaseOrderLinesTable({
                       step={1}
                       className="max-w-28"
                       value={String(line.qty)}
-                      onChange={(event) => onUpdateQty(line.sku, event.target.value)}
+                      onChange={(event) => onUpdateQty(index, event.target.value)}
                       disabled={qtyDisabled}
                       aria-label={`Quantity for ${line.sku}`}
                     />
@@ -214,7 +206,7 @@ function PurchaseOrderLinesTable({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => onRemoveLine(line.sku)}
+                    onClick={() => onRemoveLine(index)}
                   >
                     Remove
                   </Button>
@@ -246,7 +238,9 @@ function PurchaseOrderWorkspaceBody({
   const isNew = !purchaseOrderId;
 
   const [supplierId, setSupplierId] = useState<string | null>(initialSupplierId);
-  const [lines, setLines] = useState<PurchaseOrderLineDraft[]>(initialLines);
+  const [lines, setLines] = useState<PurchaseOrderLineDraft[]>(() =>
+    coalescePurchaseOrderLines(initialLines),
+  );
   const [saveState, setSaveState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -254,10 +248,12 @@ function PurchaseOrderWorkspaceBody({
   const [actionError, setActionError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const lastSavedLinesRef = useRef(initialLines);
+  const lastSavedLinesRef = useRef(coalescePurchaseOrderLines(initialLines));
+  const lastPersistSucceededRef = useRef(true);
+  const linesRef = useRef(lines);
+  linesRef.current = lines;
   const creatingRef = useRef(false);
-  const replacingRef = useRef(false);
-  const pendingReplaceLinesRef = useRef<PurchaseOrderLineDraft[] | null>(null);
+  const persistChainRef = useRef(Promise.resolve(true));
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const suppliersQuery = useListInternalSuppliers({ page: 1, pageSize: 100 });
@@ -290,11 +286,12 @@ function PurchaseOrderWorkspaceBody({
         const result = await createMutation.mutateAsync({
           data: {
             supplierId: vendorId,
-            lines: nextLines,
+            lines: purchaseOrderWriteLines(nextLines),
           },
         });
         if (result.status === 201) {
-          lastSavedLinesRef.current = nextLines;
+          lastSavedLinesRef.current = coalescePurchaseOrderLines(nextLines);
+          lastPersistSucceededRef.current = true;
           setSaveState("saved");
           await queryClient.invalidateQueries({
             queryKey: getListInternalPurchaseOrdersQueryKey(),
@@ -304,9 +301,11 @@ function PurchaseOrderWorkspaceBody({
         }
         setSaveState("error");
         setActionError("Could not create draft purchase order.");
+        lastPersistSucceededRef.current = false;
       } catch {
         setSaveState("error");
         setActionError("Could not create draft purchase order.");
+        lastPersistSucceededRef.current = false;
       } finally {
         creatingRef.current = false;
         setIsCreating(false);
@@ -316,52 +315,55 @@ function PurchaseOrderWorkspaceBody({
   );
 
   const persistReplace = useCallback(
-    async (nextLines: PurchaseOrderLineDraft[]) => {
-      if (!purchaseOrderId || nextLines.length === 0) {
-        return;
-      }
-      if (linesEqual(nextLines, lastSavedLinesRef.current)) {
-        return;
-      }
-      if (replacingRef.current) {
-        pendingReplaceLinesRef.current = nextLines;
-        return;
-      }
-      replacingRef.current = true;
-      setSaveState("saving");
-      setActionError(null);
-      try {
-        const result = await replaceMutation.mutateAsync({
-          id: purchaseOrderId,
-          data: { lines: nextLines },
-        });
-        if (result.status === 200) {
-          lastSavedLinesRef.current = nextLines;
-          setSaveState("saved");
-          await queryClient.invalidateQueries({
-            queryKey: getGetInternalPurchaseOrderQueryKey(purchaseOrderId),
-          });
-          await queryClient.invalidateQueries({
-            queryKey: getListInternalPurchaseOrdersQueryKey(),
-          });
-          return;
+    (nextLines: PurchaseOrderLineDraft[], force = false): Promise<boolean> => {
+      const run = async (): Promise<boolean> => {
+        if (!purchaseOrderId || nextLines.length === 0) {
+          return false;
         }
-        setSaveState("error");
-        setActionError("Autosave failed.");
-      } catch {
-        setSaveState("error");
-        setActionError("Autosave failed.");
-      } finally {
-        replacingRef.current = false;
-        const pending = pendingReplaceLinesRef.current;
-        pendingReplaceLinesRef.current = null;
+        const payloadLines = coalescePurchaseOrderLines(nextLines);
         if (
-          pending !== null &&
-          !linesEqual(pending, lastSavedLinesRef.current)
+          !force &&
+          purchaseOrderLineWritesEqual(payloadLines, lastSavedLinesRef.current)
         ) {
-          void persistReplace(pending);
+          lastPersistSucceededRef.current = true;
+          return true;
         }
-      }
+        setSaveState("saving");
+        setActionError(null);
+        try {
+          const result = await replaceMutation.mutateAsync({
+            id: purchaseOrderId,
+            data: { lines: purchaseOrderWriteLines(payloadLines) },
+          });
+          if (result.status === 200) {
+            lastSavedLinesRef.current = payloadLines;
+            lastPersistSucceededRef.current = true;
+            setSaveState("saved");
+            await queryClient.invalidateQueries({
+              queryKey: getGetInternalPurchaseOrderQueryKey(purchaseOrderId),
+            });
+            await queryClient.invalidateQueries({
+              queryKey: getListInternalPurchaseOrdersQueryKey(),
+            });
+            return true;
+          }
+          setSaveState("error");
+          setActionError("Autosave failed.");
+          lastPersistSucceededRef.current = false;
+          return false;
+        } catch {
+          setSaveState("error");
+          setActionError("Autosave failed.");
+          lastPersistSucceededRef.current = false;
+          return false;
+        }
+      };
+      const next = persistChainRef.current.then(run, run);
+      persistChainRef.current = next.then(
+        () => true,
+        () => false,
+      );
+      return next;
     },
     [purchaseOrderId, queryClient, replaceMutation],
   );
@@ -373,7 +375,7 @@ function PurchaseOrderWorkspaceBody({
     if (lines.length === 0) {
       return;
     }
-    if (linesEqual(lines, lastSavedLinesRef.current)) {
+    if (purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current)) {
       return;
     }
     if (autosaveTimerRef.current) {
@@ -398,21 +400,20 @@ function PurchaseOrderWorkspaceBody({
         return;
       }
       setActionError(null);
-      const nextLines = [...lines, line];
+      const nextLines = appendPurchaseOrderLine(linesRef.current, line);
+      linesRef.current = nextLines;
+      setLines(nextLines);
       if (!purchaseOrderId && activeSupplierId) {
         creatingRef.current = true;
         setIsCreating(true);
-        setLines(nextLines);
         void persistCreate(nextLines, activeSupplierId);
-        return;
       }
-      setLines(nextLines);
     },
-    [activeSupplierId, lines, persistCreate, purchaseOrderId, workspaceLocked],
+    [activeSupplierId, persistCreate, purchaseOrderId, workspaceLocked],
   );
 
   const updateLineQty = useCallback(
-    (sku: string, qtyRaw: string) => {
+    (index: number, qtyRaw: string) => {
       if (creatingRef.current || workspaceLocked) {
         return;
       }
@@ -420,48 +421,55 @@ function PurchaseOrderWorkspaceBody({
       if (!Number.isInteger(qty) || qty <= 0) {
         return;
       }
-      setLines((current) =>
-        current.map((line) => (line.sku === sku ? { ...line, qty } : line)),
-      );
+      setLines((current) => {
+        const next = current.map((line, lineIndex) =>
+          lineIndex === index ? { ...line, qty } : line,
+        );
+        linesRef.current = next;
+        return next;
+      });
     },
-    [purchaseOrderId, workspaceLocked],
+    [workspaceLocked],
   );
 
-  const removeLine = useCallback((sku: string) => {
+  const removeLine = useCallback((index: number) => {
     setLines((current) => {
       if (current.length <= 1) {
         setActionError("A draft PO must keep at least one line.");
         return current;
       }
       setActionError(null);
-      return current.filter((line) => line.sku !== sku);
+      const next = current.filter((_, lineIndex) => lineIndex !== index);
+      linesRef.current = next;
+      return next;
     });
   }, []);
 
-  const flushAutosave = useCallback(async () => {
+  const flushAutosave = useCallback(async (force = false) => {
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
     }
-    while (replacingRef.current) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+    await persistChainRef.current;
+    if (!purchaseOrderId || linesRef.current.length === 0) {
+      return lastPersistSucceededRef.current;
     }
-    if (
-      purchaseOrderId &&
-      lines.length > 0 &&
-      !linesEqual(lines, lastSavedLinesRef.current)
-    ) {
-      await persistReplace(lines);
-    }
-  }, [lines, persistReplace, purchaseOrderId]);
+    return persistReplace(linesRef.current, force);
+  }, [persistReplace, purchaseOrderId]);
 
   const finalize = useCallback(async () => {
     if (!purchaseOrderId) {
       return;
     }
     setActionError(null);
-    await flushAutosave();
-    if (!linesEqual(lines, lastSavedLinesRef.current)) {
+    const saved = await flushAutosave(true);
+    if (
+      !purchaseOrderLinesSavedForConfirm(
+        linesRef.current,
+        lastSavedLinesRef.current,
+        saved,
+      )
+    ) {
       setActionError("Could not save latest lines before finalize.");
       return;
     }
@@ -487,7 +495,6 @@ function PurchaseOrderWorkspaceBody({
   }, [
     confirmMutation,
     flushAutosave,
-    lines,
     purchaseOrderId,
     queryClient,
     router,
@@ -521,7 +528,7 @@ function PurchaseOrderWorkspaceBody({
           : "Autosave on";
 
   return (
-    <section className="flex flex-col gap-region">
+    <section className="flex flex-col gap-form-section">
       <nav className="text-body-sm text-fg-secondary">
         <Link href="/purchasing" className="text-link hover:text-link-hover">
           Purchasing
@@ -564,7 +571,7 @@ function PurchaseOrderWorkspaceBody({
                     lines.length === 0 ||
                     saveState === "saving" ||
                     isCreating ||
-                    !linesEqual(lines, lastSavedLinesRef.current)
+                    !purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current)
                   }
                   onClick={() => void finalize()}
                 >
@@ -576,38 +583,35 @@ function PurchaseOrderWorkspaceBody({
         </div>
       </header>
 
-      <div className="grid gap-field-group lg:grid-cols-[minmax(16rem,22rem)_1fr]">
-        <div className="flex flex-col gap-field-group">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="po-vendor">Vendor</Label>
-            <Combobox
-              id="po-vendor"
-              options={supplierOptions}
-              value={activeSupplierId}
-              onChange={(value) => {
-                if (!vendorLocked) {
-                  setSupplierId(typeof value === "string" ? value : null);
-                }
-              }}
-              disabled={vendorLocked || suppliersQuery.isLoading}
-              placeholder="Select vendor"
-            />
-          </div>
-        </div>
+      <FieldRow>
+        <LabeledField className="min-w-56 flex-1">
+          <Label htmlFor="po-vendor">Vendor</Label>
+          <Combobox
+            id="po-vendor"
+            options={supplierOptions}
+            value={activeSupplierId}
+            onChange={(value) => {
+              if (!vendorLocked) {
+                setSupplierId(typeof value === "string" ? value : null);
+              }
+            }}
+            disabled={vendorLocked || suppliersQuery.isLoading}
+            placeholder="Select vendor"
+          />
+        </LabeledField>
 
         {activeSupplierId ? (
           <PurchaseOrderLineAdder
             supplierId={activeSupplierId}
-            lines={lines}
             disabled={workspaceLocked}
             onAddLine={addLine}
           />
         ) : (
-          <p className="text-body-sm text-fg-secondary self-end">
+          <p className="text-body-sm text-fg-secondary">
             Select a vendor to add lines.
           </p>
         )}
-      </div>
+      </FieldRow>
 
       {actionError ? (
         <p className="text-body-sm text-error" role="alert">
@@ -680,11 +684,14 @@ function PurchaseOrderEditWorkspace({
       key={purchaseOrderId}
       purchaseOrderId={purchaseOrderId}
       initialSupplierId={po.supplierId}
-      initialLines={po.lines.map((line) => ({
-        sku: line.sku,
-        name: line.name,
-        qty: line.qty,
-      }))}
+      initialLines={coalescePurchaseOrderLines(
+        po.lines.map((line) => ({
+          id: line.id,
+          sku: line.sku,
+          name: line.name,
+          qty: line.qty,
+        })),
+      )}
       initialDocumentNumber={po.documentNumber}
       isDraft
     />

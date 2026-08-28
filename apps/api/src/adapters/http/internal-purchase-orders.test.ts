@@ -185,6 +185,56 @@ describe("internal purchase orders HTTP", () => {
     expect(blocked.json()).toEqual({ error: "conflict" });
   });
 
+  it("rejects duplicate SKU lines on replace and confirms the previous unique draft", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 5 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string };
+
+    const duplicateReplace = await app.inject({
+      method: "PATCH",
+      url: `/internal/purchase-orders/${po.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        lines: [
+          { sku: "DEM-00003", name: "Connector metallic plug", qty: 1 },
+          { sku: "DEM-00003", name: "Connector metallic plug", qty: 1 },
+          { sku: "DEM-00004", name: "Hook taper pin", qty: 1 },
+          { sku: "DEM-00003", name: "Connector metallic plug", qty: 1 },
+          { sku: "DEM-00004", name: "Hook taper pin", qty: 1 },
+        ],
+      },
+    });
+    expect(duplicateReplace.statusCode).toBe(400);
+    expect(duplicateReplace.json()).toEqual({ error: "invalid" });
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-confirm-after-duplicate-patch" },
+    });
+    expect(confirmed.statusCode).toBe(200);
+    const confirmedPo = confirmed.json() as {
+      status: string;
+      lines: Array<{ sku: string; qty: number }>;
+    };
+    expect(confirmedPo.status).toBe("confirmed");
+    expect(confirmedPo.lines).toEqual([
+      expect.objectContaining({ sku: "HEX-BOLT-GALV", qty: 5 }),
+    ]);
+  });
+
   it("exports purchase order lines as xlsx and returns 404 for missing id", async () => {
     const app = await startPurchasingApp();
     const cookie = await staffCookie(app);

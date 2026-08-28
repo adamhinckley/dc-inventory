@@ -154,6 +154,13 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
       })
       .where(eq(purchaseOrders.id, order.id));
 
+    const keepIds = new Set(order.lines.map((line) => line.id));
+    for (const stale of existing.lines) {
+      if (!keepIds.has(stale.id)) {
+        await this.db.delete(purchaseOrderLines).where(eq(purchaseOrderLines.id, stale.id));
+      }
+    }
+
     for (const line of order.lines) {
       const lineRows = await this.db
         .select()
