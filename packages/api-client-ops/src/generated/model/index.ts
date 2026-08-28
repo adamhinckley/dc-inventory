@@ -5,5 +5,5 @@
  * OpenAPI spec version: 0.0.0
  */
 
-export * from './getOpsSubscription200.js';
-export * from './getOpsSubscription200Status.js';
+export * from './getOpsSubscription200';
+export * from './getOpsSubscription200Status';

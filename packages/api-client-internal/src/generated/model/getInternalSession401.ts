@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { GetInternalSession401Error } from './getInternalSession401Error.js';
+import type { GetInternalSession401Error } from './getInternalSession401Error';
 
 export type GetInternalSession401 = {
   error: GetInternalSession401Error;

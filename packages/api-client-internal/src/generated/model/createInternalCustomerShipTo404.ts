@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { CreateInternalCustomerShipTo404Error } from './createInternalCustomerShipTo404Error.js';
+import type { CreateInternalCustomerShipTo404Error } from './createInternalCustomerShipTo404Error';
 
 export type CreateInternalCustomerShipTo404 = {
   error: CreateInternalCustomerShipTo404Error;

@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ReplaceInternalPurchaseOrderLinesBodyLinesItem } from './replaceInternalPurchaseOrderLinesBodyLinesItem.js';
+import type { ReplaceInternalPurchaseOrderLinesBodyLinesItem } from './replaceInternalPurchaseOrderLinesBodyLinesItem';
 
 export type ReplaceInternalPurchaseOrderLinesBody = {
   /** @minItems 1 */

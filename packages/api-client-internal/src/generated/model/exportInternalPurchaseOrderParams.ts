@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ExportInternalPurchaseOrderFormat } from './exportInternalPurchaseOrderFormat.js';
+import type { ExportInternalPurchaseOrderFormat } from './exportInternalPurchaseOrderFormat';
 
 export type ExportInternalPurchaseOrderParams = {
 format?: ExportInternalPurchaseOrderFormat;

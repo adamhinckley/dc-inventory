@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ReceiveInternalPurchaseOrderBodyLinesItem } from './receiveInternalPurchaseOrderBodyLinesItem.js';
+import type { ReceiveInternalPurchaseOrderBodyLinesItem } from './receiveInternalPurchaseOrderBodyLinesItem';
 
 export type ReceiveInternalPurchaseOrderBody = {
   /** @minLength 1 */
