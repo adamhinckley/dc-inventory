@@ -158,9 +158,13 @@ describe("replay sales orders (in-memory)", () => {
     );
 
     expect(replay.salesOrderCount).toBe(DEMO_COUNTS.salesOrders);
-    expect(replay.lastSalesDocumentNumber).toBe("SO-15000");
+    expect(replay.lastSalesDocumentNumber).toBe(
+      `SO-${String(DEMO_COUNTS.salesOrders).padStart(5, "0")}`,
+    );
     expect(replay.shippedCount).toBe(DEMO_COUNTS.shippedSalesOrders);
-    expect(replay.lastInvoiceDocumentNumber).toBe("INV-12000");
+    expect(replay.lastInvoiceDocumentNumber).toBe(
+      `INV-${String(DEMO_COUNTS.invoices).padStart(5, "0")}`,
+    );
     expect(replay.leftoverConfirmedCount).toBe(plan.leftoverConfirmedSalesOrderCount);
     expect(replay.leftoverConfirmedCount).toBeGreaterThanOrEqual(
       FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMin,
@@ -330,11 +334,12 @@ describe("replay sales orders (in-memory)", () => {
       const order = listed.items.find((row) => row.id === movement.refId);
       expect(order).toBeDefined();
       const planned = plannedForDocumentNumber(order!.documentNumber);
-      let expectedInstant = planned!.plannedInstant;
-      if (movement.movementType === "Shipped") {
-        expectedInstant =
-          shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
-      }
+      const shipInstant =
+        shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
+      const expectedInstant =
+        movement.movementType === "Shipped"
+          ? shipInstant
+          : new Date(Math.min(planned!.plannedInstant.getTime(), shipInstant.getTime()));
       expect(movement.createdAt.getTime()).toBe(expectedInstant.getTime());
     }
 
