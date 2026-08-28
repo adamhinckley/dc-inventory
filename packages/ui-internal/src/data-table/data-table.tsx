@@ -19,6 +19,7 @@ import {
   type TableFilterMeta,
   type TableMeta,
 } from "./table-meta";
+import { readFieldValue } from "./cell-value";
 import {
   useDataTable,
   type ListQueryHook,
@@ -43,6 +44,14 @@ export type DataTableRootProps<
   onParamsChange?: (params: ListQueryParams) => void;
   /** Set whenever more than one Root renders on a page so form-control ids stay unique. */
   idPrefix?: string;
+  /** When set, the link column renders as an anchor to this href (keyboard-accessible navigation). */
+  getRowHref?: (row: TRow) => string | undefined;
+  /** Column `field` that receives `getRowHref` links; defaults to the first column. */
+  linkField?: string;
+  /** Optional wrapper for link cells (e.g. Next.js `Link`). Defaults to `<a href>`. */
+  renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode;
+  /** Trailing actions column (edit, unlink, etc.). */
+  rowActions?: (row: TRow) => ReactNode;
   children: ReactNode;
 };
 
@@ -50,6 +59,10 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
   filterOptions?: DataTableRootProps["filterOptions"];
   /** Per-Root prefix so two tables do not share form-control IDs. */
   idBase: string;
+  getRowHref?: (row: Record<string, unknown>) => string | undefined;
+  linkField?: string;
+  renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode;
+  rowActions?: (row: Record<string, unknown>) => ReactNode;
 };
 
 const DataTableContext = createContext<DataTableContextValue | null>(null);
@@ -63,7 +76,7 @@ function useDataTableContext(): DataTableContextValue {
 }
 
 function cellValue(row: Record<string, unknown>, field: string): ReactNode {
-  const value = row[field];
+  const value = readFieldValue(row, field);
   if (value === null || value === undefined) {
     return "—";
   }
@@ -71,6 +84,27 @@ function cellValue(row: Record<string, unknown>, field: string): ReactNode {
     return <span className="tabular-nums">{value}</span>;
   }
   return String(value);
+}
+
+function renderCell(
+  row: Record<string, unknown>,
+  field: string,
+  href: string | undefined,
+  renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode,
+): ReactNode {
+  const content = cellValue(row, field);
+  if (!href) {
+    return content;
+  }
+  const linkClassName = "text-link hover:text-link-hover";
+  if (renderRowLink) {
+    return renderRowLink({ href, children: content });
+  }
+  return (
+    <a href={href} className={linkClassName}>
+      {content}
+    </a>
+  );
 }
 
 function FilterControl({
@@ -222,6 +256,10 @@ export function DataTableRoot<
   initialParams,
   onParamsChange,
   idPrefix,
+  getRowHref,
+  linkField,
+  renderRowLink,
+  rowActions,
   children,
 }: DataTableRootProps<TParams, TRow>) {
   const idBase = tableControlIdBase(meta, idPrefix);
@@ -233,7 +271,21 @@ export function DataTableRoot<
   });
 
   return (
-    <DataTableContext.Provider value={{ ...table, filterOptions, idBase }}>
+    <DataTableContext.Provider
+      value={{
+        ...table,
+        filterOptions,
+        idBase,
+        getRowHref: getRowHref as
+          | ((row: Record<string, unknown>) => string | undefined)
+          | undefined,
+        linkField,
+        renderRowLink,
+        rowActions: rowActions as
+          | ((row: Record<string, unknown>) => ReactNode)
+          | undefined,
+      }}
+    >
       <div className="flex flex-col gap-field-group">{children}</div>
     </DataTableContext.Provider>
   );
@@ -337,7 +389,10 @@ export function DataTableFilters() {
  * ```
  */
 export function DataTableTable() {
-  const { meta, items, query, busy, state, setState } = useDataTableContext();
+  const { meta, items, query, busy, state, setState, getRowHref, linkField, renderRowLink, rowActions } =
+    useDataTableContext();
+  const hasRowActions = rowActions !== undefined;
+  const resolvedLinkField = linkField ?? meta.columns[0]?.field;
 
   function applySort(field: string) {
     setState((current) => ({
@@ -394,6 +449,14 @@ export function DataTableTable() {
                 </th>
               );
             })}
+            {hasRowActions ? (
+              <th
+                scope="col"
+                className="section-content-column-header section-content-padding border-b border-border"
+              >
+                Actions
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -401,7 +464,7 @@ export function DataTableTable() {
             <tr>
               <td
                 className="section-content-padding text-placeholder"
-                colSpan={meta.columns.length}
+                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
               >
                 Loading…
               </td>
@@ -410,7 +473,7 @@ export function DataTableTable() {
             <tr>
               <td
                 className="section-content-padding text-error"
-                colSpan={meta.columns.length}
+                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
               >
                 {query.error instanceof Error
                   ? query.error.message
@@ -421,7 +484,7 @@ export function DataTableTable() {
             <tr>
               <td
                 className="section-content-padding text-placeholder"
-                colSpan={meta.columns.length}
+                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
               >
                 No rows
               </td>
@@ -430,20 +493,31 @@ export function DataTableTable() {
             items.map((item, index) => {
               const row = item as Record<string, unknown>;
               const rowKey = String(row[meta.rowId] ?? index);
+              const href = getRowHref?.(row);
               return (
                 <tr key={rowKey}>
                   {meta.columns.map((column) => (
                     <td
                       key={column.field}
                       className={
-                        column.field === "sku"
+                        column.field === "sku" || column.field === "vendorNumber"
                           ? "section-content-padding section-content-value-mono border-b border-border"
                           : "section-content-padding section-content-value border-b border-border"
                       }
                     >
-                      {cellValue(row, column.field)}
+                      {renderCell(
+                        row,
+                        column.field,
+                        href && column.field === resolvedLinkField ? href : undefined,
+                        renderRowLink,
+                      )}
                     </td>
                   ))}
+                  {hasRowActions ? (
+                    <td className="section-content-padding section-content-value border-b border-border">
+                      {rowActions(row)}
+                    </td>
+                  ) : null}
                 </tr>
               );
             })
