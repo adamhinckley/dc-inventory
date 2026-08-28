@@ -88,6 +88,9 @@ import type {
   CreateInternalSupplier401,
   CreateInternalSupplier409,
   CreateInternalSupplierBody,
+  ExportInternalPurchaseOrder401,
+  ExportInternalPurchaseOrder404,
+  ExportInternalPurchaseOrderParams,
   GetInternalCustomer200,
   GetInternalCustomer400,
   GetInternalCustomer401,
@@ -2765,6 +2768,69 @@ export function useGetInternalPurchaseOrder<TData = Awaited<ReturnType<typeof ge
 
 
 
+
+
+
+
+export type exportInternalPurchaseOrderResponse200ApplicationVndOpenxmlformatsOfficedocumentSpreadsheetmlSheet = {
+  data: Blob
+  status: 200
+}
+
+export type exportInternalPurchaseOrderResponse200TextCsv = {
+  data: Blob
+  status: 200
+}
+
+export type exportInternalPurchaseOrderResponse401 = {
+  data: ExportInternalPurchaseOrder401
+  status: 401
+}
+
+export type exportInternalPurchaseOrderResponse404 = {
+  data: ExportInternalPurchaseOrder404
+  status: 404
+}
+
+export type exportInternalPurchaseOrderResponseSuccess = (exportInternalPurchaseOrderResponse200ApplicationVndOpenxmlformatsOfficedocumentSpreadsheetmlSheet | exportInternalPurchaseOrderResponse200TextCsv) & {
+  headers: Headers;
+};
+export type exportInternalPurchaseOrderResponseError = (exportInternalPurchaseOrderResponse401 | exportInternalPurchaseOrderResponse404) & {
+  headers: Headers;
+};
+
+export type exportInternalPurchaseOrderResponse = (exportInternalPurchaseOrderResponseSuccess | exportInternalPurchaseOrderResponseError)
+
+export const getExportInternalPurchaseOrderUrl = (id: string,
+    params?: ExportInternalPurchaseOrderParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/purchase-orders/${id}/export?${stringifiedParams}` : `/internal/purchase-orders/${id}/export`
+}
+
+/**
+ * @summary Export purchase order lines as spreadsheet
+ */
+export const exportInternalPurchaseOrder = async (id: string,
+    params?: ExportInternalPurchaseOrderParams, options?: Parameters<typeof customFetch>[1]): Promise<exportInternalPurchaseOrderResponse> => {
+
+  return customFetch<exportInternalPurchaseOrderResponse>(getExportInternalPurchaseOrderUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
 
 
 

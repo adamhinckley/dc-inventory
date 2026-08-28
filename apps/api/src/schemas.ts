@@ -419,6 +419,12 @@ export const purchaseOrderIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const purchaseOrderExportQuerySchema = z.object({
+  format: z.enum(["xlsx", "csv"]).default("xlsx"),
+});
+
+export const binaryFileResponseSchema = z.instanceof(Buffer);
+
 export const purchaseOrderWriteBodySchema = z.object({
   supplierId: z.string().uuid(),
   lines: z

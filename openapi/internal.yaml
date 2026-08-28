@@ -2850,6 +2850,69 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/purchase-orders/{id}/export:
+    get:
+      operationId: exportInternalPurchaseOrder
+      summary: Export purchase order lines as spreadsheet
+      tags:
+        - internal
+      parameters:
+        - schema:
+            default: xlsx
+            type: string
+            enum:
+              - xlsx
+              - csv
+          in: query
+          name: format
+          required: false
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Spreadsheet file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
   /internal/purchase-orders/{id}/confirm:
     post:
       operationId: confirmInternalPurchaseOrder

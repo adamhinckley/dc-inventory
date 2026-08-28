@@ -10,6 +10,13 @@ const reactQuery = {
       // POST defaults to useMutation.
       useInfinite: false,
     },
+    operations: {
+      exportInternalPurchaseOrder: {
+        query: {
+          useQuery: false,
+        },
+      },
+    },
   },
 };
 
