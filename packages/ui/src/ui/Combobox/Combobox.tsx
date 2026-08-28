@@ -47,7 +47,7 @@ const optionItemClass =
   'stacked interactable ghost item-padding flex items-center justify-between gap-icon text-xs data-highlighted:bg-interactive-strong data-selected:font-medium'
 
 const inputVariants = cva(
-  'flex-1 bg-transparent outline-none text-fg placeholder:text-fg-muted disabled:cursor-not-allowed',
+  'min-h-0 min-w-0 flex-1 bg-transparent outline-none text-fg placeholder:text-fg-muted disabled:cursor-not-allowed',
   {
     variants: {
       density: {
@@ -58,6 +58,12 @@ const inputVariants = cva(
     defaultVariants: { density: 'comfortable' },
   },
 )
+
+// Native <button> UA padding is what made Combobox taller than Input.
+// `p-0` kills that. `size-5` (20px) is the largest square that still fits
+// in the 38px control after `py-input-y` (8px) and the 1px border.
+const chromeButtonClass =
+  'inline-flex size-5 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
 
 // Async resolver hook — runs the async loader on mount, tracks internal
 // loading state, surfaces resolved options. For static arrays, returns
@@ -323,11 +329,11 @@ export function Combobox({
           {...(rest as Record<string, unknown>)}
         />
         {clearable && (
-          <BaseCombobox.Clear className="text-fg-tertiary hover:text-fg transition-colors">
+          <BaseCombobox.Clear className={chromeButtonClass}>
             <X className="size-icon" />
           </BaseCombobox.Clear>
         )}
-        <BaseCombobox.Trigger className="text-fg-tertiary hover:text-fg transition-colors">
+        <BaseCombobox.Trigger className={chromeButtonClass}>
           <BaseCombobox.Icon>
             <ChevronDown className="size-icon" />
           </BaseCombobox.Icon>

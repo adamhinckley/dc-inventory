@@ -1,0 +1,41 @@
+---
+description: Form control height, FieldRow, and readable buttons for internal dashboard layouts
+globs: apps/internal/**/*.tsx,packages/ui/**/*.tsx,packages/ui-internal/**/*.tsx
+alwaysApply: false
+---
+
+# Form controls
+
+Source: [`docs/work-dashboard-design-spec.md`](../../docs/work-dashboard-design-spec.md) §12.
+
+Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledField` from `@dc-inventory/ui`. Comfortable controls and in-row buttons share `min-h-(--space-input-height)`. If that height is wrong, change the primitive in `packages/ui`, not the page.
+
+```tsx
+// Wrong: raw input, invented height, sm secondary as the row action
+<div className="flex items-center gap-2">
+  <input className="h-10 rounded-md" />
+  <Button variant="secondary" size="sm">Add line</Button>
+</div>
+
+// Wrong: items-center lines the button up with labels, not inputs
+<div className="flex items-center gap-4">
+  <div className="flex flex-col gap-2">
+    <Label>Vendor product</Label>
+    <Combobox />
+  </div>
+  <Button size="sm">Add line</Button>
+</div>
+
+// Right
+<FieldRow>
+  <LabeledField className="min-w-56 flex-1">
+    <Label htmlFor="product">Vendor product</Label>
+    <Combobox id="product" />
+  </LabeledField>
+  <Button type="submit" variant="primary">Add line</Button>
+</FieldRow>
+```
+
+- Row action: `variant="primary"`, default `md` size. `sm` / `ghost` are toolbar and table only.
+- Label to control: `gap-field`. Field to field: `gap-field-group`. Row to table: `gap-form-section`.
+- Never set `h-*`, `min-h-*`, or `py-*` on one control to make it fit.

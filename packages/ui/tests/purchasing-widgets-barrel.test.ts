@@ -7,8 +7,10 @@ import {
   Combobox,
   DetailView,
   ExplorerView,
+  FieldRow,
   Form,
   FormDialog,
+  LabeledField,
   RepeatableFields,
   scrollToFirstError,
   useDetailView,
@@ -21,6 +23,8 @@ const uiSrc = join(dirname(fileURLToPath(import.meta.url)), "../src");
 describe("@dc-inventory/ui purchasing widget barrel", () => {
   it("re-exports purchasing layout and form widgets", () => {
     expect(Combobox).toBeTypeOf("function");
+    expect(FieldRow).toBeTypeOf("function");
+    expect(LabeledField).toBeTypeOf("function");
     expect(Form).toBeTypeOf("function");
     expect(FormDialog).toBeTypeOf("function");
     expect(ExplorerView).toBeTypeOf("function");

@@ -10,6 +10,6 @@
  *   Popover) — those render their own `<button>`; pass styling directly to
  *   the Trigger instead of nesting a Button.
  * @variants variant (`default`/`primary`/`secondary`/`ghost`/`destructive`),
- *   size (`sm`/`md`/`lg`)
+ *   size (`xs`/`sm`/`md`/`lg`). `md` matches `--space-input-height`.
  */
 export { Button, buttonVariants, type ButtonProps } from './Button'

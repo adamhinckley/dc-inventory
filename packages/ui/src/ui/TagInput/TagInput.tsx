@@ -19,7 +19,7 @@ const tagInputContainerVariants = cva(
     variants: {
       density: {
         comfortable:
-          'rounded-interactable border border-border-field px-input-x py-input-y text-input ' +
+          'min-h-(--space-input-height) rounded-interactable border border-border-field px-input-x py-input-y text-input ' +
           'hover:border-border-field-hover ' +
           'data-invalid:border-error',
         compact:
