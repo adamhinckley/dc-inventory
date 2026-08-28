@@ -9,16 +9,6 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "",
   },
-  webpack: (config) => {
-    // Orval clients use TypeScript ESM `.js` specifiers that point at `.ts` files.
-    const resolve = config.resolve ?? {};
-    resolve.extensionAlias = {
-      ...(resolve.extensionAlias ?? {}),
-      ".js": [".ts", ".tsx", ".js", ".jsx"],
-    };
-    config.resolve = resolve;
-    return config;
-  },
   async rewrites() {
     return [
       {

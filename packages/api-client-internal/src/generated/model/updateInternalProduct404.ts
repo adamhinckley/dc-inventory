@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { UpdateInternalProduct404Error } from './updateInternalProduct404Error.js';
+import type { UpdateInternalProduct404Error } from './updateInternalProduct404Error';
 
 export type UpdateInternalProduct404 = {
   error: UpdateInternalProduct404Error;

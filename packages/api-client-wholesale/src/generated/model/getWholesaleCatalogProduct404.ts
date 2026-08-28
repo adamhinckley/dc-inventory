@@ -4,7 +4,7 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
-import type { GetWholesaleCatalogProduct404Error } from './getWholesaleCatalogProduct404Error.js';
+import type { GetWholesaleCatalogProduct404Error } from './getWholesaleCatalogProduct404Error';
 
 export type GetWholesaleCatalogProduct404 = {
   error: GetWholesaleCatalogProduct404Error;

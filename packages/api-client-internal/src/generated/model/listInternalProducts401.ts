@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ListInternalProducts401Error } from './listInternalProducts401Error.js';
+import type { ListInternalProducts401Error } from './listInternalProducts401Error';
 
 export type ListInternalProducts401 = {
   error: ListInternalProducts401Error;

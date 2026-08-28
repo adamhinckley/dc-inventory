@@ -1,5 +1,12 @@
 import { defineConfig } from "orval";
 
+const orvalBundlerTsconfig = {
+  compilerOptions: {
+    module: "ESNext",
+    moduleResolution: "bundler",
+  },
+} as const;
+
 const reactQuery = {
   client: "react-query" as const,
   httpClient: "fetch" as const,
@@ -27,6 +34,7 @@ export default defineConfig({
       ...reactQuery,
       target: "./packages/api-client-internal/src/generated/api.ts",
       schemas: "./packages/api-client-internal/src/generated/model",
+      tsconfig: orvalBundlerTsconfig,
       override: {
         ...reactQuery.override,
         mutator: {
@@ -42,6 +50,7 @@ export default defineConfig({
       ...reactQuery,
       target: "./packages/api-client-wholesale/src/generated/api.ts",
       schemas: "./packages/api-client-wholesale/src/generated/model",
+      tsconfig: orvalBundlerTsconfig,
       override: {
         ...reactQuery.override,
         mutator: {
@@ -57,6 +66,7 @@ export default defineConfig({
       ...reactQuery,
       target: "./packages/api-client-ops/src/generated/api.ts",
       schemas: "./packages/api-client-ops/src/generated/model",
+      tsconfig: orvalBundlerTsconfig,
       override: {
         ...reactQuery.override,
         mutator: {
