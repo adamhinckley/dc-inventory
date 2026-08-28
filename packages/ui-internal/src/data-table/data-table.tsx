@@ -48,6 +48,8 @@ export type DataTableRootProps<
   getRowHref?: (row: TRow) => string | undefined;
   /** Column `field` that receives `getRowHref` links; defaults to the first column. */
   linkField?: string;
+  /** Optional wrapper for link cells (e.g. Next.js `Link`). Defaults to `<a href>`. */
+  renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode;
   /** Trailing actions column (edit, unlink, etc.). */
   rowActions?: (row: TRow) => ReactNode;
   children: ReactNode;
@@ -59,6 +61,7 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
   idBase: string;
   getRowHref?: (row: Record<string, unknown>) => string | undefined;
   linkField?: string;
+  renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode;
   rowActions?: (row: Record<string, unknown>) => ReactNode;
 };
 
@@ -86,14 +89,19 @@ function cellValue(row: Record<string, unknown>, field: string): ReactNode {
 function renderCell(
   row: Record<string, unknown>,
   field: string,
-  href?: string,
+  href: string | undefined,
+  renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode,
 ): ReactNode {
   const content = cellValue(row, field);
   if (!href) {
     return content;
   }
+  const linkClassName = "text-link hover:text-link-hover";
+  if (renderRowLink) {
+    return renderRowLink({ href, children: content });
+  }
   return (
-    <a href={href} className="text-link hover:text-link-hover">
+    <a href={href} className={linkClassName}>
       {content}
     </a>
   );
@@ -250,6 +258,7 @@ export function DataTableRoot<
   idPrefix,
   getRowHref,
   linkField,
+  renderRowLink,
   rowActions,
   children,
 }: DataTableRootProps<TParams, TRow>) {
@@ -271,6 +280,7 @@ export function DataTableRoot<
           | ((row: Record<string, unknown>) => string | undefined)
           | undefined,
         linkField,
+        renderRowLink,
         rowActions: rowActions as
           | ((row: Record<string, unknown>) => ReactNode)
           | undefined,
@@ -379,7 +389,7 @@ export function DataTableFilters() {
  * ```
  */
 export function DataTableTable() {
-  const { meta, items, query, busy, state, setState, getRowHref, linkField, rowActions } =
+  const { meta, items, query, busy, state, setState, getRowHref, linkField, renderRowLink, rowActions } =
     useDataTableContext();
   const hasRowActions = rowActions !== undefined;
   const resolvedLinkField = linkField ?? meta.columns[0]?.field;
@@ -499,6 +509,7 @@ export function DataTableTable() {
                         row,
                         column.field,
                         href && column.field === resolvedLinkField ? href : undefined,
+                        renderRowLink,
                       )}
                     </td>
                   ))}

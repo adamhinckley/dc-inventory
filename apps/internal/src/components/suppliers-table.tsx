@@ -5,7 +5,8 @@ import {
   DataTable,
   type ListQueryParams,
 } from "@dc-inventory/ui-internal";
-import { useCallback } from "react";
+import Link from "next/link";
+import { useCallback, type ReactNode } from "react";
 import { suppliersListTable } from "../lib/suppliers-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
@@ -26,6 +27,15 @@ export function SuppliersTable({
     return row.id ? `/purchasing/suppliers/${row.id}` : undefined;
   }, []);
 
+  const renderRowLink = useCallback(
+    ({ href, children }: { href: string; children: ReactNode }) => (
+      <Link href={href} className="text-link hover:text-link-hover">
+        {children}
+      </Link>
+    ),
+    [],
+  );
+
   return (
     <DataTable.Root<SuppliersListParams>
       meta={suppliersListTable}
@@ -34,6 +44,7 @@ export function SuppliersTable({
       onParamsChange={onParamsChange}
       getRowHref={getRowHref}
       linkField="vendorNumber"
+      renderRowLink={renderRowLink}
     >
       <DataTable.Search />
       <DataTable.Table />

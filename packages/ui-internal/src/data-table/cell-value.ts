@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 export function readFieldValue(
   row: Record<string, unknown>,
   field: string,
@@ -15,15 +13,4 @@ export function readFieldValue(
     current = (current as Record<string, unknown>)[segment];
   }
   return current;
-}
-
-export function formatCellValue(row: Record<string, unknown>, field: string): ReactNode {
-  const value = readFieldValue(row, field);
-  if (value === null || value === undefined) {
-    return "—";
-  }
-  if (typeof value === "number") {
-    return String(value);
-  }
-  return String(value);
 }
