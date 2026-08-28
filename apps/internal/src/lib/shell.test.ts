@@ -51,7 +51,6 @@ describe("internal dashboard shell", () => {
 
     const placeholders = [
       "customers",
-      "purchasing",
       "inventory",
       "sales",
       "accounting",
@@ -66,6 +65,20 @@ describe("internal dashboard shell", () => {
       expect(text, route).not.toMatch(/import\s*\{[^}]*\bDataTable\b/);
       expect(text, route).toMatch(/DashboardPlaceholder/);
     }
+
+    const purchasingPage = readFileSync(
+      join(srcRoot, "app/(dashboard)/purchasing/page.tsx"),
+      "utf8",
+    );
+    expect(purchasingPage).toMatch(/searchParams/);
+    expect(purchasingPage).toMatch(/listParamsFromSearchParams/);
+
+    const draftPurchaseOrders = readFileSync(
+      join(srcRoot, "components/draft-purchase-orders-table.tsx"),
+      "utf8",
+    );
+    expect(draftPurchaseOrders).toMatch(/DataTable\.Root/);
+    expect(draftPurchaseOrders).toMatch(/useListInternalPurchaseOrders/);
 
     expect(
       existsSync(join(srcRoot, "app/(dashboard)/purchasing/suppliers/page.tsx")),
