@@ -1,3 +1,5 @@
+'use client'
+
 import { type QueryKey, useQueryClient } from '@tanstack/react-query'
 import { type FieldValues, type UseFormReturn } from 'react-hook-form'
 import { useToast } from '#ds/ui/Toast'

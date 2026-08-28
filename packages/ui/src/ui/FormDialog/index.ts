@@ -1,3 +1,5 @@
+'use client'
+
 export type { FormDialogProps } from './FormDialog'
 
 /**
