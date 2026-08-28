@@ -11,6 +11,9 @@ node_modules/
 .env.*
 !.env.example
 
+# Next.js rewrites this on `next dev` (`.next/types` vs `.next/dev/types`).
+next-env.d.ts
+
 # Build
 dist/
 .next/
