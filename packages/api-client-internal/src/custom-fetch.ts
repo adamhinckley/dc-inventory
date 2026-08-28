@@ -8,8 +8,13 @@ export async function customFetch<T>(
   url: string,
   options?: RequestInit,
 ): Promise<T> {
+  const headers = new Headers(options?.headers);
+  if (options?.body instanceof FormData) {
+    headers.delete("Content-Type");
+  }
   const response = await fetch(`${apiBaseUrl}${url}`, {
     ...options,
+    headers,
     credentials: "include",
   });
 

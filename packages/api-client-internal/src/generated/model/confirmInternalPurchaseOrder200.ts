@@ -14,5 +14,9 @@ export type ConfirmInternalPurchaseOrder200 = {
   supplierId: string;
   documentNumber: string;
   status: ConfirmInternalPurchaseOrder200Status;
+  /** @nullable */
+  shipDate: string | null;
+  /** @nullable */
+  cancelDate: string | null;
   lines: ConfirmInternalPurchaseOrder200LinesItem[];
 };

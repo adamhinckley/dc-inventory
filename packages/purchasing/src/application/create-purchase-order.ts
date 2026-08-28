@@ -6,6 +6,7 @@ import {
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
+import { parseIsoDate } from "../domain/iso-date.js";
 import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
@@ -20,6 +21,8 @@ export type CreatePurchaseOrderRequest = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId;
   supplierId: SupplierId;
+  shipDate?: string | null;
+  cancelDate?: string | null;
   lines: readonly CreatePurchaseOrderLineInput[];
 };
 
@@ -70,6 +73,12 @@ export class CreatePurchaseOrderUseCase {
       }
     }
 
+    const shipDate = parseIsoDate(input.shipDate);
+    const cancelDate = parseIsoDate(input.cancelDate);
+    if (shipDate === "invalid" || cancelDate === "invalid") {
+      return { ok: false, reason: "invalid" };
+    }
+
     const createdAt = this.clock?.now() ?? new Date();
     const documentNumber = await this.purchaseOrders.nextDocumentNumber(input.organizationId);
     const purchaseOrder: PurchaseOrder = {
@@ -78,6 +87,8 @@ export class CreatePurchaseOrderUseCase {
       supplierId: input.supplierId,
       documentNumber,
       status: "draft",
+      shipDate,
+      cancelDate,
       createdAt,
       lines,
     };

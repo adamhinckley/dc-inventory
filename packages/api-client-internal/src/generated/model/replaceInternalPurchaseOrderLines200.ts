@@ -14,5 +14,9 @@ export type ReplaceInternalPurchaseOrderLines200 = {
   supplierId: string;
   documentNumber: string;
   status: ReplaceInternalPurchaseOrderLines200Status;
+  /** @nullable */
+  shipDate: string | null;
+  /** @nullable */
+  cancelDate: string | null;
   lines: ReplaceInternalPurchaseOrderLines200LinesItem[];
 };

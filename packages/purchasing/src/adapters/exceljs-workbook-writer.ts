@@ -10,7 +10,9 @@ export class ExcelJsWorkbookWriter implements IWorkbookWriter {
   async write(input: WorkbookWriteInput): Promise<WorkbookWriteResult> {
     if (input.format === "csv") {
       const records = input.rows.map((row) =>
-        Object.fromEntries(input.columns.map((column) => [column.header, row[column.key] ?? ""])),
+        Object.fromEntries(
+          input.columns.map((column) => [column.header, csvCell(row[column.key])]),
+        ),
       );
       const csv = stringify(records, {
         header: true,
@@ -29,6 +31,7 @@ export class ExcelJsWorkbookWriter implements IWorkbookWriter {
       header: column.header,
       key: column.key,
       width: Math.max(column.header.length, 12),
+      style: column.numFmt === undefined ? {} : { numFmt: column.numFmt },
     }));
     for (const row of input.rows) {
       sheet.addRow(row);
@@ -41,4 +44,11 @@ export class ExcelJsWorkbookWriter implements IWorkbookWriter {
       filename: `${input.sheetName}.xlsx`,
     };
   }
+}
+
+function csvCell(value: string | number | Date | undefined): string | number {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  return value ?? "";
 }

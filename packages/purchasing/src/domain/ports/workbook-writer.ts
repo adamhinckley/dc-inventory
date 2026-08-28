@@ -1,10 +1,11 @@
-export type WorkbookRow = Record<string, string | number>;
+export type WorkbookRow = Record<string, string | number | Date>;
 
 export type WorkbookFormat = "xlsx" | "csv";
 
 export type WorkbookColumn = {
   key: string;
   header: string;
+  numFmt?: string;
 };
 
 export type WorkbookWriteInput = {

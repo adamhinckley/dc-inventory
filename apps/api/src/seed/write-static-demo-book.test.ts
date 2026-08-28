@@ -342,4 +342,42 @@ describe("static demo book writer (in-memory)", () => {
       expect(wholesaleLogin.customerId).toBe(acme?.id);
     }
   });
+
+  it("skips products and vendors when persistCatalog is false", async () => {
+    const ports = staticSeedPorts();
+    const plan = planDemoBook({ seed: DEFAULT_DEMO_SEED, seedToday: SEED_TODAY });
+
+    const result = await runWriteStaticDemoBook(
+      ports,
+      plan,
+      {
+        staffPassword: "staff-placeholder",
+        wholesalePassword: "wholesale-placeholder",
+      },
+      { persistCatalog: false },
+    );
+
+    expect(result.products).toEqual([]);
+    expect(await ports.products.listMatching({ organizationId: OrganizationId.DEFAULT })).toEqual(
+      [],
+    );
+    expect(await ports.productImages.listAll()).toEqual([]);
+    expect(await ports.supplierProducts.listAll()).toEqual([]);
+    expect(
+      await ports.suppliers.findByVendorNumber(
+        OrganizationId.DEFAULT,
+        PHASE2_SUPPLIER_VENDOR_NUMBER,
+      ),
+    ).toBeNull();
+    expect(
+      await ports.suppliers.list({
+        organizationId: OrganizationId.DEFAULT,
+        page: 1,
+        pageSize: 100,
+      }),
+    ).toMatchObject({ total: 0, items: [] });
+    expect(result.staff.email).toBe(PHASE1_STAFF_EMAIL);
+    expect(result.customers.length).toBeGreaterThan(0);
+    expect(result.bootstrap.location.code).toBe(PHASE2_DEFAULT_LOCATION_CODE);
+  });
 });

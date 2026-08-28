@@ -10,8 +10,6 @@ import {
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
-  LoginStaffUseCase,
-  LoginWholesaleUseCase,
 } from "@dc-inventory/identity";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../app.js";
@@ -20,7 +18,7 @@ import {
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "../adapters/http/auth-cookies.js";
-import { PHASE1_PRODUCT_SKUS, PHASE1_PRODUCTS, PHASE1_ORGANIZATION_SLUG } from "./phase1-fixture.js";
+import { PHASE1_ORGANIZATION_SLUG } from "./phase1-fixture.js";
 import { runPhase1Seed } from "./run-phase1-seed.js";
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
@@ -30,7 +28,7 @@ afterEach(async () => {
 });
 
 describe("Phase 1 seed-shaped HTTP lists", () => {
-  it("lets seeded staff and wholesale sessions list the five shop SKUs", async () => {
+  it("lets seeded staff and wholesale sessions see an empty catalog", async () => {
     const passwords = new InMemoryPasswordHasher();
     const organizations = new InMemoryOrganizationRepository();
     const staffUsers = new InMemoryStaffUserRepository();
@@ -42,7 +40,6 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
 
     await runPhase1Seed(
       {
-        products: productRepo,
         customers: customerRepo,
         organizations,
         staffUsers,
@@ -89,16 +86,8 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
       cookies: { [STAFF_SESSION_COOKIE]: staffCookie },
     });
     expect(staffList.statusCode).toBe(200);
-    expect(staffList.json().total).toBe(5);
-    expect(staffList.json().items.map((row: { sku: string }) => row.sku).sort()).toEqual(
-      [...PHASE1_PRODUCT_SKUS].sort(),
-    );
-    for (const item of staffList.json().items as Array<{
-      available: number;
-      imageUrl?: unknown;
-    }>) {
-      expect(item.available).toBe(0);
-    }
+    expect(staffList.json().total).toBe(0);
+    expect(staffList.json().items).toEqual([]);
 
     const wholesaleLogin = await app.inject({
       method: "POST",
@@ -120,19 +109,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
       cookies: { [WHOLESALE_SESSION_COOKIE]: wholesaleCookie },
     });
     expect(shopList.statusCode).toBe(200);
-    expect(shopList.json().total).toBe(5);
-    const shopItems = shopList.json().items as Array<{
-      name: string;
-      imageUrl: string | null;
-      wholesalePrice: number;
-      available: number;
-    }>;
-    expect(shopItems).toHaveLength(5);
-    const prices = new Map(PHASE1_PRODUCTS.map((row) => [row.name, row.memberPriceCents]));
-    for (const item of shopItems) {
-      expect(item.imageUrl).toBeNull();
-      expect(item.available).toBe(0);
-      expect(item.wholesalePrice).toBe(prices.get(item.name));
-    }
+    expect(shopList.json().total).toBe(0);
+    expect(shopList.json().items).toEqual([]);
   });
 });

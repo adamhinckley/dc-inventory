@@ -1,16 +1,21 @@
 import {
   CreateProductUseCase,
+  DrizzleProductPackagingRepository,
   DrizzleProductRepository,
   GetProductUseCase,
   GetWholesaleProductUseCase,
+  ImportProductBrowserUseCase,
+  InMemoryProductPackagingRepository,
   InMemoryProductRepository,
   InMemoryQtyReadPort,
   ListStaffProductsUseCase,
   ListWholesaleCatalogUseCase,
   UpdateProductUseCase,
   type CatalogDrizzle,
+  type IProductPackagingRepository,
   type IProductRepository,
   type IQtyReadPort,
+  type ISupplierLinkPort,
 } from "@dc-inventory/catalog";
 import {
   CreateContactUseCase,
@@ -88,6 +93,7 @@ import {
   UpdateSupplierProductUseCase,
   UpdateSupplierUseCase,
   type ICatalogSkuLookupPort,
+  type IFactorySendCatalogPort,
   type IPurchaseOrderRepository,
   type ISupplierProductQtyReadPort,
   type ISupplierProductRepository,
@@ -120,8 +126,10 @@ import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { InventoryReadModelQtyReadAdapter } from "../adapters/inventory-read-model-qty-read.js";
+import { PurchasingSupplierLinkAdapter } from "../adapters/purchasing-supplier-link.js";
 import {
   catalogSkuLookupPort,
+  factorySendCatalogPort,
   supplierProductQtyReadPort,
 } from "../adapters/purchasing-catalog-ports.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
@@ -154,6 +162,7 @@ export type CatalogHttpServices = {
   createProduct: CreateProductUseCase;
   getProduct: GetProductUseCase;
   updateProduct: UpdateProductUseCase;
+  importProductBrowser: ImportProductBrowserUseCase;
   listWholesaleCatalog: ListWholesaleCatalogUseCase;
   getWholesaleProduct: GetWholesaleProductUseCase;
 };
@@ -247,11 +256,13 @@ export type AppServiceOverrides = {
   shipToRepo?: IShipToRepository;
   exemptionRepo?: IExemptionCertificateRepository;
   productRepo?: IProductRepository;
+  productPackagingRepo?: IProductPackagingRepository;
   qtyRead?: IQtyReadPort;
   purchaseOrderRepo?: IPurchaseOrderRepository;
   supplierRepo?: ISupplierRepository;
   supplierProductRepo?: ISupplierProductRepository;
   catalogSkuLookup?: ICatalogSkuLookupPort;
+  factorySendCatalog?: IFactorySendCatalogPort;
   supplierProductQtyRead?: ISupplierProductQtyReadPort;
   salesOrderRepo?: ISalesOrderRepository;
   invoiceRepo?: IInvoiceRepository;
@@ -263,12 +274,23 @@ export type AppServiceOverrides = {
 function catalogServices(
   productRepo: IProductRepository,
   qtyRead: IQtyReadPort,
+  supplierLink: ISupplierLinkPort,
+  packaging: IProductPackagingRepository,
 ): CatalogHttpServices {
+  const createProduct = new CreateProductUseCase(productRepo);
+  const updateProduct = new UpdateProductUseCase(productRepo, qtyRead);
   return {
     listStaffProducts: new ListStaffProductsUseCase(productRepo, qtyRead),
-    createProduct: new CreateProductUseCase(productRepo),
+    createProduct,
     getProduct: new GetProductUseCase(productRepo, qtyRead),
-    updateProduct: new UpdateProductUseCase(productRepo, qtyRead),
+    updateProduct,
+    importProductBrowser: new ImportProductBrowserUseCase(
+      productRepo,
+      createProduct,
+      updateProduct,
+      supplierLink,
+      packaging,
+    ),
     listWholesaleCatalog: new ListWholesaleCatalogUseCase(productRepo, qtyRead),
     getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead),
   };
@@ -312,6 +334,7 @@ function purchasingServices(
   supplierProductRepo: ISupplierProductRepository,
   catalogSkuLookup: ICatalogSkuLookupPort,
   supplierProductQty: ISupplierProductQtyReadPort,
+  factorySendCatalog: IFactorySendCatalogPort,
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
@@ -323,7 +346,12 @@ function purchasingServices(
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
     replacePurchaseOrderLines: new ReplacePurchaseOrderLinesUseCase(purchaseOrderRepo),
-    exportPurchaseOrder: new ExportPurchaseOrderUseCase(purchaseOrderRepo, workbookWriter),
+    exportPurchaseOrder: new ExportPurchaseOrderUseCase(
+      purchaseOrderRepo,
+      supplierProductRepo,
+      factorySendCatalog,
+      workbookWriter,
+    ),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
     listSuppliers: new ListSuppliersUseCase(supplierRepo),
     createSupplier: new CreateSupplierUseCase(supplierRepo),
@@ -469,6 +497,11 @@ export function composeAppServices(
     (catalogDb
       ? new DrizzleProductRepository(catalogDb)
       : new InMemoryProductRepository());
+  const productPackagingRepo =
+    overrides.productPackagingRepo ??
+    (catalogDb
+      ? new DrizzleProductPackagingRepository(catalogDb)
+      : new InMemoryProductPackagingRepository());
   const unitOfWork =
     overrides.unitOfWork ??
     (appDb ? new PostgresInventoryUnitOfWork(appDb, clock) : new InMemoryUnitOfWork(clock));
@@ -498,6 +531,8 @@ export function composeAppServices(
       : new InMemorySupplierProductRepository());
   const catalogSkuLookup =
     overrides.catalogSkuLookup ?? catalogSkuLookupPort(productRepo);
+  const factorySendCatalog =
+    overrides.factorySendCatalog ?? factorySendCatalogPort(productRepo, productPackagingRepo);
   const supplierProductQty =
     overrides.supplierProductQtyRead ?? supplierProductQtyReadPort(qtyRead);
 
@@ -554,13 +589,19 @@ export function composeAppServices(
       ),
     },
     customers: customersServices(customerRepo, contactRepo, shipToRepo, exemptionRepo),
-    catalog: catalogServices(productRepo, qtyRead),
+    catalog: catalogServices(
+      productRepo,
+      qtyRead,
+      new PurchasingSupplierLinkAdapter(supplierRepo, supplierProductRepo, catalogSkuLookup),
+      productPackagingRepo,
+    ),
     purchasing: purchasingServices(
       purchaseOrderRepo,
       supplierRepo,
       supplierProductRepo,
       catalogSkuLookup,
       supplierProductQty,
+      factorySendCatalog,
       unitOfWork,
       clock,
     ),

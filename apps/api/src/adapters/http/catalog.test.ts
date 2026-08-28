@@ -83,6 +83,23 @@ async function wholesaleCookie(app: Awaited<ReturnType<typeof buildApp>>) {
   return login.cookies.find((row) => row.name === WHOLESALE_SESSION_COOKIE)?.value ?? "";
 }
 
+function productBrowserCsvMultipart(csv: string, filename = "products.csv") {
+  const boundary = "----vitestProductBrowser";
+  const payload = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="file"; filename="${filename}"`,
+    "Content-Type: text/csv",
+    "",
+    csv,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+  return {
+    headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
+    payload,
+  };
+}
+
 describe("catalog HTTP", () => {
   it("requires staff_session on the staff product list and returns 200 with in-memory data", async () => {
     const app = await startCatalogApp();
@@ -248,6 +265,102 @@ describe("catalog HTTP", () => {
     expect(patched.json()).toMatchObject({
       sku: "HEX-BOLT-GALV",
       name: "Renamed bolt",
+    });
+  });
+
+  it("imports Product Browser CSV over multipart and ignores qty columns", async () => {
+    const app = await startCatalogApp();
+    const missing = await app.inject({
+      method: "POST",
+      url: "/internal/products/import",
+    });
+    expect(missing.statusCode).toBe(401);
+
+    const cookie = await staffCookie(app);
+    const notMultipart = await app.inject({
+      method: "POST",
+      url: "/internal/products/import",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { dryRun: true },
+    });
+    expect(notMultipart.statusCode).toBe(400);
+    expect(notMultipart.json()).toEqual({ error: "invalid" });
+
+    const csv = [
+      "product_id,item,vendor_num,vendor,mp_price,uom,mfg_code,onhand_qty,webwholesale",
+      "DC-IMPORT-1,Crystal Drop,1075,REGXJ,10.20,EA,JA149015,99,TRUE",
+    ].join("\n");
+    const multipart = productBrowserCsvMultipart(csv);
+
+    const dryRun = await app.inject({
+      method: "POST",
+      url: "/internal/products/import?dryRun=true",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      headers: multipart.headers,
+      payload: multipart.payload,
+    });
+    expect(dryRun.statusCode).toBe(200);
+    expect(dryRun.json()).toMatchObject({
+      dryRun: true,
+      rowsOk: 1,
+      created: 0,
+      updated: 0,
+      linked: 0,
+      errors: [],
+    });
+
+    const emptyList = await app.inject({
+      method: "GET",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(emptyList.json().total).toBe(0);
+
+    const committed = await app.inject({
+      method: "POST",
+      url: "/internal/products/import",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      headers: multipart.headers,
+      payload: multipart.payload,
+    });
+    expect(committed.statusCode).toBe(200);
+    expect(committed.json()).toMatchObject({
+      dryRun: false,
+      rowsOk: 1,
+      created: 1,
+      updated: 0,
+      linked: 1,
+      errors: [],
+    });
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toMatchObject({
+      total: 1,
+      items: [
+        {
+          sku: "DC-IMPORT-1",
+          name: "Crystal Drop",
+          memberPrice: 1020,
+          available: 0,
+          onHand: 0,
+        },
+      ],
+    });
+
+    const vendors = await app.inject({
+      method: "GET",
+      url: "/internal/suppliers",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(vendors.statusCode).toBe(200);
+    expect(vendors.json()).toMatchObject({
+      total: 1,
+      items: [{ vendorNumber: "1075", name: "REGXJ" }],
     });
   });
 });

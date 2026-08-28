@@ -7,6 +7,16 @@
 import type { ReplaceInternalPurchaseOrderLinesBodyLinesItem } from './replaceInternalPurchaseOrderLinesBodyLinesItem';
 
 export type ReplaceInternalPurchaseOrderLinesBody = {
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  shipDate?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  cancelDate?: string | null;
   /** @minItems 1 */
   lines: ReplaceInternalPurchaseOrderLinesBodyLinesItem[];
 };

@@ -32,6 +32,8 @@ function toOrder(order: PurchaseOrder): PurchaseOrder {
     supplierId: SupplierId.parse(order.supplierId),
     documentNumber: order.documentNumber,
     status: order.status,
+    shipDate: order.shipDate,
+    cancelDate: order.cancelDate,
     createdAt: new Date(order.createdAt.getTime()),
     lines: order.lines.map(toLine),
   };

@@ -108,6 +108,7 @@ describe("internal purchase orders HTTP", () => {
     expect(created.statusCode).toBe(201);
     const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
     expect(po.documentNumber).toBe("PO-00001");
+    expect(created.json()).toMatchObject({ shipDate: null, cancelDate: null });
 
     const confirmed = await app.inject({
       method: "POST",
@@ -166,6 +167,25 @@ describe("internal purchase orders HTTP", () => {
     expect(updated.status).toBe("draft");
     expect(updated.lines).toHaveLength(2);
     expect(updated.lines[0]).toMatchObject({ name: "Hex bolt updated", qty: 8, receivedQty: 0 });
+
+    const withDates = await app.inject({
+      method: "PATCH",
+      url: `/internal/purchase-orders/${po.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        shipDate: "2026-12-01",
+        cancelDate: "2026-01-15",
+        lines: [
+          { sku: "HEX-BOLT-GALV", name: "Hex bolt updated", qty: 8 },
+          { sku: "WASHER-SS", name: "Washer", qty: 2 },
+        ],
+      },
+    });
+    expect(withDates.statusCode).toBe(200);
+    expect(withDates.json()).toMatchObject({
+      shipDate: "2026-12-01",
+      cancelDate: "2026-01-15",
+    });
 
     const confirmed = await app.inject({
       method: "POST",

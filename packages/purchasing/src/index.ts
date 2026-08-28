@@ -2,6 +2,7 @@ export { DrizzlePurchaseOrderRepository, type PurchasingDrizzle } from "./adapte
 export { DrizzleSupplierProductRepository } from "./adapters/drizzle-supplier-products.js";
 export { DrizzleSupplierRepository } from "./adapters/drizzle-suppliers.js";
 export { InMemoryCatalogSkuLookupPort } from "./adapters/in-memory-catalog-sku-lookup.js";
+export { InMemoryFactorySendCatalogPort } from "./adapters/in-memory-factory-send-catalog.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { InMemoryPurchasingUnitOfWork } from "./adapters/in-memory-purchasing-unit-of-work.js";
 export { InMemoryPurchaseOrderRepository } from "./adapters/in-memory-purchase-order-repository.js";
@@ -53,6 +54,10 @@ export type {
   ListSupplierProductsQuery,
   SupplierProductListPage,
 } from "./domain/ports/supplier-product-repository.js";
+export type {
+  FactorySendCatalogRow,
+  IFactorySendCatalogPort,
+} from "./domain/ports/factory-send-catalog.js";
 export type { PurchaseOrder, PurchaseOrderLine, PurchaseOrderStatus } from "./domain/purchase-order.js";
 export type { SupplierProductQty } from "./domain/qty.js";
 export type { Supplier } from "./domain/supplier.js";

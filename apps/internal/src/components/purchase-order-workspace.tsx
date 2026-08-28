@@ -15,6 +15,7 @@ import {
   Button,
   Chip,
   Combobox,
+  DateInput,
   FieldRow,
   Input,
   Label,
@@ -285,12 +286,16 @@ function PurchaseOrderWorkspaceBody({
   initialSupplierId,
   initialLines,
   initialDocumentNumber,
+  initialShipDate,
+  initialCancelDate,
   isDraft,
 }: {
   purchaseOrderId?: string;
   initialSupplierId: string | null;
   initialLines: PurchaseOrderLineDraft[];
   initialDocumentNumber?: string;
+  initialShipDate: string | null;
+  initialCancelDate: string | null;
   isDraft: boolean;
 }) {
   const router = useRouter();
@@ -301,6 +306,8 @@ function PurchaseOrderWorkspaceBody({
   const [lines, setLines] = useState<PurchaseOrderLineDraft[]>(() =>
     coalescePurchaseOrderLines(initialLines),
   );
+  const [shipDate, setShipDate] = useState<string | null>(initialShipDate);
+  const [cancelDate, setCancelDate] = useState<string | null>(initialCancelDate);
   const [saveState, setSaveState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -309,9 +316,15 @@ function PurchaseOrderWorkspaceBody({
   const [exporting, setExporting] = useState(false);
 
   const lastSavedLinesRef = useRef(coalescePurchaseOrderLines(initialLines));
+  const lastSavedDatesRef = useRef({
+    shipDate: initialShipDate,
+    cancelDate: initialCancelDate,
+  });
   const lastPersistSucceededRef = useRef(true);
   const linesRef = useRef(lines);
   linesRef.current = lines;
+  const datesRef = useRef({ shipDate, cancelDate });
+  datesRef.current = { shipDate, cancelDate };
   const creatingRef = useRef(false);
   const persistChainRef = useRef(Promise.resolve(true));
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -346,11 +359,14 @@ function PurchaseOrderWorkspaceBody({
         const result = await createMutation.mutateAsync({
           data: {
             supplierId: vendorId,
+            shipDate: datesRef.current.shipDate,
+            cancelDate: datesRef.current.cancelDate,
             lines: purchaseOrderWriteLines(nextLines),
           },
         });
         if (result.status === 201) {
           lastSavedLinesRef.current = coalescePurchaseOrderLines(nextLines);
+          lastSavedDatesRef.current = { ...datesRef.current };
           lastPersistSucceededRef.current = true;
           setSaveState("saved");
           await queryClient.invalidateQueries({
@@ -381,9 +397,12 @@ function PurchaseOrderWorkspaceBody({
           return false;
         }
         const payloadLines = coalescePurchaseOrderLines(nextLines);
+        const payloadDates = { ...datesRef.current };
         if (
           !force &&
-          purchaseOrderLineWritesEqual(payloadLines, lastSavedLinesRef.current)
+          purchaseOrderLineWritesEqual(payloadLines, lastSavedLinesRef.current) &&
+          payloadDates.shipDate === lastSavedDatesRef.current.shipDate &&
+          payloadDates.cancelDate === lastSavedDatesRef.current.cancelDate
         ) {
           lastPersistSucceededRef.current = true;
           return true;
@@ -393,10 +412,15 @@ function PurchaseOrderWorkspaceBody({
         try {
           const result = await replaceMutation.mutateAsync({
             id: purchaseOrderId,
-            data: { lines: purchaseOrderWriteLines(payloadLines) },
+            data: {
+              shipDate: payloadDates.shipDate,
+              cancelDate: payloadDates.cancelDate,
+              lines: purchaseOrderWriteLines(payloadLines),
+            },
           });
           if (result.status === 200) {
             lastSavedLinesRef.current = payloadLines;
+            lastSavedDatesRef.current = payloadDates;
             lastPersistSucceededRef.current = true;
             setSaveState("saved");
             await queryClient.invalidateQueries({
@@ -435,7 +459,11 @@ function PurchaseOrderWorkspaceBody({
     if (lines.length === 0) {
       return;
     }
-    if (purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current)) {
+    if (
+      purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current) &&
+      shipDate === lastSavedDatesRef.current.shipDate &&
+      cancelDate === lastSavedDatesRef.current.cancelDate
+    ) {
       return;
     }
     if (autosaveTimerRef.current) {
@@ -449,7 +477,7 @@ function PurchaseOrderWorkspaceBody({
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [isDraft, lines, persistReplace, purchaseOrderId]);
+  }, [cancelDate, isDraft, lines, persistReplace, purchaseOrderId, shipDate]);
 
   const vendorLocked = Boolean(purchaseOrderId) || lines.length > 0;
   const workspaceLocked = isCreating;
@@ -573,13 +601,14 @@ function PurchaseOrderWorkspaceBody({
     setExporting(true);
     setActionError(null);
     try {
+      await flushAutosave(true);
       await downloadPurchaseOrderXlsx(purchaseOrderId, initialDocumentNumber);
     } catch {
       setActionError("XLS download failed.");
     } finally {
       setExporting(false);
     }
-  }, [initialDocumentNumber, purchaseOrderId]);
+  }, [flushAutosave, initialDocumentNumber, purchaseOrderId]);
 
   const title = isNew
     ? "New draft purchase order"
@@ -693,6 +722,35 @@ function PurchaseOrderWorkspaceBody({
         ) : null}
       </FieldRow>
 
+      <FieldRow>
+        <LabeledField className="min-w-56">
+          <Label htmlFor="po-ship-date">Ship date</Label>
+          <DateInput
+            id="po-ship-date"
+            value={shipDate}
+            onChange={(value) => setShipDate(value.length === 0 ? null : value)}
+            disabled={workspaceLocked}
+            yearNavigation
+            min="2020-01-01"
+            max="2040-12-31"
+            placeholder="Ship date"
+          />
+        </LabeledField>
+        <LabeledField className="min-w-56">
+          <Label htmlFor="po-cancel-date">Cancel date</Label>
+          <DateInput
+            id="po-cancel-date"
+            value={cancelDate}
+            onChange={(value) => setCancelDate(value.length === 0 ? null : value)}
+            disabled={workspaceLocked}
+            yearNavigation
+            min="2020-01-01"
+            max="2040-12-31"
+            placeholder="Cancel date"
+          />
+        </LabeledField>
+      </FieldRow>
+
       {actionError ? (
         <p className="text-body-sm text-error" role="alert">
           {actionError}
@@ -721,6 +779,8 @@ export function PurchaseOrderWorkspace({
       <PurchaseOrderWorkspaceBody
         initialSupplierId={null}
         initialLines={[]}
+        initialShipDate={null}
+        initialCancelDate={null}
         isDraft
       />
     );
@@ -755,6 +815,8 @@ function PurchaseOrderEditWorkspace({
         purchaseOrderId={purchaseOrderId}
         documentNumber={po.documentNumber}
         status={po.status}
+        shipDate={po.shipDate}
+        cancelDate={po.cancelDate}
       />
     );
   }
@@ -773,6 +835,8 @@ function PurchaseOrderEditWorkspace({
         })),
       )}
       initialDocumentNumber={po.documentNumber}
+      initialShipDate={po.shipDate}
+      initialCancelDate={po.cancelDate}
       isDraft
     />
   );
@@ -782,10 +846,14 @@ function ConfirmedPurchaseOrderView({
   purchaseOrderId,
   documentNumber,
   status,
+  shipDate,
+  cancelDate,
 }: {
   purchaseOrderId: string;
   documentNumber: string;
   status: string;
+  shipDate: string | null;
+  cancelDate: string | null;
 }) {
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -815,6 +883,9 @@ function ConfirmedPurchaseOrderView({
         <h1 className="page-title">{documentNumber}</h1>
         <p className="page-description mt-2">
           This purchase order is {status} and can no longer be edited here.
+        </p>
+        <p className="text-body-sm text-fg-secondary mt-2">
+          Ship date: {shipDate ?? "—"} · Cancel date: {cancelDate ?? "—"}
         </p>
       </header>
       {actionError ? (

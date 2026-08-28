@@ -38,6 +38,8 @@ function mapPurchaseOrder(order: PurchaseOrder) {
     supplierId: order.supplierId,
     documentNumber: order.documentNumber,
     status: order.status,
+    shipDate: order.shipDate,
+    cancelDate: order.cancelDate,
     lines: order.lines.map((line) => ({
       id: line.id,
       sku: line.sku.value,
@@ -129,6 +131,8 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         supplierId: SupplierId.parse(request.body.supplierId),
+        shipDate: request.body.shipDate,
+        cancelDate: request.body.cancelDate,
         lines: request.body.lines,
       });
       if (!result.ok) {
@@ -167,6 +171,8 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+        shipDate: request.body.shipDate,
+        cancelDate: request.body.cancelDate,
         lines: request.body.lines,
       });
       if (!result.ok) {

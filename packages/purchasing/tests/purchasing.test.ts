@@ -387,6 +387,8 @@ describe("Purchasing (in-memory)", () => {
       supplierId: acmeSupplierId,
       documentNumber: "PO-1001",
       status: "draft",
+      shipDate: null,
+      cancelDate: null,
       createdAt,
       lines: [{ id: lineId, sku: SKU, name: "Acme bolt", qty: 5, receivedQty: 0 }],
     });
@@ -396,6 +398,8 @@ describe("Purchasing (in-memory)", () => {
       supplierId: betaSupplierId,
       documentNumber: "PO-1001",
       status: "draft",
+      shipDate: null,
+      cancelDate: null,
       createdAt,
       lines: [
         {

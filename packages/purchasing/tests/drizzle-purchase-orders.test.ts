@@ -190,6 +190,8 @@ function draft(lines: PurchaseOrderLine[]): PurchaseOrder {
     supplierId: SUPPLIER_ID,
     documentNumber: "PO-00099",
     status: "draft",
+    shipDate: null,
+    cancelDate: null,
     createdAt: new Date("2026-08-28T00:00:00.000Z"),
     lines,
   };
