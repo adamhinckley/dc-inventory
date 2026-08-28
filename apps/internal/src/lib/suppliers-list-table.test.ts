@@ -12,5 +12,6 @@ describe("suppliersListTable", () => {
       "vendorNumber",
       "name",
     ]);
+    expect(suppliersListTable.sort.fields).toEqual([]);
   });
 });

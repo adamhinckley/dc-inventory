@@ -475,13 +475,32 @@ export function DataTableTable() {
               const row = item as Record<string, unknown>;
               const rowKey = String(row[meta.rowId] ?? index);
               const clickable = onRowClick !== undefined;
+              const rowLabel =
+                clickable && typeof row.name === "string"
+                  ? `Open supplier ${row.name}`
+                  : clickable
+                    ? "Open supplier"
+                    : undefined;
               return (
                 <tr
                   key={rowKey}
-                  className={clickable ? "cursor-pointer hover:bg-interactive" : undefined}
+                  className={
+                    clickable ? "cursor-pointer hover:bg-interactive" : undefined
+                  }
+                  tabIndex={clickable ? 0 : undefined}
+                  role={clickable ? "button" : undefined}
+                  aria-label={rowLabel}
                   onClick={
+                    clickable ? () => onRowClick(row) : undefined
+                  }
+                  onKeyDown={
                     clickable
-                      ? () => onRowClick(row)
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
                       : undefined
                   }
                 >

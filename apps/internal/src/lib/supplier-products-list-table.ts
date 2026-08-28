@@ -23,6 +23,6 @@ export const supplierProductsListTable = {
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
-    fields: ["sku", "catalogName", "qty.onHand", "qty.available"],
+    fields: [],
   },
 } as const satisfies TableMeta;

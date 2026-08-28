@@ -19,6 +19,6 @@ export const suppliersListTable = {
   sort: {
     defaultBy: "vendorNumber",
     defaultOrder: "asc",
-    fields: ["vendorNumber", "name"],
+    fields: [],
   },
 } as const satisfies TableMeta;

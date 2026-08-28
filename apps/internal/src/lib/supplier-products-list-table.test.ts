@@ -10,5 +10,6 @@ describe("supplierProductsListTable", () => {
     expect(supplierProductsListTable.columns.map((column) => column.field)).toContain(
       "qty.onHand",
     );
+    expect(supplierProductsListTable.sort.fields).toEqual([]);
   });
 });
