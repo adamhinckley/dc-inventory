@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { invoices, payments } from "@dc-inventory/accounting/schema";
+import { customers } from "@dc-inventory/customers/schema";
+import { orders } from "@dc-inventory/sales/schema";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { invoices, payments } from "../packages/accounting/src/persistence/schema.js";
-import { customers } from "../packages/customers/src/persistence/schema.js";
-import { orders } from "../packages/sales/src/persistence/schema.js";
 
-const root = resolve(import.meta.dirname, "..");
+const root = resolve(import.meta.dirname, "../../../..");
 
 function constraintNames(table: Parameters<typeof getTableConfig>[0]) {
   const config = getTableConfig(table);
