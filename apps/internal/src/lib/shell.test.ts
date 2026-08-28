@@ -26,7 +26,7 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "app/(auth)/login/page.tsx"))).toBe(true);
   });
 
-  it("puts DataTable only on the catalog example page", () => {
+  it("puts DataTable on catalog and purchasing supplier routes", () => {
     const catalogPage = readFileSync(
       join(srcRoot, "app/(dashboard)/catalog/page.tsx"),
       "utf8",
@@ -41,6 +41,13 @@ describe("internal dashboard shell", () => {
     expect(catalog).toMatch(/DataTable\.Root/);
     expect(catalog).toMatch(/useListInternalProducts/);
     expect(catalog).toMatch(/replaceTableUrlParams/);
+
+    const suppliers = readFileSync(
+      join(srcRoot, "components/suppliers-table.tsx"),
+      "utf8",
+    );
+    expect(suppliers).toMatch(/DataTable\.Root/);
+    expect(suppliers).toMatch(/useListInternalSuppliers/);
 
     const placeholders = [
       "customers",
@@ -59,5 +66,9 @@ describe("internal dashboard shell", () => {
       expect(text, route).not.toMatch(/import\s*\{[^}]*\bDataTable\b/);
       expect(text, route).toMatch(/DashboardPlaceholder/);
     }
+
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/purchasing/suppliers/page.tsx")),
+    ).toBe(true);
   });
 });

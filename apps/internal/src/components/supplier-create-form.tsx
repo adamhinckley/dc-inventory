@@ -1,0 +1,55 @@
+"use client";
+
+import {
+  getListInternalSuppliersQueryKey,
+  useCreateInternalSupplier,
+  type createInternalSupplier,
+} from "@dc-inventory/api-client-internal";
+import { Form, useExplorerView, useFormSubmit } from "@dc-inventory/ui";
+import { useRouter } from "next/navigation";
+import { z } from "zod";
+
+const createSupplierSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  vendorNumber: z.string().min(1, "Vendor number is required"),
+});
+
+type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
+
+export function SupplierCreateForm() {
+  const router = useRouter();
+  const { setCreateOpen } = useExplorerView();
+  const { mutateAsync } = useCreateInternalSupplier();
+
+  const onSubmit = useFormSubmit<CreateSupplierInput, Awaited<ReturnType<typeof createInternalSupplier>>>({
+    mutate: (data) => mutateAsync({ data }),
+    successMessage: "Supplier created",
+    invalidate: getListInternalSuppliersQueryKey(),
+    onSuccess: (result) => {
+      setCreateOpen(false);
+      if (result.status === 201) {
+        router.push(`/purchasing/suppliers/${result.data.id}`);
+      }
+    },
+  });
+
+  return (
+    <Form
+      schema={createSupplierSchema}
+      defaultValues={{ name: "", vendorNumber: "" }}
+      onSubmit={onSubmit}
+    >
+      <Form.Field
+        name="vendorNumber"
+        label="Vendor #"
+        required
+        form={{ kind: "text" }}
+      />
+      <Form.Field name="name" label="Name" required form={{ kind: "text" }} />
+      <Form.RootError />
+      <Form.Actions>
+        <Form.Submit>Create supplier</Form.Submit>
+      </Form.Actions>
+    </Form>
+  );
+}
