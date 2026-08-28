@@ -17,6 +17,13 @@ export const PurchaseOrderLineId = {
   },
 };
 
+export type SupplierProductId = Brand<string, "SupplierProductId">;
+export const SupplierProductId = {
+  parse(value: string): SupplierProductId {
+    return parseUuid("SupplierProductId", value);
+  },
+};
+
 export function newUuid(): string {
   return crypto.randomUUID();
 }
