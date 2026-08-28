@@ -60,6 +60,20 @@ async function findOrder(
   return toOrder(header, lines);
 }
 
+function purchaseOrderHeaderMatch(order: PurchaseOrder) {
+  return and(
+    eq(purchaseOrders.id, order.id),
+    eq(purchaseOrders.organizationId, order.organizationId),
+  );
+}
+
+function purchaseOrderLineMatch(purchaseOrderId: string, lineId: string) {
+  return and(
+    eq(purchaseOrderLines.id, lineId),
+    eq(purchaseOrderLines.purchaseOrderId, purchaseOrderId),
+  );
+}
+
 async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder): Promise<void> {
   const existing = await findOrder(db, order.organizationId, order.id);
   if (existing === null) {
@@ -92,12 +106,14 @@ async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder)
       documentNumber: order.documentNumber,
       updatedAt: new Date(),
     })
-    .where(eq(purchaseOrders.id, order.id));
+    .where(purchaseOrderHeaderMatch(order));
 
   const keepIds = new Set(order.lines.map((line) => line.id));
   for (const stale of existing.lines) {
     if (!keepIds.has(stale.id)) {
-      await db.delete(purchaseOrderLines).where(eq(purchaseOrderLines.id, stale.id));
+      await db
+        .delete(purchaseOrderLines)
+        .where(purchaseOrderLineMatch(order.id, stale.id));
     }
   }
 
@@ -105,7 +121,7 @@ async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder)
     const lineRows = await db
       .select()
       .from(purchaseOrderLines)
-      .where(eq(purchaseOrderLines.id, line.id))
+      .where(purchaseOrderLineMatch(order.id, line.id))
       .limit(1);
     if (lineRows[0] === undefined) {
       await db.insert(purchaseOrderLines).values({
@@ -126,7 +142,7 @@ async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder)
           receivedQty: line.receivedQty,
           updatedAt: new Date(),
         })
-        .where(eq(purchaseOrderLines.id, line.id));
+        .where(purchaseOrderLineMatch(order.id, line.id));
     }
   }
 }

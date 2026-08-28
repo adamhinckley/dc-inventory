@@ -13,6 +13,8 @@ const OTHER_SKU = Sku.parse("PO-OTHER-SKU");
 const LINE_A = PurchaseOrderLineId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccc01");
 const LINE_B = PurchaseOrderLineId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccc02");
 const LINE_C = PurchaseOrderLineId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccc03");
+const FOREIGN_PO_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa99";
+const FOREIGN_LINE = PurchaseOrderLineId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccc99");
 
 type OrderRow = {
   id: string;
@@ -193,12 +195,26 @@ function draft(lines: PurchaseOrderLine[]): PurchaseOrder {
   };
 }
 
+const FOREIGN_LINE_ROW: LineRow = {
+  id: FOREIGN_LINE,
+  purchaseOrderId: FOREIGN_PO_ID,
+  sku: "FOREIGN-SKU",
+  name: "Other PO line",
+  qty: 99,
+  receivedQty: 0,
+};
+
+function seedForeignLine(db: FakePurchasingDb): void {
+  db.lines.set(FOREIGN_LINE, { ...FOREIGN_LINE_ROW });
+}
+
 describe("DrizzlePurchaseOrderRepository.save", () => {
   it("drops previous line rows when the saved line set uses new ids", async () => {
     const db = new FakePurchasingDb();
     const repo = new DrizzlePurchaseOrderRepository(db as never);
 
     await repo.save(draft([line(LINE_A, SKU, "Bolt", 5)]));
+    seedForeignLine(db);
     await repo.save(
       draft([line(LINE_B, SKU, "Bolt updated", 8), line(LINE_C, OTHER_SKU, "Washer", 2)]),
     );
@@ -206,6 +222,7 @@ describe("DrizzlePurchaseOrderRepository.save", () => {
     const loaded = await repo.findById(ORG, PO_ID);
     expect(loaded?.lines.map((row) => row.id).sort()).toEqual([LINE_B, LINE_C].sort());
     expect(loaded?.lines.filter((row) => row.sku.equals(SKU))).toHaveLength(1);
+    expect(db.lines.get(FOREIGN_LINE)).toEqual(FOREIGN_LINE_ROW);
   });
 
   it("rolls back stale line deletes when a later line insert fails", async () => {
@@ -213,6 +230,7 @@ describe("DrizzlePurchaseOrderRepository.save", () => {
     const repo = new DrizzlePurchaseOrderRepository(db as never);
 
     await repo.save(draft([line(LINE_A, SKU, "Bolt", 5)]));
+    seedForeignLine(db);
     db.failNextLineInsert = true;
 
     await expect(
@@ -222,5 +240,6 @@ describe("DrizzlePurchaseOrderRepository.save", () => {
     const loaded = await repo.findById(ORG, PO_ID);
     expect(loaded?.lines.map((row) => row.id)).toEqual([LINE_A]);
     expect(loaded?.lines[0]?.qty).toBe(5);
+    expect(db.lines.get(FOREIGN_LINE)).toEqual(FOREIGN_LINE_ROW);
   });
 });
