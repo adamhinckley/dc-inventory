@@ -67,13 +67,17 @@ import {
   CancelPurchaseOrderUseCase,
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
+  CreateSupplierUseCase,
   DrizzlePurchaseOrderRepository,
   DrizzleSupplierRepository,
   GetPurchaseOrderUseCase,
+  GetSupplierUseCase,
   InMemoryPurchaseOrderRepository,
   InMemorySupplierRepository,
   ListPurchaseOrdersUseCase,
+  ListSuppliersUseCase,
   ReceivePurchaseOrderUseCase,
+  UpdateSupplierUseCase,
   type IPurchaseOrderRepository,
   type ISupplierRepository,
   type PurchasingDrizzle,
@@ -161,6 +165,10 @@ export type PurchasingHttpServices = {
   confirmPurchaseOrder: ConfirmPurchaseOrderUseCase;
   receivePurchaseOrder: ReceivePurchaseOrderUseCase;
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
+  listSuppliers: ListSuppliersUseCase;
+  createSupplier: CreateSupplierUseCase;
+  getSupplier: GetSupplierUseCase;
+  updateSupplier: UpdateSupplierUseCase;
 };
 
 export type SalesHttpServices = {
@@ -286,6 +294,10 @@ function purchasingServices(
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
+    listSuppliers: new ListSuppliersUseCase(supplierRepo),
+    createSupplier: new CreateSupplierUseCase(supplierRepo),
+    getSupplier: new GetSupplierUseCase(supplierRepo),
+    updateSupplier: new UpdateSupplierUseCase(supplierRepo),
   };
 }
 

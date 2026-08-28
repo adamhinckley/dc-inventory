@@ -7,9 +7,13 @@ export { InMemorySupplierRepository } from "./adapters/in-memory-supplier-reposi
 export { CancelPurchaseOrderUseCase } from "./application/cancel-purchase-order.js";
 export { ConfirmPurchaseOrderUseCase } from "./application/confirm-purchase-order.js";
 export { CreatePurchaseOrderUseCase } from "./application/create-purchase-order.js";
+export { CreateSupplierUseCase } from "./application/create-supplier.js";
 export { GetPurchaseOrderUseCase } from "./application/get-purchase-order.js";
+export { GetSupplierUseCase } from "./application/get-supplier.js";
 export { ListPurchaseOrdersUseCase } from "./application/list-purchase-orders.js";
+export { ListSuppliersUseCase } from "./application/list-suppliers.js";
 export { ReceivePurchaseOrderUseCase } from "./application/receive-purchase-order.js";
+export { UpdateSupplierUseCase } from "./application/update-supplier.js";
 export { formatDocumentNumber } from "./domain/document-number.js";
 export type { IClock } from "./domain/clock.js";
 export { PurchaseOrderLineId } from "./domain/ids.js";
@@ -22,6 +26,8 @@ export type {
   IPurchaseOrderRepository,
   IPurchasingUnitOfWork,
   ISupplierRepository,
+  ListSuppliersQuery,
+  SupplierListPage,
 } from "./domain/ports/purchase-order-repository.js";
 export type { PurchaseOrder, PurchaseOrderLine, PurchaseOrderStatus } from "./domain/purchase-order.js";
 export type { Supplier } from "./domain/supplier.js";

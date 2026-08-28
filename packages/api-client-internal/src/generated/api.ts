@@ -77,6 +77,11 @@ import type {
   CreateInternalSalesOrder401,
   CreateInternalSalesOrder404,
   CreateInternalSalesOrderBody,
+  CreateInternalSupplier201,
+  CreateInternalSupplier400,
+  CreateInternalSupplier401,
+  CreateInternalSupplier409,
+  CreateInternalSupplierBody,
   GetInternalCustomer200,
   GetInternalCustomer400,
   GetInternalCustomer401,
@@ -95,6 +100,10 @@ import type {
   GetInternalSalesOrder404,
   GetInternalSession200,
   GetInternalSession401,
+  GetInternalSupplier200,
+  GetInternalSupplier400,
+  GetInternalSupplier401,
+  GetInternalSupplier404,
   ListInternalCustomerContacts200,
   ListInternalCustomerContacts400,
   ListInternalCustomerContacts401,
@@ -123,6 +132,9 @@ import type {
   ListInternalSalesOrders200,
   ListInternalSalesOrders401,
   ListInternalSalesOrdersParams,
+  ListInternalSuppliers200,
+  ListInternalSuppliers401,
+  ListInternalSuppliersParams,
   LoginInternal200,
   LoginInternal401,
   LoginInternalBody,
@@ -173,7 +185,13 @@ import type {
   UpdateInternalProduct404,
   UpdateInternalProduct409,
   UpdateInternalProduct422,
-  UpdateInternalProductBody
+  UpdateInternalProductBody,
+  UpdateInternalSupplier200,
+  UpdateInternalSupplier400,
+  UpdateInternalSupplier401,
+  UpdateInternalSupplier404,
+  UpdateInternalSupplier409,
+  UpdateInternalSupplierBody
 } from './model';
 
 import { customFetch } from '../custom-fetch.js';
@@ -2942,6 +2960,433 @@ export const useCancelInternalPurchaseOrder = <TError = CancelInternalPurchaseOr
         TContext
       > => {
       return useMutation(getCancelInternalPurchaseOrderMutationOptions(options));
+    }
+
+export type listInternalSuppliersResponse200 = {
+  data: ListInternalSuppliers200
+  status: 200
+}
+
+export type listInternalSuppliersResponse401 = {
+  data: ListInternalSuppliers401
+  status: 401
+}
+
+export type listInternalSuppliersResponseSuccess = (listInternalSuppliersResponse200) & {
+  headers: Headers;
+};
+export type listInternalSuppliersResponseError = (listInternalSuppliersResponse401) & {
+  headers: Headers;
+};
+
+export type listInternalSuppliersResponse = (listInternalSuppliersResponseSuccess | listInternalSuppliersResponseError)
+
+export const getListInternalSuppliersUrl = (params?: ListInternalSuppliersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/suppliers?${stringifiedParams}` : `/internal/suppliers`
+}
+
+/**
+ * @summary List suppliers
+ */
+export const listInternalSuppliers = async (params?: ListInternalSuppliersParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalSuppliersResponse> => {
+
+  return customFetch<listInternalSuppliersResponse>(getListInternalSuppliersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalSuppliersQueryKey = (params?: ListInternalSuppliersParams,) => {
+    return [
+    `/internal/suppliers`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalSuppliersQueryOptions = <TData = Awaited<ReturnType<typeof listInternalSuppliers>>, TError = ListInternalSuppliers401>(params?: ListInternalSuppliersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalSuppliers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalSuppliersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalSuppliers>>> = ({ signal }) => listInternalSuppliers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalSuppliers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalSuppliersQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalSuppliers>>>
+export type ListInternalSuppliersQueryError = ListInternalSuppliers401
+
+
+/**
+ * @summary List suppliers
+ */
+
+export function useListInternalSuppliers<TData = Awaited<ReturnType<typeof listInternalSuppliers>>, TError = ListInternalSuppliers401>(
+ params?: ListInternalSuppliersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalSuppliers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalSuppliersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createInternalSupplierResponse201 = {
+  data: CreateInternalSupplier201
+  status: 201
+}
+
+export type createInternalSupplierResponse400 = {
+  data: CreateInternalSupplier400
+  status: 400
+}
+
+export type createInternalSupplierResponse401 = {
+  data: CreateInternalSupplier401
+  status: 401
+}
+
+export type createInternalSupplierResponse409 = {
+  data: CreateInternalSupplier409
+  status: 409
+}
+
+export type createInternalSupplierResponseSuccess = (createInternalSupplierResponse201) & {
+  headers: Headers;
+};
+export type createInternalSupplierResponseError = (createInternalSupplierResponse400 | createInternalSupplierResponse401 | createInternalSupplierResponse409) & {
+  headers: Headers;
+};
+
+export type createInternalSupplierResponse = (createInternalSupplierResponseSuccess | createInternalSupplierResponseError)
+
+export const getCreateInternalSupplierUrl = () => {
+
+
+
+
+  return `/internal/suppliers`
+}
+
+/**
+ * @summary Create supplier
+ */
+export const createInternalSupplier = async (createInternalSupplierBody: CreateInternalSupplierBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalSupplierResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalSupplierResponse>(getCreateInternalSupplierUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalSupplierBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalSupplierMutationOptions = <TError = CreateInternalSupplier400 | CreateInternalSupplier401 | CreateInternalSupplier409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalSupplier>>, TError,{data: CreateInternalSupplierBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalSupplier>>, TError,{data: CreateInternalSupplierBody}, TContext> => {
+
+const mutationKey = ['createInternalSupplier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalSupplier>>, {data: CreateInternalSupplierBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInternalSupplier(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalSupplierMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalSupplier>>>
+    export type CreateInternalSupplierMutationBody = CreateInternalSupplierBody
+    export type CreateInternalSupplierMutationError = CreateInternalSupplier400 | CreateInternalSupplier401 | CreateInternalSupplier409
+
+    /**
+ * @summary Create supplier
+ */
+export const useCreateInternalSupplier = <TError = CreateInternalSupplier400 | CreateInternalSupplier401 | CreateInternalSupplier409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalSupplier>>, TError,{data: CreateInternalSupplierBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalSupplier>>,
+        TError,
+        {data: CreateInternalSupplierBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalSupplierMutationOptions(options));
+    }
+
+export type getInternalSupplierResponse200 = {
+  data: GetInternalSupplier200
+  status: 200
+}
+
+export type getInternalSupplierResponse400 = {
+  data: GetInternalSupplier400
+  status: 400
+}
+
+export type getInternalSupplierResponse401 = {
+  data: GetInternalSupplier401
+  status: 401
+}
+
+export type getInternalSupplierResponse404 = {
+  data: GetInternalSupplier404
+  status: 404
+}
+
+export type getInternalSupplierResponseSuccess = (getInternalSupplierResponse200) & {
+  headers: Headers;
+};
+export type getInternalSupplierResponseError = (getInternalSupplierResponse400 | getInternalSupplierResponse401 | getInternalSupplierResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalSupplierResponse = (getInternalSupplierResponseSuccess | getInternalSupplierResponseError)
+
+export const getGetInternalSupplierUrl = (id: string,) => {
+
+
+
+
+  return `/internal/suppliers/${id}`
+}
+
+/**
+ * @summary Get supplier
+ */
+export const getInternalSupplier = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalSupplierResponse> => {
+
+  return customFetch<getInternalSupplierResponse>(getGetInternalSupplierUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalSupplierQueryKey = (id: string,) => {
+    return [
+    `/internal/suppliers/${id}`
+    ] as const;
+    }
+
+
+export const getGetInternalSupplierQueryOptions = <TData = Awaited<ReturnType<typeof getInternalSupplier>>, TError = GetInternalSupplier400 | GetInternalSupplier401 | GetInternalSupplier404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalSupplier>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalSupplierQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalSupplier>>> = ({ signal }) => getInternalSupplier(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalSupplier>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalSupplierQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalSupplier>>>
+export type GetInternalSupplierQueryError = GetInternalSupplier400 | GetInternalSupplier401 | GetInternalSupplier404
+
+
+/**
+ * @summary Get supplier
+ */
+
+export function useGetInternalSupplier<TData = Awaited<ReturnType<typeof getInternalSupplier>>, TError = GetInternalSupplier400 | GetInternalSupplier401 | GetInternalSupplier404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalSupplier>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalSupplierQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type updateInternalSupplierResponse200 = {
+  data: UpdateInternalSupplier200
+  status: 200
+}
+
+export type updateInternalSupplierResponse400 = {
+  data: UpdateInternalSupplier400
+  status: 400
+}
+
+export type updateInternalSupplierResponse401 = {
+  data: UpdateInternalSupplier401
+  status: 401
+}
+
+export type updateInternalSupplierResponse404 = {
+  data: UpdateInternalSupplier404
+  status: 404
+}
+
+export type updateInternalSupplierResponse409 = {
+  data: UpdateInternalSupplier409
+  status: 409
+}
+
+export type updateInternalSupplierResponseSuccess = (updateInternalSupplierResponse200) & {
+  headers: Headers;
+};
+export type updateInternalSupplierResponseError = (updateInternalSupplierResponse400 | updateInternalSupplierResponse401 | updateInternalSupplierResponse404 | updateInternalSupplierResponse409) & {
+  headers: Headers;
+};
+
+export type updateInternalSupplierResponse = (updateInternalSupplierResponseSuccess | updateInternalSupplierResponseError)
+
+export const getUpdateInternalSupplierUrl = (id: string,) => {
+
+
+
+
+  return `/internal/suppliers/${id}`
+}
+
+/**
+ * @summary Update supplier
+ */
+export const updateInternalSupplier = async (id: string,
+    updateInternalSupplierBody: UpdateInternalSupplierBody, options?: Parameters<typeof customFetch>[1]): Promise<updateInternalSupplierResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateInternalSupplierResponse>(getUpdateInternalSupplierUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInternalSupplierBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInternalSupplierMutationOptions = <TError = UpdateInternalSupplier400 | UpdateInternalSupplier401 | UpdateInternalSupplier404 | UpdateInternalSupplier409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalSupplier>>, TError,{id: string;data: UpdateInternalSupplierBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInternalSupplier>>, TError,{id: string;data: UpdateInternalSupplierBody}, TContext> => {
+
+const mutationKey = ['updateInternalSupplier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInternalSupplier>>, {id: string;data: UpdateInternalSupplierBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInternalSupplier(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInternalSupplierMutationResult = NonNullable<Awaited<ReturnType<typeof updateInternalSupplier>>>
+    export type UpdateInternalSupplierMutationBody = UpdateInternalSupplierBody
+    export type UpdateInternalSupplierMutationError = UpdateInternalSupplier400 | UpdateInternalSupplier401 | UpdateInternalSupplier404 | UpdateInternalSupplier409
+
+    /**
+ * @summary Update supplier
+ */
+export const useUpdateInternalSupplier = <TError = UpdateInternalSupplier400 | UpdateInternalSupplier401 | UpdateInternalSupplier404 | UpdateInternalSupplier409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalSupplier>>, TError,{id: string;data: UpdateInternalSupplierBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInternalSupplier>>,
+        TError,
+        {id: string;data: UpdateInternalSupplierBody},
+        TContext
+      > => {
+      return useMutation(getUpdateInternalSupplierMutationOptions(options));
     }
 
 export type listInternalSalesOrdersResponse200 = {

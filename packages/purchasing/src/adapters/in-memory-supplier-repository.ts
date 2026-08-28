@@ -1,5 +1,9 @@
 import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
-import type { ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
+import type {
+  ISupplierRepository,
+  ListSuppliersQuery,
+  SupplierListPage,
+} from "../domain/ports/purchase-order-repository.js";
 import type { Supplier } from "../domain/supplier.js";
 
 function vendorKey(organizationId: OrganizationId, vendorNumber: string): string {
@@ -9,6 +13,28 @@ function vendorKey(organizationId: OrganizationId, vendorNumber: string): string
 export class InMemorySupplierRepository implements ISupplierRepository {
   private readonly byId = new Map<SupplierId, Supplier>();
   private readonly byVendorNumber = new Map<string, Supplier>();
+
+  async list(query: ListSuppliersQuery): Promise<SupplierListPage> {
+    const needle = query.q?.trim().toLowerCase() ?? "";
+    const rows = [...this.byId.values()].filter((supplier) => {
+      if (supplier.organizationId !== query.organizationId) {
+        return false;
+      }
+      if (needle.length === 0) {
+        return true;
+      }
+      return (
+        supplier.name.toLowerCase().includes(needle) ||
+        supplier.vendorNumber.toLowerCase().includes(needle)
+      );
+    });
+    rows.sort((a, b) => a.vendorNumber.localeCompare(b.vendorNumber));
+    const start = (query.page - 1) * query.pageSize;
+    return {
+      items: rows.slice(start, start + query.pageSize),
+      total: rows.length,
+    };
+  }
 
   async findById(organizationId: OrganizationId, id: SupplierId): Promise<Supplier | null> {
     const supplier = this.byId.get(id);
@@ -32,6 +58,14 @@ export class InMemorySupplierRepository implements ISupplierRepository {
       vendorNumber: supplier.vendorNumber,
       name: supplier.name,
     };
+    const previous = this.byId.get(normalized.id);
+    if (
+      previous !== undefined &&
+      (previous.organizationId !== normalized.organizationId ||
+        previous.vendorNumber !== normalized.vendorNumber)
+    ) {
+      this.byVendorNumber.delete(vendorKey(previous.organizationId, previous.vendorNumber));
+    }
     this.byId.set(normalized.id, normalized);
     this.byVendorNumber.set(vendorKey(normalized.organizationId, normalized.vendorNumber), normalized);
   }

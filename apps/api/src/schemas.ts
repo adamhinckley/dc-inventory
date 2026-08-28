@@ -466,6 +466,56 @@ export const purchaseOrdersListTable = {
   },
 };
 
+export const supplierListQuerySchema = z.object({
+  q: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const supplierItemSchema = z.object({
+  id: z.string().uuid(),
+  vendorNumber: z.string(),
+  name: z.string(),
+});
+
+export const supplierListResponseSchema = z.object({
+  items: z.array(supplierItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const supplierWriteBodySchema = z.object({
+  name: z.string().min(1),
+  vendorNumber: z.string().min(1),
+});
+
+export const supplierPatchBodySchema = z.object({
+  name: z.string().min(1).optional(),
+  vendorNumber: z.string().min(1).optional(),
+});
+
+export const supplierIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const duplicateVendorNumberResponseSchema = z.object({
+  error: z.literal("duplicate_vendor_number"),
+});
+
+export const suppliersListTable = {
+  rowId: "id",
+  columns: [
+    { field: "vendorNumber", label: "Vendor #" },
+    { field: "name", label: "Name" },
+  ],
+  search: {
+    param: "q",
+    fields: ["vendorNumber", "name"],
+    placeholder: "Search vendor # or name",
+  },
+};
+
 export const salesOrderStatusSchema = z.enum([
   "draft",
   "confirmed",
