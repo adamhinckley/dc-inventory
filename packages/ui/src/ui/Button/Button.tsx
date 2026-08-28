@@ -13,7 +13,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-interactive text-fg-secondary border border-border hover:bg-interactive-hover hover:text-fg hover:border-border-field-hover',
+          'bg-interactive text-fg border border-border-field hover:bg-interactive-hover hover:border-border-field-hover',
         primary: 'bg-primary-strong text-primary-content hover:bg-primary-strong/90',
         secondary: 'bg-secondary text-secondary-content hover:bg-secondary/90',
         ghost: 'ghost',
@@ -22,8 +22,8 @@ export const buttonVariants = cva(
       size: {
         xs: 'h-6 px-2 text-xs',
         sm: 'h-7 px-2.5 text-button',
-        md: 'h-8 px-button-x py-button-y',
-        lg: 'h-10 px-5 text-body',
+        md: 'min-h-(--space-input-height) px-button-x',
+        lg: 'min-h-(--space-input-height) px-5 text-body',
       },
     },
     defaultVariants: {
@@ -63,7 +63,11 @@ export interface ButtonProps
 // ---------------------------------------------------------------------------
 
 /**
- * Standard button. Five visual variants and three sizes.
+ * Standard button. Five visual variants and four sizes.
+ *
+ * `md` (default) and `lg` share `--space-input-height` with Input / Select /
+ * Combobox. Use `md` next to form controls. `sm` / `xs` are toolbar and table
+ * actions only; never in a labeled field row.
  *
  * @when Any clickable action — primary CTAs, cancel buttons, toolbar
  *   actions, submit/cancel pairs in dialogs.
@@ -74,7 +78,7 @@ export interface ButtonProps
  *   Popover) — those render their own `<button>`; pass styling directly to
  *   the Trigger instead of nesting a Button.
  * @variants variant (`default`/`primary`/`secondary`/`ghost`/`destructive`),
- *   size (`sm`/`md`/`lg`)
+ *   size (`xs`/`sm`/`md`/`lg`). `md` matches `--space-input-height`.
  */
 export function Button({ ref, className, variant, size, disabledReason, ...rest }: ButtonProps) {
   if (disabledReason) {

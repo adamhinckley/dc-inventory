@@ -59,8 +59,23 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     expect(shared).toContain("--z-index-popover: 30");
     expect(shared).toContain("--z-index-drawer: 40");
     expect(shared).toContain("--z-index-toast: 50");
+    expect(shared).toContain("--space-input-height: 2.375rem");
     expect(css).toContain("--z-index-popover: var(--z-index-popover)");
     expect(css).toContain("--z-index-drawer: var(--z-index-drawer)");
     expect(css).toContain("--z-index-toast: var(--z-index-toast)");
+  });
+
+  it("locks one comfortable control height on Input, Combobox, and Button md", () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), "../src");
+    const button = readFileSync(join(root, "ui/Button/Button.tsx"), "utf8");
+    const combobox = readFileSync(join(root, "ui/Combobox/Combobox.tsx"), "utf8");
+    const input = readFileSync(join(root, "primitives/input.tsx"), "utf8");
+    expect(button).toContain("md: 'min-h-(--space-input-height) px-button-x'");
+    expect(button).toContain(
+      "bg-interactive text-fg border border-border-field",
+    );
+    expect(combobox).toContain("min-h-(--space-input-height)");
+    expect(combobox).toContain("border-0 bg-transparent p-0");
+    expect(input).toContain("min-h-(--space-input-height)");
   });
 });

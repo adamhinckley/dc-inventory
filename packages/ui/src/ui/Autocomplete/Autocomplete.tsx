@@ -15,7 +15,7 @@ const inputGroupVariants = cva(
     variants: {
       density: {
         comfortable:
-          'rounded-interactable border border-border-field px-input-x py-input-y ' +
+          'min-h-(--space-input-height) rounded-interactable border border-border-field px-input-x py-input-y ' +
           'hover:border-border-field-hover ' +
           'data-invalid:border-error',
         compact:
@@ -28,7 +28,7 @@ const inputGroupVariants = cva(
 )
 
 const inputVariants = cva(
-  'flex-1 bg-transparent outline-none text-fg placeholder:text-fg-muted disabled:cursor-not-allowed',
+  'min-h-0 min-w-0 flex-1 bg-transparent outline-none text-fg placeholder:text-fg-muted disabled:cursor-not-allowed',
   {
     variants: {
       density: {
@@ -39,6 +39,9 @@ const inputVariants = cva(
     defaultVariants: { density: 'comfortable' },
   },
 )
+
+const chromeButtonClass =
+  'inline-flex shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
 
 // Async resolver — runs the async loader on mount, tracks internal loading
 // state, surfaces resolved options. Same shape as Combobox's
@@ -188,11 +191,11 @@ export function Autocomplete({
           {...(rest as Record<string, unknown>)}
         />
         {clearable && value && (
-          <BaseAutocomplete.Clear className="text-fg-tertiary hover:text-fg transition-colors">
+          <BaseAutocomplete.Clear className={chromeButtonClass}>
             <X className="size-icon" />
           </BaseAutocomplete.Clear>
         )}
-        <BaseAutocomplete.Trigger className="text-fg-tertiary hover:text-fg transition-colors">
+        <BaseAutocomplete.Trigger className={chromeButtonClass}>
           <BaseAutocomplete.Icon>
             <ChevronDown className="size-icon" />
           </BaseAutocomplete.Icon>
