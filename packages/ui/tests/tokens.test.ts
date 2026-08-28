@@ -69,13 +69,20 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     const root = join(dirname(fileURLToPath(import.meta.url)), "../src");
     const button = readFileSync(join(root, "ui/Button/Button.tsx"), "utf8");
     const combobox = readFileSync(join(root, "ui/Combobox/Combobox.tsx"), "utf8");
+    const autocomplete = readFileSync(
+      join(root, "ui/Autocomplete/Autocomplete.tsx"),
+      "utf8",
+    );
     const input = readFileSync(join(root, "primitives/input.tsx"), "utf8");
     expect(button).toContain("md: 'min-h-(--space-input-height) px-button-x'");
     expect(button).toContain(
       "bg-interactive text-fg border border-border-field",
     );
     expect(combobox).toContain("min-h-(--space-input-height)");
+    expect(combobox).toContain("size-6");
     expect(combobox).toContain("border-0 bg-transparent p-0");
+    expect(autocomplete).toContain("size-6");
+    expect(autocomplete).toContain("border-0 bg-transparent p-0");
     expect(input).toContain("min-h-(--space-input-height)");
   });
 });

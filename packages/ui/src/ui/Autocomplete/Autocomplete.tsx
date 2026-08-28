@@ -40,8 +40,11 @@ const inputVariants = cva(
   },
 )
 
+// Native <button> UA padding is what made Autocomplete taller than Input.
+// size-6 is a 24px hit target (WCAG 2.5.8). -my-0.5 offsets the 4px that
+// would otherwise grow the padded 38px control (inner content is 20px).
 const chromeButtonClass =
-  'inline-flex shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
+  'inline-flex size-6 shrink-0 items-center justify-center border-0 bg-transparent p-0 -my-0.5 text-fg-tertiary hover:text-fg transition-colors'
 
 // Async resolver — runs the async loader on mount, tracks internal loading
 // state, surfaces resolved options. Same shape as Combobox's
