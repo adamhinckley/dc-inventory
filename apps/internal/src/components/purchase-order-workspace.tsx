@@ -149,12 +149,12 @@ function PurchaseOrderLinesTable({
   lines,
   onUpdateQty,
   onRemoveLine,
-  qtyDisabled = false,
+  disabled = false,
 }: {
   lines: PurchaseOrderLineDraft[];
   onUpdateQty: (index: number, qtyRaw: string) => void;
   onRemoveLine: (index: number) => void;
-  qtyDisabled?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <div className="overflow-x-auto rounded-interactable border border-border">
@@ -197,7 +197,7 @@ function PurchaseOrderLinesTable({
                       className="max-w-28"
                       value={String(line.qty)}
                       onChange={(event) => onUpdateQty(index, event.target.value)}
-                      disabled={qtyDisabled}
+                      disabled={disabled}
                       aria-label={`Quantity for ${line.sku}`}
                     />
                 </td>
@@ -206,6 +206,7 @@ function PurchaseOrderLinesTable({
                     type="button"
                     variant="ghost"
                     size="sm"
+                    disabled={disabled}
                     onClick={() => onRemoveLine(index)}
                   >
                     Remove
@@ -433,6 +434,9 @@ function PurchaseOrderWorkspaceBody({
   );
 
   const removeLine = useCallback((index: number) => {
+    if (creatingRef.current || workspaceLocked) {
+      return;
+    }
     setLines((current) => {
       if (current.length <= 1) {
         setActionError("A draft PO must keep at least one line.");
@@ -443,7 +447,7 @@ function PurchaseOrderWorkspaceBody({
       linesRef.current = next;
       return next;
     });
-  }, []);
+  }, [workspaceLocked]);
 
   const flushAutosave = useCallback(async (force = false) => {
     if (autosaveTimerRef.current) {
@@ -623,7 +627,7 @@ function PurchaseOrderWorkspaceBody({
         lines={lines}
         onUpdateQty={updateLineQty}
         onRemoveLine={removeLine}
-        qtyDisabled={workspaceLocked}
+        disabled={workspaceLocked}
       />
     </section>
   );
