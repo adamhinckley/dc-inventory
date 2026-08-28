@@ -1,6 +1,6 @@
+// @ts-nocheck — resource FieldConfig wiring is stubbed until x-table maps here.
 'use client'
 
-// @ts-nocheck — resource FieldConfig wiring is stubbed until x-table maps here.
 import { use, useEffect, type ComponentPropsWithRef, type ReactNode } from 'react'
 import {
   Controller,

@@ -2,8 +2,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
+const extensionAliasLoader = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../scripts/turbopack-extension-alias-loader.cjs",
+);
+
 const apiProxyOrigin = process.env.API_PROXY_ORIGIN ?? "http://localhost:3001";
-const uiSrc = join(dirname(fileURLToPath(import.meta.url)), "../../packages/ui/src");
 
 const nextConfig: NextConfig = {
   transpilePackages: [
@@ -17,10 +21,18 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "",
   },
   turbopack: {
-    resolveAlias: {
-      "#cn": join(uiSrc, "lib/cn.ts"),
-      "#ds": uiSrc,
-      "#shared": join(uiSrc, "shared"),
+    // Orval clients emit TypeScript ESM `.js` specifiers. Webpack used
+    // resolve.extensionAlias; Next 16.3 Turbopack does not, so this loader
+    // strips the suffix and default resolveExtensions finds `.ts`.
+    rules: {
+      "*.ts": {
+        condition: { not: "foreign" },
+        loaders: [extensionAliasLoader],
+      },
+      "*.tsx": {
+        condition: { not: "foreign" },
+        loaders: [extensionAliasLoader],
+      },
     },
   },
   async rewrites() {
