@@ -607,6 +607,30 @@ export const Layers: StoryObj = {
         </div>
       </Section>
 
+      <Section title="Z-index stack">
+        <p className="text-body-sm text-fg-tertiary">
+          Named utilities used by AppShell and overlay components. Portaled popups
+          must sit above <code className="text-caption">z-content</code>.
+        </p>
+        <div className="flex flex-col gap-2 text-body-sm">
+          <p>
+            <code>z-content</code> 1 — page body
+          </p>
+          <p>
+            <code>z-chrome</code> 20 — sidebar, topbar
+          </p>
+          <p>
+            <code>z-popover</code> 30 — combobox, select, menu, tooltip, dialog
+          </p>
+          <p>
+            <code>z-drawer</code> 40 — edge drawers
+          </p>
+          <p>
+            <code>z-toast</code> 50 — toast viewport
+          </p>
+        </div>
+      </Section>
+
       <Section title="Elevation Shadows">
         <p className="text-body-sm text-fg-tertiary">
           Two tiers paralleling the z-index stack. Theme-varying — dark mode boosts the alpha so
