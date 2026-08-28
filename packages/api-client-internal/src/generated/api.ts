@@ -88,6 +88,9 @@ import type {
   CreateInternalSupplier401,
   CreateInternalSupplier409,
   CreateInternalSupplierBody,
+  ExportInternalPurchaseOrder401,
+  ExportInternalPurchaseOrder404,
+  ExportInternalPurchaseOrderParams,
   GetInternalCustomer200,
   GetInternalCustomer400,
   GetInternalCustomer401,
@@ -2757,6 +2760,119 @@ export function useGetInternalPurchaseOrder<TData = Awaited<ReturnType<typeof ge
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetInternalPurchaseOrderQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type exportInternalPurchaseOrderResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type exportInternalPurchaseOrderResponse401 = {
+  data: ExportInternalPurchaseOrder401
+  status: 401
+}
+
+export type exportInternalPurchaseOrderResponse404 = {
+  data: ExportInternalPurchaseOrder404
+  status: 404
+}
+
+export type exportInternalPurchaseOrderResponseSuccess = (exportInternalPurchaseOrderResponse200) & {
+  headers: Headers;
+};
+export type exportInternalPurchaseOrderResponseError = (exportInternalPurchaseOrderResponse401 | exportInternalPurchaseOrderResponse404) & {
+  headers: Headers;
+};
+
+export type exportInternalPurchaseOrderResponse = (exportInternalPurchaseOrderResponseSuccess | exportInternalPurchaseOrderResponseError)
+
+export const getExportInternalPurchaseOrderUrl = (id: string,
+    params?: ExportInternalPurchaseOrderParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/purchase-orders/${id}/export?${stringifiedParams}` : `/internal/purchase-orders/${id}/export`
+}
+
+/**
+ * @summary Export purchase order lines as spreadsheet
+ */
+export const exportInternalPurchaseOrder = async (id: string,
+    params?: ExportInternalPurchaseOrderParams, options?: Parameters<typeof customFetch>[1]): Promise<exportInternalPurchaseOrderResponse> => {
+
+  return customFetch<exportInternalPurchaseOrderResponse>(getExportInternalPurchaseOrderUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportInternalPurchaseOrderQueryKey = (id: string,
+    params?: ExportInternalPurchaseOrderParams,) => {
+    return [
+    `/internal/purchase-orders/${id}/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportInternalPurchaseOrderQueryOptions = <TData = Awaited<ReturnType<typeof exportInternalPurchaseOrder>>, TError = ExportInternalPurchaseOrder401 | ExportInternalPurchaseOrder404>(id: string,
+    params?: ExportInternalPurchaseOrderParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportInternalPurchaseOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportInternalPurchaseOrderQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportInternalPurchaseOrder>>> = ({ signal }) => exportInternalPurchaseOrder(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportInternalPurchaseOrder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportInternalPurchaseOrderQueryResult = NonNullable<Awaited<ReturnType<typeof exportInternalPurchaseOrder>>>
+export type ExportInternalPurchaseOrderQueryError = ExportInternalPurchaseOrder401 | ExportInternalPurchaseOrder404
+
+
+/**
+ * @summary Export purchase order lines as spreadsheet
+ */
+
+export function useExportInternalPurchaseOrder<TData = Awaited<ReturnType<typeof exportInternalPurchaseOrder>>, TError = ExportInternalPurchaseOrder401 | ExportInternalPurchaseOrder404>(
+ id: string,
+    params?: ExportInternalPurchaseOrderParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportInternalPurchaseOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportInternalPurchaseOrderQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

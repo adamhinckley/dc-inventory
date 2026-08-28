@@ -14,7 +14,14 @@ export async function customFetch<T>(
   });
 
   const hasBody = response.status !== 204 && response.status !== 205;
-  const data = hasBody ? await response.json() : undefined;
+  const contentType = response.headers.get("content-type") ?? "";
+  const isJson =
+    contentType.includes("application/json") || contentType.includes("+json");
+  const data = hasBody
+    ? isJson
+      ? await response.json()
+      : await response.blob()
+    : undefined;
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);

@@ -10,6 +10,8 @@ import {
   notFoundResponseSchema,
   purchaseOrderCommandBodySchema,
   purchaseOrderIdParamsSchema,
+  purchaseOrderExportQuerySchema,
+  binaryFileResponseSchema,
   purchaseOrderItemSchema,
   purchaseOrderListQuerySchema,
   purchaseOrderListResponseSchema,
@@ -207,6 +209,41 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         return sendNotFound(reply);
       }
       return mapPurchaseOrder(result.purchaseOrder);
+    },
+  );
+
+  routes.get(
+    "/purchase-orders/:id/export",
+    {
+      schema: {
+        operationId: "exportInternalPurchaseOrder",
+        tags: ["internal"],
+        summary: "Export purchase order lines as spreadsheet",
+        params: purchaseOrderIdParamsSchema,
+        querystring: purchaseOrderExportQuerySchema,
+        response: {
+          200: binaryFileResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const query = request.query as { format: "xlsx" | "csv" };
+      const result = await request.server.purchasing.exportPurchaseOrder.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+        format: query.format,
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return reply
+        .code(200)
+        .header("Content-Type", result.file.contentType)
+        .header("Content-Disposition", `attachment; filename="${result.file.filename}"`)
+        .send(Buffer.from(result.file.bytes));
     },
   );
 

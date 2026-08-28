@@ -72,6 +72,8 @@ import {
   DrizzlePurchaseOrderRepository,
   DrizzleSupplierProductRepository,
   DrizzleSupplierRepository,
+  ExportPurchaseOrderUseCase,
+  ExcelJsWorkbookWriter,
   GetPurchaseOrderUseCase,
   GetSupplierUseCase,
   InMemoryPurchaseOrderRepository,
@@ -179,6 +181,7 @@ export type PurchasingHttpServices = {
   confirmPurchaseOrder: ConfirmPurchaseOrderUseCase;
   receivePurchaseOrder: ReceivePurchaseOrderUseCase;
   replacePurchaseOrderLines: ReplacePurchaseOrderLinesUseCase;
+  exportPurchaseOrder: ExportPurchaseOrderUseCase;
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
   listSuppliers: ListSuppliersUseCase;
   createSupplier: CreateSupplierUseCase;
@@ -312,6 +315,7 @@ function purchasingServices(
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
+  const workbookWriter = new ExcelJsWorkbookWriter();
   return {
     listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo),
     createPurchaseOrder: new CreatePurchaseOrderUseCase(purchaseOrderRepo, supplierRepo, clock),
@@ -319,6 +323,7 @@ function purchasingServices(
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
     replacePurchaseOrderLines: new ReplacePurchaseOrderLinesUseCase(purchaseOrderRepo),
+    exportPurchaseOrder: new ExportPurchaseOrderUseCase(purchaseOrderRepo, workbookWriter),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
     listSuppliers: new ListSuppliersUseCase(supplierRepo),
     createSupplier: new CreateSupplierUseCase(supplierRepo),
