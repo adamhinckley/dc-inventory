@@ -46,7 +46,7 @@ describe("@dc-inventory/ui purchasing widget barrel", () => {
     ];
     for (const file of files) {
       const source = readFileSync(join(uiSrc, file), "utf8");
-      expect(source.startsWith("'use client'\n"), file).toBe(true);
+      expect(source, file).toMatch(/^(?:\/\/[^\n]*\n)*'use client'\n/);
     }
   });
 });

@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { RecordInternalInvoicePayment401Error } from './recordInternalInvoicePayment401Error.js';
+import type { RecordInternalInvoicePayment401Error } from './recordInternalInvoicePayment401Error';
 
 export type RecordInternalInvoicePayment401 = {
   error: RecordInternalInvoicePayment401Error;

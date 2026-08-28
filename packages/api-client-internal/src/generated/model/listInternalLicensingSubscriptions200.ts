@@ -4,7 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ListInternalLicensingSubscriptions200ItemsItem } from './listInternalLicensingSubscriptions200ItemsItem.js';
+import type { ListInternalLicensingSubscriptions200ItemsItem } from './listInternalLicensingSubscriptions200ItemsItem';
 
 export type ListInternalLicensingSubscriptions200 = {
   items: ListInternalLicensingSubscriptions200ItemsItem[];
