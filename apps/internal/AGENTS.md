@@ -9,3 +9,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 
 Repo contract: [`../../AGENTS.md`](../../AGENTS.md).
+
+`next-devtools` in the repo-root `.mcp.json` discovers this app’s `/_next/mcp` when `pnpm dev:internal` is running (port 3000).
