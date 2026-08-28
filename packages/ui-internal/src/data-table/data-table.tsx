@@ -43,6 +43,10 @@ export type DataTableRootProps<
   onParamsChange?: (params: ListQueryParams) => void;
   /** Set whenever more than one Root renders on a page so form-control ids stay unique. */
   idPrefix?: string;
+  /** Navigate or open detail when a row is activated. */
+  onRowClick?: (row: TRow) => void;
+  /** Trailing actions column (edit, unlink, etc.). */
+  rowActions?: (row: TRow) => ReactNode;
   children: ReactNode;
 };
 
@@ -50,6 +54,8 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
   filterOptions?: DataTableRootProps["filterOptions"];
   /** Per-Root prefix so two tables do not share form-control IDs. */
   idBase: string;
+  onRowClick?: (row: Record<string, unknown>) => void;
+  rowActions?: (row: Record<string, unknown>) => ReactNode;
 };
 
 const DataTableContext = createContext<DataTableContextValue | null>(null);
@@ -62,8 +68,22 @@ function useDataTableContext(): DataTableContextValue {
   return value;
 }
 
+function readFieldValue(row: Record<string, unknown>, field: string): unknown {
+  if (!field.includes(".")) {
+    return row[field];
+  }
+  let current: unknown = row;
+  for (const segment of field.split(".")) {
+    if (current === null || current === undefined || typeof current !== "object") {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return current;
+}
+
 function cellValue(row: Record<string, unknown>, field: string): ReactNode {
-  const value = row[field];
+  const value = readFieldValue(row, field);
   if (value === null || value === undefined) {
     return "—";
   }
@@ -222,6 +242,8 @@ export function DataTableRoot<
   initialParams,
   onParamsChange,
   idPrefix,
+  onRowClick,
+  rowActions,
   children,
 }: DataTableRootProps<TParams, TRow>) {
   const idBase = tableControlIdBase(meta, idPrefix);
@@ -233,7 +255,19 @@ export function DataTableRoot<
   });
 
   return (
-    <DataTableContext.Provider value={{ ...table, filterOptions, idBase }}>
+    <DataTableContext.Provider
+      value={{
+        ...table,
+        filterOptions,
+        idBase,
+        onRowClick: onRowClick as
+          | ((row: Record<string, unknown>) => void)
+          | undefined,
+        rowActions: rowActions as
+          | ((row: Record<string, unknown>) => ReactNode)
+          | undefined,
+      }}
+    >
       <div className="flex flex-col gap-field-group">{children}</div>
     </DataTableContext.Provider>
   );
@@ -337,7 +371,9 @@ export function DataTableFilters() {
  * ```
  */
 export function DataTableTable() {
-  const { meta, items, query, busy, state, setState } = useDataTableContext();
+  const { meta, items, query, busy, state, setState, onRowClick, rowActions } =
+    useDataTableContext();
+  const hasRowActions = rowActions !== undefined;
 
   function applySort(field: string) {
     setState((current) => ({
@@ -394,6 +430,14 @@ export function DataTableTable() {
                 </th>
               );
             })}
+            {hasRowActions ? (
+              <th
+                scope="col"
+                className="section-content-column-header section-content-padding border-b border-border"
+              >
+                Actions
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -401,7 +445,7 @@ export function DataTableTable() {
             <tr>
               <td
                 className="section-content-padding text-placeholder"
-                colSpan={meta.columns.length}
+                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
               >
                 Loading…
               </td>
@@ -410,7 +454,7 @@ export function DataTableTable() {
             <tr>
               <td
                 className="section-content-padding text-error"
-                colSpan={meta.columns.length}
+                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
               >
                 {query.error instanceof Error
                   ? query.error.message
@@ -421,7 +465,7 @@ export function DataTableTable() {
             <tr>
               <td
                 className="section-content-padding text-placeholder"
-                colSpan={meta.columns.length}
+                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
               >
                 No rows
               </td>
@@ -430,13 +474,22 @@ export function DataTableTable() {
             items.map((item, index) => {
               const row = item as Record<string, unknown>;
               const rowKey = String(row[meta.rowId] ?? index);
+              const clickable = onRowClick !== undefined;
               return (
-                <tr key={rowKey}>
+                <tr
+                  key={rowKey}
+                  className={clickable ? "cursor-pointer hover:bg-interactive" : undefined}
+                  onClick={
+                    clickable
+                      ? () => onRowClick(row)
+                      : undefined
+                  }
+                >
                   {meta.columns.map((column) => (
                     <td
                       key={column.field}
                       className={
-                        column.field === "sku"
+                        column.field === "sku" || column.field === "vendorNumber"
                           ? "section-content-padding section-content-value-mono border-b border-border"
                           : "section-content-padding section-content-value border-b border-border"
                       }
@@ -444,6 +497,14 @@ export function DataTableTable() {
                       {cellValue(row, column.field)}
                     </td>
                   ))}
+                  {hasRowActions ? (
+                    <td
+                      className="section-content-padding section-content-value border-b border-border"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {rowActions(row)}
+                    </td>
+                  ) : null}
                 </tr>
               );
             })
