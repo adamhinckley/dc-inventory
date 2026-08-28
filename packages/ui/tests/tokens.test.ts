@@ -48,4 +48,19 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     expect(css).not.toContain("--color-text-primary:");
     expect(css).not.toContain("--color-layer-01:");
   });
+
+  it("exposes a z-index stack so portaled popups paint above AppShell content", () => {
+    const shared = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../src/tokens/shared.css"),
+      "utf8",
+    );
+    expect(shared).toContain("--z-index-content: 1");
+    expect(shared).toContain("--z-index-chrome: 20");
+    expect(shared).toContain("--z-index-popover: 30");
+    expect(shared).toContain("--z-index-drawer: 40");
+    expect(shared).toContain("--z-index-toast: 50");
+    expect(css).toContain("--z-index-popover: var(--z-index-popover)");
+    expect(css).toContain("--z-index-drawer: var(--z-index-drawer)");
+    expect(css).toContain("--z-index-toast: var(--z-index-toast)");
+  });
 });

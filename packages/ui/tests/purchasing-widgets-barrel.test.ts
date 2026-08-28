@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,6 +16,8 @@ import {
   useFormSubmit,
 } from "../src/index";
 
+const uiSrc = join(dirname(fileURLToPath(import.meta.url)), "../src");
+
 describe("@dc-inventory/ui purchasing widget barrel", () => {
   it("re-exports purchasing layout and form widgets", () => {
     expect(Combobox).toBeTypeOf("function");
@@ -25,5 +30,19 @@ describe("@dc-inventory/ui purchasing widget barrel", () => {
     expect(useFormSubmit).toBeTypeOf("function");
     expect(useExplorerView).toBeTypeOf("function");
     expect(useDetailView).toBeTypeOf("function");
+  });
+
+  it("marks Form and FormDialog as client modules so the App Router barrel is safe from RSC", () => {
+    const files = [
+      "ui/Form/Form.tsx",
+      "ui/Form/Form.hook.ts",
+      "ui/Form/index.ts",
+      "ui/FormDialog/FormDialog.tsx",
+      "ui/FormDialog/index.ts",
+    ];
+    for (const file of files) {
+      const source = readFileSync(join(uiSrc, file), "utf8");
+      expect(source.startsWith("'use client'\n"), file).toBe(true);
+    }
   });
 });
