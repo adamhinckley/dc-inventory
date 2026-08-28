@@ -52,7 +52,7 @@ packages/
 | Validation (HTTP only) | **Zod** | Parse at the adapter. Never put Zod on domain entities. |
 | SQL access | **Drizzle + `postgres.js`** | SQL-shaped, transactions, `FOR UPDATE`, integer columns. Prisma hides SQL; agents generate N+1 and cannot express a stock ledger cleanly. |
 | Database | **PostgreSQL 16+** | See [§4](#4-database-postgresql). |
-| Frontends | **Three Next.js apps** | Internal = dashboard. Wholesale = e-commerce. Ops = licensing control plane. Not one app with three route groups. Ops may later deploy separately; it still talks to `/ops`. |
+| Frontends | **Three Next.js 16 apps (Turbopack)** | Internal = dashboard. Wholesale = e-commerce. Ops = licensing control plane. Not one app with three route groups. Ops may later deploy separately; it still talks to `/ops`. `next dev` / `next build` use Turbopack; do not add a `webpack()` key in `next.config.ts`. |
 | Charts (internal only) | **Recharts** | Huge training data for agents. Draws series from report endpoints. Do not chart raw list pages. |
 | Client data | **TanStack Query via Orval** | Hooks generated from OpenAPI. No hand-written `fetch`. |
 | API contract for UIs | **OpenAPI 3 from Zod + Fastify swagger**; three specs (internal / wholesale / ops); **Orval** clients; `x-table` for search/filter UI | Frontends are presentation-only. See [`api-contract.md`](./api-contract.md). |
