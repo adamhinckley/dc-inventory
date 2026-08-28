@@ -61,6 +61,11 @@ function PurchaseOrderLineAdder({
   const [addQty, setAddQty] = useState("1");
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setSelectedSkus([]);
+    setError(null);
+  }, [supplierId]);
+
   const productsQuery = useListInternalSupplierProducts(supplierId, {
     page: 1,
     pageSize: 100,
@@ -631,6 +636,7 @@ function PurchaseOrderWorkspaceBody({
 
         {activeSupplierId ? (
           <PurchaseOrderLineAdder
+            key={activeSupplierId}
             supplierId={activeSupplierId}
             lines={lines}
             disabled={workspaceLocked}
