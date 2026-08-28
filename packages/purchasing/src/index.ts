@@ -8,10 +8,13 @@ export { InMemoryPurchaseOrderRepository } from "./adapters/in-memory-purchase-o
 export { InMemorySupplierProductQtyReadPort } from "./adapters/in-memory-supplier-product-qty-read.js";
 export { InMemorySupplierProductRepository } from "./adapters/in-memory-supplier-product-repository.js";
 export { InMemorySupplierRepository } from "./adapters/in-memory-supplier-repository.js";
+export { InMemoryWorkbookWriter } from "./adapters/in-memory-workbook-writer.js";
+export { ExcelJsWorkbookWriter } from "./adapters/exceljs-workbook-writer.js";
 export { AssignSupplierProductUseCase } from "./application/assign-supplier-product.js";
 export { CancelPurchaseOrderUseCase } from "./application/cancel-purchase-order.js";
 export { ConfirmPurchaseOrderUseCase } from "./application/confirm-purchase-order.js";
 export { CreatePurchaseOrderUseCase } from "./application/create-purchase-order.js";
+export { ExportPurchaseOrderUseCase } from "./application/export-purchase-order.js";
 export { CreateSupplierUseCase } from "./application/create-supplier.js";
 export { GetPurchaseOrderUseCase } from "./application/get-purchase-order.js";
 export { GetSupplierUseCase } from "./application/get-supplier.js";
@@ -38,6 +41,11 @@ export type {
   ListSuppliersQuery,
   SupplierListPage,
 } from "./domain/ports/purchase-order-repository.js";
+export type {
+  IWorkbookWriter,
+  WorkbookFormat,
+  WorkbookWriteResult,
+} from "./domain/ports/workbook-writer.js";
 export type {
   ICatalogSkuLookupPort,
   ISupplierProductQtyReadPort,
