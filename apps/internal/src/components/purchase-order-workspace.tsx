@@ -256,6 +256,7 @@ function PurchaseOrderWorkspaceBody({
 
   const lastSavedLinesRef = useRef(initialLines);
   const creatingRef = useRef(false);
+  const replacingRef = useRef(false);
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const suppliersQuery = useListInternalSuppliers({ page: 1, pageSize: 100 });
@@ -275,11 +276,13 @@ function PurchaseOrderWorkspaceBody({
 
   const persistCreate = useCallback(
     async (nextLines: PurchaseOrderLineDraft[], vendorId: string) => {
-      if (creatingRef.current || purchaseOrderId) {
+      if (purchaseOrderId) {
         return;
       }
-      creatingRef.current = true;
-      setIsCreating(true);
+      if (!creatingRef.current) {
+        creatingRef.current = true;
+        setIsCreating(true);
+      }
       setSaveState("saving");
       setActionError(null);
       try {
@@ -319,6 +322,10 @@ function PurchaseOrderWorkspaceBody({
       if (linesEqual(nextLines, lastSavedLinesRef.current)) {
         return;
       }
+      if (replacingRef.current) {
+        return;
+      }
+      replacingRef.current = true;
       setSaveState("saving");
       setActionError(null);
       try {
@@ -342,6 +349,8 @@ function PurchaseOrderWorkspaceBody({
       } catch {
         setSaveState("error");
         setActionError("Autosave failed.");
+      } finally {
+        replacingRef.current = false;
       }
     },
     [purchaseOrderId, queryClient, replaceMutation],
@@ -371,26 +380,30 @@ function PurchaseOrderWorkspaceBody({
   }, [isDraft, lines, persistReplace, purchaseOrderId]);
 
   const vendorLocked = Boolean(purchaseOrderId) || lines.length > 0;
-  const workspaceLocked = isCreating || (!purchaseOrderId && lines.length > 0);
+  const workspaceLocked = isCreating;
 
   const addLine = useCallback(
     (line: PurchaseOrderLineDraft) => {
-      if (workspaceLocked && !purchaseOrderId) {
+      if (creatingRef.current || workspaceLocked) {
         return;
       }
       setActionError(null);
       const nextLines = [...lines, line];
-      setLines(nextLines);
       if (!purchaseOrderId && activeSupplierId) {
+        creatingRef.current = true;
+        setIsCreating(true);
+        setLines(nextLines);
         void persistCreate(nextLines, activeSupplierId);
+        return;
       }
+      setLines(nextLines);
     },
     [activeSupplierId, lines, persistCreate, purchaseOrderId, workspaceLocked],
   );
 
   const updateLineQty = useCallback(
     (sku: string, qtyRaw: string) => {
-      if (workspaceLocked && !purchaseOrderId) {
+      if (creatingRef.current || workspaceLocked) {
         return;
       }
       const qty = Number(qtyRaw);
@@ -419,6 +432,9 @@ function PurchaseOrderWorkspaceBody({
     if (autosaveTimerRef.current) {
       clearTimeout(autosaveTimerRef.current);
       autosaveTimerRef.current = null;
+    }
+    while (replacingRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
     if (
       purchaseOrderId &&
@@ -573,7 +589,7 @@ function PurchaseOrderWorkspaceBody({
           <PurchaseOrderLineAdder
             supplierId={activeSupplierId}
             lines={lines}
-            disabled={workspaceLocked && !purchaseOrderId}
+            disabled={workspaceLocked}
             onAddLine={addLine}
           />
         ) : (
@@ -593,7 +609,7 @@ function PurchaseOrderWorkspaceBody({
         lines={lines}
         onUpdateQty={updateLineQty}
         onRemoveLine={removeLine}
-        qtyDisabled={workspaceLocked && !purchaseOrderId}
+        qtyDisabled={workspaceLocked}
       />
     </section>
   );
