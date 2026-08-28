@@ -18,7 +18,7 @@ import type {
   GetOpsSubscription200
 } from './model';
 
-import { customFetch } from '../custom-fetch.js';
+import { customFetch } from '../custom-fetch';
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 

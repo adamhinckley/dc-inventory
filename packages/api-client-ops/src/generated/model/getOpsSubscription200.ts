@@ -4,7 +4,7 @@
  * DC Inventory ops API
  * OpenAPI spec version: 0.0.0
  */
-import type { GetOpsSubscription200Status } from './getOpsSubscription200Status.js';
+import type { GetOpsSubscription200Status } from './getOpsSubscription200Status';
 
 export type GetOpsSubscription200 = {
   status: GetOpsSubscription200Status;

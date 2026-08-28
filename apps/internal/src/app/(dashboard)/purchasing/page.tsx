@@ -1,10 +1,18 @@
-import { DashboardPlaceholder } from "../../../components/dashboard-placeholder";
+import { PurchasingDraftsExplorer } from "../../../components/purchasing-drafts-explorer";
+import { draftPurchaseOrdersListTable } from "../../../lib/draft-purchase-orders-list-table";
+import { listParamsFromSearchParams } from "../../../lib/table-url-params";
 
-export default function PurchasingPage() {
-  return (
-    <DashboardPlaceholder
-      title="Purchasing"
-      body="Placeholder purchasing. Purchase-order tables land when that list endpoint exists."
-    />
+type PurchasingSearchParams = Record<string, string | string[] | undefined>;
+
+export default async function PurchasingPage({
+  searchParams,
+}: {
+  searchParams: Promise<PurchasingSearchParams>;
+}) {
+  const initialParams = listParamsFromSearchParams(
+    draftPurchaseOrdersListTable,
+    await searchParams,
   );
+
+  return <PurchasingDraftsExplorer initialParams={initialParams} />;
 }

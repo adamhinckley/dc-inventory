@@ -6,9 +6,9 @@ export const DEFAULT_DEMO_SEED = "dc-inventory-demo-1";
 export const DEMO_HISTORY_YEARS = 5;
 
 export const GENERATED_SKU_PREFIX = "DEM-";
-export const GENERATED_SKU_COUNT = 795;
+export const GENERATED_SKU_COUNT = 130;
 export const GENERATED_SKU_FIRST = 1;
-export const GENERATED_SKU_LAST = 795;
+export const GENERATED_SKU_LAST = 130;
 
 export const MEMBER_PRICE_MIN_CENTS = 25;
 export const MEMBER_PRICE_MAX_CENTS = 2_500;
@@ -36,9 +36,9 @@ export const SO_LINE_QTY_MAX = 6;
 export const SO_LINE_QTY_MEAN = 3;
 
 export const PERSONA_ORDER_BUDGETS = {
-  northstar: 1_500,
-  harvest: 450,
-  idlePark: 75,
+  northstar: 250,
+  harvest: 75,
+  idlePark: 13,
 } as const;
 
 export const IDLE_PARK_DORMANCY_DAYS = 120;

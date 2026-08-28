@@ -37,7 +37,7 @@ Wholesale clients might see **their** order counts, their invoices, and whether 
 | Inventory turns | How fast stock leaves relative to what we hold |
 | Adjustment / shrink quantity and dollars | Count, damage, loss (needs cost to put $ on it) |
 | Inactive or discontinued SKUs that still have on-hand | Markdown or return-to-vendor candidates |
-| Coverage of open orders | Allocated compared with on-hand plus inbound (inbound is **shown**, not sellable, in v1) |
+| Coverage of open orders | Committed compared with on-hand plus inbound. Locked sellability is `availableToSell` ([ADR 0008](../adr/0008-available-to-sell-open-locked.md)). |
 | Next inbound date and qty per SKU | When the hole might close |
 
 ## Sales and service

@@ -1,6 +1,10 @@
 import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
-import type { ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
+import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
+import type {
+  ISupplierRepository,
+  ListSuppliersQuery,
+  SupplierListPage,
+} from "../domain/ports/purchase-order-repository.js";
 import type { Supplier } from "../domain/supplier.js";
 import { suppliers } from "../persistence/schema.js";
 import type { PurchasingDrizzle } from "./drizzle-purchase-orders.js";
@@ -16,6 +20,33 @@ function toSupplier(row: typeof suppliers.$inferSelect): Supplier {
 
 export class DrizzleSupplierRepository implements ISupplierRepository {
   constructor(private readonly db: PurchasingDrizzle) {}
+
+  async list(query: ListSuppliersQuery): Promise<SupplierListPage> {
+    const clauses = [eq(suppliers.organizationId, query.organizationId)];
+    if (query.q !== undefined && query.q.trim().length > 0) {
+      const pattern = `%${query.q.trim()}%`;
+      clauses.push(or(ilike(suppliers.vendorNumber, pattern), ilike(suppliers.name, pattern))!);
+    }
+    const where = and(...clauses);
+    const offset = (query.page - 1) * query.pageSize;
+    const [rows, countRows] = await Promise.all([
+      this.db
+        .select()
+        .from(suppliers)
+        .where(where)
+        .orderBy(asc(suppliers.vendorNumber))
+        .limit(query.pageSize)
+        .offset(offset),
+      this.db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(suppliers)
+        .where(where),
+    ]);
+    return {
+      items: rows.map(toSupplier),
+      total: countRows[0]?.count ?? 0,
+    };
+  }
 
   async findById(organizationId: OrganizationId, id: SupplierId): Promise<Supplier | null> {
     const rows = await this.db

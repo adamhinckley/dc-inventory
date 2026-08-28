@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, type ReactElement, type ReactNode } from 'react'
 import { useWatch, type DefaultValues, type FieldValues, type UseFormReturn } from 'react-hook-form'
 import { type QueryKey } from '@tanstack/react-query'

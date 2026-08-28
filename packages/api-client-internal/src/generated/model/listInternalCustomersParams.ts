@@ -4,8 +4,8 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ListInternalCustomersSortBy } from './listInternalCustomersSortBy.js';
-import type { ListInternalCustomersSortOrder } from './listInternalCustomersSortOrder.js';
+import type { ListInternalCustomersSortBy } from './listInternalCustomersSortBy';
+import type { ListInternalCustomersSortOrder } from './listInternalCustomersSortOrder';
 
 export type ListInternalCustomersParams = {
 q?: string;

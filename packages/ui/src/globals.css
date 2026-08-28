@@ -100,9 +100,6 @@
   --shadow-overlay: 0 8px 24px rgb(22 22 22 / 0.12);
   --shadow-modal: 0 16px 48px rgb(22 22 22 / 0.18);
 
-  --z-index-chrome: 20;
-  --z-index-content: 1;
-
   --size-icon-sm: 0.75rem;
   --size-icon: 0.875rem;
   --size-icon-lg: 1rem;
@@ -259,8 +256,11 @@
   --shadow-overlay: var(--shadow-overlay);
   --shadow-modal: var(--shadow-modal);
 
-  --z-index-chrome: var(--z-index-chrome);
   --z-index-content: var(--z-index-content);
+  --z-index-chrome: var(--z-index-chrome);
+  --z-index-popover: var(--z-index-popover);
+  --z-index-drawer: var(--z-index-drawer);
+  --z-index-toast: var(--z-index-toast);
 
   --spacing-tight: var(--space-tight-gap);
   --spacing-snug: var(--space-snug-gap);

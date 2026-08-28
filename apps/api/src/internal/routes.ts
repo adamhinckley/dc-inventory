@@ -6,6 +6,8 @@ import { registerInternalInvoiceRoutes } from "../adapters/http/internal-invoice
 import { registerInternalLicensingRoutes } from "../adapters/http/internal-licensing.js";
 import { registerInternalPurchaseOrderRoutes } from "../adapters/http/internal-purchase-orders.js";
 import { registerInternalSalesOrderRoutes } from "../adapters/http/internal-sales-orders.js";
+import { registerInternalSupplierProductRoutes } from "../adapters/http/internal-supplier-products.js";
+import { registerInternalSupplierRoutes } from "../adapters/http/internal-suppliers.js";
 import { registerInternalProductRoutes } from "../adapters/http/internal-products.js";
 
 /** Staff mount (`/internal`). Auth, customers, catalog products, purchasing, and sales. */
@@ -15,6 +17,8 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalCustomerRoutes(app);
   registerInternalProductRoutes(app);
   registerInternalPurchaseOrderRoutes(app);
+  registerInternalSupplierRoutes(app);
+  registerInternalSupplierProductRoutes(app);
   registerInternalSalesOrderRoutes(app);
   registerInternalInvoiceRoutes(app);
   registerInternalLicensingRoutes(app);

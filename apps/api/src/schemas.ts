@@ -419,8 +419,26 @@ export const purchaseOrderIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const purchaseOrderExportQuerySchema = z.object({
+  format: z.enum(["xlsx", "csv"]).default("xlsx"),
+});
+
+export const binaryFileResponseSchema = z.instanceof(Buffer);
+
 export const purchaseOrderWriteBodySchema = z.object({
   supplierId: z.string().uuid(),
+  lines: z
+    .array(
+      z.object({
+        sku: z.string().min(1),
+        name: z.string().min(1),
+        qty: z.number().int().positive(),
+      }),
+    )
+    .min(1),
+});
+
+export const purchaseOrderReplaceLinesBodySchema = z.object({
   lines: z
     .array(
       z.object({
@@ -463,6 +481,145 @@ export const purchaseOrdersListTable = {
     defaultBy: "documentNumber",
     defaultOrder: "asc",
     fields: ["documentNumber", "status"],
+  },
+};
+
+export const supplierListQuerySchema = z.object({
+  q: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const supplierItemSchema = z.object({
+  id: z.string().uuid(),
+  vendorNumber: z.string(),
+  name: z.string(),
+});
+
+export const supplierListResponseSchema = z.object({
+  items: z.array(supplierItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const supplierWriteBodySchema = z.object({
+  name: z.string().min(1),
+  vendorNumber: z.string().min(1),
+});
+
+export const supplierPatchBodySchema = z.object({
+  name: z.string().min(1).optional(),
+  vendorNumber: z.string().min(1).optional(),
+});
+
+export const supplierIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const duplicateVendorNumberResponseSchema = z.object({
+  error: z.literal("duplicate_vendor_number"),
+});
+
+export const suppliersListTable = {
+  rowId: "id",
+  columns: [
+    { field: "vendorNumber", label: "Vendor #" },
+    { field: "name", label: "Name" },
+  ],
+  search: {
+    param: "q",
+    fields: ["vendorNumber", "name"],
+    placeholder: "Search vendor # or name",
+  },
+};
+
+export const supplierProductListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const supplierProductQtySchema = z.object({
+  onHand: z.number().int(),
+  onOrder: z.number().int(),
+  allocated: z.number().int(),
+  available: z.number().int(),
+});
+
+export const supplierProductItemSchema = z.object({
+  id: z.string().uuid(),
+  sku: z.string(),
+  catalogName: z.string(),
+  supplierSku: z.string().nullable(),
+  minOrderQty: z.number().int().nullable(),
+  minOrderAmountCents: z.number().int().nullable(),
+  lastPoCostCents: z.number().int().nullable(),
+  currency: z.string().length(3),
+  qty: supplierProductQtySchema,
+});
+
+export const supplierProductWriteItemSchema = z.object({
+  id: z.string().uuid(),
+  sku: z.string(),
+  supplierSku: z.string().nullable(),
+  minOrderQty: z.number().int().nullable(),
+  minOrderAmountCents: z.number().int().nullable(),
+  lastPoCostCents: z.number().int().nullable(),
+  currency: z.string().length(3),
+});
+
+export const supplierProductListResponseSchema = z.object({
+  items: z.array(supplierProductItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const supplierProductWriteBodySchema = z.object({
+  sku: z.string().min(1),
+  supplierSku: z.string().nullable().optional(),
+  minOrderQty: z.number().int().min(0).nullable().optional(),
+  minOrderAmountCents: z.number().int().min(0).nullable().optional(),
+  lastPoCostCents: z.number().int().min(0).nullable().optional(),
+  currency: z.string().length(3).optional(),
+});
+
+export const supplierProductPatchBodySchema = z.object({
+  supplierSku: z.string().nullable().optional(),
+  minOrderQty: z.number().int().min(0).nullable().optional(),
+  minOrderAmountCents: z.number().int().min(0).nullable().optional(),
+  lastPoCostCents: z.number().int().min(0).nullable().optional(),
+  currency: z.string().length(3).optional(),
+});
+
+export const supplierProductParamsSchema = z.object({
+  id: z.string().uuid(),
+  productId: z.string().uuid(),
+});
+
+export const unknownSkuResponseSchema = z.object({
+  error: z.literal("unknown_sku"),
+});
+
+export const supplierProductsListTable = {
+  rowId: "id",
+  columns: [
+    { field: "sku", label: "SKU" },
+    { field: "catalogName", label: "Product" },
+    { field: "supplierSku", label: "Vendor item #" },
+    { field: "minOrderQty", label: "Min qty" },
+    { field: "minOrderAmountCents", label: "Min $ (¢)" },
+    { field: "lastPoCostCents", label: "Last cost (¢)" },
+    { field: "currency", label: "Currency" },
+    { field: "qty.onHand", label: "On hand" },
+    { field: "qty.onOrder", label: "On order" },
+    { field: "qty.allocated", label: "Allocated" },
+    { field: "qty.available", label: "Available" },
+  ],
+  sort: {
+    defaultBy: "sku",
+    defaultOrder: "asc",
+    fields: ["sku", "catalogName", "qty.onHand", "qty.available"],
   },
 };
 

@@ -59,6 +59,17 @@
 
   --sidebar-width-expanded: 240px;
   --sidebar-width-collapsed: 56px;
+
+  /* --- Z-index -------------------------------------------------------------- */
+  /* Utilities: z-content, z-chrome, z-popover, z-drawer, z-toast.
+     Combobox/Select/Menu/Tooltip/Dialog use z-popover; Drawer uses z-drawer;
+     Toast uses z-toast. AppShell main is z-content; nav/topbar are z-chrome. */
+
+  --z-index-content: 1;     /* page body — AppShell <main> */
+  --z-index-chrome: 20;     /* sidebar, topbar */
+  --z-index-popover: 30;    /* portaled dropdowns, menus, tooltips, dialogs */
+  --z-index-drawer: 40;     /* edge drawers */
+  --z-index-toast: 50;      /* toast viewport */
 }
 
 /* --- Behavioral Archetypes -------------------------------------------------- */

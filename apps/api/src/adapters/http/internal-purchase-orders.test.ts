@@ -130,4 +130,110 @@ describe("internal purchase orders HTTP", () => {
     expect(received.statusCode).toBe(200);
     expect(received.json()).toMatchObject({ status: "received" });
   });
+
+  it("replaces lines on a draft purchase order and rejects confirmed", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 5 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string; lines: Array<{ id: string }> };
+
+    const replaced = await app.inject({
+      method: "PATCH",
+      url: `/internal/purchase-orders/${po.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        lines: [
+          { sku: "HEX-BOLT-GALV", name: "Hex bolt updated", qty: 8 },
+          { sku: "WASHER-SS", name: "Washer", qty: 2 },
+        ],
+      },
+    });
+    expect(replaced.statusCode).toBe(200);
+    const updated = replaced.json() as {
+      status: string;
+      lines: Array<{ name: string; qty: number; receivedQty: number }>;
+    };
+    expect(updated.status).toBe("draft");
+    expect(updated.lines).toHaveLength(2);
+    expect(updated.lines[0]).toMatchObject({ name: "Hex bolt updated", qty: 8, receivedQty: 0 });
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-confirm-after-replace" },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const blocked = await app.inject({
+      method: "PATCH",
+      url: `/internal/purchase-orders/${po.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ sku: "HEX-BOLT-GALV", name: "Too late", qty: 1 }] },
+    });
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json()).toEqual({ error: "conflict" });
+  });
+
+  it("exports purchase order lines as xlsx and returns 404 for missing id", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 5 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string };
+
+    const exported = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/export?format=xlsx`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(exported.statusCode).toBe(200);
+    expect(exported.headers["content-type"]).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    expect(exported.headers["content-disposition"]).toMatch(/PO-00001\.xlsx/);
+    expect(exported.rawPayload.length).toBeGreaterThan(0);
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-export-confirm" },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const exportedConfirmed = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/export?format=xlsx`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(exportedConfirmed.statusCode).toBe(200);
+
+    const missing = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders/99999999-9999-4999-8999-999999999999/export?format=xlsx",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toEqual({ error: "not_found" });
+  });
 });

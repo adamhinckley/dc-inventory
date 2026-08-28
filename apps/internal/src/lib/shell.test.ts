@@ -26,7 +26,7 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "app/(auth)/login/page.tsx"))).toBe(true);
   });
 
-  it("puts DataTable only on the catalog example page", () => {
+  it("puts DataTable on catalog and purchasing supplier routes", () => {
     const catalogPage = readFileSync(
       join(srcRoot, "app/(dashboard)/catalog/page.tsx"),
       "utf8",
@@ -42,9 +42,15 @@ describe("internal dashboard shell", () => {
     expect(catalog).toMatch(/useListInternalProducts/);
     expect(catalog).toMatch(/replaceTableUrlParams/);
 
+    const suppliers = readFileSync(
+      join(srcRoot, "components/suppliers-table.tsx"),
+      "utf8",
+    );
+    expect(suppliers).toMatch(/DataTable\.Root/);
+    expect(suppliers).toMatch(/useListInternalSuppliers/);
+
     const placeholders = [
       "customers",
-      "purchasing",
       "inventory",
       "sales",
       "accounting",
@@ -59,5 +65,23 @@ describe("internal dashboard shell", () => {
       expect(text, route).not.toMatch(/import\s*\{[^}]*\bDataTable\b/);
       expect(text, route).toMatch(/DashboardPlaceholder/);
     }
+
+    const purchasingPage = readFileSync(
+      join(srcRoot, "app/(dashboard)/purchasing/page.tsx"),
+      "utf8",
+    );
+    expect(purchasingPage).toMatch(/searchParams/);
+    expect(purchasingPage).toMatch(/listParamsFromSearchParams/);
+
+    const draftPurchaseOrders = readFileSync(
+      join(srcRoot, "components/draft-purchase-orders-table.tsx"),
+      "utf8",
+    );
+    expect(draftPurchaseOrders).toMatch(/DataTable\.Root/);
+    expect(draftPurchaseOrders).toMatch(/useListInternalPurchaseOrders/);
+
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/purchasing/suppliers/page.tsx")),
+    ).toBe(true);
   });
 });
