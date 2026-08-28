@@ -10,7 +10,7 @@ export type InventoryUnitOfWorkScope = {
 
 /**
  * Shared in-memory unit of work for inventory tests. Serializes work and rolls back
- * movements and snapshots when the callback throws.
+ * snapshots plus appended movements when the callback throws.
  */
 export class InMemoryInventoryUnitOfWork implements InventoryUnitOfWorkScope {
   readonly readModel: InMemoryInventoryReadModel;
@@ -26,12 +26,12 @@ export class InMemoryInventoryUnitOfWork implements InventoryUnitOfWorkScope {
   run<T>(work: (scope: InventoryUnitOfWorkScope) => Promise<T>): Promise<T> {
     const next = this.queue.then(async () => {
       const snapshotsBefore = this.readModel.cloneSnapshots();
-      const movementsBefore = this.readModel.cloneMovements();
+      const movementCountBefore = this.readModel.movementCount();
       try {
         return await work(this);
       } catch (error) {
         this.readModel.restoreSnapshots(snapshotsBefore);
-        this.readModel.restoreMovements(movementsBefore);
+        this.readModel.truncateMovements(movementCountBefore);
         throw error;
       }
     });

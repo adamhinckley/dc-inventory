@@ -121,7 +121,7 @@ export class InMemoryStockLedger implements IStockLedger {
       refType: command.refType,
       refId: command.refId,
       idempotencyKey: command.idempotencyKey,
-      createdAt: this.clock?.now() ?? new Date(),
+      createdAt: this.clock ? new Date(this.clock.now().getTime()) : new Date(),
     });
 
     this.readModel.appendMovement(movement);

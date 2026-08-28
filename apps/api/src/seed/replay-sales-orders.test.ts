@@ -34,6 +34,7 @@ import {
 } from "./planner/constants.js";
 import { mean } from "./planner/corpus-samplers.js";
 import { isWithinLastDays } from "./planner/dates.js";
+import { allocateInstant } from "./planner/allocate-instant.js";
 import { planDemoBook } from "./planner/plan-demo-book.js";
 import { PHASE1_PRODUCT_SKUS } from "./phase1-fixture.js";
 import { InMemoryProductImageSeedRepository } from "./ports/in-memory-product-image-seed.js";
@@ -327,19 +328,19 @@ describe("replay sales orders (in-memory)", () => {
     expect(shippedMovements.length).toBe(expectedShippedLines);
     expect(allocated.length).toBeGreaterThan(shippedMovements.length);
 
+    const orderById = new Map(listed.items.map((row) => [row.id, row]));
     for (const movement of movements) {
       if (movement.refType !== "sales_order") {
         continue;
       }
-      const order = listed.items.find((row) => row.id === movement.refId);
+      const order = orderById.get(movement.refId);
       expect(order).toBeDefined();
       const planned = plannedForDocumentNumber(order!.documentNumber);
-      const shipInstant =
-        shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
+      const shipAt = shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
       const expectedInstant =
         movement.movementType === "Shipped"
-          ? shipInstant
-          : new Date(Math.min(planned!.plannedInstant.getTime(), shipInstant.getTime()));
+          ? shipAt
+          : allocateInstant(planned!.plannedInstant, shipAt, planned!.status === "shipped");
       expect(movement.createdAt.getTime()).toBe(expectedInstant.getTime());
     }
 
