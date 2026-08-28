@@ -14,6 +14,7 @@ import {
   purchaseOrderListQuerySchema,
   purchaseOrderListResponseSchema,
   purchaseOrderReceiveBodySchema,
+  purchaseOrderReplaceLinesBodySchema,
   purchaseOrderWriteBodySchema,
   purchaseOrdersListTable,
   unauthorizedResponseSchema,
@@ -138,6 +139,47 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         return sendInvalid(reply);
       }
       return reply.code(201).send(mapPurchaseOrder(result.purchaseOrder));
+    },
+  );
+
+  routes.patch(
+    "/purchase-orders/:id",
+    {
+      schema: {
+        operationId: "replaceInternalPurchaseOrderLines",
+        tags: ["internal"],
+        summary: "Replace lines on a draft purchase order",
+        params: purchaseOrderIdParamsSchema,
+        body: purchaseOrderReplaceLinesBodySchema,
+        response: {
+          200: purchaseOrderItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.replacePurchaseOrderLines.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+        lines: request.body.lines,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return sendNotFound(reply);
+        }
+        if (result.reason === "illegal_transition") {
+          return sendConflict(reply);
+        }
+        if (result.reason === "empty_order") {
+          return sendInvalid(reply);
+        }
+        return sendInvalid(reply);
+      }
+      return mapPurchaseOrder(result.purchaseOrder);
     },
   );
 

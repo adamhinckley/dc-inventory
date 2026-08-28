@@ -81,6 +81,7 @@ import {
   ListSupplierProductsUseCase,
   ListSuppliersUseCase,
   ReceivePurchaseOrderUseCase,
+  ReplacePurchaseOrderLinesUseCase,
   UnlinkSupplierProductUseCase,
   UpdateSupplierProductUseCase,
   UpdateSupplierUseCase,
@@ -177,6 +178,7 @@ export type PurchasingHttpServices = {
   getPurchaseOrder: GetPurchaseOrderUseCase;
   confirmPurchaseOrder: ConfirmPurchaseOrderUseCase;
   receivePurchaseOrder: ReceivePurchaseOrderUseCase;
+  replacePurchaseOrderLines: ReplacePurchaseOrderLinesUseCase;
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
   listSuppliers: ListSuppliersUseCase;
   createSupplier: CreateSupplierUseCase;
@@ -316,6 +318,7 @@ function purchasingServices(
     getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
+    replacePurchaseOrderLines: new ReplacePurchaseOrderLinesUseCase(purchaseOrderRepo),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
     listSuppliers: new ListSuppliersUseCase(supplierRepo),
     createSupplier: new CreateSupplierUseCase(supplierRepo),

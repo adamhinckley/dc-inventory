@@ -20,6 +20,7 @@ import {
   CreatePurchaseOrderUseCase,
   ListPurchaseOrdersUseCase,
   ReceivePurchaseOrderUseCase,
+  ReplacePurchaseOrderLinesUseCase,
 } from "../src/index.js";
 
 const SKU = Sku.parse("PO-TEST-SKU");
@@ -46,6 +47,7 @@ async function harness() {
     confirm: new ConfirmPurchaseOrderUseCase(uow),
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
+    replaceLines: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
   };
 }
@@ -186,6 +188,110 @@ describe("Purchasing (in-memory)", () => {
     const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(0);
     expect(snap.onOrder).toBe(2);
+  });
+
+  it("replaces lines on a draft purchase order and rejects non-draft", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 5 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const replaced = await h.replaceLines.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      lines: [
+        { sku: SKU.value, name: "Bolt updated", qty: 8 },
+        { sku: "PO-OTHER-SKU", name: "Washer", qty: 2 },
+      ],
+    });
+    expect(replaced.ok).toBe(true);
+    if (!replaced.ok) {
+      return;
+    }
+    expect(replaced.purchaseOrder.status).toBe("draft");
+    expect(replaced.purchaseOrder.documentNumber).toBe(created.purchaseOrder.documentNumber);
+    expect(replaced.purchaseOrder.supplierId).toBe(created.purchaseOrder.supplierId);
+    expect(replaced.purchaseOrder.lines).toHaveLength(2);
+    expect(replaced.purchaseOrder.lines[0]).toMatchObject({
+      sku: SKU,
+      name: "Bolt updated",
+      qty: 8,
+      receivedQty: 0,
+    });
+    expect(replaced.purchaseOrder.lines[1]).toMatchObject({
+      name: "Washer",
+      qty: 2,
+      receivedQty: 0,
+    });
+    expect(replaced.purchaseOrder.lines[0]?.id).not.toBe(created.purchaseOrder.lines[0]?.id);
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-after-replace",
+    });
+
+    const blocked = await h.replaceLines.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      lines: [{ sku: SKU.value, name: "Too late", qty: 1 }],
+    });
+    expect(blocked.ok).toBe(false);
+    if (blocked.ok) {
+      return;
+    }
+    expect(blocked.reason).toBe("illegal_transition");
+  });
+
+  it("rejects empty and duplicate SKU lines on draft replace", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 5 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const empty = await h.replaceLines.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      lines: [],
+    });
+    expect(empty.ok).toBe(false);
+    if (empty.ok) {
+      return;
+    }
+    expect(empty.reason).toBe("empty_order");
+
+    const duplicate = await h.replaceLines.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      lines: [
+        { sku: SKU.value, name: "Bolt A", qty: 2 },
+        { sku: SKU.value, name: "Bolt B", qty: 3 },
+      ],
+    });
+    expect(duplicate.ok).toBe(false);
+    if (duplicate.ok) {
+      return;
+    }
+    expect(duplicate.reason).toBe("invalid");
   });
 
   it("rejects duplicate SKU lines at create", async () => {
