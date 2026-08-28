@@ -92,6 +92,25 @@ function thenableRows<T>(rows: T[]) {
 class FakePurchasingDb {
   readonly orders = new Map<string, OrderRow>();
   readonly lines = new Map<string, LineRow>();
+  failNextLineInsert = false;
+
+  async transaction<T>(work: (tx: FakePurchasingDb) => Promise<T>): Promise<T> {
+    const orderSnap = structuredClone([...this.orders.entries()]);
+    const lineSnap = structuredClone([...this.lines.entries()]);
+    try {
+      return await work(this);
+    } catch (error) {
+      this.orders.clear();
+      this.lines.clear();
+      for (const [id, row] of orderSnap) {
+        this.orders.set(id, row);
+      }
+      for (const [id, row] of lineSnap) {
+        this.lines.set(id, row);
+      }
+      throw error;
+    }
+  }
 
   select() {
     return {
@@ -110,6 +129,10 @@ class FakePurchasingDb {
   insert(table: unknown) {
     return {
       values: async (value: OrderRow | LineRow | Array<OrderRow | LineRow>) => {
+        if (table === purchaseOrderLines && this.failNextLineInsert) {
+          this.failNextLineInsert = false;
+          throw new Error("forced line insert failure");
+        }
         const rows = Array.isArray(value) ? value : [value];
         for (const row of rows) {
           if (table === purchaseOrders) {
@@ -180,5 +203,21 @@ describe("DrizzlePurchaseOrderRepository.save", () => {
     const loaded = await repo.findById(ORG, PO_ID);
     expect(loaded?.lines.map((row) => row.id).sort()).toEqual([LINE_B, LINE_C].sort());
     expect(loaded?.lines.filter((row) => row.sku.equals(SKU))).toHaveLength(1);
+  });
+
+  it("rolls back stale line deletes when a later line insert fails", async () => {
+    const db = new FakePurchasingDb();
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+
+    await repo.save(draft([line(LINE_A, SKU, "Bolt", 5)]));
+    db.failNextLineInsert = true;
+
+    await expect(
+      repo.save(draft([line(LINE_B, SKU, "Bolt updated", 8)])),
+    ).rejects.toThrow("forced line insert failure");
+
+    const loaded = await repo.findById(ORG, PO_ID);
+    expect(loaded?.lines.map((row) => row.id)).toEqual([LINE_A]);
+    expect(loaded?.lines[0]?.qty).toBe(5);
   });
 });

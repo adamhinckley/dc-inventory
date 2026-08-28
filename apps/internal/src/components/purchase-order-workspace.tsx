@@ -21,7 +21,7 @@ import {
   useMemo,
   useRef,
   useState,
-  type SubmitEvent,
+  type FormEvent,
 } from "react";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
 import {
@@ -79,7 +79,7 @@ function PurchaseOrderLineAdder({
     return new Map(items.map((product) => [product.sku, product]));
   }, [productsQuery.data]);
 
-  const submit = (event: SubmitEvent<HTMLFormElement>) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     if (!selectedSku) {
