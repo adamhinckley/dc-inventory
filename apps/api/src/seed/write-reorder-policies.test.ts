@@ -165,7 +165,9 @@ describe("write reorder policies (in-memory)", () => {
       },
     );
 
-    const movementCountBeforePolicies = (await uow.inventory.readModel.listMovements()).length;
+    const movementCountBeforePolicies = (
+      await uow.inventory.readModel.listMovements({ organizationId: OrganizationId.DEFAULT })
+    ).length;
 
     const reorderPolicies = new InMemoryReorderPolicySeedRepository();
     const write = await runWriteReorderPolicies(
@@ -181,7 +183,10 @@ describe("write reorder policies (in-memory)", () => {
     );
 
     expect(write.policyCount).toBe(DEMO_COUNTS.products);
-    expect((await uow.inventory.readModel.listMovements()).length).toBe(
+    expect(
+      (await uow.inventory.readModel.listMovements({ organizationId: OrganizationId.DEFAULT }))
+        .length,
+    ).toBe(
       movementCountBeforePolicies,
     );
 
@@ -204,6 +209,7 @@ describe("write reorder policies (in-memory)", () => {
       const snapshot = await uow.inventory.readModel.getSnapshot(
         row.product.sku,
         LocationId.DEFAULT,
+        OrganizationId.DEFAULT,
       );
       expect(policy!.maxOnHand).toBe(Math.max(policy!.minOnHand + 12, snapshot.onHand));
       if (snapshot.onHand === 0) {

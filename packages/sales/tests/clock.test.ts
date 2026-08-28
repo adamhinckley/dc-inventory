@@ -45,6 +45,7 @@ describe("Sales seed clock (in-memory)", () => {
     const h = await harness();
     await h.uow.run(async () => {
       const stock = await h.adjustmentIncrease.execute({
+        organizationId: DEFAULT_ORG,
         idempotencyKey: "clock-seed-stock",
         sku: SKU,
         quantity: 8,
@@ -86,7 +87,7 @@ describe("Sales seed clock (in-memory)", () => {
     }
     expect(shipped.salesOrder.status).toBe("shipped");
 
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(5);
     expect(snap.allocated).toBe(0);
 
@@ -101,6 +102,7 @@ describe("Sales seed clock (in-memory)", () => {
     const h = await harness();
     await h.uow.run(async () => {
       const stock = await h.adjustmentIncrease.execute({
+        organizationId: DEFAULT_ORG,
         idempotencyKey: "clock-seed-stock-posted",
         sku: SKU,
         quantity: 8,

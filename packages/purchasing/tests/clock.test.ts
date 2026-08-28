@@ -69,7 +69,7 @@ describe("Purchasing seed clock (in-memory)", () => {
       return;
     }
     expect(confirmed.purchaseOrder.status).toBe("confirmed");
-    expect((await h.snapshot.execute({ sku: SKU, locationId: DEFAULT })).onOrder).toBe(10);
+    expect((await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT })).onOrder).toBe(10);
 
     const received = await h.receive.execute({
       organizationId: DEFAULT_ORG,
@@ -83,7 +83,7 @@ describe("Purchasing seed clock (in-memory)", () => {
       return;
     }
     expect(received.purchaseOrder.status).toBe("received");
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(10);
     expect(snap.onOrder).toBe(0);
   });

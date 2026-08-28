@@ -58,6 +58,7 @@ async function seedStock(
 ) {
   await h.uow.run(async () => {
     const result = await h.adjustmentIncrease.execute({
+      organizationId: DEFAULT_ORG,
       idempotencyKey: `seed-${sku.value}-${quantity}`,
       sku,
       quantity,
@@ -154,7 +155,7 @@ describe("Sales (in-memory)", () => {
       lines: [{ sku: SKU.value, name: "Widget", qty: 100, unitPriceCents: 500, currency: "USD" }],
     });
     expect(created.ok).toBe(true);
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.available).toBe(0);
   });
 
@@ -206,10 +207,10 @@ describe("Sales (in-memory)", () => {
     }
     expect(confirmed.salesOrder.status).toBe("confirmed");
 
-    const snapA = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snapA = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snapA.allocated).toBe(4);
     expect(snapA.available).toBe(6);
-    const snapB = await h.snapshot.execute({ sku: SKU_B, locationId: DEFAULT });
+    const snapB = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU_B, locationId: DEFAULT });
     expect(snapB.allocated).toBe(3);
     expect(snapB.available).toBe(0);
   });
@@ -248,7 +249,7 @@ describe("Sales (in-memory)", () => {
     }
     expect(cancelled.salesOrder.status).toBe("cancelled");
 
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.allocated).toBe(0);
     expect(snap.available).toBe(8);
   });
@@ -332,7 +333,7 @@ describe("Sales (in-memory)", () => {
     }
     expect(shipped.salesOrder.status).toBe("shipped");
 
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.allocated).toBe(0);
     expect(snap.onHand).toBe(6);
     expect(snap.available).toBe(6);
@@ -385,7 +386,7 @@ describe("Sales (in-memory)", () => {
 
     const invoices = await h.uow.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id);
     expect(invoices).not.toBeNull();
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(3);
   });
 
@@ -458,6 +459,7 @@ describe("Sales (in-memory)", () => {
 
     await base.run(async () => {
       await adjustmentIncrease.execute({
+        organizationId: DEFAULT_ORG,
         idempotencyKey: "rollback-seed",
         sku: SKU,
         quantity: 6,
@@ -498,7 +500,7 @@ describe("Sales (in-memory)", () => {
 
     const reloaded = await failingUow.salesOrders.findById(DEFAULT_ORG, created.salesOrder.id);
     expect(reloaded?.status).toBe("confirmed");
-    const snap = await snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.allocated).toBe(3);
     expect(snap.onHand).toBe(6);
     expect(await base.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id)).toBeNull();

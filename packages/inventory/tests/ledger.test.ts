@@ -49,11 +49,13 @@ function harness() {
 }
 
 async function snapshot(h: ReturnType<typeof harness>): Promise<StockFigures> {
-  return h.getSnapshot.execute({ sku: SKU, locationId: DEFAULT });
+  return h.getSnapshot.execute({
+ organizationId: DEFAULT_ORG,
+sku: SKU, locationId: DEFAULT });
 }
 
 async function movements(h: ReturnType<typeof harness>) {
-  return h.readModel.listMovements({ sku: SKU, locationId: DEFAULT });
+  return h.readModel.listMovements({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
 }
 
 describe("Inventory ledger (in-memory)", () => {
@@ -65,7 +67,9 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.inboundFromPo.execute({
-            idempotencyKey: "inbound-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "inbound-1",
             sku: SKU,
             quantity: 5,
             refType: "purchase_order",
@@ -80,14 +84,18 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.inboundFromPo.execute({
-            idempotencyKey: "inbound-gr-setup",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "inbound-gr-setup",
             sku: SKU,
             quantity: 5,
             refType: "purchase_order",
             refId: PO_ID,
           });
           await h.goodsReceived.execute({
-            idempotencyKey: "receive-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "receive-1",
             sku: SKU,
             quantity: 5,
             refType: "purchase_order",
@@ -102,14 +110,18 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.inboundFromPo.execute({
-            idempotencyKey: "inbound-cancel-setup",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "inbound-cancel-setup",
             sku: SKU,
             quantity: 10,
             refType: "purchase_order",
             refId: PO_ID,
           });
           await h.inboundCancelled.execute({
-            idempotencyKey: "cancel-inbound-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "cancel-inbound-1",
             sku: SKU,
             quantity: 3,
             refType: "purchase_order",
@@ -124,14 +136,18 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.adjustmentIncrease.execute({
-            idempotencyKey: "adj-setup-alloc",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-setup-alloc",
             sku: SKU,
             quantity: 10,
             refType: "adjustment",
             refId: "adj-setup-alloc",
           });
           await h.allocated.execute({
-            idempotencyKey: "alloc-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "alloc-1",
             sku: SKU,
             quantity: 4,
             refType: "sales_order",
@@ -146,21 +162,27 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.adjustmentIncrease.execute({
-            idempotencyKey: "adj-setup-dealloc",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-setup-dealloc",
             sku: SKU,
             quantity: 10,
             refType: "adjustment",
             refId: "adj-setup-dealloc",
           });
           await h.allocated.execute({
-            idempotencyKey: "alloc-before-dealloc",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "alloc-before-dealloc",
             sku: SKU,
             quantity: 4,
             refType: "sales_order",
             refId: SO_ID,
           });
           await h.deallocated.execute({
-            idempotencyKey: "dealloc-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "dealloc-1",
             sku: SKU,
             quantity: 4,
             refType: "sales_order",
@@ -175,21 +197,27 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.adjustmentIncrease.execute({
-            idempotencyKey: "adj-setup-ship",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-setup-ship",
             sku: SKU,
             quantity: 10,
             refType: "adjustment",
             refId: "adj-setup-ship",
           });
           await h.allocated.execute({
-            idempotencyKey: "alloc-before-ship",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "alloc-before-ship",
             sku: SKU,
             quantity: 4,
             refType: "sales_order",
             refId: SO_ID,
           });
           await h.shipped.execute({
-            idempotencyKey: "ship-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "ship-1",
             sku: SKU,
             quantity: 4,
             refType: "sales_order",
@@ -204,7 +232,9 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.adjustmentIncrease.execute({
-            idempotencyKey: "adj-inc-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-inc-1",
             sku: SKU,
             quantity: 3,
             refType: "adjustment",
@@ -219,14 +249,18 @@ describe("Inventory ledger (in-memory)", () => {
         async () => {
           const h = harness();
           await h.adjustmentIncrease.execute({
-            idempotencyKey: "adj-dec-setup",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-dec-setup",
             sku: SKU,
             quantity: 10,
             refType: "adjustment",
             refId: "adj-dec-setup",
           });
           await h.adjustmentDecrease.execute({
-            idempotencyKey: "adj-dec-1",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-dec-1",
             sku: SKU,
             quantity: 3,
             refType: "adjustment",
@@ -248,21 +282,27 @@ describe("Inventory ledger (in-memory)", () => {
   it("keeps available equal to onHand minus allocated after mixed movements", async () => {
     const h = harness();
     await h.adjustmentIncrease.execute({
-      idempotencyKey: "mix-adj",
+
+      organizationId: DEFAULT_ORG,
+idempotencyKey: "mix-adj",
       sku: SKU,
       quantity: 20,
       refType: "adjustment",
       refId: "mix-adj",
     });
     await h.allocated.execute({
-      idempotencyKey: "mix-alloc-a",
+
+      organizationId: DEFAULT_ORG,
+idempotencyKey: "mix-alloc-a",
       sku: SKU,
       quantity: 6,
       refType: "sales_order",
       refId: SO_ID,
     });
     await h.allocated.execute({
-      idempotencyKey: "mix-alloc-b",
+
+      organizationId: DEFAULT_ORG,
+idempotencyKey: "mix-alloc-b",
       sku: SKU,
       quantity: 5,
       refType: "sales_order",
@@ -285,7 +325,7 @@ describe("Inventory ledger (in-memory)", () => {
       onOrder: 1,
       allocated: 1,
       available: 1,
-    });
+    }, DEFAULT_ORG);
     const first = await snapshot(h);
     expect(Object.isFrozen(first)).toBe(true);
     expect(() => {
@@ -299,7 +339,9 @@ describe("Inventory ledger (in-memory)", () => {
     it.each([0, -1, -10])("rejects quantity %i", async (quantity) => {
       const h = harness();
       const result = await h.inboundFromPo.execute({
-        idempotencyKey: `qty-${String(quantity)}`,
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: `qty-${String(quantity)}`,
         sku: SKU,
         quantity,
         refType: "purchase_order",
@@ -318,14 +360,18 @@ describe("Inventory ledger (in-memory)", () => {
     it("rejects a decrease that would make onHand negative", async () => {
       const h = harness();
       await h.adjustmentIncrease.execute({
-        idempotencyKey: "adj-guard-onhand",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-guard-onhand",
         sku: SKU,
         quantity: 5,
         refType: "adjustment",
         refId: "adj-guard-onhand",
       });
       const result = await h.adjustmentDecrease.execute({
-        idempotencyKey: "adj-dec-too-much-onhand",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-dec-too-much-onhand",
         sku: SKU,
         quantity: 6,
         refType: "adjustment",
@@ -347,21 +393,27 @@ describe("Inventory ledger (in-memory)", () => {
     it("rejects a decrease that would make available negative while stock is allocated", async () => {
       const h = harness();
       await h.adjustmentIncrease.execute({
-        idempotencyKey: "adj-guard-available",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-guard-available",
         sku: SKU,
         quantity: 10,
         refType: "adjustment",
         refId: "adj-guard-available",
       });
       await h.allocated.execute({
-        idempotencyKey: "adj-guard-alloc",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-guard-alloc",
         sku: SKU,
         quantity: 8,
         refType: "sales_order",
         refId: SO_ID,
       });
       const result = await h.adjustmentDecrease.execute({
-        idempotencyKey: "adj-dec-too-much-available",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "adj-dec-too-much-available",
         sku: SKU,
         quantity: 5,
         refType: "adjustment",
@@ -385,6 +437,7 @@ describe("Inventory ledger (in-memory)", () => {
     it("treats the same key and payload as a no-op success without a duplicate movement", async () => {
       const h = harness();
       const command = {
+        organizationId: DEFAULT_ORG,
         idempotencyKey: "idem-1",
         sku: SKU,
         quantity: 4,
@@ -407,7 +460,9 @@ describe("Inventory ledger (in-memory)", () => {
     it("rejects the same key with a different payload", async () => {
       const h = harness();
       const first = await h.inboundFromPo.execute({
-        idempotencyKey: "idem-conflict",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "idem-conflict",
         sku: SKU,
         quantity: 4,
         refType: "purchase_order",
@@ -415,7 +470,9 @@ describe("Inventory ledger (in-memory)", () => {
       });
       expect(first.ok).toBe(true);
       const second = await h.inboundFromPo.execute({
-        idempotencyKey: "idem-conflict",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "idem-conflict",
         sku: SKU,
         quantity: 5,
         refType: "purchase_order",
@@ -438,27 +495,35 @@ describe("Inventory ledger (in-memory)", () => {
     it("scopes idempotency per sku for multi-line commands", async () => {
       const h = harness();
       await h.inboundFromPo.execute({
-        idempotencyKey: "multi-sku",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "multi-sku",
         sku: SKU,
         quantity: 2,
         refType: "purchase_order",
         refId: PO_ID,
       });
       await h.inboundFromPo.execute({
-        idempotencyKey: "multi-sku",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "multi-sku",
         sku: OTHER_SKU,
         quantity: 3,
         refType: "purchase_order",
         refId: PO_ID,
       });
-      expect(await h.readModel.listMovements()).toHaveLength(2);
-      expect(await h.getSnapshot.execute({ sku: SKU })).toEqual({
+      expect(await h.readModel.listMovements({ organizationId: DEFAULT_ORG })).toHaveLength(2);
+      expect(await h.getSnapshot.execute({
+ organizationId: DEFAULT_ORG,
+sku: SKU })).toEqual({
         onHand: 0,
         onOrder: 2,
         allocated: 0,
         available: 0,
       });
-      expect(await h.getSnapshot.execute({ sku: OTHER_SKU })).toEqual({
+      expect(await h.getSnapshot.execute({
+ organizationId: DEFAULT_ORG,
+sku: OTHER_SKU })).toEqual({
         onHand: 0,
         onOrder: 3,
         allocated: 0,
@@ -474,7 +539,9 @@ describe("Inventory ledger (in-memory)", () => {
         const h = harness();
         if (movementType === "InboundFromPo" || movementType === "InboundCancelled") {
           await h.inboundFromPo.execute({
-            idempotencyKey: "prov-setup",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "prov-setup",
             sku: SKU,
             quantity: 5,
             refType: "purchase_order",
@@ -487,7 +554,9 @@ describe("Inventory ledger (in-memory)", () => {
           movementType === "Shipped"
         ) {
           await h.adjustmentIncrease.execute({
-            idempotencyKey: "prov-onhand",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "prov-onhand",
             sku: SKU,
             quantity: 10,
             refType: "adjustment",
@@ -495,7 +564,9 @@ describe("Inventory ledger (in-memory)", () => {
           });
           if (movementType === "Deallocated" || movementType === "Shipped") {
             await h.allocated.execute({
-              idempotencyKey: "prov-alloc-setup",
+
+              organizationId: DEFAULT_ORG,
+idempotencyKey: "prov-alloc-setup",
               sku: SKU,
               quantity: 4,
               refType: "sales_order",
@@ -520,21 +591,27 @@ describe("Inventory ledger (in-memory)", () => {
     it("allows multiple GoodsReceived movements for partial receipts", async () => {
       const h = harness();
       await h.inboundFromPo.execute({
-        idempotencyKey: "partial-inbound",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "partial-inbound",
         sku: SKU,
         quantity: 10,
         refType: "purchase_order",
         refId: PO_ID,
       });
       const first = await h.goodsReceived.execute({
-        idempotencyKey: "partial-receive-1",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "partial-receive-1",
         sku: SKU,
         quantity: 4,
         refType: "purchase_order",
         refId: PO_ID,
       });
       const second = await h.goodsReceived.execute({
-        idempotencyKey: "partial-receive-2",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "partial-receive-2",
         sku: SKU,
         quantity: 3,
         refType: "purchase_order",
@@ -554,14 +631,18 @@ describe("Inventory ledger (in-memory)", () => {
     it("allows repeated adjustments against the same sku", async () => {
       const h = harness();
       const first = await h.adjustmentIncrease.execute({
-        idempotencyKey: "repeat-adj-1",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "repeat-adj-1",
         sku: SKU,
         quantity: 2,
         refType: "adjustment",
         refId: "count-1",
       });
       const second = await h.adjustmentIncrease.execute({
-        idempotencyKey: "repeat-adj-2",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "repeat-adj-2",
         sku: SKU,
         quantity: 3,
         refType: "adjustment",
@@ -583,7 +664,9 @@ describe("Inventory ledger (in-memory)", () => {
     it("leaves movements and snapshots unchanged when work fails", async () => {
       const h = harness();
       await h.adjustmentIncrease.execute({
-        idempotencyKey: "rollback-seed",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "rollback-seed",
         sku: SKU,
         quantity: 5,
         refType: "adjustment",
@@ -596,7 +679,9 @@ describe("Inventory ledger (in-memory)", () => {
         h.uow.run(async (scope) => {
           const decrease = new RecordAdjustmentDecreaseUseCase(scope.ledger);
           const result = await decrease.execute({
-            idempotencyKey: "rollback-fail",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "rollback-fail",
             sku: SKU,
             quantity: 10,
             refType: "adjustment",
@@ -615,7 +700,9 @@ describe("Inventory ledger (in-memory)", () => {
     it("forgets idempotency from a rolled-back movement", async () => {
       const h = harness();
       await h.adjustmentIncrease.execute({
-        idempotencyKey: "rollback-keep",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "rollback-keep",
         sku: SKU,
         quantity: 5,
         refType: "adjustment",
@@ -626,7 +713,9 @@ describe("Inventory ledger (in-memory)", () => {
         h.uow.run(async (scope) => {
           const increase = new RecordAdjustmentIncreaseUseCase(scope.ledger);
           const result = await increase.execute({
-            idempotencyKey: "rollback-idempotency",
+
+            organizationId: DEFAULT_ORG,
+idempotencyKey: "rollback-idempotency",
             sku: SKU,
             quantity: 1,
             refType: "adjustment",
@@ -638,7 +727,9 @@ describe("Inventory ledger (in-memory)", () => {
       ).rejects.toThrow("boom");
 
       const retried = await h.adjustmentIncrease.execute({
-        idempotencyKey: "rollback-idempotency",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "rollback-idempotency",
         sku: SKU,
         quantity: 1,
         refType: "adjustment",
@@ -653,7 +744,9 @@ describe("Inventory ledger (in-memory)", () => {
     it("cannot allocate more than available across two successful commands", async () => {
       const h = harness();
       await h.adjustmentIncrease.execute({
-        idempotencyKey: "oversell-seed",
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey: "oversell-seed",
         sku: SKU,
         quantity: 10,
         refType: "adjustment",
@@ -662,7 +755,9 @@ describe("Inventory ledger (in-memory)", () => {
 
       const first = await h.uow.run((scope) =>
         new RecordAllocatedUseCase(scope.ledger).execute({
-          idempotencyKey: "oversell-a",
+
+          organizationId: DEFAULT_ORG,
+idempotencyKey: "oversell-a",
           sku: SKU,
           quantity: 8,
           refType: "sales_order",
@@ -671,7 +766,9 @@ describe("Inventory ledger (in-memory)", () => {
       );
       const second = await h.uow.run((scope) =>
         new RecordAllocatedUseCase(scope.ledger).execute({
-          idempotencyKey: "oversell-b",
+
+          organizationId: DEFAULT_ORG,
+idempotencyKey: "oversell-b",
           sku: SKU,
           quantity: 8,
           refType: "sales_order",
@@ -814,7 +911,9 @@ async function executeProvenanceCommand(
   switch (movementType) {
     case "InboundFromPo":
       return h.inboundFromPo.execute({
-        idempotencyKey,
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey,
         sku: SKU,
         quantity: 5,
         refType: "purchase_order",
@@ -822,7 +921,9 @@ async function executeProvenanceCommand(
       });
     case "InboundCancelled":
       return h.inboundCancelled.execute({
-        idempotencyKey,
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey,
         sku: SKU,
         quantity: 5,
         refType: "purchase_order",
@@ -830,7 +931,9 @@ async function executeProvenanceCommand(
       });
     case "Allocated":
       return h.allocated.execute({
-        idempotencyKey,
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey,
         sku: SKU,
         quantity: 4,
         refType: "sales_order",
@@ -838,7 +941,9 @@ async function executeProvenanceCommand(
       });
     case "Deallocated":
       return h.deallocated.execute({
-        idempotencyKey,
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey,
         sku: SKU,
         quantity: 4,
         refType: "sales_order",
@@ -846,7 +951,9 @@ async function executeProvenanceCommand(
       });
     case "Shipped":
       return h.shipped.execute({
-        idempotencyKey,
+
+        organizationId: DEFAULT_ORG,
+idempotencyKey,
         sku: SKU,
         quantity: 4,
         refType: "sales_order",

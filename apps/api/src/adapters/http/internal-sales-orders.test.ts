@@ -103,6 +103,7 @@ describe("internal sales orders HTTP", () => {
 
     await unitOfWork.run(async (scope) => {
       const result = await new RecordAdjustmentIncreaseUseCase(scope.inventory.ledger).execute({
+        organizationId: OrganizationId.DEFAULT,
         idempotencyKey: "http-seed-stock",
         sku: SKU,
         quantity: 10,

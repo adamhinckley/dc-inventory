@@ -49,6 +49,7 @@ export async function runWriteReorderPolicies(
     const snapshot = await ports.inventoryReadModel.getSnapshot(
       row.product.sku,
       input.locationId,
+      OrganizationId.DEFAULT,
     );
     onHandBySku.set(row.product.sku.value, snapshot.onHand);
   }

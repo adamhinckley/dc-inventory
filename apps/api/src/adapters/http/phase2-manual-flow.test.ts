@@ -284,7 +284,11 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
     const { app, unitOfWork } = await startPhase2ManualFlowApp();
     const cookie = await staffCookie(app);
 
-    const zeroStock = await unitOfWork.inventory.readModel.getSnapshot(SKU, LocationId.DEFAULT);
+    const zeroStock = await unitOfWork.inventory.readModel.getSnapshot(
+      SKU,
+      LocationId.DEFAULT,
+      OrganizationId.DEFAULT,
+    );
     expect(zeroStock).toEqual({
       onHand: 0,
       onOrder: 0,
@@ -431,6 +435,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
     const finalSnapshot = await unitOfWork.inventory.readModel.getSnapshot(
       SKU,
       LocationId.DEFAULT,
+      OrganizationId.DEFAULT,
     );
     expect(finalSnapshot).toEqual({
       onHand: RECEIVE_QTY - SELL_QTY,
