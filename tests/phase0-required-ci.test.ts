@@ -49,7 +49,7 @@ describe("required CI: Compose + db:migrate + GET /ready (ADA-55)", () => {
     expect(script).toContain("postgres://postgres:postgres@localhost:5432/dc_inventory");
     expect(script).not.toMatch(/secrets\./);
     expect(script).not.toMatch(/IFileStorage/);
-    // Migrate script stays Docker-only; pnpm test runs in ci-quality (ADA-196).
+    expect(script).not.toMatch(/\bpnpm test\b/);
     expect(script).not.toMatch(/migrate.*\/ready|\/ready.*migrate/i);
   });
 

@@ -37,11 +37,19 @@ describe("required CI: test, lint, gen:api drift (ADA-196)", () => {
     expect(script).toContain("pnpm lint");
     expect(script).toContain("pnpm gen:api");
     expect(script).toContain("git diff --exit-code");
+    expect(script).toContain("git status --porcelain");
     expect(script).toContain("openapi/");
     expect(script).toContain("packages/api-client-internal/src/generated/");
     expect(script).toContain("packages/api-client-wholesale/src/generated/");
     expect(script).toContain("packages/api-client-ops/src/generated/");
     expect(script).not.toMatch(/\bdocker\b|\bdocker compose\b|\bpnpm db:migrate\b/);
+  });
+
+  it("covers x-table table metadata via openapi drift (gen:api exports x-table)", () => {
+    const internalOpenApi = readText("openapi/internal.yaml");
+    expect(internalOpenApi).toContain("x-table:");
+    const script = readText(scriptPath);
+    expect(script).toContain("openapi/");
   });
 
   it("keeps dependency-direction guards in Vitest (run via pnpm test)", () => {
