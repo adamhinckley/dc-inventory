@@ -30,7 +30,20 @@ export interface IPurchaseOrderRepository {
   ): Promise<PurchaseOrder | null>;
 }
 
+export type ListSuppliersQuery = {
+  organizationId: OrganizationId;
+  q?: string;
+  page: number;
+  pageSize: number;
+};
+
+export type SupplierListPage = {
+  items: readonly import("../supplier.js").Supplier[];
+  total: number;
+};
+
 export interface ISupplierRepository {
+  list(query: ListSuppliersQuery): Promise<SupplierListPage>;
   findById(organizationId: OrganizationId, id: SupplierId): Promise<import("../supplier.js").Supplier | null>;
   save(supplier: import("../supplier.js").Supplier): Promise<void>;
   findByVendorNumber(
