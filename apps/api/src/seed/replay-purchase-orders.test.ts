@@ -139,7 +139,9 @@ describe("replay purchase orders (in-memory)", () => {
     );
 
     expect(replay.purchaseOrderCount).toBe(DEMO_COUNTS.purchaseOrders);
-    expect(replay.lastDocumentNumber).toBe("PO-03000");
+    expect(replay.lastDocumentNumber).toBe(
+      `PO-${String(DEMO_COUNTS.purchaseOrders).padStart(5, "0")}`,
+    );
     expect(replay.leftoverConfirmedCount).toBe(plan.leftoverConfirmedPurchaseOrderCount);
     expect(replay.leftoverConfirmedCount).toBeGreaterThanOrEqual(
       FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedPurchaseOrderMin,

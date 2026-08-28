@@ -480,8 +480,24 @@ export function planSalesOrders(input: {
 
   if (counts.salesOrders > 20) {
     const harvestShipped = orders.filter((row) => row.customerKey === "harvest" && row.status === "shipped");
-    const harvestQ4 = harvestShipped.filter((row) => isQ4Month(row.plannedInstant)).length;
     const harvestTarget = Math.round(harvestShipped.length * HARVEST_Q4_SHIPPED_FRACTION);
+    let harvestQ4 = harvestShipped.filter((row) => isQ4Month(row.plannedInstant)).length;
+    const nonQ4 = harvestShipped.filter((row) => !isQ4Month(row.plannedInstant));
+    let cursor = 0;
+    while (harvestQ4 < harvestTarget && cursor < nonQ4.length) {
+      const order = nonQ4[cursor];
+      if (order === undefined) {
+        break;
+      }
+      order.plannedInstant = sampleHistoricalInstant(
+        input.rng,
+        input.historicalStart,
+        input.seedToday,
+        { seedToday: input.seedToday, q4Only: true },
+      );
+      harvestQ4 += 1;
+      cursor += 1;
+    }
     if (harvestQ4 < harvestTarget) {
       throw new Error("Harvest Q4 shipped fraction not met");
     }
