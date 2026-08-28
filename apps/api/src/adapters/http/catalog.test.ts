@@ -277,6 +277,15 @@ describe("catalog HTTP", () => {
     expect(missing.statusCode).toBe(401);
 
     const cookie = await staffCookie(app);
+    const notMultipart = await app.inject({
+      method: "POST",
+      url: "/internal/products/import",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { dryRun: true },
+    });
+    expect(notMultipart.statusCode).toBe(400);
+    expect(notMultipart.json()).toEqual({ error: "invalid" });
+
     const csv = [
       "product_id,item,vendor_num,vendor,mp_price,uom,mfg_code,onhand_qty,webwholesale",
       "DC-IMPORT-1,Crystal Drop,1075,REGXJ,10.20,EA,JA149015,99,TRUE",

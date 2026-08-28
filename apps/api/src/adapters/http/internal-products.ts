@@ -149,7 +149,12 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
       },
     },
     async (request, reply) => {
-      const file = await request.file();
+      let file: Awaited<ReturnType<typeof request.file>>;
+      try {
+        file = await request.file();
+      } catch {
+        return sendInvalid(reply);
+      }
       if (file === undefined) {
         return sendInvalid(reply);
       }

@@ -16,4 +16,13 @@ describe("CsvWorkbookParser", () => {
     expect(rows[0]?.item).toContain("Styrofoam");
     expect(rows[0]?.vendor).toBe("FloraCraft");
   });
+
+  it("returns no data rows when the CSV has headers only", async () => {
+    const csv = "product_id,item,vendor_num,vendor\n";
+    const rows = await new CsvWorkbookParser().parse({
+      bytes: new TextEncoder().encode(csv),
+      filename: "products.csv",
+    });
+    expect(rows).toEqual([]);
+  });
 });

@@ -39,6 +39,17 @@ export class ImportProductBrowserUseCase {
   ) {}
 
   async execute(input: ImportProductBrowserRequest): Promise<ImportProductBrowserResult> {
+    if (input.rows.length === 0) {
+      return {
+        dryRun: input.dryRun,
+        rowsOk: 0,
+        created: 0,
+        updated: 0,
+        linked: 0,
+        errors: [],
+      };
+    }
+
     const headerErrors = missingProductBrowserHeaders(input.rows[0]);
     if (headerErrors.length > 0) {
       return {

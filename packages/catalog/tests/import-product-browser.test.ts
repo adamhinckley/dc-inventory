@@ -147,6 +147,25 @@ describe("ImportProductBrowserUseCase", () => {
     });
   });
 
+  it("treats a header-only workbook as zero rows, not missing headers", async () => {
+    const h = harness();
+    const result = await h.importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: true,
+      rows: [],
+    });
+
+    expect(result).toEqual({
+      dryRun: true,
+      rowsOk: 0,
+      created: 0,
+      updated: 0,
+      linked: 0,
+      errors: [],
+    });
+  });
+
   it("does not write qty fields from the dump", async () => {
     const h = harness();
     await h.importCatalog.execute({
