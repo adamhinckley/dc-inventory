@@ -2,10 +2,7 @@ import type { Product } from "@dc-inventory/catalog";
 import type { Customer, ExemptionCertificate, ShipTo } from "@dc-inventory/customers";
 import { ExemptionCertificateId, ShipToId } from "@dc-inventory/customers";
 import type { StaffUser, WholesaleUser } from "@dc-inventory/identity";
-import {
-  runPhase2Bootstrap,
-  type Phase2BootstrapResult,
-} from "@dc-inventory/inventory";
+import { type Phase2BootstrapResult } from "@dc-inventory/inventory";
 import type { Supplier } from "@dc-inventory/purchasing";
 import {
   CustomerId,
@@ -23,6 +20,16 @@ import type { StaticDemoSeedPorts } from "./ports/static-seed-types.js";
 import { upsertDefaultOrganization } from "./upsert-default-organization.js";
 
 export const STATIC_EXEMPTION_EXPIRY_DAYS = 365;
+
+export type WriteStaticDemoBookOptions = {
+  /**
+   * When false, skip products, product images, planned suppliers, supplier
+   * products, and the Demo Supplier bootstrap row. Location, customers, and
+   * users still write. Defaults to true so in-memory planner tests keep a
+   * synthetic catalog.
+   */
+  persistCatalog?: boolean;
+};
 
 export type StaticDemoSeedResult = {
   bootstrap: Phase2BootstrapResult;
@@ -156,7 +163,9 @@ export async function runWriteStaticDemoBook(
   ports: StaticDemoSeedPorts,
   plan: DemoBookPlan,
   secrets: Phase1SeedSecrets,
+  options: WriteStaticDemoBookOptions = {},
 ): Promise<StaticDemoSeedResult> {
+  const persistCatalog = options.persistCatalog !== false;
   const staffPassword = requirePassword("PHASE1_STAFF_PASSWORD", secrets.staffPassword);
   const wholesalePassword = requirePassword(
     "PHASE1_WHOLESALE_PASSWORD",
@@ -165,37 +174,48 @@ export async function runWriteStaticDemoBook(
 
   await upsertDefaultOrganization(ports.organizations);
 
-  const bootstrap = await runPhase2Bootstrap(ports.phase2Bootstrap);
+  const location = await ports.phase2Bootstrap.upsertDefaultLocation();
+  const bootstrap: Phase2BootstrapResult = persistCatalog
+    ? { location, supplier: await ports.phase2Bootstrap.upsertPrerequisiteSupplier() }
+    : {
+        location,
+        supplier: {
+          id: SupplierId.parse("00000000-0000-4000-8000-000000000001"),
+          vendorNumber: "UNSEEDED",
+        },
+      };
   const supplierByKey = new Map<string, Supplier>();
 
-  for (const planned of plan.master.suppliers) {
-    const supplier = await upsertSupplier(ports, planned);
-    supplierByKey.set(planned.key, supplier);
+  if (persistCatalog) {
+    for (const planned of plan.master.suppliers) {
+      const supplier = await upsertSupplier(ports, planned);
+      supplierByKey.set(planned.key, supplier);
+    }
   }
 
   const products: Product[] = [];
-  const productIdBySku = new Map<string, ProductId>();
-  for (const planned of plan.master.products) {
-    const product = await upsertProduct(ports, planned);
-    products.push(product);
-    productIdBySku.set(planned.sku, product.id);
-    await ports.productImages.save({
-      productId: product.id,
-      objectKey: planned.imageObjectKey,
-      contentType: planned.imageContentType,
-    });
-  }
-
-  for (const planned of plan.master.supplierProducts) {
-    const supplier = supplierByKey.get(planned.supplierKey);
-    if (supplier === undefined) {
-      throw new Phase1SeedError(`missing supplier key ${planned.supplierKey}`);
+  if (persistCatalog) {
+    for (const planned of plan.master.products) {
+      const product = await upsertProduct(ports, planned);
+      products.push(product);
+      await ports.productImages.save({
+        productId: product.id,
+        objectKey: planned.imageObjectKey,
+        contentType: planned.imageContentType,
+      });
     }
-    await ports.supplierProducts.save({
-      supplierId: supplier.id,
-      sku: planned.sku,
-      minOrderQty: planned.minOrderQty,
-    });
+
+    for (const planned of plan.master.supplierProducts) {
+      const supplier = supplierByKey.get(planned.supplierKey);
+      if (supplier === undefined) {
+        throw new Phase1SeedError(`missing supplier key ${planned.supplierKey}`);
+      }
+      await ports.supplierProducts.save({
+        supplierId: supplier.id,
+        sku: planned.sku,
+        minOrderQty: planned.minOrderQty,
+      });
+    }
   }
 
   const customerByKey = new Map<string, Customer>();

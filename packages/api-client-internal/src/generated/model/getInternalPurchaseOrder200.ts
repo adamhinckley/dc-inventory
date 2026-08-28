@@ -14,5 +14,9 @@ export type GetInternalPurchaseOrder200 = {
   supplierId: string;
   documentNumber: string;
   status: GetInternalPurchaseOrder200Status;
+  /** @nullable */
+  shipDate: string | null;
+  /** @nullable */
+  cancelDate: string | null;
   lines: GetInternalPurchaseOrder200LinesItem[];
 };

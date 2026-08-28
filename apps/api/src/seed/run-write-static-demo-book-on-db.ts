@@ -33,6 +33,7 @@ import type { StaticDemoSeedPorts } from "./ports/static-seed-types.js";
 import {
   runWriteStaticDemoBook,
   type StaticDemoSeedResult,
+  type WriteStaticDemoBookOptions,
 } from "./write-static-demo-book.js";
 import type { Phase1SeedSecrets } from "./run-phase1-seed.js";
 
@@ -44,6 +45,7 @@ export async function runWriteStaticDemoBookOnDb(
   db: AppDrizzle,
   plan: DemoBookPlan,
   secrets: Phase1SeedSecrets,
+  options: WriteStaticDemoBookOptions = {},
 ): Promise<StaticDemoSeedResult> {
   const suppliers = new DrizzleSupplierRepository(db as never);
   const ports: StaticDemoSeedPorts = {
@@ -104,5 +106,5 @@ export async function runWriteStaticDemoBookOnDb(
     },
   };
 
-  return runWriteStaticDemoBook(ports, plan, secrets);
+  return runWriteStaticDemoBook(ports, plan, secrets, options);
 }

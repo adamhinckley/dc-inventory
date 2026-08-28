@@ -83,6 +83,8 @@ async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder)
       supplierId: order.supplierId,
       status: order.status,
       documentNumber: order.documentNumber,
+      shipDate: order.shipDate,
+      cancelDate: order.cancelDate,
       createdAt: order.createdAt,
     });
     for (const line of order.lines) {
@@ -104,6 +106,8 @@ async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder)
       supplierId: order.supplierId,
       status: order.status,
       documentNumber: order.documentNumber,
+      shipDate: order.shipDate,
+      cancelDate: order.cancelDate,
       updatedAt: new Date(),
     })
     .where(purchaseOrderHeaderMatch(order));
@@ -157,6 +161,8 @@ function toOrder(
     supplierId: SupplierId.parse(header.supplierId),
     documentNumber: header.documentNumber,
     status: header.status,
+    shipDate: header.shipDate,
+    cancelDate: header.cancelDate,
     createdAt: header.createdAt,
     lines,
   };

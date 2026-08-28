@@ -7,10 +7,11 @@ import type {
   ListedProduct,
   ProductListMatch,
 } from "../domain/ports/product-repository.js";
-import { products } from "../persistence/schema.js";
+import { products, productPackaging } from "../persistence/schema.js";
 
 export type CatalogDrizzle = PostgresJsDatabase<{
   products: typeof products;
+  productPackaging: typeof productPackaging;
 }>;
 
 function toProduct(row: typeof products.$inferSelect): Product {

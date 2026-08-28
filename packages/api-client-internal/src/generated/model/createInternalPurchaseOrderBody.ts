@@ -9,6 +9,16 @@ import type { CreateInternalPurchaseOrderBodyLinesItem } from './createInternalP
 export type CreateInternalPurchaseOrderBody = {
   /** @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$ */
   supplierId: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  shipDate?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  cancelDate?: string | null;
   /** @minItems 1 */
   lines: CreateInternalPurchaseOrderBodyLinesItem[];
 };

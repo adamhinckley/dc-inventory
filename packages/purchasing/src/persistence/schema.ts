@@ -1,6 +1,7 @@
 import {
   bigint,
   char,
+  date,
   integer,
   pgEnum,
   pgSchema,
@@ -71,6 +72,8 @@ export const purchaseOrders = purchasing.table(
       .references(() => suppliers.id),
     status: poStatus("status").notNull().default("draft"),
     documentNumber: text("document_number").notNull(),
+    shipDate: date("ship_date", { mode: "string" }),
+    cancelDate: date("cancel_date", { mode: "string" }),
     ...timestamps(),
   },
   (table) => [unique().on(table.organizationId, table.documentNumber)],

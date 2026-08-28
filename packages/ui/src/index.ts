@@ -25,6 +25,8 @@ export {
   type UseFormSubmitOptions,
 } from "./ui/Form";
 export { FormDialog, type FormDialogProps } from "./ui/FormDialog";
+export { Dialog } from "./ui/Dialog";
+export { DateInput, type DateInputProps } from "./ui/DateInput";
 export { ExplorerView, useExplorerView } from "./layouts/ExplorerView";
 export {
   DetailView,

@@ -1,5 +1,6 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
 import Fastify, {
   type FastifyInstance,
@@ -39,6 +40,7 @@ import {
 } from "./infrastructure/request-id.js";
 import { internalRoutes } from "./internal/routes.js";
 import { opsRoutes } from "./ops/routes.js";
+import { SPREADSHEET_UPLOAD_MAX_BYTES } from "./schemas.js";
 import { swaggerTransform } from "./swagger-transform.js";
 import { wholesaleRoutes } from "./wholesale/routes.js";
 
@@ -72,6 +74,12 @@ async function registerAudienceMounts(
 
 async function registerCookie(app: FastifyInstance): Promise<void> {
   await app.register(cookie);
+}
+
+async function registerMultipart(app: FastifyInstance): Promise<void> {
+  await app.register(multipart, {
+    limits: { fileSize: SPREADSHEET_UPLOAD_MAX_BYTES, files: 1 },
+  });
 }
 
 async function registerCors(app: FastifyInstance): Promise<void> {
@@ -109,6 +117,7 @@ export async function buildAudienceApp(
   app.decorate("licensingStore", services.licensingStore);
   applyHttpCompilers(app);
   await registerCookie(app);
+  await registerMultipart(app);
 
   await app.register(swagger, {
     openapi: {
@@ -152,6 +161,7 @@ export async function buildApp(
   registerRequestIdHook(app);
   await registerCookie(app);
   await registerCors(app);
+  await registerMultipart(app);
   registerHealthRoutes(app);
   registerPingRoute(app);
   await registerAudienceMounts(app);

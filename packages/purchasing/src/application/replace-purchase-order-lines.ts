@@ -5,6 +5,7 @@ import {
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IPurchaseOrderRepository } from "../domain/ports/purchase-order-repository.js";
+import { parseIsoDate } from "../domain/iso-date.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
 
@@ -19,6 +20,8 @@ export type ReplacePurchaseOrderLinesRequest = {
   staffUserId: StaffUserId;
   purchaseOrderId: PurchaseOrderId;
   lines: readonly ReplacePurchaseOrderLineInput[];
+  shipDate?: string | null;
+  cancelDate?: string | null;
 };
 
 export type ReplacePurchaseOrderLinesResult =
@@ -73,7 +76,20 @@ export class ReplacePurchaseOrderLinesUseCase {
       }
     }
 
-    const updated: PurchaseOrder = { ...existing, lines };
+    const shipDate =
+      input.shipDate === undefined ? existing.shipDate : parseIsoDate(input.shipDate);
+    const cancelDate =
+      input.cancelDate === undefined ? existing.cancelDate : parseIsoDate(input.cancelDate);
+    if (shipDate === "invalid" || cancelDate === "invalid") {
+      return { ok: false, reason: "invalid" };
+    }
+
+    const updated: PurchaseOrder = {
+      ...existing,
+      shipDate,
+      cancelDate,
+      lines,
+    };
     await this.purchaseOrders.save(updated);
     return { ok: true, purchaseOrder: updated };
   }

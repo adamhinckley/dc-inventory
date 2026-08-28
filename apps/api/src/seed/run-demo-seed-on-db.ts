@@ -26,6 +26,7 @@ export type RunDemoSeedOnDbInput = {
   onProgress?: DemoSeedProgressReporter;
   deadline?: DemoSeedDeadline;
   expectations?: DemoReconciliationExpectations;
+  persistCatalog?: boolean;
 };
 
 export type RunDemoSeedOnDbResult = {
@@ -51,7 +52,22 @@ export async function runDemoSeedOnDb(
   };
 
   tick(input, "static master data");
-  const staticResult = await runWriteStaticDemoBookOnDb(input.db, input.plan, input.secrets);
+  const persistCatalog = input.persistCatalog !== false;
+  const staticResult = await runWriteStaticDemoBookOnDb(
+    input.db,
+    input.plan,
+    input.secrets,
+    { persistCatalog },
+  );
+
+  if (!persistCatalog) {
+    input.deadline?.assertWithinBudget();
+    return {
+      staffUserId: staticResult.staff.id,
+      reconciliation: { ok: true },
+      elapsedMs: Date.now() - startedAt,
+    };
+  }
 
   tick(input, "purchase order playback");
   await runReplayPurchaseOrdersOnDb(input.db, input.plan, {

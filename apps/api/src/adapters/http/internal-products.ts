@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { Product, ProductQty } from "@dc-inventory/catalog";
+import { CsvWorkbookParser } from "@dc-inventory/catalog";
 import { ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   duplicateSkuResponseSchema,
@@ -10,12 +11,15 @@ import {
   notFoundResponseSchema,
   productDetailSchema,
   productIdParamsSchema,
+  productImportQuerySchema,
+  productImportResultSchema,
   productListResponseSchema,
   productPatchBodySchema,
   productWriteBodySchema,
   productsListTable,
   qtyNotAllowedResponseSchema,
   skuImmutableResponseSchema,
+  SPREADSHEET_UPLOAD_MAX_BYTES,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
@@ -126,6 +130,60 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
         pageSize: result.pageSize,
         total: result.total,
       };
+    },
+  );
+
+  routes.post(
+    "/products/import",
+    {
+      schema: {
+        operationId: "importInternalProducts",
+        tags: ["internal"],
+        summary: "Import Product Browser CSV into catalog and vendors",
+        querystring: productImportQuerySchema,
+        response: {
+          200: productImportResultSchema,
+          400: invalidResponseSchema,
+          401: unauthorizedResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const file = await request.file();
+      if (file === undefined) {
+        return sendInvalid(reply);
+      }
+      const filename = file.filename.toLowerCase();
+      const csvLike =
+        filename.endsWith(".csv") ||
+        file.mimetype === "text/csv" ||
+        file.mimetype === "application/vnd.ms-excel" ||
+        file.mimetype === "application/octet-stream" ||
+        file.mimetype === "text/plain";
+      if (!csvLike) {
+        return sendInvalid(reply);
+      }
+      let bytes: Uint8Array;
+      try {
+        bytes = await file.toBuffer();
+      } catch {
+        return sendInvalid(reply);
+      }
+      if (bytes.byteLength > SPREADSHEET_UPLOAD_MAX_BYTES) {
+        return sendInvalid(reply);
+      }
+      const rows = await new CsvWorkbookParser().parse({
+        bytes,
+        filename: file.filename,
+        contentType: file.mimetype,
+      });
+      const query = request.query as { dryRun?: boolean };
+      return request.server.catalog.importProductBrowser.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        rows,
+        dryRun: query.dryRun === true,
+      });
     },
   );
 

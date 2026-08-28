@@ -113,6 +113,11 @@ import type {
   GetInternalSupplier400,
   GetInternalSupplier401,
   GetInternalSupplier404,
+  ImportInternalProducts200,
+  ImportInternalProducts400,
+  ImportInternalProducts401,
+  ImportInternalProductsBody,
+  ImportInternalProductsParams,
   ListInternalCustomerContacts200,
   ListInternalCustomerContacts400,
   ListInternalCustomerContacts401,
@@ -2130,6 +2135,111 @@ export const useCreateInternalProduct = <TError = CreateInternalProduct400 | Cre
         TContext
       > => {
       return useMutation(getCreateInternalProductMutationOptions(options));
+    }
+
+export type importInternalProductsResponse200 = {
+  data: ImportInternalProducts200
+  status: 200
+}
+
+export type importInternalProductsResponse400 = {
+  data: ImportInternalProducts400
+  status: 400
+}
+
+export type importInternalProductsResponse401 = {
+  data: ImportInternalProducts401
+  status: 401
+}
+
+export type importInternalProductsResponseSuccess = (importInternalProductsResponse200) & {
+  headers: Headers;
+};
+export type importInternalProductsResponseError = (importInternalProductsResponse400 | importInternalProductsResponse401) & {
+  headers: Headers;
+};
+
+export type importInternalProductsResponse = (importInternalProductsResponseSuccess | importInternalProductsResponseError)
+
+export const getImportInternalProductsUrl = (params?: ImportInternalProductsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/products/import?${stringifiedParams}` : `/internal/products/import`
+}
+
+/**
+ * @summary Import Product Browser CSV into catalog and vendors
+ */
+export const importInternalProducts = async (importInternalProductsBody: ImportInternalProductsBody,
+    params?: ImportInternalProductsParams, options?: Parameters<typeof customFetch>[1]): Promise<importInternalProductsResponse> => {
+    const formData = new FormData();
+formData.append(`file`, importInternalProductsBody.file);
+
+  return customFetch<importInternalProductsResponse>(getImportInternalProductsUrl(params),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+
+export const getImportInternalProductsMutationOptions = <TError = ImportInternalProducts400 | ImportInternalProducts401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext> => {
+
+const mutationKey = ['importInternalProducts'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importInternalProducts>>, {data: ImportInternalProductsBody;params?: ImportInternalProductsParams}> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  importInternalProducts(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportInternalProductsMutationResult = NonNullable<Awaited<ReturnType<typeof importInternalProducts>>>
+    export type ImportInternalProductsMutationBody = ImportInternalProductsBody
+    export type ImportInternalProductsMutationError = ImportInternalProducts400 | ImportInternalProducts401
+
+    /**
+ * @summary Import Product Browser CSV into catalog and vendors
+ */
+export const useImportInternalProducts = <TError = ImportInternalProducts400 | ImportInternalProducts401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importInternalProducts>>,
+        TError,
+        {data: ImportInternalProductsBody;params?: ImportInternalProductsParams},
+        TContext
+      > => {
+      return useMutation(getImportInternalProductsMutationOptions(options));
     }
 
 export type getInternalProductResponse200 = {

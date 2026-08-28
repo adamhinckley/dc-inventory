@@ -1,9 +1,22 @@
 import { jsonSchemaTransform } from "fastify-type-provider-zod";
+import { SPREADSHEET_UPLOAD_MAX_BYTES } from "./schemas.js";
 
 type SchemaWithTable = {
   "x-table"?: unknown;
   operationId?: string;
 };
+
+const spreadsheetImportBody = {
+  type: "object",
+  required: ["file"],
+  properties: {
+    file: {
+      type: "string",
+      format: "binary",
+      description: `Product Browser CSV. Max ${String(SPREADSHEET_UPLOAD_MAX_BYTES)} bytes.`,
+    },
+  },
+} as const;
 
 const spreadsheetExportResponse = {
   description: "Spreadsheet file",
@@ -28,6 +41,14 @@ export function swaggerTransform(
   const table = schema?.["x-table"];
   if (table !== undefined && transformed.schema) {
     (transformed.schema as SchemaWithTable)["x-table"] = table;
+  }
+  if (schema?.operationId === "importInternalProducts" && transformed.schema) {
+    const target = transformed.schema as {
+      consumes?: string[];
+      body?: unknown;
+    };
+    target.consumes = ["multipart/form-data"];
+    target.body = spreadsheetImportBody;
   }
   if (schema?.operationId === "exportInternalPurchaseOrder" && transformed.schema) {
     (transformed.schema as { response?: Record<string, unknown> }).response = {

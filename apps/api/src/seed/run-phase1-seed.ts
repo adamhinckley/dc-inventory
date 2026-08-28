@@ -1,4 +1,3 @@
-import type { IProductRepository, Product } from "@dc-inventory/catalog";
 import type { Customer, ICustomerRepository } from "@dc-inventory/customers";
 import type {
   IPasswordHasher,
@@ -11,8 +10,6 @@ import type {
 import {
   CustomerId,
   Money,
-  ProductId,
-  Sku,
   OrganizationId,
   StaffUserId,
   WholesaleUserId,
@@ -22,15 +19,12 @@ import {
   PHASE1_CUSTOMER_CURRENCY,
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
-  PHASE1_PRODUCTS,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
-  type Phase1ProductFixture,
 } from "./phase1-fixture.js";
 import { upsertDefaultOrganization } from "./upsert-default-organization.js";
 
 export type Phase1SeedPorts = {
-  products: IProductRepository;
   customers: ICustomerRepository;
   organizations: IOrganizationRepository;
   staffUsers: IStaffUserRepository;
@@ -47,7 +41,6 @@ export type Phase1SeedResult = {
   customer: Customer;
   staff: StaffUser;
   wholesale: WholesaleUser;
-  products: Product[];
 };
 
 export class Phase1SeedError extends Error {
@@ -117,32 +110,9 @@ async function upsertWholesale(
   return wholesale;
 }
 
-async function upsertProduct(
-  ports: Phase1SeedPorts,
-  fixture: Phase1ProductFixture,
-): Promise<Product> {
-  const sku = Sku.parse(fixture.sku);
-  const existing = await ports.products.findBySku(OrganizationId.DEFAULT, sku);
-  const product: Product = {
-    id: existing?.id ?? ProductId.parse(newId()),
-    organizationId: OrganizationId.DEFAULT,
-    sku,
-    name: fixture.name,
-    description: null,
-    uom: fixture.uom,
-    memberPrice: Money.fromMinorUnits(fixture.memberPriceCents, fixture.currency),
-    inactive: false,
-    discontinued: false,
-    webWholesale: true,
-    taxCategoryCode: null,
-  };
-  await ports.products.save(product);
-  return product;
-}
-
 /**
  * Upsert Phase 1 local/demo rows. Does not write contacts, ship-tos,
- * exemptions, ops users, sessions, or stock snapshots.
+ * exemptions, ops users, sessions, stock snapshots, products, or vendors.
  */
 export async function runPhase1Seed(
   ports: Phase1SeedPorts,
@@ -158,10 +128,6 @@ export async function runPhase1Seed(
   await upsertDefaultOrganization(ports.organizations);
   const staff = await upsertStaff(ports, staffPassword);
   const wholesale = await upsertWholesale(ports, customer.id, wholesalePassword);
-  const products: Product[] = [];
-  for (const fixture of PHASE1_PRODUCTS) {
-    products.push(await upsertProduct(ports, fixture));
-  }
 
-  return { customer, staff, wholesale, products };
+  return { customer, staff, wholesale };
 }

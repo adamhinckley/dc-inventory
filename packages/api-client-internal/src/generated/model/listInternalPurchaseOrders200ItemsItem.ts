@@ -14,5 +14,9 @@ export type ListInternalPurchaseOrders200ItemsItem = {
   supplierId: string;
   documentNumber: string;
   status: ListInternalPurchaseOrders200ItemsItemStatus;
+  /** @nullable */
+  shipDate: string | null;
+  /** @nullable */
+  cancelDate: string | null;
   lines: ListInternalPurchaseOrders200ItemsItemLinesItem[];
 };

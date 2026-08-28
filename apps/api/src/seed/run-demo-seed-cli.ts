@@ -16,7 +16,6 @@ import {
 import { planDemoBook } from "./planner/plan-demo-book.js";
 import { Phase1SeedError } from "./run-phase1-seed.js";
 import { runDemoSeedOnDb } from "./run-demo-seed-on-db.js";
-import { DEMO_COUNTS } from "./planner/constants.js";
 
 function loadLocalEnvFiles(): void {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -58,12 +57,13 @@ try {
     secrets: config.secrets,
     onProgress,
     deadline,
+    persistCatalog: false,
   });
 
   await connection.sql.end({ timeout: 5 });
 
   console.log(
-    `Demo seed succeeded in ${String(Math.ceil(result.elapsedMs / 1000))}s: ${String(DEMO_COUNTS.products)} products, ${String(DEMO_COUNTS.purchaseOrders)} POs, ${String(DEMO_COUNTS.salesOrders)} SOs, ${String(DEMO_COUNTS.invoices)} invoices, ${String(DEMO_COUNTS.payments)} payments. Reconciliation passed.`,
+    `Demo seed succeeded in ${String(Math.ceil(result.elapsedMs / 1000))}s: staff, wholesale, and customers. Catalog and vendors stay empty until Product Browser import.`,
   );
 } catch (error) {
   if (

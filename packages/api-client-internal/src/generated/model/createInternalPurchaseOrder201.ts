@@ -14,5 +14,9 @@ export type CreateInternalPurchaseOrder201 = {
   supplierId: string;
   documentNumber: string;
   status: CreateInternalPurchaseOrder201Status;
+  /** @nullable */
+  shipDate: string | null;
+  /** @nullable */
+  cancelDate: string | null;
   lines: CreateInternalPurchaseOrder201LinesItem[];
 };

@@ -158,6 +158,27 @@ export const qtyNotAllowedResponseSchema = z.object({
   error: z.literal("qty_not_allowed"),
 });
 
+export const SPREADSHEET_UPLOAD_MAX_BYTES = 10_000_000;
+
+export const productImportQuerySchema = z.object({
+  dryRun: optionalBooleanQuery,
+});
+
+export const productImportErrorSchema = z.object({
+  row: z.number().int(),
+  field: z.string(),
+  message: z.string(),
+});
+
+export const productImportResultSchema = z.object({
+  dryRun: z.boolean(),
+  rowsOk: z.number().int(),
+  created: z.number().int(),
+  updated: z.number().int(),
+  linked: z.number().int(),
+  errors: z.array(productImportErrorSchema),
+});
+
 export const stubOpsSubscription = {
   status: "inactive" as const,
   plan: null,
@@ -398,6 +419,8 @@ export const purchaseOrderItemSchema = z.object({
   supplierId: z.string().uuid(),
   documentNumber: z.string(),
   status: purchaseOrderStatusSchema,
+  shipDate: z.string().nullable(),
+  cancelDate: z.string().nullable(),
   lines: z.array(purchaseOrderLineSchema),
 });
 
@@ -427,6 +450,8 @@ export const binaryFileResponseSchema = z.instanceof(Buffer);
 
 export const purchaseOrderWriteBodySchema = z.object({
   supplierId: z.string().uuid(),
+  shipDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  cancelDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   lines: z
     .array(
       z.object({
@@ -439,6 +464,8 @@ export const purchaseOrderWriteBodySchema = z.object({
 });
 
 export const purchaseOrderReplaceLinesBodySchema = z.object({
+  shipDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  cancelDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   lines: z
     .array(
       z.object({
