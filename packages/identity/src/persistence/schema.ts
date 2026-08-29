@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
   integer,
   pgSchema,
   primaryKey,
@@ -121,8 +123,8 @@ export const loginThrottleCounters = identity.table(
   "login_throttle_counters",
   {
     audience: actorType("audience").notNull(),
-    sourceHash: text("source_hash").notNull(),
-    accountIdentifierHash: text("account_identifier_hash").notNull(),
+    dimension: text("dimension").notNull(),
+    keyHash: text("key_hash").notNull(),
     attemptCount: integer("attempt_count").notNull(),
     windowStartedAt: timestamp("window_started_at", {
       withTimezone: true,
@@ -133,7 +135,11 @@ export const loginThrottleCounters = identity.table(
   (table) => [
     primaryKey({
       name: "login_throttle_counters_pk",
-      columns: [table.audience, table.sourceHash, table.accountIdentifierHash],
+      columns: [table.audience, table.dimension, table.keyHash],
     }),
+    check(
+      "login_throttle_counters_dimension_check",
+      sql`${table.dimension} in ('source', 'account_identifier')`,
+    ),
   ],
 );

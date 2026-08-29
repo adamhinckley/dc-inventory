@@ -41,7 +41,7 @@ describe("Phase 1 identity schema (ADA-77)", () => {
     expect(sql).not.toMatch(/CREATE TABLE "identity"\."verification"/);
   });
 
-  it("persists login throttle counters by hashed source and account identifier", () => {
+  it("persists independent hashed source and account-identifier counters", () => {
     const schema = readText("packages/identity/src/persistence/schema.ts");
     const migration = readText(
       "apps/api/drizzle/migrations/0022_identity_login_throttle.sql",
@@ -49,11 +49,12 @@ describe("Phase 1 identity schema (ADA-77)", () => {
 
     for (const source of [schema, migration]) {
       expect(source).toMatch(/login_throttle_counters/);
-      expect(source).toMatch(/source_hash/);
-      expect(source).toMatch(/account_identifier_hash/);
+      expect(source).toMatch(/dimension/);
+      expect(source).toMatch(/key_hash/);
       expect(source).toMatch(/attempt_count/);
       expect(source).toMatch(/window_started_at/);
     }
-    expect(migration).not.toMatch(/"email"|"source"/);
+    expect(migration).toMatch(/'source', 'account_identifier'/);
+    expect(migration).not.toMatch(/"email"/);
   });
 });

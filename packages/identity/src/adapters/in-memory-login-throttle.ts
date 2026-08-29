@@ -21,7 +21,31 @@ export class InMemoryLoginThrottle implements ILoginThrottle {
 
   async attempt(key: LoginThrottleKey): Promise<LoginThrottleResult> {
     const at = this.clock.now();
-    const storageKey = serializeKey(key);
+    const results = [
+      this.increment(serializeKey(key, "source"), at),
+      this.increment(serializeKey(key, "account_identifier"), at),
+    ];
+    const rejected = results.filter(
+      (result): result is Extract<LoginThrottleResult, { allowed: false }> =>
+        !result.allowed,
+    );
+    if (rejected.length === 0) {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(
+        ...rejected.map((result) => result.retryAfterSeconds),
+      ),
+    };
+  }
+
+  async reset(key: LoginThrottleKey): Promise<void> {
+    this.counters.delete(serializeKey(key, "source"));
+    this.counters.delete(serializeKey(key, "account_identifier"));
+  }
+
+  private increment(storageKey: string, at: Date): LoginThrottleResult {
     const current = this.counters.get(storageKey);
     const windowExpired =
       current === undefined ||
@@ -35,12 +59,12 @@ export class InMemoryLoginThrottle implements ILoginThrottle {
     this.counters.set(storageKey, counter);
     return loginThrottleResult(counter.attemptCount, counter.windowStartedAt, at);
   }
-
-  async reset(key: LoginThrottleKey): Promise<void> {
-    this.counters.delete(serializeKey(key));
-  }
 }
 
-function serializeKey(key: LoginThrottleKey): string {
-  return JSON.stringify([key.audience, key.source, key.accountIdentifier]);
+function serializeKey(
+  key: LoginThrottleKey,
+  dimension: "source" | "account_identifier",
+): string {
+  const value = dimension === "source" ? key.source : key.accountIdentifier;
+  return JSON.stringify([key.audience, dimension, value]);
 }

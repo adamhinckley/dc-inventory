@@ -330,14 +330,15 @@ describe("opaque session HTTP", () => {
       retryAfterSeconds: LOGIN_THROTTLE_WINDOW_MS / 1000,
     });
 
+    const { app: unknownApp } = await startAuthApp();
     const unknownAccountRequest = {
       ...request,
       payload: { ...request.payload, email: "missing@local.test" },
     };
     for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
-      expect((await app.inject(unknownAccountRequest)).statusCode).toBe(401);
+      expect((await unknownApp.inject(unknownAccountRequest)).statusCode).toBe(401);
     }
-    const unknownRejected = await app.inject(unknownAccountRequest);
+    const unknownRejected = await unknownApp.inject(unknownAccountRequest);
     expect(unknownRejected.statusCode).toBe(rejected.statusCode);
     expect(unknownRejected.headers["retry-after"]).toBe(
       rejected.headers["retry-after"],

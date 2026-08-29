@@ -57,10 +57,17 @@ describe("login throttling", () => {
     });
     await expect(
       throttle.attempt({ ...STAFF_KEY, source: "203.0.113.11" }),
-    ).resolves.toEqual({ allowed: true });
+    ).resolves.toMatchObject({ allowed: false });
     await expect(
       throttle.attempt({
         ...STAFF_KEY,
+        accountIdentifier: "acme\u0000other@example.com",
+      }),
+    ).resolves.toMatchObject({ allowed: false });
+    await expect(
+      throttle.attempt({
+        ...STAFF_KEY,
+        source: "203.0.113.11",
         accountIdentifier: "acme\u0000other@example.com",
       }),
     ).resolves.toEqual({ allowed: true });

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import type { IClock } from "../domain/clock.js";
 import {
   LOGIN_THROTTLE_WINDOW_MS,
@@ -21,24 +21,23 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
 
   async attempt(key: LoginThrottleKey): Promise<LoginThrottleResult> {
     const at = this.clock.now();
-    const sourceHash = hash(key.source);
-    const accountIdentifierHash = hash(key.accountIdentifier);
     const expiredBefore = new Date(at.getTime() - LOGIN_THROTTLE_WINDOW_MS);
-    const [counter] = await this.db
+    const counters = await this.db
       .insert(loginThrottleCounters)
-      .values({
-        audience: key.audience,
-        sourceHash,
-        accountIdentifierHash,
-        attemptCount: 1,
-        windowStartedAt: at,
-        updatedAt: at,
-      })
+      .values([
+        counterValue(key.audience, "source", key.source, at),
+        counterValue(
+          key.audience,
+          "account_identifier",
+          key.accountIdentifier,
+          at,
+        ),
+      ])
       .onConflictDoUpdate({
         target: [
           loginThrottleCounters.audience,
-          loginThrottleCounters.sourceHash,
-          loginThrottleCounters.accountIdentifierHash,
+          loginThrottleCounters.dimension,
+          loginThrottleCounters.keyHash,
         ],
         set: {
           attemptCount: sql<number>`case
@@ -56,10 +55,26 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
         attemptCount: loginThrottleCounters.attemptCount,
         windowStartedAt: loginThrottleCounters.windowStartedAt,
       });
-    if (counter === undefined) {
-      throw new Error("login throttle upsert returned no row");
+    if (counters.length !== 2) {
+      throw new Error("login throttle upsert did not return both counters");
     }
-    return loginThrottleResult(counter.attemptCount, counter.windowStartedAt, at);
+    const rejected = counters
+      .map((counter) =>
+        loginThrottleResult(counter.attemptCount, counter.windowStartedAt, at),
+      )
+      .filter(
+        (result): result is Extract<LoginThrottleResult, { allowed: false }> =>
+          !result.allowed,
+      );
+    if (rejected.length === 0) {
+      return { allowed: true };
+    }
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(
+        ...rejected.map((result) => result.retryAfterSeconds),
+      ),
+    };
   }
 
   async reset(key: LoginThrottleKey): Promise<void> {
@@ -68,11 +83,35 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
       .where(
         and(
           eq(loginThrottleCounters.audience, key.audience),
-          eq(loginThrottleCounters.sourceHash, hash(key.source)),
-          eq(loginThrottleCounters.accountIdentifierHash, hash(key.accountIdentifier)),
+          or(
+            and(
+              eq(loginThrottleCounters.dimension, "source"),
+              eq(loginThrottleCounters.keyHash, hash(key.source)),
+            ),
+            and(
+              eq(loginThrottleCounters.dimension, "account_identifier"),
+              eq(loginThrottleCounters.keyHash, hash(key.accountIdentifier)),
+            ),
+          ),
         ),
       );
   }
+}
+
+function counterValue(
+  audience: LoginThrottleKey["audience"],
+  dimension: "source" | "account_identifier",
+  value: string,
+  at: Date,
+) {
+  return {
+    audience,
+    dimension,
+    keyHash: hash(value),
+    attemptCount: 1,
+    windowStartedAt: at,
+    updatedAt: at,
+  };
 }
 
 function hash(value: string): string {

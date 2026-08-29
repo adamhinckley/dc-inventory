@@ -13,8 +13,8 @@ export type LoginThrottleResult =
 /**
  * Shared login-throttling port for all three audiences.
  *
- * `attempt` reserves one password check. A successful login clears that
- * source/account pair; failed attempts remain until the fixed window expires.
+ * `attempt` reserves one password check against independent source and account
+ * counters. A successful login clears both counters for that request.
  */
 export interface ILoginThrottle {
   attempt(key: LoginThrottleKey): Promise<LoginThrottleResult>;
