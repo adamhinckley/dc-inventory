@@ -21,6 +21,7 @@ export type {
   ICustomerLookupPort,
   IInventoryCommandPort,
   InventoryCommandResult,
+  InventorySnapshotLock,
   ISalesOrderRepository,
   ISalesUnitOfWork,
   ShippedCommand,

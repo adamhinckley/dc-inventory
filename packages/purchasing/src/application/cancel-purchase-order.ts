@@ -45,11 +45,16 @@ export class CancelPurchaseOrderUseCase {
           return { ok: true, purchaseOrder: cancelled };
         }
 
-        for (const line of existing.lines) {
-          const remainder = unreceivedQty(line);
-          if (remainder <= 0) {
-            continue;
-          }
+        const linesToCancel = existing.lines
+          .map((line) => ({ line, remainder: unreceivedQty(line) }))
+          .filter(({ remainder }) => remainder > 0);
+        await scope.inventory.lockSnapshots(
+          linesToCancel.map(({ line }) => ({
+            organizationId: existing.organizationId,
+            sku: line.sku,
+          })),
+        );
+        for (const { line, remainder } of linesToCancel) {
           const result = await scope.inventory.recordInboundCancelled({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:cancel:${line.id}`,

@@ -28,11 +28,11 @@ import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-comma
 
 /**
  * Postgres-backed unit of work for the composition root.
- * Serializes callers and runs each callback in one Drizzle transaction.
+ * Each callback runs in its own Drizzle transaction. Inventory adapters use
+ * row-level locks for the snapshot rows touched by that transaction.
  */
 export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   private readonly defaultLocationUuidByOrg = new Map<string, Promise<string>>();
-  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly db: AppDrizzle,
@@ -77,19 +77,12 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   }
 
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
-    const next = this.queue.then(() =>
-      this.db.transaction(async (tx) =>
-        this.runOnTransaction(
-          tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
-          work,
-        ),
+    return this.db.transaction(async (tx) =>
+      this.runOnTransaction(
+        tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
+        work,
       ),
     );
-    this.queue = next.then(
-      () => undefined,
-      () => undefined,
-    );
-    return next;
   }
 
   private async runOnTransaction<T>(

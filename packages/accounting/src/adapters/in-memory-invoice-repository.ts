@@ -104,6 +104,13 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
     return row.invoice;
   }
 
+  findByIdForPayment(
+    organizationId: OrganizationId,
+    id: InvoiceId,
+  ): Promise<Invoice | null> {
+    return this.findById(organizationId, id);
+  }
+
   async findByOrderId(
     organizationId: OrganizationId,
     orderId: OrderId,

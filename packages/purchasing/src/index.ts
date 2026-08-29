@@ -36,6 +36,7 @@ export type {
   InboundCancelledCommand,
   InboundFromPoCommand,
   InventoryCommandResult,
+  InventorySnapshotLock,
   IPurchaseOrderRepository,
   IPurchasingUnitOfWork,
   ISupplierRepository,

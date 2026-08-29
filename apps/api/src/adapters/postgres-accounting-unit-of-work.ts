@@ -7,11 +7,10 @@ import type { AppDrizzle } from "../infrastructure/db.js";
 
 /**
  * Postgres-backed accounting unit of work for payment recording.
- * Serializes callers and runs each callback in one Drizzle transaction.
+ * Each callback runs in its own transaction. Payment use cases lock their
+ * invoice row before checking and appending applications.
  */
 export class PostgresAccountingUnitOfWork implements IAccountingUnitOfWork {
-  private queue: Promise<unknown> = Promise.resolve();
-
   constructor(private readonly db: AppDrizzle) {}
 
   get invoices(): IAccountingUnitOfWork["invoices"] {
@@ -19,14 +18,9 @@ export class PostgresAccountingUnitOfWork implements IAccountingUnitOfWork {
   }
 
   run<T>(work: (uow: IAccountingUnitOfWork) => Promise<T>): Promise<T> {
-    const next = this.queue.then(() =>
-      this.db.transaction(async (tx) => this.runOnTransaction(tx as AccountingDrizzle, work)),
+    return this.db.transaction(async (tx) =>
+      this.runOnTransaction(tx as AccountingDrizzle, work),
     );
-    this.queue = next.then(
-      () => undefined,
-      () => undefined,
-    );
-    return next;
   }
 
   private async runOnTransaction<T>(
