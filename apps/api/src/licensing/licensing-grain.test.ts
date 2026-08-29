@@ -81,4 +81,13 @@ describe("licensing tenant grain (ADA-166)", () => {
     await expect(features.isEnabled(DEFAULT_ORG, "catalog")).resolves.toBe(true);
     await expect(features.isEnabled(BETA_ORG, "catalog")).resolves.toBe(false);
   });
+
+  it("disables core flags when subscription is past_due", async () => {
+    const features = new InMemoryFeatures(
+      new Map([[DEFAULT_ORG, { subscriptionStatus: "past_due", flagOverrides: [] }]]),
+    );
+
+    await expect(features.isEnabled(DEFAULT_ORG, "inventory")).resolves.toBe(false);
+    await expect(features.isEnabled(DEFAULT_ORG, "sales")).resolves.toBe(false);
+  });
 });

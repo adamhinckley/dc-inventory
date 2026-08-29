@@ -108,7 +108,7 @@ Other contexts **import `IFeatures` and `FeatureName` only**. They never import 
 For a tenant, `IFeatures.isEnabled(name)`:
 
 1. Operator **override** (force off wins over force on if both exist — pick one and test it; recommended: force off wins).
-2. Else if the name is in the **core** set: enabled iff subscription is `trialing` or `active` (grace: [G19](./invariants.md#g19-licensing-policy)).
+2. Else if the name is in the **core** set: enabled iff subscription is `trialing` or `active` ([G19](./invariants.md#g19-licensing-policy-subscription-grace-core-vs-paid) — `past_due` and `canceled` disable core).
 3. Else enabled iff an **in-force entitlement** (plan or add-on grant) includes that name.
 4. Else **false**.
 

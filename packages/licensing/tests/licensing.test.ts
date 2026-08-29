@@ -32,6 +32,8 @@ describe("Licensing application ports", () => {
     const store = new InMemoryLicensingStore();
     store.createSubscription(DEFAULT_ORG, "core", "active");
     store.createSubscription(BETA_ORG, "core", "canceled");
+    const pastDueOrg = OrganizationId.parse("770e8400-e29b-41d4-a716-446655440088");
+    store.createSubscription(pastDueOrg, "core", "past_due");
     store.setFlagOverrides(DEFAULT_ORG, [
       { featureName: "catalog", direction: "force_on" },
       { featureName: "catalog", direction: "force_off" },
@@ -41,6 +43,7 @@ describe("Licensing application ports", () => {
     await expect(features.isEnabled(DEFAULT_ORG, "catalog")).resolves.toBe(false);
     await expect(features.isEnabled(DEFAULT_ORG, "sales")).resolves.toBe(true);
     await expect(features.isEnabled(BETA_ORG, "sales")).resolves.toBe(false);
+    await expect(features.isEnabled(pastDueOrg, "inventory")).resolves.toBe(false);
   });
 
   it("retains the all-core-on adapter for isolated unit tests", async () => {
