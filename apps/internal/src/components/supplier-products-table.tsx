@@ -1,6 +1,9 @@
 "use client";
 
-import { useListInternalSupplierProducts } from "@dc-inventory/api-client-internal";
+import {
+  listInternalSupplierProductsTable,
+  useListInternalSupplierProducts,
+} from "@dc-inventory/api-client-internal";
 import { Button } from "@dc-inventory/ui";
 import {
   DataTable,
@@ -12,7 +15,6 @@ import type {
   SupplierProductRow,
   SupplierProductsListParams,
 } from "../lib/supplier-product-types";
-import { supplierProductsListTable } from "../lib/supplier-products-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 import { SupplierProductEditDialog } from "./supplier-product-edit-dialog";
 import { SupplierProductUnlinkButton } from "./supplier-product-unlink-button";
@@ -42,7 +44,7 @@ export function SupplierProductsTable({
   );
 
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(supplierProductsListTable, params);
+    replaceTableUrlParams(listInternalSupplierProductsTable, params);
   }, []);
 
   const rowActions = useCallback(
@@ -68,7 +70,7 @@ export function SupplierProductsTable({
   return (
     <>
       <DataTable.Root<SupplierProductsListParams>
-        meta={supplierProductsListTable}
+        meta={listInternalSupplierProductsTable}
         queryHook={queryHook}
         initialParams={initialParams}
         onParamsChange={onParamsChange}

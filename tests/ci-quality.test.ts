@@ -45,11 +45,15 @@ describe("required CI: test, lint, gen:api drift (ADA-196)", () => {
     expect(script).not.toMatch(/\bdocker\b|\bdocker compose\b|\bpnpm db:migrate\b/);
   });
 
-  it("covers x-table table metadata via openapi drift (gen:api exports x-table)", () => {
+  it("covers generated x-table metadata in the gen:api drift check", () => {
     const internalOpenApi = readText("openapi/internal.yaml");
     expect(internalOpenApi).toContain("x-table:");
+    const generator = readText("apps/api/src/gen-api.ts");
+    expect(generator).toContain("writeTableMetadata");
+    expect(generator).toContain("table-metadata.ts");
     const script = readText(scriptPath);
     expect(script).toContain("openapi/");
+    expect(script).toContain("packages/api-client-internal/src/generated/");
   });
 
   it("keeps dependency-direction guards in Vitest (run via pnpm test)", () => {
