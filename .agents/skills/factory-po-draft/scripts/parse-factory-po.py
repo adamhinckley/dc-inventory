@@ -26,11 +26,16 @@ def fail(message: str) -> None:
 def parse_positive_int(qty_raw: str, sku: str) -> int:
     try:
         qty_float = float(qty_raw)
-    except ValueError:
+    except (ValueError, OverflowError):
+        fail(f"{sku}: quan must be a positive integer, got {qty_raw!r}")
+    if qty_float != qty_float or qty_float in (float("inf"), float("-inf")):
         fail(f"{sku}: quan must be a positive integer, got {qty_raw!r}")
     if qty_float <= 0 or qty_float != int(qty_float):
         fail(f"{sku}: quan must be a positive integer, got {qty_raw!r}")
-    return int(qty_float)
+    try:
+        return int(qty_float)
+    except OverflowError:
+        fail(f"{sku}: quan must be a positive integer, got {qty_raw!r}")
 
 
 def parse_calendar_date(value: str, field: str, sku: str) -> str:
@@ -53,11 +58,17 @@ def parse_calendar_date(value: str, field: str, sku: str) -> str:
     return iso
 
 
-def money_to_cents(value: str) -> int:
+def money_to_cents(value: str, sku: str) -> int:
     raw = value.strip()
     if not raw:
         return 0
-    return round(float(raw) * 100)
+    try:
+        amount = float(raw)
+    except ValueError:
+        fail(f"{sku}: unreadable price {raw!r}")
+    if amount != amount or amount in (float("inf"), float("-inf")):
+        fail(f"{sku}: unreadable price {raw!r}")
+    return round(amount * 100)
 
 
 def vendor_from_path(path: Path) -> tuple[str, str]:
@@ -153,7 +164,7 @@ def parse_rows(rows: list[dict[str, str]], source: Path) -> dict[str, object]:
                 "sku": sku,
                 "name": name,
                 "qty": qty,
-                "priceCents": money_to_cents(price) if price else None,
+                "priceCents": money_to_cents(price, sku) if price else None,
                 "supplierSku": mfg or None,
                 "shipDate": parse_calendar_date(get(row, "ship_date"), "ship_date", sku),
                 "cancelDate": parse_calendar_date(get(row, "canc_date"), "canc_date", sku),
