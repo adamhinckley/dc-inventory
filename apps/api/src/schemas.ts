@@ -10,6 +10,10 @@ export const unauthorizedResponseSchema = z.object({
   error: z.literal("unauthorized"),
 });
 
+export const featureDisabledResponseSchema = z.object({
+  error: z.literal("feature_disabled"),
+});
+
 export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
@@ -95,7 +99,7 @@ export const catalogListResponseSchema = z.object({
 });
 
 export const opsSubscriptionSchema = z.object({
-  status: z.enum(["trialing", "active", "inactive"]),
+  status: z.enum(["trialing", "active", "past_due", "canceled", "inactive"]),
   plan: z.string().nullable(),
 });
 
@@ -179,11 +183,6 @@ export const productImportResultSchema = z.object({
   errors: z.array(productImportErrorSchema),
 });
 
-export const stubOpsSubscription = {
-  status: "inactive" as const,
-  plan: null,
-};
-
 export const licensingSubscriptionItemSchema = z.object({
   id: z.string().uuid(),
   plan: z.string(),
@@ -197,7 +196,7 @@ export const licensingSubscriptionListResponseSchema = z.object({
 export const licensingPaymentItemSchema = z.object({
   id: z.string().uuid(),
   subscriptionId: z.string().uuid(),
-  providerRef: z.string(),
+  providerRef: z.string().nullable(),
   amountCents: z.number().int(),
 });
 

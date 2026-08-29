@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { registerStaffAudienceGuard } from "../adapters/http/audience-guard.js";
+import { registerFeatureGuard } from "../adapters/http/feature-guard.js";
 import { registerInternalAuthRoutes } from "../adapters/http/internal-auth.js";
 import { registerInternalCustomerRoutes } from "../adapters/http/internal-customers.js";
 import { registerInternalInvoiceRoutes } from "../adapters/http/internal-invoices.js";
@@ -14,12 +15,27 @@ import { registerInternalProductRoutes } from "../adapters/http/internal-product
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalAuthRoutes(app);
   registerStaffAudienceGuard(app);
-  registerInternalCustomerRoutes(app);
-  registerInternalProductRoutes(app);
-  registerInternalPurchaseOrderRoutes(app);
-  registerInternalSupplierRoutes(app);
-  registerInternalSupplierProductRoutes(app);
-  registerInternalSalesOrderRoutes(app);
-  registerInternalInvoiceRoutes(app);
+  await app.register(async (catalog) => {
+    registerFeatureGuard(catalog, "catalog", "staff");
+    registerInternalProductRoutes(catalog);
+  });
+  await app.register(async (customers) => {
+    registerFeatureGuard(customers, "customers", "staff");
+    registerInternalCustomerRoutes(customers);
+  });
+  await app.register(async (purchasing) => {
+    registerFeatureGuard(purchasing, "purchasing", "staff");
+    registerInternalPurchaseOrderRoutes(purchasing);
+    registerInternalSupplierRoutes(purchasing);
+    registerInternalSupplierProductRoutes(purchasing);
+  });
+  await app.register(async (sales) => {
+    registerFeatureGuard(sales, "sales", "staff");
+    registerInternalSalesOrderRoutes(sales);
+  });
+  await app.register(async (accounting) => {
+    registerFeatureGuard(accounting, "ar", "staff");
+    registerInternalInvoiceRoutes(accounting);
+  });
   registerInternalLicensingRoutes(app);
 }

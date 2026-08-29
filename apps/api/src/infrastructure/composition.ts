@@ -69,6 +69,17 @@ import {
   type IdentityDrizzle,
 } from "@dc-inventory/identity";
 import {
+  DrizzleLicensingReadRepository,
+  featuresAllCoreOn,
+  InMemoryLicensingStore,
+  LicensingFeatures,
+  ListLicensingPaymentsUseCase,
+  ListLicensingSubscriptionsUseCase,
+  type IFeatures,
+  type ILicensingReadRepository,
+  type LicensingDrizzle,
+} from "@dc-inventory/licensing";
+import {
   AssignSupplierProductUseCase,
   CancelPurchaseOrderUseCase,
   ConfirmPurchaseOrderUseCase,
@@ -138,14 +149,8 @@ import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
-import {
-  ListLicensingPaymentsUseCase,
-  ListLicensingSubscriptionsUseCase,
-} from "../application/list-licensing.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
-import { featuresAllCoreOn, type IFeatures } from "../features.js";
-import { InMemoryLicensingStore } from "../licensing/in-memory-licensing.js";
 import { createDatabaseConnection, PostgresDatabase } from "./db.js";
 
 export type IdentityHttpServices = {
@@ -239,7 +244,6 @@ export type AppServices = {
   accounting: AccountingHttpServices;
   licensing: LicensingHttpServices;
   unitOfWork: IUnitOfWork;
-  licensingStore: InMemoryLicensingStore;
 };
 
 export type AppServiceOverrides = {
@@ -269,6 +273,7 @@ export type AppServiceOverrides = {
   accountingUnitOfWork?: import("@dc-inventory/accounting").IAccountingUnitOfWork;
   unitOfWork?: IUnitOfWork;
   licensingStore?: InMemoryLicensingStore;
+  licensingRepository?: ILicensingReadRepository;
 };
 
 function catalogServices(
@@ -413,19 +418,17 @@ function accountingServices(
   };
 }
 
-function licensingServices(store: InMemoryLicensingStore): LicensingHttpServices {
+function licensingServices(repository: ILicensingReadRepository): LicensingHttpServices {
   return {
-    listSubscriptions: new ListLicensingSubscriptionsUseCase(store),
-    listPayments: new ListLicensingPaymentsUseCase(store),
+    listSubscriptions: new ListLicensingSubscriptionsUseCase(repository),
+    listPayments: new ListLicensingPaymentsUseCase(repository),
   };
 }
 
 export function composeAppServices(
   overrides: AppServiceOverrides = {},
 ): AppServices {
-  const features = overrides.features ?? featuresAllCoreOn();
   const clock = overrides.clock ?? new SystemClock();
-  const licensingStore = overrides.licensingStore ?? new InMemoryLicensingStore();
 
   let database: IDatabase;
   let identityDb: IdentityDrizzle | undefined;
@@ -434,6 +437,7 @@ export function composeAppServices(
   let purchasingDb: PurchasingDrizzle | undefined;
   let salesDb: SalesDrizzle | undefined;
   let accountingDb: AccountingDrizzle | undefined;
+  let licensingDb: LicensingDrizzle | undefined;
   let appDb: AppDrizzle | undefined;
   if (overrides.database) {
     database = overrides.database;
@@ -446,8 +450,25 @@ export function composeAppServices(
     purchasingDb = connection.db as unknown as PurchasingDrizzle;
     salesDb = connection.db as unknown as SalesDrizzle;
     accountingDb = connection.db as unknown as AccountingDrizzle;
+    licensingDb = connection.db as unknown as LicensingDrizzle;
     appDb = connection.db;
   }
+
+  const inMemoryLicensing =
+    overrides.licensingStore ??
+    (licensingDb || overrides.licensingRepository
+      ? undefined
+      : new InMemoryLicensingStore());
+  const licensingRepository =
+    overrides.licensingRepository ??
+    (licensingDb
+      ? new DrizzleLicensingReadRepository(licensingDb)
+      : inMemoryLicensing!);
+  const features =
+    overrides.features ??
+    (licensingDb
+      ? new LicensingFeatures(licensingRepository)
+      : featuresAllCoreOn());
 
   const staffUsers =
     overrides.staffUsers ??
@@ -607,8 +628,7 @@ export function composeAppServices(
     ),
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork, clock),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
-    licensing: licensingServices(licensingStore),
+    licensing: licensingServices(licensingRepository),
     unitOfWork,
-    licensingStore,
   };
 }
