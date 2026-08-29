@@ -29,6 +29,11 @@ import { Skeleton } from '#ds/ui/Skeleton'
 import { Tooltip } from '#ds/ui/Tooltip'
 import { TooltipHelp } from '#ds/ui/TooltipHelp'
 import { columnSortKey, type TableColumnDef, type TableInstance } from './Table.hook'
+import {
+  isSequentialTableTabField,
+  tableCellTabIndex,
+  tableRowTabIndex,
+} from './table-tab-order'
 import './Table.css'
 
 // Reserved widths in px for the optional leading checkbox col + trailing actions col.
@@ -512,20 +517,28 @@ export function TableBody({ className, ref, ...rest }: TableBodyProps) {
   const [activeCol, setActiveCol] = useState(-1)
   const activeIndex = Math.min(Math.max(0, activeRowIndex), Math.max(0, table.rows.length - 1))
 
-  // Sync `tabIndex` on every focusable descendant of every row so exactly
-  // one element in the body has `tabIndex=0`. Cell content comes from
-  // arbitrary `column.render` / `rowActions` callers, so we can't enforce
-  // this declaratively — we rewrite tabindex after each render. Hook order
-  // requires this run unconditionally; on early-return frames `rowRefs`
-  // is empty so the loop is a no-op.
+  // Sync `tabIndex` after each render. Cell content comes from arbitrary
+  // `column.render` / `rowActions` callers, so we can't enforce this
+  // declaratively. Text-like inputs stay in sequential Tab order (qty
+  // columns); buttons/links/checkboxes keep the single-tab-stop roving
+  // model. Hook order requires this run unconditionally; on early-return
+  // frames `rowRefs` is empty so the loop is a no-op.
   useEffect(() => {
     rowRefs.current.forEach((rowEl, idx) => {
       if (!rowEl) return
       const focusables = getRowFocusables(rowEl)
       const isActive = idx === activeIndex
+      const hasSequentialField = focusables.some(isSequentialTableTabField)
       focusables.forEach((el, colIdx) => {
-        el.tabIndex = isActive && colIdx === activeCol ? 0 : -1
+        el.tabIndex = tableCellTabIndex(
+          isSequentialTableTabField(el),
+          isActive && colIdx === activeCol,
+        )
       })
+      rowEl.tabIndex = tableRowTabIndex(
+        isActive && activeCol === -1,
+        hasSequentialField,
+      )
     })
   })
 
@@ -571,13 +584,11 @@ export function TableBody({ className, ref, ...rest }: TableBodyProps) {
 
   if (table.rows.length === 0) return null
 
-  // Single-tab-stop grid navigation. The active row owns one `tabIndex=0`
-  // — either on the row anchor (`activeCol === -1`) or on one of its
-  // focusable descendants (`activeCol >= 0`). All other interactive
-  // elements in the body get `tabIndex=-1`, so Tab from inside the body
-  // exits to the next region (pagination's rows-per-page select).
-  // Right/Left arrows walk focusables within the row; Up/Down move
-  // between rows while preserving the column position.
+  // Grid navigation. Buttons, links, and checkboxes use a roving tabindex
+  // so Tab enters the body once and exits to the next region. Text-like
+  // inputs stay in sequential Tab order so a qty column can be edited
+  // down the list. Right/Left arrows walk focusables within the row;
+  // Up/Down move between rows while preserving the column position.
 
   function focusRowAnchor(rowIdx: number) {
     setActiveRowIndex(rowIdx)

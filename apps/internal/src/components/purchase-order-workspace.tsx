@@ -33,10 +33,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type FormEvent,
 } from "react";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
-import { lineAdderSelectionForSupplier } from "../lib/purchase-order-line-adder";
+import { draftLineFromVendorProduct } from "../lib/purchase-order-line-adder";
 import {
   appendPurchaseOrderLine,
   coalescePurchaseOrderLines,
@@ -67,31 +66,26 @@ function PurchaseOrderLineAdder({
   disabled = false,
   onAddLines,
 }: {
-  supplierId: string;
+  supplierId: string | null;
   lines: PurchaseOrderLineDraft[];
   disabled?: boolean;
   onAddLines: (next: PurchaseOrderLineDraft[]) => void;
 }) {
-  const [selectedSkus, setSelectedSkus] = useState<string[]>([]);
-  const [addQty, setAddQty] = useState("1");
   const [error, setError] = useState<string | null>(null);
-  const previousSupplierIdRef = useRef(supplierId);
+  const hasVendor = supplierId !== null;
 
   useEffect(() => {
-    const previousSupplierId = previousSupplierIdRef.current;
-    previousSupplierIdRef.current = supplierId;
-    const next = lineAdderSelectionForSupplier(previousSupplierId, supplierId);
-    if (!next) {
-      return;
-    }
-    setSelectedSkus(next.selectedSkus);
-    setError(next.error);
+    setError(null);
   }, [supplierId]);
 
-  const productsQuery = useListInternalSupplierProducts(supplierId, {
-    page: 1,
-    pageSize: 100,
-  });
+  const productsQuery = useListInternalSupplierProducts(
+    supplierId ?? "",
+    {
+      page: 1,
+      pageSize: 100,
+    },
+    { query: { enabled: hasVendor } },
+  );
 
   const productOptions = useMemo(() => {
     const items =
@@ -111,21 +105,14 @@ function PurchaseOrderLineAdder({
     return new Map(items.map((product) => [product.sku, product]));
   }, [productsQuery.data]);
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    if (selectedSkus.length === 0) {
-      setError("Pick at least one vendor product to add.");
-      return;
-    }
-    const qty = Number(addQty);
-    if (!Number.isInteger(qty) || qty <= 0) {
-      setError("Quantity must be a positive whole number.");
+  const addSku = (value: string | string[] | null) => {
+    const skus = Array.isArray(value) ? value : value ? [value] : [];
+    if (skus.length === 0) {
       return;
     }
     const taken = new Set(lines.map((line) => line.sku));
     const nextLines: PurchaseOrderLineDraft[] = [];
-    for (const sku of selectedSkus) {
+    for (const sku of skus) {
       if (taken.has(sku)) {
         continue;
       }
@@ -134,67 +121,34 @@ function PurchaseOrderLineAdder({
         setError("A selected SKU is not on this vendor.");
         return;
       }
-      nextLines.push({
-        id: crypto.randomUUID(),
-        sku: product.sku,
-        name: product.catalogName,
-        qty,
-      });
+      nextLines.push(draftLineFromVendorProduct(product));
+      taken.add(sku);
     }
     if (nextLines.length === 0) {
-      setError("Those SKUs are already on this PO.");
       return;
     }
+    setError(null);
     onAddLines(nextLines);
-    setSelectedSkus([]);
-    setAddQty("1");
   };
 
   return (
-    <form
-      className="flex min-w-0 flex-1 flex-wrap items-end gap-field-group"
-      onSubmit={submit}
-    >
-      <LabeledField className="min-w-56 flex-1">
-        <Label htmlFor="po-product">Vendor product</Label>
-        <Combobox
-          id="po-product"
-          multiple
-          options={productOptions}
-          value={selectedSkus}
-          onChange={(value) =>
-            setSelectedSkus(Array.isArray(value) ? value : [])
-          }
-          disabled={disabled || productsQuery.isLoading}
-          placeholder="Select SKUs"
-        />
-      </LabeledField>
-      <LabeledField className="w-24">
-        <Label htmlFor="po-qty">Qty</Label>
-        <Input
-          id="po-qty"
-          type="number"
-          min={1}
-          step={1}
-          value={addQty}
-          onChange={(event) => setAddQty(event.target.value)}
-          disabled={disabled}
-        />
-      </LabeledField>
-      <Button
-        type="submit"
-        variant="primary"
-        className="shrink-0"
-        disabled={disabled || selectedSkus.length === 0}
-      >
-        {selectedSkus.length > 1 ? "Add lines" : "Add line"}
-      </Button>
+    <LabeledField className="min-w-56 flex-1">
+      <Label htmlFor="po-product">Vendor product</Label>
+      <Combobox
+        id="po-product"
+        multiple
+        options={productOptions}
+        value={[]}
+        onChange={addSku}
+        disabled={disabled || !hasVendor || productsQuery.isLoading}
+        placeholder="Add a SKU"
+      />
       {error ? (
-        <p className="basis-full text-body-sm text-error" role="alert">
+        <p className="text-body-sm text-error" role="alert">
           {error}
         </p>
       ) : null}
-    </form>
+    </LabeledField>
   );
 }
 
@@ -651,7 +605,7 @@ function PurchaseOrderWorkspaceBody({
       </nav>
 
       <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="page-title">{title}</h1>
           <p className="page-description mt-2">
             Pick a vendor, add lines from that vendor&apos;s catalog, then finalize or
@@ -660,10 +614,10 @@ function PurchaseOrderWorkspaceBody({
           {activeSupplierId ? <SupplierName supplierId={activeSupplierId} /> : null}
         </div>
         {purchaseOrderId ? (
-          <div className="flex flex-wrap items-center gap-tight">
+          <div className="flex shrink-0 items-center gap-tight">
             <Button
               type="button"
-              variant="ghost"
+              variant="secondary"
               size="sm"
               disabled={exporting || lines.length === 0}
               onClick={() => void downloadXlsx()}
@@ -705,21 +659,15 @@ function PurchaseOrderWorkspaceBody({
             }}
             disabled={vendorLocked || suppliersQuery.isLoading}
             placeholder="Select vendor"
-            helperText={
-              activeSupplierId ? undefined : "Select a vendor to add lines."
-            }
           />
         </LabeledField>
 
-        {activeSupplierId ? (
-          <PurchaseOrderLineAdder
-            key={activeSupplierId}
-            supplierId={activeSupplierId}
-            lines={lines}
-            disabled={workspaceLocked}
-            onAddLines={addLines}
-          />
-        ) : null}
+        <PurchaseOrderLineAdder
+          supplierId={activeSupplierId}
+          lines={lines}
+          disabled={workspaceLocked}
+          onAddLines={addLines}
+        />
       </FieldRow>
 
       <FieldRow>
@@ -896,7 +844,7 @@ function ConfirmedPurchaseOrderView({
       <div>
         <Button
           type="button"
-          variant="ghost"
+          variant="secondary"
           size="sm"
           disabled={exporting}
           onClick={() => void downloadXlsx()}
