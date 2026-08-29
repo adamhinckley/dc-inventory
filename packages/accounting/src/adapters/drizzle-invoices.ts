@@ -117,6 +117,20 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
     return row === undefined ? null : toInvoice(row);
   }
 
+  async findByIdForPayment(
+    organizationId: OrganizationId,
+    id: InvoiceId,
+  ): Promise<Invoice | null> {
+    const rows = await this.db
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.id, id), eq(invoices.organizationId, organizationId)))
+      .limit(1)
+      .for("update");
+    const row = rows[0];
+    return row === undefined ? null : toInvoice(row);
+  }
+
   async findByOrderId(
     organizationId: OrganizationId,
     orderId: OrderId,

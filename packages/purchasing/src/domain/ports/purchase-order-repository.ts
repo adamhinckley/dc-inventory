@@ -89,7 +89,13 @@ export type InboundCancelledCommand = {
   purchaseOrderId: PurchaseOrderId;
 };
 
+export type InventorySnapshotLock = {
+  organizationId: OrganizationId;
+  sku: Sku;
+};
+
 export interface IInventoryCommandPort {
+  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void>;
   recordInboundFromPo(command: InboundFromPoCommand): Promise<InventoryCommandResult>;
   recordGoodsReceived(command: GoodsReceivedCommand): Promise<InventoryCommandResult>;
   recordInboundCancelled(command: InboundCancelledCommand): Promise<InventoryCommandResult>;

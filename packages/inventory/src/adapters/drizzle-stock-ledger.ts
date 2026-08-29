@@ -23,6 +23,7 @@ import type {
   RecordShippedCommand,
   StockCommandBase,
   StockCommandResult,
+  StockSnapshotLock,
 } from "../domain/ports/stock-ledger.js";
 import { freezeStockFigures, ZERO_STOCK_FIGURES } from "../domain/snapshot.js";
 import { stockMovements, stockSnapshots } from "../persistence/schema.js";
@@ -34,6 +35,8 @@ export type InventoryDrizzle = PostgresJsDatabase<{
 }>;
 
 export class DrizzleStockLedger implements IStockLedger {
+  private readonly lockedSnapshotKeys = new Set<string>();
+
   constructor(
     private readonly db: InventoryDrizzle,
     private readonly readModel: DrizzleInventoryReadModel,
@@ -43,6 +46,61 @@ export class DrizzleStockLedger implements IStockLedger {
     ) => Promise<string>,
     private readonly clock: IClock,
   ) {}
+
+  async lockSnapshots(snapshots: readonly StockSnapshotLock[]): Promise<void> {
+    const resolved = await Promise.all(
+      snapshots.map(async (snapshot) => {
+        const organizationId = requireOrganizationId(snapshot.organizationId);
+        const locationId = snapshot.locationId ?? LocationId.DEFAULT;
+        const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+        return {
+          organizationId,
+          sku: snapshot.sku.value,
+          locationUuid,
+          key: `${organizationId}\0${snapshot.sku.value}\0${locationUuid}`,
+        };
+      }),
+    );
+    const ordered = [...new Map(resolved.map((snapshot) => [snapshot.key, snapshot])).values()]
+      .filter((snapshot) => !this.lockedSnapshotKeys.has(snapshot.key))
+      .sort((left, right) => left.key.localeCompare(right.key));
+
+    for (const snapshot of ordered) {
+      await this.db
+        .insert(stockSnapshots)
+        .values({
+          organizationId: snapshot.organizationId,
+          sku: snapshot.sku,
+          locationId: snapshot.locationUuid,
+        })
+        .onConflictDoNothing({
+          target: [
+            stockSnapshots.organizationId,
+            stockSnapshots.sku,
+            stockSnapshots.locationId,
+          ],
+        });
+    }
+
+    for (const snapshot of ordered) {
+      const rows = await this.db
+        .select({ id: stockSnapshots.id })
+        .from(stockSnapshots)
+        .where(
+          and(
+            eq(stockSnapshots.organizationId, snapshot.organizationId),
+            eq(stockSnapshots.sku, snapshot.sku),
+            eq(stockSnapshots.locationId, snapshot.locationUuid),
+          ),
+        )
+        .limit(1)
+        .for("update");
+      if (rows[0] === undefined) {
+        throw new Error("Inventory snapshot disappeared before it could be locked");
+      }
+      this.lockedSnapshotKeys.add(snapshot.key);
+    }
+  }
 
   recordInboundFromPo(command: RecordInboundFromPoCommand): Promise<StockCommandResult> {
     return this.record("InboundFromPo", command);
@@ -90,6 +148,8 @@ export class DrizzleStockLedger implements IStockLedger {
     if (!isPositiveIntegerQuantity(command.quantity)) {
       return { ok: false, reason: "invalid_quantity" };
     }
+
+    await this.lockSnapshots([{ organizationId, sku: command.sku, locationId }]);
 
     const existing = await this.readModel.findMovementByIdempotency(
       organizationId,
@@ -168,25 +228,17 @@ export class DrizzleStockLedger implements IStockLedger {
       .limit(1);
 
     if (existingSnapshot[0] === undefined) {
-      await this.db.insert(stockSnapshots).values({
-        organizationId,
-        sku: command.sku.value,
-        locationId: locationUuid,
+      throw new Error("Locked inventory snapshot is missing");
+    }
+    await this.db
+      .update(stockSnapshots)
+      .set({
         onHand: next.onHand,
         onOrder: next.onOrder,
         allocated: next.allocated,
-      });
-    } else {
-      await this.db
-        .update(stockSnapshots)
-        .set({
-          onHand: next.onHand,
-          onOrder: next.onOrder,
-          allocated: next.allocated,
-          updatedAt: new Date(),
-        })
-        .where(eq(stockSnapshots.id, existingSnapshot[0].id));
-    }
+        updatedAt: new Date(),
+      })
+      .where(eq(stockSnapshots.id, existingSnapshot[0].id));
 
     return { ok: true, movement };
   }

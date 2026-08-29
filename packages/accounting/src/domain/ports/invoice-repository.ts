@@ -19,6 +19,10 @@ export type PaymentIdempotencyRecord = {
 
 export type IInvoiceRepository = {
   findById(organizationId: OrganizationId, id: InvoiceId): Promise<Invoice | null>;
+  findByIdForPayment(
+    organizationId: OrganizationId,
+    id: InvoiceId,
+  ): Promise<Invoice | null>;
   findByOrderId(organizationId: OrganizationId, orderId: OrderId): Promise<Invoice | null>;
   list(organizationId: OrganizationId): Promise<readonly Invoice[]>;
   save(invoice: Invoice): Promise<void>;
