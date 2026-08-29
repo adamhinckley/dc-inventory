@@ -1,0 +1,9 @@
+---
+description: Code review, PR review, and writing or editing tests. Apply CODING_STANDARDS.md (tautological tests).
+globs: "**/*.test.ts,**/*.test.tsx,**/*.spec.ts,**/*.spec.tsx,**/tests/**/*.ts"
+alwaysApply: false
+---
+
+# Coding standards
+
+Read [`CODING_STANDARDS.md`](../../CODING_STANDARDS.md) before writing tests or reviewing a diff. Apply every line. Done when every new or changed assertion can fail.
