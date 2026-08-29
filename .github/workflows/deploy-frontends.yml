@@ -2,6 +2,7 @@
 # Push to main (frontend paths) or Actions → Deploy frontends → Run workflow.
 # Jobs run only on main and only when VERCEL_TOKEN is configured (avoids
 # failing on push when using Vercel Git integration without Actions secrets).
+# Token presence is checked in check-vercel-token (secrets are not valid in job if).
 #
 # Run vercel CLI from the repository root; each Vercel project's Root Directory
 # (apps/internal / apps/wholesale) selects the app. VERCEL_ORG_ID + VERCEL_PROJECT_ID
@@ -44,9 +45,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check-vercel-token:
+    name: check-vercel-token
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - id: check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy-internal:
     name: deploy-internal
-    if: github.ref == 'refs/heads/main' && secrets.VERCEL_TOKEN != ''
+    needs: check-vercel-token
+    if: github.ref == 'refs/heads/main' && needs.check-vercel-token.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -75,7 +94,8 @@ jobs:
 
   deploy-wholesale:
     name: deploy-wholesale
-    if: github.ref == 'refs/heads/main' && secrets.VERCEL_TOKEN != ''
+    needs: check-vercel-token
+    if: github.ref == 'refs/heads/main' && needs.check-vercel-token.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
