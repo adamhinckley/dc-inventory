@@ -1,6 +1,7 @@
 import {
   bigint,
   char,
+  foreignKey,
   integer,
   pgSchema,
   text,
@@ -38,12 +39,8 @@ export const invoices = accounting.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: text("organization_id").notNull().default("DEFAULT"),
-    orderId: uuid("order_id")
-      .notNull()
-      .references(() => orders.id),
-    customerId: uuid("customer_id")
-      .notNull()
-      .references(() => customers.id),
+    orderId: uuid("order_id").notNull(),
+    customerId: uuid("customer_id").notNull(),
     documentNumber: text("document_number").notNull(),
     status: invoiceStatus("status").notNull(),
     postedAt: timestamp("posted_at", { withTimezone: true, mode: "date" }),
@@ -59,6 +56,16 @@ export const invoices = accounting.table(
       table.documentNumber,
     ),
     uniqueIndex("invoices_order_id_unique").on(table.orderId),
+    foreignKey({
+      columns: [table.organizationId, table.orderId],
+      foreignColumns: [orders.organizationId, orders.id],
+      name: "invoices_organization_id_order_id_orders_fk",
+    }),
+    foreignKey({
+      columns: [table.organizationId, table.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+      name: "invoices_organization_id_customer_id_customers_fk",
+    }),
   ],
 );
 
@@ -87,9 +94,7 @@ export const payments = accounting.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: text("organization_id").notNull().default("DEFAULT"),
-    customerId: uuid("customer_id")
-      .notNull()
-      .references(() => customers.id),
+    customerId: uuid("customer_id").notNull(),
     amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
     currency: char("currency", { length: 3 }).notNull().default("USD"),
     idempotencyKey: text("idempotency_key").notNull(),
@@ -100,6 +105,11 @@ export const payments = accounting.table(
       table.organizationId,
       table.idempotencyKey,
     ),
+    foreignKey({
+      columns: [table.organizationId, table.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+      name: "payments_organization_id_customer_id_customers_fk",
+    }),
   ],
 );
 
