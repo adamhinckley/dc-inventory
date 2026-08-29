@@ -328,7 +328,7 @@ describe("internal purchase orders HTTP", () => {
         expect.objectContaining({
           mat_num: "HEX-BOLT-GALV",
           quan: 5,
-          description: "Hex bolt",
+          description: "Hex bolt from Catalog",
           tot_cbm: "Not Available",
         }),
       ],

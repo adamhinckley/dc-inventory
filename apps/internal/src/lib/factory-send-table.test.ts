@@ -34,7 +34,7 @@ describe("formatFactorySendCell", () => {
 });
 
 describe("factorySendRowId", () => {
-  it("keys a row by mill SKU and index", () => {
+  it("uses mill SKU as the row id", () => {
     expect(factorySendRowId({ mat_num: "DC7818LV" })).toBe("DC7818LV");
   });
 });
