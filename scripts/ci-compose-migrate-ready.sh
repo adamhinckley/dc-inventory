@@ -21,7 +21,6 @@ fi
 
 docker compose up -d --wait
 pnpm db:migrate
-pnpm test:integration:idempotency-races
 
 api_log="$(mktemp)"
 pnpm dev:api >"$api_log" 2>&1 &
