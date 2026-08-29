@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   integer,
   pgSchema,
   primaryKey,
@@ -137,6 +138,7 @@ export const loginThrottleCounters = identity.table(
       name: "login_throttle_counters_pk",
       columns: [table.audience, table.dimension, table.keyHash],
     }),
+    index("login_throttle_counters_window_started_at_idx").on(table.windowStartedAt),
     check(
       "login_throttle_counters_dimension_check",
       sql`${table.dimension} in ('source', 'account_identifier')`,

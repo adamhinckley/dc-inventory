@@ -5,17 +5,24 @@
  * OpenAPI spec version: 0.0.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
-  GetOpsSubscription200
+  GetOpsSubscription200,
+  LoginOps401,
+  LoginOps429,
+  LoginOpsBody
 } from './model';
 
 import { customFetch } from '../custom-fetch';
@@ -37,6 +44,100 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export type loginOpsResponse401 = {
+  data: LoginOps401
+  status: 401
+}
+
+export type loginOpsResponse429 = {
+  data: LoginOps429
+  status: 429
+}
+
+;
+export type loginOpsResponseError = (loginOpsResponse401 | loginOpsResponse429) & {
+  headers: Headers;
+};
+
+export type loginOpsResponse = (loginOpsResponseError)
+
+export const getLoginOpsUrl = () => {
+
+
+
+
+  return `/ops/auth/login`
+}
+
+/**
+ * @summary Ops login (throttled; credential verification not yet implemented)
+ */
+export const loginOps = async (loginOpsBody: LoginOpsBody, options?: Parameters<typeof customFetch>[1]): Promise<loginOpsResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<loginOpsResponse>(getLoginOpsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(loginOpsBody)
+  }
+);}
+
+
+
+
+
+export const getLoginOpsMutationOptions = <TError = LoginOps401 | LoginOps429,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginOps>>, TError,{data: LoginOpsBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof loginOps>>, TError,{data: LoginOpsBody}, TContext> => {
+
+const mutationKey = ['loginOps'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginOps>>, {data: LoginOpsBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  loginOps(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginOpsMutationResult = NonNullable<Awaited<ReturnType<typeof loginOps>>>
+    export type LoginOpsMutationBody = LoginOpsBody
+    export type LoginOpsMutationError = LoginOps401 | LoginOps429
+
+    /**
+ * @summary Ops login (throttled; credential verification not yet implemented)
+ */
+export const useLoginOps = <TError = LoginOps401 | LoginOps429,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginOps>>, TError,{data: LoginOpsBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof loginOps>>,
+        TError,
+        {data: LoginOpsBody},
+        TContext
+      > => {
+      return useMutation(getLoginOpsMutationOptions(options));
+    }
 
 export type getOpsSubscriptionResponse200 = {
   data: GetOpsSubscription200

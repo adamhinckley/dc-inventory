@@ -44,7 +44,10 @@ describe("Phase 1 identity schema (ADA-77)", () => {
   it("persists independent hashed source and account-identifier counters", () => {
     const schema = readText("packages/identity/src/persistence/schema.ts");
     const migration = readText(
-      "apps/api/drizzle/migrations/0022_identity_login_throttle.sql",
+      "apps/api/drizzle/migrations/0024_identity_login_throttle.sql",
+    );
+    const indexMigration = readText(
+      "apps/api/drizzle/migrations/0025_login_throttle_window_started_at_idx.sql",
     );
 
     for (const source of [schema, migration]) {
@@ -56,5 +59,7 @@ describe("Phase 1 identity schema (ADA-77)", () => {
     }
     expect(migration).toMatch(/'source', 'account_identifier'/);
     expect(migration).not.toMatch(/"email"/);
+    expect(indexMigration).toMatch(/login_throttle_counters_window_started_at_idx/);
+    expect(schema).toMatch(/login_throttle_counters_window_started_at_idx/);
   });
 });

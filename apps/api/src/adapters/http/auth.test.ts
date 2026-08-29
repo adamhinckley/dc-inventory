@@ -17,6 +17,7 @@ import {
 } from "@dc-inventory/identity";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
+import { readTrustProxy } from "../../infrastructure/trust-proxy.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import {
   STAFF_SESSION_COOKIE,
@@ -351,7 +352,7 @@ describe("opaque session HTTP", () => {
   });
 
   it("throttles distinct forwarded client addresses behind a trusted proxy", async () => {
-    const { app } = await startAuthApp(undefined, { trustProxy: true });
+    const { app } = await startAuthApp(undefined, { trustProxy: readTrustProxy("1") });
     const blockedClient = {
       method: "POST" as const,
       url: "/internal/auth/login",
@@ -379,6 +380,41 @@ describe("opaque session HTTP", () => {
       },
     });
     expect(otherClient.statusCode).toBe(401);
+  });
+
+  it("ignores prepended X-Forwarded-For addresses when TRUST_PROXY is one hop", async () => {
+    const { app } = await startAuthApp(undefined, { trustProxy: readTrustProxy("1") });
+    const payload = {
+      organizationSlug: ACME_SLUG,
+      email: "staff@local.test",
+      password: "wrong",
+    };
+
+    for (let attempt = 0; attempt <= LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      const response = await app.inject({
+        method: "POST",
+        url: "/internal/auth/login",
+        headers: { "x-forwarded-for": "203.0.113.10" },
+        payload,
+      });
+      expect([401, 429]).toContain(response.statusCode);
+    }
+
+    const spoofed = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      headers: { "x-forwarded-for": "198.51.100.99, 203.0.113.10" },
+      payload,
+    });
+    expect(spoofed.statusCode).toBe(429);
+
+    const otherIp = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      headers: { "x-forwarded-for": "203.0.113.11" },
+      payload: { ...payload, email: "other@local.test" },
+    });
+    expect(otherIp.statusCode).toBe(401);
   });
 
   it("clears failed attempts after a successful login", async () => {
@@ -459,13 +495,26 @@ describe("opaque session HTTP", () => {
     expect(denied.headers["access-control-allow-origin"]).not.toBe("*");
   });
 
-  it("does not add ops auth routes", async () => {
+  it("throttles ops login with the shared interface", async () => {
     const { app } = await startAuthApp();
-    const opsLogin = await app.inject({
-      method: "POST",
+    const request = {
+      method: "POST" as const,
       url: "/ops/auth/login",
-      payload: { organizationSlug: ACME_SLUG, email: "ops@local.test", password: "x" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "ops@local.test",
+        password: "wrong",
+      },
+    };
+
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect((await app.inject(request)).statusCode).toBe(401);
+    }
+    const rejected = await app.inject(request);
+    expect(rejected.statusCode).toBe(429);
+    expect(rejected.json()).toEqual({
+      error: "too_many_login_attempts",
+      retryAfterSeconds: LOGIN_THROTTLE_WINDOW_MS / 1000,
     });
-    expect(opsLogin.statusCode).toBe(404);
   });
 });

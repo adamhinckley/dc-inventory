@@ -81,12 +81,14 @@ describe("login throttling", () => {
       await throttle.attempt(STAFF_KEY);
     }
 
-    await expect(
-      throttle.attempt({
-        ...STAFF_KEY,
-        accountIdentifier: freshAccount,
-      }),
-    ).resolves.toMatchObject({ allowed: false });
+    for (let attempt = 0; attempt <= LOGIN_THROTTLE_MAX_ATTEMPTS + 3; attempt += 1) {
+      await expect(
+        throttle.attempt({
+          ...STAFF_KEY,
+          accountIdentifier: freshAccount,
+        }),
+      ).resolves.toMatchObject({ allowed: false });
+    }
 
     await expect(
       throttle.attempt({
@@ -100,25 +102,35 @@ describe("login throttling", () => {
   it("purges expired counters without disturbing active windows", async () => {
     const clock = new InMemoryClock(START);
     const throttle = new InMemoryLoginThrottle(clock);
-    const staleAccount = "acme\u0000stale@example.com";
+    const staleKey: LoginThrottleKey = {
+      ...STAFF_KEY,
+      source: "203.0.113.99",
+      accountIdentifier: "acme\u0000stale@example.com",
+    };
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      await throttle.attempt({
-        ...STAFF_KEY,
-        accountIdentifier: staleAccount,
-      });
+      await throttle.attempt(staleKey);
     }
+    expect(throttle.hasStoredCounter(staleKey, "account_identifier")).toBe(true);
 
     clock.advance(LOGIN_THROTTLE_WINDOW_MS + 1);
-    await expect(
-      throttle.attempt({
-        ...STAFF_KEY,
-        source: "203.0.113.99",
-        accountIdentifier: "acme\u0000another-stale@example.com",
-      }),
-    ).resolves.toEqual({ allowed: true });
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      await throttle.attempt(STAFF_KEY);
+    }
+    expect(throttle.hasStoredCounter(STAFF_KEY, "source")).toBe(true);
 
-    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+    await throttle.attempt({
+      ...STAFF_KEY,
+      source: "203.0.113.55",
+      accountIdentifier: "acme\u0000purge-trigger@example.com",
+    });
+
+    expect(throttle.hasStoredCounter(staleKey, "account_identifier")).toBe(false);
+    expect(throttle.hasStoredCounter(staleKey, "source")).toBe(false);
+    expect(throttle.hasStoredCounter(STAFF_KEY, "source")).toBe(true);
+
+    const remainingAttempts = LOGIN_THROTTLE_MAX_ATTEMPTS - 2;
+    for (let attempt = 0; attempt < remainingAttempts; attempt += 1) {
       await expect(throttle.attempt(STAFF_KEY)).resolves.toEqual({ allowed: true });
     }
     await expect(throttle.attempt(STAFF_KEY)).resolves.toMatchObject({ allowed: false });

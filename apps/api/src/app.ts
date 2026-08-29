@@ -115,13 +115,9 @@ export async function buildAudienceApp(
     features,
     database: new InMemoryDatabase(),
   });
-<<<<<<< HEAD
-  const app = Fastify({ logger: false });
   const drainState = new DrainState();
   const errorReporter = new NoopErrorReporter();
-=======
   const app = Fastify({ logger: false, trustProxy: readTrustProxy() });
->>>>>>> 385d668 (fix(identity): address ADA-207 login throttle review feedback)
   app.decorate("features", features);
   app.decorate("drainState", drainState);
   app.decorate("errorReporter", errorReporter);
@@ -154,12 +150,9 @@ export async function buildAudienceApp(
 
 export type BuildAppOptions = AppServiceOverrides & {
   logger?: FastifyServerOptions["logger"];
-<<<<<<< HEAD
   drainState?: DrainState;
   errorReporter?: IErrorReporter;
-=======
   trustProxy?: TrustProxySetting;
->>>>>>> 385d668 (fix(identity): address ADA-207 login throttle review feedback)
 };
 
 /** Combined composition root: Pino + requestId, health, Ping, three mounts. */

@@ -35,6 +35,17 @@ export class InMemoryLoginThrottle implements ILoginThrottle {
     this.counters.delete(serializeKey(key, "account_identifier"));
   }
 
+  hasStoredCounter(
+    key: LoginThrottleKey,
+    dimension: "source" | "account_identifier",
+  ): boolean {
+    return this.counters.has(serializeKey(key, dimension));
+  }
+
+  storedCounterCount(): number {
+    return this.counters.size;
+  }
+
   private purgeExpired(at: Date): void {
     for (const [storageKey, counter] of this.counters) {
       if (counter.windowStartedAt.getTime() + LOGIN_THROTTLE_WINDOW_MS <= at.getTime()) {
