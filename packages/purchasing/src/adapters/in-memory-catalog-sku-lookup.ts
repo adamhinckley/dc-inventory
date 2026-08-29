@@ -6,16 +6,26 @@ function catalogKey(organizationId: OrganizationId, sku: string): string {
 }
 
 export class InMemoryCatalogSkuLookupPort implements ICatalogSkuLookupPort {
-  private readonly byOrgSku = new Map<string, { name: string }>();
+  private readonly byOrgSku = new Map<string, { sku: Sku; name: string; archived: boolean }>();
 
-  set(organizationId: OrganizationId, sku: string, name: string): void {
-    this.byOrgSku.set(catalogKey(organizationId, sku), { name });
+  set(
+    organizationId: OrganizationId,
+    sku: string,
+    name: string,
+    options: { archived?: boolean } = {},
+  ): void {
+    const parsedSku = Sku.parse(sku);
+    this.byOrgSku.set(catalogKey(organizationId, parsedSku.value), {
+      sku: parsedSku,
+      name,
+      archived: options.archived ?? false,
+    });
   }
 
   async findBySku(
     organizationId: OrganizationId,
     sku: Sku,
-  ): Promise<{ name: string } | null> {
+  ): Promise<{ sku: Sku; name: string; archived: boolean } | null> {
     return this.byOrgSku.get(catalogKey(organizationId, sku.value)) ?? null;
   }
 }

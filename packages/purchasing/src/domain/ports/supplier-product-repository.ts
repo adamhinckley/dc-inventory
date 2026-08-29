@@ -21,11 +21,17 @@ export interface ISupplierProductRepository {
   delete(supplierId: SupplierId, id: SupplierProductId): Promise<boolean>;
 }
 
+export type CatalogProductSnapshot = {
+  sku: Sku;
+  name: string;
+  archived: boolean;
+};
+
 export interface ICatalogSkuLookupPort {
   findBySku(
     organizationId: OrganizationId,
     sku: Sku,
-  ): Promise<{ name: string } | null>;
+  ): Promise<CatalogProductSnapshot | null>;
 }
 
 export interface ISupplierProductQtyReadPort {

@@ -7,6 +7,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryFactorySendCatalogPort } from "../src/adapters/in-memory-factory-send-catalog.js";
+import { InMemoryCatalogSkuLookupPort } from "../src/adapters/in-memory-catalog-sku-lookup.js";
 import { InMemoryWorkbookWriter } from "../src/adapters/in-memory-workbook-writer.js";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
 import { InMemorySupplierProductRepository } from "../src/adapters/in-memory-supplier-product-repository.js";
@@ -80,16 +81,21 @@ async function harness() {
   const workbookWriter = new InMemoryWorkbookWriter();
   const supplierProducts = new InMemorySupplierProductRepository();
   const factorySendCatalog = new InMemoryFactorySendCatalogPort();
+  const catalog = new InMemoryCatalogSkuLookupPort();
+  catalog.set(DEFAULT_ORG, SKU.value, "Bolt");
+  catalog.set(DEFAULT_ORG, "WASHER-SS", "Washer");
+  catalog.set(DEFAULT_ORG, "DCB6008BL", "Morning Glory");
   return {
     uow,
     supplierId,
     workbookWriter,
     supplierProducts,
     factorySendCatalog,
-    create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers),
-    confirm: new ConfirmPurchaseOrderUseCase(uow),
+    catalog,
+    create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers, catalog),
+    confirm: new ConfirmPurchaseOrderUseCase(uow, catalog),
     receive: new ReceivePurchaseOrderUseCase(uow),
-    replace: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders),
+    replace: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders, catalog),
     exportPo: new ExportPurchaseOrderUseCase(
       uow.purchaseOrders,
       supplierProducts,
@@ -216,6 +222,7 @@ describe("ExportPurchaseOrderUseCase", () => {
 
   it("fills mill code and decimal-dollar cost from the supplier product", async () => {
     const h = await harness();
+    h.catalog.set(DEFAULT_ORG, SKU.value, "Red Enamel Star");
     await h.supplierProducts.save({
       id: SupplierProductId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
       supplierId: h.supplierId,
@@ -265,6 +272,7 @@ describe("ExportPurchaseOrderUseCase", () => {
 
   it("repeats computed carton total from case qty on every line", async () => {
     const h = await harness();
+    h.catalog.set(DEFAULT_ORG, SKU.value, "Rose");
     h.factorySendCatalog.set(DEFAULT_ORG, SKU.value, { caseQty: 192 });
     h.factorySendCatalog.set(DEFAULT_ORG, "DCB6008BL", { caseQty: 384 });
     const created = await h.create.execute({

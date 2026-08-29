@@ -5,13 +5,17 @@ import {
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IPurchaseOrderRepository } from "../domain/ports/purchase-order-repository.js";
+import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
 import { parseIsoDate } from "../domain/iso-date.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
 
 export type ReplacePurchaseOrderLineInput = {
   sku: string;
-  name: string;
+  /**
+   * Accepted for wire compatibility only. Catalog supplies the frozen line name.
+   */
+  name?: string;
   qty: number;
 };
 
@@ -28,11 +32,20 @@ export type ReplacePurchaseOrderLinesResult =
   | { ok: true; purchaseOrder: PurchaseOrder }
   | {
       ok: false;
-      reason: "not_found" | "illegal_transition" | "empty_order" | "invalid";
+      reason:
+        | "not_found"
+        | "illegal_transition"
+        | "empty_order"
+        | "invalid"
+        | "product_not_found"
+        | "product_archived";
     };
 
 export class ReplacePurchaseOrderLinesUseCase {
-  constructor(private readonly purchaseOrders: IPurchaseOrderRepository) {}
+  constructor(
+    private readonly purchaseOrders: IPurchaseOrderRepository,
+    private readonly catalog: ICatalogSkuLookupPort,
+  ) {}
 
   async execute(input: ReplacePurchaseOrderLinesRequest): Promise<ReplacePurchaseOrderLinesResult> {
     void input.staffUserId;
@@ -54,19 +67,26 @@ export class ReplacePurchaseOrderLinesUseCase {
     const lines: PurchaseOrderLine[] = [];
     const seenSkus = new Set<string>();
     for (const line of input.lines) {
-      const name = line.name.trim();
-      if (name.length === 0 || !Number.isInteger(line.qty) || line.qty <= 0) {
+      if (!Number.isInteger(line.qty) || line.qty <= 0) {
         return { ok: false, reason: "invalid" };
       }
       try {
-        const sku = Sku.parse(line.sku);
-        if (seenSkus.has(sku.value)) {
+        const requestedSku = Sku.parse(line.sku);
+        const product = await this.catalog.findBySku(input.organizationId, requestedSku);
+        if (product === null) {
+          return { ok: false, reason: "product_not_found" };
+        }
+        if (product.archived) {
+          return { ok: false, reason: "product_archived" };
+        }
+        const name = product.name.trim();
+        if (name.length === 0 || seenSkus.has(product.sku.value)) {
           return { ok: false, reason: "invalid" };
         }
-        seenSkus.add(sku.value);
+        seenSkus.add(product.sku.value);
         lines.push({
           id: PurchaseOrderLineId.parse(newUuid()),
-          sku,
+          sku: product.sku,
           name,
           qty: line.qty,
           receivedQty: 0,

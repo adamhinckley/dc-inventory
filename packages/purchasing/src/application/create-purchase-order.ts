@@ -9,11 +9,15 @@ import type { IClock } from "../domain/clock.js";
 import { parseIsoDate } from "../domain/iso-date.js";
 import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
+import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 
 export type CreatePurchaseOrderLineInput = {
   sku: string;
-  name: string;
+  /**
+   * Accepted for wire compatibility only. Catalog supplies the frozen line name.
+   */
+  name?: string;
   qty: number;
 };
 
@@ -28,12 +32,21 @@ export type CreatePurchaseOrderRequest = {
 
 export type CreatePurchaseOrderResult =
   | { ok: true; purchaseOrder: PurchaseOrder }
-  | { ok: false; reason: "invalid" | "supplier_not_found" | "empty_order" };
+  | {
+      ok: false;
+      reason:
+        | "invalid"
+        | "supplier_not_found"
+        | "product_not_found"
+        | "product_archived"
+        | "empty_order";
+    };
 
 export class CreatePurchaseOrderUseCase {
   constructor(
     private readonly purchaseOrders: IPurchaseOrderRepository,
     private readonly suppliers: ISupplierRepository,
+    private readonly catalog: ICatalogSkuLookupPort,
     private readonly clock?: IClock,
   ) {}
 
@@ -51,19 +64,26 @@ export class CreatePurchaseOrderUseCase {
     const lines: PurchaseOrderLine[] = [];
     const seenSkus = new Set<string>();
     for (const line of input.lines) {
-      const name = line.name.trim();
-      if (name.length === 0 || !Number.isInteger(line.qty) || line.qty <= 0) {
+      if (!Number.isInteger(line.qty) || line.qty <= 0) {
         return { ok: false, reason: "invalid" };
       }
       try {
-        const sku = Sku.parse(line.sku);
-        if (seenSkus.has(sku.value)) {
+        const requestedSku = Sku.parse(line.sku);
+        const product = await this.catalog.findBySku(input.organizationId, requestedSku);
+        if (product === null) {
+          return { ok: false, reason: "product_not_found" };
+        }
+        if (product.archived) {
+          return { ok: false, reason: "product_archived" };
+        }
+        const name = product.name.trim();
+        if (name.length === 0 || seenSkus.has(product.sku.value)) {
           return { ok: false, reason: "invalid" };
         }
-        seenSkus.add(sku.value);
+        seenSkus.add(product.sku.value);
         lines.push({
           id: PurchaseOrderLineId.parse(newUuid()),
-          sku,
+          sku: product.sku,
           name,
           qty: line.qty,
           receivedQty: 0,
