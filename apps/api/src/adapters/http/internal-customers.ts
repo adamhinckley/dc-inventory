@@ -147,14 +147,21 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
       } as FastifySchema & { "x-table": typeof customersListTable },
     },
     async (request) => {
+      const query = request.query as {
+        q?: string;
+        page: number;
+        pageSize: number;
+        sortBy: "name" | "createdAt" | "creditLimitCents";
+        sortOrder: "asc" | "desc";
+      };
       const result = await request.server.customers.listCustomers.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
-        q: request.query.q,
-        page: request.query.page,
-        pageSize: request.query.pageSize,
-        sortBy: request.query.sortBy,
-        sortOrder: request.query.sortOrder,
+        q: query.q,
+        page: query.page,
+        pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
       });
       return {
         items: result.items.map(mapCustomer),
