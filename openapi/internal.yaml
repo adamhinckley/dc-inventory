@@ -3946,25 +3946,15 @@ paths:
           content:
             application/json:
               schema:
-                anyOf:
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        enum:
-                          - feature_disabled
-                    required:
-                      - error
-                    additionalProperties: false
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        enum:
-                          - feature_disabled
-                    required:
-                      - error
-                    additionalProperties: false
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:

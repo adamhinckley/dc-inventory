@@ -13,7 +13,6 @@ import {
   purchaseOrderExportQuerySchema,
   purchaseOrderFactorySendResponseSchema,
   binaryFileResponseSchema,
-  featureDisabledResponseSchema,
   purchaseOrderItemSchema,
   purchaseOrderListQuerySchema,
   purchaseOrderListResponseSchema,
@@ -279,7 +278,6 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         response: {
           200: purchaseOrderFactorySendResponseSchema,
           401: unauthorizedResponseSchema,
-          403: featureDisabledResponseSchema,
           404: notFoundResponseSchema,
         },
       },
