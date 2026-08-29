@@ -8,6 +8,8 @@ export type ListSuppliersRequest = {
   q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "vendorNumber" | "name";
+  sortOrder?: "asc" | "desc";
 };
 
 export type ListSuppliersResult = {
@@ -27,6 +29,8 @@ export class ListSuppliersUseCase {
       q: input.q,
       page: input.page,
       pageSize: input.pageSize,
+      sortBy: input.sortBy,
+      sortOrder: input.sortOrder,
     });
     return {
       items: [...page.items],

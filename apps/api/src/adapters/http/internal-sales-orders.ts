@@ -88,6 +88,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         querystring: salesOrderListQuerySchema,
         response: {
           200: salesOrderListResponseSchema,
+          400: zodValidationErrorResponseSchema,
           401: unauthorizedResponseSchema,
         },
         "x-table": salesOrdersListTable,
@@ -95,16 +96,22 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
     },
     async (request) => {
       const query = request.query as {
+        q?: string;
         page: number;
         pageSize: number;
+        sortBy: "documentNumber" | "status";
+        sortOrder: "asc" | "desc";
         status?: SalesOrder["status"];
         customerId?: string;
       };
       const result = await request.server.sales.listSalesOrders.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
+        q: query.q,
         page: query.page,
         pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
         status: query.status,
         customerId:
           query.customerId === undefined ? undefined : CustomerId.parse(query.customerId),

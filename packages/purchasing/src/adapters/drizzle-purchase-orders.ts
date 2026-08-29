@@ -1,5 +1,5 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
@@ -200,15 +200,21 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
     if (query.supplierId !== undefined) {
       clauses.push(eq(purchaseOrders.supplierId, query.supplierId));
     }
+    if (query.q !== undefined && query.q.trim().length > 0) {
+      clauses.push(ilike(purchaseOrders.documentNumber, `%${query.q.trim()}%`));
+    }
     const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
+    const sortColumn =
+      query.sortBy === "status" ? purchaseOrders.status : purchaseOrders.documentNumber;
+    const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
     const [totalRows, headers] = await Promise.all([
       this.db.select({ value: count() }).from(purchaseOrders).where(where),
       this.db
         .select()
         .from(purchaseOrders)
         .where(where)
-        .orderBy(asc(purchaseOrders.documentNumber), asc(purchaseOrders.id))
+        .orderBy(order, asc(purchaseOrders.id))
         .limit(query.pageSize)
         .offset(offset),
     ]);

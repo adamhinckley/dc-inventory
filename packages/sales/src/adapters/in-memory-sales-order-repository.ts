@@ -74,6 +74,7 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
   }
 
   async list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage> {
+    const needle = query.q?.trim().toLowerCase() ?? "";
     const rows = [...this.byId.values()].filter((row) => {
       if (row.order.organizationId !== query.organizationId) {
         return false;
@@ -84,13 +85,15 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
       if (query.customerId !== undefined && row.order.customerId !== query.customerId) {
         return false;
       }
-      return true;
+      return needle.length === 0 || row.order.documentNumber.toLowerCase().includes(needle);
     });
-    rows.sort(
-      (a, b) =>
-        a.order.documentNumber.localeCompare(b.order.documentNumber) ||
-        a.order.id.localeCompare(b.order.id),
-    );
+    rows.sort((a, b) => {
+      const cmp =
+        query.sortBy === "status"
+          ? a.order.status.localeCompare(b.order.status)
+          : a.order.documentNumber.localeCompare(b.order.documentNumber);
+      return query.sortOrder === "desc" ? -cmp : cmp;
+    });
     const start = (query.page - 1) * query.pageSize;
     return {
       items: rows.slice(start, start + query.pageSize).map((row) => row.order),

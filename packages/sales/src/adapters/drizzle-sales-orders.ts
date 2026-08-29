@@ -1,5 +1,5 @@
 import { CustomerId, Money, OrderId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
-import { and, asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { SalesOrderLineId } from "../domain/ids.js";
@@ -82,15 +82,21 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
     if (query.customerId !== undefined) {
       clauses.push(eq(orders.customerId, query.customerId));
     }
+    if (query.q !== undefined && query.q.trim().length > 0) {
+      clauses.push(ilike(orders.documentNumber, `%${query.q.trim()}%`));
+    }
     const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
+    const sortColumn =
+      query.sortBy === "status" ? orders.status : orders.documentNumber;
+    const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
     const [totalRows, headers] = await Promise.all([
       this.db.select({ value: count() }).from(orders).where(where),
       this.db
         .select()
         .from(orders)
         .where(where)
-        .orderBy(asc(orders.documentNumber), asc(orders.id))
+        .orderBy(order, asc(orders.id))
         .limit(query.pageSize)
         .offset(offset),
     ]);

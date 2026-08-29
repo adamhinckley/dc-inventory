@@ -5,7 +5,7 @@
  * OpenAPI spec version: 0.0.0
  */
 
-export type ListInternalSupplierProducts400 = {
+export type ListInternalPurchaseOrders400 = {
   statusCode: number;
   code: string;
   error: string;

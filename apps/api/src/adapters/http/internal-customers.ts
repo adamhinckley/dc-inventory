@@ -25,6 +25,7 @@ import {
   customerListResponseSchema,
   customerPatchBodySchema,
   customerWriteBodySchema,
+  customersListTable,
   duplicateEmailResponseSchema,
   exemptionItemSchema,
   exemptionListResponseSchema,
@@ -39,7 +40,9 @@ import {
   shipToPatchBodySchema,
   shipToWriteBodySchema,
   unauthorizedResponseSchema,
+  zodValidationErrorResponseSchema,
 } from "../../schemas.js";
+import type { FastifySchema } from "fastify";
 import { staffOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
@@ -135,8 +138,13 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
         tags: ["internal-customers"],
         summary: "List customers",
         querystring: customerListQuerySchema,
-        response: { 200: customerListResponseSchema, 401: unauthorizedResponseSchema },
-      },
+        response: {
+          200: customerListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+        },
+        "x-table": customersListTable,
+      } as FastifySchema & { "x-table": typeof customersListTable },
     },
     async (request) => {
       const result = await request.server.customers.listCustomers.execute({

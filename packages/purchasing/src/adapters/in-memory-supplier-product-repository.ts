@@ -16,10 +16,24 @@ export class InMemorySupplierProductRepository implements ISupplierProductReposi
   }
 
   async listBySupplier(query: ListSupplierProductsQuery): Promise<SupplierProductListPage> {
-    const rows = [...this.byId.values()].filter(
-      (row) => row.supplierId === query.supplierId,
-    );
-    rows.sort((a, b) => a.sku.value.localeCompare(b.sku.value));
+    const needle = query.q?.trim().toLowerCase() ?? "";
+    const rows = [...this.byId.values()].filter((row) => {
+      if (row.supplierId !== query.supplierId) {
+        return false;
+      }
+      return (
+        needle.length === 0 ||
+        row.sku.value.toLowerCase().includes(needle) ||
+        row.supplierSku?.toLowerCase().includes(needle) === true
+      );
+    });
+    rows.sort((a, b) => {
+      const cmp =
+        query.sortBy === "supplierSku"
+          ? (a.supplierSku ?? "").localeCompare(b.supplierSku ?? "")
+          : a.sku.value.localeCompare(b.sku.value);
+      return query.sortOrder === "desc" ? -cmp : cmp;
+    });
     const start = (query.page - 1) * query.pageSize;
     return {
       items: rows.slice(start, start + query.pageSize),
