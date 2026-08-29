@@ -284,7 +284,10 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
       if (!result.ok) {
         return sendNotFound(reply);
       }
-      return { columns: result.columns, rows: result.rows };
+      return purchaseOrderFactorySendResponseSchema.parse({
+        columns: [...result.columns],
+        rows: [...result.rows],
+      });
     },
   );
 
