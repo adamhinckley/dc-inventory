@@ -504,11 +504,10 @@ export const purchaseOrdersListTable = {
     { field: "status", label: "Status" },
     { field: "supplierId", label: "Supplier" },
   ],
-  sort: {
-    defaultBy: "documentNumber",
-    defaultOrder: "asc",
-    fields: ["documentNumber", "status"],
-  },
+  filters: [
+    { param: "status", control: "select" },
+    { param: "supplierId", control: "text" },
+  ],
 };
 
 export const supplierListQuerySchema = z.object({
@@ -643,11 +642,6 @@ export const supplierProductsListTable = {
     { field: "qty.allocated", label: "Allocated" },
     { field: "qty.available", label: "Available" },
   ],
-  sort: {
-    defaultBy: "sku",
-    defaultOrder: "asc",
-    fields: ["sku", "catalogName", "qty.onHand", "qty.available"],
-  },
 };
 
 export const salesOrderStatusSchema = z.enum([
@@ -736,11 +730,10 @@ export const salesOrdersListTable = {
     { field: "status", label: "Status" },
     { field: "customerId", label: "Customer" },
   ],
-  sort: {
-    defaultBy: "documentNumber",
-    defaultOrder: "asc",
-    fields: ["documentNumber", "status"],
-  },
+  filters: [
+    { param: "status", control: "select" },
+    { param: "customerId", control: "text" },
+  ],
 };
 
 export const invoiceStatusSchema = z.enum(["unposted", "posted"]);

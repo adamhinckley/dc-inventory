@@ -1,6 +1,6 @@
+import { listInternalSuppliersTable } from "@dc-inventory/api-client-internal";
 import Link from "next/link";
 import { SuppliersExplorer } from "../../../../components/suppliers-explorer";
-import { suppliersListTable } from "../../../../lib/suppliers-list-table";
 import { listParamsFromSearchParams } from "../../../../lib/table-url-params";
 
 type SuppliersSearchParams = Record<string, string | string[] | undefined>;
@@ -11,7 +11,7 @@ export default async function SuppliersPage({
   searchParams: Promise<SuppliersSearchParams>;
 }) {
   const initialParams = listParamsFromSearchParams(
-    suppliersListTable,
+    listInternalSuppliersTable,
     await searchParams,
   );
 
