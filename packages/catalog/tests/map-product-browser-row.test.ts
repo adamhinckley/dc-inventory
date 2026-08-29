@@ -41,6 +41,9 @@ describe("mapProductBrowserRow", () => {
     expect(mapped.value.supplierSku).toBe("JA149015");
     expect(mapped.value.lastPoCostCents).toBe(357);
     expect(mapped.value.caseQty).toBe(192);
+    expect(mapped.value.caseLength).toBeNull();
+    expect(mapped.value.caseWidth).toBeNull();
+    expect(mapped.value.caseHeight).toBeNull();
     expect(mapped.value.minOrderQty).toBeNull();
     expect(mapped.value).not.toHaveProperty("onHand");
     expect(mapped.value).not.toHaveProperty("onhand_qty");
@@ -94,6 +97,35 @@ describe("mapProductBrowserRow", () => {
     if (paddedZero.ok) {
       expect(paddedZero.value.caseQty).toBeNull();
       expect(paddedZero.value.minOrderQty).toBeNull();
+    }
+  });
+
+  it("maps case inches and treats empty or zero as missing", () => {
+    const mapped = mapProductBrowserRow(
+      row({ cs_len: "23.6", cs_wid: "15.7", cs_ht: "19.7" }),
+      2,
+    );
+    expect(mapped.ok).toBe(true);
+    if (mapped.ok) {
+      expect(mapped.value.caseLength).toBe("23.6");
+      expect(mapped.value.caseWidth).toBe("15.7");
+      expect(mapped.value.caseHeight).toBe("19.7");
+    }
+
+    const empty = mapProductBrowserRow(row({ cs_len: "", cs_wid: "0", cs_ht: "0.0" }), 2);
+    expect(empty.ok).toBe(true);
+    if (empty.ok) {
+      expect(empty.value.caseLength).toBeNull();
+      expect(empty.value.caseWidth).toBeNull();
+      expect(empty.value.caseHeight).toBeNull();
+    }
+
+    const invalid = mapProductBrowserRow(row({ cs_len: "wide" }), 4);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) {
+      expect(invalid.errors).toEqual([
+        { row: 4, field: "cs_len", message: "Case length must be a non-negative number" },
+      ]);
     }
   });
 

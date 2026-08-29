@@ -80,7 +80,15 @@ export interface ButtonProps
  * @variants variant (`default`/`primary`/`secondary`/`ghost`/`destructive`),
  *   size (`xs`/`sm`/`md`/`lg`). `md` matches `--space-input-height`.
  */
-export function Button({ ref, className, variant, size, disabledReason, ...rest }: ButtonProps) {
+export function Button({
+  ref,
+  className,
+  variant,
+  size,
+  disabledReason,
+  disabled,
+  ...rest
+}: ButtonProps) {
   if (disabledReason) {
     // Focusable non-interactive render (the RouterTabs.Trigger disabled
     // pattern): `aria-disabled` + explicit tabIndex instead of the native
@@ -90,7 +98,7 @@ export function Button({ ref, className, variant, size, disabledReason, ...rest 
     // `type="submit"` must not survive here — a native submit button still
     // implicitly submits on Enter even with no onClick handler.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { onClick: _onClick, disabled: _disabled, ...inert } = rest
+    const { onClick: _onClick, ...inert } = rest
     return (
       <Tooltip content={disabledReason}>
         <button
@@ -114,6 +122,7 @@ export function Button({ ref, className, variant, size, disabledReason, ...rest 
       type="button"
       className={cn(buttonVariants({ variant, size }), className)}
       {...rest}
+      disabled={disabled === true ? true : undefined}
     />
   )
 }

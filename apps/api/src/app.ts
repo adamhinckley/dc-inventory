@@ -144,6 +144,7 @@ export async function buildApp(
   const services = composeAppServices(options);
   const app = Fastify({
     logger: options.logger ?? pinoLoggerOptions(),
+    bodyLimit: SPREADSHEET_UPLOAD_MAX_BYTES,
     ...requestIdConfig(),
   });
   app.decorate("features", services.features);

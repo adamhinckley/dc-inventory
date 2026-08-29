@@ -104,89 +104,103 @@ export class ImportProductBrowserUseCase {
     let updated = 0;
     let linked = 0;
     for (const { rowNumber, value } of valid) {
-      const sku = Sku.parse(value.sku);
-      const existing = await this.products.findBySku(input.organizationId, sku);
-      if (existing === null) {
-        const createdResult = await this.createProduct.execute({
-          organizationId: input.organizationId,
-          staffUserId: input.staffUserId,
-          sku: value.sku,
-          name: value.name,
-          uom: value.uom,
-          memberPriceCents: value.memberPriceCents,
-          currency: "USD",
-          inactive: value.inactive,
-          discontinued: value.discontinued,
-          webWholesale: value.webWholesale,
-          description: value.description,
-          taxCategoryCode: value.taxCategoryCode,
-        });
-        if (!createdResult.ok) {
-          errors.push({
-            row: rowNumber,
-            field: "product_id",
-            message: createdResult.reason === "duplicate_sku" ? "SKU already exists" : "Product could not be created",
+      try {
+        const sku = Sku.parse(value.sku);
+        const existing = await this.products.findBySku(input.organizationId, sku);
+        if (existing === null) {
+          const createdResult = await this.createProduct.execute({
+            organizationId: input.organizationId,
+            staffUserId: input.staffUserId,
+            sku: value.sku,
+            name: value.name,
+            uom: value.uom,
+            memberPriceCents: value.memberPriceCents,
+            currency: "USD",
+            inactive: value.inactive,
+            discontinued: value.discontinued,
+            webWholesale: value.webWholesale,
+            description: value.description,
+            taxCategoryCode: value.taxCategoryCode,
           });
-          continue;
-        }
-        created += 1;
-        await this.packaging.save({
-          productId: createdResult.product.id,
-          caseQty: value.caseQty,
-        });
-      } else {
-        const updatedResult = await this.updateProduct.execute({
-          organizationId: input.organizationId,
-          staffUserId: input.staffUserId,
-          productId: existing.id,
-          name: value.name,
-          uom: value.uom,
-          memberPriceCents: value.memberPriceCents,
-          currency: "USD",
-          inactive: value.inactive,
-          discontinued: value.discontinued,
-          webWholesale: value.webWholesale,
-          description: value.description,
-          taxCategoryCode: value.taxCategoryCode,
-        });
-        if (!updatedResult.ok) {
-          errors.push({
-            row: rowNumber,
-            field: "product_id",
-            message: "Product could not be updated",
+          if (!createdResult.ok) {
+            errors.push({
+              row: rowNumber,
+              field: "product_id",
+              message: createdResult.reason === "duplicate_sku" ? "SKU already exists" : "Product could not be created",
+            });
+            continue;
+          }
+          await this.packaging.save({
+            productId: createdResult.product.id,
+            caseQty: value.caseQty,
+            caseLength: value.caseLength,
+            caseWidth: value.caseWidth,
+            caseHeight: value.caseHeight,
           });
-          continue;
+          created += 1;
+        } else {
+          const updatedResult = await this.updateProduct.execute({
+            organizationId: input.organizationId,
+            staffUserId: input.staffUserId,
+            productId: existing.id,
+            name: value.name,
+            uom: value.uom,
+            memberPriceCents: value.memberPriceCents,
+            currency: "USD",
+            inactive: value.inactive,
+            discontinued: value.discontinued,
+            webWholesale: value.webWholesale,
+            description: value.description,
+            taxCategoryCode: value.taxCategoryCode,
+          });
+          if (!updatedResult.ok) {
+            errors.push({
+              row: rowNumber,
+              field: "product_id",
+              message: "Product could not be updated",
+            });
+            continue;
+          }
+          await this.packaging.save({
+            productId: existing.id,
+            caseQty: value.caseQty,
+            caseLength: value.caseLength,
+            caseWidth: value.caseWidth,
+            caseHeight: value.caseHeight,
+          });
+          updated += 1;
         }
-        updated += 1;
-        await this.packaging.save({
-          productId: existing.id,
-          caseQty: value.caseQty,
-        });
-      }
 
-      if (value.vendorNumber === null || value.vendorName === null) {
-        continue;
-      }
-      const link = await this.suppliers.linkSku({
-        organizationId: input.organizationId,
-        staffUserId: input.staffUserId,
-        vendorNumber: value.vendorNumber,
-        vendorName: value.vendorName,
-        sku: value.sku,
-        supplierSku: value.supplierSku,
-        minOrderQty: value.minOrderQty,
-        minOrderAmountCents: value.minOrderAmountCents,
-        lastPoCostCents: value.lastPoCostCents,
-      });
-      if (!link.ok) {
+        if (value.vendorNumber === null || value.vendorName === null) {
+          continue;
+        }
+        const link = await this.suppliers.linkSku({
+          organizationId: input.organizationId,
+          staffUserId: input.staffUserId,
+          vendorNumber: value.vendorNumber,
+          vendorName: value.vendorName,
+          sku: value.sku,
+          supplierSku: value.supplierSku,
+          minOrderQty: value.minOrderQty,
+          minOrderAmountCents: value.minOrderAmountCents,
+          lastPoCostCents: value.lastPoCostCents,
+        });
+        if (!link.ok) {
+          errors.push({
+            row: rowNumber,
+            field: "vendor",
+            message: link.message,
+          });
+          continue;
+        }
+        linked += 1;
+      } catch {
         errors.push({
           row: rowNumber,
-          field: "vendor",
-          message: link.message,
+          field: "product_id",
+          message: "Product could not be saved",
         });
-        continue;
       }
-      linked += 1;
     }
 
     return {

@@ -24,6 +24,9 @@ export type ProductBrowserMappedRow = {
   minOrderAmountCents: number | null;
   lastPoCostCents: number | null;
   caseQty: number | null;
+  caseLength: string | null;
+  caseWidth: string | null;
+  caseHeight: string | null;
 };
 
 export type MapProductBrowserRowResult =
@@ -91,6 +94,23 @@ function optionalPositiveInt(raw: string): { ok: true; value: number | null } | 
   return { ok: true, value: parsed === 0 ? null : parsed };
 }
 
+function optionalPositiveDecimal(
+  raw: string,
+): { ok: true; value: string | null } | { ok: false } {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    return { ok: true, value: null };
+  }
+  if (!/^\d+(?:\.\d+)?$/.test(trimmed)) {
+    return { ok: false };
+  }
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return { ok: true, value: null };
+  }
+  return { ok: true, value: trimmed };
+}
+
 function optionalText(raw: string): string | null {
   const trimmed = raw.trim();
   return trimmed.length === 0 ? null : trimmed;
@@ -111,6 +131,9 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
   const minOrderAmtRaw = cell(row, "min_order_amt");
   const poCostRaw = cell(row, "po_cost");
   const caseQtyRaw = cell(row, "cs_qty");
+  const caseLengthRaw = cell(row, "cs_len");
+  const caseWidthRaw = cell(row, "cs_wid");
+  const caseHeightRaw = cell(row, "cs_ht");
 
   if (skuRaw.length === 0) {
     errors.push({ row: rowNumber, field: "product_id", message: "SKU is required" });
@@ -159,6 +182,31 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
     errors.push({ row: rowNumber, field: "cs_qty", message: "Case quantity must be a whole number" });
   }
 
+  const caseLength = optionalPositiveDecimal(caseLengthRaw);
+  if (!caseLength.ok) {
+    errors.push({
+      row: rowNumber,
+      field: "cs_len",
+      message: "Case length must be a non-negative number",
+    });
+  }
+  const caseWidth = optionalPositiveDecimal(caseWidthRaw);
+  if (!caseWidth.ok) {
+    errors.push({
+      row: rowNumber,
+      field: "cs_wid",
+      message: "Case width must be a non-negative number",
+    });
+  }
+  const caseHeight = optionalPositiveDecimal(caseHeightRaw);
+  if (!caseHeight.ok) {
+    errors.push({
+      row: rowNumber,
+      field: "cs_ht",
+      message: "Case height must be a non-negative number",
+    });
+  }
+
   if (vendorName !== null && vendorNumber === null) {
     errors.push({ row: rowNumber, field: "vendor_num", message: "Vendor number is required when vendor name is present" });
   }
@@ -189,6 +237,9 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
       minOrderAmountCents: minOrderAmount.ok && minOrderAmount.cents > 0 ? minOrderAmount.cents : null,
       lastPoCostCents: lastPoCost.ok && lastPoCost.cents > 0 ? lastPoCost.cents : null,
       caseQty: caseQty.ok ? caseQty.value : null,
+      caseLength: caseLength.ok ? caseLength.value : null,
+      caseWidth: caseWidth.ok ? caseWidth.value : null,
+      caseHeight: caseHeight.ok ? caseHeight.value : null,
     },
   };
 }

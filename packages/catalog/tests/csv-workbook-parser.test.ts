@@ -25,4 +25,15 @@ describe("CsvWorkbookParser", () => {
     });
     expect(rows).toEqual([]);
   });
+
+  it("rejects Excel binary bytes instead of throwing a parser internals error", async () => {
+    const ole = new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 1, 2, 3]);
+    await expect(
+      new CsvWorkbookParser().parse({
+        bytes: ole,
+        filename: "products.xls",
+        contentType: "application/vnd.ms-excel",
+      }),
+    ).rejects.toThrow("not a valid CSV");
+  });
 });
