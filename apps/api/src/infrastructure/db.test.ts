@@ -18,6 +18,7 @@ describe("PostgresDatabase", () => {
         "invoices",
         "issueReports",
         "locations",
+        "loginThrottleCounters",
         "operatorOutbox",
         "opsUsers",
         "orderLines",
