@@ -23,7 +23,7 @@ describe("org-session fail closed (ADA-194)", () => {
     expect(() => wholesaleOrganizationId({})).toThrow(MissingOrganizationContextError);
   });
 
-  it("returns 500 when a route uses staffOrganizationId without the audience guard", async () => {
+  it("returns a safe 500 when a route uses staffOrganizationId without the audience guard", async () => {
     const app = await buildApp({ logger: false, database: new InMemoryDatabase() });
     apps.push(app);
 
@@ -37,6 +37,11 @@ describe("org-session fail closed (ADA-194)", () => {
     });
 
     expect(response.statusCode).toBe(500);
-    expect(response.body).toContain("Missing organization context");
+    expect(response.json()).toEqual({
+      error: "internal_error",
+      message: "An unexpected error occurred.",
+      requestId: expect.any(String),
+    });
+    expect(response.body).not.toContain("Missing organization context");
   });
 });

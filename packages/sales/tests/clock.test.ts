@@ -2,9 +2,18 @@ import {
   GetStockSnapshotUseCase,
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import {
+  CustomerId,
+  LocationId,
+  Money,
+  OrganizationId,
+  ProductId,
+  Sku,
+  StaffUserId,
+} from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
+import { InMemoryCatalogProductPort } from "../src/adapters/in-memory-catalog-product-port.js";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import {
   ConfirmSalesOrderUseCase,
@@ -14,6 +23,7 @@ import {
 } from "../src/index.js";
 
 const SKU = Sku.parse("SO-CLOCK-SKU");
+const PRODUCT_ID = ProductId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 const DEFAULT = LocationId.DEFAULT;
 const DEFAULT_ORG = OrganizationId.DEFAULT;
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
@@ -27,11 +37,21 @@ async function harness() {
     findById: async (organizationId: OrganizationId, id: CustomerId) =>
       organizationId === DEFAULT_ORG && id === CUSTOMER_ID ? { id } : null,
   };
+  const catalog = new InMemoryCatalogProductPort([
+    {
+      productId: PRODUCT_ID,
+      organizationId: DEFAULT_ORG,
+      sku: SKU,
+      name: "Widget",
+      unitPrice: Money.fromMinorUnits(500, "USD"),
+      active: true,
+    },
+  ]);
 
   return {
     clock,
     uow,
-    create: new CreateSalesOrderUseCase(uow.salesOrders, customers, clock),
+    create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog, clock),
     get: new GetSalesOrderUseCase(uow.salesOrders),
     confirm: new ConfirmSalesOrderUseCase(uow),
     ship: new ShipSalesOrderUseCase(uow),
@@ -59,7 +79,7 @@ describe("Sales seed clock (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 3 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -116,7 +136,7 @@ describe("Sales seed clock (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 3 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -150,7 +170,7 @@ describe("Sales seed clock (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 1, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {

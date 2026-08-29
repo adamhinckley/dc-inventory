@@ -48,6 +48,12 @@ export class ConfirmPurchaseOrderUseCase {
           return { ok: false, reason: "empty_order" };
         }
 
+        await scope.inventory.lockSnapshots(
+          existing.lines.map((line) => ({
+            organizationId: existing.organizationId,
+            sku: line.sku,
+          })),
+        );
         for (const line of existing.lines) {
           const product = await this.catalog.findBySku(existing.organizationId, line.sku);
           if (product === null || !product.sku.equals(line.sku)) {

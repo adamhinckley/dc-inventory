@@ -4,6 +4,7 @@ import {
 } from "@dc-inventory/sales";
 import { DrizzleCustomerRepository } from "@dc-inventory/customers";
 import { DrizzleInvoiceRepository } from "@dc-inventory/accounting";
+import { DrizzleProductRepository } from "@dc-inventory/catalog";
 import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { SeedPlaybackClock } from "../adapters/seed-playback-clock.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
@@ -37,6 +38,7 @@ export async function runReplaySalesOrdersOnDb(
   const salesOrders = new DrizzleSalesOrderRepository(db as never);
   const customers = new DrizzleCustomerRepository(db as never);
   const invoices = new DrizzleInvoiceRepository(db as never);
+  const products = new DrizzleProductRepository(db as never);
 
   const salesUow: ISalesUnitOfWork = {
     salesOrders,
@@ -50,7 +52,7 @@ export async function runReplaySalesOrdersOnDb(
   };
 
   return runReplaySalesOrders(
-    { uow: salesUow, clock, customers, invoices },
+    { uow: salesUow, clock, customers, products, invoices },
     {
       plan,
       customerIdByKey: input.customerIdByKey,

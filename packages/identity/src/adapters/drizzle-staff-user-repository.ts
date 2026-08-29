@@ -4,13 +4,20 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { normalizeEmail } from "../domain/email.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { StaffUser } from "../domain/staff-user.js";
-import { organizations, sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
+import {
+  loginThrottleCounters,
+  organizations,
+  sessions,
+  staffUsers,
+  wholesaleUsers,
+} from "../persistence/schema.js";
 
 export type IdentityDrizzle = PostgresJsDatabase<{
   organizations: typeof organizations;
   staffUsers: typeof staffUsers;
   wholesaleUsers: typeof wholesaleUsers;
   sessions: typeof sessions;
+  loginThrottleCounters: typeof loginThrottleCounters;
 }>;
 
 export class DrizzleStaffUserRepository implements IStaffUserRepository {

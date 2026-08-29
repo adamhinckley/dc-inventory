@@ -45,6 +45,8 @@ describe("OpenAPI stub export", () => {
     expect(specs.wholesale).not.toContain("/internal/");
 
     expect(specs.ops).toContain("/ops/subscription");
+    expect(specs.ops).toContain("/ops/auth/login");
+    expect(specs.ops).toContain("loginOps");
     expect(specs.ops).not.toContain("/internal/");
     expect(specs.ops).not.toContain("x-table");
   });

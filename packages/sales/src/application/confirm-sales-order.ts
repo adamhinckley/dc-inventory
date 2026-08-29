@@ -44,6 +44,12 @@ export class ConfirmSalesOrderUseCase {
           return { ok: false, reason: "empty_order" };
         }
 
+        await scope.inventory.lockSnapshots(
+          existing.lines.map((line) => ({
+            organizationId: existing.organizationId,
+            sku: line.sku,
+          })),
+        );
         for (const line of existing.lines) {
           const result = await scope.inventory.recordAllocated({
             organizationId: existing.organizationId,

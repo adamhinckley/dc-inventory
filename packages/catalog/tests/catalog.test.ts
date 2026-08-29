@@ -131,6 +131,33 @@ describe("Catalog use cases (in-memory)", () => {
     expect(listed.items[0]?.product.memberPrice.amountMinor).toBe(1250);
   });
 
+  it("constrains the wholesale list to products in the requested category", async () => {
+    const h = harness();
+    const bolt = await createProduct(h, {
+      sku: "SHOP-BOLT",
+      name: "Shop bolt",
+    });
+    const ribbon = await createProduct(h, {
+      sku: "SHOP-RIBBON",
+      name: "Shop ribbon",
+    });
+    h.products.setCategories(bolt.id, ["Hardware", "Fasteners"]);
+    h.products.setCategories(ribbon.id, ["Textiles"]);
+
+    const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      category: "Hardware",
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+    });
+
+    expect(listed.total).toBe(1);
+    expect(listed.items[0]?.product.sku.value).toBe("SHOP-BOLT");
+  });
+
   it("treats missing qty snapshots as zero", async () => {
     const h = harness();
     const product = await createProduct(h);

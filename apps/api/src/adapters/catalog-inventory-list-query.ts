@@ -4,10 +4,10 @@ import {
   type Product,
   type ProductQty,
 } from "@dc-inventory/catalog";
-import { products } from "@dc-inventory/catalog/schema";
+import { categories, productCategories, products } from "@dc-inventory/catalog/schema";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
-import { and, asc, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
@@ -64,6 +64,20 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     if (needle.length > 0) {
       const pattern = `%${needle}%`;
       clauses.push(or(ilike(products.sku, pattern), ilike(products.name, pattern))!);
+    }
+    const category = query.category?.trim() ?? "";
+    if (category.length > 0) {
+      const productIds = this.db
+        .select({ productId: productCategories.productId })
+        .from(productCategories)
+        .innerJoin(categories, eq(categories.id, productCategories.categoryId))
+        .where(
+          and(
+            eq(categories.organizationId, query.organizationId),
+            eq(categories.name, category),
+          ),
+        );
+      clauses.push(inArray(products.id, productIds));
     }
     const where = and(...clauses);
     const onHand = sql<number>`coalesce(${stockSnapshots.onHand}, 0)`;
