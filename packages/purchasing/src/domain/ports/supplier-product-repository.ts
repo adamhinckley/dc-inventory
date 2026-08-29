@@ -4,8 +4,11 @@ import type { SupplierProduct } from "../supplier-product.js";
 
 export type ListSupplierProductsQuery = {
   supplierId: SupplierId;
+  q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "sku" | "supplierSku";
+  sortOrder?: "asc" | "desc";
 };
 
 export type SupplierProductListPage = {

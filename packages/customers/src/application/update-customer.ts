@@ -39,6 +39,7 @@ export class UpdateCustomerUseCase {
         name,
         creditLimit: Money.fromMinorUnits(cents, currency),
         terms,
+        createdAt: existing.createdAt,
       };
       await this.customers.save(customer);
       return { ok: true, customer };

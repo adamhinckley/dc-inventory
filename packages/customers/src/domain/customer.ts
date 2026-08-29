@@ -6,4 +6,5 @@ export type Customer = {
   name: string;
   creditLimit: Money;
   terms: string;
+  createdAt: Date;
 };

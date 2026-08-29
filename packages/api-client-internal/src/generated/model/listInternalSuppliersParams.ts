@@ -4,6 +4,8 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalSuppliersSortBy } from './listInternalSuppliersSortBy';
+import type { ListInternalSuppliersSortOrder } from './listInternalSuppliersSortOrder';
 
 export type ListInternalSuppliersParams = {
 q?: string;
@@ -17,4 +19,6 @@ page?: number;
  * @maximum 100
  */
 pageSize?: number;
+sortBy?: ListInternalSuppliersSortBy;
+sortOrder?: ListInternalSuppliersSortOrder;
 };

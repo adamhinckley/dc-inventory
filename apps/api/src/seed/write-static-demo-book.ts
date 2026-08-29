@@ -106,6 +106,7 @@ async function upsertCustomer(
     name: planned.name,
     creditLimit: Money.fromMinorUnits(planned.creditLimitCents, planned.currency),
     terms: planned.terms,
+    createdAt: existing?.createdAt ?? new Date(),
   };
   await ports.customers.save(customer);
   return customer;

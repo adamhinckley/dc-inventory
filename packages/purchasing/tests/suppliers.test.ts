@@ -49,6 +49,8 @@ describe("Suppliers use cases (in-memory)", () => {
       staffUserId: OTHER_STAFF,
       page: 1,
       pageSize: 25,
+      sortBy: "vendorNumber",
+      sortOrder: "asc",
     });
     expect(listed.total).toBe(2);
     expect(listed.items.map((row) => row.vendorNumber)).toEqual(["VEND-001", "VEND-002"]);
@@ -94,6 +96,8 @@ describe("Suppliers use cases (in-memory)", () => {
       q: "ww-1",
       page: 1,
       pageSize: 25,
+      sortBy: "vendorNumber",
+      sortOrder: "asc",
     });
     expect(byVendor.total).toBe(1);
     expect(byVendor.items[0]?.name).toBe("Widget Warehouse");
@@ -104,9 +108,24 @@ describe("Suppliers use cases (in-memory)", () => {
       q: "depot",
       page: 1,
       pageSize: 25,
+      sortBy: "vendorNumber",
+      sortOrder: "asc",
     });
     expect(byName.total).toBe(1);
     expect(byName.items[0]?.vendorNumber).toBe("GD-200");
+
+    const sorted = await h.listSuppliers.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "desc",
+    });
+    expect(sorted.items.map((row) => row.name)).toEqual([
+      "Widget Warehouse",
+      "Gadget Depot",
+    ]);
   });
 
   it("rejects duplicate vendor numbers within an org", async () => {

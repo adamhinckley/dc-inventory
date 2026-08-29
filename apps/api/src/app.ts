@@ -226,5 +226,11 @@ declare module "fastify" {
       customerId: string;
       organizationId: string;
     };
+    opsAuth?: {
+      opsUserId: string;
+      email: string;
+      kind: "operator" | "business_owner";
+      tenantId: string;
+    };
   }
 }

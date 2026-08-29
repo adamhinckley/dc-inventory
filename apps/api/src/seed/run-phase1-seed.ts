@@ -70,6 +70,7 @@ async function upsertCustomer(ports: Phase1SeedPorts): Promise<Customer> {
       PHASE1_CUSTOMER_CURRENCY,
     ),
     terms: PHASE1_CUSTOMER_TERMS,
+    createdAt: existing?.createdAt ?? new Date(),
   };
   await ports.customers.save(customer);
   return customer;

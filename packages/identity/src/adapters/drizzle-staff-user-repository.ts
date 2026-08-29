@@ -6,6 +6,7 @@ import type { IStaffUserRepository } from "../domain/ports/staff-user-repository
 import type { StaffUser } from "../domain/staff-user.js";
 import {
   loginThrottleCounters,
+  opsUsers,
   organizations,
   sessions,
   staffUsers,
@@ -14,6 +15,7 @@ import {
 
 export type IdentityDrizzle = PostgresJsDatabase<{
   organizations: typeof organizations;
+  opsUsers: typeof opsUsers;
   staffUsers: typeof staffUsers;
   wholesaleUsers: typeof wholesaleUsers;
   sessions: typeof sessions;

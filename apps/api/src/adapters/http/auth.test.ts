@@ -7,12 +7,14 @@ import {
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
+  InMemoryOpsUserRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
   LOGIN_THROTTLE_MAX_ATTEMPTS,
   LOGIN_THROTTLE_WINDOW_MS,
+  OpsUserId,
   SESSION_IDLE_MS,
 } from "@dc-inventory/identity";
 import { afterEach, describe, expect, it } from "vitest";
@@ -21,11 +23,14 @@ import { readTrustProxy } from "../../infrastructure/trust-proxy.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import {
   STAFF_SESSION_COOKIE,
+  OPS_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
+const OPERATOR_ID = OpsUserId.parse("44444444-4444-4444-8444-444444444444");
+const OWNER_ID = OpsUserId.parse("55555555-5555-4555-8555-555555555555");
 const CUSTOMER_ID = CustomerId.parse("33333333-3333-4333-8333-333333333333");
 const ACME_SLUG = "acme";
 
@@ -43,6 +48,7 @@ async function startAuthApp(
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
   const staffUsers = new InMemoryStaffUserRepository();
+  const opsUsers = new InMemoryOpsUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
   await staffUsers.save({
@@ -59,11 +65,26 @@ async function startAuthApp(
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_ID,
   });
+  await opsUsers.save({
+    id: OPERATOR_ID,
+    tenantId: OrganizationId.DEFAULT,
+    email: "operator@local.test",
+    passwordHash: await passwords.hash("operator-secret"),
+    kind: "operator",
+  });
+  await opsUsers.save({
+    id: OWNER_ID,
+    tenantId: OrganizationId.DEFAULT,
+    email: "owner@local.test",
+    passwordHash: await passwords.hash("owner-secret"),
+    kind: "business_owner",
+  });
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),
     clock,
     staffUsers,
+    opsUsers,
     wholesaleUsers,
     sessions,
     passwords,
@@ -496,6 +517,118 @@ describe("opaque session HTTP", () => {
       "https://evil.example",
     );
     expect(denied.headers["access-control-allow-origin"]).not.toBe("*");
+  });
+
+  it.each([
+    ["operator@local.test", "operator-secret", OPERATOR_ID, "operator"],
+    ["owner@local.test", "owner-secret", OWNER_ID, "business_owner"],
+  ] as const)(
+    "sets ops_session and resolves the %s actor kind",
+    async (email, password, opsUserId, kind) => {
+      const { app } = await startAuthApp();
+      const login = await app.inject({
+        method: "POST",
+        url: "/ops/auth/login",
+        payload: { organizationSlug: ACME_SLUG, email, password },
+      });
+      expect(login.statusCode).toBe(200);
+      expect(login.json()).toEqual({
+        opsUserId,
+        email,
+        kind,
+        tenantId: OrganizationId.DEFAULT,
+      });
+      const cookie = cookieValue(login, OPS_SESSION_COOKIE);
+      expect(cookie?.name).toBe(OPS_SESSION_COOKIE);
+      expect(cookie?.httpOnly).toBe(true);
+
+      const session = await app.inject({
+        method: "GET",
+        url: "/ops/auth/session",
+        cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
+      });
+      expect(session.statusCode).toBe(200);
+      expect(session.json()).toEqual(login.json());
+
+      const subscription = await app.inject({
+        method: "GET",
+        url: "/ops/subscription",
+        cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
+      });
+      expect(subscription.statusCode).toBe(200);
+    },
+  );
+
+  it("guards every non-login ops route and expires ops sessions", async () => {
+    const { app, clock } = await startAuthApp();
+    for (const request of [
+      { method: "GET" as const, url: "/ops/subscription" },
+      { method: "GET" as const, url: "/ops/auth/session" },
+      { method: "POST" as const, url: "/ops/auth/logout" },
+    ]) {
+      const response = await app.inject(request);
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: "unauthorized" });
+    }
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/ops/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "operator@local.test",
+        password: "operator-secret",
+      },
+    });
+    const cookie = cookieValue(login, OPS_SESSION_COOKIE);
+    clock.advance(SESSION_IDLE_MS + 1);
+    const expired = await app.inject({
+      method: "GET",
+      url: "/ops/subscription",
+      cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
+    });
+    expect(expired.statusCode).toBe(401);
+    expect(expired.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("rejects staff and wholesale cookies and wrong-audience tokens on ops routes", async () => {
+    const { app } = await startAuthApp();
+    const staffLogin = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
+    });
+    const wholesaleLogin = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
+    });
+    const staffToken = cookieValue(staffLogin, STAFF_SESSION_COOKIE)?.value ?? "";
+    const wholesaleToken =
+      cookieValue(wholesaleLogin, WHOLESALE_SESSION_COOKIE)?.value ?? "";
+
+    for (const cookies of [
+      { [STAFF_SESSION_COOKIE]: staffToken },
+      { [WHOLESALE_SESSION_COOKIE]: wholesaleToken },
+      { [OPS_SESSION_COOKIE]: staffToken },
+      { [OPS_SESSION_COOKIE]: wholesaleToken },
+    ]) {
+      const response = await app.inject({
+        method: "GET",
+        url: "/ops/subscription",
+        cookies,
+      });
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: "unauthorized" });
+    }
   });
 
   it("throttles ops login with the shared interface", async () => {

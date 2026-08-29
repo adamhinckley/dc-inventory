@@ -7,6 +7,8 @@ import {
   type WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
+import type { OpsActorKind, OpsUserId } from "../domain/ops-user.js";
+import type { IOpsUserRepository } from "../domain/ports/ops-user-repository.js";
 import type { ISessionStore } from "../domain/ports/session-store.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
@@ -36,6 +38,16 @@ export type ResolveWholesaleSessionResult =
       email: string;
       customerId: CustomerId;
       organizationId: OrganizationId;
+    }
+  | { ok: false; reason: SessionFailureReason };
+
+export type ResolveOpsSessionResult =
+  | {
+      ok: true;
+      opsUserId: OpsUserId;
+      email: string;
+      kind: OpsActorKind;
+      tenantId: OrganizationId;
     }
   | { ok: false; reason: SessionFailureReason };
 
@@ -146,6 +158,49 @@ export class ResolveWholesaleSessionUseCase {
       email: user.email,
       customerId: session.customerId,
       organizationId: session.organizationId,
+    };
+  }
+}
+
+export class ResolveOpsSessionUseCase {
+  constructor(
+    private readonly sessions: ISessionStore,
+    private readonly opsUsers: IOpsUserRepository,
+    private readonly clock: IClock,
+  ) {}
+
+  async execute(rawSessionId: string | null | undefined): Promise<ResolveOpsSessionResult> {
+    if (rawSessionId === null || rawSessionId === undefined || rawSessionId.length === 0) {
+      return { ok: false, reason: "missing" };
+    }
+    const sessionId = parseSessionId(rawSessionId);
+    if (sessionId === null) {
+      return { ok: false, reason: "invalid" };
+    }
+    const session = await this.sessions.findById(sessionId);
+    if (session === null) {
+      return { ok: false, reason: "invalid" };
+    }
+    if (session.audience !== "ops" || session.opsUserId === null) {
+      return { ok: false, reason: "wrong_audience" };
+    }
+    const now = this.clock.now();
+    if (isSessionExpired(session, now)) {
+      await this.sessions.delete(session.id);
+      return { ok: false, reason: "expired" };
+    }
+    const user = await this.opsUsers.findById(session.opsUserId);
+    if (user === null || user.tenantId !== session.organizationId) {
+      await this.sessions.delete(session.id);
+      return { ok: false, reason: "invalid" };
+    }
+    await this.sessions.touch(session.id, now);
+    return {
+      ok: true,
+      opsUserId: session.opsUserId,
+      email: user.email,
+      kind: user.kind,
+      tenantId: user.tenantId,
     };
   }
 }

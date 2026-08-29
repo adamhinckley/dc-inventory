@@ -37,6 +37,13 @@ export const wholesaleSessionResponseSchema = z.object({
   organizationId: z.string(),
 });
 
+export const opsSessionResponseSchema = z.object({
+  opsUserId: z.string().uuid(),
+  email: z.string(),
+  kind: z.enum(["operator", "business_owner"]),
+  tenantId: z.string(),
+});
+
 const optionalBooleanQuery = z
   .union([z.literal("true"), z.literal("false"), z.boolean()])
   .optional()
@@ -247,6 +254,7 @@ export const customerItemSchema = z.object({
   creditLimitCents: z.number().int(),
   currency: z.string(),
   terms: z.string(),
+  createdAt: z.string().datetime(),
 });
 
 export const customerListResponseSchema = z.object({
@@ -255,6 +263,27 @@ export const customerListResponseSchema = z.object({
   pageSize: z.number().int(),
   total: z.number().int(),
 });
+
+export const customersListTable = {
+  rowId: "id",
+  columns: [
+    { field: "name", label: "Name" },
+    { field: "creditLimitCents", label: "Credit limit (¢)" },
+    { field: "currency", label: "Currency" },
+    { field: "terms", label: "Terms" },
+  ],
+  search: {
+    param: "q",
+    fields: ["name"],
+    placeholder: "Search customer name",
+  },
+  filters: [],
+  sort: {
+    defaultBy: "name",
+    defaultOrder: "asc",
+    fields: ["name", "createdAt", "creditLimitCents"],
+  },
+};
 
 export const customerWriteBodySchema = z.object({
   name: z.string().min(1),
@@ -434,8 +463,11 @@ export const purchaseOrderItemSchema = z.object({
 });
 
 export const purchaseOrderListQuerySchema = z.object({
+  q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
   status: purchaseOrderStatusSchema.optional(),
   supplierId: z.string().uuid().optional(),
 });
@@ -513,16 +545,28 @@ export const purchaseOrdersListTable = {
     { field: "status", label: "Status" },
     { field: "supplierId", label: "Supplier" },
   ],
+  search: {
+    param: "q",
+    fields: ["documentNumber"],
+    placeholder: "Search PO number",
+  },
   filters: [
     { param: "status", control: "select" },
     { param: "supplierId", control: "text" },
   ],
+  sort: {
+    defaultBy: "documentNumber",
+    defaultOrder: "asc",
+    fields: ["documentNumber", "status"],
+  },
 };
 
 export const supplierListQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["vendorNumber", "name"]).default("vendorNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
 export const supplierItemSchema = z.object({
@@ -567,11 +611,20 @@ export const suppliersListTable = {
     fields: ["vendorNumber", "name"],
     placeholder: "Search vendor # or name",
   },
+  filters: [],
+  sort: {
+    defaultBy: "vendorNumber",
+    defaultOrder: "asc",
+    fields: ["vendorNumber", "name"],
+  },
 };
 
 export const supplierProductListQuerySchema = z.object({
+  q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["sku", "supplierSku"]).default("sku"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
 export const supplierProductQtySchema = z.object({
@@ -651,6 +704,17 @@ export const supplierProductsListTable = {
     { field: "qty.allocated", label: "Allocated" },
     { field: "qty.available", label: "Available" },
   ],
+  search: {
+    param: "q",
+    fields: ["sku", "supplierSku"],
+    placeholder: "Search SKU or vendor item #",
+  },
+  filters: [],
+  sort: {
+    defaultBy: "sku",
+    defaultOrder: "asc",
+    fields: ["sku", "supplierSku"],
+  },
 };
 
 export const salesOrderStatusSchema = z.enum([
@@ -685,8 +749,11 @@ export const salesOrderItemSchema = z.object({
 });
 
 export const salesOrderListQuerySchema = z.object({
+  q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
   status: salesOrderStatusSchema.optional(),
   customerId: z.string().uuid().optional(),
 });
@@ -744,10 +811,20 @@ export const salesOrdersListTable = {
     { field: "status", label: "Status" },
     { field: "customerId", label: "Customer" },
   ],
+  search: {
+    param: "q",
+    fields: ["documentNumber"],
+    placeholder: "Search SO number",
+  },
   filters: [
     { param: "status", control: "select" },
     { param: "customerId", control: "text" },
   ],
+  sort: {
+    defaultBy: "documentNumber",
+    defaultOrder: "asc",
+    fields: ["documentNumber", "status"],
+  },
 };
 
 export const invoiceStatusSchema = z.enum(["unposted", "posted"]);

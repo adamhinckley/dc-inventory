@@ -1,5 +1,5 @@
 import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type {
   ISupplierRepository,
   ListSuppliersQuery,
@@ -29,12 +29,14 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
     }
     const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
+    const sortColumn = query.sortBy === "name" ? suppliers.name : suppliers.vendorNumber;
+    const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
     const [rows, countRows] = await Promise.all([
       this.db
         .select()
         .from(suppliers)
         .where(where)
-        .orderBy(asc(suppliers.vendorNumber))
+        .orderBy(order)
         .limit(query.pageSize)
         .offset(offset),
       this.db

@@ -5,7 +5,10 @@
  * OpenAPI spec version: 0.0.0
  */
 import type { ListInternalSupplierProducts400Error } from './listInternalSupplierProducts400Error';
+import type { ListInternalSupplierProducts400Message } from './listInternalSupplierProducts400Message';
 
 export type ListInternalSupplierProducts400 = {
   error: ListInternalSupplierProducts400Error;
+  message: ListInternalSupplierProducts400Message;
+  requestId: string;
 };
