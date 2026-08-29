@@ -4,8 +4,9 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { UpdateInternalCustomerContact403Error } from './updateInternalCustomerContact403Error';
 
 export type UpdateInternalCustomerContact403 = {
-  error: UpdateInternalCustomerContact403Error;
+  error: 'forbidden';
+} | {
+  error: 'feature_disabled';
 };

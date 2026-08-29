@@ -57,6 +57,7 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
         organizationId: user.organizationId,
         email,
         passwordHash: user.passwordHash,
+        roles: [...user.roles],
       })
       .onConflictDoUpdate({
         target: staffUsers.id,
@@ -64,6 +65,7 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
           organizationId: user.organizationId,
           email,
           passwordHash: user.passwordHash,
+          roles: [...user.roles],
           updatedAt: new Date(),
         },
       });
@@ -76,5 +78,6 @@ function toStaffUser(row: typeof staffUsers.$inferSelect): StaffUser {
     organizationId: OrganizationId.parse(row.organizationId),
     email: row.email,
     passwordHash: row.passwordHash,
+    roles: row.roles,
   };
 }

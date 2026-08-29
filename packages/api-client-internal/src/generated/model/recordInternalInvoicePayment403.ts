@@ -4,8 +4,9 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { RecordInternalInvoicePayment403Error } from './recordInternalInvoicePayment403Error';
 
 export type RecordInternalInvoicePayment403 = {
-  error: RecordInternalInvoicePayment403Error;
+  error: 'forbidden';
+} | {
+  error: 'feature_disabled';
 };

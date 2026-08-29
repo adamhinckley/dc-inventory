@@ -56,6 +56,7 @@ async function startAuthApp(
       organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
@@ -118,6 +119,7 @@ describe("opaque session HTTP", () => {
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
+      roles: ["admin"],
     });
     const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
     expect(cookie?.name).toBe(STAFF_SESSION_COOKIE);
@@ -149,6 +151,7 @@ describe("opaque session HTTP", () => {
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
+      roles: ["admin"],
     });
   });
 

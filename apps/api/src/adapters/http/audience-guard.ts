@@ -37,6 +37,7 @@ export function registerStaffAudienceGuard(app: FastifyInstance): void {
       staffUserId: result.staffUserId,
       email: result.email,
       organizationId: result.organizationId,
+      roles: result.roles,
     };
   });
 }

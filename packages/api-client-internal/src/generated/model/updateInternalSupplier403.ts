@@ -4,8 +4,9 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { UpdateInternalSupplier403Error } from './updateInternalSupplier403Error';
 
 export type UpdateInternalSupplier403 = {
-  error: UpdateInternalSupplier403Error;
+  error: 'forbidden';
+} | {
+  error: 'feature_disabled';
 };

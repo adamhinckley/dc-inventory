@@ -13,6 +13,7 @@ import type { ISessionStore } from "../domain/ports/session-store.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
 import { isSessionExpired } from "../domain/session.js";
+import type { StaffRole } from "../domain/staff-role.js";
 
 export type SessionFailureReason =
   | "missing"
@@ -21,7 +22,13 @@ export type SessionFailureReason =
   | "wrong_audience";
 
 export type ResolveStaffSessionResult =
-  | { ok: true; staffUserId: StaffUserId; email: string; organizationId: OrganizationId }
+  | {
+      ok: true;
+      staffUserId: StaffUserId;
+      email: string;
+      organizationId: OrganizationId;
+      roles: readonly StaffRole[];
+    }
   | { ok: false; reason: SessionFailureReason };
 
 export type ResolveWholesaleSessionResult =
@@ -97,6 +104,7 @@ export class ResolveStaffSessionUseCase {
       staffUserId: session.staffUserId,
       email: user.email,
       organizationId: session.organizationId,
+      roles: user.roles,
     };
   }
 }

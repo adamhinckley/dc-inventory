@@ -20,7 +20,11 @@ export class InMemoryStaffUserRepository implements IStaffUserRepository {
   }
 
   async save(user: StaffUser): Promise<void> {
-    const stored = { ...user, email: normalizeEmail(user.email) };
+    const stored = {
+      ...user,
+      email: normalizeEmail(user.email),
+      roles: [...user.roles],
+    };
     this.byId.set(stored.id, stored);
     this.byOrgEmail.set(emailKey(stored.organizationId, stored.email), stored);
   }

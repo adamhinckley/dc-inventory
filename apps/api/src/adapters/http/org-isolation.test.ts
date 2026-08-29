@@ -72,12 +72,14 @@ async function startTwoOrgIsolationApp() {
     organizationId: DEFAULT_ORG,
     email: "acme-staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   await staffUsers.save({
     id: BETA_STAFF_ID,
     organizationId: BETA_ORG,
     email: "beta-staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
 
   await customerRepo.save({

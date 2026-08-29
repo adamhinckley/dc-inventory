@@ -4,8 +4,9 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { CancelInternalSalesOrder403Error } from './cancelInternalSalesOrder403Error';
 
 export type CancelInternalSalesOrder403 = {
-  error: CancelInternalSalesOrder403Error;
+  error: 'forbidden';
+} | {
+  error: 'feature_disabled';
 };

@@ -147,6 +147,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
 
     const result = await h.loginStaff.execute({
@@ -167,6 +168,7 @@ describe("Identity login and sessions (in-memory)", () => {
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
+      roles: ["admin"],
     });
   });
 
@@ -178,6 +180,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
 
     const unknownSlug = await h.loginStaff.execute({
@@ -249,6 +252,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
     const login = await h.loginStaff.execute({
       organizationSlug: ACME_SLUG,
@@ -276,6 +280,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
     const login = await h.loginStaff.execute({
       organizationSlug: ACME_SLUG,
@@ -308,6 +313,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
     const login = await h.loginStaff.execute({
       organizationSlug: ACME_SLUG,
@@ -341,12 +347,14 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("acme-secret"),
+      roles: ["admin"],
     });
     await h.staffUsers.save({
       id: betaStaffId,
       organizationId: betaOrgId,
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("beta-secret"),
+      roles: ["purchasing"],
     });
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,

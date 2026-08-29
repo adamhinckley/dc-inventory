@@ -30,6 +30,11 @@ export { LoginWholesaleUseCase } from "./application/login-wholesale.js";
 export { LogoutUseCase } from "./application/logout.js";
 export { RegisterOrganizationUseCase } from "./application/register-organization.js";
 export {
+  STAFF_ACTIONS,
+  canStaffPerform,
+  type StaffAction,
+} from "./application/staff-action-policy.js";
+export {
   ResolveOpsSessionUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
@@ -64,6 +69,7 @@ export {
   type SessionAudience,
 } from "./domain/session.js";
 export type { Organization } from "./domain/organization.js";
+export { STAFF_ROLES, type StaffRole } from "./domain/staff-role.js";
 export type { StaffUser } from "./domain/staff-user.js";
 export type { WholesaleUser } from "./domain/wholesale-user.js";
 export {

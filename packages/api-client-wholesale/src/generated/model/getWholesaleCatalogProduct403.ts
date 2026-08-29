@@ -4,8 +4,7 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
-import type { GetWholesaleCatalogProduct403Error } from './getWholesaleCatalogProduct403Error';
 
 export type GetWholesaleCatalogProduct403 = {
-  error: GetWholesaleCatalogProduct403Error;
+  error: 'feature_disabled';
 };

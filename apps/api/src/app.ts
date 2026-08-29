@@ -2,6 +2,7 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
+import type { StaffRole } from "@dc-inventory/identity";
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
@@ -214,7 +215,12 @@ declare module "fastify" {
   }
 
   interface FastifyRequest {
-    staffAuth?: { staffUserId: string; email: string; organizationId: string };
+    staffAuth?: {
+      staffUserId: string;
+      email: string;
+      organizationId: string;
+      roles: readonly StaffRole[];
+    };
     wholesaleAuth?: {
       wholesaleUserId: string;
       email: string;

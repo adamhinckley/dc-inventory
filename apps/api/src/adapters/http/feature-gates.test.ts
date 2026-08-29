@@ -36,6 +36,7 @@ async function authenticatedApp(disabled: FeatureName) {
     organizationId: OrganizationId.DEFAULT,
     email: "staff@example.test",
     passwordHash: await passwords.hash("secret"),
+    roles: ["admin"],
   });
   const app = await buildApp({
     logger: false,

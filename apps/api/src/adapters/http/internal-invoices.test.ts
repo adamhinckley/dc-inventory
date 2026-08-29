@@ -47,6 +47,7 @@ async function startAccountingApp() {
       organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
 
   const createInvoice = new CreateInvoiceUseCase(accountingUow);
