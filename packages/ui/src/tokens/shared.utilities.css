@@ -52,6 +52,20 @@
   @apply px-item-x py-item-y;
 }
 
+@utility scrollbar-track-raised {
+  /** Scrollbar trough matches the page panel (`surface-raised`), not the
+      white card / transparent main that would otherwise paint a lighter strip. */
+  scrollbar-color: var(--color-fg-muted) var(--color-surface-raised);
+
+  &::-webkit-scrollbar-track {
+    background-color: var(--color-surface-raised);
+  }
+
+  &::-webkit-scrollbar-corner {
+    background-color: var(--color-surface-raised);
+  }
+}
+
 @utility sticky-scrollport {
   /** Scroll container that adapts to sticky descendants.
       When a [data-sticky-table] descendant is inside, drops the container's

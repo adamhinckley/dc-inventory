@@ -1,0 +1,84 @@
+"use client";
+
+import {
+  getGetInternalSessionQueryKey,
+  useGetInternalSession,
+  useLogoutInternal,
+} from "@dc-inventory/api-client-internal";
+import { Menu, useAppShellContext } from "@dc-inventory/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { Check, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useColorScheme } from "./color-scheme-provider";
+import { COLOR_SCHEMES, type ColorScheme } from "../lib/color-scheme";
+
+const SCHEME_LABELS: Record<ColorScheme, string> = {
+  light: "Light",
+  dark: "Dark",
+  system: "System",
+};
+
+export function AccountNavMenu() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const { isExpanded } = useAppShellContext();
+  const { scheme, setScheme } = useColorScheme();
+  const session = useGetInternalSession({ query: { retry: false } });
+  const logout = useLogoutInternal();
+
+  const email =
+    session.data?.status === 200 ? session.data.data.email : "Signed in";
+
+  function signOut() {
+    logout.mutate(undefined, {
+      onSettled: () => {
+        queryClient.removeQueries({ queryKey: getGetInternalSessionQueryKey() });
+        router.push("/login");
+      },
+    });
+  }
+
+  return (
+    <Menu>
+      <Menu.Trigger
+        aria-label="Account"
+        data-testid="shell-account-menu-trigger"
+        className="interactable subtle mb-action flex w-full items-center gap-icon px-input-x py-item-y text-body focus-visible:-outline-offset-2"
+      >
+        <span className="flex size-icon-lg shrink-0 items-center justify-center">
+          <User className="size-full" aria-hidden />
+        </span>
+        {isExpanded ? <span className="truncate text-left">Account</span> : null}
+      </Menu.Trigger>
+      <Menu.Content
+        side="right"
+        align="end"
+        data-testid="shell-account-menu"
+      >
+        <p className="item-padding text-caption text-fg-secondary">{email}</p>
+        <Menu.Separator />
+        <Menu.Group>
+          <Menu.GroupLabel>Appearance</Menu.GroupLabel>
+          {COLOR_SCHEMES.map((option) => (
+            <Menu.Item
+              key={option}
+              closeOnClick={false}
+              onClick={() => setScheme(option)}
+            >
+              <Check
+                className="size-icon"
+                aria-hidden
+                style={{ visibility: scheme === option ? "visible" : "hidden" }}
+              />
+              {SCHEME_LABELS[option]}
+            </Menu.Item>
+          ))}
+        </Menu.Group>
+        <Menu.Separator />
+        <Menu.Item onClick={signOut} disabled={logout.isPending}>
+          {logout.isPending ? "Signing out…" : "Sign out"}
+        </Menu.Item>
+      </Menu.Content>
+    </Menu>
+  );
+}

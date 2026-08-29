@@ -1,9 +1,10 @@
 "use client";
 
 import { AppShell } from "@dc-inventory/ui";
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { dashboardNav } from "../lib/dashboard-routes";
+import { AccountNavMenu } from "./account-nav-menu";
+import { StaffSessionGate } from "./staff-sign-in-dialog";
 
 function WorkspaceMark() {
   return (
@@ -15,42 +16,39 @@ function WorkspaceMark() {
 
 export function DashboardFrame({ children }: { children: ReactNode }) {
   return (
-    <AppShell
-      nav={
-        <AppShell.Nav href="/catalog">
-          <AppShell.NavGroup id="workspace" label="Workspace" icon={<WorkspaceMark />}>
-            {dashboardNav.map((item) => (
-              <AppShell.NavItem
-                key={item.href}
-                href={item.href}
-                label={item.label}
-              />
-            ))}
-          </AppShell.NavGroup>
-        </AppShell.Nav>
-      }
-      topbar={
-        <AppShell.Topbar>
-          <p className="text-body-sm text-fg-secondary">Staff dashboard</p>
-          <AppShell.TopbarActions>
-            <Link
-              href="/login"
-              className="interactable ghost item-padding text-body-sm text-link hover:text-link-hover"
-            >
-              Sign in
-            </Link>
-          </AppShell.TopbarActions>
-        </AppShell.Topbar>
-      }
-    >
-      <div className="flex min-h-full flex-col has-data-sticky-table:h-full has-data-sticky-table:min-h-0">
-        <div className="flex-1 p-canvas has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col">
-          {children}
+    <StaffSessionGate>
+      <AppShell
+        nav={
+          <AppShell.Nav href="/catalog">
+            <AppShell.NavGroup id="workspace" label="Workspace" icon={<WorkspaceMark />}>
+              {dashboardNav.map((item) => (
+                <AppShell.NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                />
+              ))}
+            </AppShell.NavGroup>
+            <AppShell.NavFooter>
+              <AccountNavMenu />
+            </AppShell.NavFooter>
+          </AppShell.Nav>
+        }
+        topbar={
+          <AppShell.Topbar>
+            <p className="text-body-sm text-fg-secondary">Staff dashboard</p>
+          </AppShell.Topbar>
+        }
+      >
+        <div className="flex min-h-full flex-col has-data-sticky-table:h-full has-data-sticky-table:min-h-0">
+          <div className="flex-1 p-canvas has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col">
+            {children}
+          </div>
+          <p className="px-region-x py-region-y text-caption text-fg-muted">
+            © {new Date().getFullYear()} Pull Clear Software
+          </p>
         </div>
-        <p className="px-region-x py-region-y text-caption text-fg-muted">
-          Staff dashboard — not the wholesale shop.
-        </p>
-      </div>
-    </AppShell>
+      </AppShell>
+    </StaffSessionGate>
   );
 }

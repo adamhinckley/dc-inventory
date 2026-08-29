@@ -403,8 +403,9 @@ export function DataTableTable() {
   }
 
   return (
-    <div className="section-flat overflow-x-auto">
-      <table className="w-full border-collapse text-left text-body">
+    <div className="section-flat">
+      <div className="overflow-x-auto bg-surface-raised scrollbar-track-raised">
+        <table className="w-full border-collapse bg-surface-card text-left text-body">
         <thead>
           <tr>
             {meta.columns.map((column) => {
@@ -523,7 +524,8 @@ export function DataTableTable() {
             })
           )}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 }

@@ -58,6 +58,21 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     expect(css).not.toContain("--color-layer-01:");
   });
 
+  it("paints scrollbar troughs with the page panel surface", () => {
+    const utilities = readFileSync(
+      join(
+        dirname(fileURLToPath(import.meta.url)),
+        "../src/tokens/shared.utilities.css",
+      ),
+      "utf8",
+    );
+    expect(utilities).toContain("@utility scrollbar-track-raised");
+    expect(utilities).toContain(
+      "scrollbar-color: var(--color-fg-muted) var(--color-surface-raised)",
+    );
+    expect(utilities).toContain("&::-webkit-scrollbar-corner");
+  });
+
   it("exposes a z-index stack so portaled popups paint above AppShell content", () => {
     const shared = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), "../src/tokens/shared.css"),
