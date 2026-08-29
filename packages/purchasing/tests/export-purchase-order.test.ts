@@ -385,6 +385,7 @@ describe("ExportPurchaseOrderUseCase", () => {
 describe("GetPurchaseOrderFactorySendUseCase", () => {
   it("returns the factory send columns and JSON rows used by XLS export", async () => {
     const h = await harness();
+    h.catalog.set(DEFAULT_ORG, SKU.value, "Bolt from Catalog");
     h.factorySendCatalog.set(DEFAULT_ORG, SKU.value, { caseQty: 192 });
     const created = await h.create.execute({
       organizationId: DEFAULT_ORG,
@@ -392,7 +393,7 @@ describe("GetPurchaseOrderFactorySendUseCase", () => {
       supplierId: h.supplierId,
       shipDate: "2026-12-01",
       cancelDate: "2026-01-15",
-      lines: [{ sku: SKU.value, name: "Bolt", qty: 1152 }],
+      lines: [{ sku: SKU.value, name: "Caller-controlled bolt label", qty: 1152 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -419,7 +420,7 @@ describe("GetPurchaseOrderFactorySendUseCase", () => {
         quan: 1152,
         price: "",
         extprice: "",
-        description: "Bolt",
+        description: "Bolt from Catalog",
         mfg_code: "",
         mfg_sku: "",
         mfg_upc: "",

@@ -295,11 +295,14 @@ describe("internal purchase orders HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
       payload: {
         supplierId: SUPPLIER_ID,
-        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 5 }],
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Caller hex bolt label", qty: 5 }],
       },
     });
     expect(created.statusCode).toBe(201);
     const po = created.json() as { id: string };
+    expect(created.json()).toMatchObject({
+      lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
+    });
 
     const exported = await app.inject({
       method: "GET",

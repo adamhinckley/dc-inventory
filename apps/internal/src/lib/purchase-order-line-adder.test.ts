@@ -2,16 +2,18 @@ import { describe, expect, it } from "vitest";
 import { draftLineFromVendorProduct } from "./purchase-order-line-adder";
 
 describe("draftLineFromVendorProduct", () => {
-  it("builds a qty-1 line from a vendor catalog product", () => {
+  it("starts picked vendor products at qty 1 with a fresh line id", () => {
     const line = draftLineFromVendorProduct({
       sku: "DC7818LV",
       catalogName: 'Baby Rose Bush X 7 12" - Lavender',
     });
-    expect(line).toMatchObject({
-      sku: "DC7818LV",
-      name: 'Baby Rose Bush X 7 12" - Lavender',
-      qty: 1,
-    });
+    expect(line.qty).toBe(1);
     expect(line.id).toEqual(expect.any(String));
+
+    const second = draftLineFromVendorProduct({
+      sku: "DC7819LV",
+      catalogName: "Different rose",
+    });
+    expect(second.id).not.toBe(line.id);
   });
 });
