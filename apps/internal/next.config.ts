@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "",
   },
+  experimental: {
+    // Product Browser import writes thousands of SKUs; the rewrite default is 30s.
+    proxyTimeout: 300_000,
+  },
   async rewrites() {
     return [
       {

@@ -151,7 +151,7 @@ export const listInternalPurchaseOrdersTable = {
       "label": "Status"
     },
     {
-      "field": "supplierId",
+      "field": "supplierName",
       "label": "Supplier"
     }
   ],

@@ -100,6 +100,7 @@ import {
   DrizzleSupplierRepository,
   ExportPurchaseOrderUseCase,
   ExcelJsWorkbookWriter,
+  GetPurchaseOrderFactorySendUseCase,
   GetPurchaseOrderUseCase,
   GetSupplierUseCase,
   InMemoryPurchaseOrderRepository,
@@ -214,6 +215,7 @@ export type PurchasingHttpServices = {
   receivePurchaseOrder: ReceivePurchaseOrderUseCase;
   replacePurchaseOrderLines: ReplacePurchaseOrderLinesUseCase;
   exportPurchaseOrder: ExportPurchaseOrderUseCase;
+  getPurchaseOrderFactorySend: GetPurchaseOrderFactorySendUseCase;
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
   listSuppliers: ListSuppliersUseCase;
   createSupplier: CreateSupplierUseCase;
@@ -373,7 +375,7 @@ function purchasingServices(
 ): PurchasingHttpServices {
   const workbookWriter = new ExcelJsWorkbookWriter();
   return {
-    listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo),
+    listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo, supplierRepo),
     createPurchaseOrder: new CreatePurchaseOrderUseCase(
       purchaseOrderRepo,
       supplierRepo,
@@ -395,6 +397,11 @@ function purchasingServices(
       supplierProductRepo,
       factorySendCatalog,
       workbookWriter,
+    ),
+    getPurchaseOrderFactorySend: new GetPurchaseOrderFactorySendUseCase(
+      purchaseOrderRepo,
+      supplierProductRepo,
+      factorySendCatalog,
     ),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
     listSuppliers: new ListSuppliersUseCase(supplierRepo),

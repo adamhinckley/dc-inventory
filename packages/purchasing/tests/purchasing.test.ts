@@ -48,7 +48,7 @@ async function harness() {
     catalog,
     supplierId,
     create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers, catalog),
-    list: new ListPurchaseOrdersUseCase(uow.purchaseOrders),
+    list: new ListPurchaseOrdersUseCase(uow.purchaseOrders, uow.suppliers),
     confirm: new ConfirmPurchaseOrderUseCase(uow, catalog),
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
@@ -552,6 +552,7 @@ describe("Purchasing (in-memory)", () => {
     expect(acmeList.total).toBe(1);
     expect(acmeList.items[0]?.documentNumber).toBe("PO-1001");
     expect(acmeList.items[0]?.id).toBe(acmePoId);
+    expect(acmeList.supplierNames.get(acmeSupplierId)).toBe("Acme vendor");
 
     const betaList = await h.list.execute({
       organizationId: BETA_ORG,

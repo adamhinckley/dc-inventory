@@ -164,6 +164,7 @@ export async function buildApp(
   const errorReporter = options.errorReporter ?? new NoopErrorReporter();
   const app = Fastify({
     logger: options.logger ?? pinoLoggerOptions(),
+    bodyLimit: SPREADSHEET_UPLOAD_MAX_BYTES,
     trustProxy: options.trustProxy ?? readTrustProxy(),
     ...requestIdConfig(),
   });

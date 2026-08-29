@@ -95,12 +95,16 @@ async function wholesaleCookie(app: Awaited<ReturnType<typeof buildApp>>) {
   return login.cookies.find((row) => row.name === WHOLESALE_SESSION_COOKIE)?.value ?? "";
 }
 
-function productBrowserCsvMultipart(csv: string, filename = "products.csv") {
+function productBrowserCsvMultipart(
+  csv: string,
+  filename = "products.csv",
+  contentType = "text/csv",
+) {
   const boundary = "----vitestProductBrowser";
   const payload = [
     `--${boundary}`,
     `Content-Disposition: form-data; name="file"; filename="${filename}"`,
-    "Content-Type: text/csv",
+    `Content-Type: ${contentType}`,
     "",
     csv,
     `--${boundary}--`,
@@ -401,5 +405,44 @@ describe("catalog HTTP", () => {
       total: 1,
       items: [{ vendorNumber: "1075", name: "REGXJ" }],
     });
+
+    const reimport = await app.inject({
+      method: "POST",
+      url: "/internal/products/import",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      headers: multipart.headers,
+      payload: multipart.payload,
+    });
+    expect(reimport.statusCode).toBe(200);
+    expect(reimport.json()).toMatchObject({
+      dryRun: false,
+      rowsOk: 1,
+      created: 0,
+      updated: 1,
+      linked: 1,
+      errors: [],
+    });
+  });
+
+  it("rejects Excel workbooks as invalid instead of 500", async () => {
+    const app = await startCatalogApp();
+    const cookie = await staffCookie(app);
+    const ole = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, 0, 1, 2, 3]).toString(
+      "latin1",
+    );
+    const multipart = productBrowserCsvMultipart(
+      ole,
+      "product_browser.xls",
+      "application/vnd.ms-excel",
+    );
+    const res = await app.inject({
+      method: "POST",
+      url: "/internal/products/import",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      headers: multipart.headers,
+      payload: multipart.payload,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toEqual({ error: "invalid" });
   });
 });

@@ -57,8 +57,13 @@ export function CatalogImportDialog() {
           queryClient.invalidateQueries({ queryKey: getListInternalSuppliersQueryKey() }),
         ]);
       }
-    } catch {
-      setError("Import failed. Check the file and try again.");
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : "";
+      setError(
+        message.includes("HTTP 400")
+          ? "Import failed. Use a Product Browser CSV (.csv), not an Excel workbook."
+          : "Import failed. Check the file and try again.",
+      );
     }
   }
 

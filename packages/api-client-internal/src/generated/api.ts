@@ -126,6 +126,10 @@ import type {
   GetInternalPurchaseOrder401,
   GetInternalPurchaseOrder403,
   GetInternalPurchaseOrder404,
+  GetInternalPurchaseOrderFactorySend200,
+  GetInternalPurchaseOrderFactorySend401,
+  GetInternalPurchaseOrderFactorySend403,
+  GetInternalPurchaseOrderFactorySend404,
   GetInternalSalesOrder200,
   GetInternalSalesOrder401,
   GetInternalSalesOrder403,
@@ -3229,6 +3233,112 @@ export const exportInternalPurchaseOrder = async (id: string,
 
   }
 );}
+
+
+
+
+export type getInternalPurchaseOrderFactorySendResponse200 = {
+  data: GetInternalPurchaseOrderFactorySend200
+  status: 200
+}
+
+export type getInternalPurchaseOrderFactorySendResponse401 = {
+  data: GetInternalPurchaseOrderFactorySend401
+  status: 401
+}
+
+export type getInternalPurchaseOrderFactorySendResponse403 = {
+  data: GetInternalPurchaseOrderFactorySend403
+  status: 403
+}
+
+export type getInternalPurchaseOrderFactorySendResponse404 = {
+  data: GetInternalPurchaseOrderFactorySend404
+  status: 404
+}
+
+export type getInternalPurchaseOrderFactorySendResponseSuccess = (getInternalPurchaseOrderFactorySendResponse200) & {
+  headers: Headers;
+};
+export type getInternalPurchaseOrderFactorySendResponseError = (getInternalPurchaseOrderFactorySendResponse401 | getInternalPurchaseOrderFactorySendResponse403 | getInternalPurchaseOrderFactorySendResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalPurchaseOrderFactorySendResponse = (getInternalPurchaseOrderFactorySendResponseSuccess | getInternalPurchaseOrderFactorySendResponseError)
+
+export const getGetInternalPurchaseOrderFactorySendUrl = (id: string,) => {
+
+
+
+
+  return `/internal/purchase-orders/${id}/factory-send`
+}
+
+/**
+ * @summary Return factory-send columns and rows for a purchase order
+ */
+export const getInternalPurchaseOrderFactorySend = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalPurchaseOrderFactorySendResponse> => {
+
+  return customFetch<getInternalPurchaseOrderFactorySendResponse>(getGetInternalPurchaseOrderFactorySendUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalPurchaseOrderFactorySendQueryKey = (id: string,) => {
+    return [
+    `/internal/purchase-orders/${id}/factory-send`
+    ] as const;
+    }
+
+
+export const getGetInternalPurchaseOrderFactorySendQueryOptions = <TData = Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend403 | GetInternalPurchaseOrderFactorySend404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalPurchaseOrderFactorySendQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>> = ({ signal }) => getInternalPurchaseOrderFactorySend(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalPurchaseOrderFactorySendQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>>
+export type GetInternalPurchaseOrderFactorySendQueryError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend403 | GetInternalPurchaseOrderFactorySend404
+
+
+/**
+ * @summary Return factory-send columns and rows for a purchase order
+ */
+
+export function useGetInternalPurchaseOrderFactorySend<TData = Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend403 | GetInternalPurchaseOrderFactorySend404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalPurchaseOrderFactorySendQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
 
 
 

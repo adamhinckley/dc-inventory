@@ -13,6 +13,8 @@ import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
+export type PurchaseOrdersList = "draft" | "completed";
+
 function useDraftPurchaseOrdersList(
   params?: Parameters<typeof useListInternalPurchaseOrders>[0],
 ) {
@@ -22,9 +24,20 @@ function useDraftPurchaseOrdersList(
   });
 }
 
-export function DraftPurchaseOrdersTable({
+function useCompletedPurchaseOrdersList(
+  params?: Parameters<typeof useListInternalPurchaseOrders>[0],
+) {
+  return useListInternalPurchaseOrders({
+    ...params,
+    status: "confirmed",
+  });
+}
+
+export function PurchaseOrdersTable({
+  list,
   initialParams,
 }: {
+  list: PurchaseOrdersList;
   initialParams?: ListQueryParams;
 }) {
   const onParamsChange = useCallback((params: ListQueryParams) => {
@@ -48,7 +61,9 @@ export function DraftPurchaseOrdersTable({
     <DataTable.Root
       meta={listInternalPurchaseOrdersTable}
       queryHook={
-        useDraftPurchaseOrdersList as ListQueryHook<
+        (list === "draft"
+          ? useDraftPurchaseOrdersList
+          : useCompletedPurchaseOrdersList) as ListQueryHook<
           Parameters<typeof useListInternalPurchaseOrders>[0]
         >
       }
@@ -57,7 +72,9 @@ export function DraftPurchaseOrdersTable({
       getRowHref={getRowHref}
       linkField="documentNumber"
       renderRowLink={renderRowLink}
-      idPrefix="draft-purchase-orders"
+      idPrefix={
+        list === "draft" ? "draft-purchase-orders" : "completed-purchase-orders"
+      }
     >
       <DataTable.Table />
       <DataTable.Pagination />

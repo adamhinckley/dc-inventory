@@ -118,12 +118,19 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
         return sendInvalid(reply);
       }
       const filename = file.filename.toLowerCase();
+      if (
+        filename.endsWith(".xls") ||
+        filename.endsWith(".xlsx") ||
+        filename.endsWith(".xlsm")
+      ) {
+        return sendInvalid(reply);
+      }
       const csvLike =
         filename.endsWith(".csv") ||
         file.mimetype === "text/csv" ||
-        file.mimetype === "application/vnd.ms-excel" ||
+        file.mimetype === "text/plain" ||
         file.mimetype === "application/octet-stream" ||
-        file.mimetype === "text/plain";
+        (file.mimetype === "application/vnd.ms-excel" && filename.endsWith(".csv"));
       if (!csvLike) {
         return sendInvalid(reply);
       }
@@ -136,18 +143,28 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
       if (bytes.byteLength > SPREADSHEET_UPLOAD_MAX_BYTES) {
         return sendInvalid(reply);
       }
-      const rows = await new CsvWorkbookParser().parse({
-        bytes,
-        filename: file.filename,
-        contentType: file.mimetype,
-      });
+      let rows;
+      try {
+        rows = await new CsvWorkbookParser().parse({
+          bytes,
+          filename: file.filename,
+          contentType: file.mimetype,
+        });
+      } catch {
+        return sendInvalid(reply);
+      }
       const query = request.query as { dryRun?: boolean };
-      return request.server.catalog.importProductBrowser.execute({
-        organizationId: staffOrganizationId(request),
-        staffUserId: staffUserId(request),
-        rows,
-        dryRun: query.dryRun === true,
-      });
+      try {
+        return await request.server.catalog.importProductBrowser.execute({
+          organizationId: staffOrganizationId(request),
+          staffUserId: staffUserId(request),
+          rows,
+          dryRun: query.dryRun === true,
+        });
+      } catch (error) {
+        request.log.error({ err: error }, "product browser import failed");
+        throw error;
+      }
     },
   );
 

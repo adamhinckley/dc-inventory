@@ -19,4 +19,5 @@ export type ListInternalPurchaseOrders200ItemsItem = {
   /** @nullable */
   cancelDate: string | null;
   lines: ListInternalPurchaseOrders200ItemsItemLinesItem[];
+  supplierName: string;
 };

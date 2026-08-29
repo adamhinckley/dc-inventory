@@ -555,7 +555,7 @@ export function DataTablePagination() {
         <Button
           variant="outline"
           size="sm"
-          disabled={busy || page <= 1}
+          disabled={busy || page <= 1 ? true : undefined}
           onClick={() =>
             setState((current) => ({
               ...current,
@@ -568,7 +568,7 @@ export function DataTablePagination() {
         <Button
           variant="outline"
           size="sm"
-          disabled={busy || page >= pageCount}
+          disabled={busy || page >= pageCount ? true : undefined}
           onClick={() =>
             setState((current) => ({
               ...current,

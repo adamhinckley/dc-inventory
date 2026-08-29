@@ -120,6 +120,22 @@ describe("internal purchase orders HTTP", () => {
       lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
     });
 
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders?status=draft",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: po.id,
+          supplierId: SUPPLIER_ID,
+          supplierName: PHASE2_SUPPLIER_NAME,
+        }),
+      ],
+    });
+
     const confirmed = await app.inject({
       method: "POST",
       url: `/internal/purchase-orders/${po.id}/confirm`,
@@ -279,11 +295,14 @@ describe("internal purchase orders HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
       payload: {
         supplierId: SUPPLIER_ID,
-        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 5 }],
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Caller hex bolt label", qty: 5 }],
       },
     });
     expect(created.statusCode).toBe(201);
     const po = created.json() as { id: string };
+    expect(created.json()).toMatchObject({
+      lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
+    });
 
     const exported = await app.inject({
       method: "GET",
@@ -296,6 +315,27 @@ describe("internal purchase orders HTTP", () => {
     );
     expect(exported.headers["content-disposition"]).toMatch(/PO-00001\.xlsx/);
     expect(exported.rawPayload.length).toBeGreaterThan(0);
+
+    const factorySend = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/factory-send`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(factorySend.statusCode).toBe(200);
+    expect(factorySend.json()).toMatchObject({
+      columns: expect.arrayContaining([
+        { key: "mat_num", header: "mat_num" },
+        { key: "tot_cartons", header: "tot_cartons" },
+      ]),
+      rows: [
+        expect.objectContaining({
+          mat_num: "HEX-BOLT-GALV",
+          quan: 5,
+          description: "Hex bolt from Catalog",
+          tot_cbm: "Not Available",
+        }),
+      ],
+    });
 
     const confirmed = await app.inject({
       method: "POST",

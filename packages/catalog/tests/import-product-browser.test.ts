@@ -82,7 +82,13 @@ describe("ImportProductBrowserUseCase", () => {
       staffUserId: STAFF,
       dryRun: false,
       rows: [
-        productRow({ product_id: "DC-A", item: "Ornament A" }),
+        productRow({
+          product_id: "DC-A",
+          item: "Ornament A",
+          cs_len: "23.6",
+          cs_wid: "15.7",
+          cs_ht: "19.7",
+        }),
         productRow({ product_id: "DC-B", item: "Ornament B" }),
         productRow({
           product_id: "DC-C",
@@ -114,10 +120,16 @@ describe("ImportProductBrowserUseCase", () => {
     expect(await h.packaging.findByProductId(bySku.get("DC-A")!)).toEqual({
       productId: bySku.get("DC-A"),
       caseQty: 192,
+      caseLength: "23.6",
+      caseWidth: "15.7",
+      caseHeight: "19.7",
     });
     expect(await h.packaging.findByProductId(bySku.get("DC-C")!)).toEqual({
       productId: bySku.get("DC-C"),
       caseQty: 384,
+      caseLength: null,
+      caseWidth: null,
+      caseHeight: null,
     });
   });
 
@@ -144,6 +156,9 @@ describe("ImportProductBrowserUseCase", () => {
     expect(listed[0]?.product.memberPrice.amountMinor).toBe(1150);
     expect(await h.packaging.findByProductId(listed[0]!.product.id)).toMatchObject({
       caseQty: 192,
+      caseLength: null,
+      caseWidth: null,
+      caseHeight: null,
     });
   });
 
@@ -156,14 +171,43 @@ describe("ImportProductBrowserUseCase", () => {
       rows: [],
     });
 
-    expect(result).toEqual({
-      dryRun: true,
-      rowsOk: 0,
-      created: 0,
-      updated: 0,
-      linked: 0,
-      errors: [],
+    expect(result.dryRun).toBe(true);
+    expect(result.rowsOk).toBe(0);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("records a row error when packaging save throws instead of rejecting the import", async () => {
+    const products = new InMemoryProductRepository();
+    const qty = new InMemoryQtyReadPort();
+    const packaging = {
+      async findByProductId() {
+        return null;
+      },
+      async save() {
+        throw new Error("packaging write failed");
+      },
+    };
+    const importCatalog = new ImportProductBrowserUseCase(
+      products,
+      new CreateProductUseCase(products),
+      new UpdateProductUseCase(products, qty),
+      new InMemorySupplierLinkPort(),
+      packaging,
+    );
+
+    const result = await importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: false,
+      rows: [productRow()],
     });
+
+    expect(result.created).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.errors).toEqual([
+      { row: 2, field: "product_id", message: "Product could not be saved" },
+    ]);
+    expect(await products.listMatching({ organizationId: ORG })).toHaveLength(1);
   });
 
   it("does not write qty fields from the dump", async () => {

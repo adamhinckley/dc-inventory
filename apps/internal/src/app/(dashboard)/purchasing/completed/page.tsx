@@ -1,10 +1,10 @@
 import { listInternalPurchaseOrdersTable } from "@dc-inventory/api-client-internal";
-import { PurchasingOrdersExplorer } from "../../../components/purchasing-orders-explorer";
-import { listParamsFromSearchParams } from "../../../lib/table-url-params";
+import { PurchasingOrdersExplorer } from "../../../../components/purchasing-orders-explorer";
+import { listParamsFromSearchParams } from "../../../../lib/table-url-params";
 
 type PurchasingSearchParams = Record<string, string | string[] | undefined>;
 
-export default async function PurchasingPage({
+export default async function CompletedPurchaseOrdersPage({
   searchParams,
 }: {
   searchParams: Promise<PurchasingSearchParams>;
@@ -14,5 +14,7 @@ export default async function PurchasingPage({
     await searchParams,
   );
 
-  return <PurchasingOrdersExplorer list="draft" initialParams={initialParams} />;
+  return (
+    <PurchasingOrdersExplorer list="completed" initialParams={initialParams} />
+  );
 }

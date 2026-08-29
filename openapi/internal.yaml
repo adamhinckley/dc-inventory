@@ -2877,7 +2877,7 @@ paths:
             label: "PO #"
           - field: status
             label: Status
-          - field: supplierId
+          - field: supplierName
             label: Supplier
         search:
           param: q
@@ -2959,6 +2959,8 @@ paths:
                               - qty
                               - receivedQty
                             additionalProperties: false
+                        supplierName:
+                          type: string
                       required:
                         - id
                         - supplierId
@@ -2967,6 +2969,7 @@ paths:
                         - shipDate
                         - cancelDate
                         - lines
+                        - supplierName
                       additionalProperties: false
                   page:
                     type: integer
@@ -3592,6 +3595,148 @@ paths:
               schema:
                 type: string
                 format: binary
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/purchase-orders/{id}/factory-send:
+    get:
+      operationId: getInternalPurchaseOrderFactorySend
+      summary: Return factory-send columns and rows for a purchase order
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  columns:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        header:
+                          type: string
+                      required:
+                        - key
+                        - header
+                      additionalProperties: false
+                  rows:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ship_date:
+                          type: string
+                        canc_date:
+                          type: string
+                        mat_num:
+                          type: string
+                        quan:
+                          type: number
+                        price:
+                          anyOf:
+                            - type: number
+                            - type: string
+                              enum:
+                                - ""
+                        extprice:
+                          anyOf:
+                            - type: number
+                            - type: string
+                              enum:
+                                - ""
+                        description:
+                          type: string
+                        mfg_code:
+                          type: string
+                        mfg_sku:
+                          type: string
+                        mfg_upc:
+                          type: string
+                        product_upc_1:
+                          type: string
+                        cs_cube_metric:
+                          type: number
+                        tot_cartons:
+                          anyOf:
+                            - type: number
+                            - type: string
+                              enum:
+                                - ""
+                        tot_cbm:
+                          type: string
+                      required:
+                        - ship_date
+                        - canc_date
+                        - mat_num
+                        - quan
+                        - price
+                        - extprice
+                        - description
+                        - mfg_code
+                        - mfg_sku
+                        - mfg_upc
+                        - product_upc_1
+                        - cs_cube_metric
+                        - tot_cartons
+                        - tot_cbm
+                      additionalProperties: false
+                required:
+                  - columns
+                  - rows
+                additionalProperties: false
         "401":
           description: Default Response
           content:

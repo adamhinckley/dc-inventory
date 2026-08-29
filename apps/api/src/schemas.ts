@@ -468,6 +468,10 @@ export const purchaseOrderItemSchema = z.object({
   lines: z.array(purchaseOrderLineSchema),
 });
 
+export const purchaseOrderListItemSchema = purchaseOrderItemSchema.extend({
+  supplierName: z.string(),
+});
+
 export const purchaseOrderListQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -479,7 +483,7 @@ export const purchaseOrderListQuerySchema = z.object({
 });
 
 export const purchaseOrderListResponseSchema = z.object({
-  items: z.array(purchaseOrderItemSchema),
+  items: z.array(purchaseOrderListItemSchema),
   page: z.number().int(),
   pageSize: z.number().int(),
   total: z.number().int(),
@@ -491,6 +495,35 @@ export const purchaseOrderIdParamsSchema = z.object({
 
 export const purchaseOrderExportQuerySchema = z.object({
   format: z.enum(["xlsx", "csv"]).default("xlsx"),
+});
+
+const factorySendBlankOrNumber = z.union([z.number(), z.literal("")]);
+
+export const purchaseOrderFactorySendColumnSchema = z.object({
+  key: z.string(),
+  header: z.string(),
+});
+
+export const purchaseOrderFactorySendRowSchema = z.object({
+  ship_date: z.string(),
+  canc_date: z.string(),
+  mat_num: z.string(),
+  quan: z.number(),
+  price: factorySendBlankOrNumber,
+  extprice: factorySendBlankOrNumber,
+  description: z.string(),
+  mfg_code: z.string(),
+  mfg_sku: z.string(),
+  mfg_upc: z.string(),
+  product_upc_1: z.string(),
+  cs_cube_metric: z.number(),
+  tot_cartons: factorySendBlankOrNumber,
+  tot_cbm: z.string(),
+});
+
+export const purchaseOrderFactorySendResponseSchema = z.object({
+  columns: z.array(purchaseOrderFactorySendColumnSchema),
+  rows: z.array(purchaseOrderFactorySendRowSchema),
 });
 
 export const binaryFileResponseSchema = z.instanceof(Buffer);
@@ -549,7 +582,7 @@ export const purchaseOrdersListTable = {
   columns: [
     { field: "documentNumber", label: "PO #" },
     { field: "status", label: "Status" },
-    { field: "supplierId", label: "Supplier" },
+    { field: "supplierName", label: "Supplier" },
   ],
   search: {
     param: "q",

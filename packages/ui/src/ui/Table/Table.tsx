@@ -29,6 +29,11 @@ import { Skeleton } from '#ds/ui/Skeleton'
 import { Tooltip } from '#ds/ui/Tooltip'
 import { TooltipHelp } from '#ds/ui/TooltipHelp'
 import { columnSortKey, type TableColumnDef, type TableInstance } from './Table.hook'
+import {
+  isSequentialTableTabField,
+  tableCellTabIndex,
+  tableRowTabIndex,
+} from './table-tab-order'
 import './Table.css'
 
 // Reserved widths in px for the optional leading checkbox col + trailing actions col.
@@ -99,6 +104,37 @@ export function computeColumnWidths<T>(
   // Replace each placeholder slot with the computed fill width; every
   // other slot already holds its fixed pixel value from the first pass.
   return fixedWidths.map((w) => (w === null ? fillWidth : w))
+}
+
+/**
+ * Pixel floor for the `<table>` itself. `w-full table-fixed` otherwise
+ * squeezes col widths to the card; this min-width lets the inner
+ * `overflow-auto` scroller take over when columns are wider than the card.
+ */
+export function tableMinWidthPx<T>(
+  columns: TableColumnDef<T>[],
+  hasSelection: boolean,
+  hasActions: boolean,
+  resolved: (number | undefined)[] | null,
+  fillColumn: string,
+): number {
+  const reserved = (hasSelection ? SELECTION_WIDTH : 0) + (hasActions ? ACTIONS_WIDTH : 0)
+  if (resolved) {
+    return reserved + resolved.reduce<number>((sum, width) => sum + (width ?? 0), 0)
+  }
+  let total = reserved
+  for (const column of columns) {
+    if (column.id === fillColumn) {
+      total += column.minWidth ?? DEFAULT_FILL_MIN_WIDTH
+      continue
+    }
+    if (typeof column.width === 'number') {
+      total += column.width
+    } else {
+      total += column.minWidth ?? DEFAULT_COLUMN_WIDTH
+    }
+  }
+  return total
 }
 
 // ---------------------------------------------------------------------------
@@ -256,8 +292,19 @@ export function TableRoot({
   // Not opt-in via children: the component self-suppresses when not live.
   const liveNoticeNode = findSlot(children, TableLiveNotice) ?? <TableLiveNotice />
 
+  const minWidth = tableMinWidthPx(
+    table.columns,
+    table.enableSelection,
+    !!table.rowActions,
+    resolved,
+    table.fillColumn,
+  )
+
   const tableEl = (
-    <table className="w-full table-fixed text-left text-sm">
+    <table
+      className="w-full table-fixed text-left text-sm"
+      style={{ minWidth }}
+    >
       <colgroup>
         {table.enableSelection && <col className="w-10" />}
         {table.columns.map((column, i) => {
@@ -294,7 +341,7 @@ export function TableRoot({
         // vertical padding for pseudo spacers.
         data-sticky-table={sticky || undefined}
         className={cn(
-          'flex w-full flex-col rounded-section border border-border',
+          'flex min-w-0 w-full flex-col rounded-section border border-border',
           // Sticky mode: the card owns its own scrolling (CORE-990). It caps
           // at the hosting container's content height and the rows scroll
           // INSIDE it — the card outline stays put while content disappears
@@ -512,20 +559,28 @@ export function TableBody({ className, ref, ...rest }: TableBodyProps) {
   const [activeCol, setActiveCol] = useState(-1)
   const activeIndex = Math.min(Math.max(0, activeRowIndex), Math.max(0, table.rows.length - 1))
 
-  // Sync `tabIndex` on every focusable descendant of every row so exactly
-  // one element in the body has `tabIndex=0`. Cell content comes from
-  // arbitrary `column.render` / `rowActions` callers, so we can't enforce
-  // this declaratively — we rewrite tabindex after each render. Hook order
-  // requires this run unconditionally; on early-return frames `rowRefs`
-  // is empty so the loop is a no-op.
+  // Sync `tabIndex` after each render. Cell content comes from arbitrary
+  // `column.render` / `rowActions` callers, so we can't enforce this
+  // declaratively. Text-like inputs stay in sequential Tab order (qty
+  // columns); buttons/links/checkboxes keep the single-tab-stop roving
+  // model. Hook order requires this run unconditionally; on early-return
+  // frames `rowRefs` is empty so the loop is a no-op.
   useEffect(() => {
     rowRefs.current.forEach((rowEl, idx) => {
       if (!rowEl) return
       const focusables = getRowFocusables(rowEl)
       const isActive = idx === activeIndex
+      const hasSequentialField = focusables.some(isSequentialTableTabField)
       focusables.forEach((el, colIdx) => {
-        el.tabIndex = isActive && colIdx === activeCol ? 0 : -1
+        el.tabIndex = tableCellTabIndex(
+          isSequentialTableTabField(el),
+          isActive && colIdx === activeCol,
+        )
       })
+      rowEl.tabIndex = tableRowTabIndex(
+        isActive && activeCol === -1,
+        hasSequentialField,
+      )
     })
   })
 
@@ -571,13 +626,11 @@ export function TableBody({ className, ref, ...rest }: TableBodyProps) {
 
   if (table.rows.length === 0) return null
 
-  // Single-tab-stop grid navigation. The active row owns one `tabIndex=0`
-  // — either on the row anchor (`activeCol === -1`) or on one of its
-  // focusable descendants (`activeCol >= 0`). All other interactive
-  // elements in the body get `tabIndex=-1`, so Tab from inside the body
-  // exits to the next region (pagination's rows-per-page select).
-  // Right/Left arrows walk focusables within the row; Up/Down move
-  // between rows while preserving the column position.
+  // Grid navigation. Buttons, links, and checkboxes use a roving tabindex
+  // so Tab enters the body once and exits to the next region. Text-like
+  // inputs stay in sequential Tab order so a qty column can be edited
+  // down the list. Right/Left arrows walk focusables within the row;
+  // Up/Down move between rows while preserving the column position.
 
   function focusRowAnchor(rowIdx: number) {
     setActiveRowIndex(rowIdx)
