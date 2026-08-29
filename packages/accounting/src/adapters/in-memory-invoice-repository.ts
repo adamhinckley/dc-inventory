@@ -10,6 +10,7 @@ import { newUuid, PaymentApplicationId, PaymentId } from "../domain/ids.js";
 import type {
   IInvoiceRepository,
   PaymentIdempotencyRecord,
+  UnnumberedInvoice,
 } from "../domain/ports/invoice-repository.js";
 import type { Invoice, Payment, PaymentApplication } from "../domain/invoice.js";
 
@@ -146,12 +147,12 @@ export class InMemoryInvoiceRepository implements IInvoiceRepository {
     }
   }
 
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const orgKey = organizationId;
+  async insertWithNextDocumentNumber(invoice: UnnumberedInvoice): Promise<Invoice> {
+    const orgKey = invoice.organizationId;
     const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
-    const number = formatDocumentNumber(next);
-    this.nextSequenceByOrg.set(orgKey, next + 1);
-    return number;
+    const numbered = { ...invoice, documentNumber: formatDocumentNumber(next) };
+    await this.save(numbered);
+    return toInvoice(numbered);
   }
 
   async listApplications(invoiceId: InvoiceId): Promise<readonly PaymentApplication[]> {

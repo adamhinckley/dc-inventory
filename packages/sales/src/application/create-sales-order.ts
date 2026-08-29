@@ -112,12 +112,10 @@ export class CreateSalesOrderUseCase {
     }));
 
     const createdAt = this.clock?.now() ?? new Date();
-    const documentNumber = await this.salesOrders.nextDocumentNumber(input.organizationId);
-    const salesOrder: SalesOrder = {
+    const salesOrder = await this.salesOrders.insertWithNextDocumentNumber({
       id: OrderId.parse(newUuid()),
       organizationId: input.organizationId,
       customerId: input.customerId,
-      documentNumber,
       status: "draft",
       createdAt,
       lines,
@@ -127,8 +125,7 @@ export class CreateSalesOrderUseCase {
       shipRegion: input.shipRegion,
       shipPostal: input.shipPostal,
       shipCountry: input.shipCountry,
-    };
-    await this.salesOrders.save(salesOrder);
+    });
     return { ok: true, salesOrder };
   }
 }

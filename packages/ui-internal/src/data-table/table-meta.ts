@@ -51,18 +51,18 @@ export type TableImportMeta = {
  *
  * @example
  * ```ts
+ * import { listInternalProductsTable } from "@dc-inventory/api-client-internal";
  * import type { TableMeta } from "@dc-inventory/ui-internal";
- * import { productsListTable } from "../lib/products-list-table";
  *
- * const meta: TableMeta = productsListTable;
+ * const meta: TableMeta = listInternalProductsTable;
  * ```
  */
 export type TableMeta = {
   rowId: string;
   columns: readonly TableColumnMeta[];
   search?: TableSearchMeta;
-  filters: readonly TableFilterMeta[];
-  sort: TableSortMeta;
+  filters?: readonly TableFilterMeta[];
+  sort?: TableSortMeta;
   export?: TableExportMeta;
   import?: TableImportMeta;
 };
@@ -80,8 +80,8 @@ export function tableControlIdBase(meta: TableMeta, idPrefix?: string): string {
   }
   const tokens = [
     meta.search?.param,
-    ...meta.filters.map((filter) => filter.param),
-    meta.sort.defaultBy,
+    ...(meta.filters ?? []).map((filter) => filter.param),
+    meta.sort?.defaultBy,
     meta.rowId,
     ...meta.columns.map((column) => column.field),
   ].filter((token): token is string => token !== undefined && token.length > 0);

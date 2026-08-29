@@ -25,6 +25,10 @@ import {
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
 import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-command-port.js";
+import {
+  INVENTORY_IDEMPOTENCY_CONSTRAINTS,
+  retryAfterIdempotencyRace,
+} from "./postgres-idempotency-race.js";
 
 /**
  * Postgres-backed unit of work for the composition root.
@@ -77,11 +81,18 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   }
 
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
-    return this.db.transaction(async (tx) =>
-      this.runOnTransaction(
-        tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
-        work,
-      ),
+    return retryAfterIdempotencyRace(
+      () =>
+        this.db.transaction(async (tx) =>
+          this.runOnTransaction(
+            tx as unknown as InventoryDrizzle &
+              PurchasingDrizzle &
+              SalesDrizzle &
+              AccountingDrizzle,
+            work,
+          ),
+        ),
+      INVENTORY_IDEMPOTENCY_CONSTRAINTS,
     );
   }
 

@@ -1,5 +1,5 @@
 import { CustomerId, Money, OrderId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { SalesOrderLineId } from "../domain/ids.js";
@@ -7,14 +7,12 @@ import type {
   ISalesOrderRepository,
   ListSalesOrdersQuery,
   SalesOrderListPage,
+  UnnumberedSalesOrder,
 } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
-import { orderLines, orders } from "../persistence/schema.js";
+import { documentNumberCounters, orderLines, orders } from "../persistence/schema.js";
 
-export type SalesDrizzle = PostgresJsDatabase<{
-  orders: typeof orders;
-  orderLines: typeof orderLines;
-}>;
+export type SalesDrizzle = PostgresJsDatabase;
 
 function toLine(row: typeof orderLines.$inferSelect): SalesOrderLine {
   return {
@@ -30,6 +28,27 @@ function toLine(row: typeof orderLines.$inferSelect): SalesOrderLine {
 async function loadLines(db: SalesDrizzle, orderId: string): Promise<SalesOrderLine[]> {
   const rows = await db.select().from(orderLines).where(eq(orderLines.orderId, orderId));
   return rows.map(toLine);
+}
+
+async function loadLinesByOrderIds(
+  db: SalesDrizzle,
+  orderIds: readonly string[],
+): Promise<Map<string, SalesOrderLine[]>> {
+  const byOrderId = new Map<string, SalesOrderLine[]>();
+  if (orderIds.length === 0) {
+    return byOrderId;
+  }
+  const rows = await db
+    .select()
+    .from(orderLines)
+    .where(inArray(orderLines.orderId, [...orderIds]))
+    .orderBy(asc(orderLines.orderId), asc(orderLines.id));
+  for (const row of rows) {
+    const lines = byOrderId.get(row.orderId) ?? [];
+    lines.push(toLine(row));
+    byOrderId.set(row.orderId, lines);
+  }
+  return byOrderId;
 }
 
 function toOrder(header: typeof orders.$inferSelect, lines: SalesOrderLine[]): SalesOrder {
@@ -50,30 +69,75 @@ function toOrder(header: typeof orders.$inferSelect, lines: SalesOrderLine[]): S
   };
 }
 
+async function allocateDocumentNumber(
+  db: SalesDrizzle,
+  organizationId: OrganizationId,
+): Promise<string> {
+  const rows = await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: 1 })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: { lastValue: sql`${documentNumberCounters.lastValue} + 1` },
+    })
+    .returning({ sequence: documentNumberCounters.lastValue });
+  const sequence = rows[0]?.sequence;
+  if (sequence === undefined) {
+    throw new Error("Failed to allocate sales order document number");
+  }
+  return formatDocumentNumber(sequence);
+}
+
+async function advanceCounter(
+  db: SalesDrizzle,
+  organizationId: OrganizationId,
+  documentNumber: string,
+): Promise<void> {
+  const sequence = parseDocumentSequence(documentNumber);
+  if (sequence === null || sequence < 1) {
+    return;
+  }
+  await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: sequence })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: {
+        lastValue: sql`greatest(${documentNumberCounters.lastValue}, ${sequence})`,
+      },
+    });
+}
+
 export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
   constructor(private readonly db: SalesDrizzle) {}
 
   async list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage> {
-    const rows = await this.db
-      .select()
-      .from(orders)
-      .where(eq(orders.organizationId, query.organizationId));
-    const filtered = [];
-    for (const row of rows) {
-      if (query.status !== undefined && row.status !== query.status) {
-        continue;
-      }
-      if (query.customerId !== undefined && row.customerId !== query.customerId) {
-        continue;
-      }
-      const lines = await loadLines(this.db, row.id);
-      filtered.push(toOrder(row, lines));
+    const clauses = [eq(orders.organizationId, query.organizationId)];
+    if (query.status !== undefined) {
+      clauses.push(eq(orders.status, query.status));
     }
-    filtered.sort((a, b) => a.documentNumber.localeCompare(b.documentNumber));
-    const start = (query.page - 1) * query.pageSize;
+    if (query.customerId !== undefined) {
+      clauses.push(eq(orders.customerId, query.customerId));
+    }
+    const where = and(...clauses);
+    const offset = (query.page - 1) * query.pageSize;
+    const [totalRows, headers] = await Promise.all([
+      this.db.select({ value: count() }).from(orders).where(where),
+      this.db
+        .select()
+        .from(orders)
+        .where(where)
+        .orderBy(asc(orders.documentNumber), asc(orders.id))
+        .limit(query.pageSize)
+        .offset(offset),
+    ]);
+    const lines = await loadLinesByOrderIds(
+      this.db,
+      headers.map((header) => header.id),
+    );
     return {
-      items: filtered.slice(start, start + query.pageSize),
-      total: filtered.length,
+      items: headers.map((header) => toOrder(header, lines.get(header.id) ?? [])),
+      total: totalRows[0]?.value ?? 0,
     };
   }
 
@@ -114,6 +178,33 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
   }
 
   async save(order: SalesOrder): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      const transactionalDb = tx as SalesDrizzle;
+      await advanceCounter(
+        transactionalDb,
+        order.organizationId,
+        order.documentNumber,
+      );
+      await new DrizzleSalesOrderRepository(transactionalDb).persist(order);
+    });
+  }
+
+  async insertWithNextDocumentNumber(
+    order: UnnumberedSalesOrder,
+  ): Promise<SalesOrder> {
+    return this.db.transaction(async (tx) => {
+      const transactionalDb = tx as SalesDrizzle;
+      const documentNumber = await allocateDocumentNumber(
+        transactionalDb,
+        order.organizationId,
+      );
+      const numbered = { ...order, documentNumber };
+      await new DrizzleSalesOrderRepository(transactionalDb).persist(numbered);
+      return numbered;
+    });
+  }
+
+  private async persist(order: SalesOrder): Promise<void> {
     const existing = await this.findById(order.organizationId, order.id);
     if (existing === null) {
       await this.db.insert(orders).values({
@@ -193,20 +284,5 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
           .where(eq(orderLines.id, line.id));
       }
     }
-  }
-
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const rows = await this.db
-      .select({ documentNumber: orders.documentNumber })
-      .from(orders)
-      .where(eq(orders.organizationId, organizationId));
-    let max = 0;
-    for (const row of rows) {
-      const sequence = parseDocumentSequence(row.documentNumber);
-      if (sequence !== null && sequence > max) {
-        max = sequence;
-      }
-    }
-    return formatDocumentNumber(max + 1);
   }
 }

@@ -10,6 +10,7 @@ import type {
   IPurchaseOrderRepository,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
+  UnnumberedPurchaseOrder,
 } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 
@@ -56,7 +57,11 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
       }
       return true;
     });
-    rows.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    rows.sort(
+      (a, b) =>
+        a.order.documentNumber.localeCompare(b.order.documentNumber) ||
+        a.order.id.localeCompare(b.order.id),
+    );
     const start = (query.page - 1) * query.pageSize;
     return {
       items: rows.slice(start, start + query.pageSize).map((row) => row.order),
@@ -104,11 +109,13 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     }
   }
 
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const orgKey = organizationId;
+  async insertWithNextDocumentNumber(
+    order: UnnumberedPurchaseOrder,
+  ): Promise<PurchaseOrder> {
+    const orgKey = order.organizationId;
     const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
-    const number = formatDocumentNumber(next);
-    this.nextSequenceByOrg.set(orgKey, next + 1);
-    return number;
+    const numbered = { ...order, documentNumber: formatDocumentNumber(next) };
+    await this.save(numbered);
+    return toOrder(numbered);
   }
 }

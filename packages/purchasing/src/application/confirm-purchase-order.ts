@@ -1,5 +1,6 @@
 import { OrganizationId, PurchaseOrderId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IPurchasingUnitOfWork } from "../domain/ports/purchase-order-repository.js";
+import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
 import { PurchasingTransactionError } from "../domain/errors.js";
 
@@ -18,12 +19,16 @@ export type ConfirmPurchaseOrderResult =
         | "not_found"
         | "illegal_transition"
         | "empty_order"
+        | "product_not_found"
         | "inventory_conflict"
         | "idempotency_conflict";
     };
 
 export class ConfirmPurchaseOrderUseCase {
-  constructor(private readonly uow: IPurchasingUnitOfWork) {}
+  constructor(
+    private readonly uow: IPurchasingUnitOfWork,
+    private readonly catalog: ICatalogSkuLookupPort,
+  ) {}
 
   async execute(input: ConfirmPurchaseOrderRequest): Promise<ConfirmPurchaseOrderResult> {
     void input.staffUserId;
@@ -49,6 +54,13 @@ export class ConfirmPurchaseOrderUseCase {
             sku: line.sku,
           })),
         );
+        for (const line of existing.lines) {
+          const product = await this.catalog.findBySku(existing.organizationId, line.sku);
+          if (product === null || !product.sku.equals(line.sku)) {
+            return { ok: false, reason: "product_not_found" };
+          }
+        }
+
         for (const line of existing.lines) {
           const result = await scope.inventory.recordInboundFromPo({
             organizationId: existing.organizationId,

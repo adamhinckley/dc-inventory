@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
+import { listInternalProductsTable as productsListTable } from "@dc-inventory/api-client-internal";
 import { describe, expect, it } from "vitest";
-import { productsListTable } from "./products-list-table";
 import {
   listParamsFromSearchParams,
   tableSearchFromParams,
