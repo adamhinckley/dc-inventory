@@ -131,6 +131,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
+          409: conflictResponseSchema,
         },
       },
     },

@@ -30,7 +30,7 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startSalesApp() {
+async function startSalesApp(options: { productInactive?: boolean } = {}) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
@@ -55,7 +55,7 @@ async function startSalesApp() {
     description: null,
     uom: "EA",
     memberPrice: Money.fromMinorUnits(250, "USD"),
-    inactive: false,
+    inactive: options.productInactive ?? false,
     discontinued: false,
     webWholesale: true,
     taxCategoryCode: "TANGIBLE",
@@ -113,6 +113,24 @@ describe("internal sales orders HTTP", () => {
       payload: { customerId: CUSTOMER_ID, lines: [] },
     });
     expect(response.statusCode).toBe(400);
+  });
+
+  it("returns the declared conflict response for an inactive product", async () => {
+    const { app } = await startSalesApp({ productInactive: true });
+    const cookie = await staffCookie(app);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({ error: "conflict" });
   });
 
   it("runs create, confirm, ship, and cancel", async () => {
