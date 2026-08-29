@@ -36,7 +36,10 @@ export class CorrectPaymentUseCase {
     }
 
     return this.unitOfWork.run(async (uow) => {
-      const invoice = await uow.invoices.findById(input.organizationId, input.invoiceId);
+      const invoice = await uow.invoices.findByIdForPayment(
+        input.organizationId,
+        input.invoiceId,
+      );
       if (invoice === null) {
         return { ok: false, reason: "not_found" };
       }

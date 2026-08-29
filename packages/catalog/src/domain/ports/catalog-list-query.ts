@@ -8,6 +8,7 @@ export type CatalogListSortOrder = "asc" | "desc";
 export type CatalogListQuery = {
   organizationId: OrganizationId;
   q?: string;
+  category?: string;
   page: number;
   pageSize: number;
   sortBy: CatalogListSortBy;

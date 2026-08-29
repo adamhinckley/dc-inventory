@@ -20,6 +20,7 @@ import type {
   RecordShippedCommand,
   StockCommandBase,
   StockCommandResult,
+  StockSnapshotLock,
 } from "../domain/ports/stock-ledger.js";
 import type { InMemoryInventoryReadModel } from "./in-memory-inventory-read-model.js";
 
@@ -32,6 +33,10 @@ export class InMemoryStockLedger implements IStockLedger {
     private readonly readModel: InMemoryInventoryReadModel,
     private readonly clock?: IClock,
   ) {}
+
+  lockSnapshots(_snapshots: readonly StockSnapshotLock[]): Promise<void> {
+    return Promise.resolve();
+  }
 
   recordInboundFromPo(command: RecordInboundFromPoCommand): Promise<StockCommandResult> {
     return this.record("InboundFromPo", command);

@@ -36,11 +36,13 @@ export type {
   InboundCancelledCommand,
   InboundFromPoCommand,
   InventoryCommandResult,
+  InventorySnapshotLock,
   IPurchaseOrderRepository,
   IPurchasingUnitOfWork,
   ISupplierRepository,
   ListSuppliersQuery,
   SupplierListPage,
+  UnnumberedPurchaseOrder,
 } from "./domain/ports/purchase-order-repository.js";
 export type {
   IWorkbookWriter,

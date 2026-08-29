@@ -25,6 +25,7 @@ import type {
   GetOpsSubscription401,
   LoginOps200,
   LoginOps401,
+  LoginOps429,
   LoginOpsBody,
   LogoutOps200,
   LogoutOps401
@@ -60,10 +61,15 @@ export type loginOpsResponse401 = {
   status: 401
 }
 
+export type loginOpsResponse429 = {
+  data: LoginOps429
+  status: 429
+}
+
 export type loginOpsResponseSuccess = (loginOpsResponse200) & {
   headers: Headers;
 };
-export type loginOpsResponseError = (loginOpsResponse401) & {
+export type loginOpsResponseError = (loginOpsResponse401 | loginOpsResponse429) & {
   headers: Headers;
 };
 
@@ -101,7 +107,7 @@ return customFetch<loginOpsResponse>(getLoginOpsUrl(),
 
 
 
-export const getLoginOpsMutationOptions = <TError = LoginOps401,
+export const getLoginOpsMutationOptions = <TError = LoginOps401 | LoginOps429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginOps>>, TError,{data: LoginOpsBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof loginOps>>, TError,{data: LoginOpsBody}, TContext> => {
 
@@ -130,12 +136,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type LoginOpsMutationResult = NonNullable<Awaited<ReturnType<typeof loginOps>>>
     export type LoginOpsMutationBody = LoginOpsBody
-    export type LoginOpsMutationError = LoginOps401
+    export type LoginOpsMutationError = LoginOps401 | LoginOps429
 
     /**
  * @summary Ops login; sets HttpOnly ops_session
  */
-export const useLoginOps = <TError = LoginOps401,
+export const useLoginOps = <TError = LoginOps401 | LoginOps429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginOps>>, TError,{data: LoginOpsBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof loginOps>>,

@@ -5,6 +5,7 @@ import { normalizeEmail } from "../domain/email.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { StaffUser } from "../domain/staff-user.js";
 import {
+  loginThrottleCounters,
   opsUsers,
   organizations,
   sessions,
@@ -18,6 +19,7 @@ export type IdentityDrizzle = PostgresJsDatabase<{
   staffUsers: typeof staffUsers;
   wholesaleUsers: typeof wholesaleUsers;
   sessions: typeof sessions;
+  loginThrottleCounters: typeof loginThrottleCounters;
 }>;
 
 export class DrizzleStaffUserRepository implements IStaffUserRepository {

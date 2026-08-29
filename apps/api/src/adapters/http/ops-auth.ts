@@ -4,6 +4,7 @@ import {
   loginBodySchema,
   logoutResponseSchema,
   opsSessionResponseSchema,
+  tooManyLoginAttemptsResponseSchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
 import {
@@ -11,6 +12,10 @@ import {
   OPS_SESSION_COOKIE,
   setSessionCookie,
 } from "./auth-cookies.js";
+import {
+  createLoginThrottlePreHandler,
+  resetLoginThrottle,
+} from "./login-throttle.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -27,6 +32,7 @@ export function registerOpsLoginRoute(app: FastifyInstance): void {
   typed(app).post(
     "/auth/login",
     {
+      preHandler: createLoginThrottlePreHandler("ops"),
       schema: {
         operationId: "loginOps",
         tags: ["ops-auth"],
@@ -35,6 +41,7 @@ export function registerOpsLoginRoute(app: FastifyInstance): void {
         response: {
           200: opsSessionResponseSchema,
           401: unauthorizedResponseSchema,
+          429: tooManyLoginAttemptsResponseSchema,
         },
       },
     },
@@ -43,6 +50,7 @@ export function registerOpsLoginRoute(app: FastifyInstance): void {
       if (!result.ok) {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
+      await resetLoginThrottle(request, "ops");
       setSessionCookie(reply, OPS_SESSION_COOKIE, result.sessionId, request);
       return {
         opsUserId: result.opsUserId,

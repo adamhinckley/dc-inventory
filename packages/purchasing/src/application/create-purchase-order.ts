@@ -100,19 +100,16 @@ export class CreatePurchaseOrderUseCase {
     }
 
     const createdAt = this.clock?.now() ?? new Date();
-    const documentNumber = await this.purchaseOrders.nextDocumentNumber(input.organizationId);
-    const purchaseOrder: PurchaseOrder = {
+    const purchaseOrder = await this.purchaseOrders.insertWithNextDocumentNumber({
       id: PurchaseOrderId.parse(newUuid()),
       organizationId: input.organizationId,
       supplierId: input.supplierId,
-      documentNumber,
       status: "draft",
       shipDate,
       cancelDate,
       createdAt,
       lines,
-    };
-    await this.purchaseOrders.save(purchaseOrder);
+    });
     return { ok: true, purchaseOrder };
   }
 }

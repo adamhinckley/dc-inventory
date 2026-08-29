@@ -56,6 +56,8 @@ import {
   type IOpsUserRepository,
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
+  DrizzleLoginThrottle,
+  InMemoryLoginThrottle,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
@@ -69,6 +71,7 @@ import {
   ScryptPasswordHasher,
   DrizzleOrganizationRepository,
   type IPasswordHasher,
+  type ILoginThrottle,
   type IOrganizationRepository,
   type ISessionStore,
   type IStaffUserRepository,
@@ -124,11 +127,13 @@ import {
   InMemorySalesOrderRepository,
   ListSalesOrdersUseCase,
   ShipSalesOrderUseCase,
+  type ICatalogProductPort,
   type ICustomerLookupPort,
   type ISalesOrderRepository,
   type SalesDrizzle,
 } from "@dc-inventory/sales";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
+import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
@@ -158,6 +163,7 @@ import { createDatabaseConnection, PostgresDatabase } from "./db.js";
 
 export type IdentityHttpServices = {
   loginOps: LoginOpsUseCase;
+  loginThrottle: ILoginThrottle;
   loginStaff: LoginStaffUseCase;
   logoutOps: LogoutUseCase;
   resolveOps: ResolveOpsSessionUseCase;
@@ -262,6 +268,7 @@ export type AppServiceOverrides = {
   wholesaleUsers?: IWholesaleUserRepository;
   sessions?: ISessionStore;
   passwords?: IPasswordHasher;
+  loginThrottle?: ILoginThrottle;
   organizationRepo?: IOrganizationRepository;
   customerRepo?: ICustomerRepository;
   contactRepo?: IContactRepository;
@@ -277,6 +284,7 @@ export type AppServiceOverrides = {
   catalogSkuLookup?: ICatalogSkuLookupPort;
   factorySendCatalog?: IFactorySendCatalogPort;
   supplierProductQtyRead?: ISupplierProductQtyReadPort;
+  catalogProduct?: ICatalogProductPort;
   salesOrderRepo?: ISalesOrderRepository;
   invoiceRepo?: IInvoiceRepository;
   accountingUnitOfWork?: import("@dc-inventory/accounting").IAccountingUnitOfWork;
@@ -410,6 +418,7 @@ function customerLookupPort(customerRepo: ICustomerRepository): ICustomerLookupP
 function salesServices(
   salesOrderRepo: ISalesOrderRepository,
   customerRepo: ICustomerRepository,
+  catalogProduct: ICatalogProductPort,
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/sales").IClock,
 ): SalesHttpServices {
@@ -418,6 +427,7 @@ function salesServices(
     createSalesOrder: new CreateSalesOrderUseCase(
       salesOrderRepo,
       customerLookupPort(customerRepo),
+      catalogProduct,
       clock,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
@@ -500,6 +510,11 @@ export function composeAppServices(
     (identityDb
       ? new DrizzleOrganizationRepository(identityDb)
       : new InMemoryOrganizationRepository());
+  const loginThrottle =
+    overrides.loginThrottle ??
+    (identityDb
+      ? new DrizzleLoginThrottle(identityDb, clock)
+      : new InMemoryLoginThrottle(clock));
 
   const customerRepo =
     overrides.customerRepo ??
@@ -607,6 +622,7 @@ export function composeAppServices(
         passwords,
         clock,
       ),
+      loginThrottle,
       logoutOps: new LogoutUseCase(sessions, clock, "ops"),
       resolveOps: new ResolveOpsSessionUseCase(sessions, opsUsers, clock),
       loginStaff: new LoginStaffUseCase(
@@ -650,7 +666,13 @@ export function composeAppServices(
       unitOfWork,
       clock,
     ),
-    sales: salesServices(salesOrderRepo, customerRepo, unitOfWork, clock),
+    sales: salesServices(
+      salesOrderRepo,
+      customerRepo,
+      overrides.catalogProduct ?? catalogProductPort(productRepo),
+      unitOfWork,
+      clock,
+    ),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     licensing: licensingServices(licensingStore),
     unitOfWork,

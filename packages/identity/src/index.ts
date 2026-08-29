@@ -1,4 +1,5 @@
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
+export { InMemoryLoginThrottle } from "./adapters/in-memory-login-throttle.js";
 export { InMemoryIdentityUnitOfWork } from "./adapters/in-memory-identity-unit-of-work.js";
 export { InMemoryOpsUserRepository } from "./adapters/in-memory-ops-user-repository.js";
 export { InMemoryOrganizationRepository } from "./adapters/in-memory-organization-repository.js";
@@ -22,6 +23,7 @@ export {
 } from "./adapters/drizzle-staff-user-repository.js";
 export { DrizzleWholesaleUserRepository } from "./adapters/drizzle-wholesale-user-repository.js";
 export { DrizzleSessionStore } from "./adapters/drizzle-session-store.js";
+export { DrizzleLoginThrottle } from "./adapters/drizzle-login-throttle.js";
 export { LoginOpsUseCase } from "./application/login-ops.js";
 export { LoginStaffUseCase } from "./application/login-staff.js";
 export { LoginWholesaleUseCase } from "./application/login-wholesale.js";
@@ -37,7 +39,17 @@ export {
   type SessionFailureReason,
 } from "./application/resolve-session.js";
 export type { IClock } from "./domain/clock.js";
+export {
+  LOGIN_THROTTLE_MAX_ATTEMPTS,
+  LOGIN_THROTTLE_WINDOW_MS,
+} from "./domain/login-throttle-policy.js";
 export type { IIdentityUnitOfWork } from "./domain/ports/identity-unit-of-work.js";
+export type {
+  ILoginThrottle,
+  LoginAudience,
+  LoginThrottleKey,
+  LoginThrottleResult,
+} from "./domain/ports/login-throttle.js";
 export type { IOrganizationRepository } from "./domain/ports/organization-repository.js";
 export type { IOpsUserRepository } from "./domain/ports/ops-user-repository.js";
 export type { IPasswordHasher } from "./domain/ports/password-hasher.js";

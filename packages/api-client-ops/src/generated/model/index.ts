@@ -17,6 +17,8 @@ export * from './loginOps200';
 export * from './loginOps200Kind';
 export * from './loginOps401';
 export * from './loginOps401Error';
+export * from './loginOps429';
+export * from './loginOps429Error';
 export * from './loginOpsBody';
 export * from './logoutOps200';
 export * from './logoutOps401';

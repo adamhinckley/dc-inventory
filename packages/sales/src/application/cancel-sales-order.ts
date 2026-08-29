@@ -45,6 +45,12 @@ export class CancelSalesOrderUseCase {
           return { ok: true, salesOrder: cancelled };
         }
 
+        await scope.inventory.lockSnapshots(
+          existing.lines.map((line) => ({
+            organizationId: existing.organizationId,
+            sku: line.sku,
+          })),
+        );
         for (const line of existing.lines) {
           const result = await scope.inventory.recordDeallocated({
             organizationId: existing.organizationId,

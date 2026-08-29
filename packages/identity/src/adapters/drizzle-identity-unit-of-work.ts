@@ -5,6 +5,7 @@ import type { IIdentityUnitOfWork } from "../domain/ports/identity-unit-of-work.
 import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import {
+  loginThrottleCounters,
   opsUsers,
   organizations,
   sessions,
@@ -18,6 +19,7 @@ export type IdentityTransactionDrizzle = PostgresJsDatabase<{
   staffUsers: typeof staffUsers;
   wholesaleUsers: typeof wholesaleUsers;
   sessions: typeof sessions;
+  loginThrottleCounters: typeof loginThrottleCounters;
 }>;
 
 /**

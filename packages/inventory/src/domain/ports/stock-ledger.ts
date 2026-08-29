@@ -24,6 +24,12 @@ export type StockCommandBase = {
   refId: string;
 };
 
+export type StockSnapshotLock = {
+  organizationId: OrganizationId;
+  sku: Sku;
+  locationId?: LocationId;
+};
+
 export type RecordInboundFromPoCommand = StockCommandBase & {
   refType: "purchase_order";
 };
@@ -61,6 +67,12 @@ export type RecordAdjustmentDecreaseCommand = StockCommandBase & {
  * implemented by adapters; callers use application use cases.
  */
 export interface IStockLedger {
+  /**
+   * Acquires the consistency rows for a command set before any stock-state
+   * validation or mutation. Postgres adapters lock distinct rows in stable
+   * organization, SKU, and location order; in-memory adapters need no lock.
+   */
+  lockSnapshots(snapshots: readonly StockSnapshotLock[]): Promise<void>;
   recordInboundFromPo(command: RecordInboundFromPoCommand): Promise<StockCommandResult>;
   recordGoodsReceived(command: RecordGoodsReceivedCommand): Promise<StockCommandResult>;
   recordInboundCancelled(command: RecordInboundCancelledCommand): Promise<StockCommandResult>;
