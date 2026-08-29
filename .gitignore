@@ -32,3 +32,4 @@ storybook-static/
 .idea/
 .vscode/
 *.swp
+.neon
