@@ -12,7 +12,7 @@ export const readyResponseSchema = z.object({
 
 export const notReadyResponseSchema = z.object({
   ready: z.literal(false),
-  error: z.string(),
+  error: z.literal("service_unavailable"),
 });
 
 function typed(app: FastifyInstance) {
@@ -52,10 +52,29 @@ export function registerHealthRoutes(app: FastifyInstance): void {
         },
       },
     },
-    async (_request, reply) => {
+    async (request, reply) => {
+      if (app.drainState.isDraining()) {
+        return reply.code(503).send({
+          ready: false as const,
+          error: "service_unavailable" as const,
+        });
+      }
       const result = await app.readyCheck.execute();
       if (!result.ready) {
-        return reply.code(503).send(result);
+        const context = {
+          requestId: request.id,
+          method: request.method,
+          route: request.routeOptions.url ?? request.url,
+        };
+        request.log.error(
+          { err: result.cause, ...context },
+          "readiness check failed",
+        );
+        app.errorReporter.captureException(result.cause, context);
+        return reply.code(503).send({
+          ready: false as const,
+          error: "service_unavailable" as const,
+        });
       }
       return result;
     },
