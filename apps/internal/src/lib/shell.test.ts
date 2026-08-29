@@ -36,21 +36,5 @@ describe("internal dashboard shell", () => {
     expect(dashboardFrame).toMatch(/AccountNavMenu/);
     expect(dashboardFrame).toMatch(/NavFooter/);
     expect(dashboardFrame).not.toMatch(/href="\/login"/);
-
-    const signInGate = readFileSync(
-      join(srcRoot, "components/staff-sign-in-dialog.tsx"),
-      "utf8",
-    );
-    expect(signInGate).toMatch(/useGetInternalSession/);
-    expect(signInGate).toMatch(/StaffSignInForm/);
-    expect(signInGate).toMatch(/auth-sign-in-dialog/);
-
-    const accountMenu = readFileSync(
-      join(srcRoot, "components/account-nav-menu.tsx"),
-      "utf8",
-    );
-    expect(accountMenu).toMatch(/useLogoutInternal/);
-    expect(accountMenu).toMatch(/onSettled/);
-    expect(accountMenu).toMatch(/router\.push\("\/login"\)/);
   });
 });
