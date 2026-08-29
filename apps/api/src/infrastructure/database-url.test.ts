@@ -3,6 +3,7 @@ import {
   InvalidDatabaseTargetError,
   MissingDatabaseUrlError,
   MissingNeonDatabaseUrlError,
+  PooledDatabaseUrlError,
   readDatabaseUrl,
 } from "./database-url.js";
 
@@ -74,5 +75,32 @@ describe("readDatabaseUrl", () => {
     expect(() =>
       readDatabaseUrl({ DATABASE_TARGET: "staging", DATABASE_URL: localUrl }),
     ).toThrow(/local, neon/);
+  });
+
+  it("rejects pooled Neon hostnames when DATABASE_TARGET is unset", () => {
+    expect(() => readDatabaseUrl({ DATABASE_URL: neonPooled })).toThrow(
+      PooledDatabaseUrlError,
+    );
+    expect(() => readDatabaseUrl({ DATABASE_URL: neonPooled })).toThrow(
+      /-pooler/,
+    );
+  });
+
+  it("rejects pooled Neon hostnames when DATABASE_TARGET is neon", () => {
+    expect(() =>
+      readDatabaseUrl({
+        DATABASE_TARGET: "neon",
+        DATABASE_URL_UNPOOLED: neonPooled,
+      }),
+    ).toThrow(PooledDatabaseUrlError);
+  });
+
+  it("rejects pooled Neon hostnames when DATABASE_TARGET is local", () => {
+    expect(() =>
+      readDatabaseUrl({
+        DATABASE_TARGET: "local",
+        DATABASE_URL_LOCAL: neonPooled,
+      }),
+    ).toThrow(PooledDatabaseUrlError);
   });
 });

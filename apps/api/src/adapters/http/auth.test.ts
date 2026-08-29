@@ -157,7 +157,7 @@ describe("opaque session HTTP", () => {
       },
     });
     expect(cookieValue(flyLogin, STAFF_SESSION_COOKIE)?.secure).toBe(true);
-    expect(cookieValue(flyLogin, STAFF_SESSION_COOKIE)?.sameSite).toBe("None");
+    expect(cookieValue(flyLogin, STAFF_SESSION_COOKIE)?.sameSite).toBe("Lax");
 
     const session = await app.inject({
       method: "GET",

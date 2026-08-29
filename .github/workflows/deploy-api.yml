@@ -1,5 +1,5 @@
 # Deploy the Fastify API to Fly. One app for now (dc-inventory-api).
-# Push to main or Actions → Deploy API → Run workflow.
+# Push to main or Actions → Deploy API → Run workflow (main only).
 # Secrets: FLY_API_TOKEN (deploy), DATABASE_URL (Neon direct, for migrate).
 name: Deploy API
 
@@ -7,18 +7,31 @@ on:
   push:
     branches:
       - main
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-api
-  cancel-in-progress: false
+  group: deploy-api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  build-api-image:
+    name: build-api-image
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t dc-inventory-api:pr-${{ github.event.pull_request.number }} .
+
   deploy-api:
     name: deploy-api
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -45,3 +58,18 @@ jobs:
         run: flyctl deploy --remote-only --ha=false --app dc-inventory-api
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      - name: Verify readiness
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            status=$(curl -s -o /tmp/ready.json -w "%{http_code}" https://dc-inventory-api.fly.dev/ready || true)
+            if [ "$status" = "200" ]; then
+              grep -q '"ready":true' /tmp/ready.json
+              exit 0
+            fi
+            echo "GET /ready returned $status (attempt $attempt/30); retrying in 10s…"
+            sleep 10
+          done
+          echo "Deploy finished but /ready never returned 200" >&2
+          cat /tmp/ready.json >&2 || true
+          exit 1

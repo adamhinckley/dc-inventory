@@ -54,7 +54,7 @@ To point the same process at Neon instead of Compose, set `DATABASE_TARGET=neon`
 
 ## Fly (public API)
 
-The Next apps stay local or on Vercel. This process is the only thing that talks to Neon. Deploys come from GitHub Actions (`.github/workflows/deploy-api.yml`): push to `main`, or **Actions → Deploy API → Run workflow**. Do not `fly deploy` from a laptop unless Actions is down.
+The Next apps stay local or on Vercel. This process is the only thing that talks to Neon. Deploys come from GitHub Actions (`.github/workflows/deploy-api.yml`): push to `main`, or **Actions → Deploy API → Run workflow** on `main` only. Do not `fly deploy` from a laptop unless Actions is down.
 
 Repo secrets (Settings → Secrets and variables → Actions):
 
@@ -63,7 +63,11 @@ Repo secrets (Settings → Secrets and variables → Actions):
 
 The image does not migrate on boot. CI migrates, then `flyctl deploy --remote-only --ha=false`.
 
-`GET /health` is liveness (no Postgres). `GET /ready` is `SELECT 1` against Neon. The Machine stops when idle (`min_machines_running = 0`) so a quiet month stays cheap. First request after sleep waits for a cold start.
+`GET /health` is liveness (no Postgres). `GET /ready` is `SELECT 1` against Neon. Fly health checks and the deploy workflow both gate on `/ready`. The Machine stops when idle (`min_machines_running = 0`) so a quiet month stays cheap. First request after sleep waits for a cold start.
+
+**Local internal app against Fly:** leave `NEXT_PUBLIC_API_URL` empty and set `API_PROXY_ORIGIN=https://dc-inventory-api.fly.dev` in `apps/internal/.env`. The browser calls `http://localhost:3000`; Next rewrites to Fly. Session cookies stay host-only on localhost with `SameSite=Lax` — do not point the browser at Fly directly unless you add anti-CSRF tokens and change invariant X5 in the same change.
+
+Production evaluates `LicensingFeatures` from Postgres (`FEATURES_ALL_CORE_ON` is not set on Fly). Seed a `licensing.subscriptions` row or run demo seed against Neon before relying on gated routes.
 
 First-time app create (once):
 

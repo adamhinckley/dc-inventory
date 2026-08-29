@@ -35,6 +35,16 @@ export class InvalidDatabaseTargetError extends Error {
   }
 }
 
+export class PooledDatabaseUrlError extends Error {
+  override readonly name = "PooledDatabaseUrlError";
+
+  constructor() {
+    super(
+      "DATABASE_URL must use a direct (unpooled) Neon host. Remove -pooler from the hostname (see apps/api/README.md).",
+    );
+  }
+}
+
 function requiredUrl(
   url: string | undefined,
   missing: () => Error,
@@ -43,7 +53,20 @@ function requiredUrl(
   if (!trimmed) {
     throw missing();
   }
-  return trimmed;
+  return assertDirectDatabaseUrl(trimmed);
+}
+
+function assertDirectDatabaseUrl(url: string): string {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return url;
+  }
+  if (hostname.includes("-pooler")) {
+    throw new PooledDatabaseUrlError();
+  }
+  return url;
 }
 
 export function readDatabaseUrl(

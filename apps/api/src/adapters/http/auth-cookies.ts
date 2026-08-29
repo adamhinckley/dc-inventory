@@ -12,27 +12,8 @@ export function cookieSecure(request: FastifyRequest): boolean {
   return proto === "https" || request.protocol === "https";
 }
 
-/**
- * Cross-site browser → Fly needs SameSite=None (Secure is required with None).
- * Same-origin Next rewrites and local :3000 → :3001 stay Lax.
- */
-export function cookieSameSite(request: FastifyRequest): "lax" | "none" {
-  if (!cookieSecure(request)) {
-    return "lax";
-  }
-  const origin = request.headers.origin;
-  if (typeof origin !== "string" || origin.length === 0) {
-    return "lax";
-  }
-  let originHost: string;
-  try {
-    originHost = new URL(origin).hostname;
-  } catch {
-    return "lax";
-  }
-  if (originHost !== request.hostname) {
-    return "none";
-  }
+/** Invariant X5: session cookies stay SameSite=Lax (see docs/invariants.md). */
+export function cookieSameSite(_request: FastifyRequest): "lax" {
   return "lax";
 }
 
