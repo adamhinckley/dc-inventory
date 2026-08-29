@@ -10,6 +10,7 @@ SELECT
 FROM "purchasing"."purchase_orders"
 WHERE "document_number" ~ '^PO-[0-9]+'
 GROUP BY "organization_id"
+HAVING MAX((substring("document_number" FROM '^PO-([0-9]+)'))::integer) > 0
 ON CONFLICT ("organization_id") DO UPDATE
 SET "last_value" = GREATEST(
   "purchasing"."document_number_counters"."last_value",
@@ -28,6 +29,7 @@ SELECT
 FROM "sales"."orders"
 WHERE "document_number" ~ '^SO-[0-9]+'
 GROUP BY "organization_id"
+HAVING MAX((substring("document_number" FROM '^SO-([0-9]+)'))::integer) > 0
 ON CONFLICT ("organization_id") DO UPDATE
 SET "last_value" = GREATEST(
   "sales"."document_number_counters"."last_value",
@@ -46,6 +48,7 @@ SELECT
 FROM "accounting"."invoices"
 WHERE "document_number" ~ '^INV-[0-9]+'
 GROUP BY "organization_id"
+HAVING MAX((substring("document_number" FROM '^INV-([0-9]+)'))::integer) > 0
 ON CONFLICT ("organization_id") DO UPDATE
 SET "last_value" = GREATEST(
   "accounting"."document_number_counters"."last_value",

@@ -211,7 +211,7 @@ async function advanceCounter(
   documentNumber: string,
 ): Promise<void> {
   const sequence = parseDocumentSequence(documentNumber);
-  if (sequence === null) {
+  if (sequence === null || sequence < 1) {
     return;
   }
   await db
