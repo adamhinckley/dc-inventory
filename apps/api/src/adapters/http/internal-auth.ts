@@ -4,6 +4,7 @@ import {
   loginBodySchema,
   logoutResponseSchema,
   staffSessionResponseSchema,
+  tooManyLoginAttemptsResponseSchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
 import {
@@ -11,6 +12,10 @@ import {
   setSessionCookie,
   STAFF_SESSION_COOKIE,
 } from "./auth-cookies.js";
+import {
+  createLoginThrottlePreHandler,
+  resetLoginThrottle,
+} from "./login-throttle.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -29,6 +34,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
   routes.post(
     "/auth/login",
     {
+      preHandler: createLoginThrottlePreHandler("staff"),
       schema: {
         operationId: "loginInternal",
         tags: ["internal-auth"],
@@ -37,6 +43,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         response: {
           200: staffSessionResponseSchema,
           401: unauthorizedResponseSchema,
+          429: tooManyLoginAttemptsResponseSchema,
         },
       },
     },
@@ -45,6 +52,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
       if (!result.ok) {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
+      await resetLoginThrottle(request, "staff");
       setSessionCookie(reply, STAFF_SESSION_COOKIE, result.sessionId, request);
       return {
         staffUserId: result.staffUserId,

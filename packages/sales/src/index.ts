@@ -1,4 +1,5 @@
 export { AccountingCommandAdapter } from "./adapters/accounting-command-adapter.js";
+export { InMemoryCatalogProductPort } from "./adapters/in-memory-catalog-product-port.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { DrizzleSalesOrderRepository, type SalesDrizzle } from "./adapters/drizzle-sales-orders.js";
 export { InMemorySalesOrderRepository } from "./adapters/in-memory-sales-order-repository.js";
@@ -13,6 +14,10 @@ export { formatDocumentNumber } from "./domain/document-number.js";
 export type { IClock } from "./domain/clock.js";
 export { SalesOrderLineId } from "./domain/ids.js";
 export type {
+  ICatalogProductPort,
+  ProductSnapshot,
+} from "./domain/ports/catalog-product.js";
+export type {
   AccountingCommandResult,
   AllocatedCommand,
   CreateInvoiceForOrderCommand,
@@ -21,6 +26,7 @@ export type {
   ICustomerLookupPort,
   IInventoryCommandPort,
   InventoryCommandResult,
+  InventorySnapshotLock,
   ISalesOrderRepository,
   ISalesUnitOfWork,
   ShippedCommand,

@@ -34,6 +34,7 @@ export {
 export {
   actorType,
   identity,
+  loginThrottleCounters,
   opsUserKind,
   opsUsers,
   organizations,
@@ -115,6 +116,7 @@ import {
   stockSnapshots,
 } from "@dc-inventory/inventory/schema";
 import {
+  loginThrottleCounters,
   opsUsers,
   organizations,
   sessions,
@@ -164,6 +166,7 @@ export const schema = {
   reorderPolicies,
   stockMovements,
   stockSnapshots,
+  loginThrottleCounters,
   opsUsers,
   organizations,
   staffUsers,

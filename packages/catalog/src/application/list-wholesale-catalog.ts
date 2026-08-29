@@ -10,6 +10,7 @@ export type ListWholesaleCatalogRequest = {
   organizationId: OrganizationId;
   customerId: CustomerId;
   q?: string;
+  category?: string;
   page: number;
   pageSize: number;
   sortBy: WholesaleCatalogSortBy;
@@ -38,6 +39,7 @@ export class ListWholesaleCatalogUseCase {
     const page = await this.catalogList.list({
       organizationId: input.organizationId,
       q: input.q,
+      category: input.category,
       page: input.page,
       pageSize: input.pageSize,
       sortBy: input.sortBy,

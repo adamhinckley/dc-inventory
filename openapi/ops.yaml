@@ -5,6 +5,67 @@ info:
 components:
   schemas: {}
 paths:
+  /ops/auth/login:
+    post:
+      operationId: loginOps
+      summary: Ops login (throttled; credential verification not yet implemented)
+      tags:
+        - ops-auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationSlug:
+                  type: string
+                  minLength: 1
+                email:
+                  type: string
+                  minLength: 1
+                password:
+                  type: string
+                  minLength: 1
+              required:
+                - organizationSlug
+                - email
+                - password
+      responses:
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "429":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - too_many_login_attempts
+                  retryAfterSeconds:
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                required:
+                  - error
+                  - retryAfterSeconds
+                additionalProperties: false
   /ops/subscription:
     get:
       operationId: getOpsSubscription

@@ -131,6 +131,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
+          409: conflictResponseSchema,
         },
       },
     },
@@ -148,8 +149,15 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         shipCountry: request.body.shipCountry,
       });
       if (!result.ok) {
-        if (result.reason === "customer_not_found") {
+        if (
+          result.reason === "customer_not_found" ||
+          result.reason === "product_not_found" ||
+          result.reason === "product_organization_mismatch"
+        ) {
           return sendNotFound(reply);
+        }
+        if (result.reason === "product_inactive") {
+          return sendConflict(reply);
         }
         if (result.reason === "empty_order") {
           return sendInvalid(reply);

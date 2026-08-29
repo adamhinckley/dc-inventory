@@ -34,7 +34,10 @@ export type {
   CatalogListSortOrder,
   ICatalogListQuery,
 } from "./domain/ports/catalog-list-query.js";
-export type { IProductRepository } from "./domain/ports/product-repository.js";
+export type {
+  IProductRepository,
+  ProductListMatch,
+} from "./domain/ports/product-repository.js";
 export type {
   IProductPackagingRepository,
   ProductPackaging,

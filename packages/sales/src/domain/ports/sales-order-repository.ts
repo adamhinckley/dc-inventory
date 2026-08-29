@@ -75,6 +75,11 @@ export type ShippedCommand = {
   orderId: OrderId;
 };
 
+export type InventorySnapshotLock = {
+  organizationId: OrganizationId;
+  sku: Sku;
+};
+
 export type CreateInvoiceForOrderCommand = {
   organizationId: OrganizationId;
   orderId: OrderId;
@@ -93,6 +98,7 @@ export type AccountingCommandResult =
   | { ok: false; reason: "invalid" };
 
 export interface IInventoryCommandPort {
+  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void>;
   recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult>;
   recordDeallocated(command: DeallocatedCommand): Promise<InventoryCommandResult>;
   recordShipped(command: ShippedCommand): Promise<InventoryCommandResult>;

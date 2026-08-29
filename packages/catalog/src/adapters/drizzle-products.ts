@@ -1,5 +1,5 @@
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, eq, ilike, inArray, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Product } from "../domain/product.js";
 import type {
@@ -7,9 +7,16 @@ import type {
   ListedProduct,
   ProductListMatch,
 } from "../domain/ports/product-repository.js";
-import { products, productPackaging } from "../persistence/schema.js";
+import {
+  categories,
+  productCategories,
+  products,
+  productPackaging,
+} from "../persistence/schema.js";
 
 export type CatalogDrizzle = PostgresJsDatabase<{
+  categories: typeof categories;
+  productCategories: typeof productCategories;
   products: typeof products;
   productPackaging: typeof productPackaging;
 }>;
@@ -30,25 +37,46 @@ function toProduct(row: typeof products.$inferSelect): Product {
   };
 }
 
+export function buildProductListQuery(
+  db: CatalogDrizzle,
+  query: ProductListMatch,
+) {
+  const clauses = [eq(products.organizationId, query.organizationId)];
+  if (query.inactive !== undefined) {
+    clauses.push(eq(products.inactive, query.inactive));
+  }
+  if (query.shopVisibleOnly === true) {
+    clauses.push(eq(products.webWholesale, true));
+    clauses.push(eq(products.inactive, false));
+    clauses.push(eq(products.discontinued, false));
+  }
+  const needle = query.q?.trim() ?? "";
+  if (needle.length > 0) {
+    const pattern = `%${needle}%`;
+    clauses.push(or(ilike(products.sku, pattern), ilike(products.name, pattern))!);
+  }
+  const category = query.category?.trim() ?? "";
+  if (category.length > 0) {
+    const productIds = db
+      .select({ productId: productCategories.productId })
+      .from(productCategories)
+      .innerJoin(categories, eq(categories.id, productCategories.categoryId))
+      .where(
+        and(
+          eq(categories.organizationId, query.organizationId),
+          eq(categories.name, category),
+        ),
+      );
+    clauses.push(inArray(products.id, productIds));
+  }
+  return db.select().from(products).where(and(...clauses));
+}
+
 export class DrizzleProductRepository implements IProductRepository {
   constructor(private readonly db: CatalogDrizzle) {}
 
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
-    const clauses = [eq(products.organizationId, query.organizationId)];
-    if (query.inactive !== undefined) {
-      clauses.push(eq(products.inactive, query.inactive));
-    }
-    if (query.shopVisibleOnly === true) {
-      clauses.push(eq(products.webWholesale, true));
-      clauses.push(eq(products.inactive, false));
-      clauses.push(eq(products.discontinued, false));
-    }
-    const needle = query.q?.trim() ?? "";
-    if (needle.length > 0) {
-      const pattern = `%${needle}%`;
-      clauses.push(or(ilike(products.sku, pattern), ilike(products.name, pattern))!);
-    }
-    const rows = await this.db.select().from(products).where(and(...clauses));
+    const rows = await buildProductListQuery(this.db, query);
     return rows.map((row) => ({
       product: toProduct(row),
       createdAt: row.createdAt,

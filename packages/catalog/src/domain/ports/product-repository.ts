@@ -4,6 +4,7 @@ import type { Product } from "../product.js";
 export type ProductListMatch = {
   organizationId: OrganizationId;
   q?: string;
+  category?: string;
   inactive?: boolean;
   shopVisibleOnly?: boolean;
 };

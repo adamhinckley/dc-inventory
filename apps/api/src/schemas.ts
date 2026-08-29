@@ -14,6 +14,11 @@ export const featureDisabledResponseSchema = z.object({
   error: z.literal("feature_disabled"),
 });
 
+export const tooManyLoginAttemptsResponseSchema = z.object({
+  error: z.literal("too_many_login_attempts"),
+  retryAfterSeconds: z.number().int().positive(),
+});
+
 export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
@@ -75,7 +80,7 @@ export const productListResponseSchema = z.object({
 
 export const catalogQuerySchema = z.object({
   q: z.string().optional(),
-  category: z.string().optional(),
+  category: z.string().trim().min(1).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["name", "available"]).default("name"),
@@ -703,26 +708,31 @@ export const salesOrderIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
-export const salesOrderWriteBodySchema = z.object({
-  customerId: z.string().uuid(),
-  lines: z
-    .array(
-      z.object({
-        sku: z.string().min(1),
-        name: z.string().min(1),
-        qty: z.number().int().positive(),
-        unitPriceCents: z.number().int().nonnegative(),
-        currency: z.string().length(3),
-        taxCategoryCode: z.string().optional(),
-      }),
-    )
-    .min(1),
+const salesOrderLineInputSchema = z.object({
+  productId: z.string().uuid(),
+  qty: z.number().int().positive(),
+});
+
+const salesOrderAddressSchema = {
   shipLine1: z.string().optional(),
   shipLine2: z.string().nullable().optional(),
   shipCity: z.string().optional(),
   shipRegion: z.string().optional(),
   shipPostal: z.string().optional(),
   shipCountry: z.string().optional(),
+};
+
+export const salesOrderWriteBodySchema = z.object({
+  customerId: z.string().uuid(),
+  lines: z.array(salesOrderLineInputSchema).min(1),
+  ...salesOrderAddressSchema,
+});
+
+export const wholesaleSalesOrderWriteBodySchema = z.object({
+  lines: z
+    .array(salesOrderLineInputSchema)
+    .min(1),
+  ...salesOrderAddressSchema,
 });
 
 export const salesOrderCommandBodySchema = z.object({

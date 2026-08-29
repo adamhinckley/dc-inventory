@@ -60,7 +60,10 @@ export class ReceivePurchaseOrderUseCase {
 
         const lineById = new Map(existing.lines.map((line) => [line.id, line]));
         const updatedLines = [...existing.lines];
-
+        const validatedReceipts: {
+          receive: ReceivePurchaseOrderLineInput;
+          line: PurchaseOrderLine;
+        }[] = [];
         for (const receive of input.lines) {
           if (!Number.isInteger(receive.quantity) || receive.quantity <= 0) {
             return { ok: false, reason: "invalid" };
@@ -73,7 +76,16 @@ export class ReceivePurchaseOrderUseCase {
           if (receive.quantity > remainder) {
             return { ok: false, reason: "over_receive" };
           }
+          validatedReceipts.push({ receive, line });
+        }
 
+        await scope.inventory.lockSnapshots(
+          validatedReceipts.map(({ line }) => ({
+            organizationId: existing.organizationId,
+            sku: line.sku,
+          })),
+        );
+        for (const { receive, line } of validatedReceipts) {
           const result = await scope.inventory.recordGoodsReceived({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:receive:${line.id}:${receive.quantity}`,
