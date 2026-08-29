@@ -50,6 +50,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         staffUserId: result.staffUserId,
         email: result.email,
         organizationId: result.organizationId,
+        roles: [...result.roles],
       };
     },
   );
@@ -101,6 +102,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         staffUserId: result.staffUserId,
         email: result.email,
         organizationId: result.organizationId,
+        roles: [...result.roles],
       };
     },
   );

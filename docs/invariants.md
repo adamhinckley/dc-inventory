@@ -479,19 +479,22 @@ Credit is named as a use-case invariant but not specified.
 
 ### G8. Staff RBAC matrix
 
-Roles are examples (`admin`, `purchasing`, `warehouse`). There is no matrix.
-
-**Close a tiny static table** before Identity is more than login, for example:
+**Closed for v1:** Identity defines four staff roles and a static action policy. Any listed
+role may read internal catalog, customer, purchasing, stock, sales, and invoice data.
+Commands use this matrix:
 
 | Action | admin | purchasing | warehouse | sales support |
 |---|---|---|---|---|
-| Catalog / customers CRUD | yes | yes | read | read |
-| Create / send PO | yes | yes | no | no |
-| Receive PO / adjust stock | yes | no | yes | no |
-| Place order on behalf of customer | yes | no | no | yes |
+| Manage catalog / customers | yes | yes | no | no |
+| Manage suppliers; create, edit, confirm, or cancel PO | yes | yes | no | no |
+| Receive PO, adjust stock, or ship order | yes | no | yes | no |
+| Create, confirm, or cancel order for customer | yes | no | no | yes |
 | Apply payment | yes | no | no | no |
 
-Without this, agents will either skip checks or invent a permission CMS.
+Users may hold more than one role and authorization succeeds if any role grants the
+action. Empty or unknown role sets grant no commands. `sales_support` is the code value
+for sales support. New roles or actions require this table and the static policy to change
+together. v1 has no permission CMS, per-user grants, or feature-flag replacement for RBAC.
 
 ### G9. Purchasing state machine (cancel, over/under receive)
 

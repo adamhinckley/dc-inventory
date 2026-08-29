@@ -10,6 +10,10 @@ export const unauthorizedResponseSchema = z.object({
   error: z.literal("unauthorized"),
 });
 
+export const forbiddenResponseSchema = z.object({
+  error: z.literal("forbidden"),
+});
+
 export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
@@ -18,6 +22,7 @@ export const staffSessionResponseSchema = z.object({
   staffUserId: z.string().uuid(),
   email: z.string(),
   organizationId: z.string(),
+  roles: z.array(z.enum(["admin", "purchasing", "warehouse", "sales_support"])),
 });
 
 export const wholesaleSessionResponseSchema = z.object({

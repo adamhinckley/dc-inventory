@@ -5,6 +5,7 @@ import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { ISessionStore } from "../domain/ports/session-store.js";
 import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
+import type { StaffRole } from "../domain/staff-role.js";
 import { resolveLoginOrganizationId } from "./resolve-login-organization.js";
 
 export type LoginStaffRequest = {
@@ -20,6 +21,7 @@ export type LoginStaffResult =
       staffUserId: StaffUserId;
       email: string;
       organizationId: OrganizationId;
+      roles: readonly StaffRole[];
     }
   | { ok: false };
 
@@ -67,6 +69,7 @@ export class LoginStaffUseCase {
       staffUserId: user.id,
       email: user.email,
       organizationId: user.organizationId,
+      roles: user.roles,
     };
   }
 }

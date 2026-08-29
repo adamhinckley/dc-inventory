@@ -25,17 +25,20 @@ describe("Phase 1 identity schema (ADA-77)", () => {
     expect(existsSync(resolve(root, "packages/db"))).toBe(false);
   });
 
-  it("adds password_hash, session customer_id, and last_seen_at without Better Auth tables", () => {
+  it("adds staff roles and session fields without Better Auth tables", () => {
     const schema = readText("packages/identity/src/persistence/schema.ts");
     expect(schema).toMatch(/password_hash/);
     expect(schema).toMatch(/last_seen_at/);
     expect(schema).toMatch(/customer_id/);
+    expect(schema).toMatch(/staff_role/);
+    expect(schema).toMatch(/roles/);
     expect(schema).not.toMatch(/betterAuth|better_auth/);
-    expect(schema).not.toMatch(/["']role["']/);
 
     const sql = listSqlMigrations().join("\n");
     expect(sql).toMatch(/password_hash/);
     expect(sql).toMatch(/last_seen_at/);
+    expect(sql).toMatch(/staff_role/);
+    expect(sql).toMatch(/"roles"/);
     expect(sql).not.toMatch(/CREATE TABLE "identity"\."user"/);
     expect(sql).not.toMatch(/CREATE TABLE "identity"\."account"/);
     expect(sql).not.toMatch(/CREATE TABLE "identity"\."verification"/);

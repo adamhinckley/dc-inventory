@@ -30,6 +30,7 @@ describe("RegisterOrganization (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "owner@acme.test",
       passwordHash: await h.passwords.hash("acme-secret"),
+      roles: ["admin"],
     });
 
     const result = await h.registerOrganization.execute({
@@ -68,6 +69,7 @@ describe("RegisterOrganization (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "shared@local.test",
       passwordHash: await h.passwords.hash("acme-secret"),
+      roles: ["admin"],
     });
 
     const result = await h.registerOrganization.execute({

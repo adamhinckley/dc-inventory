@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { pgSchema, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /**
@@ -9,7 +10,7 @@ const customers = pgSchema("customers").table("customers", {
 });
 
 /**
- * Identity persistence models. Opaque sessions — no Better Auth tables, no staff role.
+ * Identity persistence models. Opaque sessions and static staff roles, no Better Auth tables.
  * Customers is referenced only for `wholesale_users.customer_id` / session snapshot FK.
  */
 export const identity = pgSchema("identity");
@@ -23,6 +24,13 @@ export const actorType = identity.enum("actor_type", [
   "staff",
   "wholesale",
   "ops",
+]);
+
+export const staffRole = identity.enum("staff_role", [
+  "admin",
+  "purchasing",
+  "warehouse",
+  "sales_support",
 ]);
 
 function timestamps() {
@@ -66,6 +74,10 @@ export const staffUsers = identity.table(
     organizationId: text("organization_id").notNull().default("DEFAULT"),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
+    roles: staffRole("roles")
+      .array()
+      .notNull()
+      .default(sql`ARRAY['admin']::identity.staff_role[]`),
     ...timestamps(),
   },
   (table) => ({

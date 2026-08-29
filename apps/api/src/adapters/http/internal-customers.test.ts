@@ -31,6 +31,7 @@ async function startCustomersApp() {
       organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   const app = await buildApp({
     logger: false,

@@ -41,6 +41,7 @@ async function startCatalogApp() {
       organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   await wholesaleUsers.save({
     id: WHOLESALE_ID,

@@ -47,10 +47,20 @@ paths:
                     type: string
                   organizationId:
                     type: string
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                        - admin
+                        - purchasing
+                        - warehouse
+                        - sales_support
                 required:
                   - staffUserId
                   - email
                   - organizationId
+                  - roles
                 additionalProperties: false
         "401":
           description: Default Response
@@ -123,10 +133,20 @@ paths:
                     type: string
                   organizationId:
                     type: string
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                        - admin
+                        - purchasing
+                        - warehouse
+                        - sales_support
                 required:
                   - staffUserId
                   - email
                   - organizationId
+                  - roles
                 additionalProperties: false
         "401":
           description: Default Response
@@ -342,6 +362,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
   /internal/customers/{id}:
     get:
       operationId: getInternalCustomer
@@ -515,6 +549,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -716,6 +764,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -836,6 +898,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -1089,6 +1165,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1218,6 +1308,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -1447,6 +1551,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1571,6 +1689,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -1937,6 +2069,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "409":
           description: Default Response
           content:
@@ -2074,6 +2220,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -2328,6 +2488,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -2694,6 +2868,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -2870,6 +3058,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -3195,6 +3397,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -3381,6 +3597,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -3514,6 +3744,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -3714,6 +3958,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "409":
           description: Default Response
           content:
@@ -3877,6 +4135,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -4240,6 +4512,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -4391,6 +4677,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -4460,6 +4760,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -4839,6 +5153,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5109,6 +5437,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5264,6 +5606,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -5426,6 +5782,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false
@@ -5662,6 +6032,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
                 required:
                   - error
                 additionalProperties: false

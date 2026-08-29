@@ -9,11 +9,13 @@ import { registerInternalSalesOrderRoutes } from "../adapters/http/internal-sale
 import { registerInternalSupplierProductRoutes } from "../adapters/http/internal-supplier-products.js";
 import { registerInternalSupplierRoutes } from "../adapters/http/internal-suppliers.js";
 import { registerInternalProductRoutes } from "../adapters/http/internal-products.js";
+import { registerStaffActionGuard } from "../adapters/http/staff-action-guard.js";
 
 /** Staff mount (`/internal`). Auth, customers, catalog products, purchasing, and sales. */
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalAuthRoutes(app);
   registerStaffAudienceGuard(app);
+  registerStaffActionGuard(app);
   registerInternalCustomerRoutes(app);
   registerInternalProductRoutes(app);
   registerInternalPurchaseOrderRoutes(app);
