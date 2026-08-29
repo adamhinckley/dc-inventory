@@ -71,7 +71,7 @@ export const productListResponseSchema = z.object({
 
 export const catalogQuerySchema = z.object({
   q: z.string().optional(),
-  category: z.string().optional(),
+  category: z.string().trim().min(1).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["name", "available"]).default("name"),

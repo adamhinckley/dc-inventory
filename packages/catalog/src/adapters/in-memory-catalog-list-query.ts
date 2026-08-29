@@ -36,6 +36,7 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
     const listed = await this.products.listMatching({
       organizationId: query.organizationId,
       q: query.q,
+      category: query.category,
       inactive: query.inactive,
       shopVisibleOnly: query.shopVisibleOnly,
     });

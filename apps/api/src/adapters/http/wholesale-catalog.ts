@@ -50,11 +50,11 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
       },
     },
     async (request) => {
-      void request.query.category;
       const result = await request.server.catalog.listWholesaleCatalog.execute({
         organizationId: wholesaleOrganizationId(request),
         customerId: customerId(request),
         q: request.query.q,
+        category: request.query.category,
         page: request.query.page,
         pageSize: request.query.pageSize,
         sortBy: request.query.sortBy,

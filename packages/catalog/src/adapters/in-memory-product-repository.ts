@@ -11,9 +11,11 @@ type Stored = { product: Product; createdAt: Date };
 
 export class InMemoryProductRepository implements IProductRepository {
   private readonly byId = new Map<ProductId, Stored>();
+  private readonly categoriesByProductId = new Map<ProductId, Set<string>>();
 
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
     const needle = query.q?.trim().toLowerCase() ?? "";
+    const category = query.category?.trim() ?? "";
     return [...this.byId.values()].filter((row) => {
       if (row.product.organizationId !== query.organizationId) {
         return false;
@@ -24,6 +26,12 @@ export class InMemoryProductRepository implements IProductRepository {
       if (query.shopVisibleOnly === true && !isShopVisible(row.product)) {
         return false;
       }
+      if (
+        category.length > 0 &&
+        !this.categoriesByProductId.get(row.product.id)?.has(category)
+      ) {
+        return false;
+      }
       if (needle.length === 0) {
         return true;
       }
@@ -32,6 +40,10 @@ export class InMemoryProductRepository implements IProductRepository {
         row.product.name.toLowerCase().includes(needle)
       );
     });
+  }
+
+  setCategories(productId: ProductId, categories: Iterable<string>): void {
+    this.categoriesByProductId.set(productId, new Set(categories));
   }
 
   async findById(organizationId: OrganizationId, id: ProductId): Promise<Product | null> {
