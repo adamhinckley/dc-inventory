@@ -72,4 +72,55 @@ describe("login throttling", () => {
       }),
     ).resolves.toEqual({ allowed: true });
   });
+
+  it("does not increment account counters when the source is already blocked", async () => {
+    const throttle = new InMemoryLoginThrottle(new InMemoryClock(START));
+    const freshAccount = "acme\u0000fresh@example.com";
+
+    for (let attempt = 0; attempt <= LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      await throttle.attempt(STAFF_KEY);
+    }
+
+    await expect(
+      throttle.attempt({
+        ...STAFF_KEY,
+        accountIdentifier: freshAccount,
+      }),
+    ).resolves.toMatchObject({ allowed: false });
+
+    await expect(
+      throttle.attempt({
+        ...STAFF_KEY,
+        source: "203.0.113.11",
+        accountIdentifier: freshAccount,
+      }),
+    ).resolves.toEqual({ allowed: true });
+  });
+
+  it("purges expired counters without disturbing active windows", async () => {
+    const clock = new InMemoryClock(START);
+    const throttle = new InMemoryLoginThrottle(clock);
+    const staleAccount = "acme\u0000stale@example.com";
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await throttle.attempt({
+        ...STAFF_KEY,
+        accountIdentifier: staleAccount,
+      });
+    }
+
+    clock.advance(LOGIN_THROTTLE_WINDOW_MS + 1);
+    await expect(
+      throttle.attempt({
+        ...STAFF_KEY,
+        source: "203.0.113.99",
+        accountIdentifier: "acme\u0000another-stale@example.com",
+      }),
+    ).resolves.toEqual({ allowed: true });
+
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      await expect(throttle.attempt(STAFF_KEY)).resolves.toEqual({ allowed: true });
+    }
+    await expect(throttle.attempt(STAFF_KEY)).resolves.toMatchObject({ allowed: false });
+  });
 });

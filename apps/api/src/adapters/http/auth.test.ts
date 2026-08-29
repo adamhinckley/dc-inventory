@@ -34,7 +34,10 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00:00.000Z"))) {
+async function startAuthApp(
+  clock = new InMemoryClock(new Date("2026-08-23T03:00:00.000Z")),
+  options: { trustProxy?: import("../../infrastructure/trust-proxy.js").TrustProxySetting } = {},
+) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
@@ -63,6 +66,7 @@ async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00
     sessions,
     passwords,
     organizationRepo: organizations,
+    trustProxy: options.trustProxy,
   });
   apps.push(app);
   return { app, clock };
@@ -344,6 +348,37 @@ describe("opaque session HTTP", () => {
       rejected.headers["retry-after"],
     );
     expect(unknownRejected.json()).toEqual(rejected.json());
+  });
+
+  it("throttles distinct forwarded client addresses behind a trusted proxy", async () => {
+    const { app } = await startAuthApp(undefined, { trustProxy: true });
+    const blockedClient = {
+      method: "POST" as const,
+      url: "/internal/auth/login",
+      headers: { "x-forwarded-for": "203.0.113.10" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "wrong",
+      },
+    };
+
+    for (let attempt = 0; attempt <= LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      const response = await app.inject(blockedClient);
+      expect([401, 429]).toContain(response.statusCode);
+    }
+    const blocked = await app.inject(blockedClient);
+    expect(blocked.statusCode).toBe(429);
+
+    const otherClient = await app.inject({
+      ...blockedClient,
+      headers: { "x-forwarded-for": "203.0.113.11" },
+      payload: {
+        ...blockedClient.payload,
+        email: "other@local.test",
+      },
+    });
+    expect(otherClient.statusCode).toBe(401);
   });
 
   it("clears failed attempts after a successful login", async () => {

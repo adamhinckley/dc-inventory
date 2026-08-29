@@ -44,6 +44,10 @@ import {
   registerRequestIdHook,
   requestIdConfig,
 } from "./infrastructure/request-id.js";
+import {
+  readTrustProxy,
+  type TrustProxySetting,
+} from "./infrastructure/trust-proxy.js";
 import { internalRoutes } from "./internal/routes.js";
 import { opsRoutes } from "./ops/routes.js";
 import { SPREADSHEET_UPLOAD_MAX_BYTES } from "./schemas.js";
@@ -111,9 +115,13 @@ export async function buildAudienceApp(
     features,
     database: new InMemoryDatabase(),
   });
+<<<<<<< HEAD
   const app = Fastify({ logger: false });
   const drainState = new DrainState();
   const errorReporter = new NoopErrorReporter();
+=======
+  const app = Fastify({ logger: false, trustProxy: readTrustProxy() });
+>>>>>>> 385d668 (fix(identity): address ADA-207 login throttle review feedback)
   app.decorate("features", features);
   app.decorate("drainState", drainState);
   app.decorate("errorReporter", errorReporter);
@@ -146,8 +154,12 @@ export async function buildAudienceApp(
 
 export type BuildAppOptions = AppServiceOverrides & {
   logger?: FastifyServerOptions["logger"];
+<<<<<<< HEAD
   drainState?: DrainState;
   errorReporter?: IErrorReporter;
+=======
+  trustProxy?: TrustProxySetting;
+>>>>>>> 385d668 (fix(identity): address ADA-207 login throttle review feedback)
 };
 
 /** Combined composition root: Pino + requestId, health, Ping, three mounts. */
@@ -159,6 +171,7 @@ export async function buildApp(
   const errorReporter = options.errorReporter ?? new NoopErrorReporter();
   const app = Fastify({
     logger: options.logger ?? pinoLoggerOptions(),
+    trustProxy: options.trustProxy ?? readTrustProxy(),
     ...requestIdConfig(),
   });
   app.decorate("features", services.features);

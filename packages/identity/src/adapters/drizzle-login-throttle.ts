@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, lte, or, sql } from "drizzle-orm";
 import type { IClock } from "../domain/clock.js";
 import {
   LOGIN_THROTTLE_WINDOW_MS,
@@ -13,6 +13,11 @@ import type {
 import { loginThrottleCounters } from "../persistence/schema.js";
 import type { IdentityDrizzle } from "./drizzle-staff-user-repository.js";
 
+type CounterRow = {
+  attemptCount: number;
+  windowStartedAt: Date;
+};
+
 export class DrizzleLoginThrottle implements ILoginThrottle {
   constructor(
     private readonly db: IdentityDrizzle,
@@ -22,17 +27,74 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
   async attempt(key: LoginThrottleKey): Promise<LoginThrottleResult> {
     const at = this.clock.now();
     const expiredBefore = new Date(at.getTime() - LOGIN_THROTTLE_WINDOW_MS);
-    const counters = await this.db
-      .insert(loginThrottleCounters)
-      .values([
-        counterValue(key.audience, "source", key.source, at),
-        counterValue(
-          key.audience,
-          "account_identifier",
-          key.accountIdentifier,
-          at,
+    await this.purgeExpired(expiredBefore);
+
+    const sourceCounter = await this.upsertCounter(
+      key.audience,
+      "source",
+      key.source,
+      at,
+      expiredBefore,
+    );
+    const sourceResult = loginThrottleResult(
+      sourceCounter.attemptCount,
+      sourceCounter.windowStartedAt,
+      at,
+    );
+    if (!sourceResult.allowed) {
+      return sourceResult;
+    }
+
+    const accountCounter = await this.upsertCounter(
+      key.audience,
+      "account_identifier",
+      key.accountIdentifier,
+      at,
+      expiredBefore,
+    );
+    return loginThrottleResult(
+      accountCounter.attemptCount,
+      accountCounter.windowStartedAt,
+      at,
+    );
+  }
+
+  async reset(key: LoginThrottleKey): Promise<void> {
+    await this.db
+      .delete(loginThrottleCounters)
+      .where(
+        and(
+          eq(loginThrottleCounters.audience, key.audience),
+          or(
+            and(
+              eq(loginThrottleCounters.dimension, "source"),
+              eq(loginThrottleCounters.keyHash, hash(key.source)),
+            ),
+            and(
+              eq(loginThrottleCounters.dimension, "account_identifier"),
+              eq(loginThrottleCounters.keyHash, hash(key.accountIdentifier)),
+            ),
+          ),
         ),
-      ])
+      );
+  }
+
+  private async purgeExpired(expiredBefore: Date): Promise<void> {
+    await this.db
+      .delete(loginThrottleCounters)
+      .where(lte(loginThrottleCounters.windowStartedAt, expiredBefore));
+  }
+
+  private async upsertCounter(
+    audience: LoginThrottleKey["audience"],
+    dimension: "source" | "account_identifier",
+    value: string,
+    at: Date,
+    expiredBefore: Date,
+  ): Promise<CounterRow> {
+    const [counter] = await this.db
+      .insert(loginThrottleCounters)
+      .values(counterValue(audience, dimension, value, at))
       .onConflictDoUpdate({
         target: [
           loginThrottleCounters.audience,
@@ -55,46 +117,10 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
         attemptCount: loginThrottleCounters.attemptCount,
         windowStartedAt: loginThrottleCounters.windowStartedAt,
       });
-    if (counters.length !== 2) {
-      throw new Error("login throttle upsert did not return both counters");
+    if (counter === undefined) {
+      throw new Error("login throttle upsert did not return a counter");
     }
-    const rejected = counters
-      .map((counter) =>
-        loginThrottleResult(counter.attemptCount, counter.windowStartedAt, at),
-      )
-      .filter(
-        (result): result is Extract<LoginThrottleResult, { allowed: false }> =>
-          !result.allowed,
-      );
-    if (rejected.length === 0) {
-      return { allowed: true };
-    }
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.max(
-        ...rejected.map((result) => result.retryAfterSeconds),
-      ),
-    };
-  }
-
-  async reset(key: LoginThrottleKey): Promise<void> {
-    await this.db
-      .delete(loginThrottleCounters)
-      .where(
-        and(
-          eq(loginThrottleCounters.audience, key.audience),
-          or(
-            and(
-              eq(loginThrottleCounters.dimension, "source"),
-              eq(loginThrottleCounters.keyHash, hash(key.source)),
-            ),
-            and(
-              eq(loginThrottleCounters.dimension, "account_identifier"),
-              eq(loginThrottleCounters.keyHash, hash(key.accountIdentifier)),
-            ),
-          ),
-        ),
-      );
+    return counter;
   }
 }
 
