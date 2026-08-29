@@ -23,6 +23,8 @@ export * from './listWholesaleCatalogSortOrder';
 export * from './loginWholesale200';
 export * from './loginWholesale401';
 export * from './loginWholesale401Error';
+export * from './loginWholesale429';
+export * from './loginWholesale429Error';
 export * from './loginWholesaleBody';
 export * from './logoutWholesale200';
 export * from './logoutWholesale401';

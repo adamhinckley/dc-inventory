@@ -29,6 +29,7 @@ import type {
   ListWholesaleCatalogParams,
   LoginWholesale200,
   LoginWholesale401,
+  LoginWholesale429,
   LoginWholesaleBody,
   LogoutWholesale200,
   LogoutWholesale401
@@ -64,10 +65,15 @@ export type loginWholesaleResponse401 = {
   status: 401
 }
 
+export type loginWholesaleResponse429 = {
+  data: LoginWholesale429
+  status: 429
+}
+
 export type loginWholesaleResponseSuccess = (loginWholesaleResponse200) & {
   headers: Headers;
 };
-export type loginWholesaleResponseError = (loginWholesaleResponse401) & {
+export type loginWholesaleResponseError = (loginWholesaleResponse401 | loginWholesaleResponse429) & {
   headers: Headers;
 };
 
@@ -105,7 +111,7 @@ return customFetch<loginWholesaleResponse>(getLoginWholesaleUrl(),
 
 
 
-export const getLoginWholesaleMutationOptions = <TError = LoginWholesale401,
+export const getLoginWholesaleMutationOptions = <TError = LoginWholesale401 | LoginWholesale429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWholesale>>, TError,{data: LoginWholesaleBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof loginWholesale>>, TError,{data: LoginWholesaleBody}, TContext> => {
 
@@ -134,12 +140,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type LoginWholesaleMutationResult = NonNullable<Awaited<ReturnType<typeof loginWholesale>>>
     export type LoginWholesaleMutationBody = LoginWholesaleBody
-    export type LoginWholesaleMutationError = LoginWholesale401
+    export type LoginWholesaleMutationError = LoginWholesale401 | LoginWholesale429
 
     /**
  * @summary Wholesale login; sets HttpOnly wholesale_session
  */
-export const useLoginWholesale = <TError = LoginWholesale401,
+export const useLoginWholesale = <TError = LoginWholesale401 | LoginWholesale429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginWholesale>>, TError,{data: LoginWholesaleBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof loginWholesale>>,
