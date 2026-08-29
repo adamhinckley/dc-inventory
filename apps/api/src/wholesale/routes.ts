@@ -10,6 +10,9 @@ export async function wholesaleRoutes(app: FastifyInstance): Promise<void> {
   registerWholesaleAudienceGuard(app);
   await app.register(async (catalog) => {
     registerFeatureGuard(catalog, "catalog", "wholesale");
-    registerWholesaleCatalogRoutes(catalog);
+    await catalog.register(async (inventory) => {
+      registerFeatureGuard(inventory, "inventory", "wholesale");
+      registerWholesaleCatalogRoutes(inventory);
+    });
   });
 }

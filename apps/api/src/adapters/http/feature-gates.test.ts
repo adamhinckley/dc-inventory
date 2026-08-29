@@ -66,7 +66,7 @@ async function authenticatedApp(disabled: FeatureName) {
 describe("named feature gates", () => {
   const cases: Array<{ feature: FeatureName; url: string }> = [
     { feature: "catalog", url: "/internal/products" },
-    { feature: "inventory", url: "/internal/inventory/stock/SKU001" },
+    { feature: "inventory", url: "/internal/products" },
     { feature: "customers", url: "/internal/customers" },
     { feature: "purchasing", url: "/internal/purchase-orders" },
     { feature: "sales", url: "/internal/sales-orders" },

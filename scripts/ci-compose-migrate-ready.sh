@@ -21,7 +21,7 @@ fi
 
 docker compose up -d --wait
 pnpm db:migrate
-pnpm exec vitest run apps/api/src/licensing/persistent-licensing.integration.test.ts
+pnpm exec vitest run --config vitest.integration.config.ts
 
 api_log="$(mktemp)"
 pnpm dev:api >"$api_log" 2>&1 &
