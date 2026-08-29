@@ -32,6 +32,13 @@ export const wholesaleSessionResponseSchema = z.object({
   organizationId: z.string(),
 });
 
+export const opsSessionResponseSchema = z.object({
+  opsUserId: z.string().uuid(),
+  email: z.string(),
+  kind: z.enum(["operator", "business_owner"]),
+  tenantId: z.string(),
+});
+
 const optionalBooleanQuery = z
   .union([z.literal("true"), z.literal("false"), z.boolean()])
   .optional()

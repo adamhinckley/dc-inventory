@@ -5,11 +5,12 @@ import type {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import type { OpsUserId } from "./ops-user.js";
 
 export const SESSION_IDLE_MS = 30 * 60 * 1000;
 export const SESSION_ABSOLUTE_MS = 8 * 60 * 60 * 1000;
 
-export type SessionAudience = "staff" | "wholesale";
+export type SessionAudience = "staff" | "wholesale" | "ops";
 
 export type Session = {
   id: SessionId;
@@ -17,6 +18,7 @@ export type Session = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId | null;
   wholesaleUserId: WholesaleUserId | null;
+  opsUserId: OpsUserId | null;
   customerId: CustomerId | null;
   createdAt: Date;
   lastSeenAt: Date;
