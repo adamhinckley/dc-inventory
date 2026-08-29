@@ -86,7 +86,11 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
       }
       return true;
     });
-    rows.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    rows.sort(
+      (a, b) =>
+        a.order.documentNumber.localeCompare(b.order.documentNumber) ||
+        a.order.id.localeCompare(b.order.id),
+    );
     const start = (query.page - 1) * query.pageSize;
     return {
       items: rows.slice(start, start + query.pageSize).map((row) => row.order),

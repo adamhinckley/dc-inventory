@@ -45,3 +45,5 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Compose, migrate, GET /ready
         run: bash scripts/ci-compose-migrate-ready.sh
+      - name: Run idempotency race integration tests
+        run: pnpm test:integration:idempotency-races

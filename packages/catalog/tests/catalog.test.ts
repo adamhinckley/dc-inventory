@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { InMemoryProductRepository } from "../src/adapters/in-memory-product-repository.js";
 import { InMemoryQtyReadPort } from "../src/adapters/in-memory-qty-read.js";
+import { InMemoryCatalogListQuery } from "../src/adapters/in-memory-catalog-list-query.js";
 import { CreateProductUseCase } from "../src/application/create-product.js";
 import { GetProductUseCase } from "../src/application/get-product.js";
 import { GetWholesaleProductUseCase } from "../src/application/get-wholesale-product.js";
@@ -25,6 +26,7 @@ const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 function harness() {
   const products = new InMemoryProductRepository();
   const qty = new InMemoryQtyReadPort();
+  const catalogList = new InMemoryCatalogListQuery(products, qty);
   return {
     products,
     qty,
@@ -32,8 +34,8 @@ function harness() {
     update: new UpdateProductUseCase(products, qty),
     get: new GetProductUseCase(products, qty),
     getWholesale: new GetWholesaleProductUseCase(products, qty),
-    listStaff: new ListStaffProductsUseCase(products, qty),
-    listWholesale: new ListWholesaleCatalogUseCase(products, qty),
+    listStaff: new ListStaffProductsUseCase(catalogList),
+    listWholesale: new ListWholesaleCatalogUseCase(catalogList),
   };
 }
 

@@ -4,6 +4,10 @@ import {
   type IAccountingUnitOfWork,
 } from "@dc-inventory/accounting";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import {
+  PAYMENT_IDEMPOTENCY_CONSTRAINTS,
+  retryAfterIdempotencyRace,
+} from "./postgres-idempotency-race.js";
 
 /**
  * Postgres-backed accounting unit of work for payment recording.
@@ -20,7 +24,13 @@ export class PostgresAccountingUnitOfWork implements IAccountingUnitOfWork {
 
   run<T>(work: (uow: IAccountingUnitOfWork) => Promise<T>): Promise<T> {
     const next = this.queue.then(() =>
-      this.db.transaction(async (tx) => this.runOnTransaction(tx as AccountingDrizzle, work)),
+      retryAfterIdempotencyRace(
+        () =>
+          this.db.transaction(async (tx) =>
+            this.runOnTransaction(tx as AccountingDrizzle, work),
+          ),
+        PAYMENT_IDEMPOTENCY_CONSTRAINTS,
+      ),
     );
     this.queue = next.then(
       () => undefined,
