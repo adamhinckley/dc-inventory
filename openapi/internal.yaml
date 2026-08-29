@@ -2665,19 +2665,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -2844,19 +2845,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -3352,19 +3354,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -4801,19 +4804,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -5618,19 +5622,20 @@ paths:
                 anyOf:
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
                   - type: object
                     properties:
