@@ -9,7 +9,7 @@ export const draftPurchaseOrdersListTable = {
   columns: [
     { field: "documentNumber", label: "PO #" },
     { field: "status", label: "Status" },
-    { field: "supplierId", label: "Supplier" },
+    { field: "supplierName", label: "Supplier" },
   ],
   filters: [],
   sort: {

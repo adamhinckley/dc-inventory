@@ -2420,7 +2420,7 @@ paths:
             label: "PO #"
           - field: status
             label: Status
-          - field: supplierId
+          - field: supplierName
             label: Supplier
         sort:
           defaultBy: documentNumber
@@ -2492,6 +2492,8 @@ paths:
                               - qty
                               - receivedQty
                             additionalProperties: false
+                        supplierName:
+                          type: string
                       required:
                         - id
                         - supplierId
@@ -2500,6 +2502,7 @@ paths:
                         - shipDate
                         - cancelDate
                         - lines
+                        - supplierName
                       additionalProperties: false
                   page:
                     type: integer

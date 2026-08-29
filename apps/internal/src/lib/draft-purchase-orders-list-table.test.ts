@@ -7,7 +7,7 @@ describe("draftPurchaseOrdersListTable", () => {
     expect(draftPurchaseOrdersListTable.columns.map((column) => column.field)).toEqual([
       "documentNumber",
       "status",
-      "supplierId",
+      "supplierName",
     ]);
     expect(draftPurchaseOrdersListTable.sort.fields).toEqual([
       "documentNumber",

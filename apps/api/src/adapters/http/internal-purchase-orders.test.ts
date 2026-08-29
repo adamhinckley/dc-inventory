@@ -110,6 +110,22 @@ describe("internal purchase orders HTTP", () => {
     expect(po.documentNumber).toBe("PO-00001");
     expect(created.json()).toMatchObject({ shipDate: null, cancelDate: null });
 
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders?status=draft",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: po.id,
+          supplierId: SUPPLIER_ID,
+          supplierName: PHASE2_SUPPLIER_NAME,
+        }),
+      ],
+    });
+
     const confirmed = await app.inject({
       method: "POST",
       url: `/internal/purchase-orders/${po.id}/confirm`,

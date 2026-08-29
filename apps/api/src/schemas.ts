@@ -424,6 +424,10 @@ export const purchaseOrderItemSchema = z.object({
   lines: z.array(purchaseOrderLineSchema),
 });
 
+export const purchaseOrderListItemSchema = purchaseOrderItemSchema.extend({
+  supplierName: z.string(),
+});
+
 export const purchaseOrderListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
@@ -432,7 +436,7 @@ export const purchaseOrderListQuerySchema = z.object({
 });
 
 export const purchaseOrderListResponseSchema = z.object({
-  items: z.array(purchaseOrderItemSchema),
+  items: z.array(purchaseOrderListItemSchema),
   page: z.number().int(),
   pageSize: z.number().int(),
   total: z.number().int(),
@@ -502,7 +506,7 @@ export const purchaseOrdersListTable = {
   columns: [
     { field: "documentNumber", label: "PO #" },
     { field: "status", label: "Status" },
-    { field: "supplierId", label: "Supplier" },
+    { field: "supplierName", label: "Supplier" },
   ],
   sort: {
     defaultBy: "documentNumber",

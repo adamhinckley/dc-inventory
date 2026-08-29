@@ -340,7 +340,7 @@ function purchasingServices(
 ): PurchasingHttpServices {
   const workbookWriter = new ExcelJsWorkbookWriter();
   return {
-    listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo),
+    listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo, supplierRepo),
     createPurchaseOrder: new CreatePurchaseOrderUseCase(purchaseOrderRepo, supplierRepo, clock),
     getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),

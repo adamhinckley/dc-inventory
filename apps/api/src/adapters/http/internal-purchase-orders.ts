@@ -102,7 +102,10 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           query.supplierId === undefined ? undefined : SupplierId.parse(query.supplierId),
       });
       return {
-        items: result.items.map(mapPurchaseOrder),
+        items: result.items.map((order) => ({
+          ...mapPurchaseOrder(order),
+          supplierName: result.supplierNames.get(order.supplierId) ?? "",
+        })),
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
