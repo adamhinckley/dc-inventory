@@ -59,7 +59,7 @@ export const getGetOpsSubscriptionUrl = () => {
 }
 
 /**
- * @summary Stub software subscription
+ * @summary Get software subscription
  */
 export const getOpsSubscription = async ( options?: Parameters<typeof customFetch>[1]): Promise<getOpsSubscriptionResponse> => {
 
@@ -106,7 +106,7 @@ export type GetOpsSubscriptionQueryError = unknown
 
 
 /**
- * @summary Stub software subscription
+ * @summary Get software subscription
  */
 
 export function useGetOpsSubscription<TData = Awaited<ReturnType<typeof getOpsSubscription>>, TError = unknown>(

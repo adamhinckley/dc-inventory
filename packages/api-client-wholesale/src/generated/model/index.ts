@@ -8,6 +8,8 @@
 export * from './getWholesaleCatalogProduct200';
 export * from './getWholesaleCatalogProduct401';
 export * from './getWholesaleCatalogProduct401Error';
+export * from './getWholesaleCatalogProduct403';
+export * from './getWholesaleCatalogProduct403Error';
 export * from './getWholesaleCatalogProduct404';
 export * from './getWholesaleCatalogProduct404Error';
 export * from './getWholesaleSession200';
@@ -17,6 +19,8 @@ export * from './listWholesaleCatalog200';
 export * from './listWholesaleCatalog200ItemsItem';
 export * from './listWholesaleCatalog401';
 export * from './listWholesaleCatalog401Error';
+export * from './listWholesaleCatalog403';
+export * from './listWholesaleCatalog403Error';
 export * from './listWholesaleCatalogParams';
 export * from './listWholesaleCatalogSortBy';
 export * from './listWholesaleCatalogSortOrder';

@@ -15,13 +15,13 @@ import { registerInternalProductRoutes } from "../adapters/http/internal-product
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalAuthRoutes(app);
   registerStaffAudienceGuard(app);
-  await app.register(async (catalog) => {
-    registerFeatureGuard(catalog, "catalog", "staff");
-    registerInternalProductRoutes(catalog);
-  });
   await app.register(async (customers) => {
     registerFeatureGuard(customers, "customers", "staff");
     registerInternalCustomerRoutes(customers);
+  });
+  await app.register(async (catalog) => {
+    registerFeatureGuard(catalog, "catalog", "staff");
+    registerInternalProductRoutes(catalog);
   });
   await app.register(async (purchasing) => {
     registerFeatureGuard(purchasing, "purchasing", "staff");
