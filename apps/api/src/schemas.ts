@@ -238,6 +238,7 @@ export const customerItemSchema = z.object({
   creditLimitCents: z.number().int(),
   currency: z.string(),
   terms: z.string(),
+  createdAt: z.string().datetime(),
 });
 
 export const customerListResponseSchema = z.object({

@@ -60,6 +60,7 @@ function mapCustomer(customer: Customer) {
     creditLimitCents: customer.creditLimit.amountMinor,
     currency: customer.creditLimit.currency,
     terms: customer.terms,
+    createdAt: customer.createdAt.toISOString(),
   };
 }
 
