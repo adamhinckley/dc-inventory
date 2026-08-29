@@ -30,14 +30,16 @@ const PURCHASE_ORDER_IDS = Array.from(
 );
 
 describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
-  let queryCount = 0;
-  const sql = postgres(databaseUrl!, {
-    max: 2,
-    debug: () => {
-      queryCount += 1;
+  const queryLog: string[] = [];
+  const sql = postgres(databaseUrl!, { max: 2 });
+  const db = drizzle(sql, {
+    schema,
+    logger: {
+      logQuery(query) {
+        queryLog.push(query);
+      },
     },
   });
-  const db = drizzle(sql, { schema });
 
   beforeAll(async () => {
     await sql`delete from sales.order_lines where order_id in ${sql(SALES_ORDER_IDS)}`;
@@ -129,7 +131,7 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
 
   it("keeps equal stock sorts stable on the second catalog page", async () => {
     const adapter = new CatalogInventoryListQuery(db);
-    queryCount = 0;
+    queryLog.length = 0;
     const firstRead = await adapter.list({
       organizationId: ORG,
       page: 2,
@@ -137,12 +139,13 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
       sortBy: "onHand",
       sortOrder: "asc",
     });
-    expect(queryCount).toBe(2);
+    expect(queryLog).toHaveLength(2);
+    expect(queryLog.some((query) => /limit \$\d+ offset \$\d+/.test(query))).toBe(true);
     expect(firstRead.total).toBe(5);
     expect(firstRead.items).toHaveLength(2);
     expect(firstRead.items.map((row) => row.product.id)).toEqual(PRODUCT_IDS.slice(2, 4));
 
-    queryCount = 0;
+    queryLog.length = 0;
     const secondRead = await adapter.list({
       organizationId: ORG,
       page: 2,
@@ -150,7 +153,7 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
       sortBy: "onHand",
       sortOrder: "asc",
     });
-    expect(queryCount).toBe(2);
+    expect(queryLog).toHaveLength(2);
     expect(secondRead.items.map((row) => row.product.id)).toEqual(
       firstRead.items.map((row) => row.product.id),
     );
@@ -158,14 +161,18 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
 
   it("pages sales headers in SQL and batch-loads only the page's lines", async () => {
     const adapter = new DrizzleSalesOrderRepository(db);
-    queryCount = 0;
+    queryLog.length = 0;
     const page = await adapter.list({
       organizationId: ORG,
       customerId: CUSTOMER_ID,
       page: 2,
       pageSize: 2,
     });
-    expect(queryCount).toBe(3);
+    expect(queryLog).toHaveLength(3);
+    expect(queryLog.some((query) => /limit \$\d+ offset \$\d+/.test(query))).toBe(true);
+    expect(queryLog.some((query) => query.includes('"sales"."order_lines"."order_id" in'))).toBe(
+      true,
+    );
     expect(page.total).toBe(5);
     expect(page.items.map((order) => order.id)).toEqual(SALES_ORDER_IDS.slice(2, 4));
     expect(page.items).toHaveLength(2);
@@ -174,14 +181,20 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
 
   it("pages PO headers in SQL and batch-loads only the page's lines", async () => {
     const adapter = new DrizzlePurchaseOrderRepository(db);
-    queryCount = 0;
+    queryLog.length = 0;
     const page = await adapter.list({
       organizationId: ORG,
       supplierId: SUPPLIER_ID,
       page: 2,
       pageSize: 2,
     });
-    expect(queryCount).toBe(3);
+    expect(queryLog).toHaveLength(3);
+    expect(queryLog.some((query) => /limit \$\d+ offset \$\d+/.test(query))).toBe(true);
+    expect(
+      queryLog.some((query) =>
+        query.includes('"purchasing"."purchase_order_lines"."purchase_order_id" in'),
+      ),
+    ).toBe(true);
     expect(page.total).toBe(5);
     expect(page.items.map((order) => order.id)).toEqual(PURCHASE_ORDER_IDS.slice(2, 4));
     expect(page.items).toHaveLength(2);
