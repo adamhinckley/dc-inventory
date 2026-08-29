@@ -81,6 +81,6 @@ export default defineConfig({
       "packages/ui/tests/**/*.test.ts",
       "packages/ui-internal/tests/**/*.test.ts",
     ],
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/persistent-licensing.integration.test.ts"],
   },
 });

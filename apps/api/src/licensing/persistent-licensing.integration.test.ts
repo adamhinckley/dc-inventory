@@ -11,8 +11,13 @@ import {
 } from "../infrastructure/schema.js";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
+if (!databaseUrl) {
+  throw new Error(
+    "persistent-licensing.integration.test.ts requires DATABASE_URL; run via scripts/ci-compose-migrate-ready.sh",
+  );
+}
 
-describe.skipIf(!databaseUrl)("persistent licensing composition", () => {
+describe("persistent licensing composition", () => {
   it("shares reads and feature state across two instances and a restart", async () => {
     const tenantId = OrganizationId.parse(randomUUID());
     const subscriptionId = randomUUID();
