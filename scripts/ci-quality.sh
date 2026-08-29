@@ -8,6 +8,8 @@ cd "$root"
 
 pnpm test
 pnpm lint
+pnpm --filter @dc-inventory/internal build
+pnpm --filter @dc-inventory/wholesale build
 
 drift_paths=(
   openapi/

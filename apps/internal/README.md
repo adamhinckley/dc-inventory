@@ -44,3 +44,25 @@ Dashboard chrome is AppShell (sidebar + elevated `.page` panel) from `packages/u
 ## Env
 
 See [`.env.example`](./.env.example). Default is same-origin `/internal/*` rewritten to `apps/api`.
+
+## Vercel
+
+Two Vercel projects share this repo; set **Root Directory** to `apps/internal`.
+
+| Setting | Value |
+|---|---|
+| Framework | Next.js |
+| Node | 24 |
+| `API_PROXY_ORIGIN` | `https://dc-inventory-api.fly.dev` |
+| `NEXT_PUBLIC_API_URL` | *(empty — use same-origin rewrites)* |
+
+[`vercel.json`](./vercel.json) pins filtered pnpm install/build for the monorepo. Deploys run from [`.github/workflows/deploy-frontends.yml`](../../.github/workflows/deploy-frontends.yml) after you link projects and add GitHub secrets (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_INTERNAL`, `VERCEL_PROJECT_ID_WHOLESALE`). Or connect the repo in the Vercel dashboard and set the same env vars — Git integration deploys on push without Actions.
+
+First-time link from the repo root:
+
+```bash
+pnpm dlx vercel login
+pnpm dlx vercel link --repo
+```
+
+Pick/create a project for `apps/internal`. Repeat for wholesale with Root Directory `apps/wholesale`.

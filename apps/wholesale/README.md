@@ -42,3 +42,25 @@ Shop chrome is a storefront header (catalog + cart + orders), not AppShell. Do n
 ## Env
 
 See [`.env.example`](./.env.example). Default is same-origin `/wholesale/*` rewritten to `apps/api`.
+
+## Vercel
+
+Two Vercel projects share this repo; set **Root Directory** to `apps/wholesale`.
+
+| Setting | Value |
+|---|---|
+| Framework | Next.js |
+| Node | 24 |
+| `API_PROXY_ORIGIN` | `https://dc-inventory-api.fly.dev` |
+| `NEXT_PUBLIC_API_URL` | *(empty — use same-origin rewrites)* |
+
+[`vercel.json`](./vercel.json) pins filtered pnpm install/build for the monorepo. Deploys run from [`.github/workflows/deploy-frontends.yml`](../../.github/workflows/deploy-frontends.yml) after you link projects and add GitHub secrets. Or connect the repo in the Vercel dashboard with the same env vars.
+
+First-time link from the repo root:
+
+```bash
+pnpm dlx vercel login
+pnpm dlx vercel link --repo
+```
+
+Pick/create a project for `apps/wholesale`. The internal dashboard uses Root Directory `apps/internal`.
