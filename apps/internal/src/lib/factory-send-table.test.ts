@@ -34,7 +34,15 @@ describe("formatFactorySendCell", () => {
 });
 
 describe("factorySendRowId", () => {
-  it("uses mill SKU as the row id", () => {
-    expect(factorySendRowId({ mat_num: "DC7818LV" })).toBe("DC7818LV");
+  it("falls back to line when mat_num is missing", () => {
+    expect(factorySendRowId({ quan: 5 })).toBe("line");
+  });
+
+  it("uses different ids for different mill SKUs", () => {
+    const first = factorySendRowId({ mat_num: "DC7818LV" });
+    const second = factorySendRowId({ mat_num: "DC7819LV" });
+    expect(first).not.toBe(second);
+    expect(first).toBe("DC7818LV");
+    expect(second).toBe("DC7819LV");
   });
 });
