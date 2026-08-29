@@ -22,12 +22,7 @@ import {
   payments,
 } from "../persistence/schema.js";
 
-export type AccountingDrizzle = PostgresJsDatabase<{
-  invoices: typeof invoices;
-  payments: typeof payments;
-  paymentApplications: typeof paymentApplications;
-  documentNumberCounters: typeof documentNumberCounters;
-}>;
+export type AccountingDrizzle = PostgresJsDatabase;
 
 function toInvoice(row: typeof invoices.$inferSelect): Invoice {
   return {

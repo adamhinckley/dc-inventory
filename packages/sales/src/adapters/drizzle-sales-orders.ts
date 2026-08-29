@@ -12,11 +12,7 @@ import type {
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
 import { documentNumberCounters, orderLines, orders } from "../persistence/schema.js";
 
-export type SalesDrizzle = PostgresJsDatabase<{
-  orders: typeof orders;
-  orderLines: typeof orderLines;
-  documentNumberCounters: typeof documentNumberCounters;
-}>;
+export type SalesDrizzle = PostgresJsDatabase;
 
 function toLine(row: typeof orderLines.$inferSelect): SalesOrderLine {
   return {
