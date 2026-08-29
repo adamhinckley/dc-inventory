@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   clearSessionCookie,
+  OPS_SESSION_COOKIE,
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
@@ -53,6 +54,25 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
       email: result.email,
       customerId: result.customerId,
       organizationId: result.organizationId,
+    };
+  });
+}
+
+export function registerOpsAudienceGuard(app: FastifyInstance): void {
+  app.addHook("preHandler", async (request, reply) => {
+    const token = request.cookies[OPS_SESSION_COOKIE];
+    const result = await request.server.identity.resolveOps.execute(token);
+    if (!result.ok) {
+      if (token !== undefined && token.length > 0) {
+        clearSessionCookie(reply, OPS_SESSION_COOKIE, request);
+      }
+      return sendUnauthorized(reply);
+    }
+    request.opsAuth = {
+      opsUserId: result.opsUserId,
+      email: result.email,
+      kind: result.kind,
+      tenantId: result.tenantId,
     };
   });
 }

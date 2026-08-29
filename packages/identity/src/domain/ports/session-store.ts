@@ -5,6 +5,7 @@ import type {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import type { OpsUserId } from "../ops-user.js";
 import type { Session, SessionAudience } from "../session.js";
 
 export type NewSession = {
@@ -12,6 +13,7 @@ export type NewSession = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId | null;
   wholesaleUserId: WholesaleUserId | null;
+  opsUserId: OpsUserId | null;
   customerId: CustomerId | null;
   createdAt: Date;
   lastSeenAt: Date;

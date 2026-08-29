@@ -48,7 +48,12 @@ import {
   type IShipToRepository,
 } from "@dc-inventory/customers";
 import {
+  DrizzleOpsUserRepository,
   DrizzleSessionStore,
+  InMemoryOpsUserRepository,
+  LoginOpsUseCase,
+  ResolveOpsSessionUseCase,
+  type IOpsUserRepository,
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
   InMemoryOrganizationRepository,
@@ -152,7 +157,10 @@ import { InMemoryLicensingStore } from "../licensing/in-memory-licensing.js";
 import { createDatabaseConnection, PostgresDatabase } from "./db.js";
 
 export type IdentityHttpServices = {
+  loginOps: LoginOpsUseCase;
   loginStaff: LoginStaffUseCase;
+  logoutOps: LogoutUseCase;
+  resolveOps: ResolveOpsSessionUseCase;
   loginWholesale: LoginWholesaleUseCase;
   logoutStaff: LogoutUseCase;
   logoutWholesale: LogoutUseCase;
@@ -246,6 +254,7 @@ export type AppServices = {
 };
 
 export type AppServiceOverrides = {
+  opsUsers?: IOpsUserRepository;
   features?: IFeatures;
   clock?: IClock;
   database?: IDatabase;
@@ -470,6 +479,11 @@ export function composeAppServices(
     (identityDb
       ? new DrizzleStaffUserRepository(identityDb)
       : new InMemoryStaffUserRepository());
+  const opsUsers =
+    overrides.opsUsers ??
+    (identityDb
+      ? new DrizzleOpsUserRepository(identityDb)
+      : new InMemoryOpsUserRepository());
   const wholesaleUsers =
     overrides.wholesaleUsers ??
     (identityDb
@@ -586,6 +600,15 @@ export function composeAppServices(
     ping: new PingUseCase(clock),
     ready: new ReadyCheckUseCase(database),
     identity: {
+      loginOps: new LoginOpsUseCase(
+        organizationRepo,
+        opsUsers,
+        sessions,
+        passwords,
+        clock,
+      ),
+      logoutOps: new LogoutUseCase(sessions, clock, "ops"),
+      resolveOps: new ResolveOpsSessionUseCase(sessions, opsUsers, clock),
       loginStaff: new LoginStaffUseCase(
         organizationRepo,
         staffUsers,
