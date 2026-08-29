@@ -17,7 +17,6 @@ def main() -> None:
     parser.add_argument("json_path")
     parser.add_argument("--base-url", default="http://localhost:3001")
     parser.add_argument("--email", default="staff@local.test")
-    parser.add_argument("--password", default="phase1-staff-placeholder")
     parser.add_argument("--organization-slug", default="acme")
     args = parser.parse_args()
 
@@ -25,11 +24,6 @@ def main() -> None:
     if payload.get("shipDate") is None or payload.get("cancelDate") is None:
         raise SystemExit("ship_date/canc_date are not uniform across rows. Fix the sheet.")
 
-    login = {
-        "organizationSlug": args.organization_slug,
-        "email": args.email,
-        "password": args.password,
-    }
     supplier = {
         "name": payload["supplierName"],
         "vendorNumber": payload["vendorNumber"],
@@ -47,7 +41,12 @@ def main() -> None:
     print()
     print("curl -sS -c \"$JAR\" -b \"$JAR\" -H 'content-type: application/json' \\")
     print("  -X POST \"$API/internal/auth/login\" \\")
-    print(f"  --data-binary {bash_single(json.dumps(login, separators=(',', ':')))}")
+    print('  --data-binary "$(STAFF_PASSWORD="${PHASE1_STAFF_PASSWORD:-phase1-staff-placeholder}" \\')
+    print("    python3 -c 'import json,os; print(json.dumps({")
+    print(f"      \"organizationSlug\": {json.dumps(args.organization_slug)},")
+    print(f"      \"email\": {json.dumps(args.email)},")
+    print("      \"password\": os.environ[\"STAFF_PASSWORD\"],")
+    print("  }))')\"")
     print("echo")
     print()
     print("EXISTING=$(curl -sS -b \"$JAR\" -G \"$API/internal/suppliers\" \\")
@@ -88,12 +87,14 @@ def main() -> None:
     print("for line in payload['lines']:")
     print("    post_ok(f'{api}/internal/products', {")
     print("        'sku': line['sku'], 'name': line['name'], 'uom': 'EA',")
-    print("        'memberPriceCents': line['priceCents'],")
+    print("        'memberPriceCents': 0,")
     print("    })")
-    print("    post_ok(f'{api}/internal/suppliers/{supplier_id}/products', {")
+    print("    supplier_product = {")
     print("        'sku': line['sku'], 'supplierSku': line['supplierSku'],")
-    print("        'lastPoCostCents': line['priceCents'],")
-    print("    })")
+    print("    }")
+    print("    if line.get('priceCents') is not None:")
+    print("        supplier_product['lastPoCostCents'] = line['priceCents']")
+    print("    post_ok(f'{api}/internal/suppliers/{supplier_id}/products', supplier_product)")
     print()
     print("body = {")
     print("    'supplierId': supplier_id,")
