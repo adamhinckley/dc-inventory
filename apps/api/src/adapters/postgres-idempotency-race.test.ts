@@ -24,6 +24,7 @@ describe("PostgreSQL idempotency race classification", () => {
       "stock_movements_organization_id_once_only_provenance",
     ],
     [PAYMENT_IDEMPOTENCY_CONSTRAINTS, "payments_organization_id_idempotency_key_unique"],
+    [PAYMENT_IDEMPOTENCY_CONSTRAINTS, "payments_idempotency_key_unique"],
   ])("recognizes 23505 for known constraint %s", (constraints, constraintName) => {
     expect(isKnownIdempotencyUniqueViolation(uniqueViolation(constraintName), constraints)).toBe(
       true,
@@ -46,6 +47,16 @@ describe("PostgreSQL idempotency race classification", () => {
         PAYMENT_IDEMPOTENCY_CONSTRAINTS,
       ),
     ).toBe(false);
+  });
+
+  it("recognizes a known violation wrapped by Drizzle", () => {
+    const wrapped = Object.assign(new Error("Failed query"), {
+      cause: uniqueViolation("payments_organization_id_idempotency_key_unique"),
+    });
+
+    expect(
+      isKnownIdempotencyUniqueViolation(wrapped, PAYMENT_IDEMPOTENCY_CONSTRAINTS),
+    ).toBe(true);
   });
 
   it("retries once after a known race and lets the replay result through", async () => {

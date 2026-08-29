@@ -84,7 +84,7 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
             ${customerId},
             ${`INV-${organizationId}`},
             'posted',
-            ${clock.now()},
+            ${clock.now().toISOString()},
             1000,
             0,
             1000,

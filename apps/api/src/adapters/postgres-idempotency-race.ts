@@ -5,26 +5,34 @@ export const INVENTORY_IDEMPOTENCY_CONSTRAINTS = new Set([
 
 export const PAYMENT_IDEMPOTENCY_CONSTRAINTS = new Set([
   "payments_organization_id_idempotency_key_unique",
+  "payments_idempotency_key_unique",
 ]);
 
 type PostgresError = {
   readonly code?: unknown;
   readonly constraint_name?: unknown;
+  readonly cause?: unknown;
 };
 
 export function isKnownIdempotencyUniqueViolation(
   error: unknown,
   constraints: ReadonlySet<string>,
 ): boolean {
-  if (typeof error !== "object" || error === null) {
-    return false;
+  const seen = new Set<object>();
+  let current = error;
+  while (typeof current === "object" && current !== null && !seen.has(current)) {
+    seen.add(current);
+    const postgresError = current as PostgresError;
+    if (
+      postgresError.code === "23505" &&
+      typeof postgresError.constraint_name === "string" &&
+      constraints.has(postgresError.constraint_name)
+    ) {
+      return true;
+    }
+    current = postgresError.cause;
   }
-  const postgresError = error as PostgresError;
-  return (
-    postgresError.code === "23505" &&
-    typeof postgresError.constraint_name === "string" &&
-    constraints.has(postgresError.constraint_name)
-  );
+  return false;
 }
 
 export async function retryAfterIdempotencyRace<T>(
