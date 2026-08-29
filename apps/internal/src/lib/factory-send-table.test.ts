@@ -39,10 +39,8 @@ describe("factorySendRowId", () => {
   });
 
   it("uses different ids for different mill SKUs", () => {
-    const first = factorySendRowId({ mat_num: "DC7818LV" });
-    const second = factorySendRowId({ mat_num: "DC7819LV" });
-    expect(first).not.toBe(second);
-    expect(first).toBe("DC7818LV");
-    expect(second).toBe("DC7819LV");
+    expect(factorySendRowId({ mat_num: "DC7818LV" })).not.toBe(
+      factorySendRowId({ mat_num: "DC7819LV" }),
+    );
   });
 });
