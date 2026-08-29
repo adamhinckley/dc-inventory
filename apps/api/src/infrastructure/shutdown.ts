@@ -42,7 +42,7 @@ export async function shutdownApp(
 
   const forceTimer = setTimeout(() => {
     app.log.warn({ signal, forceCloseAfterMs }, "forcing open connections closed");
-    app.closeAllConnections();
+    app.server.closeAllConnections();
   }, forceCloseAfterMs);
   const hardTimer = setTimeout(() => {
     app.log.error({ signal, timeoutMs }, "API shutdown timed out");

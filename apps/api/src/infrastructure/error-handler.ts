@@ -1,4 +1,4 @@
-import type { FastifyError, FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { IErrorReporter } from "./error-reporter.js";
 
 type SafeError = {
@@ -21,12 +21,24 @@ function routeFor(request: FastifyRequest): string {
   return request.routeOptions.url ?? request.url;
 }
 
-function knownError(error: FastifyError): SafeError | undefined {
-  const statusCode = error.validation ? 400 : error.statusCode;
+function knownError(error: unknown): SafeError | undefined {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+  const candidate = error as { validation?: unknown; statusCode?: unknown };
+  const statusCode =
+    candidate.validation !== undefined
+      ? 400
+      : typeof candidate.statusCode === "number"
+        ? candidate.statusCode
+        : undefined;
   if (statusCode === undefined || statusCode < 400 || statusCode >= 500) {
     return undefined;
   }
-  const mapped = knownErrors[statusCode] ?? knownErrors[400];
+  const mapped = knownErrors[statusCode] ?? {
+    code: "invalid_request",
+    message: "The request is invalid.",
+  };
   return { statusCode, ...mapped };
 }
 
