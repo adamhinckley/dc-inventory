@@ -23,18 +23,34 @@ def fail(message: str) -> None:
     raise SystemExit(2)
 
 
-def excel_serial_to_iso(value: str) -> str:
+def parse_positive_int(qty_raw: str, sku: str) -> int:
+    try:
+        qty_float = float(qty_raw)
+    except ValueError:
+        fail(f"{sku}: quan must be a positive integer, got {qty_raw!r}")
+    if qty_float <= 0 or qty_float != int(qty_float):
+        fail(f"{sku}: quan must be a positive integer, got {qty_raw!r}")
+    return int(qty_float)
+
+
+def parse_calendar_date(value: str, field: str, sku: str) -> str:
     raw = value.strip()
     if not raw:
-        return ""
+        fail(f"{sku}: empty {field}")
     if len(raw) == 10 and raw[4] == "-" and raw[7] == "-":
-        return raw
+        iso = raw
+    else:
+        try:
+            serial = float(raw)
+        except ValueError:
+            fail(f"{sku}: unreadable {field} {raw!r}")
+        day = datetime(1899, 12, 30) + timedelta(days=int(serial))
+        iso = day.strftime("%Y-%m-%d")
     try:
-        serial = float(raw)
+        datetime.strptime(iso, "%Y-%m-%d")
     except ValueError:
-        fail(f"unreadable date {raw!r}")
-    day = datetime(1899, 12, 30) + timedelta(days=int(serial))
-    return day.strftime("%Y-%m-%d")
+        fail(f"{sku}: invalid calendar {field} {iso!r}")
+    return iso
 
 
 def money_to_cents(value: str) -> int:
@@ -116,16 +132,18 @@ def parse_rows(rows: list[dict[str, str]], source: Path) -> dict[str, object]:
         return (row.get(first[name]) or "").strip()
 
     lines = []
+    seen_skus: set[str] = set()
     for row in rows:
         sku = get(row, "mat_num")
         if not sku:
             continue
+        if sku in seen_skus:
+            fail(f"duplicate mat_num: {sku}")
+        seen_skus.add(sku)
         qty_raw = get(row, "quan")
         if not qty_raw:
             fail(f"{sku}: empty quan")
-        qty = int(float(qty_raw))
-        if qty <= 0:
-            fail(f"{sku}: quan must be a positive integer")
+        qty = parse_positive_int(qty_raw, sku)
         name = get(row, "description") or sku
         price_key = first.get("price")
         price = (row.get(price_key) or "").strip() if price_key else ""
@@ -135,10 +153,10 @@ def parse_rows(rows: list[dict[str, str]], source: Path) -> dict[str, object]:
                 "sku": sku,
                 "name": name,
                 "qty": qty,
-                "priceCents": money_to_cents(price),
+                "priceCents": money_to_cents(price) if price else None,
                 "supplierSku": mfg or None,
-                "shipDate": excel_serial_to_iso(get(row, "ship_date")),
-                "cancelDate": excel_serial_to_iso(get(row, "canc_date")),
+                "shipDate": parse_calendar_date(get(row, "ship_date"), "ship_date", sku),
+                "cancelDate": parse_calendar_date(get(row, "canc_date"), "canc_date", sku),
             }
         )
     if not lines:
@@ -167,6 +185,8 @@ def main() -> None:
     if not path.is_file():
         fail(f"file not found: {path}")
     suffix = path.suffix.lower()
+    if suffix not in (".xlsx", ".csv"):
+        fail(f"unsupported file type {suffix!r}; use .xlsx or .csv")
     rows = read_xlsx_rows(path) if suffix == ".xlsx" else read_csv_rows(path)
     payload = parse_rows(rows, path)
     if args.supplier_name:

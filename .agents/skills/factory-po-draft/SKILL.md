@@ -24,12 +24,11 @@ python3 .agents/skills/factory-po-draft/scripts/parse-factory-po.py "$SHEET" > /
 
 Optional: `--supplier-name "Qingdao Golden" --vendor-number QGOLDEN`
 
-4. Read `PHASE1_STAFF_PASSWORD` from `apps/api/.env` if present. Default password is `phase1-staff-placeholder`. Default API is `http://localhost:3001`. Default login is `acme` / `staff@local.test`.
+4. Ensure `PHASE1_STAFF_PASSWORD` is exported (read from `apps/api/.env` if needed). The printed script reads it at runtime with placeholder fallback `phase1-staff-placeholder`. Default API is `http://localhost:3001`. Default login is `acme` / `staff@local.test`.
 5. Print the curls:
 
 ```bash
-python3 .agents/skills/factory-po-draft/scripts/print-factory-po-curls.py /tmp/factory-po.json \
-  --password "$PHASE1_STAFF_PASSWORD"
+python3 .agents/skills/factory-po-draft/scripts/print-factory-po-curls.py /tmp/factory-po.json
 ```
 
 6. Paste that stdout in the reply as a fenced `bash` block. Say the line count, ship date, cancel date, supplier, and extended cents. Keep cancel-before-ship if the sheet has it.
