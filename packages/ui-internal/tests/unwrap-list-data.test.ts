@@ -9,8 +9,10 @@ const envelope = {
 };
 
 describe("unwrapListData", () => {
-  it("accepts a bare list envelope", () => {
-    expect(unwrapListData(envelope)).toEqual(envelope);
+  it("recognizes bare list envelopes and rejects other shapes", () => {
+    expect(unwrapListData(undefined)).toBeUndefined();
+    expect(unwrapListData({} as never)).toBeUndefined();
+    expect(unwrapListData(envelope)?.total).toBe(1);
   });
 
   it("unwraps the Orval { data, status, headers } envelope", () => {
@@ -19,8 +21,8 @@ describe("unwrapListData", () => {
         data: envelope,
         status: 200,
         headers: new Headers(),
-      }),
-    ).toEqual(envelope);
+      })?.total,
+    ).toBe(1);
   });
 });
 

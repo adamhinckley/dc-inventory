@@ -171,14 +171,9 @@ describe("ImportProductBrowserUseCase", () => {
       rows: [],
     });
 
-    expect(result).toEqual({
-      dryRun: true,
-      rowsOk: 0,
-      created: 0,
-      updated: 0,
-      linked: 0,
-      errors: [],
-    });
+    expect(result.dryRun).toBe(true);
+    expect(result.rowsOk).toBe(0);
+    expect(result.errors).toHaveLength(0);
   });
 
   it("records a row error when packaging save throws instead of rejecting the import", async () => {

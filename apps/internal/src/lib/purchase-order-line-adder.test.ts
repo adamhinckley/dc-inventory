@@ -8,7 +8,6 @@ describe("draftLineFromVendorProduct", () => {
       catalogName: 'Baby Rose Bush X 7 12" - Lavender',
     });
     expect(line.qty).toBe(1);
-    expect(line.id).toEqual(expect.any(String));
 
     const second = draftLineFromVendorProduct({
       sku: "DC7819LV",

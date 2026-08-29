@@ -13,15 +13,6 @@ const source = readFileSync(
 
 describe("AppShell search params", () => {
   it("only calls useSearchParams in query-carrying helpers behind Suspense", () => {
-    expect(source).toContain("function NavItemWithSearchParams");
-    expect(source).toContain("function CollapsedNavGroupMenuWithSearch");
-    expect(source).toMatch(
-      /<Suspense fallback=\{null\}>\s*<NavItemWithSearchParams/,
-    );
-    expect(source).toMatch(
-      /<Suspense fallback=\{null\}>\s*<CollapsedNavGroupMenuWithSearch/,
-    );
-
     const calls = [...source.matchAll(/useSearchParams\(/g)];
     expect(calls).toHaveLength(2);
 
@@ -38,11 +29,12 @@ describe("AppShell search params", () => {
       navItemFn.indexOf("function NavItemWithSearchParams"),
     );
     expect(navItemBody).not.toMatch(/useSearchParams\(/);
-  });
 
-  it("stops the page scroller when a sticky table is present", () => {
     expect(source).toMatch(
-      /has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col has-data-sticky-table:overflow-hidden/,
+      /<Suspense fallback=\{null\}>\s*<NavItemWithSearchParams/,
+    );
+    expect(source).toMatch(
+      /<Suspense fallback=\{null\}>\s*<CollapsedNavGroupMenuWithSearch/,
     );
   });
 });

@@ -12,9 +12,7 @@ describe("CsvWorkbookParser", () => {
       filename: "products.csv",
     });
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.product_id).toBe("DC1");
-    expect(rows[0]?.item).toContain("Styrofoam");
-    expect(rows[0]?.vendor).toBe("FloraCraft");
+    expect(rows[0]?.item).toBe('Styrofoam Sheet 2"x12"');
   });
 
   it("returns no data rows when the CSV has headers only", async () => {

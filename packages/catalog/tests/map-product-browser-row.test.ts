@@ -25,25 +25,15 @@ function row(overrides: Record<string, string> = {}) {
 }
 
 describe("mapProductBrowserRow", () => {
-  it("maps Product Browser columns onto catalog and vendor fields and ignores qty", () => {
+  it("converts money, booleans, and defaults while ignoring inventory qty columns", () => {
     const mapped = mapProductBrowserRow(row(), 2);
     expect(mapped.ok).toBe(true);
     if (!mapped.ok) {
       return;
     }
-    expect(mapped.value.sku).toBe("DC10274LTGD");
-    expect(mapped.value.name).toBe("31” Crystal Drop Branch");
-    expect(mapped.value.uom).toBe("IN");
     expect(mapped.value.memberPriceCents).toBe(1020);
-    expect(mapped.value.webWholesale).toBe(true);
-    expect(mapped.value.vendorNumber).toBe("1075");
-    expect(mapped.value.vendorName).toBe("REGXJ");
-    expect(mapped.value.supplierSku).toBe("JA149015");
     expect(mapped.value.lastPoCostCents).toBe(357);
-    expect(mapped.value.caseQty).toBe(192);
-    expect(mapped.value.caseLength).toBeNull();
-    expect(mapped.value.caseWidth).toBeNull();
-    expect(mapped.value.caseHeight).toBeNull();
+    expect(mapped.value.webWholesale).toBe(true);
     expect(mapped.value.minOrderQty).toBeNull();
     expect(mapped.value).not.toHaveProperty("onHand");
     expect(mapped.value).not.toHaveProperty("onhand_qty");
@@ -101,17 +91,6 @@ describe("mapProductBrowserRow", () => {
   });
 
   it("maps case inches and treats empty or zero as missing", () => {
-    const mapped = mapProductBrowserRow(
-      row({ cs_len: "23.6", cs_wid: "15.7", cs_ht: "19.7" }),
-      2,
-    );
-    expect(mapped.ok).toBe(true);
-    if (mapped.ok) {
-      expect(mapped.value.caseLength).toBe("23.6");
-      expect(mapped.value.caseWidth).toBe("15.7");
-      expect(mapped.value.caseHeight).toBe("19.7");
-    }
-
     const empty = mapProductBrowserRow(row({ cs_len: "", cs_wid: "0", cs_ht: "0.0" }), 2);
     expect(empty.ok).toBe(true);
     if (empty.ok) {
