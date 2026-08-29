@@ -26,7 +26,13 @@ describe("generated x-table meta shape", () => {
     expect(meta.search?.param).toBe("q");
     expect(meta.search?.fields).toEqual(["sku", "name"]);
     expect(meta.filters).toEqual([{ param: "inactive", control: "boolean" }]);
-    expect(meta.sort.fields).toEqual(["sku", "name", "onHand", "available", "createdAt"]);
+    expect(meta.sort?.fields).toEqual([
+      "sku",
+      "name",
+      "onHand",
+      "available",
+      "createdAt",
+    ]);
   });
 
   it("types the stub as TableMeta without extra invented filters", () => {
