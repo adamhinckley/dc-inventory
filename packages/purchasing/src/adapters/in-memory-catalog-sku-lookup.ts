@@ -1,4 +1,4 @@
-import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { Sku, type OrganizationId } from "@dc-inventory/shared-kernel";
 import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
 
 function catalogKey(organizationId: OrganizationId, sku: string): string {
