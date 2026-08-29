@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
-const apiProxyOrigin = process.env.API_PROXY_ORIGIN ?? "http://localhost:3001";
+/** Baked at build time — Vercel blocks rewrites to localhost (DNS_HOSTNAME_RESOLVED_PRIVATE). */
+function apiProxyOrigin(): string {
+  if (process.env.API_PROXY_ORIGIN) {
+    return process.env.API_PROXY_ORIGIN;
+  }
+  if (process.env.VERCEL === "1") {
+    return "https://dc-inventory-api.fly.dev";
+  }
+  return "http://localhost:3001";
+}
 
 const nextConfig: NextConfig = {
   transpilePackages: [
@@ -21,7 +30,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/internal/:path*",
-        destination: `${apiProxyOrigin}/internal/:path*`,
+        destination: `${apiProxyOrigin()}/internal/:path*`,
       },
     ];
   },
