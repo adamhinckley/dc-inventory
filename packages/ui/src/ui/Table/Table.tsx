@@ -302,7 +302,7 @@ export function TableRoot({
 
   const tableEl = (
     <table
-      className="w-full table-fixed text-left text-sm"
+      className="w-full table-fixed bg-surface-card text-left text-sm"
       style={{ minWidth }}
     >
       <colgroup>
@@ -382,7 +382,10 @@ export function TableRoot({
             containerRef.current = el
           }}
           tabIndex={-1}
-          className={cn('overflow-auto focus:outline-none', sticky && 'min-h-0')}
+          className={cn(
+            'overflow-auto bg-surface-raised scrollbar-track-raised focus:outline-none',
+            sticky && 'min-h-0',
+          )}
         >
           {tableEl}
         </div>

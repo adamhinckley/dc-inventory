@@ -223,11 +223,13 @@ export function AppShellRoot({ nav, topbar, banner, children, exportMode }: AppS
           {banner}
           <div className="flex min-h-0 flex-1">
             {nav}
-            <div className="page my-2 mr-2 flex flex-1 flex-col rounded-page">
-              {topbar}
-              <main className="relative z-content flex-1 overflow-y-auto has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col has-data-sticky-table:overflow-hidden">
-                {children}
-              </main>
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              <div className="page my-2 mr-2 flex flex-1 flex-col rounded-page">
+                {topbar}
+                <main className="relative z-content flex-1 overflow-y-auto bg-surface-raised scrollbar-track-raised has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col has-data-sticky-table:overflow-hidden">
+                  {children}
+                </main>
+              </div>
             </div>
           </div>
         </div>
