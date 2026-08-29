@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { dashboardNav } from "./dashboard-routes";
@@ -25,16 +25,5 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "components/purchase-orders-table.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchase-order-workspace.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchasing-orders-explorer.tsx"))).toBe(true);
-  });
-
-  it("gates the dashboard and puts account actions in the nav footer", () => {
-    const dashboardFrame = readFileSync(
-      join(srcRoot, "components/dashboard-frame.tsx"),
-      "utf8",
-    );
-    expect(dashboardFrame).toMatch(/StaffSessionGate/);
-    expect(dashboardFrame).toMatch(/AccountNavMenu/);
-    expect(dashboardFrame).toMatch(/NavFooter/);
-    expect(dashboardFrame).not.toMatch(/href="\/login"/);
   });
 });

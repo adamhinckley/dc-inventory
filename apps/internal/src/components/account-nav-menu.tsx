@@ -100,7 +100,7 @@ export function AccountNavMenu() {
             {signOutError}
           </p>
         ) : null}
-        <Menu.Item onClick={signOut} disabled={logout.isPending}>
+        <Menu.Item closeOnClick={false} onClick={signOut} disabled={logout.isPending}>
           {logout.isPending ? "Signing out…" : "Sign out"}
         </Menu.Item>
       </Menu.Content>
