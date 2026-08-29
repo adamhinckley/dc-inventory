@@ -2625,6 +2625,80 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/inventory/stock/{sku}:
+    get:
+      operationId: getInternalInventoryStock
+      summary: Read stock snapshot for a SKU
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: sku
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sku:
+                    type: string
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - sku
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
   /internal/purchase-orders:
     get:
       operationId: listInternalPurchaseOrders

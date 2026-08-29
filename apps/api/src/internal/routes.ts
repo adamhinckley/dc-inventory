@@ -10,6 +10,7 @@ import { registerInternalSalesOrderRoutes } from "../adapters/http/internal-sale
 import { registerInternalSupplierProductRoutes } from "../adapters/http/internal-supplier-products.js";
 import { registerInternalSupplierRoutes } from "../adapters/http/internal-suppliers.js";
 import { registerInternalProductRoutes } from "../adapters/http/internal-products.js";
+import { registerInternalInventoryRoutes } from "../adapters/http/internal-inventory.js";
 
 /** Staff mount (`/internal`). Auth, customers, catalog products, purchasing, and sales. */
 export async function internalRoutes(app: FastifyInstance): Promise<void> {
@@ -22,6 +23,10 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   await app.register(async (catalog) => {
     registerFeatureGuard(catalog, "catalog", "staff");
     registerInternalProductRoutes(catalog);
+  });
+  await app.register(async (inventory) => {
+    registerFeatureGuard(inventory, "inventory", "staff");
+    registerInternalInventoryRoutes(inventory);
   });
   await app.register(async (purchasing) => {
     registerFeatureGuard(purchasing, "purchasing", "staff");

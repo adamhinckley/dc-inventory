@@ -31,6 +31,7 @@ import {
   type SalesHttpServices,
   type AccountingHttpServices,
   type LicensingHttpServices,
+  type InventoryHttpServices,
 } from "./infrastructure/composition.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
 import {
@@ -113,6 +114,7 @@ export async function buildAudienceApp(
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
   app.decorate("licensing", services.licensing);
+  app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
   await registerCookie(app);
   await registerMultipart(app);
@@ -154,6 +156,7 @@ export async function buildApp(
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
   app.decorate("licensing", services.licensing);
+  app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
   await registerCookie(app);
@@ -180,6 +183,7 @@ declare module "fastify" {
     sales: SalesHttpServices;
     accounting: AccountingHttpServices;
     licensing: LicensingHttpServices;
+    inventory: InventoryHttpServices;
   }
 
   interface FastifyRequest {

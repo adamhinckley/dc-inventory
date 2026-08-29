@@ -110,6 +110,9 @@ import type {
   GetInternalCustomer401,
   GetInternalCustomer403,
   GetInternalCustomer404,
+  GetInternalInventoryStock200,
+  GetInternalInventoryStock401,
+  GetInternalInventoryStock403,
   GetInternalInvoice200,
   GetInternalInvoice401,
   GetInternalInvoice403,
@@ -2591,6 +2594,107 @@ export const useUpdateInternalProduct = <TError = UpdateInternalProduct400 | Upd
       > => {
       return useMutation(getUpdateInternalProductMutationOptions(options));
     }
+
+export type getInternalInventoryStockResponse200 = {
+  data: GetInternalInventoryStock200
+  status: 200
+}
+
+export type getInternalInventoryStockResponse401 = {
+  data: GetInternalInventoryStock401
+  status: 401
+}
+
+export type getInternalInventoryStockResponse403 = {
+  data: GetInternalInventoryStock403
+  status: 403
+}
+
+export type getInternalInventoryStockResponseSuccess = (getInternalInventoryStockResponse200) & {
+  headers: Headers;
+};
+export type getInternalInventoryStockResponseError = (getInternalInventoryStockResponse401 | getInternalInventoryStockResponse403) & {
+  headers: Headers;
+};
+
+export type getInternalInventoryStockResponse = (getInternalInventoryStockResponseSuccess | getInternalInventoryStockResponseError)
+
+export const getGetInternalInventoryStockUrl = (sku: string,) => {
+
+
+
+
+  return `/internal/inventory/stock/${sku}`
+}
+
+/**
+ * @summary Read stock snapshot for a SKU
+ */
+export const getInternalInventoryStock = async (sku: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalInventoryStockResponse> => {
+
+  return customFetch<getInternalInventoryStockResponse>(getGetInternalInventoryStockUrl(sku),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalInventoryStockQueryKey = (sku: string,) => {
+    return [
+    `/internal/inventory/stock/${sku}`
+    ] as const;
+    }
+
+
+export const getGetInternalInventoryStockQueryOptions = <TData = Awaited<ReturnType<typeof getInternalInventoryStock>>, TError = GetInternalInventoryStock401 | GetInternalInventoryStock403>(sku: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalInventoryStock>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalInventoryStockQueryKey(sku);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalInventoryStock>>> = ({ signal }) => getInternalInventoryStock(sku, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: sku !== null && sku !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalInventoryStock>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalInventoryStockQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalInventoryStock>>>
+export type GetInternalInventoryStockQueryError = GetInternalInventoryStock401 | GetInternalInventoryStock403
+
+
+/**
+ * @summary Read stock snapshot for a SKU
+ */
+
+export function useGetInternalInventoryStock<TData = Awaited<ReturnType<typeof getInternalInventoryStock>>, TError = GetInternalInventoryStock401 | GetInternalInventoryStock403>(
+ sku: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalInventoryStock>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalInventoryStockQueryOptions(sku,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type listInternalPurchaseOrdersResponse200 = {
   data: ListInternalPurchaseOrders200

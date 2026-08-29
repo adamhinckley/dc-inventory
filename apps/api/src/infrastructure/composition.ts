@@ -132,6 +132,7 @@ import {
   type ISalesOrderRepository,
   type SalesDrizzle,
 } from "@dc-inventory/sales";
+import { GetStockSnapshotUseCase } from "@dc-inventory/inventory";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
@@ -226,6 +227,10 @@ export type LicensingHttpServices = {
   listPayments: ListLicensingPaymentsUseCase;
 };
 
+export type InventoryHttpServices = {
+  getStockSnapshot: GetStockSnapshotUseCase;
+};
+
 /**
  * Composition root services. Domain/application never import this file —
  * only `app.ts` / `server.ts` wire ports to adapters here.
@@ -243,6 +248,7 @@ export type AppServices = {
   sales: SalesHttpServices;
   accounting: AccountingHttpServices;
   licensing: LicensingHttpServices;
+  inventory: InventoryHttpServices;
   unitOfWork: IUnitOfWork;
 };
 
@@ -422,6 +428,12 @@ function licensingServices(repository: ILicensingReadRepository): LicensingHttpS
   return {
     listSubscriptions: new ListLicensingSubscriptionsUseCase(repository),
     listPayments: new ListLicensingPaymentsUseCase(repository),
+  };
+}
+
+function inventoryServices(unitOfWork: IUnitOfWork): InventoryHttpServices {
+  return {
+    getStockSnapshot: new GetStockSnapshotUseCase(unitOfWork.inventory.readModel),
   };
 }
 
@@ -629,6 +641,7 @@ export function composeAppServices(
     sales: salesServices(salesOrderRepo, customerRepo, unitOfWork, clock),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     licensing: licensingServices(licensingRepository),
+    inventory: inventoryServices(unitOfWork),
     unitOfWork,
   };
 }

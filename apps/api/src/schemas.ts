@@ -107,6 +107,18 @@ export const productIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const inventoryStockParamsSchema = z.object({
+  sku: z.string().min(1),
+});
+
+export const inventoryStockSnapshotSchema = z.object({
+  sku: z.string(),
+  onHand: z.number().int(),
+  onOrder: z.number().int(),
+  allocated: z.number().int(),
+  available: z.number().int(),
+});
+
 export const productWriteBodySchema = z.object({
   sku: z.string().min(1),
   name: z.string().min(1),
