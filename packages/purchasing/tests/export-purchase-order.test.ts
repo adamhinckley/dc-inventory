@@ -12,6 +12,7 @@ import { InMemoryWorkbookWriter } from "../src/adapters/in-memory-workbook-write
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
 import { InMemorySupplierProductRepository } from "../src/adapters/in-memory-supplier-product-repository.js";
 import { ExportPurchaseOrderUseCase } from "../src/application/export-purchase-order.js";
+import { GetPurchaseOrderFactorySendUseCase } from "../src/application/get-purchase-order-factory-send.js";
 import { CreatePurchaseOrderUseCase } from "../src/application/create-purchase-order.js";
 import { ConfirmPurchaseOrderUseCase } from "../src/application/confirm-purchase-order.js";
 import { ReceivePurchaseOrderUseCase } from "../src/application/receive-purchase-order.js";
@@ -101,6 +102,11 @@ async function harness() {
       supplierProducts,
       factorySendCatalog,
       workbookWriter,
+    ),
+    factorySend: new GetPurchaseOrderFactorySendUseCase(
+      uow.purchaseOrders,
+      supplierProducts,
+      factorySendCatalog,
     ),
   };
 }
@@ -373,5 +379,55 @@ describe("ExportPurchaseOrderUseCase", () => {
     });
     expect(result).toEqual({ ok: false, reason: "not_found" });
     expect(h.workbookWriter.writes).toHaveLength(0);
+  });
+});
+
+describe("GetPurchaseOrderFactorySendUseCase", () => {
+  it("returns the factory send columns and JSON rows used by XLS export", async () => {
+    const h = await harness();
+    h.factorySendCatalog.set(DEFAULT_ORG, SKU.value, { caseQty: 192 });
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      shipDate: "2026-12-01",
+      cancelDate: "2026-01-15",
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 1152 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const result = await h.factorySend.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.columns.map((column) => column.key)).toEqual(
+      FACTORY_PO_COLUMNS.map((column) => column.key),
+    );
+    expect(result.rows).toEqual([
+      {
+        ship_date: "2026-12-01",
+        canc_date: "2026-01-15",
+        mat_num: SKU.value,
+        quan: 1152,
+        price: "",
+        extprice: "",
+        description: "Bolt",
+        mfg_code: "",
+        mfg_sku: "",
+        mfg_upc: "",
+        product_upc_1: "",
+        cs_cube_metric: 0,
+        tot_cartons: 6,
+        tot_cbm: "Not Available",
+      },
+    ]);
   });
 });

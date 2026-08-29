@@ -82,6 +82,12 @@ describe("internal dashboard shell", () => {
     expect(purchaseOrders).toMatch(/status: "draft"/);
     expect(purchaseOrders).toMatch(/status: "confirmed"/);
 
+    const purchaseOrderWorkspace = readFileSync(
+      join(srcRoot, "components/purchase-order-workspace.tsx"),
+      "utf8",
+    );
+    expect(purchaseOrderWorkspace).toMatch(/<Table\s+sticky/);
+
     const purchasingExplorer = readFileSync(
       join(srcRoot, "components/purchasing-orders-explorer.tsx"),
       "utf8",
@@ -89,6 +95,13 @@ describe("internal dashboard shell", () => {
     expect(purchasingExplorer).toMatch(/RouterTabs/);
     expect(purchasingExplorer).toMatch(/href="\/purchasing"/);
     expect(purchasingExplorer).toMatch(/href="\/purchasing\/completed"/);
+
+    const dashboardFrame = readFileSync(
+      join(srcRoot, "components/dashboard-frame.tsx"),
+      "utf8",
+    );
+    expect(dashboardFrame).toMatch(/has-data-sticky-table:h-full/);
+    expect(dashboardFrame).toMatch(/has-data-sticky-table:flex-col/);
 
     expect(
       existsSync(join(srcRoot, "app/(dashboard)/purchasing/completed/page.tsx")),

@@ -313,6 +313,27 @@ describe("internal purchase orders HTTP", () => {
     expect(exported.headers["content-disposition"]).toMatch(/PO-00001\.xlsx/);
     expect(exported.rawPayload.length).toBeGreaterThan(0);
 
+    const factorySend = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/factory-send`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(factorySend.statusCode).toBe(200);
+    expect(factorySend.json()).toMatchObject({
+      columns: expect.arrayContaining([
+        { key: "mat_num", header: "mat_num" },
+        { key: "tot_cartons", header: "tot_cartons" },
+      ]),
+      rows: [
+        expect.objectContaining({
+          mat_num: "HEX-BOLT-GALV",
+          quan: 5,
+          description: "Hex bolt",
+          tot_cbm: "Not Available",
+        }),
+      ],
+    });
+
     const confirmed = await app.inject({
       method: "POST",
       url: `/internal/purchase-orders/${po.id}/confirm`,

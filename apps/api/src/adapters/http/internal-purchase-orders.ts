@@ -11,6 +11,7 @@ import {
   purchaseOrderCommandBodySchema,
   purchaseOrderIdParamsSchema,
   purchaseOrderExportQuerySchema,
+  purchaseOrderFactorySendResponseSchema,
   binaryFileResponseSchema,
   purchaseOrderItemSchema,
   purchaseOrderListQuerySchema,
@@ -256,6 +257,34 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         .header("Content-Type", result.file.contentType)
         .header("Content-Disposition", `attachment; filename="${result.file.filename}"`)
         .send(Buffer.from(result.file.bytes));
+    },
+  );
+
+  routes.get(
+    "/purchase-orders/:id/factory-send",
+    {
+      schema: {
+        operationId: "getInternalPurchaseOrderFactorySend",
+        tags: ["internal"],
+        summary: "Return factory-send columns and rows for a purchase order",
+        params: purchaseOrderIdParamsSchema,
+        response: {
+          200: purchaseOrderFactorySendResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.getPurchaseOrderFactorySend.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return { columns: result.columns, rows: result.rows };
     },
   );
 

@@ -39,4 +39,10 @@ describe("AppShell search params", () => {
     );
     expect(navItemBody).not.toMatch(/useSearchParams\(/);
   });
+
+  it("stops the page scroller when a sticky table is present", () => {
+    expect(source).toMatch(
+      /has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col has-data-sticky-table:overflow-hidden/,
+    );
+  });
 });

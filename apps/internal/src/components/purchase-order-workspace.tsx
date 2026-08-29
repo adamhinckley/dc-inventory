@@ -5,6 +5,7 @@ import {
   getListInternalPurchaseOrdersQueryKey,
   getListInternalSupplierProductsQueryKey,
   useConfirmInternalPurchaseOrder,
+  useGetInternalPurchaseOrderFactorySend,
   useCreateInternalPurchaseOrder,
   useGetInternalPurchaseOrder,
   useGetInternalSupplier,
@@ -36,6 +37,11 @@ import {
   type CSSProperties,
 } from "react";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
+import {
+  factorySendRowId,
+  factorySendTableColumns,
+  type FactorySendRow,
+} from "../lib/factory-send-table";
 import { draftLineFromVendorProduct } from "../lib/purchase-order-line-adder";
 import {
   appendPurchaseOrderLine,
@@ -773,7 +779,6 @@ function PurchaseOrderEditWorkspace({
         supplierId={po.supplierId}
         shipDate={po.shipDate}
         cancelDate={po.cancelDate}
-        lines={po.lines}
       />
     );
   }
@@ -799,32 +804,41 @@ function PurchaseOrderEditWorkspace({
   );
 }
 
-function ConfirmedPurchaseOrderLines({
-  lines,
-}: {
-  lines: readonly { id: string; sku: string; name: string; qty: number }[];
-}) {
+function FactorySendLinesTable({ purchaseOrderId }: { purchaseOrderId: string }) {
+  const factorySendQuery = useGetInternalPurchaseOrderFactorySend(purchaseOrderId);
+  const sheet =
+    factorySendQuery.data?.status === 200 ? factorySendQuery.data.data : undefined;
+  const rows = useMemo<FactorySendRow[]>(
+    () => (sheet?.rows ?? []) as FactorySendRow[],
+    [sheet?.rows],
+  );
   const columns = useMemo(
-    () => [
-      { id: "sku", label: "SKU", sort: false as const, width: 140 },
-      { id: "name", label: "Product", sort: false as const },
-      { id: "qty", label: "Qty", sort: false as const, width: 100 },
-    ],
-    [],
+    () => factorySendTableColumns(sheet?.columns ?? []),
+    [sheet?.columns],
   );
 
   const table = useTable({
-    data: [...lines],
+    data: rows,
     columns,
-    getRowId: (row) => row.id,
-    fillColumn: "name",
+    getRowId: factorySendRowId,
+    fillColumn: "description",
     enableSorting: false,
     enableSelection: false,
     enablePagination: false,
   });
 
+  const emptyMessage = factorySendQuery.isLoading
+    ? "Loading mill table…"
+    : factorySendQuery.isError || !sheet
+      ? "Could not load the mill table."
+      : "This purchase order has no lines.";
+
   return (
-    <Table table={table} emptyMessage="This purchase order has no lines.">
+    <Table
+      sticky
+      table={table}
+      emptyMessage={emptyMessage}
+    >
       <Table.Header />
       <Table.Body />
       <Table.Empty />
@@ -839,7 +853,6 @@ function ConfirmedPurchaseOrderView({
   supplierId,
   shipDate,
   cancelDate,
-  lines,
 }: {
   purchaseOrderId: string;
   documentNumber: string;
@@ -847,7 +860,6 @@ function ConfirmedPurchaseOrderView({
   supplierId: string;
   shipDate: string | null;
   cancelDate: string | null;
-  lines: readonly { id: string; sku: string; name: string; qty: number }[];
 }) {
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -865,7 +877,7 @@ function ConfirmedPurchaseOrderView({
   };
 
   return (
-    <section className="flex flex-col gap-region">
+    <section className="flex min-h-0 flex-1 flex-col gap-region">
       <nav className="text-body-sm text-fg-secondary">
         <Link href="/purchasing" className="text-link hover:text-link-hover">
           Purchasing
@@ -906,7 +918,7 @@ function ConfirmedPurchaseOrderView({
           {actionError}
         </p>
       ) : null}
-      <ConfirmedPurchaseOrderLines lines={lines} />
+      <FactorySendLinesTable purchaseOrderId={purchaseOrderId} />
     </section>
   );
 }

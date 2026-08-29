@@ -13,7 +13,7 @@ import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.
 import type { SupplierProduct } from "../domain/supplier-product.js";
 
 /** SoloView / factory send dump. Money is decimal dollars (cents / 100). */
-const FACTORY_PO_COLUMNS = [
+export const FACTORY_PO_COLUMNS = [
   { key: "ship_date", header: "ship_date", numFmt: "d-mmm" },
   { key: "canc_date", header: "canc_date", numFmt: "d-mmm" },
   { key: "mat_num", header: "mat_num" },
@@ -62,36 +62,75 @@ export class ExportPurchaseOrderUseCase {
       return { ok: false, reason: "not_found" };
     }
 
-    const catalog = await this.factorySendCatalog.readBySkus(
-      input.organizationId,
-      purchaseOrder.lines.map((line) => line.sku),
-    );
-    const totCartons = totalCartons(purchaseOrder.lines, catalog);
-
-    const uniqueSkus = [
-      ...new Map(purchaseOrder.lines.map((line) => [line.sku.value, line.sku])).values(),
-    ];
-    const links = await Promise.all(
-      uniqueSkus.map((sku) =>
-        this.supplierProducts.findBySupplierAndSku(purchaseOrder.supplierId, sku),
-      ),
-    );
-    const linkBySku = new Map(
-      uniqueSkus.map((sku, index) => [sku.value, links[index] ?? null]),
-    );
-    const rows = purchaseOrder.lines.map((line) =>
-      toFactoryRow(purchaseOrder, line, linkBySku.get(line.sku.value) ?? null, totCartons),
+    const sheet = await loadFactorySendSheet(
+      purchaseOrder,
+      this.supplierProducts,
+      this.factorySendCatalog,
     );
 
     const file = await this.workbookWriter.write({
       sheetName: purchaseOrder.documentNumber,
-      columns: FACTORY_PO_COLUMNS,
-      rows,
+      columns: sheet.columns,
+      rows: sheet.rows,
       format: input.format,
     });
 
     return { ok: true, file };
   }
+}
+
+export type FactorySendSheet = {
+  columns: typeof FACTORY_PO_COLUMNS;
+  rows: WorkbookRow[];
+};
+
+export type FactorySendJsonCell = string | number;
+export type FactorySendJsonRow = Record<
+  (typeof FACTORY_PO_COLUMNS)[number]["key"],
+  FactorySendJsonCell
+>;
+
+export async function loadFactorySendSheet(
+  purchaseOrder: PurchaseOrder,
+  supplierProducts: ISupplierProductRepository,
+  factorySendCatalog: IFactorySendCatalogPort,
+): Promise<FactorySendSheet> {
+  const catalog = await factorySendCatalog.readBySkus(
+    purchaseOrder.organizationId,
+    purchaseOrder.lines.map((line) => line.sku),
+  );
+  const totCartons = totalCartons(purchaseOrder.lines, catalog);
+
+  const uniqueSkus = [
+    ...new Map(purchaseOrder.lines.map((line) => [line.sku.value, line.sku])).values(),
+  ];
+  const links = await Promise.all(
+    uniqueSkus.map((sku) =>
+      supplierProducts.findBySupplierAndSku(purchaseOrder.supplierId, sku),
+    ),
+  );
+  const linkBySku = new Map(
+    uniqueSkus.map((sku, index) => [sku.value, links[index] ?? null]),
+  );
+  const rows = purchaseOrder.lines.map((line) =>
+    toFactoryRow(purchaseOrder, line, linkBySku.get(line.sku.value) ?? null, totCartons),
+  );
+  return { columns: FACTORY_PO_COLUMNS, rows };
+}
+
+export function factorySendJsonValue(value: string | number | Date): FactorySendJsonCell {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  return value;
+}
+
+export function factorySendJsonRow(row: WorkbookRow): FactorySendJsonRow {
+  const json = {} as FactorySendJsonRow;
+  for (const column of FACTORY_PO_COLUMNS) {
+    json[column.key] = factorySendJsonValue(row[column.key] ?? EMPTY);
+  }
+  return json;
 }
 
 export function totalCartons(

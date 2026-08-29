@@ -106,6 +106,37 @@ export function computeColumnWidths<T>(
   return fixedWidths.map((w) => (w === null ? fillWidth : w))
 }
 
+/**
+ * Pixel floor for the `<table>` itself. `w-full table-fixed` otherwise
+ * squeezes col widths to the card; this min-width lets the inner
+ * `overflow-auto` scroller take over when columns are wider than the card.
+ */
+export function tableMinWidthPx<T>(
+  columns: TableColumnDef<T>[],
+  hasSelection: boolean,
+  hasActions: boolean,
+  resolved: (number | undefined)[] | null,
+  fillColumn: string,
+): number {
+  const reserved = (hasSelection ? SELECTION_WIDTH : 0) + (hasActions ? ACTIONS_WIDTH : 0)
+  if (resolved) {
+    return reserved + resolved.reduce<number>((sum, width) => sum + (width ?? 0), 0)
+  }
+  let total = reserved
+  for (const column of columns) {
+    if (column.id === fillColumn) {
+      total += column.minWidth ?? DEFAULT_FILL_MIN_WIDTH
+      continue
+    }
+    if (typeof column.width === 'number') {
+      total += column.width
+    } else {
+      total += column.minWidth ?? DEFAULT_COLUMN_WIDTH
+    }
+  }
+  return total
+}
+
 // ---------------------------------------------------------------------------
 // Context
 // ---------------------------------------------------------------------------
@@ -261,8 +292,19 @@ export function TableRoot({
   // Not opt-in via children: the component self-suppresses when not live.
   const liveNoticeNode = findSlot(children, TableLiveNotice) ?? <TableLiveNotice />
 
+  const minWidth = tableMinWidthPx(
+    table.columns,
+    table.enableSelection,
+    !!table.rowActions,
+    resolved,
+    table.fillColumn,
+  )
+
   const tableEl = (
-    <table className="w-full table-fixed text-left text-sm">
+    <table
+      className="w-full table-fixed text-left text-sm"
+      style={{ minWidth }}
+    >
       <colgroup>
         {table.enableSelection && <col className="w-10" />}
         {table.columns.map((column, i) => {
@@ -299,7 +341,7 @@ export function TableRoot({
         // vertical padding for pseudo spacers.
         data-sticky-table={sticky || undefined}
         className={cn(
-          'flex w-full flex-col rounded-section border border-border',
+          'flex min-w-0 w-full flex-col rounded-section border border-border',
           // Sticky mode: the card owns its own scrolling (CORE-990). It caps
           // at the hosting container's content height and the rows scroll
           // INSIDE it — the card outline stays put while content disappears

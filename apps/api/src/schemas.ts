@@ -454,6 +454,35 @@ export const purchaseOrderExportQuerySchema = z.object({
   format: z.enum(["xlsx", "csv"]).default("xlsx"),
 });
 
+const factorySendBlankOrNumber = z.union([z.number(), z.literal("")]);
+
+export const purchaseOrderFactorySendColumnSchema = z.object({
+  key: z.string(),
+  header: z.string(),
+});
+
+export const purchaseOrderFactorySendRowSchema = z.object({
+  ship_date: z.string(),
+  canc_date: z.string(),
+  mat_num: z.string(),
+  quan: z.number(),
+  price: factorySendBlankOrNumber,
+  extprice: factorySendBlankOrNumber,
+  description: z.string(),
+  mfg_code: z.string(),
+  mfg_sku: z.string(),
+  mfg_upc: z.string(),
+  product_upc_1: z.string(),
+  cs_cube_metric: z.number(),
+  tot_cartons: factorySendBlankOrNumber,
+  tot_cbm: z.string(),
+});
+
+export const purchaseOrderFactorySendResponseSchema = z.object({
+  columns: z.array(purchaseOrderFactorySendColumnSchema),
+  rows: z.array(purchaseOrderFactorySendRowSchema),
+});
+
 export const binaryFileResponseSchema = z.instanceof(Buffer);
 
 export const purchaseOrderWriteBodySchema = z.object({
