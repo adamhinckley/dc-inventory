@@ -5,6 +5,7 @@ import {
   GetProductUseCase,
   GetWholesaleProductUseCase,
   ImportProductBrowserUseCase,
+  InMemoryCatalogListQuery,
   InMemoryProductPackagingRepository,
   InMemoryProductRepository,
   InMemoryQtyReadPort,
@@ -12,6 +13,7 @@ import {
   ListWholesaleCatalogUseCase,
   UpdateProductUseCase,
   type CatalogDrizzle,
+  type ICatalogListQuery,
   type IProductPackagingRepository,
   type IProductRepository,
   type IQtyReadPort,
@@ -125,6 +127,7 @@ import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
+import { CatalogInventoryListQuery } from "../adapters/catalog-inventory-list-query.js";
 import { InventoryReadModelQtyReadAdapter } from "../adapters/inventory-read-model-qty-read.js";
 import { PurchasingSupplierLinkAdapter } from "../adapters/purchasing-supplier-link.js";
 import {
@@ -258,6 +261,7 @@ export type AppServiceOverrides = {
   productRepo?: IProductRepository;
   productPackagingRepo?: IProductPackagingRepository;
   qtyRead?: IQtyReadPort;
+  catalogListQuery?: ICatalogListQuery;
   purchaseOrderRepo?: IPurchaseOrderRepository;
   supplierRepo?: ISupplierRepository;
   supplierProductRepo?: ISupplierProductRepository;
@@ -274,13 +278,14 @@ export type AppServiceOverrides = {
 function catalogServices(
   productRepo: IProductRepository,
   qtyRead: IQtyReadPort,
+  catalogListQuery: ICatalogListQuery,
   supplierLink: ISupplierLinkPort,
   packaging: IProductPackagingRepository,
 ): CatalogHttpServices {
   const createProduct = new CreateProductUseCase(productRepo);
   const updateProduct = new UpdateProductUseCase(productRepo, qtyRead);
   return {
-    listStaffProducts: new ListStaffProductsUseCase(productRepo, qtyRead),
+    listStaffProducts: new ListStaffProductsUseCase(catalogListQuery),
     createProduct,
     getProduct: new GetProductUseCase(productRepo, qtyRead),
     updateProduct,
@@ -291,7 +296,7 @@ function catalogServices(
       supplierLink,
       packaging,
     ),
-    listWholesaleCatalog: new ListWholesaleCatalogUseCase(productRepo, qtyRead),
+    listWholesaleCatalog: new ListWholesaleCatalogUseCase(catalogListQuery),
     getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead),
   };
 }
@@ -515,6 +520,11 @@ export function composeAppServices(
       : inMemoryUow
         ? new InventoryReadModelQtyReadAdapter(inMemoryUow.inventory.readModel)
         : new InMemoryQtyReadPort());
+  const catalogListQuery =
+    overrides.catalogListQuery ??
+    (appDb
+      ? new CatalogInventoryListQuery(appDb)
+      : new InMemoryCatalogListQuery(productRepo, qtyRead));
 
   const purchaseOrderRepo =
     overrides.purchaseOrderRepo ??
@@ -592,6 +602,7 @@ export function composeAppServices(
     catalog: catalogServices(
       productRepo,
       qtyRead,
+      catalogListQuery,
       new PurchasingSupplierLinkAdapter(supplierRepo, supplierProductRepo, catalogSkuLookup),
       productPackagingRepo,
     ),

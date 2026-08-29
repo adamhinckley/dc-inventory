@@ -1,0 +1,58 @@
+import type {
+  CatalogListQuery,
+  CatalogListRow,
+  ICatalogListQuery,
+} from "../domain/ports/catalog-list-query.js";
+import type { IProductRepository } from "../domain/ports/product-repository.js";
+import type { IQtyReadPort } from "../domain/ports/qty-read.js";
+import { ZERO_QTY } from "../domain/qty.js";
+
+function compareRows(a: CatalogListRow, b: CatalogListRow, query: CatalogListQuery): number {
+  let comparison = 0;
+  if (query.sortBy === "sku") {
+    comparison = a.product.sku.value.localeCompare(b.product.sku.value);
+  } else if (query.sortBy === "name") {
+    comparison = a.product.name.localeCompare(b.product.name);
+  } else if (query.sortBy === "onHand") {
+    comparison = a.qty.onHand - b.qty.onHand;
+  } else if (query.sortBy === "available") {
+    comparison = a.qty.available - b.qty.available;
+  } else {
+    comparison = a.createdAt.getTime() - b.createdAt.getTime();
+  }
+  if (comparison !== 0) {
+    return query.sortOrder === "desc" ? -comparison : comparison;
+  }
+  return a.product.id.localeCompare(b.product.id);
+}
+
+export class InMemoryCatalogListQuery implements ICatalogListQuery {
+  constructor(
+    private readonly products: IProductRepository,
+    private readonly qty: IQtyReadPort,
+  ) {}
+
+  async list(query: CatalogListQuery) {
+    const listed = await this.products.listMatching({
+      organizationId: query.organizationId,
+      q: query.q,
+      inactive: query.inactive,
+      shopVisibleOnly: query.shopVisibleOnly,
+    });
+    const snapshots = await this.qty.readBySkus(
+      query.organizationId,
+      listed.map((row) => row.product.sku),
+    );
+    const rows = listed.map((row): CatalogListRow => ({
+      product: row.product,
+      qty: snapshots.get(row.product.sku.value) ?? ZERO_QTY,
+      createdAt: row.createdAt,
+    }));
+    rows.sort((a, b) => compareRows(a, b, query));
+    const offset = (query.page - 1) * query.pageSize;
+    return {
+      items: rows.slice(offset, offset + query.pageSize),
+      total: rows.length,
+    };
+  }
+}
