@@ -214,10 +214,9 @@ export const invalidResponseSchema = z.object({
 });
 
 export const zodValidationErrorResponseSchema = z.object({
-  statusCode: z.number(),
-  code: z.string(),
-  error: z.string(),
-  message: z.string(),
+  error: z.literal("invalid_request"),
+  message: z.literal("The request is invalid."),
+  requestId: z.string(),
 });
 
 export const duplicateEmailResponseSchema = z.object({
