@@ -86,7 +86,10 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
         () =>
           this.db.transaction(async (tx) =>
             this.runOnTransaction(
-              tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
+              tx as unknown as InventoryDrizzle &
+                PurchasingDrizzle &
+                SalesDrizzle &
+                AccountingDrizzle,
               work,
             ),
           ),

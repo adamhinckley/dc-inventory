@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import { DrizzlePurchaseOrderRepository } from "../src/adapters/drizzle-purchase-orders.js";
 import { PurchaseOrderLineId } from "../src/domain/ids.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../src/domain/purchase-order.js";
-import { purchaseOrderLines, purchaseOrders } from "../src/persistence/schema.js";
+import {
+  documentNumberCounters,
+  purchaseOrderLines,
+  purchaseOrders,
+} from "../src/persistence/schema.js";
 
 const ORG = OrganizationId.DEFAULT;
 const PO_ID = PurchaseOrderId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01");
@@ -133,19 +137,26 @@ class FakePurchasingDb {
 
   insert(table: unknown) {
     return {
-      values: async (value: OrderRow | LineRow | Array<OrderRow | LineRow>) => {
-        if (table === purchaseOrderLines && this.failNextLineInsert) {
-          this.failNextLineInsert = false;
-          throw new Error("forced line insert failure");
+      values: (value: OrderRow | LineRow | Array<OrderRow | LineRow>) => {
+        if (table === documentNumberCounters) {
+          return {
+            onConflictDoUpdate: async () => undefined,
+          };
         }
-        const rows = Array.isArray(value) ? value : [value];
-        for (const row of rows) {
-          if (table === purchaseOrders) {
-            this.orders.set(row.id, { ...(row as OrderRow) });
-          } else {
-            this.lines.set(row.id, { ...(row as LineRow) });
+        return (async () => {
+          if (table === purchaseOrderLines && this.failNextLineInsert) {
+            this.failNextLineInsert = false;
+            throw new Error("forced line insert failure");
           }
-        }
+          const rows = Array.isArray(value) ? value : [value];
+          for (const row of rows) {
+            if (table === purchaseOrders) {
+              this.orders.set(row.id, { ...(row as OrderRow) });
+            } else {
+              this.lines.set(row.id, { ...(row as LineRow) });
+            }
+          }
+        })();
       },
     };
   }

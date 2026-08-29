@@ -6,6 +6,8 @@ import type {
 } from "@dc-inventory/shared-kernel";
 import type { PurchaseOrder, PurchaseOrderStatus } from "../purchase-order.js";
 
+export type UnnumberedPurchaseOrder = Omit<PurchaseOrder, "documentNumber">;
+
 export type PurchaseOrderListPage = {
   items: readonly PurchaseOrder[];
   total: number;
@@ -23,7 +25,7 @@ export interface IPurchaseOrderRepository {
   list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage>;
   findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null>;
   save(order: PurchaseOrder): Promise<void>;
-  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
+  insertWithNextDocumentNumber(order: UnnumberedPurchaseOrder): Promise<PurchaseOrder>;
   findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,

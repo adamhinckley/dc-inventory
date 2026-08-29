@@ -9,6 +9,8 @@ import type { Payment, PaymentApplication } from "../invoice.js";
 import type { PaymentId } from "../ids.js";
 import type { Invoice } from "../invoice.js";
 
+export type UnnumberedInvoice = Omit<Invoice, "documentNumber">;
+
 export type PaymentIdempotencyRecord = {
   readonly payment: Payment;
   readonly invoiceId: InvoiceId;
@@ -20,7 +22,7 @@ export type IInvoiceRepository = {
   findByOrderId(organizationId: OrganizationId, orderId: OrderId): Promise<Invoice | null>;
   list(organizationId: OrganizationId): Promise<readonly Invoice[]>;
   save(invoice: Invoice): Promise<void>;
-  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
+  insertWithNextDocumentNumber(invoice: UnnumberedInvoice): Promise<Invoice>;
   listApplications(invoiceId: InvoiceId): Promise<readonly PaymentApplication[]>;
   findPaymentByIdempotencyKey(
     organizationId: OrganizationId,

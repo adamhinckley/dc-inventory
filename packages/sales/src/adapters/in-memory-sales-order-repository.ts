@@ -11,6 +11,7 @@ import type {
   ISalesOrderRepository,
   ListSalesOrdersQuery,
   SalesOrderListPage,
+  UnnumberedSalesOrder,
 } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
 
@@ -138,11 +139,11 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
     }
   }
 
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const orgKey = organizationId;
+  async insertWithNextDocumentNumber(order: UnnumberedSalesOrder): Promise<SalesOrder> {
+    const orgKey = order.organizationId;
     const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
-    const number = formatDocumentNumber(next);
-    this.nextSequenceByOrg.set(orgKey, next + 1);
-    return number;
+    const numbered = { ...order, documentNumber: formatDocumentNumber(next) };
+    await this.save(numbered);
+    return toOrder(numbered);
   }
 }

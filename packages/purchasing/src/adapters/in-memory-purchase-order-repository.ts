@@ -10,6 +10,7 @@ import type {
   IPurchaseOrderRepository,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
+  UnnumberedPurchaseOrder,
 } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 
@@ -108,11 +109,13 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     }
   }
 
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const orgKey = organizationId;
+  async insertWithNextDocumentNumber(
+    order: UnnumberedPurchaseOrder,
+  ): Promise<PurchaseOrder> {
+    const orgKey = order.organizationId;
     const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
-    const number = formatDocumentNumber(next);
-    this.nextSequenceByOrg.set(orgKey, next + 1);
-    return number;
+    const numbered = { ...order, documentNumber: formatDocumentNumber(next) };
+    await this.save(numbered);
+    return toOrder(numbered);
   }
 }

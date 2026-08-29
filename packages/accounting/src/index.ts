@@ -13,6 +13,7 @@ export type {
   IAccountingUnitOfWork,
   IInvoiceRepository,
   PaymentIdempotencyRecord,
+  UnnumberedInvoice,
 } from "./domain/ports/invoice-repository.js";
 export type { Invoice, InvoiceStatus, Payment, PaymentApplication } from "./domain/invoice.js";
 export { computeRemainingCents } from "./domain/invoice.js";

@@ -22,6 +22,7 @@ fi
 docker compose up -d --wait
 pnpm db:migrate
 pnpm vitest run apps/api/src/adapters/sql-list-pagination.integration.test.ts
+pnpm vitest run apps/api/src/infrastructure/document-number-allocation.integration.test.ts
 
 api_log="$(mktemp)"
 pnpm dev:api >"$api_log" 2>&1 &
