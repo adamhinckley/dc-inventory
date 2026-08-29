@@ -5,16 +5,18 @@ import {
   OrderId,
   OrganizationId,
 } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { newUuid, PaymentApplicationId, PaymentId } from "../domain/ids.js";
 import type {
   IInvoiceRepository,
   PaymentIdempotencyRecord,
+  UnnumberedInvoice,
 } from "../domain/ports/invoice-repository.js";
 import type { Invoice, Payment, PaymentApplication } from "../domain/invoice.js";
 import {
+  documentNumberCounters,
   invoices,
   paymentApplications,
   payments,
@@ -24,6 +26,7 @@ export type AccountingDrizzle = PostgresJsDatabase<{
   invoices: typeof invoices;
   payments: typeof payments;
   paymentApplications: typeof paymentApplications;
+  documentNumberCounters: typeof documentNumberCounters;
 }>;
 
 function toInvoice(row: typeof invoices.$inferSelect): Invoice {
@@ -49,6 +52,61 @@ function toApplication(row: typeof paymentApplications.$inferSelect): PaymentApp
     amount: Money.fromMinorUnits(row.amountCents, row.currency),
     createdAt: row.createdAt,
   };
+}
+
+async function allocateDocumentNumber(
+  db: AccountingDrizzle,
+  organizationId: OrganizationId,
+): Promise<string> {
+  const rows = await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: 1 })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: { lastValue: sql`${documentNumberCounters.lastValue} + 1` },
+    })
+    .returning({ sequence: documentNumberCounters.lastValue });
+  const sequence = rows[0]?.sequence;
+  if (sequence === undefined) {
+    throw new Error("Failed to allocate invoice document number");
+  }
+  return formatDocumentNumber(sequence);
+}
+
+async function advanceCounter(
+  db: AccountingDrizzle,
+  organizationId: OrganizationId,
+  documentNumber: string,
+): Promise<void> {
+  const sequence = parseDocumentSequence(documentNumber);
+  if (sequence === null) {
+    return;
+  }
+  await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: sequence })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: {
+        lastValue: sql`greatest(${documentNumberCounters.lastValue}, ${sequence})`,
+      },
+    });
+}
+
+async function insertInvoice(db: AccountingDrizzle, invoice: Invoice): Promise<void> {
+  await db.insert(invoices).values({
+    id: invoice.id,
+    organizationId: invoice.organizationId,
+    orderId: invoice.orderId,
+    customerId: invoice.customerId,
+    documentNumber: invoice.documentNumber,
+    status: invoice.status,
+    postedAt: invoice.postedAt,
+    subtotalCents: invoice.subtotal.amountMinor,
+    taxTotalCents: invoice.taxTotal.amountMinor,
+    totalCents: invoice.total.amountMinor,
+    currency: invoice.total.currency,
+  });
 }
 
 export class DrizzleInvoiceRepository implements IInvoiceRepository {
@@ -86,38 +144,35 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
   }
 
   async save(invoice: Invoice): Promise<void> {
-    const existing = await this.findById(invoice.organizationId, invoice.id);
-    if (existing !== null) {
-      return;
-    }
-    await this.db.insert(invoices).values({
-      id: invoice.id,
-      organizationId: invoice.organizationId,
-      orderId: invoice.orderId,
-      customerId: invoice.customerId,
-      documentNumber: invoice.documentNumber,
-      status: invoice.status,
-      postedAt: invoice.postedAt,
-      subtotalCents: invoice.subtotal.amountMinor,
-      taxTotalCents: invoice.taxTotal.amountMinor,
-      totalCents: invoice.total.amountMinor,
-      currency: invoice.total.currency,
+    await this.db.transaction(async (tx) => {
+      const transactionalDb = tx as AccountingDrizzle;
+      const repo = new DrizzleInvoiceRepository(transactionalDb);
+      const existing = await repo.findById(invoice.organizationId, invoice.id);
+      if (existing !== null) {
+        return;
+      }
+      await advanceCounter(
+        transactionalDb,
+        invoice.organizationId,
+        invoice.documentNumber,
+      );
+      await insertInvoice(transactionalDb, invoice);
     });
   }
 
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const rows = await this.db
-      .select({ documentNumber: invoices.documentNumber })
-      .from(invoices)
-      .where(eq(invoices.organizationId, organizationId));
-    let max = 0;
-    for (const row of rows) {
-      const sequence = parseDocumentSequence(row.documentNumber);
-      if (sequence !== null && sequence > max) {
-        max = sequence;
-      }
-    }
-    return formatDocumentNumber(max + 1);
+  async insertWithNextDocumentNumber(
+    invoice: UnnumberedInvoice,
+  ): Promise<Invoice> {
+    return this.db.transaction(async (tx) => {
+      const transactionalDb = tx as AccountingDrizzle;
+      const documentNumber = await allocateDocumentNumber(
+        transactionalDb,
+        invoice.organizationId,
+      );
+      const numbered = { ...invoice, documentNumber };
+      await insertInvoice(transactionalDb, numbered);
+      return numbered;
+    });
   }
 
   async listApplications(invoiceId: InvoiceId): Promise<readonly PaymentApplication[]> {

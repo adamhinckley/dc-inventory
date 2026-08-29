@@ -79,6 +79,11 @@ export const purchaseOrders = purchasing.table(
   (table) => [unique().on(table.organizationId, table.documentNumber)],
 );
 
+export const documentNumberCounters = purchasing.table("document_number_counters", {
+  organizationId: text("organization_id").primaryKey(),
+  lastValue: integer("last_value").notNull(),
+});
+
 /** Frozen sku/name + qty. No live catalog FK. */
 export const purchaseOrderLines = purchasing.table("purchase_order_lines", {
   id: uuid("id").primaryKey().defaultRandom(),

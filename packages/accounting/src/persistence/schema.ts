@@ -62,6 +62,11 @@ export const invoices = accounting.table(
   ],
 );
 
+export const documentNumberCounters = accounting.table("document_number_counters", {
+  organizationId: text("organization_id").primaryKey(),
+  lastValue: integer("last_value").notNull(),
+});
+
 /** Same shape as tax_commit_lines. Frozen. No live FK to tax. */
 export const invoiceTaxLines = accounting.table("invoice_tax_lines", {
   id: uuid("id").primaryKey().defaultRandom(),

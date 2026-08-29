@@ -1,4 +1,4 @@
-import type { IInvoiceRepository, Invoice } from "@dc-inventory/accounting";
+import type { IInvoiceRepository } from "@dc-inventory/accounting";
 import { CustomerId, InvoiceId, Money, OrderId } from "@dc-inventory/shared-kernel";
 import type {
   AccountingCommandResult,
@@ -41,20 +41,17 @@ export class AccountingCommandAdapter implements IAccountingCommandPort {
     const currency = command.currency.trim().toUpperCase();
     const subtotal = Money.fromMinorUnits(command.subtotalCents, currency);
     const zero = Money.fromMinorUnits(0, currency);
-    const documentNumber = await this.invoices.nextDocumentNumber(command.organizationId);
-    const invoice: Invoice = {
+    const invoice = await this.invoices.insertWithNextDocumentNumber({
       id: InvoiceId.parse(newUuid()),
       organizationId: command.organizationId,
       orderId: OrderId.parse(command.orderId),
       customerId: CustomerId.parse(command.customerId),
-      documentNumber,
       status: "posted",
       postedAt: this.clock?.now() ?? new Date(),
       subtotal,
       taxTotal: zero,
       total: subtotal,
-    };
-    await this.invoices.save(invoice);
+    });
     return {
       ok: true,
       invoiceId: invoice.id,

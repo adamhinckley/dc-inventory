@@ -52,20 +52,17 @@ export class CreateInvoiceUseCase {
       const currency = input.currency.trim().toUpperCase();
       const subtotal = Money.fromMinorUnits(input.subtotalCents, currency);
       const zero = Money.fromMinorUnits(0, currency);
-      const documentNumber = await uow.invoices.nextDocumentNumber(input.organizationId);
-      const invoice: Invoice = {
+      const invoice = await uow.invoices.insertWithNextDocumentNumber({
         id: InvoiceId.parse(newUuid()),
         organizationId: input.organizationId,
         orderId: input.orderId,
         customerId: input.customerId,
-        documentNumber,
         status: "posted",
         postedAt,
         subtotal,
         taxTotal: zero,
         total: subtotal,
-      };
-      await uow.invoices.save(invoice);
+      });
       return { ok: true, invoice, created: true };
     });
   }

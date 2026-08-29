@@ -41,6 +41,7 @@ export type {
   ISupplierRepository,
   ListSuppliersQuery,
   SupplierListPage,
+  UnnumberedPurchaseOrder,
 } from "./domain/ports/purchase-order-repository.js";
 export type {
   IWorkbookWriter,
