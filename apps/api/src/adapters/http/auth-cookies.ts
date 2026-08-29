@@ -12,12 +12,19 @@ export function cookieSecure(request: FastifyRequest): boolean {
   return proto === "https" || request.protocol === "https";
 }
 
-export function sessionCookieOptions(secure: boolean): CookieSerializeOptions {
+/** Invariant X5: session cookies stay SameSite=Lax (see docs/invariants.md). */
+export function cookieSameSite(_request: FastifyRequest): "lax" {
+  return "lax";
+}
+
+export function sessionCookieOptions(
+  request: FastifyRequest,
+): CookieSerializeOptions {
   return {
     path: "/",
     httpOnly: true,
-    sameSite: "lax",
-    secure,
+    sameSite: cookieSameSite(request),
+    secure: cookieSecure(request),
   };
 }
 
@@ -28,7 +35,7 @@ export function setSessionCookie(
   request: FastifyRequest,
 ): void {
   reply.setCookie(name, value, {
-    ...sessionCookieOptions(cookieSecure(request)),
+    ...sessionCookieOptions(request),
     maxAge: Math.floor(SESSION_ABSOLUTE_MS / 1000),
   });
 }
@@ -38,5 +45,5 @@ export function clearSessionCookie(
   name: string,
   request: FastifyRequest,
 ): void {
-  reply.clearCookie(name, sessionCookieOptions(cookieSecure(request)));
+  reply.clearCookie(name, sessionCookieOptions(request));
 }

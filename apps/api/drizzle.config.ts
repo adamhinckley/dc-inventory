@@ -2,10 +2,11 @@ import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "drizzle-kit";
+import { readDatabaseUrl } from "./src/infrastructure/database-url.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const localEnv = resolve(here, ".env");
-if (!process.env.DATABASE_URL?.trim() && existsSync(localEnv)) {
+if (existsSync(localEnv)) {
   process.loadEnvFile(localEnv);
 }
 
@@ -18,7 +19,6 @@ export default defineConfig({
   schema: "./src/infrastructure/schema.ts",
   out: "./drizzle/migrations",
   dbCredentials: {
-    url:
-      process.env.DATABASE_URL ?? "postgres://localhost:5432/dc_inventory",
+    url: readDatabaseUrl(),
   },
 });
