@@ -27,7 +27,7 @@ export class PostgresAccountingUnitOfWork implements IAccountingUnitOfWork {
       retryAfterIdempotencyRace(
         () =>
           this.db.transaction(async (tx) =>
-            this.runOnTransaction(tx as AccountingDrizzle, work),
+            this.runOnTransaction(tx as unknown as AccountingDrizzle, work),
           ),
         PAYMENT_IDEMPOTENCY_CONSTRAINTS,
       ),
