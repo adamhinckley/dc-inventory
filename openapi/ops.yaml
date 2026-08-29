@@ -5,6 +5,155 @@ info:
 components:
   schemas: {}
 paths:
+  /ops/auth/login:
+    post:
+      operationId: loginOps
+      summary: Ops login; sets HttpOnly ops_session
+      tags:
+        - ops-auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationSlug:
+                  type: string
+                  minLength: 1
+                email:
+                  type: string
+                  minLength: 1
+                password:
+                  type: string
+                  minLength: 1
+              required:
+                - organizationSlug
+                - email
+                - password
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  opsUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  email:
+                    type: string
+                  kind:
+                    type: string
+                    enum:
+                      - operator
+                      - business_owner
+                  tenantId:
+                    type: string
+                required:
+                  - opsUserId
+                  - email
+                  - kind
+                  - tenantId
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+  /ops/auth/logout:
+    post:
+      operationId: logoutOps
+      summary: Revoke ops session and clear cookie
+      tags:
+        - ops-auth
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+                required:
+                  - ok
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+  /ops/auth/session:
+    get:
+      operationId: getOpsSession
+      summary: Current operator or business-owner session
+      tags:
+        - ops-auth
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  opsUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  email:
+                    type: string
+                  kind:
+                    type: string
+                    enum:
+                      - operator
+                      - business_owner
+                  tenantId:
+                    type: string
+                required:
+                  - opsUserId
+                  - email
+                  - kind
+                  - tenantId
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
   /ops/subscription:
     get:
       operationId: getOpsSubscription
@@ -31,6 +180,20 @@ paths:
                 required:
                   - status
                   - plan
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
                 additionalProperties: false
 servers:
   - url: http://localhost:3001
