@@ -107,6 +107,7 @@ import type {
   GetInternalPurchaseOrder404,
   GetInternalPurchaseOrderFactorySend200,
   GetInternalPurchaseOrderFactorySend401,
+  GetInternalPurchaseOrderFactorySend403,
   GetInternalPurchaseOrderFactorySend404,
   GetInternalSalesOrder200,
   GetInternalSalesOrder401,
@@ -2965,6 +2966,11 @@ export type getInternalPurchaseOrderFactorySendResponse401 = {
   status: 401
 }
 
+export type getInternalPurchaseOrderFactorySendResponse403 = {
+  data: GetInternalPurchaseOrderFactorySend403
+  status: 403
+}
+
 export type getInternalPurchaseOrderFactorySendResponse404 = {
   data: GetInternalPurchaseOrderFactorySend404
   status: 404
@@ -2973,7 +2979,7 @@ export type getInternalPurchaseOrderFactorySendResponse404 = {
 export type getInternalPurchaseOrderFactorySendResponseSuccess = (getInternalPurchaseOrderFactorySendResponse200) & {
   headers: Headers;
 };
-export type getInternalPurchaseOrderFactorySendResponseError = (getInternalPurchaseOrderFactorySendResponse401 | getInternalPurchaseOrderFactorySendResponse404) & {
+export type getInternalPurchaseOrderFactorySendResponseError = (getInternalPurchaseOrderFactorySendResponse401 | getInternalPurchaseOrderFactorySendResponse403 | getInternalPurchaseOrderFactorySendResponse404) & {
   headers: Headers;
 };
 
@@ -3012,7 +3018,7 @@ export const getGetInternalPurchaseOrderFactorySendQueryKey = (id: string,) => {
     }
 
 
-export const getGetInternalPurchaseOrderFactorySendQueryOptions = <TData = Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetInternalPurchaseOrderFactorySendQueryOptions = <TData = Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend403 | GetInternalPurchaseOrderFactorySend404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -3031,14 +3037,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetInternalPurchaseOrderFactorySendQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>>
-export type GetInternalPurchaseOrderFactorySendQueryError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend404
+export type GetInternalPurchaseOrderFactorySendQueryError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend403 | GetInternalPurchaseOrderFactorySend404
 
 
 /**
  * @summary Return factory-send columns and rows for a purchase order
  */
 
-export function useGetInternalPurchaseOrderFactorySend<TData = Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend404>(
+export function useGetInternalPurchaseOrderFactorySend<TData = Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError = GetInternalPurchaseOrderFactorySend401 | GetInternalPurchaseOrderFactorySend403 | GetInternalPurchaseOrderFactorySend404>(
  id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderFactorySend>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

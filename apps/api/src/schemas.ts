@@ -10,6 +10,10 @@ export const unauthorizedResponseSchema = z.object({
   error: z.literal("unauthorized"),
 });
 
+export const featureDisabledResponseSchema = z.object({
+  error: z.literal("feature_disabled"),
+});
+
 export const tooManyLoginAttemptsResponseSchema = z.object({
   error: z.literal("too_many_login_attempts"),
   retryAfterSeconds: z.number().int().positive(),

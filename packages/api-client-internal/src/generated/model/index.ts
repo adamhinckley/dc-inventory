@@ -165,6 +165,8 @@ export * from './getInternalPurchaseOrderFactorySend200ColumnsItem';
 export * from './getInternalPurchaseOrderFactorySend200RowsItem';
 export * from './getInternalPurchaseOrderFactorySend401';
 export * from './getInternalPurchaseOrderFactorySend401Error';
+export * from './getInternalPurchaseOrderFactorySend403';
+export * from './getInternalPurchaseOrderFactorySend403Error';
 export * from './getInternalPurchaseOrderFactorySend404';
 export * from './getInternalPurchaseOrderFactorySend404Error';
 export * from './getInternalSalesOrder200';
