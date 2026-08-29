@@ -48,7 +48,29 @@ pnpm dev:api
 
 `pnpm db:migrate` is the only migrate entrypoint. It runs `drizzle-kit migrate` in this app. There is no `packages/db` and no second Kit config.
 
-The API **will not listen** without `DATABASE_URL`. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. `pnpm dev:api` loads `apps/api/.env` without overwriting variables already in the environment. Core feature flags stay on for that local listen so demo seed can leave `licensing` empty. Set `FEATURES_ALL_CORE_ON=0` to evaluate Postgres subscriptions instead.
+The API **will not listen** without a Postgres URL. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. `pnpm dev:api` loads `apps/api/.env` without overwriting variables already in the environment. Core feature flags stay on for that local listen so demo seed can leave `licensing` empty. Set `FEATURES_ALL_CORE_ON=0` to evaluate Postgres subscriptions instead.
+
+To point the same process at Neon instead of Compose, set `DATABASE_TARGET=neon` and put the **direct** (unpooled) connection string in `DATABASE_URL_NEON`. Flip back with `DATABASE_TARGET=local`. `pnpm db:migrate` uses the same resolver. Demo seed still refuses remote hosts. Pull the Neon URL with `npx neon@latest env pull` or Neon MCP `get_connection_string` — do not commit it.
+
+## Fly (public API)
+
+The Next apps stay local or on Vercel. This process is the only thing that talks to Neon. Deploys come from GitHub Actions (`.github/workflows/deploy-api.yml`): push to `main`, or **Actions → Deploy API → Run workflow**. Do not `fly deploy` from a laptop unless Actions is down.
+
+Repo secrets (Settings → Secrets and variables → Actions):
+
+- `FLY_API_TOKEN` — `fly tokens create deploy --app dc-inventory-api`
+- `DATABASE_URL` — Neon **direct** (unpooled) URL for `pnpm db:migrate` in CI. Same value as the Fly app secret. Never the `-pooler` host.
+
+The image does not migrate on boot. CI migrates, then `flyctl deploy --remote-only --ha=false`.
+
+`GET /health` is liveness (no Postgres). `GET /ready` is `SELECT 1` against Neon. The Machine stops when idle (`min_machines_running = 0`) so a quiet month stays cheap. First request after sleep waits for a cold start.
+
+First-time app create (once):
+
+```bash
+fly apps create dc-inventory-api --org personal
+fly secrets set DATABASE_URL='postgresql://…' --app dc-inventory-api
+```
 
 Or export it yourself:
 

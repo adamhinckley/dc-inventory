@@ -140,6 +140,24 @@ describe("opaque session HTTP", () => {
       },
     });
     expect(cookieValue(tlsLogin, STAFF_SESSION_COOKIE)?.secure).toBe(true);
+    expect(cookieValue(tlsLogin, STAFF_SESSION_COOKIE)?.sameSite).toBe("Lax");
+
+    const flyLogin = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      headers: {
+        host: "dc-inventory-api.fly.dev",
+        origin: "http://localhost:3000",
+        "x-forwarded-proto": "https",
+      },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
+    });
+    expect(cookieValue(flyLogin, STAFF_SESSION_COOKIE)?.secure).toBe(true);
+    expect(cookieValue(flyLogin, STAFF_SESSION_COOKIE)?.sameSite).toBe("None");
 
     const session = await app.inject({
       method: "GET",
@@ -504,6 +522,23 @@ describe("opaque session HTTP", () => {
     );
     expect(allowed.headers["access-control-allow-credentials"]).toBe("true");
     expect(allowed.headers["access-control-allow-origin"]).not.toBe("*");
+
+    const patchPreflight = await app.inject({
+      method: "OPTIONS",
+      url: "/internal/purchase-orders/00000000-0000-4000-8000-000000000001",
+      headers: {
+        origin: "http://localhost:3000",
+        "access-control-request-method": "PATCH",
+        "access-control-request-headers": "content-type",
+      },
+    });
+    expect(patchPreflight.statusCode).toBe(204);
+    const allowedMethods = String(
+      patchPreflight.headers["access-control-allow-methods"] ?? "",
+    );
+    expect(allowedMethods.split(",").map((m) => m.trim())).toEqual(
+      expect.arrayContaining(["PATCH"]),
+    );
 
     const denied = await app.inject({
       method: "OPTIONS",

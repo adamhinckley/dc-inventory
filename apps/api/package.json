@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/server.ts",
+    "start": "tsx src/server.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:seed:phase1": "tsx src/seed/cli.ts",
     "seed:demo": "tsx src/seed/run-demo-seed-cli.ts",
@@ -29,12 +30,12 @@
     "fastify": "^5.12.1",
     "fastify-type-provider-zod": "^7.0.0",
     "postgres": "^3.4.9",
+    "tsx": "^4.23.12",
     "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
-    "drizzle-kit": "^0.31.10",
-    "tsx": "^4.23.12"
+    "drizzle-kit": "^0.31.10"
   }
 }

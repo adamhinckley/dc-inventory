@@ -12,12 +12,38 @@ export function cookieSecure(request: FastifyRequest): boolean {
   return proto === "https" || request.protocol === "https";
 }
 
-export function sessionCookieOptions(secure: boolean): CookieSerializeOptions {
+/**
+ * Cross-site browser → Fly needs SameSite=None (Secure is required with None).
+ * Same-origin Next rewrites and local :3000 → :3001 stay Lax.
+ */
+export function cookieSameSite(request: FastifyRequest): "lax" | "none" {
+  if (!cookieSecure(request)) {
+    return "lax";
+  }
+  const origin = request.headers.origin;
+  if (typeof origin !== "string" || origin.length === 0) {
+    return "lax";
+  }
+  let originHost: string;
+  try {
+    originHost = new URL(origin).hostname;
+  } catch {
+    return "lax";
+  }
+  if (originHost !== request.hostname) {
+    return "none";
+  }
+  return "lax";
+}
+
+export function sessionCookieOptions(
+  request: FastifyRequest,
+): CookieSerializeOptions {
   return {
     path: "/",
     httpOnly: true,
-    sameSite: "lax",
-    secure,
+    sameSite: cookieSameSite(request),
+    secure: cookieSecure(request),
   };
 }
 
@@ -28,7 +54,7 @@ export function setSessionCookie(
   request: FastifyRequest,
 ): void {
   reply.setCookie(name, value, {
-    ...sessionCookieOptions(cookieSecure(request)),
+    ...sessionCookieOptions(request),
     maxAge: Math.floor(SESSION_ABSOLUTE_MS / 1000),
   });
 }
@@ -38,5 +64,5 @@ export function clearSessionCookie(
   name: string,
   request: FastifyRequest,
 ): void {
-  reply.clearCookie(name, sessionCookieOptions(cookieSecure(request)));
+  reply.clearCookie(name, sessionCookieOptions(request));
 }

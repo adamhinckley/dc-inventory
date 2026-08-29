@@ -105,6 +105,7 @@ async function registerCors(app: FastifyInstance): Promise<void> {
       callback(null, isAllowedCorsOrigin(origin, origins));
     },
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
   });
 }
 

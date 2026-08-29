@@ -42,6 +42,9 @@ describe("local demo boot (ADA-51)", () => {
     expect(rootEnv).toContain("MINIO_ROOT_PASSWORD=minio-placeholder");
 
     const apiEnv = readText("apps/api/.env.example");
+    expect(apiEnv).toMatch(/^DATABASE_TARGET=local$/m);
+    expect(apiEnv).toMatch(/^DATABASE_URL_LOCAL=/m);
+    expect(apiEnv).toMatch(/^DATABASE_URL_NEON=$/m);
     expect(apiEnv).toMatch(/^DATABASE_URL=/m);
     expect(apiEnv).toMatch(/^PORT=/m);
     expect(apiEnv).toContain(
