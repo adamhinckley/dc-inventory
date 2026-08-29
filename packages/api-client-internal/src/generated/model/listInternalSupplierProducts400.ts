@@ -4,10 +4,11 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalSupplierProducts400Error } from './listInternalSupplierProducts400Error';
+import type { ListInternalSupplierProducts400Message } from './listInternalSupplierProducts400Message';
 
 export type ListInternalSupplierProducts400 = {
-  statusCode: number;
-  code: string;
-  error: string;
-  message: string;
+  error: ListInternalSupplierProducts400Error;
+  message: ListInternalSupplierProducts400Message;
+  requestId: string;
 };

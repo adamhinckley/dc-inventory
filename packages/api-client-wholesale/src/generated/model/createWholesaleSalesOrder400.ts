@@ -8,8 +8,7 @@
 export type CreateWholesaleSalesOrder400 = {
   error: 'invalid';
 } | {
-  statusCode: number;
-  code: string;
-  error: string;
-  message: string;
+  error: 'invalid_request';
+  message: 'The request is invalid.';
+  requestId: string;
 };
