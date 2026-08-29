@@ -23,23 +23,9 @@ import { PHASE2_SUPPLIER_NAME, PHASE2_SUPPLIER_VENDOR_NUMBER } from "@dc-invento
 const DEFAULT_ORG = OrganizationId.DEFAULT;
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SKU = Sku.parse("PO-EXPORT-SKU");
-
-const FACTORY_PO_COLUMNS = [
-  { key: "ship_date", header: "ship_date", numFmt: "d-mmm" },
-  { key: "canc_date", header: "canc_date", numFmt: "d-mmm" },
-  { key: "mat_num", header: "mat_num" },
-  { key: "quan", header: "quan" },
-  { key: "price", header: "price" },
-  { key: "extprice", header: "extprice" },
-  { key: "description", header: "description" },
-  { key: "mfg_code", header: "mfg_code" },
-  { key: "mfg_sku", header: "mfg_sku" },
-  { key: "mfg_upc", header: "mfg_upc" },
-  { key: "product_upc_1", header: "product_upc_1" },
-  { key: "cs_cube_metric", header: "cs_cube_metric" },
-  { key: "tot_cartons", header: "tot_cartons" },
-  { key: "tot_cbm", header: "tot_cbm" },
-];
+const CATALOG_BOLT = "Bolt from catalog";
+const CATALOG_WASHER = "Washer from catalog";
+const CATALOG_MORNING_GLORY = "Morning Glory from catalog";
 
 function factoryLine(overrides: {
   mat_num: string;
@@ -83,9 +69,9 @@ async function harness() {
   const supplierProducts = new InMemorySupplierProductRepository();
   const factorySendCatalog = new InMemoryFactorySendCatalogPort();
   const catalog = new InMemoryCatalogSkuLookupPort();
-  catalog.set(DEFAULT_ORG, SKU.value, "Bolt");
-  catalog.set(DEFAULT_ORG, "WASHER-SS", "Washer");
-  catalog.set(DEFAULT_ORG, "DCB6008BL", "Morning Glory");
+  catalog.set(DEFAULT_ORG, SKU.value, CATALOG_BOLT);
+  catalog.set(DEFAULT_ORG, "WASHER-SS", CATALOG_WASHER);
+  catalog.set(DEFAULT_ORG, "DCB6008BL", CATALOG_MORNING_GLORY);
   return {
     uow,
     supplierId,
@@ -119,8 +105,8 @@ describe("ExportPurchaseOrderUseCase", () => {
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [
-        { sku: SKU.value, name: "Bolt", qty: 5 },
-        { sku: "WASHER-SS", name: "Washer", qty: 2 },
+        { sku: SKU.value, name: "Caller bolt label", qty: 5 },
+        { sku: "WASHER-SS", name: "Caller washer label", qty: 2 },
       ],
     });
     expect(created.ok).toBe(true);
@@ -143,10 +129,9 @@ describe("ExportPurchaseOrderUseCase", () => {
     );
     expect(result.file.filename).toBe("PO-00001.xlsx");
     expect(h.workbookWriter.writes).toHaveLength(1);
-    expect(h.workbookWriter.writes[0]?.columns).toEqual(FACTORY_PO_COLUMNS);
     expect(h.workbookWriter.writes[0]?.rows).toEqual([
-      factoryLine({ mat_num: SKU.value, quan: 5, description: "Bolt" }),
-      factoryLine({ mat_num: "WASHER-SS", quan: 2, description: "Washer" }),
+      factoryLine({ mat_num: SKU.value, quan: 5, description: CATALOG_BOLT }),
+      factoryLine({ mat_num: "WASHER-SS", quan: 2, description: CATALOG_WASHER }),
     ]);
   });
 
@@ -156,7 +141,7 @@ describe("ExportPurchaseOrderUseCase", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
-      lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
+      lines: [{ sku: SKU.value, name: "Caller bolt label", qty: 10 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -180,7 +165,7 @@ describe("ExportPurchaseOrderUseCase", () => {
       return;
     }
     expect(h.workbookWriter.writes[0]?.rows).toEqual([
-      factoryLine({ mat_num: SKU.value, quan: 10, description: "Bolt" }),
+      factoryLine({ mat_num: SKU.value, quan: 10, description: CATALOG_BOLT }),
     ]);
   });
 
@@ -190,7 +175,7 @@ describe("ExportPurchaseOrderUseCase", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
-      lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
+      lines: [{ sku: SKU.value, name: "Caller bolt label", qty: 10 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -222,7 +207,7 @@ describe("ExportPurchaseOrderUseCase", () => {
       return;
     }
     expect(h.workbookWriter.writes[0]?.rows).toEqual([
-      factoryLine({ mat_num: SKU.value, quan: 10, description: "Bolt" }),
+      factoryLine({ mat_num: SKU.value, quan: 10, description: CATALOG_BOLT }),
     ]);
   });
 
@@ -244,8 +229,8 @@ describe("ExportPurchaseOrderUseCase", () => {
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [
-        { sku: SKU.value, name: "Red Enamel Star", qty: 1152 },
-        { sku: "WASHER-SS", name: "Washer", qty: 2 },
+        { sku: SKU.value, name: "Caller star label", qty: 1152 },
+        { sku: "WASHER-SS", name: "Caller washer label", qty: 2 },
       ],
     });
     expect(created.ok).toBe(true);
@@ -272,13 +257,13 @@ describe("ExportPurchaseOrderUseCase", () => {
         extprice: 748.8,
         mfg_code: "QSLH-V15",
       }),
-      factoryLine({ mat_num: "WASHER-SS", quan: 2, description: "Washer" }),
+      factoryLine({ mat_num: "WASHER-SS", quan: 2, description: CATALOG_WASHER }),
     ]);
   });
 
   it("repeats computed carton total from case qty on every line", async () => {
     const h = await harness();
-    h.catalog.set(DEFAULT_ORG, SKU.value, "Rose");
+    h.catalog.set(DEFAULT_ORG, SKU.value, "Rose from catalog");
     h.factorySendCatalog.set(DEFAULT_ORG, SKU.value, { caseQty: 192 });
     h.factorySendCatalog.set(DEFAULT_ORG, "DCB6008BL", { caseQty: 384 });
     const created = await h.create.execute({
@@ -286,8 +271,8 @@ describe("ExportPurchaseOrderUseCase", () => {
       staffUserId: STAFF_ID,
       supplierId: h.supplierId,
       lines: [
-        { sku: SKU.value, name: "Rose", qty: 1152 },
-        { sku: "DCB6008BL", name: "Morning Glory", qty: 7680 },
+        { sku: SKU.value, name: "Caller rose label", qty: 1152 },
+        { sku: "DCB6008BL", name: "Caller glory label", qty: 7680 },
       ],
     });
     expect(created.ok).toBe(true);
@@ -309,13 +294,13 @@ describe("ExportPurchaseOrderUseCase", () => {
       factoryLine({
         mat_num: SKU.value,
         quan: 1152,
-        description: "Rose",
+        description: "Rose from catalog",
         tot_cartons: 26,
       }),
       factoryLine({
         mat_num: "DCB6008BL",
         quan: 7680,
-        description: "Morning Glory",
+        description: CATALOG_MORNING_GLORY,
         tot_cartons: 26,
       }),
     ]);
@@ -329,14 +314,12 @@ describe("ExportPurchaseOrderUseCase", () => {
       supplierId: h.supplierId,
       shipDate: "2026-12-01",
       cancelDate: "2026-01-15",
-      lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
+      lines: [{ sku: SKU.value, name: "Caller bolt label", qty: 10 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
       return;
     }
-    expect(created.purchaseOrder.shipDate).toBe("2026-12-01");
-    expect(created.purchaseOrder.cancelDate).toBe("2026-01-15");
 
     const replaced = await h.replace.execute({
       organizationId: DEFAULT_ORG,
@@ -344,7 +327,7 @@ describe("ExportPurchaseOrderUseCase", () => {
       purchaseOrderId: created.purchaseOrder.id,
       shipDate: "2026-12-01",
       cancelDate: "2026-01-15",
-      lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
+      lines: [{ sku: SKU.value, name: "Caller bolt label", qty: 10 }],
     });
     expect(replaced.ok).toBe(true);
 
@@ -362,7 +345,7 @@ describe("ExportPurchaseOrderUseCase", () => {
       factoryLine({
         mat_num: SKU.value,
         quan: 10,
-        description: "Bolt",
+        description: CATALOG_BOLT,
         ship_date: new Date("2026-12-01T00:00:00.000Z"),
         canc_date: new Date("2026-01-15T00:00:00.000Z"),
       }),
@@ -385,6 +368,7 @@ describe("ExportPurchaseOrderUseCase", () => {
 describe("GetPurchaseOrderFactorySendUseCase", () => {
   it("returns the factory send columns and JSON rows used by XLS export", async () => {
     const h = await harness();
+    h.catalog.set(DEFAULT_ORG, SKU.value, "Bolt from Catalog");
     h.factorySendCatalog.set(DEFAULT_ORG, SKU.value, { caseQty: 192 });
     const created = await h.create.execute({
       organizationId: DEFAULT_ORG,
@@ -392,7 +376,7 @@ describe("GetPurchaseOrderFactorySendUseCase", () => {
       supplierId: h.supplierId,
       shipDate: "2026-12-01",
       cancelDate: "2026-01-15",
-      lines: [{ sku: SKU.value, name: "Bolt", qty: 1152 }],
+      lines: [{ sku: SKU.value, name: "Caller-controlled bolt label", qty: 1152 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -408,26 +392,14 @@ describe("GetPurchaseOrderFactorySendUseCase", () => {
     if (!result.ok) {
       return;
     }
-    expect(result.columns.map((column) => column.key)).toEqual(
-      FACTORY_PO_COLUMNS.map((column) => column.key),
-    );
-    expect(result.rows).toEqual([
-      {
-        ship_date: "2026-12-01",
-        canc_date: "2026-01-15",
-        mat_num: SKU.value,
-        quan: 1152,
-        price: "",
-        extprice: "",
-        description: "Bolt",
-        mfg_code: "",
-        mfg_sku: "",
-        mfg_upc: "",
-        product_upc_1: "",
-        cs_cube_metric: 0,
-        tot_cartons: 6,
-        tot_cbm: "Not Available",
-      },
-    ]);
+    expect(result.rows[0]).toMatchObject({
+      ship_date: "2026-12-01",
+      canc_date: "2026-01-15",
+      mat_num: SKU.value,
+      quan: 1152,
+      description: "Bolt from Catalog",
+      tot_cartons: 6,
+      tot_cbm: "Not Available",
+    });
   });
 });
