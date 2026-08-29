@@ -2,18 +2,7 @@ import type { IDatabase } from "../domain/database.js";
 
 export type ReadyResult =
   | { ready: true }
-  | { ready: false; error: string };
-
-function sanitizeReadyError(message: string): string {
-  return message.replace(/\b[a-z][a-z0-9+.-]*:\/\/\S+/gi, "[redacted-url]");
-}
-
-function toPublicError(error: unknown): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return sanitizeReadyError(error.message);
-  }
-  return "database is not ready";
-}
+  | { ready: false; cause: unknown };
 
 /**
  * Readiness check: one ping through the database port.
@@ -27,7 +16,7 @@ export class ReadyCheckUseCase {
       await this.database.ping();
       return { ready: true };
     } catch (error) {
-      return { ready: false, error: toPublicError(error) };
+      return { ready: false, cause: error };
     }
   }
 }

@@ -16,6 +16,7 @@ import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
 } from "@dc-inventory/inventory";
+import { InMemoryCatalogSkuLookupPort } from "@dc-inventory/purchasing";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SUPPLIER_ID = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
@@ -33,6 +34,11 @@ async function startPurchasingApp() {
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const unitOfWork = new InMemoryUnitOfWork();
+  const catalog = new InMemoryCatalogSkuLookupPort();
+  catalog.set(OrganizationId.DEFAULT, "HEX-BOLT-GALV", "Hex bolt from Catalog");
+  catalog.set(OrganizationId.DEFAULT, "WASHER-SS", "Washer from Catalog");
+  catalog.set(OrganizationId.DEFAULT, "DEM-00003", "Connector metallic plug");
+  catalog.set(OrganizationId.DEFAULT, "DEM-00004", "Hook taper pin");
   await unitOfWork.suppliers.save({
     id: SUPPLIER_ID,
     organizationId: OrganizationId.DEFAULT,
@@ -58,6 +64,7 @@ async function startPurchasingApp() {
     unitOfWork,
     purchaseOrderRepo: unitOfWork.purchaseOrders,
     supplierRepo: unitOfWork.suppliers,
+    catalogSkuLookup: catalog,
   });
   apps.push(app);
   return app;
@@ -110,6 +117,9 @@ describe("internal purchase orders HTTP", () => {
     const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
     expect(po.documentNumber).toBe("PO-00001");
     expect(created.json()).toMatchObject({ shipDate: null, cancelDate: null });
+    expect(created.json()).toMatchObject({
+      lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
+    });
 
     const confirmed = await app.inject({
       method: "POST",
@@ -167,7 +177,11 @@ describe("internal purchase orders HTTP", () => {
     };
     expect(updated.status).toBe("draft");
     expect(updated.lines).toHaveLength(2);
-    expect(updated.lines[0]).toMatchObject({ name: "Hex bolt updated", qty: 8, receivedQty: 0 });
+    expect(updated.lines[0]).toMatchObject({
+      name: "Hex bolt from Catalog",
+      qty: 8,
+      receivedQty: 0,
+    });
 
     const withDates = await app.inject({
       method: "PATCH",

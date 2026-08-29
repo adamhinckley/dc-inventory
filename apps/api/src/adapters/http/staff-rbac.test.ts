@@ -14,7 +14,8 @@ import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
 
 const RESOURCE_ID = "11111111-1111-4111-8111-111111111111";
-const LINE_ID = "22222222-2222-4222-8222-222222222222";
+const PRODUCT_ID = "22222222-2222-4222-8222-222222222222";
+const LINE_ID = "33333333-3333-4333-8333-333333333333";
 const apps: FastifyInstance[] = [];
 
 afterEach(async () => {
@@ -197,15 +198,7 @@ describe("staff RBAC HTTP guard", () => {
         cookies: { [STAFF_SESSION_COOKIE]: purchasing },
         payload: {
           customerId: RESOURCE_ID,
-          lines: [
-            {
-              sku: "RBAC-1",
-              name: "RBAC test product",
-              qty: 1,
-              unitPriceCents: 100,
-              currency: "USD",
-            },
-          ],
+          lines: [{ productId: PRODUCT_ID, qty: 1 }],
         },
       }),
     );
@@ -215,15 +208,7 @@ describe("staff RBAC HTTP guard", () => {
       cookies: { [STAFF_SESSION_COOKIE]: salesSupport },
       payload: {
         customerId: RESOURCE_ID,
-        lines: [
-          {
-            sku: "RBAC-1",
-            name: "RBAC test product",
-            qty: 1,
-            unitPriceCents: 100,
-            currency: "USD",
-          },
-        ],
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
       },
     });
     expect(allowedSales.statusCode).toBe(404);

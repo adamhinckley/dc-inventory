@@ -44,14 +44,36 @@ describe("Phase 1 identity schema (ADA-77)", () => {
     expect(sql).not.toMatch(/CREATE TABLE "identity"\."verification"/);
   });
 
-  it("registers 0022_identity_staff_roles in the Kit journal", () => {
+  it("registers 0026_identity_staff_roles in the Kit journal", () => {
     const journal = JSON.parse(
       readText("apps/api/drizzle/migrations/meta/_journal.json"),
     ) as { entries: Array<{ tag: string }> };
     const tags = journal.entries.map((entry) => entry.tag);
-    expect(tags).toContain("0022_identity_staff_roles");
-    expect(existsSync(resolve(root, "apps/api/drizzle/migrations/0022_identity_staff_roles.sql"))).toBe(
+    expect(tags).toContain("0026_identity_staff_roles");
+    expect(existsSync(resolve(root, "apps/api/drizzle/migrations/0026_identity_staff_roles.sql"))).toBe(
       true,
     );
+  });
+
+  it("persists independent hashed source and account-identifier counters", () => {
+    const schema = readText("packages/identity/src/persistence/schema.ts");
+    const migration = readText(
+      "apps/api/drizzle/migrations/0024_identity_login_throttle.sql",
+    );
+    const indexMigration = readText(
+      "apps/api/drizzle/migrations/0025_login_throttle_window_started_at_idx.sql",
+    );
+
+    for (const source of [schema, migration]) {
+      expect(source).toMatch(/login_throttle_counters/);
+      expect(source).toMatch(/dimension/);
+      expect(source).toMatch(/key_hash/);
+      expect(source).toMatch(/attempt_count/);
+      expect(source).toMatch(/window_started_at/);
+    }
+    expect(migration).toMatch(/'source', 'account_identifier'/);
+    expect(migration).not.toMatch(/"email"/);
+    expect(indexMigration).toMatch(/login_throttle_counters_window_started_at_idx/);
+    expect(schema).toMatch(/login_throttle_counters_window_started_at_idx/);
   });
 });

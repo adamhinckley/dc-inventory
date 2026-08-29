@@ -9,6 +9,7 @@ import type { IClock } from "../domain/clock.js";
 import type {
   GoodsReceivedCommand,
   IInventoryCommandPort,
+  InventorySnapshotLock,
   InboundCancelledCommand,
   InboundFromPoCommand,
   InventoryCommandResult,
@@ -33,6 +34,10 @@ function mapResult(
 
 class InventoryCommandAdapter implements IInventoryCommandPort {
   constructor(private readonly ledger: IStockLedger) {}
+
+  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void> {
+    return this.ledger.lockSnapshots(snapshots);
+  }
 
   async recordInboundFromPo(command: InboundFromPoCommand): Promise<InventoryCommandResult> {
     return mapResult(

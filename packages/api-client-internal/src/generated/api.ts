@@ -94,6 +94,7 @@ import type {
   CreateInternalSalesOrder401,
   CreateInternalSalesOrder403,
   CreateInternalSalesOrder404,
+  CreateInternalSalesOrder409,
   CreateInternalSalesOrderBody,
   CreateInternalSupplier201,
   CreateInternalSupplier400,
@@ -170,6 +171,7 @@ import type {
   ListInternalSuppliersParams,
   LoginInternal200,
   LoginInternal401,
+  LoginInternal429,
   LoginInternalBody,
   LogoutInternal200,
   LogoutInternal401,
@@ -284,10 +286,15 @@ export type loginInternalResponse401 = {
   status: 401
 }
 
+export type loginInternalResponse429 = {
+  data: LoginInternal429
+  status: 429
+}
+
 export type loginInternalResponseSuccess = (loginInternalResponse200) & {
   headers: Headers;
 };
-export type loginInternalResponseError = (loginInternalResponse401) & {
+export type loginInternalResponseError = (loginInternalResponse401 | loginInternalResponse429) & {
   headers: Headers;
 };
 
@@ -325,7 +332,7 @@ return customFetch<loginInternalResponse>(getLoginInternalUrl(),
 
 
 
-export const getLoginInternalMutationOptions = <TError = LoginInternal401,
+export const getLoginInternalMutationOptions = <TError = LoginInternal401 | LoginInternal429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginInternal>>, TError,{data: LoginInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof loginInternal>>, TError,{data: LoginInternalBody}, TContext> => {
 
@@ -354,12 +361,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type LoginInternalMutationResult = NonNullable<Awaited<ReturnType<typeof loginInternal>>>
     export type LoginInternalMutationBody = LoginInternalBody
-    export type LoginInternalMutationError = LoginInternal401
+    export type LoginInternalMutationError = LoginInternal401 | LoginInternal429
 
     /**
  * @summary Staff login; sets HttpOnly staff_session
  */
-export const useLoginInternal = <TError = LoginInternal401,
+export const useLoginInternal = <TError = LoginInternal401 | LoginInternal429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginInternal>>, TError,{data: LoginInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof loginInternal>>,
@@ -4403,10 +4410,15 @@ export type createInternalSalesOrderResponse404 = {
   status: 404
 }
 
+export type createInternalSalesOrderResponse409 = {
+  data: CreateInternalSalesOrder409
+  status: 409
+}
+
 export type createInternalSalesOrderResponseSuccess = (createInternalSalesOrderResponse201) & {
   headers: Headers;
 };
-export type createInternalSalesOrderResponseError = (createInternalSalesOrderResponse400 | createInternalSalesOrderResponse401 | createInternalSalesOrderResponse403 | createInternalSalesOrderResponse404) & {
+export type createInternalSalesOrderResponseError = (createInternalSalesOrderResponse400 | createInternalSalesOrderResponse401 | createInternalSalesOrderResponse403 | createInternalSalesOrderResponse404 | createInternalSalesOrderResponse409) & {
   headers: Headers;
 };
 
@@ -4444,7 +4456,7 @@ return customFetch<createInternalSalesOrderResponse>(getCreateInternalSalesOrder
 
 
 
-export const getCreateInternalSalesOrderMutationOptions = <TError = CreateInternalSalesOrder400 | CreateInternalSalesOrder401 | CreateInternalSalesOrder403 | CreateInternalSalesOrder404,
+export const getCreateInternalSalesOrderMutationOptions = <TError = CreateInternalSalesOrder400 | CreateInternalSalesOrder401 | CreateInternalSalesOrder403 | CreateInternalSalesOrder404 | CreateInternalSalesOrder409,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalSalesOrder>>, TError,{data: CreateInternalSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createInternalSalesOrder>>, TError,{data: CreateInternalSalesOrderBody}, TContext> => {
 
@@ -4473,12 +4485,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateInternalSalesOrderMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalSalesOrder>>>
     export type CreateInternalSalesOrderMutationBody = CreateInternalSalesOrderBody
-    export type CreateInternalSalesOrderMutationError = CreateInternalSalesOrder400 | CreateInternalSalesOrder401 | CreateInternalSalesOrder403 | CreateInternalSalesOrder404
+    export type CreateInternalSalesOrderMutationError = CreateInternalSalesOrder400 | CreateInternalSalesOrder401 | CreateInternalSalesOrder403 | CreateInternalSalesOrder404 | CreateInternalSalesOrder409
 
     /**
  * @summary Create draft sales order
  */
-export const useCreateInternalSalesOrder = <TError = CreateInternalSalesOrder400 | CreateInternalSalesOrder401 | CreateInternalSalesOrder403 | CreateInternalSalesOrder404,
+export const useCreateInternalSalesOrder = <TError = CreateInternalSalesOrder400 | CreateInternalSalesOrder401 | CreateInternalSalesOrder403 | CreateInternalSalesOrder404 | CreateInternalSalesOrder409,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalSalesOrder>>, TError,{data: CreateInternalSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createInternalSalesOrder>>,

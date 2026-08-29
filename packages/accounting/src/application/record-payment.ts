@@ -36,6 +36,14 @@ export class RecordPaymentUseCase {
 
     const createdAt = this.clock?.now() ?? new Date();
     return this.unitOfWork.run(async (uow) => {
+      const invoice = await uow.invoices.findByIdForPayment(
+        input.organizationId,
+        input.invoiceId,
+      );
+      if (invoice === null) {
+        return { ok: false, reason: "not_found" };
+      }
+
       const existingPayment = await uow.invoices.findPaymentByIdempotencyKey(
         input.organizationId,
         key,
@@ -48,20 +56,11 @@ export class RecordPaymentUseCase {
         ) {
           return { ok: false, reason: "conflict" };
         }
-        const invoice = await uow.invoices.findById(input.organizationId, input.invoiceId);
-        if (invoice === null) {
-          return { ok: false, reason: "not_found" };
-        }
         const applications = await uow.invoices.listApplications(invoice.id);
         return {
           ok: true,
           remainingCents: computeRemainingCents(invoice, applications),
         };
-      }
-
-      const invoice = await uow.invoices.findById(input.organizationId, input.invoiceId);
-      if (invoice === null) {
-        return { ok: false, reason: "not_found" };
       }
 
       const currency = input.currency.trim().toUpperCase();

@@ -11,6 +11,7 @@ import type {
   AllocatedCommand,
   DeallocatedCommand,
   IInventoryCommandPort,
+  InventorySnapshotLock,
   InventoryCommandResult,
   ISalesUnitOfWork,
   ShippedCommand,
@@ -34,6 +35,10 @@ function mapResult(
 
 class InventoryCommandAdapter implements IInventoryCommandPort {
   constructor(private readonly ledger: IStockLedger) {}
+
+  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void> {
+    return this.ledger.lockSnapshots(snapshots);
+  }
 
   async recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult> {
     return mapResult(

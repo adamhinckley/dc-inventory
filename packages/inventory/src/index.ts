@@ -56,6 +56,7 @@ export type {
   StockCommandBase,
   StockCommandFailureReason,
   StockCommandResult,
+  StockSnapshotLock,
 } from "./domain/ports/stock-ledger.js";
 export {
   computeAvailable,

@@ -1,13 +1,14 @@
 import {
   CustomerId,
-  Money,
   OrderId,
   OrganizationId,
-  Sku,
+  ProductId,
   type StaffUserId,
+  type WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import { newUuid, SalesOrderLineId } from "../domain/ids.js";
+import type { ICatalogProductPort } from "../domain/ports/catalog-product.js";
 import type {
   ICustomerLookupPort,
   ISalesOrderRepository,
@@ -15,17 +16,12 @@ import type {
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
 
 export type CreateSalesOrderLineInput = {
-  sku: string;
-  name: string;
+  productId: string;
   qty: number;
-  unitPriceCents: number;
-  currency: string;
-  taxCategoryCode?: string;
 };
 
-export type CreateSalesOrderRequest = {
+type CreateSalesOrderRequestBase = {
   organizationId: OrganizationId;
-  staffUserId: StaffUserId;
   customerId: CustomerId;
   lines: readonly CreateSalesOrderLineInput[];
   shipLine1?: string;
@@ -36,27 +32,36 @@ export type CreateSalesOrderRequest = {
   shipCountry?: string;
 };
 
+export type CreateSalesOrderRequest = CreateSalesOrderRequestBase &
+  (
+    | { staffUserId: StaffUserId; wholesaleUserId?: never }
+    | { wholesaleUserId: WholesaleUserId; staffUserId?: never }
+  );
+
 export type CreateSalesOrderResult =
   | { ok: true; salesOrder: SalesOrder }
-  | { ok: false; reason: "invalid" | "customer_not_found" | "empty_order" };
-
-type MergedLine = {
-  sku: Sku;
-  name: string;
-  qty: number;
-  unitPrice: Money;
-  taxCategoryCode?: string;
-};
+  | {
+      ok: false;
+      reason:
+        | "invalid"
+        | "customer_not_found"
+        | "empty_order"
+        | "product_not_found"
+        | "product_inactive"
+        | "product_organization_mismatch";
+    };
 
 export class CreateSalesOrderUseCase {
   constructor(
     private readonly salesOrders: ISalesOrderRepository,
     private readonly customers: ICustomerLookupPort,
+    private readonly catalogProducts: ICatalogProductPort,
     private readonly clock?: IClock,
   ) {}
 
   async execute(input: CreateSalesOrderRequest): Promise<CreateSalesOrderResult> {
     void input.staffUserId;
+    void input.wholesaleUserId;
     if (input.lines.length === 0) {
       return { ok: false, reason: "empty_order" };
     }
@@ -66,58 +71,49 @@ export class CreateSalesOrderUseCase {
       return { ok: false, reason: "customer_not_found" };
     }
 
-    const merged = new Map<string, MergedLine>();
+    const requestedQuantities = new Map<ProductId, number>();
     for (const line of input.lines) {
-      const name = line.name.trim();
-      if (name.length === 0 || !Number.isInteger(line.qty) || line.qty <= 0) {
-        return { ok: false, reason: "invalid" };
-      }
-      if (!Number.isInteger(line.unitPriceCents) || line.unitPriceCents < 0) {
+      if (!Number.isInteger(line.qty) || line.qty <= 0) {
         return { ok: false, reason: "invalid" };
       }
       try {
-        const sku = Sku.parse(line.sku);
-        const unitPrice = Money.fromMinorUnits(line.unitPriceCents, line.currency);
-        const existing = merged.get(sku.value);
-        if (existing === undefined) {
-          merged.set(sku.value, {
-            sku,
-            name,
-            qty: line.qty,
-            unitPrice,
-            taxCategoryCode: line.taxCategoryCode,
-          });
-          continue;
-        }
-        if (
-          existing.name !== name ||
-          !existing.unitPrice.equals(unitPrice) ||
-          existing.taxCategoryCode !== line.taxCategoryCode
-        ) {
-          return { ok: false, reason: "invalid" };
-        }
-        existing.qty += line.qty;
+        const productId = ProductId.parse(line.productId);
+        requestedQuantities.set(
+          productId,
+          (requestedQuantities.get(productId) ?? 0) + line.qty,
+        );
       } catch {
         return { ok: false, reason: "invalid" };
       }
     }
 
-    const lines: SalesOrderLine[] = [...merged.values()].map((line) => ({
-      id: SalesOrderLineId.parse(newUuid()),
-      sku: line.sku,
-      name: line.name,
-      qty: line.qty,
-      unitPrice: line.unitPrice,
-      taxCategoryCode: line.taxCategoryCode,
-    }));
+    const lines: SalesOrderLine[] = [];
+    for (const [productId, qty] of requestedQuantities) {
+      const product = await this.catalogProducts.findById(input.organizationId, productId);
+      if (product === null) {
+        return { ok: false, reason: "product_not_found" };
+      }
+      if (product.organizationId !== input.organizationId) {
+        return { ok: false, reason: "product_organization_mismatch" };
+      }
+      if (!product.active) {
+        return { ok: false, reason: "product_inactive" };
+      }
+      lines.push({
+        id: SalesOrderLineId.parse(newUuid()),
+        sku: product.sku,
+        name: product.name,
+        qty,
+        unitPrice: product.unitPrice,
+        taxCategoryCode: product.taxCategoryCode,
+      });
+    }
 
     const createdAt = this.clock?.now() ?? new Date();
-    const documentNumber = await this.salesOrders.nextDocumentNumber(input.organizationId);
-    const salesOrder: SalesOrder = {
+    const salesOrder = await this.salesOrders.insertWithNextDocumentNumber({
       id: OrderId.parse(newUuid()),
       organizationId: input.organizationId,
       customerId: input.customerId,
-      documentNumber,
       status: "draft",
       createdAt,
       lines,
@@ -127,8 +123,7 @@ export class CreateSalesOrderUseCase {
       shipRegion: input.shipRegion,
       shipPostal: input.shipPostal,
       shipCountry: input.shipCountry,
-    };
-    await this.salesOrders.save(salesOrder);
+    });
     return { ok: true, salesOrder };
   }
 }

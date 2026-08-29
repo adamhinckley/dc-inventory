@@ -7,6 +7,7 @@ import {
 import type {
   GoodsReceivedCommand,
   IInventoryCommandPort,
+  InventorySnapshotLock,
   InboundCancelledCommand,
   InboundFromPoCommand,
   InventoryCommandResult,
@@ -33,6 +34,13 @@ export class StockLedgerInventoryCommandAdapter implements IInventoryCommandPort
     this.inboundFromPo = new RecordInboundFromPoUseCase(ledger);
     this.goodsReceived = new RecordGoodsReceivedUseCase(ledger);
     this.inboundCancelled = new RecordInboundCancelledUseCase(ledger);
+    this.ledger = ledger;
+  }
+
+  private readonly ledger: IStockLedger;
+
+  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void> {
+    return this.ledger.lockSnapshots(snapshots);
   }
 
   async recordInboundFromPo(command: InboundFromPoCommand): Promise<InventoryCommandResult> {

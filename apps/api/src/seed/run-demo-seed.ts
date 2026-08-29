@@ -167,7 +167,13 @@ export async function runDemoSeedInMemory(
 
   tick(input, "sales order playback");
   await runReplaySalesOrders(
-    { uow: uow.sales, clock, customers: staticPorts.customers, invoices: uow.invoices },
+    {
+      uow: uow.sales,
+      clock,
+      customers: staticPorts.customers,
+      products: staticPorts.products,
+      invoices: uow.invoices,
+    },
     {
       plan: input.plan,
       customerIdByKey: await customerIdByKeyFromPlan(input.plan, staticPorts.customers),

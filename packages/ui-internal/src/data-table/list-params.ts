@@ -25,8 +25,8 @@ export function defaultTableState(meta: TableMeta): DataTableState {
     search: "",
     page: 1,
     pageSize: 25,
-    sortBy: meta.sort.defaultBy,
-    sortOrder: meta.sort.defaultOrder,
+    sortBy: meta.sort?.defaultBy ?? "",
+    sortOrder: meta.sort?.defaultOrder ?? "asc",
     filters: {},
   };
 }
@@ -49,7 +49,7 @@ export function parseBooleanFilterParam(
 
 export function declaredFilterParams(meta: TableMeta): Set<string> {
   const allowed = new Set<string>();
-  for (const filter of meta.filters) {
+  for (const filter of meta.filters ?? []) {
     allowed.add(filter.param);
     if (filter.control === "dateRange" && filter.rangePair) {
       allowed.add(filter.rangePair);
@@ -86,7 +86,7 @@ export function tableStateFromInitial(
       continue;
     }
     if (typeof value === "string" || typeof value === "number") {
-      const control = meta.filters.find(
+      const control = meta.filters?.find(
         (filter) => filter.param === key || filter.rangePair === key,
       )?.control;
       if (control === "boolean") {
@@ -111,7 +111,7 @@ export function tableStateFromInitial(
       ? initial.pageSize
       : defaults.pageSize;
   const sortBy =
-    typeof initial.sortBy === "string" && meta.sort.fields.includes(initial.sortBy)
+    typeof initial.sortBy === "string" && meta.sort?.fields.includes(initial.sortBy)
       ? initial.sortBy
       : defaults.sortBy;
   const sortOrder =
@@ -140,9 +140,11 @@ export function listParamsFromState(
   const params: ListQueryParams = {
     page: state.page,
     pageSize: state.pageSize,
-    sortBy: state.sortBy,
-    sortOrder: state.sortOrder,
   };
+  if (meta.sort) {
+    params.sortBy = state.sortBy;
+    params.sortOrder = state.sortOrder;
+  }
 
   if (meta.search) {
     const value = state.search.trim();
@@ -171,7 +173,7 @@ export function nextTableSort(
   current: Pick<DataTableState, "sortBy" | "sortOrder">,
   field: string,
 ): Pick<DataTableState, "sortBy" | "sortOrder"> {
-  if (!meta.sort.fields.includes(field)) {
+  if (!meta.sort?.fields.includes(field)) {
     return { sortBy: current.sortBy, sortOrder: current.sortOrder };
   }
   if (current.sortBy === field) {

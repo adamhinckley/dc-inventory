@@ -16,10 +16,13 @@ import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
 import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { InMemoryProductRepository } from "@dc-inventory/catalog";
+import { ProductId } from "@dc-inventory/shared-kernel";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const SKU = Sku.parse("HEX-BOLT-GALV");
+const PRODUCT_ID = ProductId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
@@ -27,13 +30,14 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startSalesApp() {
+async function startSalesApp(options: { productInactive?: boolean } = {}) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
+  const productRepo = new InMemoryProductRepository();
   const unitOfWork = new InMemoryUnitOfWork();
 
   await customerRepo.save({
@@ -42,6 +46,19 @@ async function startSalesApp() {
     name: "Acme Wholesale",
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
+  });
+  await productRepo.save({
+    id: PRODUCT_ID,
+    organizationId: OrganizationId.DEFAULT,
+    sku: SKU,
+    name: "Catalog hex bolt",
+    description: null,
+    uom: "EA",
+    memberPrice: Money.fromMinorUnits(250, "USD"),
+    inactive: options.productInactive ?? false,
+    discontinued: false,
+    webWholesale: true,
+    taxCategoryCode: "TANGIBLE",
   });
 
   await staffUsers.save({
@@ -62,6 +79,7 @@ async function startSalesApp() {
     organizationRepo: organizations,
     unitOfWork,
     customerRepo,
+    productRepo,
     salesOrderRepo: unitOfWork.salesOrders,
   });
   apps.push(app);
@@ -98,6 +116,24 @@ describe("internal sales orders HTTP", () => {
     expect(response.statusCode).toBe(400);
   });
 
+  it("returns the declared conflict response for an inactive product", async () => {
+    const { app } = await startSalesApp({ productInactive: true });
+    const cookie = await staffCookie(app);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({ error: "conflict" });
+  });
+
   it("runs create, confirm, ship, and cancel", async () => {
     const { app, unitOfWork } = await startSalesApp();
     const cookie = await staffCookie(app);
@@ -122,18 +158,34 @@ describe("internal sales orders HTTP", () => {
         customerId: CUSTOMER_ID,
         lines: [
           {
-            sku: SKU.value,
-            name: "Hex bolt",
+            productId: PRODUCT_ID,
             qty: 5,
-            unitPriceCents: 250,
-            currency: "USD",
           },
         ],
       },
     });
     expect(created.statusCode).toBe(201);
-    const order = created.json() as { id: string; documentNumber: string };
+    const order = created.json() as {
+      id: string;
+      documentNumber: string;
+      lines: Array<{
+        sku: string;
+        name: string;
+        unitPriceCents: number;
+        currency: string;
+        taxCategoryCode: string;
+      }>;
+    };
     expect(order.documentNumber).toBe("SO-00001");
+    expect(order.lines).toMatchObject([
+      {
+        sku: SKU.value,
+        name: "Catalog hex bolt",
+        unitPriceCents: 250,
+        currency: "USD",
+        taxCategoryCode: "TANGIBLE",
+      },
+    ]);
 
     const confirmed = await app.inject({
       method: "POST",
