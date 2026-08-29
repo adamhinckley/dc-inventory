@@ -8,10 +8,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-/**
- * Licensing persistence models. Software-subscription money only — not wholesale AR.
- * FeatureName catalog is not invented here; flag_overrides.feature_name is free text.
- */
 export const licensing = pgSchema("licensing");
 
 export const subscriptionStatus = licensing.enum("subscription_status", [
@@ -65,10 +61,8 @@ export const subscriptions = licensing.table("subscriptions", {
   tenantId: text("tenant_id").notNull().default("DEFAULT"),
   plan: text("plan").notNull(),
   status: subscriptionStatus("status").notNull(),
-  periodStart: timestamp("period_start", { withTimezone: true, mode: "date" })
-    .notNull(),
-  periodEnd: timestamp("period_end", { withTimezone: true, mode: "date" })
-    .notNull(),
+  periodStart: timestamp("period_start", { withTimezone: true, mode: "date" }).notNull(),
+  periodEnd: timestamp("period_end", { withTimezone: true, mode: "date" }).notNull(),
   providerRef: text("provider_ref"),
   ...timestamps(),
 });
@@ -93,11 +87,6 @@ export const flagOverrides = licensing.table("flag_overrides", {
   ...timestamps(),
 });
 
-/**
- * Append-only history of money the tenant sent the software operator.
- * provider_ref is unique per tenant when present (Postgres UNIQUE allows multiple NULLs).
- * No Stripe Event/Customer/Price objects. No FK to wholesale invoices.
- */
 export const softwarePayments = licensing.table(
   "software_payments",
   {
@@ -110,8 +99,7 @@ export const softwarePayments = licensing.table(
     currency: char("currency", { length: 3 }).notNull().default("USD"),
     status: softwarePaymentStatus("status").notNull(),
     kind: softwarePaymentKind("kind").notNull(),
-    occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" })
-      .notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "date" }).notNull(),
     provider: softwarePaymentProvider("provider").notNull(),
     providerRef: text("provider_ref"),
     memo: text("memo"),

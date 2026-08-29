@@ -326,6 +326,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
     post:
       operationId: createInternalCustomer
       summary: Create customer
@@ -418,6 +432,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
   /internal/customers/{id}:
     get:
       operationId: getInternalCustomer
@@ -491,6 +519,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -604,6 +646,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -695,6 +751,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -799,6 +869,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -925,6 +1009,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1042,6 +1140,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -1172,6 +1284,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -1307,6 +1433,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1408,6 +1548,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -1530,6 +1684,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -1660,6 +1828,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1674,7 +1856,318 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/products/import:
+    post:
+      operationId: importInternalProducts
+      summary: Import Product Browser CSV into catalog and vendors
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Product Browser CSV. Max 10000000 bytes.
+      parameters:
+        - schema:
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: dryRun
+          required: false
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dryRun:
+                    type: boolean
+                  rowsOk:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  created:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  updated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  linked:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        field:
+                          type: string
+                        message:
+                          type: string
+                      required:
+                        - row
+                        - field
+                        - message
+                      additionalProperties: false
+                required:
+                  - dryRun
+                  - rowsOk
+                  - created
+                  - updated
+                  - linked
+                  - errors
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
   /internal/products:
+    post:
+      operationId: createInternalProduct
+      summary: Create product
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sku:
+                  type: string
+                  minLength: 1
+                name:
+                  type: string
+                  minLength: 1
+                uom:
+                  type: string
+                  minLength: 1
+                memberPriceCents:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                inactive:
+                  type: boolean
+                discontinued:
+                  type: boolean
+                webWholesale:
+                  type: boolean
+                description:
+                  nullable: true
+                  type: string
+                taxCategoryCode:
+                  nullable: true
+                  type: string
+              required:
+                - sku
+                - name
+                - uom
+                - memberPriceCents
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  sku:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    nullable: true
+                    type: string
+                  uom:
+                    type: string
+                  memberPriceCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                  inactive:
+                    type: boolean
+                  discontinued:
+                    type: boolean
+                  webWholesale:
+                    type: boolean
+                  taxCategoryCode:
+                    nullable: true
+                    type: string
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - id
+                  - sku
+                  - name
+                  - description
+                  - uom
+                  - memberPriceCents
+                  - currency
+                  - inactive
+                  - discontinued
+                  - webWholesale
+                  - taxCategoryCode
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - duplicate_sku
+                required:
+                  - error
+                additionalProperties: false
+        "422":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - qty_not_allowed
+                required:
+                  - error
+                additionalProperties: false
     get:
       operationId: listInternalProducts
       summary: List products including shop-hidden SKUs
@@ -1902,122 +2395,7 @@ paths:
                 required:
                   - error
                 additionalProperties: false
-    post:
-      operationId: createInternalProduct
-      summary: Create product
-      tags:
-        - internal
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                sku:
-                  type: string
-                  minLength: 1
-                name:
-                  type: string
-                  minLength: 1
-                uom:
-                  type: string
-                  minLength: 1
-                memberPriceCents:
-                  type: integer
-                  minimum: -9007199254740991
-                  maximum: 9007199254740991
-                currency:
-                  type: string
-                  minLength: 3
-                  maxLength: 3
-                inactive:
-                  type: boolean
-                discontinued:
-                  type: boolean
-                webWholesale:
-                  type: boolean
-                description:
-                  nullable: true
-                  type: string
-                taxCategoryCode:
-                  nullable: true
-                  type: string
-              required:
-                - sku
-                - name
-                - uom
-                - memberPriceCents
-      responses:
-        "201":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  sku:
-                    type: string
-                  name:
-                    type: string
-                  description:
-                    nullable: true
-                    type: string
-                  uom:
-                    type: string
-                  memberPriceCents:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  currency:
-                    type: string
-                  inactive:
-                    type: boolean
-                  discontinued:
-                    type: boolean
-                  webWholesale:
-                    type: boolean
-                  taxCategoryCode:
-                    nullable: true
-                    type: string
-                  onHand:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  onOrder:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  allocated:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  available:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                required:
-                  - id
-                  - sku
-                  - name
-                  - description
-                  - uom
-                  - memberPriceCents
-                  - currency
-                  - inactive
-                  - discontinued
-                  - webWholesale
-                  - taxCategoryCode
-                  - onHand
-                  - onOrder
-                  - allocated
-                  - available
-                additionalProperties: false
-        "400":
+        "403":
           description: Default Response
           content:
             application/json:
@@ -2027,275 +2405,11 @@ paths:
                   error:
                     type: string
                     enum:
-                      - invalid
-                required:
-                  - error
-                additionalProperties: false
-        "401":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - unauthorized
-                required:
-                  - error
-                additionalProperties: false
-        "409":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - duplicate_sku
-                required:
-                  - error
-                additionalProperties: false
-        "422":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - qty_not_allowed
-                required:
-                  - error
-                additionalProperties: false
-  /internal/products/import:
-    post:
-      operationId: importInternalProducts
-      summary: Import Product Browser CSV into catalog and vendors
-      tags:
-        - internal
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: Product Browser CSV. Max 10000000 bytes.
-      parameters:
-        - schema:
-            anyOf:
-              - type: string
-                enum:
-                  - "true"
-              - type: string
-                enum:
-                  - "false"
-              - type: boolean
-          in: query
-          name: dryRun
-          required: false
-      responses:
-        "200":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  dryRun:
-                    type: boolean
-                  rowsOk:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  created:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  updated:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  linked:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  errors:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        row:
-                          type: integer
-                          minimum: -9007199254740991
-                          maximum: 9007199254740991
-                        field:
-                          type: string
-                        message:
-                          type: string
-                      required:
-                        - row
-                        - field
-                        - message
-                      additionalProperties: false
-                required:
-                  - dryRun
-                  - rowsOk
-                  - created
-                  - updated
-                  - linked
-                  - errors
-                additionalProperties: false
-        "400":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - invalid
-                required:
-                  - error
-                additionalProperties: false
-        "401":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - unauthorized
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
   /internal/products/{id}:
-    get:
-      operationId: getInternalProduct
-      summary: Get product
-      tags:
-        - internal
-      parameters:
-        - schema:
-            type: string
-            format: uuid
-            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-          in: path
-          name: id
-          required: true
-      responses:
-        "200":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  sku:
-                    type: string
-                  name:
-                    type: string
-                  description:
-                    nullable: true
-                    type: string
-                  uom:
-                    type: string
-                  memberPriceCents:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  currency:
-                    type: string
-                  inactive:
-                    type: boolean
-                  discontinued:
-                    type: boolean
-                  webWholesale:
-                    type: boolean
-                  taxCategoryCode:
-                    nullable: true
-                    type: string
-                  onHand:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  onOrder:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  allocated:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                  available:
-                    type: integer
-                    minimum: -9007199254740991
-                    maximum: 9007199254740991
-                required:
-                  - id
-                  - sku
-                  - name
-                  - description
-                  - uom
-                  - memberPriceCents
-                  - currency
-                  - inactive
-                  - discontinued
-                  - webWholesale
-                  - taxCategoryCode
-                  - onHand
-                  - onOrder
-                  - allocated
-                  - available
-                additionalProperties: false
-        "401":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - unauthorized
-                required:
-                  - error
-                additionalProperties: false
-        "404":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - not_found
-                required:
-                  - error
-                additionalProperties: false
     patch:
       operationId: updateInternalProduct
       summary: Update product (sku is immutable; no qty writes)
@@ -2439,6 +2553,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -2478,6 +2606,204 @@ paths:
                     type: string
                     enum:
                       - qty_not_allowed
+                required:
+                  - error
+                additionalProperties: false
+    get:
+      operationId: getInternalProduct
+      summary: Get product
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  sku:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    nullable: true
+                    type: string
+                  uom:
+                    type: string
+                  memberPriceCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                  inactive:
+                    type: boolean
+                  discontinued:
+                    type: boolean
+                  webWholesale:
+                    type: boolean
+                  taxCategoryCode:
+                    nullable: true
+                    type: string
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - id
+                  - sku
+                  - name
+                  - description
+                  - uom
+                  - memberPriceCents
+                  - currency
+                  - inactive
+                  - discontinued
+                  - webWholesale
+                  - taxCategoryCode
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/inventory/stock/{sku}:
+    get:
+      operationId: getInternalInventoryStock
+      summary: Read stock snapshot for a SKU
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: sku
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sku:
+                    type: string
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - sku
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -2696,6 +3022,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
     post:
       operationId: createInternalPurchaseOrder
       summary: Create draft purchase order
@@ -2855,6 +3195,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -3038,6 +3392,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -3161,6 +3529,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -3221,6 +3603,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -3357,6 +3753,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -3547,6 +3957,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -3680,6 +4104,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -3857,6 +4295,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
     post:
       operationId: createInternalSupplier
       summary: Create supplier
@@ -3924,6 +4376,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -4001,6 +4467,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -4090,6 +4570,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -4345,6 +4839,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -4486,6 +4994,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -4640,6 +5162,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -4709,6 +5245,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -4953,6 +5503,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
     post:
       operationId: createInternalSalesOrder
       summary: Create draft sales order
@@ -5129,6 +5693,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5262,6 +5840,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -5410,6 +6002,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -5568,6 +6174,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -5733,6 +6353,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5853,6 +6487,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5967,6 +6615,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false
@@ -6090,6 +6752,7 @@ paths:
                           format: uuid
                           pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                         providerRef:
+                          nullable: true
                           type: string
                         amountCents:
                           type: integer

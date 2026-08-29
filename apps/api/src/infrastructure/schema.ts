@@ -83,7 +83,7 @@ export {
   softwarePaymentStatus,
   subscriptionStatus,
   subscriptions,
-} from "./schema/licensing.js";
+} from "@dc-inventory/licensing/schema";
 export {
   issueActorType,
   issueReports,
@@ -147,7 +147,7 @@ import {
   flagOverrides,
   softwarePayments,
   subscriptions,
-} from "./schema/licensing.js";
+} from "@dc-inventory/licensing/schema";
 import { issueReports, operatorOutbox } from "./schema/operator-bridge.js";
 
 export const schema = {

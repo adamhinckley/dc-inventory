@@ -296,6 +296,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
   /wholesale/catalog/{id}:
     get:
       operationId: getWholesaleCatalogProduct
@@ -356,6 +370,20 @@ paths:
                     type: string
                     enum:
                       - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
                 required:
                   - error
                 additionalProperties: false

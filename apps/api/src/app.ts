@@ -10,6 +10,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
+import { featuresAllCoreOn, type IFeatures } from "@dc-inventory/licensing";
 import { InMemoryDatabase } from "./adapters/in-memory-database.js";
 import { registerHealthRoutes } from "./adapters/http/health.js";
 import { registerPingRoute } from "./adapters/http/ping.js";
@@ -20,7 +21,6 @@ import {
 } from "./adapters/http/cors-origins.js";
 import type { PingUseCase } from "./application/ping.js";
 import type { ReadyCheckUseCase } from "./application/ready.js";
-import { featuresAllCoreOn, type IFeatures } from "./features.js";
 import {
   composeAppServices,
   type AppServiceOverrides,
@@ -31,8 +31,8 @@ import {
   type SalesHttpServices,
   type AccountingHttpServices,
   type LicensingHttpServices,
+  type InventoryHttpServices,
 } from "./infrastructure/composition.js";
-import type { InMemoryLicensingStore } from "./licensing/in-memory-licensing.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
 import { DrainState } from "./infrastructure/drain-state.js";
 import {
@@ -128,7 +128,7 @@ export async function buildAudienceApp(
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
   app.decorate("licensing", services.licensing);
-  app.decorate("licensingStore", services.licensingStore);
+  app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
   registerErrorHandler(app, errorReporter);
   await registerCookie(app);
@@ -179,7 +179,7 @@ export async function buildApp(
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
   app.decorate("licensing", services.licensing);
-  app.decorate("licensingStore", services.licensingStore);
+  app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
   registerErrorHandler(app, errorReporter);
@@ -209,7 +209,7 @@ declare module "fastify" {
     sales: SalesHttpServices;
     accounting: AccountingHttpServices;
     licensing: LicensingHttpServices;
-    licensingStore: InMemoryLicensingStore;
+    inventory: InventoryHttpServices;
   }
 
   interface FastifyRequest {

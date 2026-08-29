@@ -1,15 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { registerOpsAudienceGuard } from "../adapters/http/audience-guard.js";
 import {
   registerOpsLoginRoute,
   registerProtectedOpsAuthRoutes,
 } from "../adapters/http/ops-auth.js";
-import {
-  opsSubscriptionSchema,
-  stubOpsSubscription,
-  unauthorizedResponseSchema,
-} from "../schemas.js";
+import { opsSubscriptionSchema, unauthorizedResponseSchema } from "../schemas.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -27,12 +24,20 @@ export async function opsRoutes(app: FastifyInstance): Promise<void> {
     schema: {
       operationId: "getOpsSubscription",
       tags: ["ops"],
-      summary: "Stub software subscription",
+      summary: "Get software subscription",
       response: {
         200: opsSubscriptionSchema,
         401: unauthorizedResponseSchema,
       },
     },
-    handler: async () => stubOpsSubscription,
+    handler: async (request) => {
+      const result = await request.server.licensing.listSubscriptions.execute({
+        organizationId: OrganizationId.DEFAULT,
+      });
+      const subscription = result.items[0];
+      return subscription === undefined
+        ? { status: "inactive" as const, plan: null }
+        : { status: subscription.status, plan: subscription.plan };
+    },
   });
 }

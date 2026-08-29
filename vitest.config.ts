@@ -55,6 +55,12 @@ export default defineConfig({
       "@dc-inventory/accounting": fileURLToPath(
         new URL("./packages/accounting/src/index.ts", import.meta.url),
       ),
+      "@dc-inventory/licensing/schema": fileURLToPath(
+        new URL("./packages/licensing/src/persistence/schema.ts", import.meta.url),
+      ),
+      "@dc-inventory/licensing": fileURLToPath(
+        new URL("./packages/licensing/src/index.ts", import.meta.url),
+      ),
     },
   },
   test: {
@@ -71,9 +77,10 @@ export default defineConfig({
       "packages/purchasing/tests/**/*.test.ts",
       "packages/sales/tests/**/*.test.ts",
       "packages/accounting/tests/**/*.test.ts",
+      "packages/licensing/tests/**/*.test.ts",
       "packages/ui/tests/**/*.test.ts",
       "packages/ui-internal/tests/**/*.test.ts",
     ],
-    exclude: ["**/node_modules/**", "**/dist/**"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/persistent-licensing.integration.test.ts"],
   },
 });

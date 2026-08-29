@@ -177,7 +177,7 @@ paths:
   /ops/subscription:
     get:
       operationId: getOpsSubscription
-      summary: Stub software subscription
+      summary: Get software subscription
       tags:
         - ops
       responses:
@@ -193,6 +193,8 @@ paths:
                     enum:
                       - trialing
                       - active
+                      - past_due
+                      - canceled
                       - inactive
                   plan:
                     nullable: true
