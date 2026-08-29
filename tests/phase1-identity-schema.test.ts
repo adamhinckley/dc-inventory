@@ -43,4 +43,15 @@ describe("Phase 1 identity schema (ADA-77)", () => {
     expect(sql).not.toMatch(/CREATE TABLE "identity"\."account"/);
     expect(sql).not.toMatch(/CREATE TABLE "identity"\."verification"/);
   });
+
+  it("registers 0022_identity_staff_roles in the Kit journal", () => {
+    const journal = JSON.parse(
+      readText("apps/api/drizzle/migrations/meta/_journal.json"),
+    ) as { entries: Array<{ tag: string }> };
+    const tags = journal.entries.map((entry) => entry.tag);
+    expect(tags).toContain("0022_identity_staff_roles");
+    expect(existsSync(resolve(root, "apps/api/drizzle/migrations/0022_identity_staff_roles.sql"))).toBe(
+      true,
+    );
+  });
 });
