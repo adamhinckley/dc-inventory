@@ -1,4 +1,4 @@
-import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import {
   computeSnapshotDelta,
@@ -20,6 +20,7 @@ import type {
   RecordShippedCommand,
   StockCommandBase,
   StockCommandResult,
+  StockSnapshotLock,
 } from "../domain/ports/stock-ledger.js";
 import type { InMemoryInventoryReadModel } from "./in-memory-inventory-read-model.js";
 
@@ -32,6 +33,10 @@ export class InMemoryStockLedger implements IStockLedger {
     private readonly readModel: InMemoryInventoryReadModel,
     private readonly clock?: IClock,
   ) {}
+
+  lockSnapshots(_snapshots: readonly StockSnapshotLock[]): Promise<void> {
+    return Promise.resolve();
+  }
 
   recordInboundFromPo(command: RecordInboundFromPoCommand): Promise<StockCommandResult> {
     return this.record("InboundFromPo", command);
@@ -73,7 +78,7 @@ export class InMemoryStockLedger implements IStockLedger {
     movementType: MovementType,
     command: StockCommandBase,
   ): Promise<StockCommandResult> {
-    const organizationId = command.organizationId ?? OrganizationId.DEFAULT;
+    const organizationId = requireOrganizationId(command.organizationId);
     const locationId = command.locationId ?? LocationId.DEFAULT;
 
     if (!isPositiveIntegerQuantity(command.quantity)) {

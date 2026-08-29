@@ -1,6 +1,7 @@
 import {
   InMemoryProductRepository,
   InMemoryQtyReadPort,
+  type ProductListMatch,
 } from "@dc-inventory/catalog";
 import {
   InMemoryClock,
@@ -13,6 +14,7 @@ import {
 import { CustomerId, OrganizationId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
+import { catalogQuerySchema } from "../../schemas.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE, WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
@@ -23,18 +25,28 @@ const CUSTOMER_ID = CustomerId.parse("33333333-3333-4333-8333-333333333333");
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
+class RecordingProductRepository extends InMemoryProductRepository {
+  readonly listQueries: ProductListMatch[] = [];
+
+  override async listMatching(query: ProductListMatch) {
+    this.listQueries.push(query);
+    return super.listMatching(query);
+  }
+}
+
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startCatalogApp() {
+async function startCatalogApp(
+  productRepo: InMemoryProductRepository = new InMemoryProductRepository(),
+) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
-  const productRepo = new InMemoryProductRepository();
   const qtyRead = new InMemoryQtyReadPort();
   await staffUsers.save({
     id: STAFF_ID,
@@ -234,6 +246,33 @@ describe("catalog HTTP", () => {
     });
     expect(hiddenGet.statusCode).toBe(404);
     expect(hiddenGet.json()).toEqual({ error: "not_found" });
+  });
+
+  it("passes every declared wholesale filter into the repository query", async () => {
+    const productRepo = new RecordingProductRepository();
+    const app = await startCatalogApp(productRepo);
+    const wholesale = await wholesaleCookie(app);
+    const nonFilterParams = new Set(["page", "pageSize", "sortBy", "sortOrder"]);
+    const declaredFilters = Object.keys(catalogQuerySchema.shape).filter(
+      (name) => !nonFilterParams.has(name),
+    );
+    const cases = {
+      q: "bolt",
+      category: "Hardware",
+    } satisfies Record<string, string>;
+
+    expect(declaredFilters.sort()).toEqual(Object.keys(cases).sort());
+    for (const filter of declaredFilters) {
+      const value = cases[filter as keyof typeof cases];
+      const response = await app.inject({
+        method: "GET",
+        url: `/wholesale/catalog?${filter}=${encodeURIComponent(value)}`,
+        cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(productRepo.listQueries.at(-1)).toMatchObject({ [filter]: value });
+    }
   });
 
   it("does not persist qty and keeps sku immutable over HTTP", async () => {

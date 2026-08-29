@@ -1,4 +1,4 @@
-import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { LocationId } from "@dc-inventory/shared-kernel";
 import type {
   IStockLedger,
   RecordInboundFromPoCommand,
@@ -13,7 +13,7 @@ export class RecordInboundFromPoUseCase {
   async execute(input: RecordInboundFromPoRequest): Promise<StockCommandResult> {
     return this.ledger.recordInboundFromPo({
       ...input,
-      organizationId: input.organizationId ?? OrganizationId.DEFAULT,
+      organizationId: input.organizationId,
       locationId: input.locationId ?? LocationId.DEFAULT,
     });
   }

@@ -15,6 +15,7 @@ export {
   products,
 } from "@dc-inventory/catalog/schema";
 export {
+  documentNumberCounters as purchasingDocumentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
   purchasing,
@@ -33,6 +34,7 @@ export {
 export {
   actorType,
   identity,
+  loginThrottleCounters,
   opsUserKind,
   opsUsers,
   organizations,
@@ -47,7 +49,13 @@ export {
   exemptionCertificates,
   shipTos,
 } from "@dc-inventory/customers/schema";
-export { orderLines, orders, orderStatus, sales } from "@dc-inventory/sales/schema";
+export {
+  documentNumberCounters as salesDocumentNumberCounters,
+  orderLines,
+  orders,
+  orderStatus,
+  sales,
+} from "@dc-inventory/sales/schema";
 export {
   tax,
   taxCommitLines,
@@ -56,6 +64,7 @@ export {
 } from "./schema/tax.js";
 export {
   accounting,
+  documentNumberCounters as accountingDocumentNumberCounters,
   invoiceStatus,
   invoices,
   invoiceTaxLines,
@@ -94,6 +103,7 @@ import {
   products,
 } from "@dc-inventory/catalog/schema";
 import {
+  documentNumberCounters as purchasingDocumentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
   supplierProducts,
@@ -106,6 +116,7 @@ import {
   stockSnapshots,
 } from "@dc-inventory/inventory/schema";
 import {
+  loginThrottleCounters,
   opsUsers,
   organizations,
   sessions,
@@ -118,9 +129,14 @@ import {
   exemptionCertificates,
   shipTos,
 } from "@dc-inventory/customers/schema";
-import { orderLines, orders } from "@dc-inventory/sales/schema";
+import {
+  documentNumberCounters as salesDocumentNumberCounters,
+  orderLines,
+  orders,
+} from "@dc-inventory/sales/schema";
 import { taxCommitLines, taxCommits } from "./schema/tax.js";
 import {
+  documentNumberCounters as accountingDocumentNumberCounters,
   invoices,
   invoiceTaxLines,
   paymentApplications,
@@ -143,12 +159,14 @@ export const schema = {
   productImages,
   suppliers,
   supplierProducts,
+  purchasingDocumentNumberCounters,
   purchaseOrders,
   purchaseOrderLines,
   locations,
   reorderPolicies,
   stockMovements,
   stockSnapshots,
+  loginThrottleCounters,
   opsUsers,
   organizations,
   staffUsers,
@@ -160,9 +178,11 @@ export const schema = {
   exemptionCertificates,
   orders,
   orderLines,
+  salesDocumentNumberCounters,
   taxCommits,
   taxCommitLines,
   invoices,
+  accountingDocumentNumberCounters,
   invoiceTaxLines,
   payments,
   paymentApplications,

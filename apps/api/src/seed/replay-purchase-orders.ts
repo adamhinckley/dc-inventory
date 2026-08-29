@@ -1,6 +1,7 @@
 import {
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
+  InMemoryCatalogSkuLookupPort,
   ReceivePurchaseOrderUseCase,
   type IClock,
   type ISupplierRepository,
@@ -63,12 +64,17 @@ export async function runReplayPurchaseOrders(
   ports: ReplayPurchaseOrdersPorts,
   input: ReplayPurchaseOrdersInput,
 ): Promise<ReplayPurchaseOrdersResult> {
+  const catalog = new InMemoryCatalogSkuLookupPort();
+  for (const [sku, name] of input.productNameBySku) {
+    catalog.set(OrganizationId.DEFAULT, sku, name);
+  }
   const create = new CreatePurchaseOrderUseCase(
     ports.uow.purchaseOrders,
     ports.uow.suppliers,
+    catalog,
     ports.clock,
   );
-  const confirm = new ConfirmPurchaseOrderUseCase(ports.uow);
+  const confirm = new ConfirmPurchaseOrderUseCase(ports.uow, catalog);
   const receive = new ReceivePurchaseOrderUseCase(ports.uow);
 
   let leftoverConfirmedCount = 0;

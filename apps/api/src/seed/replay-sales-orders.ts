@@ -1,4 +1,5 @@
 import type { IInvoiceRepository } from "@dc-inventory/accounting";
+import type { IProductRepository } from "@dc-inventory/catalog";
 import type { ICustomerRepository } from "@dc-inventory/customers";
 import {
   ConfirmSalesOrderUseCase,
@@ -8,7 +9,13 @@ import {
   type ICustomerLookupPort,
   type ISalesUnitOfWork,
 } from "@dc-inventory/sales";
-import { CustomerId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import {
+  CustomerId,
+  OrganizationId,
+  Sku,
+  type StaffUserId,
+} from "@dc-inventory/shared-kernel";
+import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { allocateInstant } from "./planner/allocate-instant.js";
 import type { DemoBookPlan } from "./planner/types.js";
 
@@ -27,6 +34,7 @@ export type ReplaySalesOrdersPorts = {
   uow: ISalesUnitOfWork;
   clock: PlaybackClock;
   customers: Pick<ICustomerRepository, "findById">;
+  products: Pick<IProductRepository, "findBySku" | "findById">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
 };
 
@@ -94,6 +102,7 @@ export async function runReplaySalesOrders(
   const create = new CreateSalesOrderUseCase(
     ports.uow.salesOrders,
     demoCustomerLookup(ports.customers),
+    catalogProductPort(ports.products),
     ports.clock,
   );
   const confirm = new ConfirmSalesOrderUseCase(ports.uow);
@@ -117,21 +126,18 @@ export async function runReplaySalesOrders(
       throw new ReplaySalesOrdersError(`missing customer key ${planned.customerKey}`);
     }
 
-    const lines = planned.lines.map((line) => {
-      const name = input.productNameBySku.get(line.sku);
-      const currency = input.currencyBySku.get(line.sku);
-      if (name === undefined || currency === undefined) {
-        throw new ReplaySalesOrdersError(`missing product metadata for sku ${line.sku}`);
-      }
-      return {
-        sku: line.sku,
-        name,
-        qty: line.qty,
-        unitPriceCents: line.unitPriceCents,
-        currency,
-        taxCategoryCode: input.taxCategoryBySku.get(line.sku),
-      };
-    });
+    const lines = await Promise.all(
+      planned.lines.map(async (line) => {
+        const product = await ports.products.findBySku(
+          OrganizationId.DEFAULT,
+          Sku.parse(line.sku),
+        );
+        if (product === null) {
+          throw new ReplaySalesOrdersError(`missing Catalog product for sku ${line.sku}`);
+        }
+        return { productId: product.id, qty: line.qty };
+      }),
+    );
 
     const created = await create.execute({
       organizationId: OrganizationId.DEFAULT,

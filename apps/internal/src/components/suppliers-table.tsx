@@ -1,13 +1,15 @@
 "use client";
 
-import { useListInternalSuppliers } from "@dc-inventory/api-client-internal";
+import {
+  listInternalSuppliersTable,
+  useListInternalSuppliers,
+} from "@dc-inventory/api-client-internal";
 import {
   DataTable,
   type ListQueryParams,
 } from "@dc-inventory/ui-internal";
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
-import { suppliersListTable } from "../lib/suppliers-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
 type SuppliersListParams = NonNullable<
@@ -20,7 +22,7 @@ export function SuppliersTable({
   initialParams?: ListQueryParams;
 }) {
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(suppliersListTable, params);
+    replaceTableUrlParams(listInternalSuppliersTable, params);
   }, []);
 
   const getRowHref = useCallback((row: { id?: string }) => {
@@ -38,7 +40,7 @@ export function SuppliersTable({
 
   return (
     <DataTable.Root<SuppliersListParams>
-      meta={suppliersListTable}
+      meta={listInternalSuppliersTable}
       queryHook={useListInternalSuppliers}
       initialParams={initialParams}
       onParamsChange={onParamsChange}

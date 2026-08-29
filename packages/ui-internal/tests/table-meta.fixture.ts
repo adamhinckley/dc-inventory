@@ -1,10 +1,6 @@
-import type { TableMeta } from "@dc-inventory/ui-internal";
+import type { TableMeta } from "../src/data-table/table-meta";
 
-/**
- * Same shape as `productsListTable` on GET /internal/products (`x-table`).
- * Copied so this app does not import the API package. Do not add filters here.
- */
-export const productsListTable = {
+export const productsListTableFixture = {
   rowId: "id",
   columns: [
     { field: "sku", label: "SKU" },

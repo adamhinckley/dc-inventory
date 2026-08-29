@@ -15,13 +15,19 @@ export type StockCommandResult =
   | { ok: false; reason: StockCommandFailureReason };
 
 export type StockCommandBase = {
-  organizationId?: OrganizationId;
+  organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
   quantity: number;
   locationId?: LocationId;
   refType: MovementRefType;
   refId: string;
+};
+
+export type StockSnapshotLock = {
+  organizationId: OrganizationId;
+  sku: Sku;
+  locationId?: LocationId;
 };
 
 export type RecordInboundFromPoCommand = StockCommandBase & {
@@ -61,6 +67,12 @@ export type RecordAdjustmentDecreaseCommand = StockCommandBase & {
  * implemented by adapters; callers use application use cases.
  */
 export interface IStockLedger {
+  /**
+   * Acquires the consistency rows for a command set before any stock-state
+   * validation or mutation. Postgres adapters lock distinct rows in stable
+   * organization, SKU, and location order; in-memory adapters need no lock.
+   */
+  lockSnapshots(snapshots: readonly StockSnapshotLock[]): Promise<void>;
   recordInboundFromPo(command: RecordInboundFromPoCommand): Promise<StockCommandResult>;
   recordGoodsReceived(command: RecordGoodsReceivedCommand): Promise<StockCommandResult>;
   recordInboundCancelled(command: RecordInboundCancelledCommand): Promise<StockCommandResult>;
@@ -76,7 +88,7 @@ export interface IStockLedger {
 }
 
 export type MovementListFilter = {
-  organizationId?: OrganizationId;
+  organizationId: OrganizationId;
   sku?: Sku;
   locationId?: LocationId;
 };
@@ -88,7 +100,7 @@ export interface IInventoryReadModel {
   getSnapshot(
     sku: Sku,
     locationId: LocationId,
-    organizationId?: OrganizationId,
+    organizationId: OrganizationId,
   ): Promise<StockFigures>;
-  listMovements(filter?: MovementListFilter): Promise<readonly Movement[]>;
+  listMovements(filter: MovementListFilter): Promise<readonly Movement[]>;
 }

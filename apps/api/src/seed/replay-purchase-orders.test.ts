@@ -229,7 +229,10 @@ describe("replay purchase orders (in-memory)", () => {
       expect(receivedPhase1Skus.has(sku)).toBe(true);
     }
 
-    const movements = await uow.inventory.readModel.listMovements({ locationId: LocationId.DEFAULT });
+    const movements = await uow.inventory.readModel.listMovements({
+      organizationId: OrganizationId.DEFAULT,
+      locationId: LocationId.DEFAULT,
+    });
     const inbound = movements.filter((row) => row.movementType === "InboundFromPo");
     const goodsReceived = movements.filter((row) => row.movementType === "GoodsReceived");
     const expectedInboundLines = plan.purchaseOrders.reduce(

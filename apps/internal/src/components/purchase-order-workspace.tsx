@@ -3,6 +3,7 @@
 import {
   getGetInternalPurchaseOrderQueryKey,
   getListInternalPurchaseOrdersQueryKey,
+  getListInternalSupplierProductsQueryKey,
   useConfirmInternalPurchaseOrder,
   useCreateInternalPurchaseOrder,
   useGetInternalPurchaseOrder,
@@ -78,13 +79,19 @@ function PurchaseOrderLineAdder({
     setError(null);
   }, [supplierId]);
 
+  const supplierProductsParams = { page: 1, pageSize: 100 };
   const productsQuery = useListInternalSupplierProducts(
     supplierId ?? "",
+    supplierProductsParams,
     {
-      page: 1,
-      pageSize: 100,
+      query: {
+        enabled: hasVendor,
+        queryKey: getListInternalSupplierProductsQueryKey(
+          supplierId ?? "",
+          supplierProductsParams,
+        ),
+      },
     },
-    { query: { enabled: hasVendor } },
   );
 
   const productOptions = useMemo(() => {

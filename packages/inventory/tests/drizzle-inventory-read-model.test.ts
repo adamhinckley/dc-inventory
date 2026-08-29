@@ -43,7 +43,7 @@ describe("DrizzleInventoryReadModel listMovements", () => {
       return DEFAULT_LOCATION_UUID;
     });
 
-    const movements = await readModel.listMovements({ locationId: FILTER_LOCATION });
+    const movements = await readModel.listMovements({ organizationId: DEFAULT_ORG, locationId: FILTER_LOCATION });
     expect(movements).toHaveLength(1);
     expect(movements[0]?.organizationId).toBe(DEFAULT_ORG);
   });

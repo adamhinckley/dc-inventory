@@ -9,7 +9,7 @@ export type SearchParamsRecord = Record<string, string | string[] | undefined>;
 
 /** Unprefixed v1 keys: page, sort, search param, and declared `x-table` filters. */
 export function tableUrlKeys(meta: TableMeta): string[] {
-  const keys = ["page", "sortBy", "sortOrder"];
+  const keys = meta.sort ? ["page", "sortBy", "sortOrder"] : ["page"];
   if (meta.search) {
     keys.push(meta.search.param);
   }
@@ -46,12 +46,12 @@ export function listParamsFromSearchParams(
   }
 
   const sortBy = firstValue(searchParams, "sortBy");
-  if (sortBy && meta.sort.fields.includes(sortBy)) {
+  if (sortBy && meta.sort?.fields.includes(sortBy)) {
     params.sortBy = sortBy;
   }
 
   const sortOrder = firstValue(searchParams, "sortOrder");
-  if (sortOrder === "asc" || sortOrder === "desc") {
+  if (meta.sort && (sortOrder === "asc" || sortOrder === "desc")) {
     params.sortOrder = sortOrder;
   }
 
@@ -63,7 +63,7 @@ export function listParamsFromSearchParams(
   }
 
   const allowed = declaredFilterParams(meta);
-  for (const filter of meta.filters) {
+  for (const filter of meta.filters ?? []) {
     const apply = (key: string, control: (typeof filter)["control"]) => {
       if (!allowed.has(key)) {
         return;

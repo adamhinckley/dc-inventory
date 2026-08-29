@@ -9,6 +9,9 @@ import type { ListWholesaleCatalogSortOrder } from './listWholesaleCatalogSortOr
 
 export type ListWholesaleCatalogParams = {
 q?: string;
+/**
+ * @minLength 1
+ */
 category?: string;
 /**
  * @minimum 1

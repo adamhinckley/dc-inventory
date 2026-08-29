@@ -1,0 +1,39 @@
+# Required check (ADA-196). Job name `ci-quality` is the status
+# context to require on main. Compose + migrate + /ready stays in
+# compose-migrate-ready.yml (ADA-55).
+name: CI quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci-quality:
+    name: ci-quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.3
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Test, lint, gen:api drift
+        run: bash scripts/ci-quality.sh

@@ -6,6 +6,7 @@ import {
 import { LocationId, OrganizationId, Sku, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
+import { InMemoryCatalogSkuLookupPort } from "../src/adapters/in-memory-catalog-sku-lookup.js";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
 import {
   ConfirmPurchaseOrderUseCase,
@@ -23,6 +24,8 @@ const FIXED = new Date("2021-06-15T12:00:00.000Z");
 async function harness() {
   const clock = new InMemoryClock(FIXED);
   const uow = new InMemoryPurchasingUnitOfWork(clock);
+  const catalog = new InMemoryCatalogSkuLookupPort();
+  catalog.set(DEFAULT_ORG, SKU.value, "Bolt");
   const supplierId = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await uow.suppliers.save({
     id: supplierId,
@@ -35,9 +38,9 @@ async function harness() {
     clock,
     uow,
     supplierId,
-    create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers, clock),
+    create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers, catalog, clock),
     get: new GetPurchaseOrderUseCase(uow.purchaseOrders),
-    confirm: new ConfirmPurchaseOrderUseCase(uow),
+    confirm: new ConfirmPurchaseOrderUseCase(uow, catalog),
     receive: new ReceivePurchaseOrderUseCase(uow),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
   };
@@ -69,7 +72,7 @@ describe("Purchasing seed clock (in-memory)", () => {
       return;
     }
     expect(confirmed.purchaseOrder.status).toBe("confirmed");
-    expect((await h.snapshot.execute({ sku: SKU, locationId: DEFAULT })).onOrder).toBe(10);
+    expect((await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT })).onOrder).toBe(10);
 
     const received = await h.receive.execute({
       organizationId: DEFAULT_ORG,
@@ -83,7 +86,7 @@ describe("Purchasing seed clock (in-memory)", () => {
       return;
     }
     expect(received.purchaseOrder.status).toBe("received");
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(10);
     expect(snap.onOrder).toBe(0);
   });

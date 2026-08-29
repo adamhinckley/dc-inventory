@@ -1,5 +1,5 @@
+import { listInternalPurchaseOrdersTable } from "@dc-inventory/api-client-internal";
 import { PurchasingOrdersExplorer } from "../../../../components/purchasing-orders-explorer";
-import { draftPurchaseOrdersListTable } from "../../../../lib/draft-purchase-orders-list-table";
 import { listParamsFromSearchParams } from "../../../../lib/table-url-params";
 
 type PurchasingSearchParams = Record<string, string | string[] | undefined>;
@@ -10,7 +10,7 @@ export default async function CompletedPurchaseOrdersPage({
   searchParams: Promise<PurchasingSearchParams>;
 }) {
   const initialParams = listParamsFromSearchParams(
-    draftPurchaseOrdersListTable,
+    listInternalPurchaseOrdersTable,
     await searchParams,
   );
 

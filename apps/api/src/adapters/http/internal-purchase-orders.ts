@@ -139,7 +139,10 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         lines: request.body.lines,
       });
       if (!result.ok) {
-        if (result.reason === "supplier_not_found") {
+        if (
+          result.reason === "supplier_not_found" ||
+          result.reason === "product_not_found"
+        ) {
           return sendNotFound(reply);
         }
         if (result.reason === "empty_order") {
@@ -179,7 +182,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         lines: request.body.lines,
       });
       if (!result.ok) {
-        if (result.reason === "not_found") {
+        if (result.reason === "not_found" || result.reason === "product_not_found") {
           return sendNotFound(reply);
         }
         if (result.reason === "illegal_transition") {
@@ -287,6 +290,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         if (
           result.reason === "illegal_transition" ||
+          result.reason === "product_not_found" ||
           result.reason === "idempotency_conflict" ||
           result.reason === "inventory_conflict"
         ) {

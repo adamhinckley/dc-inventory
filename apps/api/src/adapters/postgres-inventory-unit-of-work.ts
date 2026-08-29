@@ -25,14 +25,18 @@ import {
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
 import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-command-port.js";
+import {
+  INVENTORY_IDEMPOTENCY_CONSTRAINTS,
+  retryAfterIdempotencyRace,
+} from "./postgres-idempotency-race.js";
 
 /**
  * Postgres-backed unit of work for the composition root.
- * Serializes callers and runs each callback in one Drizzle transaction.
+ * Each callback runs in its own Drizzle transaction. Inventory adapters use
+ * row-level locks for the snapshot rows touched by that transaction.
  */
 export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   private readonly defaultLocationUuidByOrg = new Map<string, Promise<string>>();
-  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly db: AppDrizzle,
@@ -77,19 +81,19 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   }
 
   run<T>(work: (uow: IUnitOfWork) => Promise<T>): Promise<T> {
-    const next = this.queue.then(() =>
-      this.db.transaction(async (tx) =>
-        this.runOnTransaction(
-          tx as InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
-          work,
+    return retryAfterIdempotencyRace(
+      () =>
+        this.db.transaction(async (tx) =>
+          this.runOnTransaction(
+            tx as unknown as InventoryDrizzle &
+              PurchasingDrizzle &
+              SalesDrizzle &
+              AccountingDrizzle,
+            work,
+          ),
         ),
-      ),
+      INVENTORY_IDEMPOTENCY_CONSTRAINTS,
     );
-    this.queue = next.then(
-      () => undefined,
-      () => undefined,
-    );
-    return next;
   }
 
   private async runOnTransaction<T>(

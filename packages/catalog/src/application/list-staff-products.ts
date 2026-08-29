@@ -1,8 +1,7 @@
 import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
-import type { IProductRepository } from "../domain/ports/product-repository.js";
-import type { IQtyReadPort } from "../domain/ports/qty-read.js";
+import type { ICatalogListQuery } from "../domain/ports/catalog-list-query.js";
 import type { Product } from "../domain/product.js";
-import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
+import type { ProductQty } from "../domain/qty.js";
 
 export type StaffProductSortBy = "sku" | "name" | "onHand" | "available" | "createdAt";
 export type SortOrder = "asc" | "desc";
@@ -32,48 +31,24 @@ export type ListStaffProductsResult = {
 };
 
 export class ListStaffProductsUseCase {
-  constructor(
-    private readonly products: IProductRepository,
-    private readonly qty: IQtyReadPort,
-  ) {}
+  constructor(private readonly catalogList: ICatalogListQuery) {}
 
   async execute(input: ListStaffProductsRequest): Promise<ListStaffProductsResult> {
     void input.staffUserId;
-    const listed = await this.products.listMatching({
+    const page = await this.catalogList.list({
       organizationId: input.organizationId,
       q: input.q,
-      inactive: input.inactive,
-    });
-    const snapshots = await this.qty.readBySkus(
-      input.organizationId,
-      listed.map((row) => row.product.sku),
-    );
-    const rows: StaffProductListRow[] = listed.map((row) => ({
-      product: row.product,
-      qty: snapshots.get(row.product.sku.value) ?? ZERO_QTY,
-      createdAt: row.createdAt,
-    }));
-    rows.sort((a, b) => {
-      let cmp = 0;
-      if (input.sortBy === "sku") {
-        cmp = a.product.sku.value.localeCompare(b.product.sku.value);
-      } else if (input.sortBy === "name") {
-        cmp = a.product.name.localeCompare(b.product.name);
-      } else if (input.sortBy === "onHand") {
-        cmp = a.qty.onHand - b.qty.onHand;
-      } else if (input.sortBy === "available") {
-        cmp = a.qty.available - b.qty.available;
-      } else {
-        cmp = a.createdAt.getTime() - b.createdAt.getTime();
-      }
-      return input.sortOrder === "desc" ? -cmp : cmp;
-    });
-    const start = (input.page - 1) * input.pageSize;
-    return {
-      items: rows.slice(start, start + input.pageSize),
       page: input.page,
       pageSize: input.pageSize,
-      total: rows.length,
+      sortBy: input.sortBy,
+      sortOrder: input.sortOrder,
+      inactive: input.inactive,
+    });
+    return {
+      items: [...page.items],
+      page: input.page,
+      pageSize: input.pageSize,
+      total: page.total,
     };
   }
 }

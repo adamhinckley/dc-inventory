@@ -18,6 +18,7 @@ import {
   CancelPurchaseOrderUseCase,
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
+  InMemoryCatalogSkuLookupPort,
   ListPurchaseOrdersUseCase,
   ReceivePurchaseOrderUseCase,
   ReplacePurchaseOrderLinesUseCase,
@@ -31,6 +32,9 @@ const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 
 async function harness() {
   const uow = new InMemoryPurchasingUnitOfWork();
+  const catalog = new InMemoryCatalogSkuLookupPort();
+  catalog.set(DEFAULT_ORG, SKU.value, "Catalog bolt");
+  catalog.set(DEFAULT_ORG, "PO-OTHER-SKU", "Catalog washer");
   const supplierId = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
   await uow.suppliers.save({
     id: supplierId,
@@ -41,13 +45,14 @@ async function harness() {
 
   return {
     uow,
+    catalog,
     supplierId,
-    create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers),
+    create: new CreatePurchaseOrderUseCase(uow.purchaseOrders, uow.suppliers, catalog),
     list: new ListPurchaseOrdersUseCase(uow.purchaseOrders, uow.suppliers),
-    confirm: new ConfirmPurchaseOrderUseCase(uow),
+    confirm: new ConfirmPurchaseOrderUseCase(uow, catalog),
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
-    replaceLines: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders),
+    replaceLines: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders, catalog),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
   };
 }
@@ -112,7 +117,7 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(confirmed.purchaseOrder.status).toBe("confirmed");
 
-    let snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    let snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onOrder).toBe(10);
 
     const lineId = created.purchaseOrder.lines[0]!.id;
@@ -130,7 +135,7 @@ describe("Purchasing (in-memory)", () => {
     expect(partial.purchaseOrder.status).toBe("confirmed");
     expect(partial.purchaseOrder.lines[0]?.receivedQty).toBe(4);
 
-    snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(4);
     expect(snap.onOrder).toBe(6);
 
@@ -146,7 +151,7 @@ describe("Purchasing (in-memory)", () => {
       return;
     }
     expect(complete.purchaseOrder.status).toBe("received");
-    snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(10);
     expect(snap.onOrder).toBe(0);
   });
@@ -185,7 +190,7 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(over.reason).toBe("over_receive");
 
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(0);
     expect(snap.onOrder).toBe(2);
   });
@@ -222,12 +227,12 @@ describe("Purchasing (in-memory)", () => {
     expect(replaced.purchaseOrder.lines).toHaveLength(2);
     expect(replaced.purchaseOrder.lines[0]).toMatchObject({
       sku: SKU,
-      name: "Bolt updated",
+      name: "Catalog bolt",
       qty: 8,
       receivedQty: 0,
     });
     expect(replaced.purchaseOrder.lines[1]).toMatchObject({
-      name: "Washer",
+      name: "Catalog washer",
       qty: 2,
       receivedQty: 0,
     });
@@ -312,6 +317,109 @@ describe("Purchasing (in-memory)", () => {
     expect(created.reason).toBe("invalid");
   });
 
+  it("freezes the Catalog SKU and name instead of caller-supplied line data", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Caller controlled name", qty: 2 }],
+    });
+
+    expect(created.ok).toBe(true);
+    if (created.ok) {
+      expect(created.purchaseOrder.lines[0]).toMatchObject({
+        sku: SKU,
+        name: "Catalog bolt",
+      });
+    }
+  });
+
+  it("rejects unknown, archived, and organization-mismatched products before saving", async () => {
+    const cases = [
+      {
+        name: "unknown",
+        setup: (_catalog: InMemoryCatalogSkuLookupPort) => undefined,
+        sku: "UNKNOWN-SKU",
+        reason: "product_not_found",
+      },
+      {
+        name: "archived",
+        setup: (catalog: InMemoryCatalogSkuLookupPort) =>
+          catalog.set(DEFAULT_ORG, "ARCHIVED-SKU", "Archived product", { archived: true }),
+        sku: "ARCHIVED-SKU",
+        reason: "product_archived",
+      },
+      {
+        name: "organization-mismatched",
+        setup: (catalog: InMemoryCatalogSkuLookupPort) =>
+          catalog.set(BETA_ORG, "OTHER-ORG-SKU", "Other organization product"),
+        sku: "OTHER-ORG-SKU",
+        reason: "product_not_found",
+      },
+    ] as const;
+
+    for (const testCase of cases) {
+      const h = await harness();
+      testCase.setup(h.catalog);
+      const result = await h.create.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        supplierId: h.supplierId,
+        lines: [{ sku: testCase.sku, name: "Caller name", qty: 1 }],
+      });
+
+      expect(result, testCase.name).toEqual({ ok: false, reason: testCase.reason });
+      const saved = await h.uow.purchaseOrders.list({
+        organizationId: DEFAULT_ORG,
+        page: 1,
+        pageSize: 25,
+      });
+      expect(saved.total, testCase.name).toBe(0);
+    }
+  });
+
+  it("rejects an orphaned persisted draft before recording inbound inventory", async () => {
+    const h = await harness();
+    const orphanSku = Sku.parse("ORPHAN-SKU");
+    const purchaseOrderId = PurchaseOrderId.parse(newUuid());
+    await h.uow.purchaseOrders.save({
+      id: purchaseOrderId,
+      organizationId: DEFAULT_ORG,
+      supplierId: h.supplierId,
+      documentNumber: "PO-00001",
+      status: "draft",
+      shipDate: null,
+      cancelDate: null,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      lines: [
+        {
+          id: PurchaseOrderLineId.parse(newUuid()),
+          sku: orphanSku,
+          name: "Legacy unchecked product",
+          qty: 4,
+          receivedQty: 0,
+        },
+      ],
+    });
+
+    const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId,
+      idempotencyKey: "confirm-orphan",
+    });
+
+    expect(confirmed).toEqual({ ok: false, reason: "product_not_found" });
+    const snapshot = await h.snapshot.execute({
+      organizationId: DEFAULT_ORG,
+      sku: orphanSku,
+      locationId: DEFAULT,
+    });
+    expect(snapshot.onOrder).toBe(0);
+    expect((await h.uow.purchaseOrders.findById(DEFAULT_ORG, purchaseOrderId))?.status).toBe("draft");
+  });
+
   it("cancels confirmed remainder with InboundCancelled", async () => {
     const h = await harness();
     const created = await h.create.execute({
@@ -353,7 +461,7 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(cancelled.purchaseOrder.status).toBe("cancelled");
 
-    const snap = await h.snapshot.execute({ sku: SKU, locationId: DEFAULT });
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(3);
     expect(snap.onOrder).toBe(0);
   });

@@ -51,7 +51,7 @@ export const locations = inventory.table(
   "locations",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    organizationId: text("organization_id").notNull(),
     code: text("code").notNull(),
     isPickBin: boolean("is_pick_bin").notNull().default(false),
     ...timestamps(),
@@ -63,7 +63,7 @@ export const reorderPolicies = inventory.table(
   "reorder_policies",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    organizationId: text("organization_id").notNull(),
     sku: text("sku").notNull(),
     locationId: uuid("location_id")
       .notNull()
@@ -79,7 +79,7 @@ export const stockMovements = inventory.table(
   "stock_movements",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    organizationId: text("organization_id").notNull(),
     sku: text("sku").notNull(),
     locationId: uuid("location_id")
       .notNull()
@@ -112,7 +112,7 @@ export const stockSnapshots = inventory.table(
   "stock_snapshots",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    organizationId: text("organization_id").notNull(),
     sku: text("sku").notNull(),
     locationId: uuid("location_id")
       .notNull()

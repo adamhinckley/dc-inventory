@@ -1,6 +1,9 @@
 "use client";
 
-import { useListInternalPurchaseOrders } from "@dc-inventory/api-client-internal";
+import {
+  listInternalPurchaseOrdersTable,
+  useListInternalPurchaseOrders,
+} from "@dc-inventory/api-client-internal";
 import {
   DataTable,
   type ListQueryHook,
@@ -8,7 +11,6 @@ import {
 } from "@dc-inventory/ui-internal";
 import Link from "next/link";
 import { useCallback, type ReactNode } from "react";
-import { draftPurchaseOrdersListTable } from "../lib/draft-purchase-orders-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
 export type PurchaseOrdersList = "draft" | "completed";
@@ -39,7 +41,7 @@ export function PurchaseOrdersTable({
   initialParams?: ListQueryParams;
 }) {
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(draftPurchaseOrdersListTable, params);
+    replaceTableUrlParams(listInternalPurchaseOrdersTable, params);
   }, []);
 
   const getRowHref = useCallback((row: { id?: string }) => {
@@ -57,7 +59,7 @@ export function PurchaseOrdersTable({
 
   return (
     <DataTable.Root
-      meta={draftPurchaseOrdersListTable}
+      meta={listInternalPurchaseOrdersTable}
       queryHook={
         (list === "draft"
           ? useDraftPurchaseOrdersList
