@@ -270,7 +270,7 @@ async function insertInvoiceFixture(
       ${customerId},
       ${`INV-${randomUUID()}`},
       'posted',
-      ${TEST_INSTANT},
+      ${TEST_INSTANT.toISOString()},
       ${totalCents},
       0,
       ${totalCents},
