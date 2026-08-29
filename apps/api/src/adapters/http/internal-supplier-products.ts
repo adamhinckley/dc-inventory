@@ -18,6 +18,7 @@ import {
   supplierProductsListTable,
   unauthorizedResponseSchema,
   unknownSkuResponseSchema,
+  zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
 
@@ -75,19 +76,33 @@ export function registerInternalSupplierProductRoutes(app: FastifyInstance): voi
         summary: "List vendor SKUs for a supplier",
         params: supplierIdParamsSchema,
         querystring: supplierProductListQuerySchema,
-        response: { 200: supplierProductListResponseSchema, ...errorResponses },
+        response: {
+          200: supplierProductListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
         "x-table": supplierProductsListTable,
       } as FastifySchema & { "x-table": typeof supplierProductsListTable },
     },
     async (request, reply) => {
-      const query = request.query as { page: number; pageSize: number };
+      const query = request.query as {
+        q?: string;
+        page: number;
+        pageSize: number;
+        sortBy: "sku" | "supplierSku";
+        sortOrder: "asc" | "desc";
+      };
       const params = request.params as { id: string };
       const result = await request.server.purchasing.listSupplierProducts.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         supplierId: SupplierId.parse(params.id),
+        q: query.q,
         page: query.page,
         pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
       });
       if (!result.ok) {
         return sendNotFound(reply);

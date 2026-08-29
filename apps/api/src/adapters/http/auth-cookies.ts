@@ -4,6 +4,7 @@ import { SESSION_ABSOLUTE_MS } from "@dc-inventory/identity";
 
 export const STAFF_SESSION_COOKIE = "staff_session";
 export const WHOLESALE_SESSION_COOKIE = "wholesale_session";
+export const OPS_SESSION_COOKIE = "ops_session";
 
 export function cookieSecure(request: FastifyRequest): boolean {
   const forwarded = request.headers["x-forwarded-proto"];

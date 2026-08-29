@@ -1,8 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
-import { registerOpsAuthRoutes } from "../adapters/http/ops-auth.js";
-import { opsSubscriptionSchema } from "../schemas.js";
+import { registerOpsAudienceGuard } from "../adapters/http/audience-guard.js";
+import {
+  registerOpsLoginRoute,
+  registerProtectedOpsAuthRoutes,
+} from "../adapters/http/ops-auth.js";
+import { opsSubscriptionSchema, unauthorizedResponseSchema } from "../schemas.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -10,7 +14,9 @@ function typed(app: FastifyInstance) {
 
 /** Ops / licensing mount (`/ops`). */
 export async function opsRoutes(app: FastifyInstance): Promise<void> {
-  registerOpsAuthRoutes(app);
+  registerOpsLoginRoute(app);
+  registerOpsAudienceGuard(app);
+  registerProtectedOpsAuthRoutes(app);
 
   typed(app).route({
     method: "GET",
@@ -19,7 +25,10 @@ export async function opsRoutes(app: FastifyInstance): Promise<void> {
       operationId: "getOpsSubscription",
       tags: ["ops"],
       summary: "Get software subscription",
-      response: { 200: opsSubscriptionSchema },
+      response: {
+        200: opsSubscriptionSchema,
+        401: unauthorizedResponseSchema,
+      },
     },
     handler: async (request) => {
       const result = await request.server.licensing.listSubscriptions.execute({

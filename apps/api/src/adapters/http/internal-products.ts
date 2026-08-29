@@ -21,6 +21,7 @@ import {
   skuImmutableResponseSchema,
   SPREADSHEET_UPLOAD_MAX_BYTES,
   unauthorizedResponseSchema,
+  zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
 
@@ -245,7 +246,11 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         tags: ["internal"],
         summary: "List products including shop-hidden SKUs",
         querystring: listQuerySchema,
-        response: { 200: productListResponseSchema, 401: unauthorizedResponseSchema },
+        response: {
+          200: productListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+        },
         "x-table": productsListTable,
       } as FastifySchema & { "x-table": typeof productsListTable },
     },

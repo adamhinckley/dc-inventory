@@ -52,6 +52,7 @@ export const opsUsers = identity.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull(),
+    passwordHash: text("password_hash"),
     kind: opsUserKind("kind").notNull(),
     tenantId: text("tenant_id").notNull().default("DEFAULT"),
     ...timestamps(),

@@ -176,6 +176,13 @@
       "when": 1789155600000,
       "tag": "0025_login_throttle_window_started_at_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789255600000,
+      "tag": "0026_identity_ops_password",
+      "breakpoints": true
     }
   ]
 }

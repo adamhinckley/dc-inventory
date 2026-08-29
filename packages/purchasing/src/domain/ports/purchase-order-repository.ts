@@ -15,8 +15,11 @@ export type PurchaseOrderListPage = {
 
 export type ListPurchaseOrdersQuery = {
   organizationId: OrganizationId;
+  q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "documentNumber" | "status";
+  sortOrder?: "asc" | "desc";
   status?: PurchaseOrderStatus;
   supplierId?: SupplierId;
 };
@@ -37,6 +40,8 @@ export type ListSuppliersQuery = {
   q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "vendorNumber" | "name";
+  sortOrder?: "asc" | "desc";
 };
 
 export type SupplierListPage = {

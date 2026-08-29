@@ -28,7 +28,13 @@ export class InMemorySupplierRepository implements ISupplierRepository {
         supplier.vendorNumber.toLowerCase().includes(needle)
       );
     });
-    rows.sort((a, b) => a.vendorNumber.localeCompare(b.vendorNumber));
+    rows.sort((a, b) => {
+      const cmp =
+        query.sortBy === "name"
+          ? a.name.localeCompare(b.name)
+          : a.vendorNumber.localeCompare(b.vendorNumber);
+      return query.sortOrder === "desc" ? -cmp : cmp;
+    });
     const start = (query.page - 1) * query.pageSize;
     return {
       items: rows.slice(start, start + query.pageSize),

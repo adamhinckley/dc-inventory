@@ -57,6 +57,7 @@ export class LoginStaffUseCase {
       organizationId: user.organizationId,
       staffUserId: user.id,
       wholesaleUserId: null,
+      opsUserId: null,
       customerId: null,
       createdAt: now,
       lastSeenAt: now,

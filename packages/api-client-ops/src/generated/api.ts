@@ -19,10 +19,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  GetOpsSession200,
+  GetOpsSession401,
   GetOpsSubscription200,
+  GetOpsSubscription401,
+  LoginOps200,
   LoginOps401,
   LoginOps429,
-  LoginOpsBody
+  LoginOpsBody,
+  LogoutOps200,
+  LogoutOps401
 } from './model';
 
 import { customFetch } from '../custom-fetch';
@@ -45,6 +51,11 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export type loginOpsResponse200 = {
+  data: LoginOps200
+  status: 200
+}
+
 export type loginOpsResponse401 = {
   data: LoginOps401
   status: 401
@@ -55,12 +66,14 @@ export type loginOpsResponse429 = {
   status: 429
 }
 
-;
+export type loginOpsResponseSuccess = (loginOpsResponse200) & {
+  headers: Headers;
+};
 export type loginOpsResponseError = (loginOpsResponse401 | loginOpsResponse429) & {
   headers: Headers;
 };
 
-export type loginOpsResponse = (loginOpsResponseError)
+export type loginOpsResponse = (loginOpsResponseSuccess | loginOpsResponseError)
 
 export const getLoginOpsUrl = () => {
 
@@ -71,7 +84,7 @@ export const getLoginOpsUrl = () => {
 }
 
 /**
- * @summary Ops login (throttled; credential verification not yet implemented)
+ * @summary Ops login; sets HttpOnly ops_session
  */
 export const loginOps = async (loginOpsBody: LoginOpsBody, options?: Parameters<typeof customFetch>[1]): Promise<loginOpsResponse> => {
 
@@ -126,7 +139,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type LoginOpsMutationError = LoginOps401 | LoginOps429
 
     /**
- * @summary Ops login (throttled; credential verification not yet implemented)
+ * @summary Ops login; sets HttpOnly ops_session
  */
 export const useLoginOps = <TError = LoginOps401 | LoginOps429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginOps>>, TError,{data: LoginOpsBody}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -139,17 +152,210 @@ export const useLoginOps = <TError = LoginOps401 | LoginOps429,
       return useMutation(getLoginOpsMutationOptions(options));
     }
 
+export type logoutOpsResponse200 = {
+  data: LogoutOps200
+  status: 200
+}
+
+export type logoutOpsResponse401 = {
+  data: LogoutOps401
+  status: 401
+}
+
+export type logoutOpsResponseSuccess = (logoutOpsResponse200) & {
+  headers: Headers;
+};
+export type logoutOpsResponseError = (logoutOpsResponse401) & {
+  headers: Headers;
+};
+
+export type logoutOpsResponse = (logoutOpsResponseSuccess | logoutOpsResponseError)
+
+export const getLogoutOpsUrl = () => {
+
+
+
+
+  return `/ops/auth/logout`
+}
+
+/**
+ * @summary Revoke ops session and clear cookie
+ */
+export const logoutOps = async ( options?: Parameters<typeof customFetch>[1]): Promise<logoutOpsResponse> => {
+
+  return customFetch<logoutOpsResponse>(getLogoutOpsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLogoutOpsMutationOptions = <TError = LogoutOps401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutOps>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof logoutOps>>, TError,void, TContext> => {
+
+const mutationKey = ['logoutOps'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof logoutOps>>, void> = () => {
+
+
+          return  logoutOps(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LogoutOpsMutationResult = NonNullable<Awaited<ReturnType<typeof logoutOps>>>
+
+    export type LogoutOpsMutationError = LogoutOps401
+
+    /**
+ * @summary Revoke ops session and clear cookie
+ */
+export const useLogoutOps = <TError = LogoutOps401,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutOps>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof logoutOps>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLogoutOpsMutationOptions(options));
+    }
+
+export type getOpsSessionResponse200 = {
+  data: GetOpsSession200
+  status: 200
+}
+
+export type getOpsSessionResponse401 = {
+  data: GetOpsSession401
+  status: 401
+}
+
+export type getOpsSessionResponseSuccess = (getOpsSessionResponse200) & {
+  headers: Headers;
+};
+export type getOpsSessionResponseError = (getOpsSessionResponse401) & {
+  headers: Headers;
+};
+
+export type getOpsSessionResponse = (getOpsSessionResponseSuccess | getOpsSessionResponseError)
+
+export const getGetOpsSessionUrl = () => {
+
+
+
+
+  return `/ops/auth/session`
+}
+
+/**
+ * @summary Current operator or business-owner session
+ */
+export const getOpsSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<getOpsSessionResponse> => {
+
+  return customFetch<getOpsSessionResponse>(getGetOpsSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOpsSessionQueryKey = () => {
+    return [
+    `/ops/auth/session`
+    ] as const;
+    }
+
+
+export const getGetOpsSessionQueryOptions = <TData = Awaited<ReturnType<typeof getOpsSession>>, TError = GetOpsSession401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpsSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOpsSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOpsSession>>> = ({ signal }) => getOpsSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOpsSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOpsSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getOpsSession>>>
+export type GetOpsSessionQueryError = GetOpsSession401
+
+
+/**
+ * @summary Current operator or business-owner session
+ */
+
+export function useGetOpsSession<TData = Awaited<ReturnType<typeof getOpsSession>>, TError = GetOpsSession401>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpsSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOpsSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export type getOpsSubscriptionResponse200 = {
   data: GetOpsSubscription200
   status: 200
 }
 
+export type getOpsSubscriptionResponse401 = {
+  data: GetOpsSubscription401
+  status: 401
+}
+
 export type getOpsSubscriptionResponseSuccess = (getOpsSubscriptionResponse200) & {
   headers: Headers;
 };
-;
+export type getOpsSubscriptionResponseError = (getOpsSubscriptionResponse401) & {
+  headers: Headers;
+};
 
-export type getOpsSubscriptionResponse = (getOpsSubscriptionResponseSuccess)
+export type getOpsSubscriptionResponse = (getOpsSubscriptionResponseSuccess | getOpsSubscriptionResponseError)
 
 export const getGetOpsSubscriptionUrl = () => {
 
@@ -184,7 +390,7 @@ export const getGetOpsSubscriptionQueryKey = () => {
     }
 
 
-export const getGetOpsSubscriptionQueryOptions = <TData = Awaited<ReturnType<typeof getOpsSubscription>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpsSubscription>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetOpsSubscriptionQueryOptions = <TData = Awaited<ReturnType<typeof getOpsSubscription>>, TError = GetOpsSubscription401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpsSubscription>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -203,14 +409,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetOpsSubscriptionQueryResult = NonNullable<Awaited<ReturnType<typeof getOpsSubscription>>>
-export type GetOpsSubscriptionQueryError = unknown
+export type GetOpsSubscriptionQueryError = GetOpsSubscription401
 
 
 /**
  * @summary Get software subscription
  */
 
-export function useGetOpsSubscription<TData = Awaited<ReturnType<typeof getOpsSubscription>>, TError = unknown>(
+export function useGetOpsSubscription<TData = Awaited<ReturnType<typeof getOpsSubscription>>, TError = GetOpsSubscription401>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOpsSubscription>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

@@ -182,7 +182,7 @@ describe("composition root HTTP", () => {
     const ops = await app.inject({ method: "GET", url: "/ops/subscription" });
     expect(internal.statusCode).toBe(401);
     expect(wholesale.statusCode).toBe(401);
-    expect(ops.statusCode).toBe(200);
+    expect(ops.statusCode).toBe(401);
   });
 
   it("writes JSON logs that include requestId", async () => {

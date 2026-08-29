@@ -209,6 +209,30 @@ paths:
           in: query
           name: sortOrder
           required: false
+      x-table:
+        rowId: id
+        columns:
+          - field: name
+            label: Name
+          - field: creditLimitCents
+            label: Credit limit (¢)
+          - field: currency
+            label: Currency
+          - field: terms
+            label: Terms
+        search:
+          param: q
+          fields:
+            - name
+          placeholder: Search customer name
+        filters: []
+        sort:
+          defaultBy: name
+          defaultOrder: asc
+          fields:
+            - name
+            - createdAt
+            - creditLimitCents
       responses:
         "200":
           description: Default Response
@@ -236,12 +260,17 @@ paths:
                           type: string
                         terms:
                           type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                          pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
                       required:
                         - id
                         - name
                         - creditLimitCents
                         - currency
                         - terms
+                        - createdAt
                       additionalProperties: false
                   page:
                     type: integer
@@ -260,6 +289,28 @@ paths:
                   - page
                   - pageSize
                   - total
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
                 additionalProperties: false
         "401":
           description: Default Response
@@ -341,12 +392,17 @@ paths:
                     type: string
                   terms:
                     type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
                 required:
                   - id
                   - name
                   - creditLimitCents
                   - currency
                   - terms
+                  - createdAt
                 additionalProperties: false
         "400":
           description: Default Response
@@ -426,12 +482,17 @@ paths:
                     type: string
                   terms:
                     type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
                 required:
                   - id
                   - name
                   - creditLimitCents
                   - currency
                   - terms
+                  - createdAt
                 additionalProperties: false
         "400":
           description: Default Response
@@ -545,12 +606,17 @@ paths:
                     type: string
                   terms:
                     type: string
+                  createdAt:
+                    type: string
+                    format: date-time
+                    pattern: ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z))$
                 required:
                   - id
                   - name
                   - creditLimitCents
                   - currency
                   - terms
+                  - createdAt
                 additionalProperties: false
         "400":
           description: Default Response
@@ -2293,6 +2359,28 @@ paths:
                   - pageSize
                   - total
                 additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
+                additionalProperties: false
         "401":
           description: Default Response
           content:
@@ -2727,6 +2815,11 @@ paths:
         - internal
       parameters:
         - schema:
+            type: string
+          in: query
+          name: q
+          required: false
+        - schema:
             default: 1
             type: integer
             minimum: 1
@@ -2741,6 +2834,24 @@ paths:
             maximum: 100
           in: query
           name: pageSize
+          required: false
+        - schema:
+            default: documentNumber
+            type: string
+            enum:
+              - documentNumber
+              - status
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
           required: false
         - schema:
             type: string
@@ -2768,11 +2879,22 @@ paths:
             label: Status
           - field: supplierId
             label: Supplier
+        search:
+          param: q
+          fields:
+            - documentNumber
+          placeholder: Search PO number
         filters:
           - param: status
             control: select
           - param: supplierId
             control: text
+        sort:
+          defaultBy: documentNumber
+          defaultOrder: asc
+          fields:
+            - documentNumber
+            - status
       responses:
         "200":
           description: Default Response
@@ -2863,6 +2985,28 @@ paths:
                   - page
                   - pageSize
                   - total
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
                 additionalProperties: false
         "401":
           description: Default Response
@@ -4033,6 +4177,24 @@ paths:
           in: query
           name: pageSize
           required: false
+        - schema:
+            default: vendorNumber
+            type: string
+            enum:
+              - vendorNumber
+              - name
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
+          required: false
       x-table:
         rowId: id
         columns:
@@ -4046,6 +4208,13 @@ paths:
             - vendorNumber
             - name
           placeholder: "Search vendor # or name"
+        filters: []
+        sort:
+          defaultBy: vendorNumber
+          defaultOrder: asc
+          fields:
+            - vendorNumber
+            - name
       responses:
         "200":
           description: Default Response
@@ -4089,6 +4258,28 @@ paths:
                   - page
                   - pageSize
                   - total
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
                 additionalProperties: false
         "401":
           description: Default Response
@@ -4432,6 +4623,11 @@ paths:
         - internal-suppliers
       parameters:
         - schema:
+            type: string
+          in: query
+          name: q
+          required: false
+        - schema:
             default: 1
             type: integer
             minimum: 1
@@ -4446,6 +4642,24 @@ paths:
             maximum: 100
           in: query
           name: pageSize
+          required: false
+        - schema:
+            default: sku
+            type: string
+            enum:
+              - sku
+              - supplierSku
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
           required: false
         - schema:
             type: string
@@ -4479,6 +4693,19 @@ paths:
             label: Allocated
           - field: qty.available
             label: Available
+        search:
+          param: q
+          fields:
+            - sku
+            - supplierSku
+          placeholder: "Search SKU or vendor item #"
+        filters: []
+        sort:
+          defaultBy: sku
+          defaultOrder: asc
+          fields:
+            - sku
+            - supplierSku
       responses:
         "200":
           description: Default Response
@@ -4586,9 +4813,17 @@ paths:
                   error:
                     type: string
                     enum:
-                      - invalid
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
                 required:
                   - error
+                  - message
+                  - requestId
                 additionalProperties: false
         "401":
           description: Default Response
@@ -5049,6 +5284,11 @@ paths:
         - internal
       parameters:
         - schema:
+            type: string
+          in: query
+          name: q
+          required: false
+        - schema:
             default: 1
             type: integer
             minimum: 1
@@ -5063,6 +5303,24 @@ paths:
             maximum: 100
           in: query
           name: pageSize
+          required: false
+        - schema:
+            default: documentNumber
+            type: string
+            enum:
+              - documentNumber
+              - status
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
           required: false
         - schema:
             type: string
@@ -5090,11 +5348,22 @@ paths:
             label: Status
           - field: customerId
             label: Customer
+        search:
+          param: q
+          fields:
+            - documentNumber
+          placeholder: Search SO number
         filters:
           - param: status
             control: select
           - param: customerId
             control: text
+        sort:
+          defaultBy: documentNumber
+          defaultOrder: asc
+          fields:
+            - documentNumber
+            - status
       responses:
         "200":
           description: Default Response
@@ -5197,6 +5466,28 @@ paths:
                   - page
                   - pageSize
                   - total
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
                 additionalProperties: false
         "401":
           description: Default Response

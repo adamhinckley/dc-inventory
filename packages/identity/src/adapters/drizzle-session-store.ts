@@ -7,6 +7,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { eq } from "drizzle-orm";
 import type { ISessionStore, NewSession } from "../domain/ports/session-store.js";
+import { OpsUserId } from "../domain/ops-user.js";
 import type { Session, SessionAudience } from "../domain/session.js";
 import { sessions } from "../persistence/schema.js";
 import type { IdentityDrizzle } from "./drizzle-staff-user-repository.js";
@@ -16,7 +17,11 @@ export class DrizzleSessionStore implements ISessionStore {
 
   async create(input: NewSession): Promise<Session> {
     const actorId =
-      input.audience === "staff" ? input.staffUserId : input.wholesaleUserId;
+      input.audience === "staff"
+        ? input.staffUserId
+        : input.audience === "wholesale"
+          ? input.wholesaleUserId
+          : input.opsUserId;
     if (actorId === null) {
       throw new Error("session actor is required");
     }
@@ -68,6 +73,7 @@ function toSession(row: typeof sessions.$inferSelect): Session {
     staffUserId: audience === "staff" ? StaffUserId.parse(row.actorId) : null,
     wholesaleUserId:
       audience === "wholesale" ? WholesaleUserId.parse(row.actorId) : null,
+    opsUserId: audience === "ops" ? OpsUserId.parse(row.actorId) : null,
     customerId: row.customerId === null ? null : CustomerId.parse(row.customerId),
     createdAt: row.createdAt,
     lastSeenAt: row.lastSeenAt,
