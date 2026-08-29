@@ -9,8 +9,13 @@ import { Menu, useAppShellContext } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useColorScheme } from "./color-scheme-provider";
+import { useState } from "react";
 import { COLOR_SCHEMES, type ColorScheme } from "../lib/color-scheme";
+import {
+  completeStaffSignOut,
+  shouldCompleteStaffSignOut,
+} from "../lib/staff-session";
+import { useColorScheme } from "./color-scheme-provider";
 
 const SCHEME_LABELS: Record<ColorScheme, string> = {
   light: "Light",
@@ -23,17 +28,32 @@ export function AccountNavMenu() {
   const router = useRouter();
   const { isExpanded } = useAppShellContext();
   const { scheme, setScheme } = useColorScheme();
-  const session = useGetInternalSession({ query: { retry: false } });
+  const session = useGetInternalSession({
+    query: {
+      queryKey: getGetInternalSessionQueryKey(),
+      retry: false,
+    },
+  });
   const logout = useLogoutInternal();
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   const email =
-    session.data?.status === 200 ? session.data.data.email : "Signed in";
+    session.isSuccess && session.data.status === 200
+      ? session.data.data.email
+      : "Signed in";
 
   function signOut() {
+    setSignOutError(null);
     logout.mutate(undefined, {
-      onSettled: () => {
-        queryClient.removeQueries({ queryKey: getGetInternalSessionQueryKey() });
-        router.push("/login");
+      onSuccess: () => {
+        completeStaffSignOut(queryClient, (path) => router.push(path));
+      },
+      onError: (error) => {
+        if (shouldCompleteStaffSignOut("error", error)) {
+          completeStaffSignOut(queryClient, (path) => router.push(path));
+          return;
+        }
+        setSignOutError("Could not sign out. Check your connection and try again.");
       },
     });
   }
@@ -75,6 +95,11 @@ export function AccountNavMenu() {
           ))}
         </Menu.Group>
         <Menu.Separator />
+        {signOutError !== null ? (
+          <p className="item-padding form-error" role="alert">
+            {signOutError}
+          </p>
+        ) : null}
         <Menu.Item onClick={signOut} disabled={logout.isPending}>
           {logout.isPending ? "Signing out…" : "Sign out"}
         </Menu.Item>

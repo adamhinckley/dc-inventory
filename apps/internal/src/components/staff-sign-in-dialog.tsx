@@ -7,17 +7,24 @@ import {
 import { Dialog } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import {
+  isStaffSessionSignedIn,
+  shouldShowStaffSessionLoading,
+} from "../lib/staff-session";
 import { StaffSignInForm } from "./staff-sign-in-form";
 
 export function StaffSessionGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const session = useGetInternalSession({
-    query: { retry: false },
+    query: {
+      queryKey: getGetInternalSessionQueryKey(),
+      retry: false,
+    },
   });
 
-  const signedIn = session.data?.status === 200;
+  const signedIn = isStaffSessionSignedIn(session);
 
-  if (session.isPending && !session.isFetched) {
+  if (shouldShowStaffSessionLoading(session)) {
     return <div className="min-h-screen bg-surface-base" />;
   }
 
