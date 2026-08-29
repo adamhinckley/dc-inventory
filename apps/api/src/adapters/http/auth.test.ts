@@ -11,6 +11,8 @@ import {
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
+  LOGIN_THROTTLE_MAX_ATTEMPTS,
+  LOGIN_THROTTLE_WINDOW_MS,
   SESSION_IDLE_MS,
 } from "@dc-inventory/identity";
 import { afterEach, describe, expect, it } from "vitest";
@@ -299,6 +301,96 @@ describe("opaque session HTTP", () => {
     const ready = await app.inject({ method: "GET", url: "/ready" });
     expect(health.statusCode).toBe(200);
     expect(ready.statusCode).toBe(200);
+  });
+
+  it("returns a stable 429 with Retry-After after repeated login failures", async () => {
+    const { app } = await startAuthApp();
+    const request = {
+      method: "POST" as const,
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "wrong",
+      },
+    };
+
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      const response = await app.inject(request);
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: "unauthorized" });
+    }
+    const rejected = await app.inject(request);
+    expect(rejected.statusCode).toBe(429);
+    expect(rejected.headers["retry-after"]).toBe(
+      (LOGIN_THROTTLE_WINDOW_MS / 1000).toString(),
+    );
+    expect(rejected.json()).toEqual({
+      error: "too_many_login_attempts",
+      retryAfterSeconds: LOGIN_THROTTLE_WINDOW_MS / 1000,
+    });
+
+    const unknownAccountRequest = {
+      ...request,
+      payload: { ...request.payload, email: "missing@local.test" },
+    };
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect((await app.inject(unknownAccountRequest)).statusCode).toBe(401);
+    }
+    const unknownRejected = await app.inject(unknownAccountRequest);
+    expect(unknownRejected.statusCode).toBe(rejected.statusCode);
+    expect(unknownRejected.headers["retry-after"]).toBe(
+      rejected.headers["retry-after"],
+    );
+    expect(unknownRejected.json()).toEqual(rejected.json());
+  });
+
+  it("clears failed attempts after a successful login", async () => {
+    const { app } = await startAuthApp();
+    const payload = {
+      organizationSlug: ACME_SLUG,
+      email: "staff@local.test",
+      password: "wrong",
+    };
+
+    for (let attempt = 1; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/internal/auth/login",
+            payload,
+          })
+        ).statusCode,
+      ).toBe(401);
+    }
+    const success = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: { ...payload, password: "staff-secret" },
+    });
+    expect(success.statusCode).toBe(200);
+
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/internal/auth/login",
+            payload,
+          })
+        ).statusCode,
+      ).toBe(401);
+    }
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/internal/auth/login",
+          payload,
+        })
+      ).statusCode,
+    ).toBe(429);
   });
 
   it("allows credentialed CORS from CORS_ORIGINS and never uses *", async () => {

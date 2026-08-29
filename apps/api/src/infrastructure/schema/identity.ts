@@ -5,6 +5,7 @@
 export {
   actorType,
   identity,
+  loginThrottleCounters,
   opsUserKind,
   opsUsers,
   sessions,

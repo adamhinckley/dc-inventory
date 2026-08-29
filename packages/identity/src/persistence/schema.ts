@@ -1,4 +1,12 @@
-import { pgSchema, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  integer,
+  pgSchema,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 /**
  * Persistence FK target only — not a Customers domain/application import.
@@ -108,3 +116,24 @@ export const sessions = identity.table("sessions", {
     .defaultNow(),
   ...timestamps(),
 });
+
+export const loginThrottleCounters = identity.table(
+  "login_throttle_counters",
+  {
+    audience: actorType("audience").notNull(),
+    sourceHash: text("source_hash").notNull(),
+    accountIdentifierHash: text("account_identifier_hash").notNull(),
+    attemptCount: integer("attempt_count").notNull(),
+    windowStartedAt: timestamp("window_started_at", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "login_throttle_counters_pk",
+      columns: [table.audience, table.sourceHash, table.accountIdentifierHash],
+    }),
+  ],
+);
