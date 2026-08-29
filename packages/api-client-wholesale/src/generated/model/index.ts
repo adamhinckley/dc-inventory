@@ -5,6 +5,18 @@
  * OpenAPI spec version: 0.0.0
  */
 
+export * from './createWholesaleSalesOrder201';
+export * from './createWholesaleSalesOrder201LinesItem';
+export * from './createWholesaleSalesOrder201Status';
+export * from './createWholesaleSalesOrder400';
+export * from './createWholesaleSalesOrder401';
+export * from './createWholesaleSalesOrder401Error';
+export * from './createWholesaleSalesOrder404';
+export * from './createWholesaleSalesOrder404Error';
+export * from './createWholesaleSalesOrder409';
+export * from './createWholesaleSalesOrder409Error';
+export * from './createWholesaleSalesOrderBody';
+export * from './createWholesaleSalesOrderBodyLinesItem';
 export * from './getWholesaleCatalogProduct200';
 export * from './getWholesaleCatalogProduct401';
 export * from './getWholesaleCatalogProduct401Error';
