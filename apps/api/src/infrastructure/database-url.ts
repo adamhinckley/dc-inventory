@@ -7,7 +7,7 @@ export class MissingDatabaseUrlError extends Error {
 
   constructor() {
     super(
-      "DATABASE_URL is missing. Set it to a PostgreSQL 16+ connection string (see apps/api/README.md).",
+      "DATABASE_URL is missing. Set it to a PostgreSQL 18 connection string (see apps/api/README.md).",
     );
   }
 }

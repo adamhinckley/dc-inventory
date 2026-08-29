@@ -19,7 +19,7 @@ Agents and CI run these **verbatim** from the repo root:
 
 Requires **Node >=24**. Vite 7 and the rest of the root toolchain support that range.
 
-Local demo database: `docker compose up -d --wait` (Postgres 16 + MinIO, placeholder credentials). Copy [`.env.example`](./.env.example) and [`apps/api/.env.example`](./apps/api/.env.example). Then `pnpm db:migrate` and `pnpm dev:api`. `GET /ready` is `SELECT 1`, not migrate. Demo-only locks: [`docs/demo-assumptions.md`](./docs/demo-assumptions.md) — not [`docs/invariants.md`](./docs/invariants.md) §18.
+Local demo database: `docker compose up -d --wait` (Postgres 18 + MinIO, placeholder credentials). Copy [`.env.example`](./.env.example) and [`apps/api/.env.example`](./apps/api/.env.example). Then `pnpm db:migrate` and `pnpm dev:api`. `GET /ready` is `SELECT 1`, not migrate. Demo-only locks: [`docs/demo-assumptions.md`](./docs/demo-assumptions.md) — not [`docs/invariants.md`](./docs/invariants.md) §18.
 
 Required CI (not optional): [`.github/workflows/ci-quality.yml`](./.github/workflows/ci-quality.yml) runs `pnpm test` (including dependency-direction Vitest guards), `pnpm lint`, and `pnpm gen:api` with a clean `git diff` on OpenAPI + Orval outputs (`scripts/ci-quality.sh`). [`.github/workflows/compose-migrate-ready.yml`](./.github/workflows/compose-migrate-ready.yml) separately starts Compose, runs `pnpm db:migrate`, boots the API, and fails if `GET /ready` cannot talk to Postgres (`scripts/ci-compose-migrate-ready.sh`). Unit tests stay in-memory and do not start Docker.
 

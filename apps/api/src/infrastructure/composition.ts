@@ -148,6 +148,7 @@ import { GetStockSnapshotUseCase } from "@dc-inventory/inventory";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
+import { readFeaturesAllCoreOn } from "./features-all-core-on.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { CatalogInventoryListQuery } from "../adapters/catalog-inventory-list-query.js";
@@ -520,9 +521,9 @@ export function composeAppServices(
       : inMemoryLicensing!);
   const features =
     overrides.features ??
-    (licensingDb
-      ? new LicensingFeatures(licensingRepository)
-      : featuresAllCoreOn());
+    (readFeaturesAllCoreOn() || !licensingDb
+      ? featuresAllCoreOn()
+      : new LicensingFeatures(licensingRepository));
 
   const staffUsers =
     overrides.staffUsers ??

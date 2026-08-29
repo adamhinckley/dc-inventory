@@ -9,9 +9,11 @@ function readText(relativePath: string): string {
 }
 
 describe("local demo boot (ADA-51)", () => {
-  it("Compose file declares Postgres 16 and pinned MinIO with placeholder credentials", () => {
+  it("Compose file declares Postgres 18 and pinned MinIO with placeholder credentials", () => {
     const compose = readText("docker-compose.yml");
-    expect(compose).toMatch(/image:\s*postgres:16\b/);
+    expect(compose).toMatch(/image:\s*postgres:18\b/);
+    expect(compose).toMatch(/postgres18_data:\/var\/lib\/postgresql$/m);
+    expect(compose).not.toMatch(/\/var\/lib\/postgresql\/data/);
     expect(compose).toContain(
       "image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
     );
