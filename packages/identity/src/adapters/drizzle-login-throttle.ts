@@ -103,11 +103,11 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
         ],
         set: {
           attemptCount: sql<number>`case
-            when ${loginThrottleCounters.windowStartedAt} <= ${expiredBefore} then 1
+            when ${loginThrottleCounters.windowStartedAt} <= ${expiredBefore.toISOString()} then 1
             else ${loginThrottleCounters.attemptCount} + 1
           end`,
           windowStartedAt: sql<Date>`case
-            when ${loginThrottleCounters.windowStartedAt} <= ${expiredBefore} then ${at}
+            when ${loginThrottleCounters.windowStartedAt} <= ${expiredBefore.toISOString()} then ${at.toISOString()}
             else ${loginThrottleCounters.windowStartedAt}
           end`,
           updatedAt: at,

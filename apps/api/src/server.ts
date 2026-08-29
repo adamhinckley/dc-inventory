@@ -9,9 +9,6 @@ import {
 } from "./infrastructure/shutdown.js";
 
 function loadLocalEnvFile(): void {
-  if (process.env.DATABASE_URL?.trim()) {
-    return;
-  }
   const envPath = resolve(dirname(fileURLToPath(import.meta.url)), "../.env");
   if (!existsSync(envPath)) {
     return;

@@ -32,11 +32,11 @@ Composition is explicit — no Nest-style container.
 | Pino JSON + redaction | [`src/infrastructure/logging.ts`](./src/infrastructure/logging.ts) |
 | `requestId` / `x-request-id` | [`src/infrastructure/request-id.ts`](./src/infrastructure/request-id.ts) |
 
-`buildApp({ clock, features, database, logger })` is how tests swap adapters (e.g. `InMemoryClock`, `InMemoryDatabase`). Production uses `SystemClock`, `PostgresDatabase`, and `featuresAllCoreOn()`.
+`buildApp({ clock, features, database, logger })` is how tests swap adapters (e.g. `InMemoryClock`, `InMemoryDatabase`). Production evaluates `LicensingFeatures` from Postgres. Local `pnpm dev:api` uses `featuresAllCoreOn()` unless `FEATURES_ALL_CORE_ON=0`.
 
 ## Local Postgres
 
-From the **repo root**, start Compose (Postgres 16 + MinIO placeholders), copy env examples, migrate, then boot the API:
+From the **repo root**, start Compose (Postgres 18 + MinIO placeholders), copy env examples, migrate, then boot the API:
 
 ```bash
 docker compose up -d --wait
@@ -48,7 +48,7 @@ pnpm dev:api
 
 `pnpm db:migrate` is the only migrate entrypoint. It runs `drizzle-kit migrate` in this app. There is no `packages/db` and no second Kit config.
 
-The API **will not listen** without `DATABASE_URL`. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. `pnpm dev:api` loads `apps/api/.env` if `DATABASE_URL` is not already in the environment.
+The API **will not listen** without `DATABASE_URL`. Missing or blank values throw `MissingDatabaseUrlError` with a message that points here. `pnpm dev:api` loads `apps/api/.env` without overwriting variables already in the environment. Core feature flags stay on for that local listen so demo seed can leave `licensing` empty. Set `FEATURES_ALL_CORE_ON=0` to evaluate Postgres subscriptions instead.
 
 Or export it yourself:
 
