@@ -2033,31 +2033,36 @@ export const useUpdateInternalCustomerExemptionCertificate = <TError = UpdateInt
       return useMutation(getUpdateInternalCustomerExemptionCertificateMutationOptions(options));
     }
 
-export type listInternalProductsResponse200 = {
-  data: ListInternalProducts200
+export type importInternalProductsResponse200 = {
+  data: ImportInternalProducts200
   status: 200
 }
 
-export type listInternalProductsResponse401 = {
-  data: ListInternalProducts401
+export type importInternalProductsResponse400 = {
+  data: ImportInternalProducts400
+  status: 400
+}
+
+export type importInternalProductsResponse401 = {
+  data: ImportInternalProducts401
   status: 401
 }
 
-export type listInternalProductsResponse403 = {
-  data: ListInternalProducts403
+export type importInternalProductsResponse403 = {
+  data: ImportInternalProducts403
   status: 403
 }
 
-export type listInternalProductsResponseSuccess = (listInternalProductsResponse200) & {
+export type importInternalProductsResponseSuccess = (importInternalProductsResponse200) & {
   headers: Headers;
 };
-export type listInternalProductsResponseError = (listInternalProductsResponse401 | listInternalProductsResponse403) & {
+export type importInternalProductsResponseError = (importInternalProductsResponse400 | importInternalProductsResponse401 | importInternalProductsResponse403) & {
   headers: Headers;
 };
 
-export type listInternalProductsResponse = (listInternalProductsResponseSuccess | listInternalProductsResponseError)
+export type importInternalProductsResponse = (importInternalProductsResponseSuccess | importInternalProductsResponseError)
 
-export const getListInternalProductsUrl = (params?: ListInternalProductsParams,) => {
+export const getImportInternalProductsUrl = (params?: ImportInternalProductsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -2069,20 +2074,23 @@ export const getListInternalProductsUrl = (params?: ListInternalProductsParams,)
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/internal/products?${stringifiedParams}` : `/internal/products`
+  return stringifiedParams.length > 0 ? `/internal/products/import?${stringifiedParams}` : `/internal/products/import`
 }
 
 /**
- * @summary List products including shop-hidden SKUs
+ * @summary Import Product Browser CSV into catalog and vendors
  */
-export const listInternalProducts = async (params?: ListInternalProductsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalProductsResponse> => {
+export const importInternalProducts = async (importInternalProductsBody: ImportInternalProductsBody,
+    params?: ImportInternalProductsParams, options?: Parameters<typeof customFetch>[1]): Promise<importInternalProductsResponse> => {
+    const formData = new FormData();
+formData.append(`file`, importInternalProductsBody.file);
 
-  return customFetch<listInternalProductsResponse>(getListInternalProductsUrl(params),
+  return customFetch<importInternalProductsResponse>(getImportInternalProductsUrl(params),
   {
     ...options,
-    method: 'GET'
-
-
+    method: 'POST'
+    ,
+    body: formData
   }
 );}
 
@@ -2090,56 +2098,50 @@ export const listInternalProducts = async (params?: ListInternalProductsParams, 
 
 
 
-export const getListInternalProductsQueryKey = (params?: ListInternalProductsParams,) => {
-    return [
-    `/internal/products`, ...(params ? [params] : [])
-    ] as const;
-    }
+export const getImportInternalProductsMutationOptions = <TError = ImportInternalProducts400 | ImportInternalProducts401 | ImportInternalProducts403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext> => {
 
-
-export const getListInternalProductsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalProducts>>, TError = ListInternalProducts401 | ListInternalProducts403>(params?: ListInternalProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListInternalProductsQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalProducts>>> = ({ signal }) => listInternalProducts(params, { signal, ...requestOptions });
+const mutationKey = ['importInternalProducts'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
 
 
 
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importInternalProducts>>, {data: ImportInternalProductsBody;params?: ImportInternalProductsParams}> = (props) => {
+          const {data,params} = props ?? {};
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalProducts>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListInternalProductsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalProducts>>>
-export type ListInternalProductsQueryError = ListInternalProducts401 | ListInternalProducts403
+          return  importInternalProducts(data,params,requestOptions)
+        }
 
 
-/**
- * @summary List products including shop-hidden SKUs
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportInternalProductsMutationResult = NonNullable<Awaited<ReturnType<typeof importInternalProducts>>>
+    export type ImportInternalProductsMutationBody = ImportInternalProductsBody
+    export type ImportInternalProductsMutationError = ImportInternalProducts400 | ImportInternalProducts401 | ImportInternalProducts403
+
+    /**
+ * @summary Import Product Browser CSV into catalog and vendors
  */
-
-export function useListInternalProducts<TData = Awaited<ReturnType<typeof listInternalProducts>>, TError = ListInternalProducts401 | ListInternalProducts403>(
- params?: ListInternalProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListInternalProductsQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
+export const useImportInternalProducts = <TError = ImportInternalProducts400 | ImportInternalProducts401 | ImportInternalProducts403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importInternalProducts>>,
+        TError,
+        {data: ImportInternalProductsBody;params?: ImportInternalProductsParams},
+        TContext
+      > => {
+      return useMutation(getImportInternalProductsMutationOptions(options));
+    }
 
 export type createInternalProductResponse201 = {
   data: CreateInternalProduct201
@@ -2257,36 +2259,31 @@ export const useCreateInternalProduct = <TError = CreateInternalProduct400 | Cre
       return useMutation(getCreateInternalProductMutationOptions(options));
     }
 
-export type importInternalProductsResponse200 = {
-  data: ImportInternalProducts200
+export type listInternalProductsResponse200 = {
+  data: ListInternalProducts200
   status: 200
 }
 
-export type importInternalProductsResponse400 = {
-  data: ImportInternalProducts400
-  status: 400
-}
-
-export type importInternalProductsResponse401 = {
-  data: ImportInternalProducts401
+export type listInternalProductsResponse401 = {
+  data: ListInternalProducts401
   status: 401
 }
 
-export type importInternalProductsResponse403 = {
-  data: ImportInternalProducts403
+export type listInternalProductsResponse403 = {
+  data: ListInternalProducts403
   status: 403
 }
 
-export type importInternalProductsResponseSuccess = (importInternalProductsResponse200) & {
+export type listInternalProductsResponseSuccess = (listInternalProductsResponse200) & {
   headers: Headers;
 };
-export type importInternalProductsResponseError = (importInternalProductsResponse400 | importInternalProductsResponse401 | importInternalProductsResponse403) & {
+export type listInternalProductsResponseError = (listInternalProductsResponse401 | listInternalProductsResponse403) & {
   headers: Headers;
 };
 
-export type importInternalProductsResponse = (importInternalProductsResponseSuccess | importInternalProductsResponseError)
+export type listInternalProductsResponse = (listInternalProductsResponseSuccess | listInternalProductsResponseError)
 
-export const getImportInternalProductsUrl = (params?: ImportInternalProductsParams,) => {
+export const getListInternalProductsUrl = (params?: ListInternalProductsParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -2298,118 +2295,15 @@ export const getImportInternalProductsUrl = (params?: ImportInternalProductsPara
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/internal/products/import?${stringifiedParams}` : `/internal/products/import`
+  return stringifiedParams.length > 0 ? `/internal/products?${stringifiedParams}` : `/internal/products`
 }
 
 /**
- * @summary Import Product Browser CSV into catalog and vendors
+ * @summary List products including shop-hidden SKUs
  */
-export const importInternalProducts = async (importInternalProductsBody: ImportInternalProductsBody,
-    params?: ImportInternalProductsParams, options?: Parameters<typeof customFetch>[1]): Promise<importInternalProductsResponse> => {
-    const formData = new FormData();
-formData.append(`file`, importInternalProductsBody.file);
+export const listInternalProducts = async (params?: ListInternalProductsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalProductsResponse> => {
 
-  return customFetch<importInternalProductsResponse>(getImportInternalProductsUrl(params),
-  {
-    ...options,
-    method: 'POST'
-    ,
-    body: formData
-  }
-);}
-
-
-
-
-
-export const getImportInternalProductsMutationOptions = <TError = ImportInternalProducts400 | ImportInternalProducts401 | ImportInternalProducts403,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext> => {
-
-const mutationKey = ['importInternalProducts'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importInternalProducts>>, {data: ImportInternalProductsBody;params?: ImportInternalProductsParams}> = (props) => {
-          const {data,params} = props ?? {};
-
-          return  importInternalProducts(data,params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ImportInternalProductsMutationResult = NonNullable<Awaited<ReturnType<typeof importInternalProducts>>>
-    export type ImportInternalProductsMutationBody = ImportInternalProductsBody
-    export type ImportInternalProductsMutationError = ImportInternalProducts400 | ImportInternalProducts401 | ImportInternalProducts403
-
-    /**
- * @summary Import Product Browser CSV into catalog and vendors
- */
-export const useImportInternalProducts = <TError = ImportInternalProducts400 | ImportInternalProducts401 | ImportInternalProducts403,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importInternalProducts>>, TError,{data: ImportInternalProductsBody;params?: ImportInternalProductsParams}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof importInternalProducts>>,
-        TError,
-        {data: ImportInternalProductsBody;params?: ImportInternalProductsParams},
-        TContext
-      > => {
-      return useMutation(getImportInternalProductsMutationOptions(options));
-    }
-
-export type getInternalProductResponse200 = {
-  data: GetInternalProduct200
-  status: 200
-}
-
-export type getInternalProductResponse401 = {
-  data: GetInternalProduct401
-  status: 401
-}
-
-export type getInternalProductResponse403 = {
-  data: GetInternalProduct403
-  status: 403
-}
-
-export type getInternalProductResponse404 = {
-  data: GetInternalProduct404
-  status: 404
-}
-
-export type getInternalProductResponseSuccess = (getInternalProductResponse200) & {
-  headers: Headers;
-};
-export type getInternalProductResponseError = (getInternalProductResponse401 | getInternalProductResponse403 | getInternalProductResponse404) & {
-  headers: Headers;
-};
-
-export type getInternalProductResponse = (getInternalProductResponseSuccess | getInternalProductResponseError)
-
-export const getGetInternalProductUrl = (id: string,) => {
-
-
-
-
-  return `/internal/products/${id}`
-}
-
-/**
- * @summary Get product
- */
-export const getInternalProduct = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalProductResponse> => {
-
-  return customFetch<getInternalProductResponse>(getGetInternalProductUrl(id),
+  return customFetch<listInternalProductsResponse>(getListInternalProductsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2422,45 +2316,45 @@ export const getInternalProduct = async (id: string, options?: Parameters<typeof
 
 
 
-export const getGetInternalProductQueryKey = (id: string,) => {
+export const getListInternalProductsQueryKey = (params?: ListInternalProductsParams,) => {
     return [
-    `/internal/products/${id}`
+    `/internal/products`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetInternalProductQueryOptions = <TData = Awaited<ReturnType<typeof getInternalProduct>>, TError = GetInternalProduct401 | GetInternalProduct403 | GetInternalProduct404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalProduct>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInternalProductsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalProducts>>, TError = ListInternalProducts401 | ListInternalProducts403>(params?: ListInternalProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetInternalProductQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getListInternalProductsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalProduct>>> = ({ signal }) => getInternalProduct(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalProducts>>> = ({ signal }) => listInternalProducts(params, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalProduct>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalProducts>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type GetInternalProductQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalProduct>>>
-export type GetInternalProductQueryError = GetInternalProduct401 | GetInternalProduct403 | GetInternalProduct404
+export type ListInternalProductsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalProducts>>>
+export type ListInternalProductsQueryError = ListInternalProducts401 | ListInternalProducts403
 
 
 /**
- * @summary Get product
+ * @summary List products including shop-hidden SKUs
  */
 
-export function useGetInternalProduct<TData = Awaited<ReturnType<typeof getInternalProduct>>, TError = GetInternalProduct401 | GetInternalProduct403 | GetInternalProduct404>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalProduct>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListInternalProducts<TData = Awaited<ReturnType<typeof listInternalProducts>>, TError = ListInternalProducts401 | ListInternalProducts403>(
+ params?: ListInternalProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetInternalProductQueryOptions(id,options)
+  const queryOptions = getListInternalProductsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2594,6 +2488,112 @@ export const useUpdateInternalProduct = <TError = UpdateInternalProduct400 | Upd
       > => {
       return useMutation(getUpdateInternalProductMutationOptions(options));
     }
+
+export type getInternalProductResponse200 = {
+  data: GetInternalProduct200
+  status: 200
+}
+
+export type getInternalProductResponse401 = {
+  data: GetInternalProduct401
+  status: 401
+}
+
+export type getInternalProductResponse403 = {
+  data: GetInternalProduct403
+  status: 403
+}
+
+export type getInternalProductResponse404 = {
+  data: GetInternalProduct404
+  status: 404
+}
+
+export type getInternalProductResponseSuccess = (getInternalProductResponse200) & {
+  headers: Headers;
+};
+export type getInternalProductResponseError = (getInternalProductResponse401 | getInternalProductResponse403 | getInternalProductResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalProductResponse = (getInternalProductResponseSuccess | getInternalProductResponseError)
+
+export const getGetInternalProductUrl = (id: string,) => {
+
+
+
+
+  return `/internal/products/${id}`
+}
+
+/**
+ * @summary Get product
+ */
+export const getInternalProduct = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalProductResponse> => {
+
+  return customFetch<getInternalProductResponse>(getGetInternalProductUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalProductQueryKey = (id: string,) => {
+    return [
+    `/internal/products/${id}`
+    ] as const;
+    }
+
+
+export const getGetInternalProductQueryOptions = <TData = Awaited<ReturnType<typeof getInternalProduct>>, TError = GetInternalProduct401 | GetInternalProduct403 | GetInternalProduct404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalProduct>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalProductQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalProduct>>> = ({ signal }) => getInternalProduct(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalProduct>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalProductQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalProduct>>>
+export type GetInternalProductQueryError = GetInternalProduct401 | GetInternalProduct403 | GetInternalProduct404
+
+
+/**
+ * @summary Get product
+ */
+
+export function useGetInternalProduct<TData = Awaited<ReturnType<typeof getInternalProduct>>, TError = GetInternalProduct401 | GetInternalProduct403 | GetInternalProduct404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalProduct>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalProductQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type getInternalInventoryStockResponse200 = {
   data: GetInternalInventoryStock200
