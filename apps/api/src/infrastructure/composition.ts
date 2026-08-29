@@ -51,6 +51,8 @@ import {
   DrizzleSessionStore,
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
+  DrizzleLoginThrottle,
+  InMemoryLoginThrottle,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
@@ -64,6 +66,7 @@ import {
   ScryptPasswordHasher,
   DrizzleOrganizationRepository,
   type IPasswordHasher,
+  type ILoginThrottle,
   type IOrganizationRepository,
   type ISessionStore,
   type IStaffUserRepository,
@@ -154,6 +157,7 @@ import { InMemoryLicensingStore } from "../licensing/in-memory-licensing.js";
 import { createDatabaseConnection, PostgresDatabase } from "./db.js";
 
 export type IdentityHttpServices = {
+  loginThrottle: ILoginThrottle;
   loginStaff: LoginStaffUseCase;
   loginWholesale: LoginWholesaleUseCase;
   logoutStaff: LogoutUseCase;
@@ -255,6 +259,7 @@ export type AppServiceOverrides = {
   wholesaleUsers?: IWholesaleUserRepository;
   sessions?: ISessionStore;
   passwords?: IPasswordHasher;
+  loginThrottle?: ILoginThrottle;
   organizationRepo?: IOrganizationRepository;
   customerRepo?: ICustomerRepository;
   contactRepo?: IContactRepository;
@@ -491,6 +496,11 @@ export function composeAppServices(
     (identityDb
       ? new DrizzleOrganizationRepository(identityDb)
       : new InMemoryOrganizationRepository());
+  const loginThrottle =
+    overrides.loginThrottle ??
+    (identityDb
+      ? new DrizzleLoginThrottle(identityDb, clock)
+      : new InMemoryLoginThrottle(clock));
 
   const customerRepo =
     overrides.customerRepo ??
@@ -591,6 +601,7 @@ export function composeAppServices(
     ping: new PingUseCase(clock),
     ready: new ReadyCheckUseCase(database),
     identity: {
+      loginThrottle,
       loginStaff: new LoginStaffUseCase(
         organizationRepo,
         staffUsers,

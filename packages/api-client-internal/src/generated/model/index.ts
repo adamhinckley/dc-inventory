@@ -266,6 +266,8 @@ export * from './listInternalSuppliersParams';
 export * from './loginInternal200';
 export * from './loginInternal401';
 export * from './loginInternal401Error';
+export * from './loginInternal429';
+export * from './loginInternal429Error';
 export * from './loginInternalBody';
 export * from './logoutInternal200';
 export * from './logoutInternal401';

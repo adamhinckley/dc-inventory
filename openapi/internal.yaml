@@ -66,6 +66,26 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "429":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - too_many_login_attempts
+                  retryAfterSeconds:
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                required:
+                  - error
+                  - retryAfterSeconds
+                additionalProperties: false
   /internal/auth/logout:
     post:
       operationId: logoutInternal

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { registerOpsAuthRoutes } from "../adapters/http/ops-auth.js";
 import { opsSubscriptionSchema, stubOpsSubscription } from "../schemas.js";
 
 function typed(app: FastifyInstance) {
@@ -8,6 +9,8 @@ function typed(app: FastifyInstance) {
 
 /** Ops / licensing mount (`/ops`). */
 export async function opsRoutes(app: FastifyInstance): Promise<void> {
+  registerOpsAuthRoutes(app);
+
   typed(app).route({
     method: "GET",
     url: "/subscription",

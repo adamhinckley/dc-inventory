@@ -162,6 +162,20 @@
       "when": 1788955600000,
       "tag": "0023_atomic_document_number_counters",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789055600000,
+      "tag": "0024_identity_login_throttle",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789155600000,
+      "tag": "0025_login_throttle_window_started_at_idx",
+      "breakpoints": true
     }
   ]
 }
