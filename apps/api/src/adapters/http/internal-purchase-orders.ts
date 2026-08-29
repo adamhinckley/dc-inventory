@@ -11,7 +11,9 @@ import {
   purchaseOrderCommandBodySchema,
   purchaseOrderIdParamsSchema,
   purchaseOrderExportQuerySchema,
+  purchaseOrderFactorySendResponseSchema,
   binaryFileResponseSchema,
+  featureDisabledResponseSchema,
   purchaseOrderItemSchema,
   purchaseOrderListQuerySchema,
   purchaseOrderListResponseSchema,
@@ -80,6 +82,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         querystring: purchaseOrderListQuerySchema,
         response: {
           200: purchaseOrderListResponseSchema,
+          400: zodValidationErrorResponseSchema,
           401: unauthorizedResponseSchema,
         },
         "x-table": purchaseOrdersListTable,
@@ -87,22 +90,31 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request) => {
       const query = request.query as {
+        q?: string;
         page: number;
         pageSize: number;
+        sortBy: "documentNumber" | "status";
+        sortOrder: "asc" | "desc";
         status?: PurchaseOrder["status"];
         supplierId?: string;
       };
       const result = await request.server.purchasing.listPurchaseOrders.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
+        q: query.q,
         page: query.page,
         pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
         status: query.status,
         supplierId:
           query.supplierId === undefined ? undefined : SupplierId.parse(query.supplierId),
       });
       return {
-        items: result.items.map(mapPurchaseOrder),
+        items: result.items.map((order) => ({
+          ...mapPurchaseOrder(order),
+          supplierName: result.supplierNames.get(order.supplierId) ?? "",
+        })),
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
@@ -136,7 +148,10 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         lines: request.body.lines,
       });
       if (!result.ok) {
-        if (result.reason === "supplier_not_found") {
+        if (
+          result.reason === "supplier_not_found" ||
+          result.reason === "product_not_found"
+        ) {
           return sendNotFound(reply);
         }
         if (result.reason === "empty_order") {
@@ -176,7 +191,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         lines: request.body.lines,
       });
       if (!result.ok) {
-        if (result.reason === "not_found") {
+        if (result.reason === "not_found" || result.reason === "product_not_found") {
           return sendNotFound(reply);
         }
         if (result.reason === "illegal_transition") {
@@ -253,6 +268,38 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
   );
 
+  routes.get(
+    "/purchase-orders/:id/factory-send",
+    {
+      schema: {
+        operationId: "getInternalPurchaseOrderFactorySend",
+        tags: ["internal"],
+        summary: "Return factory-send columns and rows for a purchase order",
+        params: purchaseOrderIdParamsSchema,
+        response: {
+          200: purchaseOrderFactorySendResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.getPurchaseOrderFactorySend.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return purchaseOrderFactorySendResponseSchema.parse({
+        columns: [...result.columns],
+        rows: [...result.rows],
+      });
+    },
+  );
+
   routes.post(
     "/purchase-orders/:id/confirm",
     {
@@ -284,6 +331,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         if (
           result.reason === "illegal_transition" ||
+          result.reason === "product_not_found" ||
           result.reason === "idempotency_conflict" ||
           result.reason === "inventory_conflict"
         ) {

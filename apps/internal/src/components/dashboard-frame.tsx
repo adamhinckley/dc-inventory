@@ -43,8 +43,10 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
         </AppShell.Topbar>
       }
     >
-      <div className="flex min-h-full flex-col">
-        <div className="flex-1 p-canvas">{children}</div>
+      <div className="flex min-h-full flex-col has-data-sticky-table:h-full has-data-sticky-table:min-h-0">
+        <div className="flex-1 p-canvas has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col">
+          {children}
+        </div>
         <p className="px-region-x py-region-y text-caption text-fg-muted">
           Staff dashboard — not the wholesale shop.
         </p>

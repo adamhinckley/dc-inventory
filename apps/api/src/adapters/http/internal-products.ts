@@ -21,6 +21,7 @@ import {
   skuImmutableResponseSchema,
   SPREADSHEET_UPLOAD_MAX_BYTES,
   unauthorizedResponseSchema,
+  zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
 
@@ -88,50 +89,8 @@ const writeErrorResponses = {
   409: duplicateSkuResponseSchema,
 };
 
-export function registerInternalProductRoutes(app: FastifyInstance): void {
+export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
   const routes = typed(app);
-
-  routes.get(
-    "/products",
-    {
-      schema: {
-        operationId: "listInternalProducts",
-        tags: ["internal"],
-        summary: "List products including shop-hidden SKUs",
-        querystring: listQuerySchema,
-        response: { 200: productListResponseSchema, 401: unauthorizedResponseSchema },
-        "x-table": productsListTable,
-      } as FastifySchema & { "x-table": typeof productsListTable },
-    },
-    async (request) => {
-      const query = request.query as {
-        q?: string;
-        page: number;
-        pageSize: number;
-        sortBy: "sku" | "name" | "onHand" | "available" | "createdAt";
-        sortOrder: "asc" | "desc";
-        inactive?: boolean;
-      };
-      const result = await request.server.catalog.listStaffProducts.execute({
-        organizationId: staffOrganizationId(request),
-        staffUserId: staffUserId(request),
-        q: query.q,
-        page: query.page,
-        pageSize: query.pageSize,
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
-        inactive: query.inactive,
-      });
-      return {
-        items: result.items.map((row) =>
-          mapListItem(row.product, row.qty, row.createdAt),
-        ),
-        page: result.page,
-        pageSize: result.pageSize,
-        total: result.total,
-      };
-    },
-  );
 
   routes.post(
     "/products/import",
@@ -159,12 +118,19 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
         return sendInvalid(reply);
       }
       const filename = file.filename.toLowerCase();
+      if (
+        filename.endsWith(".xls") ||
+        filename.endsWith(".xlsx") ||
+        filename.endsWith(".xlsm")
+      ) {
+        return sendInvalid(reply);
+      }
       const csvLike =
         filename.endsWith(".csv") ||
         file.mimetype === "text/csv" ||
-        file.mimetype === "application/vnd.ms-excel" ||
+        file.mimetype === "text/plain" ||
         file.mimetype === "application/octet-stream" ||
-        file.mimetype === "text/plain";
+        (file.mimetype === "application/vnd.ms-excel" && filename.endsWith(".csv"));
       if (!csvLike) {
         return sendInvalid(reply);
       }
@@ -177,18 +143,28 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
       if (bytes.byteLength > SPREADSHEET_UPLOAD_MAX_BYTES) {
         return sendInvalid(reply);
       }
-      const rows = await new CsvWorkbookParser().parse({
-        bytes,
-        filename: file.filename,
-        contentType: file.mimetype,
-      });
+      let rows;
+      try {
+        rows = await new CsvWorkbookParser().parse({
+          bytes,
+          filename: file.filename,
+          contentType: file.mimetype,
+        });
+      } catch {
+        return sendInvalid(reply);
+      }
       const query = request.query as { dryRun?: boolean };
-      return request.server.catalog.importProductBrowser.execute({
-        organizationId: staffOrganizationId(request),
-        staffUserId: staffUserId(request),
-        rows,
-        dryRun: query.dryRun === true,
-      });
+      try {
+        return await request.server.catalog.importProductBrowser.execute({
+          organizationId: staffOrganizationId(request),
+          staffUserId: staffUserId(request),
+          rows,
+          dryRun: query.dryRun === true,
+        });
+      } catch (error) {
+        request.log.error({ err: error }, "product browser import failed");
+        throw error;
+      }
     },
   );
 
@@ -235,34 +211,6 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
     },
   );
 
-  routes.get(
-    "/products/:id",
-    {
-      schema: {
-        operationId: "getInternalProduct",
-        tags: ["internal"],
-        summary: "Get product",
-        params: productIdParamsSchema,
-        response: {
-          200: productDetailSchema,
-          401: unauthorizedResponseSchema,
-          404: notFoundResponseSchema,
-        },
-      },
-    },
-    async (request, reply) => {
-      const result = await request.server.catalog.getProduct.execute({
-        organizationId: staffOrganizationId(request),
-        staffUserId: staffUserId(request),
-        productId: ProductId.parse(request.params.id),
-      });
-      if (!result.ok) {
-        return sendNotFound(reply);
-      }
-      return mapDetail(result.product, result.qty);
-    },
-  );
-
   routes.patch(
     "/products/:id",
     {
@@ -298,6 +246,84 @@ export function registerInternalProductRoutes(app: FastifyInstance): void {
           return reply.code(422).send({ error: "qty_not_allowed" as const });
         }
         return sendInvalid(reply);
+      }
+      return mapDetail(result.product, result.qty);
+    },
+  );
+}
+
+export function registerInternalProductStockRoutes(app: FastifyInstance): void {
+  const routes = typed(app);
+
+  routes.get(
+    "/products",
+    {
+      schema: {
+        operationId: "listInternalProducts",
+        tags: ["internal"],
+        summary: "List products including shop-hidden SKUs",
+        querystring: listQuerySchema,
+        response: {
+          200: productListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+        },
+        "x-table": productsListTable,
+      } as FastifySchema & { "x-table": typeof productsListTable },
+    },
+    async (request) => {
+      const query = request.query as {
+        q?: string;
+        page: number;
+        pageSize: number;
+        sortBy: "sku" | "name" | "onHand" | "available" | "createdAt";
+        sortOrder: "asc" | "desc";
+        inactive?: boolean;
+      };
+      const result = await request.server.catalog.listStaffProducts.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        q: query.q,
+        page: query.page,
+        pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+        inactive: query.inactive,
+      });
+      return {
+        items: result.items.map((row) =>
+          mapListItem(row.product, row.qty, row.createdAt),
+        ),
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
+      };
+    },
+  );
+
+  routes.get(
+    "/products/:id",
+    {
+      schema: {
+        operationId: "getInternalProduct",
+        tags: ["internal"],
+        summary: "Get product",
+        params: productIdParamsSchema,
+        response: {
+          200: productDetailSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.catalog.getProduct.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        productId: ProductId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
       }
       return mapDetail(result.product, result.qty);
     },

@@ -70,6 +70,7 @@ async function upsertCustomer(ports: Phase1SeedPorts): Promise<Customer> {
       PHASE1_CUSTOMER_CURRENCY,
     ),
     terms: PHASE1_CUSTOMER_TERMS,
+    createdAt: existing?.createdAt ?? new Date(),
   };
   await ports.customers.save(customer);
   return customer;
@@ -85,6 +86,7 @@ async function upsertStaff(
     organizationId: OrganizationId.DEFAULT,
     email: PHASE1_STAFF_EMAIL,
     passwordHash: await ports.passwords.hash(password),
+    roles: existing?.roles ?? ["admin"],
   };
   await ports.staffUsers.save(staff);
   return staff;

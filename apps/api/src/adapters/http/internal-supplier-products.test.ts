@@ -41,6 +41,7 @@ async function startSupplierProductsApp() {
     organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   const productRepo = new InMemoryProductRepository();
   const createProduct = new CreateProductUseCase(productRepo);

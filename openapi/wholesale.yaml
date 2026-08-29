@@ -71,6 +71,26 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "429":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - too_many_login_attempts
+                  retryAfterSeconds:
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                required:
+                  - error
+                  - retryAfterSeconds
+                additionalProperties: false
   /wholesale/auth/logout:
     post:
       operationId: logoutWholesale
@@ -166,6 +186,7 @@ paths:
           required: false
         - schema:
             type: string
+            minLength: 1
           in: query
           name: category
           required: false
@@ -275,6 +296,30 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
   /wholesale/catalog/{id}:
     get:
       operationId: getWholesaleCatalogProduct
@@ -338,6 +383,30 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -349,6 +418,206 @@ paths:
                     type: string
                     enum:
                       - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /wholesale/sales-orders:
+    post:
+      operationId: createWholesaleSalesOrder
+      summary: Create draft sales order
+      tags:
+        - wholesale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lines:
+                  minItems: 1
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      qty:
+                        type: integer
+                        minimum: 0
+                        exclusiveMinimum: true
+                        maximum: 9007199254740991
+                    required:
+                      - productId
+                      - qty
+                shipLine1:
+                  type: string
+                shipLine2:
+                  nullable: true
+                  type: string
+                shipCity:
+                  type: string
+                shipRegion:
+                  type: string
+                shipPostal:
+                  type: string
+                shipCountry:
+                  type: string
+              required:
+                - lines
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  customerId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  documentNumber:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - confirmed
+                      - shipped
+                      - cancelled
+                  shipLine1:
+                    type: string
+                  shipLine2:
+                    nullable: true
+                    type: string
+                  shipCity:
+                    type: string
+                  shipRegion:
+                    type: string
+                  shipPostal:
+                    type: string
+                  shipCountry:
+                    type: string
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        sku:
+                          type: string
+                        name:
+                          type: string
+                        qty:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        unitPriceCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        currency:
+                          type: string
+                          minLength: 3
+                          maxLength: 3
+                        taxCategoryCode:
+                          type: string
+                      required:
+                        - id
+                        - sku
+                        - name
+                        - qty
+                        - unitPriceCents
+                        - currency
+                      additionalProperties: false
+                required:
+                  - id
+                  - customerId
+                  - documentNumber
+                  - status
+                  - lines
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_request
+                      message:
+                        type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
+                    required:
+                      - error
+                      - message
+                      - requestId
+                    additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - conflict
                 required:
                   - error
                 additionalProperties: false

@@ -16,6 +16,7 @@ export { CancelPurchaseOrderUseCase } from "./application/cancel-purchase-order.
 export { ConfirmPurchaseOrderUseCase } from "./application/confirm-purchase-order.js";
 export { CreatePurchaseOrderUseCase } from "./application/create-purchase-order.js";
 export { ExportPurchaseOrderUseCase } from "./application/export-purchase-order.js";
+export { GetPurchaseOrderFactorySendUseCase } from "./application/get-purchase-order-factory-send.js";
 export { CreateSupplierUseCase } from "./application/create-supplier.js";
 export { GetPurchaseOrderUseCase } from "./application/get-purchase-order.js";
 export { GetSupplierUseCase } from "./application/get-supplier.js";
@@ -36,11 +37,13 @@ export type {
   InboundCancelledCommand,
   InboundFromPoCommand,
   InventoryCommandResult,
+  InventorySnapshotLock,
   IPurchaseOrderRepository,
   IPurchasingUnitOfWork,
   ISupplierRepository,
   ListSuppliersQuery,
   SupplierListPage,
+  UnnumberedPurchaseOrder,
 } from "./domain/ports/purchase-order-repository.js";
 export type {
   IWorkbookWriter,
@@ -48,6 +51,7 @@ export type {
   WorkbookWriteResult,
 } from "./domain/ports/workbook-writer.js";
 export type {
+  CatalogProductSnapshot,
   ICatalogSkuLookupPort,
   ISupplierProductQtyReadPort,
   ISupplierProductRepository,

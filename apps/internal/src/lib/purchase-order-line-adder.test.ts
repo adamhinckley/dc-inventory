@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { lineAdderSelectionForSupplier } from "./purchase-order-line-adder";
+import { draftLineFromVendorProduct } from "./purchase-order-line-adder";
 
-describe("lineAdderSelectionForSupplier", () => {
-  it("clears selected SKUs and error when the vendor changes", () => {
-    expect(lineAdderSelectionForSupplier("vendor-a", "vendor-b")).toEqual({
-      selectedSkus: [],
-      error: null,
+describe("draftLineFromVendorProduct", () => {
+  it("starts picked vendor products at qty 1 with a fresh line id", () => {
+    const line = draftLineFromVendorProduct({
+      sku: "DC7818LV",
+      catalogName: 'Baby Rose Bush X 7 12" - Lavender',
     });
-  });
+    expect(line.qty).toBe(1);
 
-  it("keeps the current selection when the vendor is unchanged", () => {
-    expect(lineAdderSelectionForSupplier("vendor-a", "vendor-a")).toBeUndefined();
+    const second = draftLineFromVendorProduct({
+      sku: "DC7819LV",
+      catalogName: "Different rose",
+    });
+    expect(second.id).not.toBe(line.id);
   });
 });

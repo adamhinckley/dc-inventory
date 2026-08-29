@@ -15,6 +15,9 @@ export class InMemoryProductPackagingRepository implements IProductPackagingRepo
     this.byProductId.set(packaging.productId, {
       productId: packaging.productId,
       caseQty: packaging.caseQty,
+      caseLength: packaging.caseLength,
+      caseWidth: packaging.caseWidth,
+      caseHeight: packaging.caseHeight,
     });
   }
 }

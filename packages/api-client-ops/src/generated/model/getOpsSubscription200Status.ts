@@ -11,5 +11,7 @@ export type GetOpsSubscription200Status = typeof GetOpsSubscription200Status[key
 export const GetOpsSubscription200Status = {
   trialing: 'trialing',
   active: 'active',
+  past_due: 'past_due',
+  canceled: 'canceled',
   inactive: 'inactive',
 } as const;

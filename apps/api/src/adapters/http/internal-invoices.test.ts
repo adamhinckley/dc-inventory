@@ -47,6 +47,7 @@ async function startAccountingApp() {
       organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
 
   const createInvoice = new CreateInvoiceUseCase(accountingUow);
@@ -179,6 +180,35 @@ describe("internal invoices HTTP", () => {
     });
     expect(payment.statusCode).toBe(200);
     expect(payment.json()).toEqual({ remainingCents: 600, currency: "USD" });
+  });
+
+  it("returns stable 200 replay and 409 conflict responses for payment retries", async () => {
+    const { app, invoice } = await startAccountingApp();
+    const cookie = await staffCookie(app);
+    const request = {
+      method: "POST" as const,
+      url: `/internal/invoices/${invoice.id}/record-payment`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        amountCents: 400,
+        currency: "USD",
+        idempotencyKey: "http-payment-retry",
+      },
+    };
+
+    const first = await app.inject(request);
+    const replay = await app.inject(request);
+    const conflict = await app.inject({
+      ...request,
+      payload: { ...request.payload, amountCents: 300 },
+    });
+
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toEqual({ remainingCents: 600, currency: "USD" });
+    expect(replay.statusCode).toBe(200);
+    expect(replay.json()).toEqual({ remainingCents: 600, currency: "USD" });
+    expect(conflict.statusCode).toBe(409);
+    expect(conflict.json()).toEqual({ error: "conflict" });
   });
 
   it("returns 404 for unknown invoice id", async () => {

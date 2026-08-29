@@ -6,6 +6,8 @@ import type {
 } from "@dc-inventory/shared-kernel";
 import type { PurchaseOrder, PurchaseOrderStatus } from "../purchase-order.js";
 
+export type UnnumberedPurchaseOrder = Omit<PurchaseOrder, "documentNumber">;
+
 export type PurchaseOrderListPage = {
   items: readonly PurchaseOrder[];
   total: number;
@@ -13,8 +15,11 @@ export type PurchaseOrderListPage = {
 
 export type ListPurchaseOrdersQuery = {
   organizationId: OrganizationId;
+  q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "documentNumber" | "status";
+  sortOrder?: "asc" | "desc";
   status?: PurchaseOrderStatus;
   supplierId?: SupplierId;
 };
@@ -23,7 +28,7 @@ export interface IPurchaseOrderRepository {
   list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage>;
   findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null>;
   save(order: PurchaseOrder): Promise<void>;
-  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
+  insertWithNextDocumentNumber(order: UnnumberedPurchaseOrder): Promise<PurchaseOrder>;
   findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,
@@ -35,6 +40,8 @@ export type ListSuppliersQuery = {
   q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "vendorNumber" | "name";
+  sortOrder?: "asc" | "desc";
 };
 
 export type SupplierListPage = {
@@ -87,7 +94,13 @@ export type InboundCancelledCommand = {
   purchaseOrderId: PurchaseOrderId;
 };
 
+export type InventorySnapshotLock = {
+  organizationId: OrganizationId;
+  sku: Sku;
+};
+
 export interface IInventoryCommandPort {
+  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void>;
   recordInboundFromPo(command: InboundFromPoCommand): Promise<InventoryCommandResult>;
   recordGoodsReceived(command: GoodsReceivedCommand): Promise<InventoryCommandResult>;
   recordInboundCancelled(command: InboundCancelledCommand): Promise<InventoryCommandResult>;

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { productsListTable } from "../fixtures/products-list-table";
 import { DataTable } from "./data-table";
 import type { ListQueryParams } from "./list-params";
+import type { TableMeta } from "./table-meta";
 import type { ListQueryHook } from "./use-data-table";
 
 type ProductRow = {
@@ -77,6 +77,25 @@ const useMockProducts: ListQueryHook<ListQueryParams, ProductRow> = (params) => 
     isError: false,
   };
 };
+
+const productsListTable = {
+  rowId: "id",
+  columns: [
+    { field: "sku", label: "SKU" },
+    { field: "name", label: "Name" },
+    { field: "onHand", label: "On hand" },
+    { field: "onOrder", label: "On order" },
+    { field: "allocated", label: "Allocated" },
+    { field: "available", label: "Available" },
+    { field: "status", label: "Status" },
+  ],
+  search: {
+    param: "q",
+    fields: ["sku", "name"],
+    placeholder: "Search SKU or name",
+  },
+  filters: [{ param: "status", control: "select" }],
+} as const satisfies TableMeta;
 
 const meta = {
   title: "ui-internal/DataTable",

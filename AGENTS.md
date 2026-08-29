@@ -14,6 +14,8 @@ Canonical contract for any coding agent that clones this repo and opens a PR. Ve
 
 Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md), [`docs/adr/0007-organization-id-current-not-deferred.md`](./docs/adr/0007-organization-id-current-not-deferred.md) (multi-org seam — current, not deferred; demo stays `DEFAULT`), [`docs/adr/0008-available-to-sell-open-locked.md`](./docs/adr/0008-available-to-sell-open-locked.md) (David's available-to-sell formula; per-SKU open/locked), [`docs/work-dashboard-design-spec.md`](./docs/work-dashboard-design-spec.md) §12 (internal Input/Select/Combobox/Button: one control height, FieldRow, readable row actions).
 
+**Tests and review:** read [`CODING_STANDARDS.md`](./CODING_STANDARDS.md) first when writing tests or reviewing code.
+
 ## Stack (do not replace)
 
 - **Language:** TypeScript, `strict: true` (see `tsconfig.base.json`); **Node >=24**

@@ -353,7 +353,7 @@ export function DataTableSearch() {
  */
 export function DataTableFilters() {
   const { meta, state, setState, filterOptions, idBase } = useDataTableContext();
-  if (meta.filters.length === 0) {
+  if (!meta.filters || meta.filters.length === 0) {
     return null;
   }
 
@@ -408,7 +408,7 @@ export function DataTableTable() {
         <thead>
           <tr>
             {meta.columns.map((column) => {
-              const canSort = meta.sort.fields.includes(column.field);
+              const canSort = meta.sort?.fields.includes(column.field) ?? false;
               const isSorted = canSort && state.sortBy === column.field;
               const chevron = canSort ? (
                 isSorted ? (
@@ -555,7 +555,7 @@ export function DataTablePagination() {
         <Button
           variant="outline"
           size="sm"
-          disabled={busy || page <= 1}
+          disabled={busy || page <= 1 ? true : undefined}
           onClick={() =>
             setState((current) => ({
               ...current,
@@ -568,7 +568,7 @@ export function DataTablePagination() {
         <Button
           variant="outline"
           size="sm"
-          disabled={busy || page >= pageCount}
+          disabled={busy || page >= pageCount ? true : undefined}
           onClick={() =>
             setState((current) => ({
               ...current,

@@ -2,9 +2,19 @@ import {
   GetStockSnapshotUseCase,
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
-import { CustomerId, LocationId, Money, OrganizationId, OrderId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import {
+  CustomerId,
+  LocationId,
+  Money,
+  OrganizationId,
+  OrderId,
+  ProductId,
+  Sku,
+  StaffUserId,
+} from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
+import { InMemoryCatalogProductPort } from "../src/adapters/in-memory-catalog-product-port.js";
 import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
@@ -17,6 +27,10 @@ import type { ISalesUnitOfWork } from "../src/domain/ports/sales-order-repositor
 
 const SKU = Sku.parse("SO-TEST-SKU");
 const SKU_B = Sku.parse("SO-TEST-SKU-B");
+const PRODUCT_ID = ProductId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+const PRODUCT_ID_B = ProductId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
+const INACTIVE_PRODUCT_ID = ProductId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
+const BETA_PRODUCT_ID = ProductId.parse("ffffffff-ffff-4fff-8fff-ffffffffffff");
 const DEFAULT = LocationId.DEFAULT;
 const DEFAULT_ORG = OrganizationId.DEFAULT;
 const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
@@ -37,11 +51,46 @@ async function harness() {
       return null;
     },
   };
+  const catalog = new InMemoryCatalogProductPort([
+    {
+      productId: PRODUCT_ID,
+      organizationId: DEFAULT_ORG,
+      sku: SKU,
+      name: "Catalog widget",
+      unitPrice: Money.fromMinorUnits(500, "USD"),
+      taxCategoryCode: "TANGIBLE",
+      active: true,
+    },
+    {
+      productId: PRODUCT_ID_B,
+      organizationId: DEFAULT_ORG,
+      sku: SKU_B,
+      name: "Catalog gadget",
+      unitPrice: Money.fromMinorUnits(700, "USD"),
+      active: true,
+    },
+    {
+      productId: INACTIVE_PRODUCT_ID,
+      organizationId: DEFAULT_ORG,
+      sku: Sku.parse("INACTIVE-SKU"),
+      name: "Inactive product",
+      unitPrice: Money.fromMinorUnits(900, "USD"),
+      active: false,
+    },
+    {
+      productId: BETA_PRODUCT_ID,
+      organizationId: BETA_ORG,
+      sku: Sku.parse("BETA-SKU"),
+      name: "Beta product",
+      unitPrice: Money.fromMinorUnits(1000, "USD"),
+      active: true,
+    },
+  ]);
 
   return {
     uow,
     customers,
-    create: new CreateSalesOrderUseCase(uow.salesOrders, customers),
+    create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog),
     list: new ListSalesOrdersUseCase(uow.salesOrders),
     confirm: new ConfirmSalesOrderUseCase(uow),
     cancel: new CancelSalesOrderUseCase(uow),
@@ -76,7 +125,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 2 }],
     });
     expect(first.ok).toBe(true);
     if (!first.ok) {
@@ -95,24 +144,47 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 1, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
     });
     expect(second.ok).toBe(true);
     if (!second.ok) {
       return;
     }
     expect(second.salesOrder.documentNumber).toBe("SO-00002");
+
+    const sorted = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "status",
+      sortOrder: "asc",
+    });
+    expect(sorted.items.map((order) => order.status)).toEqual(["cancelled", "draft"]);
+
+    const searched = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      q: "00002",
+      page: 1,
+      pageSize: 25,
+      sortBy: "documentNumber",
+      sortOrder: "desc",
+      status: "draft",
+      customerId: CUSTOMER_ID,
+    });
+    expect(searched.items.map((order) => order.documentNumber)).toEqual(["SO-00002"]);
   });
 
-  it("merges duplicate SKU lines at create", async () => {
+  it("merges duplicate product lines at create", async () => {
     const h = await harness();
     const created = await h.create.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [
-        { sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 500, currency: "USD" },
-        { sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 500, currency: "USD" },
+        { productId: PRODUCT_ID, qty: 2 },
+        { productId: PRODUCT_ID, qty: 3 },
       ],
     });
     expect(created.ok).toBe(true);
@@ -121,6 +193,51 @@ describe("Sales (in-memory)", () => {
     }
     expect(created.salesOrder.lines).toHaveLength(1);
     expect(created.salesOrder.lines[0]?.qty).toBe(5);
+  });
+
+  it("freezes authoritative Catalog fields on each line", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 2 }],
+    });
+
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(created.salesOrder.lines[0]).toMatchObject({
+      sku: SKU,
+      name: "Catalog widget",
+      qty: 2,
+      taxCategoryCode: "TANGIBLE",
+    });
+    expect(created.salesOrder.lines[0]?.unitPrice.amountMinor).toBe(500);
+    expect(created.salesOrder.lines[0]?.unitPrice.currency).toBe("USD");
+  });
+
+  it.each([
+    {
+      productId: ProductId.parse("99999999-9999-4999-8999-999999999999"),
+      reason: "product_not_found",
+    },
+    { productId: INACTIVE_PRODUCT_ID, reason: "product_inactive" },
+    {
+      productId: BETA_PRODUCT_ID,
+      reason: "product_organization_mismatch",
+    },
+  ] as const)("rejects Catalog product with $reason", async ({ productId, reason }) => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId, qty: 1 }],
+    });
+
+    expect(created).toEqual({ ok: false, reason });
   });
 
   it("rejects empty orders and non-positive lines", async () => {
@@ -141,7 +258,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 0, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 0 }],
     });
     expect(zero.ok).toBe(false);
   });
@@ -152,7 +269,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 100, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 100 }],
     });
     expect(created.ok).toBe(true);
     const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
@@ -168,8 +285,8 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
       lines: [
-        { sku: SKU.value, name: "Widget", qty: 4, unitPriceCents: 500, currency: "USD" },
-        { sku: SKU_B.value, name: "Gadget", qty: 3, unitPriceCents: 700, currency: "USD" },
+        { productId: PRODUCT_ID, qty: 4 },
+        { productId: PRODUCT_ID_B, qty: 3 },
       ],
     });
     expect(created.ok).toBe(true);
@@ -223,7 +340,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 5, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 5 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -262,13 +379,13 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 4, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 4 }],
     });
     const secondOrder = await h.create.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 4, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 4 }],
     });
     expect(firstOrder.ok).toBe(true);
     expect(secondOrder.ok).toBe(true);
@@ -305,9 +422,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [
-        { sku: SKU.value, name: "Widget", qty: 4, unitPriceCents: 500, currency: "USD" },
-      ],
+      lines: [{ productId: PRODUCT_ID, qty: 4 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -354,7 +469,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 300, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 2 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -398,7 +513,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 2, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 2 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -451,7 +566,21 @@ describe("Sales (in-memory)", () => {
         return null;
       },
     };
-    const create = new CreateSalesOrderUseCase(failingUow.salesOrders, customers);
+    const catalog = new InMemoryCatalogProductPort([
+      {
+        productId: PRODUCT_ID,
+        organizationId: DEFAULT_ORG,
+        sku: SKU,
+        name: "Catalog widget",
+        unitPrice: Money.fromMinorUnits(100, "USD"),
+        active: true,
+      },
+    ]);
+    const create = new CreateSalesOrderUseCase(
+      failingUow.salesOrders,
+      customers,
+      catalog,
+    );
     const confirm = new ConfirmSalesOrderUseCase(failingUow);
     const ship = new ShipSalesOrderUseCase(failingUow);
     const snapshot = new GetStockSnapshotUseCase(base.inventoryReadModel);
@@ -472,7 +601,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 3, unitPriceCents: 100, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 3 }],
     });
     expect(created.ok).toBe(true);
     if (!created.ok) {
@@ -564,7 +693,7 @@ describe("Sales (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       customerId: BETA_CUSTOMER_ID,
-      lines: [{ sku: SKU.value, name: "Widget", qty: 1, unitPriceCents: 500, currency: "USD" }],
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
     });
     expect(crossOrgCreate.ok).toBe(false);
     if (crossOrgCreate.ok) {

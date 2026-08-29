@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { productsListTable } from "../src/fixtures/products-list-table";
 import {
   defaultTableState,
   listParamsFromState,
@@ -8,6 +7,7 @@ import {
   type DataTableState,
 } from "../src/data-table/list-params";
 import type { TableMeta } from "../src/data-table/table-meta";
+import { productsListTableFixture as productsListTable } from "./table-meta.fixture";
 
 const dateRangeMeta = {
   ...productsListTable,
@@ -71,6 +71,16 @@ describe("listParamsFromState", () => {
     expect(params.createdFrom).toBe("2026-01-01");
     expect(params.createdTo).toBe("2026-01-31");
     expect(params).not.toHaveProperty("category");
+  });
+
+  it("does not send sort parameters when x-table does not declare sorting", () => {
+    const { sort: _sort, ...unsortedMeta } = productsListTable;
+    const state = defaultTableState(unsortedMeta);
+
+    expect(listParamsFromState(unsortedMeta, state)).toEqual({
+      page: 1,
+      pageSize: 25,
+    });
   });
 });
 

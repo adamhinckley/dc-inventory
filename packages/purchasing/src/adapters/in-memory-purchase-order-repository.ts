@@ -10,6 +10,7 @@ import type {
   IPurchaseOrderRepository,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
+  UnnumberedPurchaseOrder,
 } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 
@@ -44,6 +45,7 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
   private readonly nextSequenceByOrg = new Map<string, number>();
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
+    const needle = query.q?.trim().toLowerCase() ?? "";
     const rows = [...this.byId.values()].filter((row) => {
       if (row.order.organizationId !== query.organizationId) {
         return false;
@@ -54,9 +56,15 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
       if (query.supplierId !== undefined && row.order.supplierId !== query.supplierId) {
         return false;
       }
-      return true;
+      return needle.length === 0 || row.order.documentNumber.toLowerCase().includes(needle);
     });
-    rows.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    rows.sort((a, b) => {
+      const cmp =
+        query.sortBy === "status"
+          ? a.order.status.localeCompare(b.order.status)
+          : a.order.documentNumber.localeCompare(b.order.documentNumber);
+      return query.sortOrder === "desc" ? -cmp : cmp;
+    });
     const start = (query.page - 1) * query.pageSize;
     return {
       items: rows.slice(start, start + query.pageSize).map((row) => row.order),
@@ -104,11 +112,13 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     }
   }
 
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const orgKey = organizationId;
+  async insertWithNextDocumentNumber(
+    order: UnnumberedPurchaseOrder,
+  ): Promise<PurchaseOrder> {
+    const orgKey = order.organizationId;
     const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
-    const number = formatDocumentNumber(next);
-    this.nextSequenceByOrg.set(orgKey, next + 1);
-    return number;
+    const numbered = { ...order, documentNumber: formatDocumentNumber(next) };
+    await this.save(numbered);
+    return toOrder(numbered);
   }
 }

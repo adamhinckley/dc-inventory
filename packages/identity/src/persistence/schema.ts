@@ -1,4 +1,15 @@
-import { pgSchema, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+  check,
+  index,
+  integer,
+  pgSchema,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 /**
  * Persistence FK target only — not a Customers domain/application import.
@@ -9,7 +20,7 @@ const customers = pgSchema("customers").table("customers", {
 });
 
 /**
- * Identity persistence models. Opaque sessions — no Better Auth tables, no staff role.
+ * Identity persistence models. Opaque sessions and static staff roles, no Better Auth tables.
  * Customers is referenced only for `wholesale_users.customer_id` / session snapshot FK.
  */
 export const identity = pgSchema("identity");
@@ -23,6 +34,13 @@ export const actorType = identity.enum("actor_type", [
   "staff",
   "wholesale",
   "ops",
+]);
+
+export const staffRole = identity.enum("staff_role", [
+  "admin",
+  "purchasing",
+  "warehouse",
+  "sales_support",
 ]);
 
 function timestamps() {
@@ -41,6 +59,7 @@ export const opsUsers = identity.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull(),
+    passwordHash: text("password_hash"),
     kind: opsUserKind("kind").notNull(),
     tenantId: text("tenant_id").notNull().default("DEFAULT"),
     ...timestamps(),
@@ -66,6 +85,10 @@ export const staffUsers = identity.table(
     organizationId: text("organization_id").notNull().default("DEFAULT"),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
+    roles: staffRole("roles")
+      .array()
+      .notNull()
+      .default(sql`ARRAY['admin']::identity.staff_role[]`),
     ...timestamps(),
   },
   (table) => ({
@@ -108,3 +131,29 @@ export const sessions = identity.table("sessions", {
     .defaultNow(),
   ...timestamps(),
 });
+
+export const loginThrottleCounters = identity.table(
+  "login_throttle_counters",
+  {
+    audience: actorType("audience").notNull(),
+    dimension: text("dimension").notNull(),
+    keyHash: text("key_hash").notNull(),
+    attemptCount: integer("attempt_count").notNull(),
+    windowStartedAt: timestamp("window_started_at", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "login_throttle_counters_pk",
+      columns: [table.audience, table.dimension, table.keyHash],
+    }),
+    index("login_throttle_counters_window_started_at_idx").on(table.windowStartedAt),
+    check(
+      "login_throttle_counters_dimension_check",
+      sql`${table.dimension} in ('source', 'account_identifier')`,
+    ),
+  ],
+);

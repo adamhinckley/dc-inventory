@@ -6,24 +6,11 @@
  */
 
 export type CreateInternalSalesOrderBodyLinesItem = {
-  /** @minLength 1 */
-  sku: string;
-  /** @minLength 1 */
-  name: string;
+  /** @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$ */
+  productId: string;
   /**
      * @maximum 9007199254740991
      * @exclusiveMinimum 0
      */
   qty: number;
-  /**
-     * @minimum 0
-     * @maximum 9007199254740991
-     */
-  unitPriceCents: number;
-  /**
-     * @minLength 3
-     * @maxLength 3
-     */
-  currency: string;
-  taxCategoryCode?: string;
 };

@@ -28,6 +28,7 @@ export { FormDialog, type FormDialogProps } from "./ui/FormDialog";
 export { Dialog } from "./ui/Dialog";
 export { DateInput, type DateInputProps } from "./ui/DateInput";
 export { ExplorerView, useExplorerView } from "./layouts/ExplorerView";
+export { RouterTabs } from "./ui/RouterTabs";
 export {
   DetailView,
   useDetailView,

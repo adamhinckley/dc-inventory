@@ -1,5 +1,5 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
@@ -7,19 +7,16 @@ import type {
   IPurchaseOrderRepository,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
+  UnnumberedPurchaseOrder,
 } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 import {
+  documentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
-  suppliers,
 } from "../persistence/schema.js";
 
-export type PurchasingDrizzle = PostgresJsDatabase<{
-  purchaseOrders: typeof purchaseOrders;
-  purchaseOrderLines: typeof purchaseOrderLines;
-  suppliers: typeof suppliers;
-}>;
+export type PurchasingDrizzle = PostgresJsDatabase;
 
 function toLine(row: typeof purchaseOrderLines.$inferSelect): PurchaseOrderLine {
   return {
@@ -40,6 +37,27 @@ async function loadLines(
     .from(purchaseOrderLines)
     .where(eq(purchaseOrderLines.purchaseOrderId, purchaseOrderId));
   return rows.map(toLine);
+}
+
+async function loadLinesByPurchaseOrderIds(
+  db: PurchasingDrizzle,
+  purchaseOrderIds: readonly string[],
+): Promise<Map<string, PurchaseOrderLine[]>> {
+  const byPurchaseOrderId = new Map<string, PurchaseOrderLine[]>();
+  if (purchaseOrderIds.length === 0) {
+    return byPurchaseOrderId;
+  }
+  const rows = await db
+    .select()
+    .from(purchaseOrderLines)
+    .where(inArray(purchaseOrderLines.purchaseOrderId, [...purchaseOrderIds]))
+    .orderBy(asc(purchaseOrderLines.purchaseOrderId), asc(purchaseOrderLines.id));
+  for (const row of rows) {
+    const lines = byPurchaseOrderId.get(row.purchaseOrderId) ?? [];
+    lines.push(toLine(row));
+    byPurchaseOrderId.set(row.purchaseOrderId, lines);
+  }
+  return byPurchaseOrderId;
 }
 
 async function findOrder(
@@ -168,30 +186,81 @@ function toOrder(
   };
 }
 
+async function allocateDocumentNumber(
+  db: PurchasingDrizzle,
+  organizationId: OrganizationId,
+): Promise<string> {
+  const rows = await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: 1 })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: { lastValue: sql`${documentNumberCounters.lastValue} + 1` },
+    })
+    .returning({ sequence: documentNumberCounters.lastValue });
+  const sequence = rows[0]?.sequence;
+  if (sequence === undefined) {
+    throw new Error("Failed to allocate purchase order document number");
+  }
+  return formatDocumentNumber(sequence);
+}
+
+async function advanceCounter(
+  db: PurchasingDrizzle,
+  organizationId: OrganizationId,
+  documentNumber: string,
+): Promise<void> {
+  const sequence = parseDocumentSequence(documentNumber);
+  if (sequence === null || sequence < 1) {
+    return;
+  }
+  await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: sequence })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: {
+        lastValue: sql`greatest(${documentNumberCounters.lastValue}, ${sequence})`,
+      },
+    });
+}
+
 export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository {
   constructor(private readonly db: PurchasingDrizzle) {}
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
-    const rows = await this.db
-      .select()
-      .from(purchaseOrders)
-      .where(eq(purchaseOrders.organizationId, query.organizationId));
-    const filtered = [];
-    for (const row of rows) {
-      if (query.status !== undefined && row.status !== query.status) {
-        continue;
-      }
-      if (query.supplierId !== undefined && row.supplierId !== query.supplierId) {
-        continue;
-      }
-      const lines = await loadLines(this.db, row.id);
-      filtered.push(toOrder(row, lines));
+    const clauses = [eq(purchaseOrders.organizationId, query.organizationId)];
+    if (query.status !== undefined) {
+      clauses.push(eq(purchaseOrders.status, query.status));
     }
-    filtered.sort((a, b) => a.documentNumber.localeCompare(b.documentNumber));
-    const start = (query.page - 1) * query.pageSize;
+    if (query.supplierId !== undefined) {
+      clauses.push(eq(purchaseOrders.supplierId, query.supplierId));
+    }
+    if (query.q !== undefined && query.q.trim().length > 0) {
+      clauses.push(ilike(purchaseOrders.documentNumber, `%${query.q.trim()}%`));
+    }
+    const where = and(...clauses);
+    const offset = (query.page - 1) * query.pageSize;
+    const sortColumn =
+      query.sortBy === "status" ? purchaseOrders.status : purchaseOrders.documentNumber;
+    const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
+    const [totalRows, headers] = await Promise.all([
+      this.db.select({ value: count() }).from(purchaseOrders).where(where),
+      this.db
+        .select()
+        .from(purchaseOrders)
+        .where(where)
+        .orderBy(order, asc(purchaseOrders.id))
+        .limit(query.pageSize)
+        .offset(offset),
+    ]);
+    const lines = await loadLinesByPurchaseOrderIds(
+      this.db,
+      headers.map((header) => header.id),
+    );
     return {
-      items: filtered.slice(start, start + query.pageSize),
-      total: filtered.length,
+      items: headers.map((header) => toOrder(header, lines.get(header.id) ?? [])),
+      total: totalRows[0]?.value ?? 0,
     };
   }
 
@@ -223,22 +292,28 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
 
   async save(order: PurchaseOrder): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await persistPurchaseOrder(tx as PurchasingDrizzle, order);
+      const transactionalDb = tx as PurchasingDrizzle;
+      await advanceCounter(
+        transactionalDb,
+        order.organizationId,
+        order.documentNumber,
+      );
+      await persistPurchaseOrder(transactionalDb, order);
     });
   }
 
-  async nextDocumentNumber(organizationId: OrganizationId): Promise<string> {
-    const rows = await this.db
-      .select({ documentNumber: purchaseOrders.documentNumber })
-      .from(purchaseOrders)
-      .where(eq(purchaseOrders.organizationId, organizationId));
-    let max = 0;
-    for (const row of rows) {
-      const sequence = parseDocumentSequence(row.documentNumber);
-      if (sequence !== null && sequence > max) {
-        max = sequence;
-      }
-    }
-    return formatDocumentNumber(max + 1);
+  async insertWithNextDocumentNumber(
+    order: UnnumberedPurchaseOrder,
+  ): Promise<PurchaseOrder> {
+    return this.db.transaction(async (tx) => {
+      const transactionalDb = tx as PurchasingDrizzle;
+      const documentNumber = await allocateDocumentNumber(
+        transactionalDb,
+        order.organizationId,
+      );
+      const numbered = { ...order, documentNumber };
+      await persistPurchaseOrder(transactionalDb, numbered);
+      return numbered;
+    });
   }
 }

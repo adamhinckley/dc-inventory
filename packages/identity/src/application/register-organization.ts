@@ -60,6 +60,7 @@ export class RegisterOrganizationUseCase {
         organizationId,
         email,
         passwordHash: await this.passwords.hash(password),
+        roles: ["admin"],
       };
 
       await tx.organizations.save(organization);

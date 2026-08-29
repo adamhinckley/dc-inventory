@@ -1,8 +1,7 @@
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
-import type { IProductRepository } from "../domain/ports/product-repository.js";
-import type { IQtyReadPort } from "../domain/ports/qty-read.js";
+import type { ICatalogListQuery } from "../domain/ports/catalog-list-query.js";
 import type { Product } from "../domain/product.js";
-import { ZERO_QTY, type ProductQty } from "../domain/qty.js";
+import type { ProductQty } from "../domain/qty.js";
 
 export type WholesaleCatalogSortBy = "name" | "available";
 export type SortOrder = "asc" | "desc";
@@ -11,6 +10,7 @@ export type ListWholesaleCatalogRequest = {
   organizationId: OrganizationId;
   customerId: CustomerId;
   q?: string;
+  category?: string;
   page: number;
   pageSize: number;
   sortBy: WholesaleCatalogSortBy;
@@ -30,41 +30,27 @@ export type ListWholesaleCatalogResult = {
 };
 
 export class ListWholesaleCatalogUseCase {
-  constructor(
-    private readonly products: IProductRepository,
-    private readonly qty: IQtyReadPort,
-  ) {}
+  constructor(private readonly catalogList: ICatalogListQuery) {}
 
   async execute(
     input: ListWholesaleCatalogRequest,
   ): Promise<ListWholesaleCatalogResult> {
     void input.customerId;
-    const listed = await this.products.listMatching({
+    const page = await this.catalogList.list({
       organizationId: input.organizationId,
       q: input.q,
-      shopVisibleOnly: true,
-    });
-    const snapshots = await this.qty.readBySkus(
-      input.organizationId,
-      listed.map((row) => row.product.sku),
-    );
-    const rows: WholesaleCatalogListRow[] = listed.map((row) => ({
-      product: row.product,
-      qty: snapshots.get(row.product.sku.value) ?? ZERO_QTY,
-    }));
-    rows.sort((a, b) => {
-      const cmp =
-        input.sortBy === "available"
-          ? a.qty.available - b.qty.available
-          : a.product.name.localeCompare(b.product.name);
-      return input.sortOrder === "desc" ? -cmp : cmp;
-    });
-    const start = (input.page - 1) * input.pageSize;
-    return {
-      items: rows.slice(start, start + input.pageSize),
+      category: input.category,
       page: input.page,
       pageSize: input.pageSize,
-      total: rows.length,
+      sortBy: input.sortBy,
+      sortOrder: input.sortOrder,
+      shopVisibleOnly: true,
+    });
+    return {
+      items: page.items.map(({ product, qty }) => ({ product, qty })),
+      page: input.page,
+      pageSize: input.pageSize,
+      total: page.total,
     };
   }
 }

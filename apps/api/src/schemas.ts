@@ -10,6 +10,19 @@ export const unauthorizedResponseSchema = z.object({
   error: z.literal("unauthorized"),
 });
 
+export const forbiddenResponseSchema = z.object({
+  error: z.literal("forbidden"),
+});
+
+export const featureDisabledResponseSchema = z.object({
+  error: z.literal("feature_disabled"),
+});
+
+export const tooManyLoginAttemptsResponseSchema = z.object({
+  error: z.literal("too_many_login_attempts"),
+  retryAfterSeconds: z.number().int().positive(),
+});
+
 export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
@@ -18,6 +31,7 @@ export const staffSessionResponseSchema = z.object({
   staffUserId: z.string().uuid(),
   email: z.string(),
   organizationId: z.string(),
+  roles: z.array(z.enum(["admin", "purchasing", "warehouse", "sales_support"])),
 });
 
 export const wholesaleSessionResponseSchema = z.object({
@@ -25,6 +39,13 @@ export const wholesaleSessionResponseSchema = z.object({
   email: z.string(),
   customerId: z.string().uuid(),
   organizationId: z.string(),
+});
+
+export const opsSessionResponseSchema = z.object({
+  opsUserId: z.string().uuid(),
+  email: z.string(),
+  kind: z.enum(["operator", "business_owner"]),
+  tenantId: z.string(),
 });
 
 const optionalBooleanQuery = z
@@ -71,7 +92,7 @@ export const productListResponseSchema = z.object({
 
 export const catalogQuerySchema = z.object({
   q: z.string().optional(),
-  category: z.string().optional(),
+  category: z.string().trim().min(1).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["name", "available"]).default("name"),
@@ -95,12 +116,24 @@ export const catalogListResponseSchema = z.object({
 });
 
 export const opsSubscriptionSchema = z.object({
-  status: z.enum(["trialing", "active", "inactive"]),
+  status: z.enum(["trialing", "active", "past_due", "canceled", "inactive"]),
   plan: z.string().nullable(),
 });
 
 export const productIdParamsSchema = z.object({
   id: z.string().uuid(),
+});
+
+export const inventoryStockParamsSchema = z.object({
+  sku: z.string().min(1),
+});
+
+export const inventoryStockSnapshotSchema = z.object({
+  sku: z.string(),
+  onHand: z.number().int(),
+  onOrder: z.number().int(),
+  allocated: z.number().int(),
+  available: z.number().int(),
 });
 
 export const productWriteBodySchema = z.object({
@@ -179,11 +212,6 @@ export const productImportResultSchema = z.object({
   errors: z.array(productImportErrorSchema),
 });
 
-export const stubOpsSubscription = {
-  status: "inactive" as const,
-  plan: null,
-};
-
 export const licensingSubscriptionItemSchema = z.object({
   id: z.string().uuid(),
   plan: z.string(),
@@ -197,7 +225,7 @@ export const licensingSubscriptionListResponseSchema = z.object({
 export const licensingPaymentItemSchema = z.object({
   id: z.string().uuid(),
   subscriptionId: z.string().uuid(),
-  providerRef: z.string(),
+  providerRef: z.string().nullable(),
   amountCents: z.number().int(),
 });
 
@@ -214,10 +242,9 @@ export const invalidResponseSchema = z.object({
 });
 
 export const zodValidationErrorResponseSchema = z.object({
-  statusCode: z.number(),
-  code: z.string(),
-  error: z.string(),
-  message: z.string(),
+  error: z.literal("invalid_request"),
+  message: z.literal("The request is invalid."),
+  requestId: z.string(),
 });
 
 export const duplicateEmailResponseSchema = z.object({
@@ -238,6 +265,7 @@ export const customerItemSchema = z.object({
   creditLimitCents: z.number().int(),
   currency: z.string(),
   terms: z.string(),
+  createdAt: z.string().datetime(),
 });
 
 export const customerListResponseSchema = z.object({
@@ -246,6 +274,27 @@ export const customerListResponseSchema = z.object({
   pageSize: z.number().int(),
   total: z.number().int(),
 });
+
+export const customersListTable = {
+  rowId: "id",
+  columns: [
+    { field: "name", label: "Name" },
+    { field: "creditLimitCents", label: "Credit limit (¢)" },
+    { field: "currency", label: "Currency" },
+    { field: "terms", label: "Terms" },
+  ],
+  search: {
+    param: "q",
+    fields: ["name"],
+    placeholder: "Search customer name",
+  },
+  filters: [],
+  sort: {
+    defaultBy: "name",
+    defaultOrder: "asc",
+    fields: ["name", "createdAt", "creditLimitCents"],
+  },
+};
 
 export const customerWriteBodySchema = z.object({
   name: z.string().min(1),
@@ -424,15 +473,22 @@ export const purchaseOrderItemSchema = z.object({
   lines: z.array(purchaseOrderLineSchema),
 });
 
+export const purchaseOrderListItemSchema = purchaseOrderItemSchema.extend({
+  supplierName: z.string(),
+});
+
 export const purchaseOrderListQuerySchema = z.object({
+  q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
   status: purchaseOrderStatusSchema.optional(),
   supplierId: z.string().uuid().optional(),
 });
 
 export const purchaseOrderListResponseSchema = z.object({
-  items: z.array(purchaseOrderItemSchema),
+  items: z.array(purchaseOrderListItemSchema),
   page: z.number().int(),
   pageSize: z.number().int(),
   total: z.number().int(),
@@ -444,6 +500,35 @@ export const purchaseOrderIdParamsSchema = z.object({
 
 export const purchaseOrderExportQuerySchema = z.object({
   format: z.enum(["xlsx", "csv"]).default("xlsx"),
+});
+
+const factorySendBlankOrNumber = z.union([z.number(), z.literal("")]);
+
+export const purchaseOrderFactorySendColumnSchema = z.object({
+  key: z.string(),
+  header: z.string(),
+});
+
+export const purchaseOrderFactorySendRowSchema = z.object({
+  ship_date: z.string(),
+  canc_date: z.string(),
+  mat_num: z.string(),
+  quan: z.number(),
+  price: factorySendBlankOrNumber,
+  extprice: factorySendBlankOrNumber,
+  description: z.string(),
+  mfg_code: z.string(),
+  mfg_sku: z.string(),
+  mfg_upc: z.string(),
+  product_upc_1: z.string(),
+  cs_cube_metric: z.number(),
+  tot_cartons: factorySendBlankOrNumber,
+  tot_cbm: z.string(),
+});
+
+export const purchaseOrderFactorySendResponseSchema = z.object({
+  columns: z.array(purchaseOrderFactorySendColumnSchema),
+  rows: z.array(purchaseOrderFactorySendRowSchema),
 });
 
 export const binaryFileResponseSchema = z.instanceof(Buffer);
@@ -502,7 +587,16 @@ export const purchaseOrdersListTable = {
   columns: [
     { field: "documentNumber", label: "PO #" },
     { field: "status", label: "Status" },
-    { field: "supplierId", label: "Supplier" },
+    { field: "supplierName", label: "Supplier" },
+  ],
+  search: {
+    param: "q",
+    fields: ["documentNumber"],
+    placeholder: "Search PO number",
+  },
+  filters: [
+    { param: "status", control: "select" },
+    { param: "supplierId", control: "text" },
   ],
   sort: {
     defaultBy: "documentNumber",
@@ -515,6 +609,8 @@ export const supplierListQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["vendorNumber", "name"]).default("vendorNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
 export const supplierItemSchema = z.object({
@@ -559,11 +655,20 @@ export const suppliersListTable = {
     fields: ["vendorNumber", "name"],
     placeholder: "Search vendor # or name",
   },
+  filters: [],
+  sort: {
+    defaultBy: "vendorNumber",
+    defaultOrder: "asc",
+    fields: ["vendorNumber", "name"],
+  },
 };
 
 export const supplierProductListQuerySchema = z.object({
+  q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["sku", "supplierSku"]).default("sku"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
 export const supplierProductQtySchema = z.object({
@@ -643,10 +748,16 @@ export const supplierProductsListTable = {
     { field: "qty.allocated", label: "Allocated" },
     { field: "qty.available", label: "Available" },
   ],
+  search: {
+    param: "q",
+    fields: ["sku", "supplierSku"],
+    placeholder: "Search SKU or vendor item #",
+  },
+  filters: [],
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
-    fields: ["sku", "catalogName", "qty.onHand", "qty.available"],
+    fields: ["sku", "supplierSku"],
   },
 };
 
@@ -682,8 +793,11 @@ export const salesOrderItemSchema = z.object({
 });
 
 export const salesOrderListQuerySchema = z.object({
+  q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
   status: salesOrderStatusSchema.optional(),
   customerId: z.string().uuid().optional(),
 });
@@ -699,26 +813,31 @@ export const salesOrderIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
-export const salesOrderWriteBodySchema = z.object({
-  customerId: z.string().uuid(),
-  lines: z
-    .array(
-      z.object({
-        sku: z.string().min(1),
-        name: z.string().min(1),
-        qty: z.number().int().positive(),
-        unitPriceCents: z.number().int().nonnegative(),
-        currency: z.string().length(3),
-        taxCategoryCode: z.string().optional(),
-      }),
-    )
-    .min(1),
+const salesOrderLineInputSchema = z.object({
+  productId: z.string().uuid(),
+  qty: z.number().int().positive(),
+});
+
+const salesOrderAddressSchema = {
   shipLine1: z.string().optional(),
   shipLine2: z.string().nullable().optional(),
   shipCity: z.string().optional(),
   shipRegion: z.string().optional(),
   shipPostal: z.string().optional(),
   shipCountry: z.string().optional(),
+};
+
+export const salesOrderWriteBodySchema = z.object({
+  customerId: z.string().uuid(),
+  lines: z.array(salesOrderLineInputSchema).min(1),
+  ...salesOrderAddressSchema,
+});
+
+export const wholesaleSalesOrderWriteBodySchema = z.object({
+  lines: z
+    .array(salesOrderLineInputSchema)
+    .min(1),
+  ...salesOrderAddressSchema,
 });
 
 export const salesOrderCommandBodySchema = z.object({
@@ -735,6 +854,15 @@ export const salesOrdersListTable = {
     { field: "documentNumber", label: "SO #" },
     { field: "status", label: "Status" },
     { field: "customerId", label: "Customer" },
+  ],
+  search: {
+    param: "q",
+    fields: ["documentNumber"],
+    placeholder: "Search SO number",
+  },
+  filters: [
+    { param: "status", control: "select" },
+    { param: "customerId", control: "text" },
   ],
   sort: {
     defaultBy: "documentNumber",

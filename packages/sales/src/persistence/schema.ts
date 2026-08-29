@@ -66,6 +66,11 @@ export const orders = sales.table(
   ],
 );
 
+export const documentNumberCounters = sales.table("document_number_counters", {
+  organizationId: text("organization_id").primaryKey(),
+  lastValue: integer("last_value").notNull(),
+});
+
 /** Frozen sku/name + MP unit price. No live catalog FK. */
 export const orderLines = sales.table("order_lines", {
   id: uuid("id").primaryKey().defaultRandom(),

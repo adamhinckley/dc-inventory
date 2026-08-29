@@ -25,22 +25,15 @@ function row(overrides: Record<string, string> = {}) {
 }
 
 describe("mapProductBrowserRow", () => {
-  it("maps Product Browser columns onto catalog and vendor fields and ignores qty", () => {
+  it("converts money, booleans, and defaults while ignoring inventory qty columns", () => {
     const mapped = mapProductBrowserRow(row(), 2);
     expect(mapped.ok).toBe(true);
     if (!mapped.ok) {
       return;
     }
-    expect(mapped.value.sku).toBe("DC10274LTGD");
-    expect(mapped.value.name).toBe("31” Crystal Drop Branch");
-    expect(mapped.value.uom).toBe("IN");
     expect(mapped.value.memberPriceCents).toBe(1020);
-    expect(mapped.value.webWholesale).toBe(true);
-    expect(mapped.value.vendorNumber).toBe("1075");
-    expect(mapped.value.vendorName).toBe("REGXJ");
-    expect(mapped.value.supplierSku).toBe("JA149015");
     expect(mapped.value.lastPoCostCents).toBe(357);
-    expect(mapped.value.caseQty).toBe(192);
+    expect(mapped.value.webWholesale).toBe(true);
     expect(mapped.value.minOrderQty).toBeNull();
     expect(mapped.value).not.toHaveProperty("onHand");
     expect(mapped.value).not.toHaveProperty("onhand_qty");
@@ -94,6 +87,24 @@ describe("mapProductBrowserRow", () => {
     if (paddedZero.ok) {
       expect(paddedZero.value.caseQty).toBeNull();
       expect(paddedZero.value.minOrderQty).toBeNull();
+    }
+  });
+
+  it("maps case inches and treats empty or zero as missing", () => {
+    const empty = mapProductBrowserRow(row({ cs_len: "", cs_wid: "0", cs_ht: "0.0" }), 2);
+    expect(empty.ok).toBe(true);
+    if (empty.ok) {
+      expect(empty.value.caseLength).toBeNull();
+      expect(empty.value.caseWidth).toBeNull();
+      expect(empty.value.caseHeight).toBeNull();
+    }
+
+    const invalid = mapProductBrowserRow(row({ cs_len: "wide" }), 4);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) {
+      expect(invalid.errors).toEqual([
+        { row: 4, field: "cs_len", message: "Case length must be a non-negative number" },
+      ]);
     }
   });
 

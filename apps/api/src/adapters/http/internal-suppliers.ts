@@ -15,6 +15,7 @@ import {
   supplierWriteBodySchema,
   suppliersListTable,
   unauthorizedResponseSchema,
+  zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
 
@@ -63,7 +64,11 @@ export function registerInternalSupplierRoutes(app: FastifyInstance): void {
         tags: ["internal-suppliers"],
         summary: "List suppliers",
         querystring: supplierListQuerySchema,
-        response: { 200: supplierListResponseSchema, 401: unauthorizedResponseSchema },
+        response: {
+          200: supplierListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+        },
         "x-table": suppliersListTable,
       } as FastifySchema & { "x-table": typeof suppliersListTable },
     },
@@ -72,6 +77,8 @@ export function registerInternalSupplierRoutes(app: FastifyInstance): void {
         q?: string;
         page: number;
         pageSize: number;
+        sortBy: "vendorNumber" | "name";
+        sortOrder: "asc" | "desc";
       };
       const result = await request.server.purchasing.listSuppliers.execute({
         organizationId: staffOrganizationId(request),
@@ -79,6 +86,8 @@ export function registerInternalSupplierRoutes(app: FastifyInstance): void {
         q: query.q,
         page: query.page,
         pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
       });
       return {
         items: result.items.map(mapSupplier),

@@ -42,7 +42,7 @@ describe("organization-scoped persistence references", () => {
     const migration = readFileSync(
       resolve(
         root,
-        "apps/api/drizzle/migrations/0022_organization_reference_constraints.sql",
+        "apps/api/drizzle/migrations/0028_organization_reference_constraints.sql",
       ),
       "utf8",
     );

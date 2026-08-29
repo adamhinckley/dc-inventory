@@ -147,7 +147,13 @@ describe("replay sales orders (in-memory)", () => {
     );
 
     const replay = await runReplaySalesOrders(
-      { uow: uow.sales, clock, customers: staticPorts.customers, invoices: uow.invoices },
+      {
+        uow: uow.sales,
+        clock,
+        customers: staticPorts.customers,
+        products: staticPorts.products,
+        invoices: uow.invoices,
+      },
       {
         plan,
         customerIdByKey: await customerIdByKeyFromPlan(plan, staticPorts.customers),

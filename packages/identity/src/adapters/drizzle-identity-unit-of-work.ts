@@ -4,13 +4,22 @@ import { DrizzleStaffUserRepository } from "./drizzle-staff-user-repository.js";
 import type { IIdentityUnitOfWork } from "../domain/ports/identity-unit-of-work.js";
 import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
-import { organizations, sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
+import {
+  loginThrottleCounters,
+  opsUsers,
+  organizations,
+  sessions,
+  staffUsers,
+  wholesaleUsers,
+} from "../persistence/schema.js";
 
 export type IdentityTransactionDrizzle = PostgresJsDatabase<{
   organizations: typeof organizations;
+  opsUsers: typeof opsUsers;
   staffUsers: typeof staffUsers;
   wholesaleUsers: typeof wholesaleUsers;
   sessions: typeof sessions;
+  loginThrottleCounters: typeof loginThrottleCounters;
 }>;
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   listParamsFromState,
   tableStateFromInitial,
@@ -47,6 +47,29 @@ export function unwrapListData<TRow>(
     return data.data;
   }
   return undefined;
+}
+
+const subscribeHydration = () => () => {};
+
+/** `false` on the server and during hydration so list chrome matches SSR HTML. */
+export function useHydrated(): boolean {
+  return useSyncExternalStore(subscribeHydration, () => true, () => false);
+}
+
+/**
+ * Full-table loading chrome. Ignore React Query `isLoading` here: on the server
+ * `fetchStatus` is idle, so `isLoading` is false while the client first paint
+ * is fetching — that mismatch disabled the Next button (`true` vs `null`).
+ */
+export function isListTableBusy(
+  hydrated: boolean,
+  envelope: ListEnvelope<unknown> | undefined,
+  isError: boolean | undefined,
+): boolean {
+  if (!hydrated) {
+    return true;
+  }
+  return envelope === undefined && isError !== true;
 }
 
 export type UseDataTableOptions<
@@ -112,14 +135,15 @@ export function useDataTable<
     onParamsChangeRef.current?.(params);
   }, [params]);
 
+  const hydrated = useHydrated();
   const query = queryHook(params as TParams);
-  const envelope = unwrapListData(query.data);
+  const envelope = hydrated ? unwrapListData(query.data) : undefined;
   const items = envelope?.items ?? [];
   const total = envelope?.total ?? 0;
   const page = envelope?.page ?? state.page;
   const pageSize = envelope?.pageSize ?? state.pageSize;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const busy = query.isPending === true || query.isLoading === true;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize) || 1);
+  const busy = isListTableBusy(hydrated, envelope, query.isError);
 
   return {
     meta,

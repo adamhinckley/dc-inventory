@@ -16,6 +16,7 @@ import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
 } from "@dc-inventory/inventory";
+import { InMemoryCatalogSkuLookupPort } from "@dc-inventory/purchasing";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SUPPLIER_ID = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
@@ -33,6 +34,11 @@ async function startPurchasingApp() {
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const unitOfWork = new InMemoryUnitOfWork();
+  const catalog = new InMemoryCatalogSkuLookupPort();
+  catalog.set(OrganizationId.DEFAULT, "HEX-BOLT-GALV", "Hex bolt from Catalog");
+  catalog.set(OrganizationId.DEFAULT, "WASHER-SS", "Washer from Catalog");
+  catalog.set(OrganizationId.DEFAULT, "DEM-00003", "Connector metallic plug");
+  catalog.set(OrganizationId.DEFAULT, "DEM-00004", "Hook taper pin");
   await unitOfWork.suppliers.save({
     id: SUPPLIER_ID,
     organizationId: OrganizationId.DEFAULT,
@@ -45,6 +51,7 @@ async function startPurchasingApp() {
       organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   const app = await buildApp({
     logger: false,
@@ -57,6 +64,7 @@ async function startPurchasingApp() {
     unitOfWork,
     purchaseOrderRepo: unitOfWork.purchaseOrders,
     supplierRepo: unitOfWork.suppliers,
+    catalogSkuLookup: catalog,
   });
   apps.push(app);
   return app;
@@ -109,6 +117,25 @@ describe("internal purchase orders HTTP", () => {
     const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
     expect(po.documentNumber).toBe("PO-00001");
     expect(created.json()).toMatchObject({ shipDate: null, cancelDate: null });
+    expect(created.json()).toMatchObject({
+      lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
+    });
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders?status=draft",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: po.id,
+          supplierId: SUPPLIER_ID,
+          supplierName: PHASE2_SUPPLIER_NAME,
+        }),
+      ],
+    });
 
     const confirmed = await app.inject({
       method: "POST",
@@ -166,7 +193,11 @@ describe("internal purchase orders HTTP", () => {
     };
     expect(updated.status).toBe("draft");
     expect(updated.lines).toHaveLength(2);
-    expect(updated.lines[0]).toMatchObject({ name: "Hex bolt updated", qty: 8, receivedQty: 0 });
+    expect(updated.lines[0]).toMatchObject({
+      name: "Hex bolt from Catalog",
+      qty: 8,
+      receivedQty: 0,
+    });
 
     const withDates = await app.inject({
       method: "PATCH",
@@ -265,11 +296,14 @@ describe("internal purchase orders HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
       payload: {
         supplierId: SUPPLIER_ID,
-        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 5 }],
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Caller hex bolt label", qty: 5 }],
       },
     });
     expect(created.statusCode).toBe(201);
     const po = created.json() as { id: string };
+    expect(created.json()).toMatchObject({
+      lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
+    });
 
     const exported = await app.inject({
       method: "GET",
@@ -282,6 +316,27 @@ describe("internal purchase orders HTTP", () => {
     );
     expect(exported.headers["content-disposition"]).toMatch(/PO-00001\.xlsx/);
     expect(exported.rawPayload.length).toBeGreaterThan(0);
+
+    const factorySend = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/factory-send`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(factorySend.statusCode).toBe(200);
+    expect(factorySend.json()).toMatchObject({
+      columns: expect.arrayContaining([
+        { key: "mat_num", header: "mat_num" },
+        { key: "tot_cartons", header: "tot_cartons" },
+      ]),
+      rows: [
+        expect.objectContaining({
+          mat_num: "HEX-BOLT-GALV",
+          quan: 5,
+          description: "Hex bolt from Catalog",
+          tot_cbm: "Not Available",
+        }),
+      ],
+    });
 
     const confirmed = await app.inject({
       method: "POST",

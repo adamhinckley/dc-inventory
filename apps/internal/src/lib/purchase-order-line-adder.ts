@@ -1,19 +1,17 @@
-export type LineAdderSelection = {
-  selectedSkus: string[];
-  error: string | null;
-};
+import type { PurchaseOrderLineDraft } from "./purchase-order-types";
 
 /**
- * Staged SKU picks belong to one vendor. Switching vendors returns an
- * empty selection so submit cannot keep SKUs from the previous catalog.
- * Same vendor returns undefined: keep the current picks and error.
+ * A picker click becomes a draft line at qty 1. The table owns quantity
+ * after that — the combobox does not stage SKUs.
  */
-export function lineAdderSelectionForSupplier(
-  previousSupplierId: string,
-  nextSupplierId: string,
-): LineAdderSelection | undefined {
-  if (previousSupplierId === nextSupplierId) {
-    return undefined;
-  }
-  return { selectedSkus: [], error: null };
+export function draftLineFromVendorProduct(product: {
+  sku: string;
+  catalogName: string;
+}): PurchaseOrderLineDraft {
+  return {
+    id: crypto.randomUUID(),
+    sku: product.sku,
+    name: product.catalogName,
+    qty: 1,
+  };
 }

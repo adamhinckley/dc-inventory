@@ -3,6 +3,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   loginBodySchema,
   logoutResponseSchema,
+  tooManyLoginAttemptsResponseSchema,
   unauthorizedResponseSchema,
   wholesaleSessionResponseSchema,
 } from "../../schemas.js";
@@ -11,6 +12,10 @@ import {
   setSessionCookie,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
+import {
+  createLoginThrottlePreHandler,
+  resetLoginThrottle,
+} from "./login-throttle.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -29,6 +34,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
   routes.post(
     "/auth/login",
     {
+      preHandler: createLoginThrottlePreHandler("wholesale"),
       schema: {
         operationId: "loginWholesale",
         tags: ["wholesale-auth"],
@@ -37,6 +43,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         response: {
           200: wholesaleSessionResponseSchema,
           401: unauthorizedResponseSchema,
+          429: tooManyLoginAttemptsResponseSchema,
         },
       },
     },
@@ -45,6 +52,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
       if (!result.ok) {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
+      await resetLoginThrottle(request, "wholesale");
       setSessionCookie(reply, WHOLESALE_SESSION_COOKIE, result.sessionId, request);
       return {
         wholesaleUserId: result.wholesaleUserId,

@@ -33,6 +33,7 @@ export class CreateCustomerUseCase {
         name,
         creditLimit: Money.fromMinorUnits(input.creditLimitCents, input.currency ?? "USD"),
         terms,
+        createdAt: new Date(),
       };
       await this.customers.save(customer);
       return { ok: true, customer };

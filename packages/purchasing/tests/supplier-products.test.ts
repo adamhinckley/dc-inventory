@@ -81,6 +81,8 @@ describe("Supplier products use cases (in-memory)", () => {
       supplierId: created.supplier.id,
       page: 1,
       pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
     });
     expect(listed.ok).toBe(true);
     if (!listed.ok) {
@@ -125,10 +127,72 @@ describe("Supplier products use cases (in-memory)", () => {
       supplierId: created.supplier.id,
       page: 1,
       pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
     });
     expect(empty.ok).toBe(true);
     if (empty.ok) {
       expect(empty.total).toBe(0);
+    }
+  });
+
+  it("searches and sorts supplier products by declared table fields", async () => {
+    const h = harness();
+    const created = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Acme Supply",
+      vendorNumber: "VEND-001",
+    });
+    if (!created.ok) {
+      throw new Error("expected supplier");
+    }
+    h.catalog.set(DEFAULT_ORG, "WIDGET-A", "Alpha Widget");
+    h.catalog.set(DEFAULT_ORG, "WIDGET-B", "Beta Widget");
+    for (const [sku, supplierSku] of [
+      ["WIDGET-A", "VENDOR-A"],
+      ["WIDGET-B", "VENDOR-B"],
+    ] as const) {
+      const assigned = await h.assignSupplierProduct.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        supplierId: created.supplier.id,
+        sku,
+        supplierSku,
+      });
+      expect(assigned.ok).toBe(true);
+    }
+
+    const sorted = await h.listSupplierProducts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: created.supplier.id,
+      page: 1,
+      pageSize: 25,
+      sortBy: "supplierSku",
+      sortOrder: "desc",
+    });
+    expect(sorted.ok).toBe(true);
+    if (sorted.ok) {
+      expect(sorted.items.map((row) => row.supplierSku)).toEqual([
+        "VENDOR-B",
+        "VENDOR-A",
+      ]);
+    }
+
+    const searched = await h.listSupplierProducts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: created.supplier.id,
+      q: "vendor-a",
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+    expect(searched.ok).toBe(true);
+    if (searched.ok) {
+      expect(searched.items.map((row) => row.sku)).toEqual(["WIDGET-A"]);
     }
   });
 
@@ -243,6 +307,8 @@ describe("Supplier products use cases (in-memory)", () => {
       supplierId: created.supplier.id,
       page: 1,
       pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
     });
     expect(listed.ok).toBe(true);
     if (listed.ok) {
@@ -263,6 +329,8 @@ describe("Supplier products use cases (in-memory)", () => {
       supplierId: SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
       page: 1,
       pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
     });
     expect(missingSupplier).toEqual({ ok: false, reason: "not_found" });
 

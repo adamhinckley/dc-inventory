@@ -2,6 +2,7 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
+import type { StaffRole } from "@dc-inventory/identity";
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
@@ -10,6 +11,7 @@ import {
   serializerCompiler,
   validatorCompiler,
 } from "fastify-type-provider-zod";
+import { featuresAllCoreOn, type IFeatures } from "@dc-inventory/licensing";
 import { InMemoryDatabase } from "./adapters/in-memory-database.js";
 import { registerHealthRoutes } from "./adapters/http/health.js";
 import { registerPingRoute } from "./adapters/http/ping.js";
@@ -20,7 +22,6 @@ import {
 } from "./adapters/http/cors-origins.js";
 import type { PingUseCase } from "./application/ping.js";
 import type { ReadyCheckUseCase } from "./application/ready.js";
-import { featuresAllCoreOn, type IFeatures } from "./features.js";
 import {
   composeAppServices,
   type AppServiceOverrides,
@@ -31,13 +32,23 @@ import {
   type SalesHttpServices,
   type AccountingHttpServices,
   type LicensingHttpServices,
+  type InventoryHttpServices,
 } from "./infrastructure/composition.js";
-import type { InMemoryLicensingStore } from "./licensing/in-memory-licensing.js";
 import { pinoLoggerOptions } from "./infrastructure/logging.js";
+import { DrainState } from "./infrastructure/drain-state.js";
+import {
+  NoopErrorReporter,
+  type IErrorReporter,
+} from "./infrastructure/error-reporter.js";
+import { registerErrorHandler } from "./infrastructure/error-handler.js";
 import {
   registerRequestIdHook,
   requestIdConfig,
 } from "./infrastructure/request-id.js";
+import {
+  readTrustProxy,
+  type TrustProxySetting,
+} from "./infrastructure/trust-proxy.js";
 import { internalRoutes } from "./internal/routes.js";
 import { opsRoutes } from "./ops/routes.js";
 import { SPREADSHEET_UPLOAD_MAX_BYTES } from "./schemas.js";
@@ -105,8 +116,12 @@ export async function buildAudienceApp(
     features,
     database: new InMemoryDatabase(),
   });
-  const app = Fastify({ logger: false });
+  const drainState = new DrainState();
+  const errorReporter = new NoopErrorReporter();
+  const app = Fastify({ logger: false, trustProxy: readTrustProxy() });
   app.decorate("features", features);
+  app.decorate("drainState", drainState);
+  app.decorate("errorReporter", errorReporter);
   app.decorate("identity", services.identity);
   app.decorate("customers", services.customers);
   app.decorate("catalog", services.catalog);
@@ -114,8 +129,9 @@ export async function buildAudienceApp(
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
   app.decorate("licensing", services.licensing);
-  app.decorate("licensingStore", services.licensingStore);
+  app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
+  registerErrorHandler(app, errorReporter);
   await registerCookie(app);
   await registerMultipart(app);
 
@@ -135,6 +151,9 @@ export async function buildAudienceApp(
 
 export type BuildAppOptions = AppServiceOverrides & {
   logger?: FastifyServerOptions["logger"];
+  drainState?: DrainState;
+  errorReporter?: IErrorReporter;
+  trustProxy?: TrustProxySetting;
 };
 
 /** Combined composition root: Pino + requestId, health, Ping, three mounts. */
@@ -142,11 +161,17 @@ export async function buildApp(
   options: BuildAppOptions = {},
 ): Promise<FastifyInstance> {
   const services = composeAppServices(options);
+  const drainState = options.drainState ?? new DrainState();
+  const errorReporter = options.errorReporter ?? new NoopErrorReporter();
   const app = Fastify({
     logger: options.logger ?? pinoLoggerOptions(),
+    bodyLimit: SPREADSHEET_UPLOAD_MAX_BYTES,
+    trustProxy: options.trustProxy ?? readTrustProxy(),
     ...requestIdConfig(),
   });
   app.decorate("features", services.features);
+  app.decorate("drainState", drainState);
+  app.decorate("errorReporter", errorReporter);
   app.decorate("ping", services.ping);
   app.decorate("readyCheck", services.ready);
   app.decorate("identity", services.identity);
@@ -156,9 +181,10 @@ export async function buildApp(
   app.decorate("sales", services.sales);
   app.decorate("accounting", services.accounting);
   app.decorate("licensing", services.licensing);
-  app.decorate("licensingStore", services.licensingStore);
+  app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
+  registerErrorHandler(app, errorReporter);
   await registerCookie(app);
   await registerCors(app);
   await registerMultipart(app);
@@ -174,6 +200,8 @@ export async function buildApp(
 declare module "fastify" {
   interface FastifyInstance {
     features: IFeatures;
+    drainState: DrainState;
+    errorReporter: IErrorReporter;
     ping: PingUseCase;
     readyCheck: ReadyCheckUseCase;
     identity: IdentityHttpServices;
@@ -183,16 +211,27 @@ declare module "fastify" {
     sales: SalesHttpServices;
     accounting: AccountingHttpServices;
     licensing: LicensingHttpServices;
-    licensingStore: InMemoryLicensingStore;
+    inventory: InventoryHttpServices;
   }
 
   interface FastifyRequest {
-    staffAuth?: { staffUserId: string; email: string; organizationId: string };
+    staffAuth?: {
+      staffUserId: string;
+      email: string;
+      organizationId: string;
+      roles: readonly StaffRole[];
+    };
     wholesaleAuth?: {
       wholesaleUserId: string;
       email: string;
       customerId: string;
       organizationId: string;
+    };
+    opsAuth?: {
+      opsUserId: string;
+      email: string;
+      kind: "operator" | "business_owner";
+      tenantId: string;
     };
   }
 }

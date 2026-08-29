@@ -106,6 +106,7 @@ async function upsertCustomer(
     name: planned.name,
     creditLimit: Money.fromMinorUnits(planned.creditLimitCents, planned.currency),
     terms: planned.terms,
+    createdAt: existing?.createdAt ?? new Date(),
   };
   await ports.customers.save(customer);
   return customer;
@@ -265,6 +266,7 @@ export async function runWriteStaticDemoBook(
     organizationId: OrganizationId.DEFAULT,
     email: plan.master.staffEmail,
     passwordHash: await ports.passwords.hash(staffPassword),
+    roles: existingStaff?.roles ?? ["admin"],
   };
   await ports.staffUsers.save(staff);
 

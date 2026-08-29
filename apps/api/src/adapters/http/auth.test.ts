@@ -7,22 +7,30 @@ import {
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
+  InMemoryOpsUserRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
+  LOGIN_THROTTLE_MAX_ATTEMPTS,
+  LOGIN_THROTTLE_WINDOW_MS,
+  OpsUserId,
   SESSION_IDLE_MS,
 } from "@dc-inventory/identity";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
+import { readTrustProxy } from "../../infrastructure/trust-proxy.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import {
   STAFF_SESSION_COOKIE,
+  OPS_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
+const OPERATOR_ID = OpsUserId.parse("44444444-4444-4444-8444-444444444444");
+const OWNER_ID = OpsUserId.parse("55555555-5555-4555-8555-555555555555");
 const CUSTOMER_ID = CustomerId.parse("33333333-3333-4333-8333-333333333333");
 const ACME_SLUG = "acme";
 
@@ -32,11 +40,15 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00:00.000Z"))) {
+async function startAuthApp(
+  clock = new InMemoryClock(new Date("2026-08-23T03:00:00.000Z")),
+  options: { trustProxy?: import("../../infrastructure/trust-proxy.js").TrustProxySetting } = {},
+) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
   const staffUsers = new InMemoryStaffUserRepository();
+  const opsUsers = new InMemoryOpsUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
   await staffUsers.save({
@@ -44,6 +56,7 @@ async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00
       organizationId: OrganizationId.DEFAULT,
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
@@ -52,15 +65,31 @@ async function startAuthApp(clock = new InMemoryClock(new Date("2026-08-23T03:00
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_ID,
   });
+  await opsUsers.save({
+    id: OPERATOR_ID,
+    tenantId: OrganizationId.DEFAULT,
+    email: "operator@local.test",
+    passwordHash: await passwords.hash("operator-secret"),
+    kind: "operator",
+  });
+  await opsUsers.save({
+    id: OWNER_ID,
+    tenantId: OrganizationId.DEFAULT,
+    email: "owner@local.test",
+    passwordHash: await passwords.hash("owner-secret"),
+    kind: "business_owner",
+  });
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),
     clock,
     staffUsers,
+    opsUsers,
     wholesaleUsers,
     sessions,
     passwords,
     organizationRepo: organizations,
+    trustProxy: options.trustProxy,
   });
   apps.push(app);
   return { app, clock };
@@ -90,6 +119,7 @@ describe("opaque session HTTP", () => {
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
+      roles: ["admin"],
     });
     const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
     expect(cookie?.name).toBe(STAFF_SESSION_COOKIE);
@@ -121,6 +151,7 @@ describe("opaque session HTTP", () => {
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
+      roles: ["admin"],
     });
   });
 
@@ -301,6 +332,163 @@ describe("opaque session HTTP", () => {
     expect(ready.statusCode).toBe(200);
   });
 
+  it("returns a stable 429 with Retry-After after repeated login failures", async () => {
+    const { app } = await startAuthApp();
+    const request = {
+      method: "POST" as const,
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "wrong",
+      },
+    };
+
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      const response = await app.inject(request);
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: "unauthorized" });
+    }
+    const rejected = await app.inject(request);
+    expect(rejected.statusCode).toBe(429);
+    expect(rejected.headers["retry-after"]).toBe(
+      (LOGIN_THROTTLE_WINDOW_MS / 1000).toString(),
+    );
+    expect(rejected.json()).toEqual({
+      error: "too_many_login_attempts",
+      retryAfterSeconds: LOGIN_THROTTLE_WINDOW_MS / 1000,
+    });
+
+    const { app: unknownApp } = await startAuthApp();
+    const unknownAccountRequest = {
+      ...request,
+      payload: { ...request.payload, email: "missing@local.test" },
+    };
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect((await unknownApp.inject(unknownAccountRequest)).statusCode).toBe(401);
+    }
+    const unknownRejected = await unknownApp.inject(unknownAccountRequest);
+    expect(unknownRejected.statusCode).toBe(rejected.statusCode);
+    expect(unknownRejected.headers["retry-after"]).toBe(
+      rejected.headers["retry-after"],
+    );
+    expect(unknownRejected.json()).toEqual(rejected.json());
+  });
+
+  it("throttles distinct forwarded client addresses behind a trusted proxy", async () => {
+    const { app } = await startAuthApp(undefined, { trustProxy: readTrustProxy("1") });
+    const blockedClient = {
+      method: "POST" as const,
+      url: "/internal/auth/login",
+      headers: { "x-forwarded-for": "203.0.113.10" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "wrong",
+      },
+    };
+
+    for (let attempt = 0; attempt <= LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      const response = await app.inject(blockedClient);
+      expect([401, 429]).toContain(response.statusCode);
+    }
+    const blocked = await app.inject(blockedClient);
+    expect(blocked.statusCode).toBe(429);
+
+    const otherClient = await app.inject({
+      ...blockedClient,
+      headers: { "x-forwarded-for": "203.0.113.11" },
+      payload: {
+        ...blockedClient.payload,
+        email: "other@local.test",
+      },
+    });
+    expect(otherClient.statusCode).toBe(401);
+  });
+
+  it("ignores prepended X-Forwarded-For addresses when TRUST_PROXY is one hop", async () => {
+    const { app } = await startAuthApp(undefined, { trustProxy: readTrustProxy("1") });
+    const payload = {
+      organizationSlug: ACME_SLUG,
+      email: "staff@local.test",
+      password: "wrong",
+    };
+
+    for (let attempt = 0; attempt <= LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      const response = await app.inject({
+        method: "POST",
+        url: "/internal/auth/login",
+        headers: { "x-forwarded-for": "203.0.113.10" },
+        payload,
+      });
+      expect([401, 429]).toContain(response.statusCode);
+    }
+
+    const spoofed = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      headers: { "x-forwarded-for": "198.51.100.99, 203.0.113.10" },
+      payload,
+    });
+    expect(spoofed.statusCode).toBe(429);
+
+    const otherIp = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      headers: { "x-forwarded-for": "203.0.113.11" },
+      payload: { ...payload, email: "other@local.test" },
+    });
+    expect(otherIp.statusCode).toBe(401);
+  });
+
+  it("clears failed attempts after a successful login", async () => {
+    const { app } = await startAuthApp();
+    const payload = {
+      organizationSlug: ACME_SLUG,
+      email: "staff@local.test",
+      password: "wrong",
+    };
+
+    for (let attempt = 1; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/internal/auth/login",
+            payload,
+          })
+        ).statusCode,
+      ).toBe(401);
+    }
+    const success = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: { ...payload, password: "staff-secret" },
+    });
+    expect(success.statusCode).toBe(200);
+
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect(
+        (
+          await app.inject({
+            method: "POST",
+            url: "/internal/auth/login",
+            payload,
+          })
+        ).statusCode,
+      ).toBe(401);
+    }
+    expect(
+      (
+        await app.inject({
+          method: "POST",
+          url: "/internal/auth/login",
+          payload,
+        })
+      ).statusCode,
+    ).toBe(429);
+  });
+
   it("allows credentialed CORS from CORS_ORIGINS and never uses *", async () => {
     const { app } = await startAuthApp();
     const allowed = await app.inject({
@@ -331,13 +519,138 @@ describe("opaque session HTTP", () => {
     expect(denied.headers["access-control-allow-origin"]).not.toBe("*");
   });
 
-  it("does not add ops auth routes", async () => {
-    const { app } = await startAuthApp();
-    const opsLogin = await app.inject({
+  it.each([
+    ["operator@local.test", "operator-secret", OPERATOR_ID, "operator"],
+    ["owner@local.test", "owner-secret", OWNER_ID, "business_owner"],
+  ] as const)(
+    "sets ops_session and resolves the %s actor kind",
+    async (email, password, opsUserId, kind) => {
+      const { app } = await startAuthApp();
+      const login = await app.inject({
+        method: "POST",
+        url: "/ops/auth/login",
+        payload: { organizationSlug: ACME_SLUG, email, password },
+      });
+      expect(login.statusCode).toBe(200);
+      expect(login.json()).toEqual({
+        opsUserId,
+        email,
+        kind,
+        tenantId: OrganizationId.DEFAULT,
+      });
+      const cookie = cookieValue(login, OPS_SESSION_COOKIE);
+      expect(cookie?.name).toBe(OPS_SESSION_COOKIE);
+      expect(cookie?.httpOnly).toBe(true);
+
+      const session = await app.inject({
+        method: "GET",
+        url: "/ops/auth/session",
+        cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
+      });
+      expect(session.statusCode).toBe(200);
+      expect(session.json()).toEqual(login.json());
+
+      const subscription = await app.inject({
+        method: "GET",
+        url: "/ops/subscription",
+        cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
+      });
+      expect(subscription.statusCode).toBe(200);
+    },
+  );
+
+  it("guards every non-login ops route and expires ops sessions", async () => {
+    const { app, clock } = await startAuthApp();
+    for (const request of [
+      { method: "GET" as const, url: "/ops/subscription" },
+      { method: "GET" as const, url: "/ops/auth/session" },
+      { method: "POST" as const, url: "/ops/auth/logout" },
+    ]) {
+      const response = await app.inject(request);
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: "unauthorized" });
+    }
+
+    const login = await app.inject({
       method: "POST",
       url: "/ops/auth/login",
-      payload: { organizationSlug: ACME_SLUG, email: "ops@local.test", password: "x" },
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "operator@local.test",
+        password: "operator-secret",
+      },
     });
-    expect(opsLogin.statusCode).toBe(404);
+    const cookie = cookieValue(login, OPS_SESSION_COOKIE);
+    clock.advance(SESSION_IDLE_MS + 1);
+    const expired = await app.inject({
+      method: "GET",
+      url: "/ops/subscription",
+      cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
+    });
+    expect(expired.statusCode).toBe(401);
+    expect(expired.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("rejects staff and wholesale cookies and wrong-audience tokens on ops routes", async () => {
+    const { app } = await startAuthApp();
+    const staffLogin = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
+    });
+    const wholesaleLogin = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
+    });
+    const staffToken = cookieValue(staffLogin, STAFF_SESSION_COOKIE)?.value ?? "";
+    const wholesaleToken =
+      cookieValue(wholesaleLogin, WHOLESALE_SESSION_COOKIE)?.value ?? "";
+
+    for (const cookies of [
+      { [STAFF_SESSION_COOKIE]: staffToken },
+      { [WHOLESALE_SESSION_COOKIE]: wholesaleToken },
+      { [OPS_SESSION_COOKIE]: staffToken },
+      { [OPS_SESSION_COOKIE]: wholesaleToken },
+    ]) {
+      const response = await app.inject({
+        method: "GET",
+        url: "/ops/subscription",
+        cookies,
+      });
+      expect(response.statusCode).toBe(401);
+      expect(response.json()).toEqual({ error: "unauthorized" });
+    }
+  });
+
+  it("throttles ops login with the shared interface", async () => {
+    const { app } = await startAuthApp();
+    const request = {
+      method: "POST" as const,
+      url: "/ops/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "ops@local.test",
+        password: "wrong",
+      },
+    };
+
+    for (let attempt = 0; attempt < LOGIN_THROTTLE_MAX_ATTEMPTS; attempt += 1) {
+      expect((await app.inject(request)).statusCode).toBe(401);
+    }
+    const rejected = await app.inject(request);
+    expect(rejected.statusCode).toBe(429);
+    expect(rejected.json()).toEqual({
+      error: "too_many_login_attempts",
+      retryAfterSeconds: LOGIN_THROTTLE_WINDOW_MS / 1000,
+    });
   });
 });

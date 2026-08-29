@@ -24,8 +24,11 @@ export type ListSupplierProductsRequest = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId;
   supplierId: SupplierId;
+  q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "sku" | "supplierSku";
+  sortOrder?: "asc" | "desc";
 };
 
 export type ListSupplierProductsResult =
@@ -54,8 +57,11 @@ export class ListSupplierProductsUseCase {
     }
     const page = await this.supplierProducts.listBySupplier({
       supplierId: input.supplierId,
+      q: input.q,
       page: input.page,
       pageSize: input.pageSize,
+      sortBy: input.sortBy,
+      sortOrder: input.sortOrder,
     });
     const snapshots = await this.qty.readBySkus(
       input.organizationId,

@@ -29,6 +29,9 @@ export class DrizzleProductPackagingRepository implements IProductPackagingRepos
     return {
       productId: ProductId.parse(row.productId),
       caseQty: row.caseQty,
+      caseLength: row.caseLength,
+      caseWidth: row.caseWidth,
+      caseHeight: row.caseHeight,
     };
   }
 
@@ -39,11 +42,17 @@ export class DrizzleProductPackagingRepository implements IProductPackagingRepos
         id: newUuid(),
         productId: packaging.productId,
         caseQty: packaging.caseQty,
+        caseLength: packaging.caseLength,
+        caseWidth: packaging.caseWidth,
+        caseHeight: packaging.caseHeight,
       })
       .onConflictDoUpdate({
         target: productPackaging.productId,
         set: {
           caseQty: packaging.caseQty,
+          caseLength: packaging.caseLength,
+          caseWidth: packaging.caseWidth,
+          caseHeight: packaging.caseHeight,
           updatedAt: new Date(),
         },
       });

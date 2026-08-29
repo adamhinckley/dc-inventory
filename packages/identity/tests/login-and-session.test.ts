@@ -9,21 +9,27 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { InMemoryOrganizationRepository } from "../src/adapters/in-memory-organization-repository.js";
+import { InMemoryOpsUserRepository } from "../src/adapters/in-memory-ops-user-repository.js";
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
 import { InMemorySessionStore } from "../src/adapters/in-memory-session-store.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
 import { InMemoryWholesaleUserRepository } from "../src/adapters/in-memory-wholesale-user-repository.js";
+import { LoginOpsUseCase } from "../src/application/login-ops.js";
 import { LoginStaffUseCase } from "../src/application/login-staff.js";
 import { LoginWholesaleUseCase } from "../src/application/login-wholesale.js";
 import { LogoutUseCase } from "../src/application/logout.js";
 import {
+  ResolveOpsSessionUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
 } from "../src/application/resolve-session.js";
 import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS } from "../src/domain/session.js";
+import { OpsUserId } from "../src/domain/ops-user.js";
 
 const STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440001");
 const WHOLESALE_ID = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440002");
+const OPERATOR_ID = OpsUserId.parse("550e8400-e29b-41d4-a716-446655440005");
+const OWNER_ID = OpsUserId.parse("550e8400-e29b-41d4-a716-446655440006");
 const CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-446655440003");
 const OTHER_CUSTOMER = CustomerId.parse("550e8400-e29b-41d4-a716-446655440004");
 const ACME_SLUG = "acme";
@@ -34,6 +40,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   const clock = new InMemoryClock(at);
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
+  const opsUsers = new InMemoryOpsUserRepository();
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -41,9 +48,17 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
     clock,
     passwords,
     organizations,
+    opsUsers,
     staffUsers,
     wholesaleUsers,
     sessions,
+    loginOps: new LoginOpsUseCase(
+      organizations,
+      opsUsers,
+      sessions,
+      passwords,
+      clock,
+    ),
     loginStaff: new LoginStaffUseCase(
       organizations,
       staffUsers,
@@ -64,8 +79,10 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
       wholesaleUsers,
       clock,
     ),
+    resolveOps: new ResolveOpsSessionUseCase(sessions, opsUsers, clock),
     logoutStaff: new LogoutUseCase(sessions, clock, "staff"),
     logoutWholesale: new LogoutUseCase(sessions, clock, "wholesale"),
+    logoutOps: new LogoutUseCase(sessions, clock, "ops"),
   };
 }
 
@@ -74,6 +91,54 @@ async function seedAcmeOrg(h: ReturnType<typeof harness>) {
 }
 
 describe("Identity login and sessions (in-memory)", () => {
+  it("resolves operator and business-owner ops sessions as distinct actors", async () => {
+    const h = harness();
+    await seedAcmeOrg(h);
+    await h.opsUsers.save({
+      id: OPERATOR_ID,
+      tenantId: OrganizationId.DEFAULT,
+      email: "operator@local.test",
+      passwordHash: await h.passwords.hash("operator-secret"),
+      kind: "operator",
+    });
+    await h.opsUsers.save({
+      id: OWNER_ID,
+      tenantId: OrganizationId.DEFAULT,
+      email: "owner@local.test",
+      passwordHash: await h.passwords.hash("owner-secret"),
+      kind: "business_owner",
+    });
+
+    const operator = await h.loginOps.execute({
+      organizationSlug: ACME_SLUG,
+      email: "operator@local.test",
+      password: "operator-secret",
+    });
+    const owner = await h.loginOps.execute({
+      organizationSlug: ACME_SLUG,
+      email: "owner@local.test",
+      password: "owner-secret",
+    });
+    expect(operator.ok).toBe(true);
+    expect(owner.ok).toBe(true);
+    if (!operator.ok || !owner.ok) {
+      return;
+    }
+
+    await expect(h.resolveOps.execute(operator.sessionId)).resolves.toMatchObject({
+      ok: true,
+      opsUserId: OPERATOR_ID,
+      kind: "operator",
+      tenantId: OrganizationId.DEFAULT,
+    });
+    await expect(h.resolveOps.execute(owner.sessionId)).resolves.toMatchObject({
+      ok: true,
+      opsUserId: OWNER_ID,
+      kind: "business_owner",
+      tenantId: OrganizationId.DEFAULT,
+    });
+  });
+
   it("logs in staff with org slug + email + password", async () => {
     const h = harness();
     await seedAcmeOrg(h);
@@ -82,6 +147,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
 
     const result = await h.loginStaff.execute({
@@ -102,6 +168,7 @@ describe("Identity login and sessions (in-memory)", () => {
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
+      roles: ["admin"],
     });
   });
 
@@ -113,6 +180,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
 
     const unknownSlug = await h.loginStaff.execute({
@@ -184,6 +252,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
     const login = await h.loginStaff.execute({
       organizationSlug: ACME_SLUG,
@@ -211,6 +280,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
     const login = await h.loginStaff.execute({
       organizationSlug: ACME_SLUG,
@@ -243,6 +313,7 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
     });
     const login = await h.loginStaff.execute({
       organizationSlug: ACME_SLUG,
@@ -276,12 +347,14 @@ describe("Identity login and sessions (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("acme-secret"),
+      roles: ["admin"],
     });
     await h.staffUsers.save({
       id: betaStaffId,
       organizationId: betaOrgId,
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("beta-secret"),
+      roles: ["purchasing"],
     });
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,

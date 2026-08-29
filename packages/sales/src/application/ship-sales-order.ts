@@ -53,6 +53,12 @@ export class ShipSalesOrderUseCase {
           return { ok: false, reason: "illegal_transition" };
         }
 
+        await scope.inventory.lockSnapshots(
+          existing.lines.map((line) => ({
+            organizationId: existing.organizationId,
+            sku: line.sku,
+          })),
+        );
         for (const line of existing.lines) {
           const result = await scope.inventory.recordShipped({
             organizationId: existing.organizationId,

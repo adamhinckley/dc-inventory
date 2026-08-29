@@ -88,6 +88,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         querystring: salesOrderListQuerySchema,
         response: {
           200: salesOrderListResponseSchema,
+          400: zodValidationErrorResponseSchema,
           401: unauthorizedResponseSchema,
         },
         "x-table": salesOrdersListTable,
@@ -95,16 +96,22 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
     },
     async (request) => {
       const query = request.query as {
+        q?: string;
         page: number;
         pageSize: number;
+        sortBy: "documentNumber" | "status";
+        sortOrder: "asc" | "desc";
         status?: SalesOrder["status"];
         customerId?: string;
       };
       const result = await request.server.sales.listSalesOrders.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
+        q: query.q,
         page: query.page,
         pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
         status: query.status,
         customerId:
           query.customerId === undefined ? undefined : CustomerId.parse(query.customerId),
@@ -131,6 +138,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
+          409: conflictResponseSchema,
         },
       },
     },
@@ -148,8 +156,15 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         shipCountry: request.body.shipCountry,
       });
       if (!result.ok) {
-        if (result.reason === "customer_not_found") {
+        if (
+          result.reason === "customer_not_found" ||
+          result.reason === "product_not_found" ||
+          result.reason === "product_organization_mismatch"
+        ) {
           return sendNotFound(reply);
+        }
+        if (result.reason === "product_inactive") {
+          return sendConflict(reply);
         }
         if (result.reason === "empty_order") {
           return sendInvalid(reply);

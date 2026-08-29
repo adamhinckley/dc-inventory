@@ -15,6 +15,7 @@ import {
   RecordAdjustmentIncreaseUseCase,
   RecordAllocatedUseCase,
 } from "@dc-inventory/inventory";
+import { InMemoryLicensingStore } from "@dc-inventory/licensing";
 import {
   CustomerId,
   LocationId,
@@ -28,7 +29,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
-import { InMemoryLicensingStore } from "../../licensing/in-memory-licensing.js";
 import {
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
@@ -72,12 +72,14 @@ async function startTwoOrgIsolationApp() {
     organizationId: DEFAULT_ORG,
     email: "acme-staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
   await staffUsers.save({
     id: BETA_STAFF_ID,
     organizationId: BETA_ORG,
     email: "beta-staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
+    roles: ["admin"],
   });
 
   await customerRepo.save({

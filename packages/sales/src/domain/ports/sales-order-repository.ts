@@ -7,6 +7,8 @@ import type {
 } from "@dc-inventory/shared-kernel";
 import type { SalesOrder, SalesOrderStatus } from "../sales-order.js";
 
+export type UnnumberedSalesOrder = Omit<SalesOrder, "documentNumber">;
+
 export type SalesOrderListPage = {
   items: readonly SalesOrder[];
   total: number;
@@ -14,8 +16,11 @@ export type SalesOrderListPage = {
 
 export type ListSalesOrdersQuery = {
   organizationId: OrganizationId;
+  q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "documentNumber" | "status";
+  sortOrder?: "asc" | "desc";
   status?: SalesOrderStatus;
   customerId?: CustomerId;
 };
@@ -24,7 +29,7 @@ export interface ISalesOrderRepository {
   list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage>;
   findById(organizationId: OrganizationId, id: OrderId): Promise<SalesOrder | null>;
   save(order: SalesOrder): Promise<void>;
-  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
+  insertWithNextDocumentNumber(order: UnnumberedSalesOrder): Promise<SalesOrder>;
   findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,
@@ -73,6 +78,11 @@ export type ShippedCommand = {
   orderId: OrderId;
 };
 
+export type InventorySnapshotLock = {
+  organizationId: OrganizationId;
+  sku: Sku;
+};
+
 export type CreateInvoiceForOrderCommand = {
   organizationId: OrganizationId;
   orderId: OrderId;
@@ -91,6 +101,7 @@ export type AccountingCommandResult =
   | { ok: false; reason: "invalid" };
 
 export interface IInventoryCommandPort {
+  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void>;
   recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult>;
   recordDeallocated(command: DeallocatedCommand): Promise<InventoryCommandResult>;
   recordShipped(command: ShippedCommand): Promise<InventoryCommandResult>;
