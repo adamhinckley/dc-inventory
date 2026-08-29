@@ -11,6 +11,11 @@ function isAuthRoute(request: FastifyRequest): boolean {
   return url.includes("/auth/");
 }
 
+function isOpsLoginRoute(request: FastifyRequest): boolean {
+  const url = request.routeOptions.url ?? request.url.split("?")[0] ?? "";
+  return url === "/auth/login" || url === "/ops/auth/login";
+}
+
 function sendUnauthorized(reply: FastifyReply) {
   return reply.code(401).send({ error: "unauthorized" as const });
 }
@@ -60,6 +65,9 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
 
 export function registerOpsAudienceGuard(app: FastifyInstance): void {
   app.addHook("preHandler", async (request, reply) => {
+    if (isOpsLoginRoute(request)) {
+      return;
+    }
     const token = request.cookies[OPS_SESSION_COOKIE];
     const result = await request.server.identity.resolveOps.execute(token);
     if (!result.ok) {
