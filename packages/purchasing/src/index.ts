@@ -48,6 +48,7 @@ export type {
   WorkbookWriteResult,
 } from "./domain/ports/workbook-writer.js";
 export type {
+  CatalogProductSnapshot,
   ICatalogSkuLookupPort,
   ISupplierProductQtyReadPort,
   ISupplierProductRepository,

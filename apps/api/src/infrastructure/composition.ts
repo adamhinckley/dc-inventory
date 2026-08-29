@@ -346,11 +346,22 @@ function purchasingServices(
   const workbookWriter = new ExcelJsWorkbookWriter();
   return {
     listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo),
-    createPurchaseOrder: new CreatePurchaseOrderUseCase(purchaseOrderRepo, supplierRepo, clock),
+    createPurchaseOrder: new CreatePurchaseOrderUseCase(
+      purchaseOrderRepo,
+      supplierRepo,
+      catalogSkuLookup,
+      clock,
+    ),
     getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
-    confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(unitOfWork.purchasing),
+    confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(
+      unitOfWork.purchasing,
+      catalogSkuLookup,
+    ),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
-    replacePurchaseOrderLines: new ReplacePurchaseOrderLinesUseCase(purchaseOrderRepo),
+    replacePurchaseOrderLines: new ReplacePurchaseOrderLinesUseCase(
+      purchaseOrderRepo,
+      catalogSkuLookup,
+    ),
     exportPurchaseOrder: new ExportPurchaseOrderUseCase(
       purchaseOrderRepo,
       supplierProductRepo,
