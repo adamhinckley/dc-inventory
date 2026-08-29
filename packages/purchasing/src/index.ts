@@ -41,6 +41,7 @@ export type {
   ISupplierRepository,
   ListSuppliersQuery,
   SupplierListPage,
+  UnnumberedPurchaseOrder,
 } from "./domain/ports/purchase-order-repository.js";
 export type {
   IWorkbookWriter,
@@ -48,6 +49,7 @@ export type {
   WorkbookWriteResult,
 } from "./domain/ports/workbook-writer.js";
 export type {
+  CatalogProductSnapshot,
   ICatalogSkuLookupPort,
   ISupplierProductQtyReadPort,
   ISupplierProductRepository,

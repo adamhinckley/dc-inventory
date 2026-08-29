@@ -24,5 +24,6 @@ export type {
   ISalesOrderRepository,
   ISalesUnitOfWork,
   ShippedCommand,
+  UnnumberedSalesOrder,
 } from "./domain/ports/sales-order-repository.js";
 export type { SalesOrder, SalesOrderLine, SalesOrderStatus } from "./domain/sales-order.js";

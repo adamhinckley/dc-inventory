@@ -17,38 +17,26 @@ describe("ReadyCheckUseCase (in-memory database)", () => {
     await expect(useCase.execute()).resolves.toEqual({ ready: true });
   });
 
-  it("returns a public error when ping fails", async () => {
+  it("keeps the database failure internal when ping fails", async () => {
+    const cause = new Error("connection refused");
     const useCase = new ReadyCheckUseCase(
-      new InMemoryDatabase({ failWith: new Error("connection refused") }),
+      new InMemoryDatabase({ failWith: cause }),
     );
     await expect(useCase.execute()).resolves.toEqual({
       ready: false,
-      error: "connection refused",
+      cause,
     });
   });
 
-  it("keeps the missing-URL message and redacts connection strings", async () => {
+  it("returns missing configuration as an internal cause", async () => {
+    const cause = new MissingDatabaseUrlError();
     const missing = new ReadyCheckUseCase(
-      new InMemoryDatabase({ failWith: new MissingDatabaseUrlError() }),
+      new InMemoryDatabase({ failWith: cause }),
     );
     await expect(missing.execute()).resolves.toEqual({
       ready: false,
-      error: new MissingDatabaseUrlError().message,
+      cause,
     });
-
-    const leaked = new ReadyCheckUseCase(
-      new InMemoryDatabase({
-        failWith: new Error(
-          "connect failed postgres://user:secret@localhost:5432/dc_inventory",
-        ),
-      }),
-    );
-    const result = await leaked.execute();
-    expect(result.ready).toBe(false);
-    if (!result.ready) {
-      expect(result.error).toContain("[redacted-url]");
-      expect(result.error).not.toContain("secret");
-    }
   });
 
   it("does not import Fastify, Pino, Zod, Drizzle, or postgres.js", () => {

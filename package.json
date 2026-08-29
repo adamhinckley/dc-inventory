@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:integration:idempotency-races": "IDEMPOTENCY_RACE_INTEGRATION=1 vitest run apps/api/src/adapters/postgres-idempotency-races.integration.test.ts",
     "db:migrate": "pnpm --filter @dc-inventory/api db:migrate",
     "db:seed:phase1": "pnpm --filter @dc-inventory/api db:seed:phase1",
     "seed:demo": "pnpm --filter @dc-inventory/api seed:demo",

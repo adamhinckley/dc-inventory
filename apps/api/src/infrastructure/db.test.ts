@@ -8,6 +8,7 @@ describe("PostgresDatabase", () => {
     expect(Object.keys(schema).sort()).toEqual(
       [
         "addOnGrants",
+        "accountingDocumentNumberCounters",
         "categories",
         "contacts",
         "customers",
@@ -31,7 +32,9 @@ describe("PostgresDatabase", () => {
         "products",
         "purchaseOrderLines",
         "purchaseOrders",
+        "purchasingDocumentNumberCounters",
         "reorderPolicies",
+        "salesDocumentNumberCounters",
         "sessions",
         "shipTos",
         "softwarePayments",

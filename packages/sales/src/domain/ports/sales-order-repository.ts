@@ -7,6 +7,8 @@ import type {
 } from "@dc-inventory/shared-kernel";
 import type { SalesOrder, SalesOrderStatus } from "../sales-order.js";
 
+export type UnnumberedSalesOrder = Omit<SalesOrder, "documentNumber">;
+
 export type SalesOrderListPage = {
   items: readonly SalesOrder[];
   total: number;
@@ -24,7 +26,7 @@ export interface ISalesOrderRepository {
   list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage>;
   findById(organizationId: OrganizationId, id: OrderId): Promise<SalesOrder | null>;
   save(order: SalesOrder): Promise<void>;
-  nextDocumentNumber(organizationId: OrganizationId): Promise<string>;
+  insertWithNextDocumentNumber(order: UnnumberedSalesOrder): Promise<SalesOrder>;
   findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,

@@ -2748,12 +2748,11 @@ paths:
             label: Status
           - field: supplierId
             label: Supplier
-        sort:
-          defaultBy: documentNumber
-          defaultOrder: asc
-          fields:
-            - documentNumber
-            - status
+        filters:
+          - param: status
+            control: select
+          - param: supplierId
+            control: text
       responses:
         "200":
           description: Default Response
@@ -3006,19 +3005,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -3199,19 +3199,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -3763,19 +3764,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -4457,14 +4459,6 @@ paths:
             label: Allocated
           - field: qty.available
             label: Available
-        sort:
-          defaultBy: sku
-          defaultOrder: asc
-          fields:
-            - sku
-            - catalogName
-            - qty.onHand
-            - qty.available
       responses:
         "200":
           description: Default Response
@@ -5076,12 +5070,11 @@ paths:
             label: Status
           - field: customerId
             label: Customer
-        sort:
-          defaultBy: documentNumber
-          defaultOrder: asc
-          fields:
-            - documentNumber
-            - status
+        filters:
+          - param: status
+            control: select
+          - param: customerId
+            control: text
       responses:
         "200":
           description: Default Response
@@ -5375,19 +5368,20 @@ paths:
                     additionalProperties: false
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
         "401":
           description: Default Response
@@ -6276,19 +6270,20 @@ paths:
                 anyOf:
                   - type: object
                     properties:
-                      statusCode:
-                        type: number
-                      code:
-                        type: string
                       error:
                         type: string
+                        enum:
+                          - invalid_request
                       message:
                         type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
                     required:
-                      - statusCode
-                      - code
                       - error
                       - message
+                      - requestId
                     additionalProperties: false
                   - type: object
                     properties:

@@ -14,7 +14,13 @@ export function catalogSkuLookupPort(productRepo: IProductRepository): ICatalogS
   return {
     findBySku: async (organizationId: OrganizationId, sku: Sku) => {
       const product = await productRepo.findBySku(organizationId, sku);
-      return product === null ? null : { name: product.name };
+      return product === null
+        ? null
+        : {
+            sku: product.sku,
+            name: product.name,
+            archived: product.inactive || product.discontinued,
+          };
     },
   };
 }
