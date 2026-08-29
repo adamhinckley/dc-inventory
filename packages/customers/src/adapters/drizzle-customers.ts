@@ -40,6 +40,7 @@ function toCustomer(row: typeof customers.$inferSelect): Customer {
     name: row.name,
     creditLimit: Money.fromMinorUnits(row.creditLimitCents, row.currency),
     terms: row.terms,
+    createdAt: row.createdAt,
   };
 }
 
@@ -149,6 +150,7 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
         creditLimitCents: customer.creditLimit.amountMinor,
         currency: customer.creditLimit.currency,
         terms: customer.terms,
+        createdAt: customer.createdAt,
       })
       .onConflictDoUpdate({
         target: customers.id,

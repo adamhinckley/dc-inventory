@@ -1,5 +1,5 @@
 import { Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { SupplierProductId } from "../domain/ids.js";
 import type {
   ISupplierProductRepository,
@@ -27,14 +27,25 @@ export class DrizzleSupplierProductRepository implements ISupplierProductReposit
   constructor(private readonly db: PurchasingDrizzle) {}
 
   async listBySupplier(query: ListSupplierProductsQuery): Promise<SupplierProductListPage> {
-    const where = eq(supplierProducts.supplierId, query.supplierId);
+    const clauses = [eq(supplierProducts.supplierId, query.supplierId)];
+    const needle = query.q?.trim() ?? "";
+    if (needle.length > 0) {
+      const pattern = `%${needle}%`;
+      clauses.push(
+        or(ilike(supplierProducts.sku, pattern), ilike(supplierProducts.supplierSku, pattern))!,
+      );
+    }
+    const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
+    const sortColumn =
+      query.sortBy === "supplierSku" ? supplierProducts.supplierSku : supplierProducts.sku;
+    const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
     const [rows, countRows] = await Promise.all([
       this.db
         .select()
         .from(supplierProducts)
         .where(where)
-        .orderBy(asc(supplierProducts.sku))
+        .orderBy(order)
         .limit(query.pageSize)
         .offset(offset),
       this.db

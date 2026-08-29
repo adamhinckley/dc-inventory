@@ -80,6 +80,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         querystring: purchaseOrderListQuerySchema,
         response: {
           200: purchaseOrderListResponseSchema,
+          400: zodValidationErrorResponseSchema,
           401: unauthorizedResponseSchema,
         },
         "x-table": purchaseOrdersListTable,
@@ -87,16 +88,22 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request) => {
       const query = request.query as {
+        q?: string;
         page: number;
         pageSize: number;
+        sortBy: "documentNumber" | "status";
+        sortOrder: "asc" | "desc";
         status?: PurchaseOrder["status"];
         supplierId?: string;
       };
       const result = await request.server.purchasing.listPurchaseOrders.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
+        q: query.q,
         page: query.page,
         pageSize: query.pageSize,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
         status: query.status,
         supplierId:
           query.supplierId === undefined ? undefined : SupplierId.parse(query.supplierId),

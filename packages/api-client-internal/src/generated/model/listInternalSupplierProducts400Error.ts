@@ -9,5 +9,5 @@ export type ListInternalSupplierProducts400Error = typeof ListInternalSupplierPr
 
 
 export const ListInternalSupplierProducts400Error = {
-  invalid: 'invalid',
+  invalid_request: 'invalid_request',
 } as const;

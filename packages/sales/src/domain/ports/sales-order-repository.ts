@@ -16,8 +16,11 @@ export type SalesOrderListPage = {
 
 export type ListSalesOrdersQuery = {
   organizationId: OrganizationId;
+  q?: string;
   page: number;
   pageSize: number;
+  sortBy?: "documentNumber" | "status";
+  sortOrder?: "asc" | "desc";
   status?: SalesOrderStatus;
   customerId?: CustomerId;
 };

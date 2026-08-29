@@ -90,6 +90,29 @@ describe("Purchasing (in-memory)", () => {
       return;
     }
     expect(second.purchaseOrder.documentNumber).toBe("PO-00002");
+
+    const sorted = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "status",
+      sortOrder: "asc",
+    });
+    expect(sorted.items.map((order) => order.status)).toEqual(["cancelled", "draft"]);
+
+    const searched = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      q: "00002",
+      page: 1,
+      pageSize: 25,
+      sortBy: "documentNumber",
+      sortOrder: "desc",
+      status: "draft",
+      supplierId: h.supplierId,
+    });
+    expect(searched.items.map((order) => order.documentNumber)).toEqual(["PO-00002"]);
   });
 
   it("confirms, partially receives, and completes with inventory movements", async () => {

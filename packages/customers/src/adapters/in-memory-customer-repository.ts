@@ -6,28 +6,26 @@ import type {
   ListCustomersQuery,
 } from "../domain/ports/customer-repository.js";
 
-type Stored = { customer: Customer; createdAt: Date };
-
 export class InMemoryCustomerRepository implements ICustomerRepository {
-  private readonly byId = new Map<CustomerId, Stored>();
+  private readonly byId = new Map<CustomerId, Customer>();
 
   async list(query: ListCustomersQuery): Promise<CustomerListPage> {
     const needle = query.q?.trim().toLowerCase() ?? "";
-    const rows = [...this.byId.values()].filter((row) => {
-      if (row.customer.organizationId !== query.organizationId) {
+    const rows = [...this.byId.values()].filter((customer) => {
+      if (customer.organizationId !== query.organizationId) {
         return false;
       }
       if (needle.length === 0) {
         return true;
       }
-      return row.customer.name.toLowerCase().includes(needle);
+      return customer.name.toLowerCase().includes(needle);
     });
     rows.sort((a, b) => {
       let cmp = 0;
       if (query.sortBy === "name") {
-        cmp = a.customer.name.localeCompare(b.customer.name);
+        cmp = a.name.localeCompare(b.name);
       } else if (query.sortBy === "creditLimitCents") {
-        cmp = a.customer.creditLimit.amountMinor - b.customer.creditLimit.amountMinor;
+        cmp = a.creditLimit.amountMinor - b.creditLimit.amountMinor;
       } else {
         cmp = a.createdAt.getTime() - b.createdAt.getTime();
       }
@@ -35,17 +33,17 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
     });
     const start = (query.page - 1) * query.pageSize;
     return {
-      items: rows.slice(start, start + query.pageSize).map((row) => row.customer),
+      items: rows.slice(start, start + query.pageSize),
       total: rows.length,
     };
   }
 
   async findById(organizationId: OrganizationId, id: CustomerId): Promise<Customer | null> {
-    const row = this.byId.get(id);
-    if (row === undefined || row.customer.organizationId !== organizationId) {
+    const customer = this.byId.get(id);
+    if (customer === undefined || customer.organizationId !== organizationId) {
       return null;
     }
-    return row.customer;
+    return customer;
   }
 
   async findByName(organizationId: OrganizationId, name: string): Promise<Customer | null> {
@@ -53,9 +51,9 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
     if (needle.length === 0) {
       return null;
     }
-    for (const row of this.byId.values()) {
-      if (row.customer.organizationId === organizationId && row.customer.name === needle) {
-        return row.customer;
+    for (const customer of this.byId.values()) {
+      if (customer.organizationId === organizationId && customer.name === needle) {
+        return customer;
       }
     }
     return null;
@@ -64,8 +62,8 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
   async save(customer: Customer): Promise<void> {
     const existing = this.byId.get(customer.id);
     this.byId.set(customer.id, {
-      customer,
-      createdAt: existing?.createdAt ?? new Date(),
+      ...customer,
+      createdAt: existing?.createdAt ?? customer.createdAt,
     });
   }
 }

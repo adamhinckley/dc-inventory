@@ -21,6 +21,45 @@ export type InternalTableMetadata = {
   readonly import?: { readonly template: boolean };
 };
 
+export const listInternalCustomersTable = {
+  "rowId": "id",
+  "columns": [
+    {
+      "field": "name",
+      "label": "Name"
+    },
+    {
+      "field": "creditLimitCents",
+      "label": "Credit limit (¢)"
+    },
+    {
+      "field": "currency",
+      "label": "Currency"
+    },
+    {
+      "field": "terms",
+      "label": "Terms"
+    }
+  ],
+  "search": {
+    "param": "q",
+    "fields": [
+      "name"
+    ],
+    "placeholder": "Search customer name"
+  },
+  "filters": [],
+  "sort": {
+    "defaultBy": "name",
+    "defaultOrder": "asc",
+    "fields": [
+      "name",
+      "createdAt",
+      "creditLimitCents"
+    ]
+  }
+} as const satisfies InternalTableMetadata;
+
 export const listInternalProductsTable = {
   "rowId": "id",
   "columns": [
@@ -116,6 +155,13 @@ export const listInternalPurchaseOrdersTable = {
       "label": "Supplier"
     }
   ],
+  "search": {
+    "param": "q",
+    "fields": [
+      "documentNumber"
+    ],
+    "placeholder": "Search PO number"
+  },
   "filters": [
     {
       "param": "status",
@@ -125,7 +171,15 @@ export const listInternalPurchaseOrdersTable = {
       "param": "supplierId",
       "control": "text"
     }
-  ]
+  ],
+  "sort": {
+    "defaultBy": "documentNumber",
+    "defaultOrder": "asc",
+    "fields": [
+      "documentNumber",
+      "status"
+    ]
+  }
 } as const satisfies InternalTableMetadata;
 
 export const listInternalSalesOrdersTable = {
@@ -144,6 +198,13 @@ export const listInternalSalesOrdersTable = {
       "label": "Customer"
     }
   ],
+  "search": {
+    "param": "q",
+    "fields": [
+      "documentNumber"
+    ],
+    "placeholder": "Search SO number"
+  },
   "filters": [
     {
       "param": "status",
@@ -153,7 +214,15 @@ export const listInternalSalesOrdersTable = {
       "param": "customerId",
       "control": "text"
     }
-  ]
+  ],
+  "sort": {
+    "defaultBy": "documentNumber",
+    "defaultOrder": "asc",
+    "fields": [
+      "documentNumber",
+      "status"
+    ]
+  }
 } as const satisfies InternalTableMetadata;
 
 export const listInternalSupplierProductsTable = {
@@ -203,7 +272,24 @@ export const listInternalSupplierProductsTable = {
       "field": "qty.available",
       "label": "Available"
     }
-  ]
+  ],
+  "search": {
+    "param": "q",
+    "fields": [
+      "sku",
+      "supplierSku"
+    ],
+    "placeholder": "Search SKU or vendor item #"
+  },
+  "filters": [],
+  "sort": {
+    "defaultBy": "sku",
+    "defaultOrder": "asc",
+    "fields": [
+      "sku",
+      "supplierSku"
+    ]
+  }
 } as const satisfies InternalTableMetadata;
 
 export const listInternalSuppliersTable = {
@@ -225,10 +311,20 @@ export const listInternalSuppliersTable = {
       "name"
     ],
     "placeholder": "Search vendor # or name"
+  },
+  "filters": [],
+  "sort": {
+    "defaultBy": "vendorNumber",
+    "defaultOrder": "asc",
+    "fields": [
+      "vendorNumber",
+      "name"
+    ]
   }
 } as const satisfies InternalTableMetadata;
 
 export const internalTableMetadata = {
+  listInternalCustomers: listInternalCustomersTable,
   listInternalProducts: listInternalProductsTable,
   listInternalPurchaseOrders: listInternalPurchaseOrdersTable,
   listInternalSalesOrders: listInternalSalesOrdersTable,

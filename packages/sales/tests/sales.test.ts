@@ -151,6 +151,29 @@ describe("Sales (in-memory)", () => {
       return;
     }
     expect(second.salesOrder.documentNumber).toBe("SO-00002");
+
+    const sorted = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "status",
+      sortOrder: "asc",
+    });
+    expect(sorted.items.map((order) => order.status)).toEqual(["cancelled", "draft"]);
+
+    const searched = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      q: "00002",
+      page: 1,
+      pageSize: 25,
+      sortBy: "documentNumber",
+      sortOrder: "desc",
+      status: "draft",
+      customerId: CUSTOMER_ID,
+    });
+    expect(searched.items.map((order) => order.documentNumber)).toEqual(["SO-00002"]);
   });
 
   it("merges duplicate product lines at create", async () => {
