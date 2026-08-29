@@ -1,5 +1,5 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
@@ -40,6 +40,27 @@ async function loadLines(
     .from(purchaseOrderLines)
     .where(eq(purchaseOrderLines.purchaseOrderId, purchaseOrderId));
   return rows.map(toLine);
+}
+
+async function loadLinesByPurchaseOrderIds(
+  db: PurchasingDrizzle,
+  purchaseOrderIds: readonly string[],
+): Promise<Map<string, PurchaseOrderLine[]>> {
+  const byPurchaseOrderId = new Map<string, PurchaseOrderLine[]>();
+  if (purchaseOrderIds.length === 0) {
+    return byPurchaseOrderId;
+  }
+  const rows = await db
+    .select()
+    .from(purchaseOrderLines)
+    .where(inArray(purchaseOrderLines.purchaseOrderId, [...purchaseOrderIds]))
+    .orderBy(asc(purchaseOrderLines.purchaseOrderId), asc(purchaseOrderLines.id));
+  for (const row of rows) {
+    const lines = byPurchaseOrderId.get(row.purchaseOrderId) ?? [];
+    lines.push(toLine(row));
+    byPurchaseOrderId.set(row.purchaseOrderId, lines);
+  }
+  return byPurchaseOrderId;
 }
 
 async function findOrder(
@@ -172,26 +193,32 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
   constructor(private readonly db: PurchasingDrizzle) {}
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
-    const rows = await this.db
-      .select()
-      .from(purchaseOrders)
-      .where(eq(purchaseOrders.organizationId, query.organizationId));
-    const filtered = [];
-    for (const row of rows) {
-      if (query.status !== undefined && row.status !== query.status) {
-        continue;
-      }
-      if (query.supplierId !== undefined && row.supplierId !== query.supplierId) {
-        continue;
-      }
-      const lines = await loadLines(this.db, row.id);
-      filtered.push(toOrder(row, lines));
+    const clauses = [eq(purchaseOrders.organizationId, query.organizationId)];
+    if (query.status !== undefined) {
+      clauses.push(eq(purchaseOrders.status, query.status));
     }
-    filtered.sort((a, b) => a.documentNumber.localeCompare(b.documentNumber));
-    const start = (query.page - 1) * query.pageSize;
+    if (query.supplierId !== undefined) {
+      clauses.push(eq(purchaseOrders.supplierId, query.supplierId));
+    }
+    const where = and(...clauses);
+    const offset = (query.page - 1) * query.pageSize;
+    const [totalRows, headers] = await Promise.all([
+      this.db.select({ value: count() }).from(purchaseOrders).where(where),
+      this.db
+        .select()
+        .from(purchaseOrders)
+        .where(where)
+        .orderBy(asc(purchaseOrders.documentNumber), asc(purchaseOrders.id))
+        .limit(query.pageSize)
+        .offset(offset),
+    ]);
+    const lines = await loadLinesByPurchaseOrderIds(
+      this.db,
+      headers.map((header) => header.id),
+    );
     return {
-      items: filtered.slice(start, start + query.pageSize),
-      total: filtered.length,
+      items: headers.map((header) => toOrder(header, lines.get(header.id) ?? [])),
+      total: totalRows[0]?.value ?? 0,
     };
   }
 

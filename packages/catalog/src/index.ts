@@ -1,6 +1,7 @@
 export { CsvWorkbookParser } from "./adapters/csv-workbook-parser.js";
 export { DrizzleProductRepository, type CatalogDrizzle } from "./adapters/drizzle-products.js";
 export { DrizzleProductPackagingRepository } from "./adapters/drizzle-product-packaging.js";
+export { InMemoryCatalogListQuery } from "./adapters/in-memory-catalog-list-query.js";
 export { InMemoryProductRepository } from "./adapters/in-memory-product-repository.js";
 export { InMemoryProductPackagingRepository } from "./adapters/in-memory-product-packaging.js";
 export { InMemoryQtyReadPort } from "./adapters/in-memory-qty-read.js";
@@ -25,6 +26,14 @@ export type { ImportProductBrowserResult } from "./application/import-product-br
 export { UpdateProductUseCase } from "./application/update-product.js";
 export { buildProductImageObjectKey } from "./domain/product-image-object-key.js";
 export { isShopVisible, type Product } from "./domain/product.js";
+export type {
+  CatalogListPage,
+  CatalogListQuery,
+  CatalogListRow,
+  CatalogListSortBy,
+  CatalogListSortOrder,
+  ICatalogListQuery,
+} from "./domain/ports/catalog-list-query.js";
 export type { IProductRepository } from "./domain/ports/product-repository.js";
 export type {
   IProductPackagingRepository,

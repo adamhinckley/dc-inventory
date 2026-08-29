@@ -1,5 +1,5 @@
 import { CustomerId, Money, OrderId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { SalesOrderLineId } from "../domain/ids.js";
@@ -32,6 +32,27 @@ async function loadLines(db: SalesDrizzle, orderId: string): Promise<SalesOrderL
   return rows.map(toLine);
 }
 
+async function loadLinesByOrderIds(
+  db: SalesDrizzle,
+  orderIds: readonly string[],
+): Promise<Map<string, SalesOrderLine[]>> {
+  const byOrderId = new Map<string, SalesOrderLine[]>();
+  if (orderIds.length === 0) {
+    return byOrderId;
+  }
+  const rows = await db
+    .select()
+    .from(orderLines)
+    .where(inArray(orderLines.orderId, [...orderIds]))
+    .orderBy(asc(orderLines.orderId), asc(orderLines.id));
+  for (const row of rows) {
+    const lines = byOrderId.get(row.orderId) ?? [];
+    lines.push(toLine(row));
+    byOrderId.set(row.orderId, lines);
+  }
+  return byOrderId;
+}
+
 function toOrder(header: typeof orders.$inferSelect, lines: SalesOrderLine[]): SalesOrder {
   return {
     id: OrderId.parse(header.id),
@@ -54,26 +75,32 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
   constructor(private readonly db: SalesDrizzle) {}
 
   async list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage> {
-    const rows = await this.db
-      .select()
-      .from(orders)
-      .where(eq(orders.organizationId, query.organizationId));
-    const filtered = [];
-    for (const row of rows) {
-      if (query.status !== undefined && row.status !== query.status) {
-        continue;
-      }
-      if (query.customerId !== undefined && row.customerId !== query.customerId) {
-        continue;
-      }
-      const lines = await loadLines(this.db, row.id);
-      filtered.push(toOrder(row, lines));
+    const clauses = [eq(orders.organizationId, query.organizationId)];
+    if (query.status !== undefined) {
+      clauses.push(eq(orders.status, query.status));
     }
-    filtered.sort((a, b) => a.documentNumber.localeCompare(b.documentNumber));
-    const start = (query.page - 1) * query.pageSize;
+    if (query.customerId !== undefined) {
+      clauses.push(eq(orders.customerId, query.customerId));
+    }
+    const where = and(...clauses);
+    const offset = (query.page - 1) * query.pageSize;
+    const [totalRows, headers] = await Promise.all([
+      this.db.select({ value: count() }).from(orders).where(where),
+      this.db
+        .select()
+        .from(orders)
+        .where(where)
+        .orderBy(asc(orders.documentNumber), asc(orders.id))
+        .limit(query.pageSize)
+        .offset(offset),
+    ]);
+    const lines = await loadLinesByOrderIds(
+      this.db,
+      headers.map((header) => header.id),
+    );
     return {
-      items: filtered.slice(start, start + query.pageSize),
-      total: filtered.length,
+      items: headers.map((header) => toOrder(header, lines.get(header.id) ?? [])),
+      total: totalRows[0]?.value ?? 0,
     };
   }
 
