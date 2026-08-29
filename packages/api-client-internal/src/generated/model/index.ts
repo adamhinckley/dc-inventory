@@ -117,6 +117,8 @@ export * from './createInternalSalesOrder401';
 export * from './createInternalSalesOrder401Error';
 export * from './createInternalSalesOrder404';
 export * from './createInternalSalesOrder404Error';
+export * from './createInternalSalesOrder409';
+export * from './createInternalSalesOrder409Error';
 export * from './createInternalSalesOrderBody';
 export * from './createInternalSalesOrderBodyLinesItem';
 export * from './createInternalSupplier201';

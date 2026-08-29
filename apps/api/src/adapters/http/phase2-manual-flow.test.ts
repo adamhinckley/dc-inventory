@@ -124,7 +124,7 @@ async function startPhase2ManualFlowApp() {
     invoiceRepo: unitOfWork.invoices,
   });
   apps.push(app);
-  return { app, unitOfWork };
+  return { app, unitOfWork, productId: seeded.product.id };
 }
 
 async function staffCookie(app: Awaited<ReturnType<typeof buildApp>>) {
@@ -152,7 +152,13 @@ type StaffCommand = {
 
 function staffCommands(
   app: Awaited<ReturnType<typeof buildApp>>,
-  ids: { poId: string; poLineId: string; orderId: string; invoiceId: string },
+  ids: {
+    poId: string;
+    poLineId: string;
+    orderId: string;
+    invoiceId: string;
+    productId: string;
+  },
   staff: string,
   wholesale: string,
 ): StaffCommand[] {
@@ -221,15 +227,7 @@ function staffCommands(
           cookies: cookiesFor(auth),
           payload: {
             customerId: CUSTOMER_ID,
-            lines: [
-              {
-                sku: SKU.value,
-                name: "Hex bolt",
-                qty: SELL_QTY,
-                unitPriceCents: UNIT_PRICE_CENTS,
-                currency: "USD",
-              },
-            ],
+            lines: [{ productId: ids.productId, qty: SELL_QTY }],
           },
         }),
     },
@@ -280,8 +278,48 @@ function staffCommands(
 }
 
 describe("Phase 2 manual staff flow (PO to payment)", () => {
+  it("creates wholesale and internal drafts through the shared Sales use case", async () => {
+    const { app, productId } = await startPhase2ManualFlowApp();
+    const staff = await staffCookie(app);
+    const wholesale = await wholesaleCookie(app);
+
+    const internal = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: staff },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId, qty: 1 }],
+      },
+    });
+    const wholesaleOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
+      payload: {
+        lines: [{ productId, qty: 2 }],
+      },
+    });
+
+    expect(internal.statusCode).toBe(201);
+    expect(wholesaleOrder.statusCode).toBe(201);
+    expect(wholesaleOrder.json()).toMatchObject({
+      customerId: CUSTOMER_ID,
+      documentNumber: "SO-00002",
+      lines: [
+        {
+          sku: SKU.value,
+          name: "Galvanized hex bolt",
+          qty: 2,
+          unitPriceCents: UNIT_PRICE_CENTS,
+          currency: "USD",
+        },
+      ],
+    });
+  });
+
   it("drives PO receive, sales ship, invoice, and payment with reconciled quantities", async () => {
-    const { app, unitOfWork } = await startPhase2ManualFlowApp();
+    const { app, unitOfWork, productId } = await startPhase2ManualFlowApp();
     const cookie = await staffCookie(app);
 
     const zeroStock = await unitOfWork.inventory.readModel.getSnapshot(
@@ -359,15 +397,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
       payload: {
         customerId: CUSTOMER_ID,
-        lines: [
-          {
-            sku: SKU.value,
-            name: "Hex bolt",
-            qty: SELL_QTY,
-            unitPriceCents: UNIT_PRICE_CENTS,
-            currency: "USD",
-          },
-        ],
+        lines: [{ productId, qty: SELL_QTY }],
       },
     });
     expect(createdOrder.statusCode).toBe(201);
@@ -453,7 +483,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
   });
 
   it("returns 401 without staff_session or with wholesale cookie on staff commands", async () => {
-    const { app } = await startPhase2ManualFlowApp();
+    const { app, productId } = await startPhase2ManualFlowApp();
     const cookie = await staffCookie(app);
     const wholesale = await wholesaleCookie(app);
 
@@ -474,15 +504,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
       payload: {
         customerId: CUSTOMER_ID,
-        lines: [
-          {
-            sku: SKU.value,
-            name: "Hex bolt",
-            qty: SELL_QTY,
-            unitPriceCents: UNIT_PRICE_CENTS,
-            currency: "USD",
-          },
-        ],
+        lines: [{ productId, qty: SELL_QTY }],
       },
     });
     const order = createdOrder.json() as { id: string };
@@ -495,6 +517,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
         poLineId: po.lines[0]!.id,
         orderId: order.id,
         invoiceId,
+        productId,
       },
       cookie,
       wholesale,
