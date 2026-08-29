@@ -73,13 +73,26 @@ describe("internal dashboard shell", () => {
     expect(purchasingPage).toMatch(/searchParams/);
     expect(purchasingPage).toMatch(/listParamsFromSearchParams/);
 
-    const draftPurchaseOrders = readFileSync(
-      join(srcRoot, "components/draft-purchase-orders-table.tsx"),
+    const purchaseOrders = readFileSync(
+      join(srcRoot, "components/purchase-orders-table.tsx"),
       "utf8",
     );
-    expect(draftPurchaseOrders).toMatch(/DataTable\.Root/);
-    expect(draftPurchaseOrders).toMatch(/useListInternalPurchaseOrders/);
+    expect(purchaseOrders).toMatch(/DataTable\.Root/);
+    expect(purchaseOrders).toMatch(/useListInternalPurchaseOrders/);
+    expect(purchaseOrders).toMatch(/status: "draft"/);
+    expect(purchaseOrders).toMatch(/status: "confirmed"/);
 
+    const purchasingExplorer = readFileSync(
+      join(srcRoot, "components/purchasing-orders-explorer.tsx"),
+      "utf8",
+    );
+    expect(purchasingExplorer).toMatch(/RouterTabs/);
+    expect(purchasingExplorer).toMatch(/href="\/purchasing"/);
+    expect(purchasingExplorer).toMatch(/href="\/purchasing\/completed"/);
+
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/purchasing/completed/page.tsx")),
+    ).toBe(true);
     expect(
       existsSync(join(srcRoot, "app/(dashboard)/purchasing/suppliers/page.tsx")),
     ).toBe(true);

@@ -1,4 +1,4 @@
-import { PurchasingDraftsExplorer } from "../../../components/purchasing-drafts-explorer";
+import { PurchasingOrdersExplorer } from "../../../components/purchasing-orders-explorer";
 import { draftPurchaseOrdersListTable } from "../../../lib/draft-purchase-orders-list-table";
 import { listParamsFromSearchParams } from "../../../lib/table-url-params";
 
@@ -14,5 +14,5 @@ export default async function PurchasingPage({
     await searchParams,
   );
 
-  return <PurchasingDraftsExplorer initialParams={initialParams} />;
+  return <PurchasingOrdersExplorer list="draft" initialParams={initialParams} />;
 }

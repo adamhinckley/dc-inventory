@@ -763,8 +763,10 @@ function PurchaseOrderEditWorkspace({
         purchaseOrderId={purchaseOrderId}
         documentNumber={po.documentNumber}
         status={po.status}
+        supplierId={po.supplierId}
         shipDate={po.shipDate}
         cancelDate={po.cancelDate}
+        lines={po.lines}
       />
     );
   }
@@ -790,18 +792,55 @@ function PurchaseOrderEditWorkspace({
   );
 }
 
+function ConfirmedPurchaseOrderLines({
+  lines,
+}: {
+  lines: readonly { id: string; sku: string; name: string; qty: number }[];
+}) {
+  const columns = useMemo(
+    () => [
+      { id: "sku", label: "SKU", sort: false as const, width: 140 },
+      { id: "name", label: "Product", sort: false as const },
+      { id: "qty", label: "Qty", sort: false as const, width: 100 },
+    ],
+    [],
+  );
+
+  const table = useTable({
+    data: [...lines],
+    columns,
+    getRowId: (row) => row.id,
+    fillColumn: "name",
+    enableSorting: false,
+    enableSelection: false,
+    enablePagination: false,
+  });
+
+  return (
+    <Table table={table} emptyMessage="This purchase order has no lines.">
+      <Table.Header />
+      <Table.Body />
+      <Table.Empty />
+    </Table>
+  );
+}
+
 function ConfirmedPurchaseOrderView({
   purchaseOrderId,
   documentNumber,
   status,
+  supplierId,
   shipDate,
   cancelDate,
+  lines,
 }: {
   purchaseOrderId: string;
   documentNumber: string;
   status: string;
+  supplierId: string;
   shipDate: string | null;
   cancelDate: string | null;
+  lines: readonly { id: string; sku: string; name: string; qty: number }[];
 }) {
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -825,23 +864,26 @@ function ConfirmedPurchaseOrderView({
           Purchasing
         </Link>
         <span aria-hidden="true"> / </span>
+        <Link
+          href="/purchasing/completed"
+          className="text-link hover:text-link-hover"
+        >
+          Completed
+        </Link>
+        <span aria-hidden="true"> / </span>
         <span>{documentNumber}</span>
       </nav>
-      <header>
-        <h1 className="page-title">{documentNumber}</h1>
-        <p className="page-description mt-2">
-          This purchase order is {status} and can no longer be edited here.
-        </p>
-        <p className="text-body-sm text-fg-secondary mt-2">
-          Ship date: {shipDate ?? "—"} · Cancel date: {cancelDate ?? "—"}
-        </p>
-      </header>
-      {actionError ? (
-        <p className="text-body-sm text-error" role="alert">
-          {actionError}
-        </p>
-      ) : null}
-      <div>
+      <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="page-title">{documentNumber}</h1>
+          <p className="page-description mt-2">
+            This purchase order is {status} and can no longer be edited here.
+          </p>
+          <SupplierName supplierId={supplierId} />
+          <p className="text-body-sm text-fg-secondary mt-2">
+            Ship date: {shipDate ?? "—"} · Cancel date: {cancelDate ?? "—"}
+          </p>
+        </div>
         <Button
           type="button"
           variant="secondary"
@@ -851,7 +893,13 @@ function ConfirmedPurchaseOrderView({
         >
           {exporting ? "Downloading…" : "Download XLS"}
         </Button>
-      </div>
+      </header>
+      {actionError ? (
+        <p className="text-body-sm text-error" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+      <ConfirmedPurchaseOrderLines lines={lines} />
     </section>
   );
 }

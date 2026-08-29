@@ -9,6 +9,7 @@ import {
   DetailView,
   ExplorerView,
   FieldRow,
+  RouterTabs,
   Form,
   FormDialog,
   LabeledField,
@@ -35,6 +36,7 @@ describe("@dc-inventory/ui purchasing widget barrel", () => {
     expect(Form).toBeTypeOf("function");
     expect(FormDialog).toBeTypeOf("function");
     expect(ExplorerView).toBeTypeOf("function");
+    expect(RouterTabs).toBeTypeOf("function");
     expect(DetailView).toBeTypeOf("function");
     expect(RepeatableFields).toBeTypeOf("function");
     expect(scrollToFirstError).toBeTypeOf("function");
