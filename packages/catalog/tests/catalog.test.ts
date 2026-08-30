@@ -7,6 +7,7 @@ import {
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { InMemoryProductPackagingRepository } from "../src/adapters/in-memory-product-packaging.js";
 import { InMemoryProductRepository } from "../src/adapters/in-memory-product-repository.js";
 import { InMemoryQtyReadPort } from "../src/adapters/in-memory-qty-read.js";
 import { InMemoryCatalogListQuery } from "../src/adapters/in-memory-catalog-list-query.js";
@@ -26,13 +27,14 @@ const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 function harness() {
   const products = new InMemoryProductRepository();
   const qty = new InMemoryQtyReadPort();
+  const packaging = new InMemoryProductPackagingRepository();
   const catalogList = new InMemoryCatalogListQuery(products, qty);
   return {
     products,
     qty,
     create: new CreateProductUseCase(products),
-    update: new UpdateProductUseCase(products, qty),
-    get: new GetProductUseCase(products, qty),
+    update: new UpdateProductUseCase(products, qty, packaging),
+    get: new GetProductUseCase(products, qty, packaging),
     getWholesale: new GetWholesaleProductUseCase(products, qty),
     listStaff: new ListStaffProductsUseCase(catalogList),
     listWholesale: new ListWholesaleCatalogUseCase(catalogList),
@@ -191,6 +193,7 @@ describe("Catalog use cases (in-memory)", () => {
       ok: true,
       product,
       qty: { onHand: 10, onOrder: 4, allocated: 3, available: 7 },
+      caseQty: null,
     });
   });
 
@@ -290,6 +293,28 @@ describe("Catalog use cases (in-memory)", () => {
     expect(ok.product.sku.value).toBe("HEX-BOLT-GALV");
     expect(ok.product.name).toBe("Renamed bolt");
     expect(ok.product.inactive).toBe(true);
+  });
+
+  it("saves caseQty by sku and returns it on get", async () => {
+    const h = harness();
+    const product = await createProduct(h, { sku: "DCB7925BK" });
+    const updated = await h.update.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      sku: "DCB7925BK",
+      caseQty: 240,
+    });
+    expect(updated).toMatchObject({ ok: true, caseQty: 240 });
+    const loaded = await h.get.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      sku: "DCB7925BK",
+    });
+    expect(loaded).toMatchObject({
+      ok: true,
+      product: { id: product.id },
+      caseQty: 240,
+    });
   });
 
   it("returns not_found for a hidden or missing wholesale product", async () => {

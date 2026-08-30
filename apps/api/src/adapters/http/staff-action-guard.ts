@@ -15,6 +15,7 @@ const ACTION_BY_OPERATION = {
   importInternalProducts: "master_data_manage",
   createInternalProduct: "master_data_manage",
   updateInternalProduct: "master_data_manage",
+  updateInternalProductBySku: "master_data_manage",
   createInternalCustomer: "master_data_manage",
   updateInternalCustomer: "master_data_manage",
   createInternalCustomerContact: "master_data_manage",

@@ -124,6 +124,10 @@ export const productIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const productSkuParamsSchema = z.object({
+  sku: z.string().min(1),
+});
+
 export const inventoryStockParamsSchema = z.object({
   sku: z.string().min(1),
 });
@@ -159,6 +163,7 @@ export const productPatchBodySchema = z.object({
   webWholesale: z.boolean().optional(),
   description: z.string().optional().nullable(),
   taxCategoryCode: z.string().optional().nullable(),
+  caseQty: z.number().int().positive().nullable().optional(),
 });
 
 export const productDetailSchema = z.object({
@@ -173,6 +178,7 @@ export const productDetailSchema = z.object({
   discontinued: z.boolean(),
   webWholesale: z.boolean(),
   taxCategoryCode: z.string().nullable(),
+  caseQty: z.number().int().positive().nullable(),
   onHand: z.number().int(),
   onOrder: z.number().int(),
   allocated: z.number().int(),
@@ -524,6 +530,7 @@ export const purchaseOrderFactorySendRowSchema = z.object({
   cs_cube_metric: z.number(),
   tot_cartons: factorySendBlankOrNumber,
   tot_cbm: z.string(),
+  blocks_tot_cartons: z.boolean(),
 });
 
 export const purchaseOrderFactorySendResponseSchema = z.object({

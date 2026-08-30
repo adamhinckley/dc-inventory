@@ -1,4 +1,5 @@
-import { Money, type OrganizationId, type ProductId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { Money, Sku, type OrganizationId, type ProductId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import type { IProductPackagingRepository } from "../domain/ports/product-packaging.js";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import type { Product } from "../domain/product.js";
@@ -8,7 +9,8 @@ import { hasQtyWriteFields, hasSkuField } from "./write-guards.js";
 export type UpdateProductRequest = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId;
-  productId: ProductId;
+  productId?: ProductId;
+  sku?: string;
   name?: string;
   uom?: string;
   memberPriceCents?: number;
@@ -18,10 +20,11 @@ export type UpdateProductRequest = {
   webWholesale?: boolean;
   description?: string | null;
   taxCategoryCode?: string | null;
+  caseQty?: number | null;
 };
 
 export type UpdateProductResult =
-  | { ok: true; product: Product; qty: ProductQty }
+  | { ok: true; product: Product; qty: ProductQty; caseQty: number | null }
   | {
       ok: false;
       reason: "not_found" | "invalid" | "sku_immutable" | "qty_not_allowed";
@@ -31,17 +34,26 @@ export class UpdateProductUseCase {
   constructor(
     private readonly products: IProductRepository,
     private readonly qty: IQtyReadPort,
+    private readonly packaging: IProductPackagingRepository,
   ) {}
 
   async execute(input: UpdateProductRequest): Promise<UpdateProductResult> {
     void input.staffUserId;
-    if (hasSkuField(input)) {
+    if (input.productId !== undefined && hasSkuField(input)) {
       return { ok: false, reason: "sku_immutable" };
     }
     if (hasQtyWriteFields(input)) {
       return { ok: false, reason: "qty_not_allowed" };
     }
-    const existing = await this.products.findById(input.organizationId, input.productId);
+    if (input.caseQty !== undefined && input.caseQty !== null && input.caseQty <= 0) {
+      return { ok: false, reason: "invalid" };
+    }
+    const existing =
+      input.productId !== undefined
+        ? await this.products.findById(input.organizationId, input.productId)
+        : input.sku !== undefined
+          ? await this.products.findBySku(input.organizationId, Sku.parse(input.sku))
+          : null;
     if (existing === null) {
       return { ok: false, reason: "not_found" };
     }
@@ -79,11 +91,24 @@ export class UpdateProductUseCase {
         taxCategoryCode,
       };
       await this.products.save(product);
+      const existingPack = await this.packaging.findByProductId(product.id);
+      const caseQty =
+        input.caseQty === undefined ? (existingPack?.caseQty ?? null) : input.caseQty;
+      if (input.caseQty !== undefined || existingPack !== null) {
+        await this.packaging.save({
+          productId: product.id,
+          caseQty,
+          caseLength: existingPack?.caseLength ?? null,
+          caseWidth: existingPack?.caseWidth ?? null,
+          caseHeight: existingPack?.caseHeight ?? null,
+        });
+      }
       const snapshots = await this.qty.readBySkus(input.organizationId, [product.sku]);
       return {
         ok: true,
         product,
         qty: snapshots.get(product.sku.value) ?? ZERO_QTY,
+        caseQty,
       };
     } catch {
       return { ok: false, reason: "invalid" };

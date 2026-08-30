@@ -309,7 +309,28 @@ describe("catalog HTTP", () => {
     expect(patched.json()).toMatchObject({
       sku: "HEX-BOLT-GALV",
       name: "Renamed bolt",
+      caseQty: null,
     });
+
+    const bySku = await app.inject({
+      method: "PATCH",
+      url: "/internal/products/sku/HEX-BOLT-GALV",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { caseQty: 192 },
+    });
+    expect(bySku.statusCode).toBe(200);
+    expect(bySku.json()).toMatchObject({
+      sku: "HEX-BOLT-GALV",
+      caseQty: 192,
+    });
+
+    const fetched = await app.inject({
+      method: "GET",
+      url: `/internal/products/${id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(fetched.statusCode).toBe(200);
+    expect(fetched.json()).toMatchObject({ caseQty: 192 });
   });
 
   it("imports Product Browser CSV over multipart and ignores qty columns", async () => {

@@ -6,6 +6,7 @@ import {
   purchaseOrderLineWritesEqual,
   purchaseOrderLinesSavedForConfirm,
   purchaseOrderWriteLines,
+  removePurchaseOrderLinesByRowKeys,
 } from "./purchase-order-lines";
 import type { PurchaseOrderLineDraft } from "./purchase-order-types";
 
@@ -89,6 +90,16 @@ describe("purchase order line draft helpers", () => {
         { sku: "DEM-00004", name: "Hook taper pin", qty: 2 },
       ]),
     ).toBe(true);
+  });
+
+  it("removes selected line keys and refuses to empty the draft", () => {
+    const lines = [dem00003("line-a", 2), dem00003("line-b", 4)];
+    expect(
+      removePurchaseOrderLinesByRowKeys(lines, new Set(["line-a"])),
+    ).toEqual([dem00003("line-b", 4)]);
+    expect(
+      removePurchaseOrderLinesByRowKeys(lines, new Set(["line-a", "line-b"])),
+    ).toBeNull();
   });
 
   it("does not confirm when the last persist failed", () => {

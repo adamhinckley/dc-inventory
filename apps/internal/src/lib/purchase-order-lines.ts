@@ -55,6 +55,19 @@ export function purchaseOrderLineWritesEqual(
   return JSON.stringify(purchaseOrderWriteLines(left)) === JSON.stringify(purchaseOrderWriteLines(right));
 }
 
+export function removePurchaseOrderLinesByRowKeys(
+  lines: readonly PurchaseOrderLineDraft[],
+  keys: ReadonlySet<string>,
+): PurchaseOrderLineDraft[] | null {
+  const next = lines.filter(
+    (line, index) => !keys.has(purchaseOrderLineRowKey(line, index)),
+  );
+  if (next.length === 0) {
+    return null;
+  }
+  return next;
+}
+
 export function purchaseOrderLinesSavedForConfirm(
   lines: readonly PurchaseOrderLineDraft[],
   lastSaved: readonly PurchaseOrderLineDraft[],

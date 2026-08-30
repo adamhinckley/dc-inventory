@@ -1,9 +1,11 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Toast as BaseToast } from '@base-ui-components/react/toast'
 import { cva } from 'class-variance-authority'
 import { CircleCheck, CircleX, Info, TriangleAlert, X } from 'lucide-react'
 import { cn } from '#cn'
+import { silenceReactFlushSyncLifecycleWarning } from './toast-flush-sync-warning'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,6 +80,7 @@ export interface ToastProviderProps {
  *   `Toast.Viewport`.
  */
 export function ToastProvider({ children }: ToastProviderProps) {
+  useEffect(() => silenceReactFlushSyncLifecycleWarning(), [])
   return <BaseToast.Provider>{children}</BaseToast.Provider>
 }
 

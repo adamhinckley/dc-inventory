@@ -9,8 +9,8 @@
 }
 
 @utility overlay-group-label {
-  /** Menu section divider — "ACTIONS", "SORT BY" */
-  @apply text-label uppercase text-fg-tertiary;
+  /** Menu section divider — "Appearance", "Sort by" */
+  @apply text-label text-fg-tertiary;
 }
 
 @utility overlay-region {

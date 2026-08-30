@@ -82,13 +82,16 @@ export class ExportPurchaseOrderUseCase {
 export type FactorySendSheet = {
   columns: typeof FACTORY_PO_COLUMNS;
   rows: WorkbookRow[];
+  blocksTotCartons: readonly boolean[];
 };
 
 export type FactorySendJsonCell = string | number;
 export type FactorySendJsonRow = Record<
   (typeof FACTORY_PO_COLUMNS)[number]["key"],
   FactorySendJsonCell
->;
+> & {
+  blocks_tot_cartons: boolean;
+};
 
 export async function loadFactorySendSheet(
   purchaseOrder: PurchaseOrder,
@@ -100,6 +103,9 @@ export async function loadFactorySendSheet(
     purchaseOrder.lines.map((line) => line.sku),
   );
   const totCartons = totalCartons(purchaseOrder.lines, catalog);
+  const blocksTotCartons = purchaseOrder.lines.map((line) =>
+    missingCaseQty(catalog.get(line.sku.value)?.caseQty),
+  );
 
   const uniqueSkus = [
     ...new Map(purchaseOrder.lines.map((line) => [line.sku.value, line.sku])).values(),
@@ -115,7 +121,7 @@ export async function loadFactorySendSheet(
   const rows = purchaseOrder.lines.map((line) =>
     toFactoryRow(purchaseOrder, line, linkBySku.get(line.sku.value) ?? null, totCartons),
   );
-  return { columns: FACTORY_PO_COLUMNS, rows };
+  return { columns: FACTORY_PO_COLUMNS, rows, blocksTotCartons };
 }
 
 export function factorySendJsonValue(value: string | number | Date): FactorySendJsonCell {
@@ -125,12 +131,20 @@ export function factorySendJsonValue(value: string | number | Date): FactorySend
   return value;
 }
 
-export function factorySendJsonRow(row: WorkbookRow): FactorySendJsonRow {
+export function factorySendJsonRow(
+  row: WorkbookRow,
+  blocksTotCartons: boolean,
+): FactorySendJsonRow {
   const json = {} as FactorySendJsonRow;
   for (const column of FACTORY_PO_COLUMNS) {
     json[column.key] = factorySendJsonValue(row[column.key] ?? EMPTY);
   }
+  json.blocks_tot_cartons = blocksTotCartons;
   return json;
+}
+
+export function missingCaseQty(caseQty: number | null | undefined): boolean {
+  return caseQty === null || caseQty === undefined || caseQty <= 0;
 }
 
 export function totalCartons(
@@ -140,7 +154,7 @@ export function totalCartons(
   let total = 0;
   for (const line of lines) {
     const caseQty = catalog.get(line.sku.value)?.caseQty ?? null;
-    if (caseQty === null || caseQty <= 0) {
+    if (typeof caseQty !== "number" || caseQty <= 0) {
       return EMPTY;
     }
     total += Math.ceil(line.qty / caseQty);

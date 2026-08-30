@@ -149,6 +149,7 @@ export interface TableInstance<T> {
    */
   truncate: boolean
   getRowId: (row: T) => string
+  getRowClassName: ((row: T) => string | undefined) | null
   getCellValue: (row: T, column: TableColumnDef<T>) => unknown
   sort: {
     field: string | null
@@ -407,6 +408,8 @@ export interface UseTableOptions<T> {
   onRetry?: () => void
   columns: TableColumnDef<T>[]
   getRowId: (row: T) => string
+  /** Extra classes on the data row, e.g. a warning highlight. */
+  getRowClassName?: (row: T) => string | undefined
   /** Render a trailing actions cell per row. */
   rowActions?: (row: T) => ReactNode
   enableSorting?: boolean
@@ -517,6 +520,7 @@ export function useTable<T>(options: UseTableOptions<T>): TableInstance<T> {
     onRetry,
     columns,
     getRowId,
+    getRowClassName,
     rowActions,
     enableSorting: sortingEnabled = true,
     enableSelection: selectionEnabled = false,
@@ -783,6 +787,7 @@ export function useTable<T>(options: UseTableOptions<T>): TableInstance<T> {
     fillColumn,
     truncate,
     getRowId,
+    getRowClassName: getRowClassName ?? null,
     getCellValue,
     sort: {
       field: sortField,

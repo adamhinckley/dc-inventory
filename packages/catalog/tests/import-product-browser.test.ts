@@ -47,7 +47,7 @@ function harness() {
     importCatalog: new ImportProductBrowserUseCase(
       products,
       new CreateProductUseCase(products),
-      new UpdateProductUseCase(products, qty),
+      new UpdateProductUseCase(products, qty, packaging),
       suppliers,
       packaging,
     ),
@@ -190,7 +190,7 @@ describe("ImportProductBrowserUseCase", () => {
     const importCatalog = new ImportProductBrowserUseCase(
       products,
       new CreateProductUseCase(products),
-      new UpdateProductUseCase(products, qty),
+      new UpdateProductUseCase(products, qty, packaging),
       new InMemorySupplierLinkPort(),
       packaging,
     );

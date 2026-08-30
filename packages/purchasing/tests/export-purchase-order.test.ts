@@ -400,6 +400,48 @@ describe("GetPurchaseOrderFactorySendUseCase", () => {
       description: "Bolt from Catalog",
       tot_cartons: 6,
       tot_cbm: "Not Available",
+      blocks_tot_cartons: false,
     });
+  });
+
+  it("flags only the line missing case qty when tot_cartons stays blank", async () => {
+    const h = await harness();
+    h.catalog.set(DEFAULT_ORG, SKU.value, "Bolt from Catalog");
+    h.factorySendCatalog.set(DEFAULT_ORG, SKU.value, { caseQty: 192 });
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [
+        { sku: SKU.value, name: "Caller bolt label", qty: 1152 },
+        { sku: "WASHER-SS", name: "Caller washer label", qty: 2 },
+      ],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const result = await h.factorySend.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.rows).toEqual([
+      expect.objectContaining({
+        mat_num: SKU.value,
+        tot_cartons: "",
+        blocks_tot_cartons: false,
+      }),
+      expect.objectContaining({
+        mat_num: "WASHER-SS",
+        tot_cartons: "",
+        blocks_tot_cartons: true,
+      }),
+    ]);
   });
 });
