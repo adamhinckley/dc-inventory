@@ -41,7 +41,7 @@ export function CatalogCsvDownloadButton() {
   }
 
   return (
-    <>
+    <div className="flex shrink-0 flex-col gap-1">
       <Button
         type="button"
         variant="secondary"
@@ -58,6 +58,6 @@ export function CatalogCsvDownloadButton() {
           {error}
         </p>
       ) : null}
-    </>
+    </div>
   );
 }

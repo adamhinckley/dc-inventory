@@ -74,6 +74,7 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
 };
 
 const DataTableContext = createContext<DataTableContextValue | null>(null);
+const DataTableToolbarContext = createContext(false);
 
 function useDataTableContext(): DataTableContextValue {
   const value = useContext(DataTableContext);
@@ -316,6 +317,7 @@ export function DataTableRoot<
  */
 export function DataTableSearch() {
   const { meta, state, setState, idBase } = useDataTableContext();
+  const inToolbar = useContext(DataTableToolbarContext);
   if (!meta.search) {
     return null;
   }
@@ -325,7 +327,7 @@ export function DataTableSearch() {
     <TextInput
       id={searchId}
       density="compact"
-      className="min-w-56 flex-1"
+      className={inToolbar ? "min-w-56 flex-1" : "min-w-56"}
       aria-label={meta.search.placeholder}
       value={state.search}
       placeholder={meta.search.placeholder}
@@ -348,9 +350,11 @@ export function DataTableSearch() {
  */
 export function DataTableToolbar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-field-group">
-      {children}
-    </div>
+    <DataTableToolbarContext.Provider value={true}>
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-field-group">
+        {children}
+      </div>
+    </DataTableToolbarContext.Provider>
   );
 }
 
