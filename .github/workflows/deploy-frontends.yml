@@ -1,0 +1,123 @@
+# Deploy Next.js frontends to Vercel (internal + wholesale).
+# Push to main (frontend paths) or Actions → Deploy frontends → Run workflow.
+# Jobs run only on main and only when VERCEL_TOKEN is configured (avoids
+# failing on push when using Vercel Git integration without Actions secrets).
+# Token presence is checked in check-vercel-token (secrets are not valid in job if).
+#
+# Run vercel CLI from the repository root; each Vercel project's Root Directory
+# (apps/internal / apps/wholesale) selects the app. VERCEL_ORG_ID + VERCEL_PROJECT_ID
+# select the project — do not set working-directory to the app subfolder.
+#
+# One-time Vercel setup (repo root):
+#   pnpm dlx vercel login
+#   pnpm dlx vercel link --repo
+#   Create/link projects with Root Directory apps/internal and apps/wholesale.
+#
+# GitHub secrets (Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN — vercel.com/account/tokens
+#   VERCEL_ORG_ID — .vercel/project.json after link (or team id)
+#   VERCEL_PROJECT_ID_INTERNAL — internal dashboard project id
+#   VERCEL_PROJECT_ID_WHOLESALE — wholesale shop project id
+#
+# Vercel env (both projects, Production + Preview):
+#   API_PROXY_ORIGIN=https://dc-inventory-api.fly.dev
+#   NEXT_PUBLIC_API_URL=   (leave empty — same-origin /internal or /wholesale rewrites)
+name: Deploy frontends
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/internal/**"
+      - "apps/wholesale/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/deploy-frontends.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-frontends
+  cancel-in-progress: false
+
+jobs:
+  check-vercel-token:
+    name: check-vercel-token
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - id: check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -n "$VERCEL_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy-internal:
+    name: deploy-internal
+    needs: check-vercel-token
+    if: github.ref == 'refs/heads/main' && needs.check-vercel-token.outputs.has_token == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_INTERNAL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.3
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install Vercel CLI
+        run: npm install --global vercel@59.10.0
+      - name: Pull Vercel env
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+  deploy-wholesale:
+    name: deploy-wholesale
+    needs: check-vercel-token
+    if: github.ref == 'refs/heads/main' && needs.check-vercel-token.outputs.has_token == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_WHOLESALE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.3
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install Vercel CLI
+        run: npm install --global vercel@59.10.0
+      - name: Pull Vercel env
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
