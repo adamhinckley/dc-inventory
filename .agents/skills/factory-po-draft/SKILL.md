@@ -48,4 +48,4 @@ Staff cookie `staff_session` from `POST /internal/auth/login`. Then:
 - `POST /internal/suppliers/:id/products` (409 already linked is fine)
 - `POST /internal/purchase-orders` with `{ supplierId, shipDate, cancelDate, lines: [{ sku, name, qty }] }`
 
-The API must already be up. Local listen needs `FEATURES_ALL_CORE_ON=1` or an active subscription, or every call 403s `feature_disabled`.
+The API must already be up. Core flags default on; `FEATURES_ALL_CORE_ON=0` without a subscription 403s `feature_disabled`.

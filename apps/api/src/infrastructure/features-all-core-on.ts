@@ -1,6 +1,7 @@
 /**
- * Local listen should not need a `licensing.subscriptions` row.
- * `1` / `0` after trim are explicit. Unset means on except `test` and `production`.
+ * Licensing evaluation stays wired (`LicensingFeatures` + Postgres) but is
+ * inactive unless `FEATURES_ALL_CORE_ON=0`. `1` / `0` after trim are explicit.
+ * Unset means every core flag is on, except Vitest (`NODE_ENV=test`).
  */
 export function readFeaturesAllCoreOn(
   env: NodeJS.ProcessEnv = process.env,
@@ -12,5 +13,5 @@ export function readFeaturesAllCoreOn(
   if (raw === "0") {
     return false;
   }
-  return env.NODE_ENV !== "test" && env.NODE_ENV !== "production";
+  return env.NODE_ENV !== "test";
 }

@@ -32,7 +32,7 @@ Composition is explicit — no Nest-style container.
 | Pino JSON + redaction | [`src/infrastructure/logging.ts`](./src/infrastructure/logging.ts) |
 | `requestId` / `x-request-id` | [`src/infrastructure/request-id.ts`](./src/infrastructure/request-id.ts) |
 
-`buildApp({ clock, features, database, logger })` is how tests swap adapters (e.g. `InMemoryClock`, `InMemoryDatabase`). Production evaluates `LicensingFeatures` from Postgres. Local `pnpm dev:api` uses `featuresAllCoreOn()` unless `FEATURES_ALL_CORE_ON=0`.
+`buildApp({ clock, features, database, logger })` is how tests swap adapters (e.g. `InMemoryClock`, `InMemoryDatabase`). Listen (local and Fly) uses `featuresAllCoreOn()` unless `FEATURES_ALL_CORE_ON=0`, which evaluates `LicensingFeatures` from Postgres.
 
 ## Local Postgres
 
@@ -67,7 +67,7 @@ The image does not migrate on boot. CI migrates, then `flyctl deploy --remote-on
 
 **Local internal app against Fly:** leave `NEXT_PUBLIC_API_URL` empty and set `API_PROXY_ORIGIN=https://dc-inventory-api.fly.dev` in `apps/internal/.env`. The browser calls `http://localhost:3000`; Next rewrites to Fly. Session cookies stay host-only on localhost with `SameSite=Lax` — do not point the browser at Fly directly unless you add anti-CSRF tokens and change invariant X5 in the same change.
 
-Production evaluates `LicensingFeatures` from Postgres (`FEATURES_ALL_CORE_ON` is not set on Fly). Seed a `licensing.subscriptions` row or run demo seed against Neon before relying on gated routes.
+Fly keeps the licensing tables and `LicensingFeatures` adapter, but core flags stay on until `FEATURES_ALL_CORE_ON=0` is set. That env is how you turn subscription paywalls back on.
 
 First-time app create (once):
 
