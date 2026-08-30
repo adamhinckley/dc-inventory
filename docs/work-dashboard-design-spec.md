@@ -85,7 +85,7 @@ Default theme. Full roles live on Carbon’s [color tokens](https://carbondesign
 | `border-inverse` | `#161616` | `$border-inverse` Gray 100 |
 | `background-brand` | `#0f62fe` | `$background-brand` Blue 60 + `text-on-color` |
 | `highlight` | `#d0e2ff` | `$highlight` Blue 20 |
-| `overlay` | `#000000` 60% | `$overlay` |
+| `backdrop` (Carbon `$overlay`) | `#000000` 60% | Modal scrim only. `--color-backdrop` / `bg-backdrop`. Never a tooltip, menu, or dialog card. |
 | `status-error` | `#da1e28` | `$support-error` Red 60 + icon + “Error” |
 | `status-ok` | `#24a148` | `$support-success` Green 50 + check + “OK” |
 | `status-warn` | `#f1c21b` | `$support-warning` Yellow 30 + outline + “Warning”. Never text-only. |
@@ -126,7 +126,7 @@ Checked against live Carbon on 2026-08-22: [`packages/themes/src/dtcg/g100.json`
 | `border-inverse` | `#f4f4f4` | `$border-inverse` Gray 10 |
 | `background-brand` | `#0f62fe` | `$background-brand` Blue 60 still; pair with `text-on-color` |
 | `highlight` | `#001d6c` | Live v11 g100 `$highlight` = **Blue 90** (not v10 Blue 80) |
-| `overlay` | `#000000` 60% | `$overlay` `black` @ 0.6 |
+| `backdrop` (Carbon `$overlay`) | `#000000` 60% | Same as light: scrim only (`bg-backdrop`). Not a floating card. |
 | `status-error` | `#fa4d56` | `$support-error` on g100 = Red 50 + icon + “Error” |
 | `status-ok` | `#42be65` | `$support-success` on g100 = Green 40 + check + “OK”. Do **not** use Green 50 `#24a148` as the only dark success (too dark). |
 | `status-warn` | `#f1c21b` | `$support-warning` Yellow 30 + outline `#8e6a00` (Yellow 60) or a light border + black/dark icon + “Warning”. Never as text-only. |
@@ -179,9 +179,11 @@ Agents write **`bg-surface-base text-fg border-border dark:`** — never raw hex
 | Brand fill | `--color-primary-strong` `#0f62fe` | `bg-primary-strong text-primary-content` |
 | Error text/fill | `--color-error` `#da1e28` | `text-error` |
 | Field border | `--color-border-field` `#8d8d8d` | `border-border-field` |
+| Floating card (E3) | `--color-surface-overlay` `#ffffff` | `.overlay` or `bg-surface-overlay` |
+| Modal scrim | `--color-backdrop` `rgb(0 0 0 / 60%)` | `bg-backdrop` |
 | Charts | `--color-chart-01`…`08` Okabe–Ito | `var(--color-chart-*)` |
 
-Dark overrides the same keys (g100). `chart-08` becomes `#f4f4f4`.
+Dark overrides the same keys (g100). `chart-08` becomes `#f4f4f4`. `--color-surface-overlay` becomes `#262626`.
 
 Elevation: shell `bg-surface-base` (E0) → `.page` (E1) → `.section` / `.section-flat` (E2) → `.overlay` (E3). Type composites: `page-title`, `page-description`, `text-body`, `text-label`, `section-content-column-header`.
 
@@ -252,6 +254,7 @@ Recharts consumes **report** series from the API ([`architecture.md`](./architec
 | Green 50 `#24a148` as the only dark success | Too dark on Gray 100; use Green 40 `#42be65` + check + “OK” |
 | Material You / dynamic dark | Not the lock; agents must not generate a third palette |
 | Rainbow / Spectral / RdYlGn / turbo charts | Not colorblind-safe; color would become the only series cue |
+| Transparent or inverse tooltip fill (`tooltip-bg`, `--color-tooltip`, `bg-backdrop` as the card) | Staff cannot read the definition over a table. Use `.overlay`. See [§13](#13-overlay-surfaces-are-opaque). |
 
 ---
 
@@ -284,7 +287,7 @@ Recharts consumes **report** series from the API ([`architecture.md`](./architec
 
 One height. Readable actions. Agents copy this; they do not invent `h-*` on a single control.
 
-**Height.** Comfortable-density Input, TextInput, Select, Combobox, Autocomplete, TagInput, NumberInput, DateInput, DateRangeInput, PhoneInput, and Button `md` / `lg` all use `min-h-(--space-input-height)` (38px, `--space-input-height` in `packages/ui/src/tokens/shared.css`). Compact density is FilterBar only.
+**Height.** Comfortable-density Input, TextInput, Select, Combobox, Autocomplete, TagInput, NumberInput, DateInput, DateRangeInput, PhoneInput, and Button `md` / `lg` all use `min-h-(--space-input-height)` (38px, `--space-input-height` in `packages/ui/src/tokens/shared.css`). Compact density is FilterBar and list-table toolbars (`DataTable.Toolbar` + `TextInput density="compact"`).
 
 **Components.** Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledField` from `@dc-inventory/ui`. Do not drop a raw `<input>` or `<select>` with one-off padding.
 
@@ -305,3 +308,26 @@ One height. Readable actions. Agents copy this; they do not invent `h-*` on a si
 **Buttons.** `primary` is the form-row action (blue, `text-primary-content`). `secondary` is Gray 70 fill + white text. `default` is bordered Gray 10 + `text-fg`. Do not use `ghost` or `secondary`+`size="sm"` as the only action next to inputs. If a size is wrong, change `packages/ui/src/ui/Button/Button.tsx`, not the page.
 
 **Done when** every control in the row shares `--space-input-height`, the trailing button reads as an action at rest, labels sit `gap-field` above controls, and the next block uses `gap-form-section` or `gap-field-group` rather than sitting on the controls.
+
+---
+
+## 13. Overlay surfaces are opaque
+
+Carbon's `$overlay` token is a **scrim** (black at 60%). This repo maps that to `--color-backdrop` / `bg-backdrop`. Use it only on `Dialog.Backdrop` / `Drawer` dimmers.
+
+E3 floating chrome (tooltip, popover, menu, dialog card, drawer panel) uses `.overlay` or `bg-surface-overlay`. That fill is a solid hex (`#ffffff` light, `#262626` dark). `shadow-overlay` is extra depth. It is not the fill.
+
+There is no `tooltip-bg` class and no `--color-tooltip` fill. Inverse gray tooltips are not in this kit. Pair overlay surfaces with `overlay-title` / `overlay-description` (`text-fg` / `text-fg-secondary`).
+
+```tsx
+// Wrong: invented class, no fill, table shows through
+<Tooltip.Popup className="tooltip-bg border border-border shadow-overlay">
+
+// Wrong: Carbon $overlay / backdrop as the card
+<Tooltip.Popup className="bg-backdrop">
+
+// Right: same surface as Menu and Popover
+<Tooltip.Popup className="overlay rounded-section p-3 shadow-overlay">
+```
+
+**Done when** you cannot read page or table text through the popup. Alpha on a floating card is a defect. Alpha on `bg-backdrop` is the scrim.

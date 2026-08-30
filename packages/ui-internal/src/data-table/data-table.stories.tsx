@@ -103,8 +103,10 @@ const meta = {
   component: DataTable.Root,
   render: (args) => (
     <DataTable.Root {...args}>
-      <DataTable.Search />
-      <DataTable.Filters />
+      <DataTable.Toolbar>
+        <DataTable.Search />
+        <DataTable.Filters />
+      </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />
     </DataTable.Root>

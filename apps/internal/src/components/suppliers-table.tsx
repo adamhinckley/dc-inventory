@@ -48,7 +48,9 @@ export function SuppliersTable({
       linkField="vendorNumber"
       renderRowLink={renderRowLink}
     >
-      <DataTable.Search />
+      <DataTable.Toolbar>
+        <DataTable.Search />
+      </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />
     </DataTable.Root>

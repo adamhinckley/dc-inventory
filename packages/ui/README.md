@@ -25,6 +25,8 @@ Write token classes (`bg-surface-base`, `text-fg`, `page-title`, `dark:`). Dark 
 
 Form rows: [`docs/work-dashboard-design-spec.md`](../../docs/work-dashboard-design-spec.md) §12. Use `FieldRow` / `LabeledField`. Input, Select, Combobox, and Button `md` share `--space-input-height`. The row action is `variant="primary"`.
 
+Floating chrome: §13. `.overlay` / `bg-surface-overlay` is the opaque card. `bg-backdrop` is the modal scrim (Carbon `$overlay`).
+
 ## Storybook
 
 One monorepo Storybook at the repo root. From the repo root:

@@ -1,6 +1,15 @@
 "use client";
 
-import { Input, Label, Table, useTable, type TableColumnDef } from "@dc-inventory/ui";
+import {
+  Checkbox,
+  Input,
+  Label,
+  Table,
+  TextInput,
+  useTable,
+  type TableColumnDef,
+  type TableTooltip,
+} from "@dc-inventory/ui";
 import {
   createContext,
   useContext,
@@ -65,6 +74,7 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
 };
 
 const DataTableContext = createContext<DataTableContextValue | null>(null);
+const DataTableToolbarContext = createContext(false);
 
 function useDataTableContext(): DataTableContextValue {
   const value = useContext(DataTableContext);
@@ -153,13 +163,13 @@ function FilterControl({
 
   if (filter.control === "boolean") {
     return (
-      <div className="flex items-end gap-2 pb-2">
-        <input
+      <div className="flex shrink-0 items-center gap-2">
+        <Checkbox
           id={filterId}
-          type="checkbox"
+          density="compact"
           checked={state.filters[filter.param] === true}
-          onChange={(event) =>
-            setFilter(filter.param, event.target.checked ? true : undefined)
+          onChange={(checked) =>
+            setFilter(filter.param, checked ? true : undefined)
           }
         />
         <Label htmlFor={filterId}>{filter.param}</Label>
@@ -307,27 +317,44 @@ export function DataTableRoot<
  */
 export function DataTableSearch() {
   const { meta, state, setState, idBase } = useDataTableContext();
+  const inToolbar = useContext(DataTableToolbarContext);
   if (!meta.search) {
     return null;
   }
   const searchId = `${idBase}-search`;
 
   return (
-    <div className="flex min-w-56 shrink-0 flex-col gap-2">
-      <Label htmlFor={searchId}>{meta.search.placeholder}</Label>
-      <Input
-        id={searchId}
-        value={state.search}
-        placeholder={meta.search.placeholder}
-        onChange={(event) =>
-          setState((current) => ({
-            ...current,
-            page: 1,
-            search: event.target.value,
-          }))
-        }
-      />
-    </div>
+    <TextInput
+      id={searchId}
+      density="compact"
+      className={inToolbar ? "min-w-56 flex-1" : "min-w-56"}
+      aria-label={meta.search.placeholder}
+      value={state.search}
+      placeholder={meta.search.placeholder}
+      onChange={(search) =>
+        setState((current) => ({
+          ...current,
+          page: 1,
+          search,
+        }))
+      }
+    />
+  );
+}
+
+/**
+ * One compact row for list actions, search, and filters.
+ *
+ * When to use: staff lists that share a line with Download / Import.
+ * When not to use: wrapping the table body.
+ */
+export function DataTableToolbar({ children }: { children: ReactNode }) {
+  return (
+    <DataTableToolbarContext.Provider value={true}>
+      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-field-group">
+        {children}
+      </div>
+    </DataTableToolbarContext.Provider>
   );
 }
 
@@ -357,7 +384,7 @@ export function DataTableFilters() {
   }
 
   return (
-    <div className="flex shrink-0 flex-wrap items-end gap-field-group">
+    <div className="flex shrink-0 flex-wrap items-center gap-field-group">
       {meta.filters.map((filter) => (
         <FilterControl
           key={filter.param}
@@ -399,6 +426,30 @@ const NUMERIC_FIELDS = new Set([
 ]);
 const CODE_FIELDS = new Set(["sku", "vendorNumber", "documentNumber"]);
 
+/** Ledger qty headers — same words as ADR 0008 / architecture stock cycle. */
+const INVENTORY_CYCLE_HEADER_HELP: Record<string, TableTooltip> = {
+  onHand: {
+    title: "On hand",
+    description:
+      "Units physically in the warehouse. Receipts raise this; shipments lower it.",
+  },
+  onOrder: {
+    title: "On order",
+    description:
+      "Units inbound on open factory purchase orders. Not on the floor yet.",
+  },
+  allocated: {
+    title: "Allocated",
+    description:
+      "Warehouse cover for confirmed sales. Held against on-hand so those orders can ship. Never exceeds on-hand.",
+  },
+  available: {
+    title: "Available",
+    description:
+      "Warehouse leftover: on hand minus allocated. What can still be picked from the floor. Not available to sell — that figure also counts inbound and pre-sold demand.",
+  },
+};
+
 function fillColumnId(meta: TableMeta): string {
   const fields = meta.columns.map((column) => column.field);
   for (const preferred of FILL_COLUMN_PREFERENCE) {
@@ -418,6 +469,9 @@ function columnWidth(field: string): number | undefined {
   }
   if (field === "createdAt") {
     return 180;
+  }
+  if (field in INVENTORY_CYCLE_HEADER_HELP) {
+    return 128;
   }
   if (NUMERIC_FIELDS.has(field)) {
     return 100;
@@ -452,6 +506,7 @@ export function DataTableTable() {
         return {
           id: column.field,
           label: column.label,
+          tooltip: INVENTORY_CYCLE_HEADER_HELP[column.field],
           sort: canSort ? column.field : false,
           width: columnWidth(column.field),
           truncate: column.field !== fillColumn,
@@ -580,6 +635,7 @@ export function DataTablePagination() {
  */
 export const DataTable = {
   Root: DataTableRoot,
+  Toolbar: DataTableToolbar,
   Search: DataTableSearch,
   Filters: DataTableFilters,
   Table: DataTableTable,

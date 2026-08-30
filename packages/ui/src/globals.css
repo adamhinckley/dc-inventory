@@ -31,7 +31,6 @@
   --color-surface-card: #ffffff;
   --color-surface-card-raised: #ffffff;
   --color-surface-overlay: #ffffff;
-  --color-tooltip: #161616;
 
   --color-fg: #161616;
   --color-fg-secondary: #525252;
@@ -119,7 +118,6 @@
   --color-surface-card: #262626;
   --color-surface-card-raised: #393939;
   --color-surface-overlay: #262626;
-  --color-tooltip: #f4f4f4;
 
   --color-fg: #f4f4f4;
   --color-fg-secondary: #c6c6c6;
@@ -191,7 +189,6 @@
   --color-surface-card: var(--color-surface-card);
   --color-surface-card-raised: var(--color-surface-card-raised);
   --color-surface-overlay: var(--color-surface-overlay);
-  --color-tooltip: var(--color-tooltip);
   --color-fg: var(--color-fg);
   --color-fg-secondary: var(--color-fg-secondary);
   --color-fg-tertiary: var(--color-fg-tertiary);

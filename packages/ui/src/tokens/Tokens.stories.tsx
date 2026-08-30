@@ -77,7 +77,6 @@ export const Colors: StoryObj = {
           <Swatch name="bg-surface-card" className="bg-surface-card" />
           <Swatch name="bg-surface-card-raised" className="bg-surface-card-raised" />
           <Swatch name="bg-surface-overlay" className="bg-surface-overlay" />
-          <Swatch name="bg-tooltip" className="bg-tooltip" />
         </div>
       </Section>
 

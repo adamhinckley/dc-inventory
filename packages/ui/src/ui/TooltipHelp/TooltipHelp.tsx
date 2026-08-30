@@ -1,3 +1,5 @@
+"use client";
+
 import { type ReactElement, type ReactNode } from 'react'
 import { Tooltip } from '@base-ui-components/react/tooltip'
 import { HelpCircle } from 'lucide-react'
@@ -51,7 +53,7 @@ export type TooltipHelpProps =
  *   or table headers where the surrounding label is too dense to expand.
  * @avoid Long-form content — use `Popover`. Toggleable info — use a
  *   `Dialog`.
- * @tokens tooltip-bg + border-border (popup surface), z-popover (positioner z-index)
+ * @tokens overlay (opaque E3 surface), z-popover (positioner z-index)
  */
 export function TooltipHelp(props: TooltipHelpProps) {
   const { title, description, 'data-testid': testid } = props
@@ -79,7 +81,7 @@ export function TooltipHelp(props: TooltipHelpProps) {
       )}
       <Tooltip.Portal>
         <Tooltip.Positioner sideOffset={6} className="z-popover">
-          <Tooltip.Popup className="tooltip-bg border border-border max-w-[320px] rounded-section p-3 shadow-overlay">
+          <Tooltip.Popup className="overlay max-w-[320px] rounded-section p-3 shadow-overlay">
             <Tooltip.Arrow />
             {title && <div className="overlay-title mb-1">{title}</div>}
             <p className="overlay-description">{description}</p>

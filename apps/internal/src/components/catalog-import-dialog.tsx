@@ -15,6 +15,7 @@ import {
   Progress,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
+import { Upload } from "lucide-react";
 import { useId, useState } from "react";
 
 type ImportSummary = {
@@ -80,7 +81,8 @@ export function CatalogImportDialog() {
     <Dialog>
       <Dialog.Trigger
         render={
-          <Button type="button" variant="primary">
+          <Button type="button" variant="primary" size="sm">
+            <Upload className="size-icon" aria-hidden />
             Import Product Browser
           </Button>
         }

@@ -41,15 +41,16 @@ export function CatalogCsvDownloadButton() {
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex shrink-0 flex-col gap-1">
       <Button
         type="button"
         variant="secondary"
+        size="sm"
         onClick={() => void onDownload()}
         disabled={pending}
         data-testid="catalog-download-csv"
       >
-        <Download className="size-icon-lg" aria-hidden />
+        <Download className="size-icon" aria-hidden />
         {pending ? "Downloading…" : "Download CSV"}
       </Button>
       {error ? (
