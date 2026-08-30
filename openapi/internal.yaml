@@ -2400,6 +2400,9 @@ paths:
             - onHand
             - available
             - createdAt
+        export:
+          formats:
+            - csv
       responses:
         "200":
           description: Default Response
@@ -3132,6 +3135,128 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/products/export:
+    get:
+      operationId: exportInternalProducts
+      summary: Export products as CSV using the same filters as the staff list (max
+        10000 rows)
+      tags:
+        - internal
+      parameters:
+        - schema:
+            default: csv
+            type: string
+            enum:
+              - csv
+          in: query
+          name: format
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: q
+          required: false
+        - schema:
+            default: sku
+            type: string
+            enum:
+              - sku
+              - name
+              - onHand
+              - available
+              - createdAt
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: asc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
+          required: false
+        - schema:
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: inactive
+          required: false
+      responses:
+        "200":
+          description: CSV file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/inventory/stock/{sku}:
     get:
       operationId: getInternalInventoryStock

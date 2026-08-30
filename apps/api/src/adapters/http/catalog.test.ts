@@ -190,6 +190,59 @@ describe("catalog HTTP", () => {
     expect(listed.statusCode).toBe(200);
   });
 
+  it("exports the staff product list as CSV with the same filters", async () => {
+    const app = await startCatalogApp();
+    const missing = await app.inject({ method: "GET", url: "/internal/products/export" });
+    expect(missing.statusCode).toBe(401);
+
+    const cookie = await staffCookie(app);
+    await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        sku: "HEX-BOLT-GALV",
+        name: "Galvanized hex bolt",
+        uom: "EA",
+        memberPriceCents: 1250,
+        currency: "USD",
+        webWholesale: true,
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        sku: "WASHER",
+        name: "Washer",
+        uom: "EA",
+        memberPriceCents: 50,
+        currency: "USD",
+        webWholesale: true,
+      },
+    });
+
+    const rejected = await app.inject({
+      method: "GET",
+      url: "/internal/products/export?format=xlsx",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(rejected.statusCode).toBe(400);
+
+    const exported = await app.inject({
+      method: "GET",
+      url: "/internal/products/export?format=csv&q=HEX",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(exported.statusCode).toBe(200);
+    expect(exported.headers["content-type"]).toMatch(/text\/csv/);
+    expect(exported.headers["content-disposition"]).toContain("products.csv");
+    expect(exported.body).toContain("SKU,Name,Member price");
+    expect(exported.body).toContain("HEX-BOLT-GALV");
+    expect(exported.body).not.toContain("WASHER");
+  });
+
   it("requires wholesale_session on the shop catalog and hides non-shop SKUs", async () => {
     const app = await startCatalogApp();
     const missing = await app.inject({ method: "GET", url: "/wholesale/catalog" });

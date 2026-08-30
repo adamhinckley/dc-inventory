@@ -12,6 +12,7 @@ import {
   Input,
   Label,
   LabeledField,
+  Progress,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
@@ -34,6 +35,7 @@ export function CatalogImportDialog() {
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"check" | "import" | null>(null);
 
   async function run(dryRun: boolean) {
     if (file === null) {
@@ -41,6 +43,8 @@ export function CatalogImportDialog() {
       return;
     }
     setError(null);
+    setResult(null);
+    setBusy(dryRun ? "check" : "import");
     try {
       const response = await mutateAsync({
         data: { file },
@@ -64,6 +68,8 @@ export function CatalogImportDialog() {
           ? "Import failed. Use a Product Browser CSV (.csv), not an Excel workbook."
           : "Import failed. Check the file and try again.",
       );
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -98,6 +104,7 @@ export function CatalogImportDialog() {
                 type="file"
                 accept=".csv,text/csv"
                 data-testid="catalog-import-file"
+                disabled={isPending}
                 onChange={(event) => {
                   setFile(event.target.files?.[0] ?? null);
                   setResult(null);
@@ -123,6 +130,22 @@ export function CatalogImportDialog() {
               Import
             </Button>
           </FieldRow>
+          {busy !== null ? (
+            <div
+              className="flex flex-col gap-field"
+              data-testid="catalog-import-progress"
+            >
+              <Progress
+                className="h-1"
+                aria-label={
+                  busy === "check" ? "Checking file" : "Importing catalog"
+                }
+              />
+              <p className="text-body-sm text-fg-secondary">
+                {busy === "check" ? "Checking file…" : "Importing…"}
+              </p>
+            </div>
+          ) : null}
           {error !== null ? <p className="text-body text-error">{error}</p> : null}
           {result !== null ? (
             <div className="flex flex-col gap-field">

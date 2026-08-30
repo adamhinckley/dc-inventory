@@ -1,6 +1,7 @@
 import type { ComponentPropsWithRef } from 'react'
 import { Progress as BaseProgress } from '@base-ui-components/react/progress'
 import { cn } from '#cn'
+import './Progress.css'
 
 export interface ProgressProps extends ComponentPropsWithRef<'div'> {
   /**

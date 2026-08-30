@@ -1,12 +1,18 @@
 export { CsvWorkbookParser } from "./adapters/csv-workbook-parser.js";
 export { DrizzleProductRepository, type CatalogDrizzle } from "./adapters/drizzle-products.js";
 export { DrizzleProductPackagingRepository } from "./adapters/drizzle-product-packaging.js";
+export { InMemoryCatalogCsvWriter } from "./adapters/in-memory-catalog-csv-writer.js";
 export { InMemoryCatalogListQuery } from "./adapters/in-memory-catalog-list-query.js";
 export { InMemoryProductRepository } from "./adapters/in-memory-product-repository.js";
 export { InMemoryProductPackagingRepository } from "./adapters/in-memory-product-packaging.js";
 export { InMemoryQtyReadPort } from "./adapters/in-memory-qty-read.js";
 export { InMemorySupplierLinkPort } from "./adapters/in-memory-supplier-link.js";
 export { InMemoryWorkbookParser } from "./adapters/in-memory-workbook-parser.js";
+export {
+  ExportStaffProductsCsvUseCase,
+  STAFF_PRODUCTS_CSV_COLUMNS,
+  STAFF_PRODUCTS_EXPORT_ROW_CAP,
+} from "./application/export-staff-products-csv.js";
 export { CreateProductUseCase } from "./application/create-product.js";
 export { GetProductUseCase } from "./application/get-product.js";
 export { GetWholesaleProductUseCase } from "./application/get-wholesale-product.js";
@@ -26,6 +32,12 @@ export type { ImportProductBrowserResult } from "./application/import-product-br
 export { UpdateProductUseCase } from "./application/update-product.js";
 export { buildProductImageObjectKey } from "./domain/product-image-object-key.js";
 export { isShopVisible, type Product } from "./domain/product.js";
+export type {
+  CatalogCsvColumn,
+  CatalogCsvWriteInput,
+  CatalogCsvWriteResult,
+  ICatalogCsvWriter,
+} from "./domain/ports/catalog-csv-writer.js";
 export type {
   CatalogListPage,
   CatalogListQuery,

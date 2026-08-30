@@ -4,7 +4,9 @@ import {
   DrizzleProductRepository,
   GetProductUseCase,
   GetWholesaleProductUseCase,
+  ExportStaffProductsCsvUseCase,
   ImportProductBrowserUseCase,
+  InMemoryCatalogCsvWriter,
   InMemoryCatalogListQuery,
   InMemoryProductPackagingRepository,
   InMemoryProductRepository,
@@ -184,6 +186,7 @@ export type IdentityHttpServices = {
 
 export type CatalogHttpServices = {
   listStaffProducts: ListStaffProductsUseCase;
+  exportStaffProductsCsv: ExportStaffProductsCsvUseCase;
   createProduct: CreateProductUseCase;
   getProduct: GetProductUseCase;
   updateProduct: UpdateProductUseCase;
@@ -317,6 +320,10 @@ function catalogServices(
   const updateProduct = new UpdateProductUseCase(productRepo, qtyRead, packaging);
   return {
     listStaffProducts: new ListStaffProductsUseCase(catalogListQuery),
+    exportStaffProductsCsv: new ExportStaffProductsCsvUseCase(
+      catalogListQuery,
+      new InMemoryCatalogCsvWriter(),
+    ),
     createProduct,
     getProduct: new GetProductUseCase(productRepo, qtyRead, packaging),
     updateProduct,

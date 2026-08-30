@@ -30,6 +30,15 @@ const spreadsheetExportResponse = {
   },
 } as const;
 
+const csvExportResponse = {
+  description: "CSV file",
+  content: {
+    "text/csv": {
+      schema: { type: "string", format: "binary" },
+    },
+  },
+} as const;
+
 /**
  * Keep Zod JSON Schema conversion and copy `x-table` onto the OpenAPI operation.
  */
@@ -55,6 +64,11 @@ export function swaggerTransform(
       ...(transformed.schema as { response?: Record<string, unknown> }).response,
       200: spreadsheetExportResponse,
     };
+  } else if (schema?.operationId === "exportInternalProducts" && transformed.schema) {
+    (transformed.schema as { response?: Record<string, unknown> }).response = {
+      ...(transformed.schema as { response?: Record<string, unknown> }).response,
+      200: csvExportResponse,
+    };
   } else if (
     (opts as { url?: string }).url?.endsWith("/purchase-orders/:id/export") &&
     transformed.schema
@@ -62,6 +76,14 @@ export function swaggerTransform(
     (transformed.schema as { response?: Record<string, unknown> }).response = {
       ...(transformed.schema as { response?: Record<string, unknown> }).response,
       200: spreadsheetExportResponse,
+    };
+  } else if (
+    (opts as { url?: string }).url?.endsWith("/products/export") &&
+    transformed.schema
+  ) {
+    (transformed.schema as { response?: Record<string, unknown> }).response = {
+      ...(transformed.schema as { response?: Record<string, unknown> }).response,
+      200: csvExportResponse,
     };
   }
   return transformed;
