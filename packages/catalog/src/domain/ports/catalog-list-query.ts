@@ -2,7 +2,13 @@ import type { OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Product } from "../product.js";
 import type { ProductQty } from "../qty.js";
 
-export type CatalogListSortBy = "sku" | "name" | "onHand" | "available" | "createdAt";
+export type CatalogListSortBy =
+  | "sku"
+  | "name"
+  | "onHand"
+  | "available"
+  | "caseQty"
+  | "createdAt";
 export type CatalogListSortOrder = "asc" | "desc";
 
 export type CatalogListQuery = {
@@ -21,6 +27,7 @@ export type CatalogListRow = {
   product: Product;
   qty: ProductQty;
   createdAt: Date;
+  caseQty: number | null;
 };
 
 export type CatalogListPage = {

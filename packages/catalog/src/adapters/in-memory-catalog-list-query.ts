@@ -4,6 +4,7 @@ import type {
   ICatalogListQuery,
 } from "../domain/ports/catalog-list-query.js";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
+import type { IProductPackagingRepository } from "../domain/ports/product-packaging.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import { ZERO_QTY } from "../domain/qty.js";
 
@@ -17,6 +18,8 @@ function compareRows(a: CatalogListRow, b: CatalogListRow, query: CatalogListQue
     comparison = a.qty.onHand - b.qty.onHand;
   } else if (query.sortBy === "available") {
     comparison = a.qty.available - b.qty.available;
+  } else if (query.sortBy === "caseQty") {
+    comparison = (a.caseQty ?? 0) - (b.caseQty ?? 0);
   } else {
     comparison = a.createdAt.getTime() - b.createdAt.getTime();
   }
@@ -30,6 +33,7 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
   constructor(
     private readonly products: IProductRepository,
     private readonly qty: IQtyReadPort,
+    private readonly packaging: IProductPackagingRepository,
   ) {}
 
   async list(query: CatalogListQuery) {
@@ -44,10 +48,14 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
       query.organizationId,
       listed.map((row) => row.product.sku),
     );
-    const rows = listed.map((row): CatalogListRow => ({
+    const packs = await Promise.all(
+      listed.map((row) => this.packaging.findByProductId(row.product.id)),
+    );
+    const rows = listed.map((row, index): CatalogListRow => ({
       product: row.product,
       qty: snapshots.get(row.product.sku.value) ?? ZERO_QTY,
       createdAt: row.createdAt,
+      caseQty: packs[index]?.caseQty ?? null,
     }));
     rows.sort((a, b) => compareRows(a, b, query));
     const offset = (query.page - 1) * query.pageSize;

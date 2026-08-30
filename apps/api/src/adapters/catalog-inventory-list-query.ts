@@ -4,7 +4,12 @@ import {
   type Product,
   type ProductQty,
 } from "@dc-inventory/catalog";
-import { categories, productCategories, products } from "@dc-inventory/catalog/schema";
+import {
+  categories,
+  productCategories,
+  productPackaging,
+  products,
+} from "@dc-inventory/catalog/schema";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
@@ -91,8 +96,10 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           ? products.name
           : query.sortBy === "onHand"
             ? onHand
-            : query.sortBy === "available"
-              ? available
+          : query.sortBy === "available"
+            ? available
+            : query.sortBy === "caseQty"
+              ? productPackaging.caseQty
               : products.createdAt;
     const direction = query.sortOrder === "desc" ? desc : asc;
     const offset = (query.page - 1) * query.pageSize;
@@ -118,6 +125,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           onOrder,
           allocated,
           available,
+          caseQty: productPackaging.caseQty,
         })
         .from(products)
         .leftJoin(
@@ -135,6 +143,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
             eq(stockSnapshots.locationId, locations.id),
           ),
         )
+        .leftJoin(productPackaging, eq(productPackaging.productId, products.id))
         .where(where)
         .orderBy(direction(sortExpression), asc(products.id))
         .limit(query.pageSize)
@@ -151,6 +160,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           available: row.available,
         } satisfies ProductQty,
         createdAt: row.createdAt,
+        caseQty: row.caseQty ?? null,
       })),
       total: totalRows[0]?.value ?? 0,
     };

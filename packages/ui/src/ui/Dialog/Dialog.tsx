@@ -11,7 +11,7 @@ import { cn } from '#cn'
 // ---------------------------------------------------------------------------
 
 const dialogContentVariants = cva(
-  'flex max-h-[85vh] flex-col overlay rounded-section shadow-modal outline-hidden transition-[opacity,transform] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0',
+  'flex max-h-[85vh] min-h-0 flex-col overflow-hidden overlay rounded-section shadow-modal outline-hidden transition-[opacity,transform] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0',
   {
     variants: {
       size: {
@@ -229,7 +229,7 @@ export function DialogBody({ ref, className, children, ...rest }: DialogBodyProp
   return (
     <div
       ref={ref}
-      className={cn('stacked flex-1 overflow-y-auto py-section-content-y', className)}
+      className={cn('stacked min-h-0 flex-1 overflow-y-auto py-section-content-y', className)}
       {...rest}
     >
       {children}

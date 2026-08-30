@@ -254,6 +254,7 @@ export function FormDialog<TSchema extends ZodTypeAny, TResult = unknown>({
           schema={schema}
           defaultValues={defaultValues}
           onSubmit={onSubmit as (data: z.output<TSchema>, form: UseFormReturn<Input>) => void}
+          className="min-h-0 flex-1"
           data-testid={`${testid}-form`}
         >
           <Dialog.Body className="flex flex-col gap-region">

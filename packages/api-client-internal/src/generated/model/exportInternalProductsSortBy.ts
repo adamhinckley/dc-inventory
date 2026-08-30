@@ -13,5 +13,6 @@ export const ExportInternalProductsSortBy = {
   name: 'name',
   onHand: 'onHand',
   available: 'available',
+  caseQty: 'caseQty',
   createdAt: 'createdAt',
 } as const;

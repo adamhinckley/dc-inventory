@@ -30,7 +30,7 @@ function harness() {
   const products = new InMemoryProductRepository();
   const qty = new InMemoryQtyReadPort();
   const packaging = new InMemoryProductPackagingRepository();
-  const catalogList = new InMemoryCatalogListQuery(products, qty);
+    const catalogList = new InMemoryCatalogListQuery(products, qty, packaging);
   return {
     products,
     qty,
@@ -103,6 +103,56 @@ describe("Catalog use cases (in-memory)", () => {
     ]);
     expect(listed.items[1]?.product.inactive).toBe(true);
     expect(listed.items[1]?.product.webWholesale).toBe(false);
+  });
+
+  it("includes caseQty on the staff list", async () => {
+    const h = harness();
+    const product = await createProduct(h, { sku: "HEX-BOLT-GALV" });
+    const updated = await h.update.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      productId: product.id,
+      caseQty: 192,
+    });
+    expect(updated.ok).toBe(true);
+
+    const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: OTHER_STAFF,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+    expect(listed.items[0]?.caseQty).toBe(192);
+  });
+
+  it("sorts the staff list by caseQty", async () => {
+    const h = harness();
+    const small = await createProduct(h, { sku: "SMALL", name: "Small case" });
+    const large = await createProduct(h, { sku: "LARGE", name: "Large case" });
+    await h.update.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      productId: small.id,
+      caseQty: 12,
+    });
+    await h.update.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      productId: large.id,
+      caseQty: 192,
+    });
+
+    const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: OTHER_STAFF,
+      page: 1,
+      pageSize: 25,
+      sortBy: "caseQty",
+      sortOrder: "desc",
+    });
+    expect(listed.items.map((row) => row.product.sku.value)).toEqual(["LARGE", "SMALL"]);
   });
 
   it("exports staff products as CSV using the same list filters", async () => {

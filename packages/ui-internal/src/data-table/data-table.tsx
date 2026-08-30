@@ -395,6 +395,7 @@ const NUMERIC_FIELDS = new Set([
   "allocated",
   "available",
   "qty",
+  "caseQty",
 ]);
 const CODE_FIELDS = new Set(["sku", "vendorNumber", "documentNumber"]);
 
