@@ -612,7 +612,7 @@ export function composeAppServices(
     overrides.catalogListQuery ??
     (appDb
       ? new CatalogInventoryListQuery(appDb)
-      : new InMemoryCatalogListQuery(productRepo, qtyRead));
+      : new InMemoryCatalogListQuery(productRepo, qtyRead, productPackagingRepo));
 
   const purchaseOrderRepo =
     overrides.purchaseOrderRepo ??

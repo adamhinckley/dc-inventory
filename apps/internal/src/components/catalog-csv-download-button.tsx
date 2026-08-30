@@ -26,6 +26,7 @@ export function CatalogCsvDownloadButton() {
           params.sortBy === "name" ||
           params.sortBy === "onHand" ||
           params.sortBy === "available" ||
+          params.sortBy === "caseQty" ||
           params.sortBy === "createdAt"
             ? params.sortBy
             : undefined,

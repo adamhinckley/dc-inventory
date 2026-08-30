@@ -3,7 +3,13 @@ import type { ICatalogListQuery } from "../domain/ports/catalog-list-query.js";
 import type { Product } from "../domain/product.js";
 import type { ProductQty } from "../domain/qty.js";
 
-export type StaffProductSortBy = "sku" | "name" | "onHand" | "available" | "createdAt";
+export type StaffProductSortBy =
+  | "sku"
+  | "name"
+  | "onHand"
+  | "available"
+  | "caseQty"
+  | "createdAt";
 export type SortOrder = "asc" | "desc";
 
 export type ListStaffProductsRequest = {
@@ -21,6 +27,7 @@ export type StaffProductListRow = {
   product: Product;
   qty: ProductQty;
   createdAt: Date;
+  caseQty: number | null;
 };
 
 export type ListStaffProductsResult = {

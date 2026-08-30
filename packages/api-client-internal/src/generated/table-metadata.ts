@@ -108,6 +108,10 @@ export const listInternalProductsTable = {
       "label": "Available"
     },
     {
+      "field": "caseQty",
+      "label": "Case qty"
+    },
+    {
       "field": "createdAt",
       "label": "Created"
     }
@@ -134,6 +138,7 @@ export const listInternalProductsTable = {
       "name",
       "onHand",
       "available",
+      "caseQty",
       "createdAt"
     ]
   },

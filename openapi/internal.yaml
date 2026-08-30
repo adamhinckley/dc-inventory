@@ -2330,6 +2330,7 @@ paths:
               - name
               - onHand
               - available
+              - caseQty
               - createdAt
           in: query
           name: sortBy
@@ -2380,6 +2381,8 @@ paths:
             label: Allocated
           - field: available
             label: Available
+          - field: caseQty
+            label: Case qty
           - field: createdAt
             label: Created
         search:
@@ -2399,6 +2402,7 @@ paths:
             - name
             - onHand
             - available
+            - caseQty
             - createdAt
         export:
           formats:
@@ -2452,6 +2456,12 @@ paths:
                           type: integer
                           minimum: -9007199254740991
                           maximum: 9007199254740991
+                        caseQty:
+                          nullable: true
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                          maximum: 9007199254740991
                         createdAt:
                           type: string
                           format: date-time
@@ -2469,6 +2479,7 @@ paths:
                         - onOrder
                         - allocated
                         - available
+                        - caseQty
                         - createdAt
                       additionalProperties: false
                   page:
@@ -3164,6 +3175,7 @@ paths:
               - name
               - onHand
               - available
+              - caseQty
               - createdAt
           in: query
           name: sortBy

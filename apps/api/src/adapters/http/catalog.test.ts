@@ -166,10 +166,30 @@ describe("catalog HTTP", () => {
           onOrder: 0,
           allocated: 0,
           available: 0,
+          caseQty: null,
         },
       ],
     });
     expect(body.items[0]?.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
+    const createdId = (created.json() as { id: string }).id;
+    const patched = await app.inject({
+      method: "PATCH",
+      url: `/internal/products/${createdId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { caseQty: 192 },
+    });
+    expect(patched.statusCode).toBe(200);
+
+    const listedWithCaseQty = await app.inject({
+      method: "GET",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listedWithCaseQty.statusCode).toBe(200);
+    expect(listedWithCaseQty.json()).toMatchObject({
+      items: [{ sku: "HEX-BOLT-GALV", caseQty: 192 }],
+    });
   });
 
   it("accepts sortBy=onHand on the staff product list", async () => {
@@ -188,6 +208,13 @@ describe("catalog HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
     expect(listed.statusCode).toBe(200);
+
+    const byCaseQty = await app.inject({
+      method: "GET",
+      url: "/internal/products?sortBy=caseQty&sortOrder=desc",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(byCaseQty.statusCode).toBe(200);
   });
 
   it("exports the staff product list as CSV with the same filters", async () => {

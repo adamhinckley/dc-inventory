@@ -21,6 +21,7 @@ export const STAFF_PRODUCTS_CSV_COLUMNS = [
   { key: "onOrder", header: "On order" },
   { key: "allocated", header: "Allocated" },
   { key: "available", header: "Available" },
+  { key: "caseQty", header: "Case qty" },
   { key: "createdAt", header: "Created" },
 ] as const;
 
@@ -56,6 +57,7 @@ function csvRow(row: CatalogListRow): Record<string, string> {
     onOrder: String(row.qty.onOrder),
     allocated: String(row.qty.allocated),
     available: String(row.qty.available),
+    caseQty: row.caseQty === null ? "" : String(row.caseQty),
     createdAt: row.createdAt.toISOString(),
   };
 }
