@@ -5,7 +5,7 @@
  * OpenAPI spec version: 0.0.0
  */
 
-export type UpdateInternalProductBody = {
+export type UpdateInternalProductBySkuBody = {
   /** @minLength 1 */
   name?: string;
   /** @minLength 1 */

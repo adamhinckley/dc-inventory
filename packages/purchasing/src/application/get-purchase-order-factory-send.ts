@@ -53,7 +53,9 @@ export class GetPurchaseOrderFactorySendUseCase {
         key: column.key,
         header: column.header,
       })),
-      rows: sheet.rows.map(factorySendJsonRow),
+      rows: sheet.rows.map((row, index) =>
+        factorySendJsonRow(row, sheet.blocksTotCartons[index] === true),
+      ),
     };
   }
 }

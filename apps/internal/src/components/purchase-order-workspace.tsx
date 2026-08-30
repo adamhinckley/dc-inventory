@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  getGetInternalPurchaseOrderFactorySendQueryKey,
   getGetInternalPurchaseOrderQueryKey,
   getListInternalPurchaseOrdersQueryKey,
   getListInternalSupplierProductsQueryKey,
@@ -18,6 +19,7 @@ import {
   Chip,
   Combobox,
   DateInput,
+  Dialog,
   FieldRow,
   Input,
   Label,
@@ -26,8 +28,10 @@ import {
   useTable,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
+import { CircleCheck, Download, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   useCallback,
   useEffect,
@@ -36,10 +40,18 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { ProductCaseQtyDialog } from "./product-case-qty-dialog";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
 import {
+  FACTORY_SEND_NO_CASE_QTY_LABEL,
+  factorySendBlockedSkus,
+  factorySendRowBlocksCartons,
+  factorySendRowClassName,
   factorySendRowId,
   factorySendTableColumns,
+  firstBlockedSku,
+  formatFactorySendCell,
+  missingCaseQtyRowElementId,
   type FactorySendRow,
 } from "../lib/factory-send-table";
 import { draftLineFromVendorProduct } from "../lib/purchase-order-line-adder";
@@ -50,10 +62,85 @@ import {
   purchaseOrderLineWritesEqual,
   purchaseOrderLinesSavedForConfirm,
   purchaseOrderWriteLines,
+  removePurchaseOrderLinesByRowKeys,
 } from "../lib/purchase-order-lines";
 import type { PurchaseOrderLineDraft } from "../lib/purchase-order-types";
 
 type PurchaseOrderLineRow = PurchaseOrderLineDraft & { rowIndex: number };
+
+function DashboardTopbarPortal({ children }: { children: React.ReactNode }) {
+  const [target, setTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setTarget(document.getElementById("dashboard-topbar-actions"));
+  }, []);
+  if (target === null) {
+    return null;
+  }
+  return createPortal(children, target);
+}
+
+function scrollToMissingCaseQtyRow(sku: string) {
+  document
+    .getElementById(missingCaseQtyRowElementId(sku))
+    ?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function MissingCaseQtyDownloadDialog({
+  open,
+  sku,
+  onOpenChange,
+  onProceed,
+}: {
+  open: boolean;
+  sku: string;
+  onOpenChange: (open: boolean) => void;
+  onProceed: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog.Content
+        size="sm"
+        data-testid="purchasing-po-missing-case-qty-dialog"
+      >
+        <Dialog.Header>
+          <Dialog.Title>Case quantity is missing</Dialog.Title>
+          <Dialog.Close />
+        </Dialog.Header>
+        <Dialog.Body>
+          <Dialog.Description>
+            The XLS leaves tot_cartons blank when any line is missing case
+            quantity. Enter case qty on {sku} before download, or continue
+            without that column.
+          </Dialog.Description>
+        </Dialog.Body>
+        <Dialog.Footer>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              onOpenChange(false);
+              onProceed();
+            }}
+          >
+            Download anyway
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              onOpenChange(false);
+              window.setTimeout(() => {
+                scrollToMissingCaseQtyRow(sku);
+              }, 200);
+            }}
+          >
+            Add case quantity
+          </Button>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog>
+  );
+}
 
 function SupplierName({ supplierId }: { supplierId: string }) {
   const supplierQuery = useGetInternalSupplier(supplierId);
@@ -165,17 +252,65 @@ function PurchaseOrderLineAdder({
   );
 }
 
+function PurchaseOrderLineQtyInput({
+  sku,
+  qty,
+  disabled,
+  onCommit,
+}: {
+  sku: string;
+  qty: number;
+  disabled?: boolean;
+  onCommit: (qty: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(qty));
+
+  useEffect(() => {
+    setDraft(String(qty));
+  }, [qty]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      className="max-w-28"
+      value={draft}
+      onChange={(event) => {
+        const raw = event.target.value;
+        if (raw !== "" && !/^\d+$/.test(raw)) {
+          return;
+        }
+        setDraft(raw);
+        const next = Number(raw);
+        if (Number.isInteger(next) && next > 0) {
+          onCommit(next);
+        }
+      }}
+      onBlur={() => {
+        setDraft(String(qty));
+      }}
+      disabled={disabled}
+      aria-label={`Quantity for ${sku}`}
+    />
+  );
+}
+
 function PurchaseOrderLinesTable({
   lines,
+  blockedSkus,
+  purchaseOrderId,
   onUpdateQty,
-  onRemoveLine,
+  onRemoveSelected,
   disabled = false,
 }: {
   lines: PurchaseOrderLineDraft[];
-  onUpdateQty: (index: number, qtyRaw: string) => void;
-  onRemoveLine: (index: number) => void;
+  blockedSkus: ReadonlySet<string>;
+  purchaseOrderId?: string;
+  onUpdateQty: (index: number, qty: number) => void;
+  onRemoveSelected: (keys: ReadonlySet<string>) => void;
   disabled?: boolean;
 }) {
+  const [caseQtySku, setCaseQtySku] = useState<string | null>(null);
   const rows = useMemo<PurchaseOrderLineRow[]>(
     () => lines.map((line, rowIndex) => ({ ...line, rowIndex })),
     [lines],
@@ -183,68 +318,122 @@ function PurchaseOrderLinesTable({
 
   const columns = useMemo(
     () => [
-      { id: "sku", label: "SKU", sort: false as const, width: 140 },
+      {
+        id: "sku",
+        label: "SKU",
+        sort: false as const,
+        width: 180,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          blockedSkus.has(record.sku) ? (
+            <span
+              id={missingCaseQtyRowElementId(record.sku)}
+              className="flex flex-wrap items-center gap-tight"
+            >
+              <span>{record.sku}</span>
+              <Chip
+                icon={<Chip.Dot />}
+                style={{ "--chip-color": "var(--color-warning)" } as CSSProperties}
+              >
+                {FACTORY_SEND_NO_CASE_QTY_LABEL}
+              </Chip>
+            </span>
+          ) : (
+            record.sku
+          ),
+      },
       { id: "name", label: "Product", sort: false as const },
       {
+        id: "caseQtyAction",
+        label: "",
+        sort: false as const,
+        width: 180,
+        truncate: false,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          blockedSkus.has(record.sku) ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setCaseQtySku(record.sku)}
+              data-testid={`purchasing-po-line-enter-case-qty-${record.rowIndex}`}
+            >
+              Enter Case Quantity
+            </Button>
+          ) : null,
+      },
+      {
         id: "qty",
-        label: "Qty",
+        label: "Quantity",
         sort: false as const,
         width: 160,
         truncate: false,
+        align: "right" as const,
         render: ({ record }: { record: PurchaseOrderLineRow }) => (
-          <Input
-            type="number"
-            min={1}
-            step={1}
-            className="max-w-28"
-            value={String(record.qty)}
-            onChange={(event) => onUpdateQty(record.rowIndex, event.target.value)}
+          <PurchaseOrderLineQtyInput
+            sku={record.sku}
+            qty={record.qty}
             disabled={disabled}
-            aria-label={`Quantity for ${record.sku}`}
+            onCommit={(qty) => onUpdateQty(record.rowIndex, qty)}
           />
         ),
       },
-      {
-        id: "remove",
-        label: "Actions",
-        sort: false as const,
-        width: 120,
-        truncate: false,
-        render: ({ record }: { record: PurchaseOrderLineRow }) => (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={disabled}
-            onClick={() => onRemoveLine(record.rowIndex)}
-          >
-            Remove
-          </Button>
-        ),
-      },
     ],
-    [disabled, onRemoveLine, onUpdateQty],
+    [blockedSkus, disabled, onUpdateQty],
   );
 
   const table = useTable({
     data: rows,
     columns,
     getRowId: (row) => purchaseOrderLineRowKey(row, row.rowIndex),
+    getRowClassName: (row) =>
+      blockedSkus.has(row.sku) ? "bg-warning/25" : undefined,
     fillColumn: "name",
     enableSorting: false,
-    enableSelection: false,
+    enableSelection: !disabled,
     enablePagination: false,
   });
 
   return (
-    <Table
-      table={table}
-      emptyMessage="Add at least one line from the vendor catalog."
-    >
-      <Table.Header />
-      <Table.Body />
-      <Table.Empty />
-    </Table>
+    <>
+      <Table
+        sticky
+        className="min-h-0 flex-1"
+        table={table}
+        emptyMessage="Add at least one line from the vendor catalog."
+      >
+        <Table.Header />
+        <Table.Body />
+        <Table.Empty />
+        <Table.BulkActions>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={disabled}
+            onClick={() => {
+              onRemoveSelected(table.selection.selectedIds);
+              table.selection.clear();
+            }}
+          >
+            <Trash2 className="size-icon-lg" aria-hidden />
+            Remove selected
+          </Button>
+        </Table.BulkActions>
+      </Table>
+      {caseQtySku ? (
+        <ProductCaseQtyDialog
+          sku={caseQtySku}
+          purchaseOrderId={purchaseOrderId}
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setCaseQtySku(null);
+            }
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -281,6 +470,30 @@ function PurchaseOrderWorkspaceBody({
   const [isCreating, setIsCreating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [missingCaseQtyDownloadOpen, setMissingCaseQtyDownloadOpen] =
+    useState(false);
+
+  const factorySendQuery = useGetInternalPurchaseOrderFactorySend(
+    purchaseOrderId ?? "",
+    {
+      query: {
+        enabled: Boolean(purchaseOrderId),
+        queryKey: getGetInternalPurchaseOrderFactorySendQueryKey(purchaseOrderId ?? ""),
+      },
+    },
+  );
+  const factorySendReady = factorySendQuery.data?.status === 200;
+  const factorySendRows = useMemo(() => {
+    if (!factorySendReady || factorySendQuery.data?.status !== 200) {
+      return [] as FactorySendRow[];
+    }
+    return factorySendQuery.data.data.rows as FactorySendRow[];
+  }, [factorySendQuery.data, factorySendReady]);
+  const blockedSkus = useMemo(
+    () => factorySendBlockedSkus(factorySendRows),
+    [factorySendRows],
+  );
+  const missingCaseQtySku = factorySendReady ? firstBlockedSku(factorySendRows) : null;
 
   const lastSavedLinesRef = useRef(coalescePurchaseOrderLines(initialLines));
   const lastSavedDatesRef = useRef({
@@ -396,6 +609,9 @@ function PurchaseOrderWorkspaceBody({
             await queryClient.invalidateQueries({
               queryKey: getListInternalPurchaseOrdersQueryKey(),
             });
+            await queryClient.invalidateQueries({
+              queryKey: getGetInternalPurchaseOrderFactorySendQueryKey(purchaseOrderId),
+            });
             return true;
           }
           setSaveState("error");
@@ -471,12 +687,8 @@ function PurchaseOrderWorkspaceBody({
   );
 
   const updateLineQty = useCallback(
-    (index: number, qtyRaw: string) => {
+    (index: number, qty: number) => {
       if (creatingRef.current || workspaceLocked) {
-        return;
-      }
-      const qty = Number(qtyRaw);
-      if (!Number.isInteger(qty) || qty <= 0) {
         return;
       }
       setLines((current) => {
@@ -490,17 +702,17 @@ function PurchaseOrderWorkspaceBody({
     [workspaceLocked],
   );
 
-  const removeLine = useCallback((index: number) => {
-    if (creatingRef.current || workspaceLocked) {
+  const removeSelectedLines = useCallback((keys: ReadonlySet<string>) => {
+    if (creatingRef.current || workspaceLocked || keys.size === 0) {
       return;
     }
     setLines((current) => {
-      if (current.length <= 1) {
+      const next = removePurchaseOrderLinesByRowKeys(current, keys);
+      if (next === null) {
         setActionError("A draft PO must keep at least one line.");
         return current;
       }
       setActionError(null);
-      const next = current.filter((_, lineIndex) => lineIndex !== index);
       linesRef.current = next;
       return next;
     });
@@ -577,6 +789,22 @@ function PurchaseOrderWorkspaceBody({
     }
   }, [flushAutosave, initialDocumentNumber, purchaseOrderId]);
 
+  const requestDownloadXlsx = useCallback(() => {
+    if (!factorySendReady || factorySendQuery.isFetching) {
+      return;
+    }
+    if (missingCaseQtySku) {
+      setMissingCaseQtyDownloadOpen(true);
+      return;
+    }
+    void downloadXlsx();
+  }, [
+    downloadXlsx,
+    factorySendQuery.isFetching,
+    factorySendReady,
+    missingCaseQtySku,
+  ]);
+
   const title = isNew
     ? "New draft purchase order"
     : (initialDocumentNumber ?? "Draft PO");
@@ -598,15 +826,8 @@ function PurchaseOrderWorkspaceBody({
           : "var(--color-fg-secondary)";
 
   return (
-    <section className="flex flex-col gap-form-section">
-      <nav className="flex items-center justify-between gap-region">
-        <p className="text-body-sm text-fg-secondary">
-          <Link href="/purchasing" className="text-link hover:text-link-hover">
-            Purchasing
-          </Link>
-          <span aria-hidden="true"> / </span>
-          <span>{isNew ? "New" : title}</span>
-        </p>
+    <section className="flex min-h-0 flex-1 flex-col gap-form-section">
+      <DashboardTopbarPortal>
         <Chip
           busy={saveState === "saving"}
           icon={<Chip.Dot />}
@@ -615,47 +836,24 @@ function PurchaseOrderWorkspaceBody({
         >
           {saveLabel}
         </Chip>
+      </DashboardTopbarPortal>
+      <nav>
+        <p className="text-body-sm text-fg-secondary">
+          <Link href="/purchasing" className="text-link hover:text-link-hover">
+            Purchasing
+          </Link>
+          <span aria-hidden="true"> / </span>
+          <span>{isNew ? "New" : title}</span>
+        </p>
       </nav>
 
-      <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="page-title">{title}</h1>
-          <p className="page-description mt-2">
-            Pick a vendor, add lines from that vendor&apos;s catalog, then finalize or
-            download XLS. Lines autosave after the first create.
-          </p>
-          {activeSupplierId ? <SupplierName supplierId={activeSupplierId} /> : null}
-        </div>
-        {purchaseOrderId ? (
-          <div className="flex shrink-0 items-center gap-tight">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={exporting || lines.length === 0}
-              onClick={() => void downloadXlsx()}
-            >
-              {exporting ? "Downloading…" : "Download XLS"}
-            </Button>
-            {isDraft ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                disabled={
-                  confirmMutation.isPending ||
-                  lines.length === 0 ||
-                  saveState === "saving" ||
-                  isCreating ||
-                  !purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current)
-                }
-                onClick={() => void finalize()}
-              >
-                {confirmMutation.isPending ? "Finalizing…" : "Finalize"}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
+      <header>
+        <h1 className="page-title">{title}</h1>
+        <p className="page-description mt-2">
+          Pick a vendor, add lines from that vendor&apos;s catalog, then finalize or
+          download XLS. Lines autosave after the first create.
+        </p>
+        {activeSupplierId ? <SupplierName supplierId={activeSupplierId} /> : null}
       </header>
 
       <FieldRow>
@@ -710,6 +908,41 @@ function PurchaseOrderWorkspaceBody({
             placeholder="Cancel date"
           />
         </LabeledField>
+        {purchaseOrderId ? (
+          <div className="ml-auto flex flex-wrap items-end gap-field-group">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                exporting ||
+                lines.length === 0 ||
+                !factorySendReady ||
+                factorySendQuery.isFetching
+              }
+              onClick={requestDownloadXlsx}
+            >
+              <Download className="size-icon-lg" aria-hidden />
+              {exporting ? "Downloading…" : "Download XLS"}
+            </Button>
+            {isDraft ? (
+              <Button
+                type="button"
+                variant="primary"
+                disabled={
+                  confirmMutation.isPending ||
+                  lines.length === 0 ||
+                  saveState === "saving" ||
+                  isCreating ||
+                  !purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current)
+                }
+                onClick={() => void finalize()}
+              >
+                <CircleCheck className="size-icon-lg" aria-hidden />
+                {confirmMutation.isPending ? "Finalizing…" : "Finalize"}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </FieldRow>
 
       {actionError ? (
@@ -718,10 +951,21 @@ function PurchaseOrderWorkspaceBody({
         </p>
       ) : null}
 
+      {missingCaseQtySku ? (
+        <MissingCaseQtyDownloadDialog
+          open={missingCaseQtyDownloadOpen}
+          sku={missingCaseQtySku}
+          onOpenChange={setMissingCaseQtyDownloadOpen}
+          onProceed={() => void downloadXlsx()}
+        />
+      ) : null}
+
       <PurchaseOrderLinesTable
         lines={lines}
+        blockedSkus={blockedSkus}
+        purchaseOrderId={purchaseOrderId}
         onUpdateQty={updateLineQty}
-        onRemoveLine={removeLine}
+        onRemoveSelected={removeSelectedLines}
         disabled={workspaceLocked}
       />
     </section>
@@ -805,6 +1049,7 @@ function PurchaseOrderEditWorkspace({
 }
 
 function FactorySendLinesTable({ purchaseOrderId }: { purchaseOrderId: string }) {
+  const [caseQtySku, setCaseQtySku] = useState<string | null>(null);
   const factorySendQuery = useGetInternalPurchaseOrderFactorySend(purchaseOrderId);
   const sheet =
     factorySendQuery.data?.status === 200 ? factorySendQuery.data.data : undefined;
@@ -812,15 +1057,75 @@ function FactorySendLinesTable({ purchaseOrderId }: { purchaseOrderId: string })
     () => (sheet?.rows ?? []) as FactorySendRow[],
     [sheet?.rows],
   );
-  const columns = useMemo(
-    () => factorySendTableColumns(sheet?.columns ?? []),
-    [sheet?.columns],
-  );
+  const columns = useMemo(() => {
+    const baseColumns = factorySendTableColumns(sheet?.columns ?? []).map((column) =>
+      column.id !== "mat_num"
+        ? column
+        : {
+            ...column,
+            render: ({ record }: { record: FactorySendRow }) => {
+              const sku = String(record.mat_num ?? "");
+              if (!factorySendRowBlocksCartons(record)) {
+                return formatFactorySendCell(record.mat_num);
+              }
+              return (
+                <span className="flex flex-wrap items-center gap-tight">
+                  <span>{sku}</span>
+                  <Chip
+                    id={missingCaseQtyRowElementId(sku)}
+                    icon={<Chip.Dot />}
+                    style={
+                      { "--chip-color": "var(--color-warning)" } as CSSProperties
+                    }
+                  >
+                    {FACTORY_SEND_NO_CASE_QTY_LABEL}
+                  </Chip>
+                </span>
+              );
+            },
+          },
+    );
+    const totCartonsIndex = baseColumns.findIndex((column) => column.id === "tot_cartons");
+    if (totCartonsIndex === -1) {
+      return baseColumns;
+    }
+    const caseQtyActionColumn = {
+      id: "caseQtyAction",
+      label: "",
+      sort: false as const,
+      width: 180,
+      truncate: false,
+      align: "right" as const,
+      render: ({ record }: { record: FactorySendRow }) => {
+        const sku = String(record.mat_num ?? "");
+        if (!factorySendRowBlocksCartons(record) || sku.length === 0) {
+          return null;
+        }
+        return (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setCaseQtySku(sku)}
+            data-testid={`purchasing-factory-send-enter-case-qty-${sku}`}
+          >
+            Enter Case Quantity
+          </Button>
+        );
+      },
+    };
+    return [
+      ...baseColumns.slice(0, totCartonsIndex),
+      caseQtyActionColumn,
+      ...baseColumns.slice(totCartonsIndex),
+    ];
+  }, [sheet?.columns]);
 
   const table = useTable({
     data: rows,
     columns,
     getRowId: factorySendRowId,
+    getRowClassName: factorySendRowClassName,
     fillColumn: "description",
     enableSorting: false,
     enableSelection: false,
@@ -834,6 +1139,7 @@ function FactorySendLinesTable({ purchaseOrderId }: { purchaseOrderId: string })
       : "This purchase order has no lines.";
 
   return (
+    <div className="flex min-h-0 flex-1 flex-col gap-tight">
     <Table
       sticky
       table={table}
@@ -843,6 +1149,19 @@ function FactorySendLinesTable({ purchaseOrderId }: { purchaseOrderId: string })
       <Table.Body />
       <Table.Empty />
     </Table>
+      {caseQtySku ? (
+        <ProductCaseQtyDialog
+          sku={caseQtySku}
+          purchaseOrderId={purchaseOrderId}
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setCaseQtySku(null);
+            }
+          }}
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -863,6 +1182,21 @@ function ConfirmedPurchaseOrderView({
 }) {
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [missingCaseQtyDownloadOpen, setMissingCaseQtyDownloadOpen] =
+    useState(false);
+  const factorySendQuery = useGetInternalPurchaseOrderFactorySend(purchaseOrderId);
+  const factorySendReady = factorySendQuery.data?.status === 200;
+  const factorySendRows = useMemo(() => {
+    if (!factorySendReady || factorySendQuery.data?.status !== 200) {
+      return [] as FactorySendRow[];
+    }
+    return factorySendQuery.data.data.rows as FactorySendRow[];
+  }, [factorySendQuery.data, factorySendReady]);
+  const blockedSkus = useMemo(
+    () => factorySendBlockedSkus(factorySendRows),
+    [factorySendRows],
+  );
+  const missingCaseQtySku = factorySendReady ? firstBlockedSku(factorySendRows) : null;
 
   const downloadXlsx = async () => {
     setExporting(true);
@@ -874,6 +1208,17 @@ function ConfirmedPurchaseOrderView({
     } finally {
       setExporting(false);
     }
+  };
+
+  const requestDownloadXlsx = () => {
+    if (!factorySendReady || factorySendQuery.isFetching) {
+      return;
+    }
+    if (missingCaseQtySku) {
+      setMissingCaseQtyDownloadOpen(true);
+      return;
+    }
+    void downloadXlsx();
   };
 
   return (
@@ -903,20 +1248,33 @@ function ConfirmedPurchaseOrderView({
             Ship date: {shipDate ?? "—"} · Cancel date: {cancelDate ?? "—"}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={exporting}
-          onClick={() => void downloadXlsx()}
-        >
-          {exporting ? "Downloading…" : "Download XLS"}
-        </Button>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-tight">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={
+              exporting || !factorySendReady || factorySendQuery.isFetching
+            }
+            onClick={requestDownloadXlsx}
+          >
+            <Download className="size-icon-lg" aria-hidden />
+            {exporting ? "Downloading…" : "Download XLS"}
+          </Button>
+        </div>
       </header>
       {actionError ? (
         <p className="text-body-sm text-error" role="alert">
           {actionError}
         </p>
+      ) : null}
+      {missingCaseQtySku ? (
+        <MissingCaseQtyDownloadDialog
+          open={missingCaseQtyDownloadOpen}
+          sku={missingCaseQtySku}
+          onOpenChange={setMissingCaseQtyDownloadOpen}
+          onProceed={() => void downloadXlsx()}
+        />
       ) : null}
       <FactorySendLinesTable purchaseOrderId={purchaseOrderId} />
     </section>

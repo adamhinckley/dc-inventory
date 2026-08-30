@@ -86,6 +86,13 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
       "background-color: var(--color-surface-raised)",
     );
     expect(utilityBody).toContain("&::-webkit-scrollbar-corner");
+
+    const cardUtilityMatch = utilities.match(
+      /@utility scrollbar-track-card\s*\{([\s\S]*?)\n\}/,
+    );
+    expect(cardUtilityMatch?.[1]).toContain(
+      "scrollbar-color: var(--color-fg-muted) var(--color-surface-card)",
+    );
   });
 
   it("exposes a z-index stack so portaled popups paint above AppShell content", () => {

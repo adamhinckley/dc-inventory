@@ -11,6 +11,7 @@ import {
   notFoundResponseSchema,
   productDetailSchema,
   productIdParamsSchema,
+  productSkuParamsSchema,
   productImportQuerySchema,
   productImportResultSchema,
   productListResponseSchema,
@@ -57,7 +58,7 @@ function mapListItem(product: Product, qty: ProductQty, createdAt: Date) {
   };
 }
 
-function mapDetail(product: Product, qty: ProductQty) {
+function mapDetail(product: Product, qty: ProductQty, caseQty: number | null = null) {
   return {
     id: product.id,
     sku: product.sku.value,
@@ -70,6 +71,7 @@ function mapDetail(product: Product, qty: ProductQty) {
     discontinued: product.discontinued,
     webWholesale: product.webWholesale,
     taxCategoryCode: product.taxCategoryCode,
+    caseQty,
     ...mapQty(qty),
   };
 }
@@ -212,6 +214,46 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
   );
 
   routes.patch(
+    "/products/sku/:sku",
+    {
+      schema: {
+        operationId: "updateInternalProductBySku",
+        tags: ["internal"],
+        summary: "Update product by SKU (sku is immutable; no qty writes)",
+        params: productSkuParamsSchema,
+        body: productPatchBodySchema,
+        response: {
+          200: productDetailSchema,
+          ...writeErrorResponses,
+          422: qtyNotAllowedResponseSchema,
+          409: skuImmutableResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.catalog.updateProduct.execute({
+        ...request.body,
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        sku: request.params.sku,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return sendNotFound(reply);
+        }
+        if (result.reason === "sku_immutable") {
+          return reply.code(409).send({ error: "sku_immutable" as const });
+        }
+        if (result.reason === "qty_not_allowed") {
+          return reply.code(422).send({ error: "qty_not_allowed" as const });
+        }
+        return sendInvalid(reply);
+      }
+      return mapDetail(result.product, result.qty, result.caseQty);
+    },
+  );
+
+  routes.patch(
     "/products/:id",
     {
       schema: {
@@ -247,7 +289,7 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
         }
         return sendInvalid(reply);
       }
-      return mapDetail(result.product, result.qty);
+      return mapDetail(result.product, result.qty, result.caseQty);
     },
   );
 }
@@ -325,7 +367,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
       if (!result.ok) {
         return sendNotFound(reply);
       }
-      return mapDetail(result.product, result.qty);
+      return mapDetail(result.product, result.qty, result.caseQty);
     },
   );
 }

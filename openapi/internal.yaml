@@ -2175,6 +2175,12 @@ paths:
                   taxCategoryCode:
                     nullable: true
                     type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
                   onHand:
                     type: integer
                     minimum: -9007199254740991
@@ -2203,6 +2209,7 @@ paths:
                   - discontinued
                   - webWholesale
                   - taxCategoryCode
+                  - caseQty
                   - onHand
                   - onOrder
                   - allocated
@@ -2539,6 +2546,228 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+  /internal/products/sku/{sku}:
+    patch:
+      operationId: updateInternalProductBySku
+      summary: Update product by SKU (sku is immutable; no qty writes)
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                uom:
+                  type: string
+                  minLength: 1
+                memberPriceCents:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                inactive:
+                  type: boolean
+                discontinued:
+                  type: boolean
+                webWholesale:
+                  type: boolean
+                description:
+                  nullable: true
+                  type: string
+                taxCategoryCode:
+                  nullable: true
+                  type: string
+                caseQty:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: sku
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  sku:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    nullable: true
+                    type: string
+                  uom:
+                    type: string
+                  memberPriceCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                  inactive:
+                    type: boolean
+                  discontinued:
+                    type: boolean
+                  webWholesale:
+                    type: boolean
+                  taxCategoryCode:
+                    nullable: true
+                    type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  onHand:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  onOrder:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  allocated:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  available:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - id
+                  - sku
+                  - name
+                  - description
+                  - uom
+                  - memberPriceCents
+                  - currency
+                  - inactive
+                  - discontinued
+                  - webWholesale
+                  - taxCategoryCode
+                  - caseQty
+                  - onHand
+                  - onOrder
+                  - allocated
+                  - available
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - sku_immutable
+                required:
+                  - error
+                additionalProperties: false
+        "422":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - qty_not_allowed
+                required:
+                  - error
+                additionalProperties: false
   /internal/products/{id}:
     patch:
       operationId: updateInternalProduct
@@ -2578,6 +2807,12 @@ paths:
                 taxCategoryCode:
                   nullable: true
                   type: string
+                caseQty:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
       parameters:
         - schema:
             type: string
@@ -2622,6 +2857,12 @@ paths:
                   taxCategoryCode:
                     nullable: true
                     type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
                   onHand:
                     type: integer
                     minimum: -9007199254740991
@@ -2650,6 +2891,7 @@ paths:
                   - discontinued
                   - webWholesale
                   - taxCategoryCode
+                  - caseQty
                   - onHand
                   - onOrder
                   - allocated
@@ -2798,6 +3040,12 @@ paths:
                   taxCategoryCode:
                     nullable: true
                     type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
                   onHand:
                     type: integer
                     minimum: -9007199254740991
@@ -2826,6 +3074,7 @@ paths:
                   - discontinued
                   - webWholesale
                   - taxCategoryCode
+                  - caseQty
                   - onHand
                   - onOrder
                   - allocated
@@ -3907,6 +4156,8 @@ paths:
                                 - ""
                         tot_cbm:
                           type: string
+                        blocks_tot_cartons:
+                          type: boolean
                       required:
                         - ship_date
                         - canc_date
@@ -3922,6 +4173,7 @@ paths:
                         - cs_cube_metric
                         - tot_cartons
                         - tot_cbm
+                        - blocks_tot_cartons
                       additionalProperties: false
                 required:
                   - columns

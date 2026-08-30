@@ -37,6 +37,12 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
         topbar={
           <AppShell.Topbar>
             <p className="text-body-sm text-fg-secondary">Staff dashboard</p>
+            <AppShell.TopbarActions>
+              <div
+                id="dashboard-topbar-actions"
+                className="flex items-center gap-tight"
+              />
+            </AppShell.TopbarActions>
           </AppShell.Topbar>
         }
       >

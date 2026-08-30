@@ -20,4 +20,5 @@ export type GetInternalPurchaseOrderFactorySend200RowsItem = {
   cs_cube_metric: number;
   tot_cartons: number | '';
   tot_cbm: string;
+  blocks_tot_cartons: boolean;
 };

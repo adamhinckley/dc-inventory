@@ -269,6 +269,14 @@ import type {
   UpdateInternalProduct409,
   UpdateInternalProduct422,
   UpdateInternalProductBody,
+  UpdateInternalProductBySku200,
+  UpdateInternalProductBySku400,
+  UpdateInternalProductBySku401,
+  UpdateInternalProductBySku403,
+  UpdateInternalProductBySku404,
+  UpdateInternalProductBySku409,
+  UpdateInternalProductBySku422,
+  UpdateInternalProductBySkuBody,
   UpdateInternalSupplier200,
   UpdateInternalSupplier400,
   UpdateInternalSupplier401,
@@ -2392,6 +2400,128 @@ export function useListInternalProducts<TData = Awaited<ReturnType<typeof listIn
 
 
 
+
+export type updateInternalProductBySkuResponse200 = {
+  data: UpdateInternalProductBySku200
+  status: 200
+}
+
+export type updateInternalProductBySkuResponse400 = {
+  data: UpdateInternalProductBySku400
+  status: 400
+}
+
+export type updateInternalProductBySkuResponse401 = {
+  data: UpdateInternalProductBySku401
+  status: 401
+}
+
+export type updateInternalProductBySkuResponse403 = {
+  data: UpdateInternalProductBySku403
+  status: 403
+}
+
+export type updateInternalProductBySkuResponse404 = {
+  data: UpdateInternalProductBySku404
+  status: 404
+}
+
+export type updateInternalProductBySkuResponse409 = {
+  data: UpdateInternalProductBySku409
+  status: 409
+}
+
+export type updateInternalProductBySkuResponse422 = {
+  data: UpdateInternalProductBySku422
+  status: 422
+}
+
+export type updateInternalProductBySkuResponseSuccess = (updateInternalProductBySkuResponse200) & {
+  headers: Headers;
+};
+export type updateInternalProductBySkuResponseError = (updateInternalProductBySkuResponse400 | updateInternalProductBySkuResponse401 | updateInternalProductBySkuResponse403 | updateInternalProductBySkuResponse404 | updateInternalProductBySkuResponse409 | updateInternalProductBySkuResponse422) & {
+  headers: Headers;
+};
+
+export type updateInternalProductBySkuResponse = (updateInternalProductBySkuResponseSuccess | updateInternalProductBySkuResponseError)
+
+export const getUpdateInternalProductBySkuUrl = (sku: string,) => {
+
+
+
+
+  return `/internal/products/sku/${sku}`
+}
+
+/**
+ * @summary Update product by SKU (sku is immutable; no qty writes)
+ */
+export const updateInternalProductBySku = async (sku: string,
+    updateInternalProductBySkuBody: UpdateInternalProductBySkuBody, options?: Parameters<typeof customFetch>[1]): Promise<updateInternalProductBySkuResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateInternalProductBySkuResponse>(getUpdateInternalProductBySkuUrl(sku),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInternalProductBySkuBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInternalProductBySkuMutationOptions = <TError = UpdateInternalProductBySku400 | UpdateInternalProductBySku401 | UpdateInternalProductBySku403 | UpdateInternalProductBySku404 | UpdateInternalProductBySku409 | UpdateInternalProductBySku422,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalProductBySku>>, TError,{sku: string;data: UpdateInternalProductBySkuBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInternalProductBySku>>, TError,{sku: string;data: UpdateInternalProductBySkuBody}, TContext> => {
+
+const mutationKey = ['updateInternalProductBySku'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInternalProductBySku>>, {sku: string;data: UpdateInternalProductBySkuBody}> = (props) => {
+          const {sku,data} = props ?? {};
+
+          return  updateInternalProductBySku(sku,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInternalProductBySkuMutationResult = NonNullable<Awaited<ReturnType<typeof updateInternalProductBySku>>>
+    export type UpdateInternalProductBySkuMutationBody = UpdateInternalProductBySkuBody
+    export type UpdateInternalProductBySkuMutationError = UpdateInternalProductBySku400 | UpdateInternalProductBySku401 | UpdateInternalProductBySku403 | UpdateInternalProductBySku404 | UpdateInternalProductBySku409 | UpdateInternalProductBySku422
+
+    /**
+ * @summary Update product by SKU (sku is immutable; no qty writes)
+ */
+export const useUpdateInternalProductBySku = <TError = UpdateInternalProductBySku400 | UpdateInternalProductBySku401 | UpdateInternalProductBySku403 | UpdateInternalProductBySku404 | UpdateInternalProductBySku409 | UpdateInternalProductBySku422,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalProductBySku>>, TError,{sku: string;data: UpdateInternalProductBySkuBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInternalProductBySku>>,
+        TError,
+        {sku: string;data: UpdateInternalProductBySkuBody},
+        TContext
+      > => {
+      return useMutation(getUpdateInternalProductBySkuMutationOptions(options));
+    }
 
 export type updateInternalProductResponse200 = {
   data: UpdateInternalProduct200

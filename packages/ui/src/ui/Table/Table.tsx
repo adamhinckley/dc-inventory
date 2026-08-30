@@ -341,15 +341,16 @@ export function TableRoot({
         // vertical padding for pseudo spacers.
         data-sticky-table={sticky || undefined}
         className={cn(
-          'flex min-w-0 w-full flex-col rounded-section border border-border',
+          'flex min-w-0 w-full flex-col overflow-clip rounded-section border border-border',
+          // `overflow-clip` keeps header and last-row fills inside
+          // `rounded-section` without creating a scrollport (sticky thead
+          // still pins to the inner overflow-auto scroller).
           // Sticky mode: the card owns its own scrolling (CORE-990). It caps
           // at the hosting container's content height and the rows scroll
           // INSIDE it — the card outline stays put while content disappears
           // under the frame, both scrollbars render at the card's own edges,
           // and the bulk/pagination bars are static card chrome below the
-          // scroller (always visible, no sticky machinery). `overflow-clip`
-          // (not `overflow-hidden`) clips the chrome to the rounded corners
-          // without creating a scrolling ancestor for the thead.
+          // scroller (always visible, no sticky machinery).
           //
           // `min-h-0` is the height binding when the card is a flex item
           // (detail-tab / reports feature roots). It keeps the DEFAULT flex
@@ -363,7 +364,7 @@ export function TableRoot({
           // scrollport parents (ExplorerViewContent, Dialog.Body) where
           // `max-h-full` is the binding — a child is only a flex item when its
           // parent is `display:flex`, and `min-h-0` is a no-op on block boxes.
-          sticky && 'max-h-full overflow-clip min-h-0',
+          sticky && 'max-h-full min-h-0',
           className,
         )}
         {...rest}
@@ -383,7 +384,7 @@ export function TableRoot({
           }}
           tabIndex={-1}
           className={cn(
-            'overflow-auto bg-surface-raised scrollbar-track-raised focus:outline-none',
+            'overflow-auto bg-surface-card scrollbar-track-card focus:outline-none',
             sticky && 'min-h-0',
           )}
         >
@@ -792,9 +793,11 @@ export function TableBody({ className, ref, ...rest }: TableBodyProps) {
             tabIndex={index === activeIndex && activeCol === -1 ? 0 : -1}
             className={cn(
               'border-b border-border last:border-b-0 transition-colors hover:bg-interactive',
+              'last:[&>td:first-child]:rounded-bl-section last:[&>td:last-child]:rounded-br-section',
               selected && 'bg-selected',
               departed && 'opacity-50',
               flashed && 'table-row-arrived',
+              table.getRowClassName?.(row),
             )}
             data-selected={selected || undefined}
             data-departed={departed || undefined}

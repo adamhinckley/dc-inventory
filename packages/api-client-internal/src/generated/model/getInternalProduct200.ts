@@ -25,6 +25,12 @@ export type GetInternalProduct200 = {
   /** @nullable */
   taxCategoryCode: string | null;
   /**
+     * @maximum 9007199254740991
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  caseQty: number | null;
+  /**
      * @minimum -9007199254740991
      * @maximum 9007199254740991
      */

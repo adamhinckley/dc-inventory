@@ -334,6 +334,7 @@ describe("internal purchase orders HTTP", () => {
           quan: 5,
           description: "Hex bolt from Catalog",
           tot_cbm: "Not Available",
+          blocks_tot_cartons: true,
         }),
       ],
     });

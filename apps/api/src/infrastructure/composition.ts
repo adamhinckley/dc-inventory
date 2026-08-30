@@ -314,11 +314,11 @@ function catalogServices(
   packaging: IProductPackagingRepository,
 ): CatalogHttpServices {
   const createProduct = new CreateProductUseCase(productRepo);
-  const updateProduct = new UpdateProductUseCase(productRepo, qtyRead);
+  const updateProduct = new UpdateProductUseCase(productRepo, qtyRead, packaging);
   return {
     listStaffProducts: new ListStaffProductsUseCase(catalogListQuery),
     createProduct,
-    getProduct: new GetProductUseCase(productRepo, qtyRead),
+    getProduct: new GetProductUseCase(productRepo, qtyRead, packaging),
     updateProduct,
     importProductBrowser: new ImportProductBrowserUseCase(
       productRepo,
