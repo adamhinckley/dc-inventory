@@ -482,17 +482,18 @@ function PurchaseOrderWorkspaceBody({
       },
     },
   );
+  const factorySendReady = factorySendQuery.data?.status === 200;
   const factorySendRows = useMemo(() => {
-    if (factorySendQuery.data?.status !== 200) {
+    if (!factorySendReady || factorySendQuery.data?.status !== 200) {
       return [] as FactorySendRow[];
     }
     return factorySendQuery.data.data.rows as FactorySendRow[];
-  }, [factorySendQuery.data]);
+  }, [factorySendQuery.data, factorySendReady]);
   const blockedSkus = useMemo(
     () => factorySendBlockedSkus(factorySendRows),
     [factorySendRows],
   );
-  const missingCaseQtySku = firstBlockedSku(factorySendRows);
+  const missingCaseQtySku = factorySendReady ? firstBlockedSku(factorySendRows) : null;
 
   const lastSavedLinesRef = useRef(coalescePurchaseOrderLines(initialLines));
   const lastSavedDatesRef = useRef({
@@ -789,12 +790,20 @@ function PurchaseOrderWorkspaceBody({
   }, [flushAutosave, initialDocumentNumber, purchaseOrderId]);
 
   const requestDownloadXlsx = useCallback(() => {
+    if (!factorySendReady || factorySendQuery.isFetching) {
+      return;
+    }
     if (missingCaseQtySku) {
       setMissingCaseQtyDownloadOpen(true);
       return;
     }
     void downloadXlsx();
-  }, [downloadXlsx, missingCaseQtySku]);
+  }, [
+    downloadXlsx,
+    factorySendQuery.isFetching,
+    factorySendReady,
+    missingCaseQtySku,
+  ]);
 
   const title = isNew
     ? "New draft purchase order"
@@ -904,7 +913,12 @@ function PurchaseOrderWorkspaceBody({
             <Button
               type="button"
               variant="secondary"
-              disabled={exporting || lines.length === 0}
+              disabled={
+                exporting ||
+                lines.length === 0 ||
+                !factorySendReady ||
+                factorySendQuery.isFetching
+              }
               onClick={requestDownloadXlsx}
             >
               <Download className="size-icon-lg" aria-hidden />
@@ -1043,47 +1057,69 @@ function FactorySendLinesTable({ purchaseOrderId }: { purchaseOrderId: string })
     () => (sheet?.rows ?? []) as FactorySendRow[],
     [sheet?.rows],
   );
-  const columns = useMemo(
-    () =>
-      factorySendTableColumns(sheet?.columns ?? []).map((column) =>
-        column.id !== "tot_cartons"
-          ? column
-          : {
-              ...column,
-              render: ({ record }: { record: FactorySendRow }) => {
-                const sku = String(record.mat_num ?? "");
-                if (!factorySendRowBlocksCartons(record)) {
-                  return formatFactorySendCell(record.tot_cartons);
-                }
-                return (
-                  <div className="flex flex-wrap items-center gap-tight">
-                    <Chip
-                      id={missingCaseQtyRowElementId(sku)}
-                      icon={<Chip.Dot />}
-                      style={
-                        { "--chip-color": "var(--color-warning)" } as CSSProperties
-                      }
-                    >
-                      {FACTORY_SEND_NO_CASE_QTY_LABEL}
-                    </Chip>
-                    {sku.length > 0 ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setCaseQtySku(sku)}
-                        data-testid={`purchasing-factory-send-enter-case-qty-${sku}`}
-                      >
-                        Enter Case Quantity
-                      </Button>
-                    ) : null}
-                  </div>
-                );
-              },
+  const columns = useMemo(() => {
+    const baseColumns = factorySendTableColumns(sheet?.columns ?? []).map((column) =>
+      column.id !== "mat_num"
+        ? column
+        : {
+            ...column,
+            render: ({ record }: { record: FactorySendRow }) => {
+              const sku = String(record.mat_num ?? "");
+              if (!factorySendRowBlocksCartons(record)) {
+                return formatFactorySendCell(record.mat_num);
+              }
+              return (
+                <span className="flex flex-wrap items-center gap-tight">
+                  <span>{sku}</span>
+                  <Chip
+                    id={missingCaseQtyRowElementId(sku)}
+                    icon={<Chip.Dot />}
+                    style={
+                      { "--chip-color": "var(--color-warning)" } as CSSProperties
+                    }
+                  >
+                    {FACTORY_SEND_NO_CASE_QTY_LABEL}
+                  </Chip>
+                </span>
+              );
             },
-      ),
-    [sheet?.columns],
-  );
+          },
+    );
+    const totCartonsIndex = baseColumns.findIndex((column) => column.id === "tot_cartons");
+    if (totCartonsIndex === -1) {
+      return baseColumns;
+    }
+    const caseQtyActionColumn = {
+      id: "caseQtyAction",
+      label: "",
+      sort: false as const,
+      width: 180,
+      truncate: false,
+      align: "right" as const,
+      render: ({ record }: { record: FactorySendRow }) => {
+        const sku = String(record.mat_num ?? "");
+        if (!factorySendRowBlocksCartons(record) || sku.length === 0) {
+          return null;
+        }
+        return (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setCaseQtySku(sku)}
+            data-testid={`purchasing-factory-send-enter-case-qty-${sku}`}
+          >
+            Enter Case Quantity
+          </Button>
+        );
+      },
+    };
+    return [
+      ...baseColumns.slice(0, totCartonsIndex),
+      caseQtyActionColumn,
+      ...baseColumns.slice(totCartonsIndex),
+    ];
+  }, [sheet?.columns]);
 
   const table = useTable({
     data: rows,
@@ -1149,17 +1185,18 @@ function ConfirmedPurchaseOrderView({
   const [missingCaseQtyDownloadOpen, setMissingCaseQtyDownloadOpen] =
     useState(false);
   const factorySendQuery = useGetInternalPurchaseOrderFactorySend(purchaseOrderId);
+  const factorySendReady = factorySendQuery.data?.status === 200;
   const factorySendRows = useMemo(() => {
-    if (factorySendQuery.data?.status !== 200) {
+    if (!factorySendReady || factorySendQuery.data?.status !== 200) {
       return [] as FactorySendRow[];
     }
     return factorySendQuery.data.data.rows as FactorySendRow[];
-  }, [factorySendQuery.data]);
+  }, [factorySendQuery.data, factorySendReady]);
   const blockedSkus = useMemo(
     () => factorySendBlockedSkus(factorySendRows),
     [factorySendRows],
   );
-  const missingCaseQtySku = firstBlockedSku(factorySendRows);
+  const missingCaseQtySku = factorySendReady ? firstBlockedSku(factorySendRows) : null;
 
   const downloadXlsx = async () => {
     setExporting(true);
@@ -1174,6 +1211,9 @@ function ConfirmedPurchaseOrderView({
   };
 
   const requestDownloadXlsx = () => {
+    if (!factorySendReady || factorySendQuery.isFetching) {
+      return;
+    }
     if (missingCaseQtySku) {
       setMissingCaseQtyDownloadOpen(true);
       return;
@@ -1213,7 +1253,9 @@ function ConfirmedPurchaseOrderView({
             type="button"
             variant="secondary"
             size="sm"
-            disabled={exporting}
+            disabled={
+              exporting || !factorySendReady || factorySendQuery.isFetching
+            }
             onClick={requestDownloadXlsx}
           >
             <Download className="size-icon-lg" aria-hidden />
