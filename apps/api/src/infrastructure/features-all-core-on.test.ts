@@ -9,11 +9,11 @@ describe("readFeaturesAllCoreOn", () => {
     expect(readFeaturesAllCoreOn({ FEATURES_ALL_CORE_ON: " 0 " })).toBe(false);
   });
 
-  it("defaults on for local listen, off for test and production", () => {
+  it("defaults on except in test", () => {
     expect(readFeaturesAllCoreOn({})).toBe(true);
     expect(readFeaturesAllCoreOn({ NODE_ENV: "development" })).toBe(true);
+    expect(readFeaturesAllCoreOn({ NODE_ENV: "production" })).toBe(true);
     expect(readFeaturesAllCoreOn({ NODE_ENV: "test" })).toBe(false);
-    expect(readFeaturesAllCoreOn({ NODE_ENV: "production" })).toBe(false);
   });
 
   it("lets the explicit flag win over NODE_ENV", () => {
