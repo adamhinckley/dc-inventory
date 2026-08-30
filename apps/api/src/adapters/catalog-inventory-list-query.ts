@@ -89,6 +89,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     const onOrder = sql<number>`coalesce(${stockSnapshots.onOrder}, 0)`;
     const allocated = sql<number>`coalesce(${stockSnapshots.allocated}, 0)`;
     const available = sql<number>`coalesce(${stockSnapshots.available}, 0)`;
+    const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
     const sortExpression =
       query.sortBy === "sku"
         ? products.sku
@@ -99,7 +100,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           : query.sortBy === "available"
             ? available
             : query.sortBy === "caseQty"
-              ? productPackaging.caseQty
+              ? caseQty
               : products.createdAt;
     const direction = query.sortOrder === "desc" ? desc : asc;
     const offset = (query.page - 1) * query.pageSize;
