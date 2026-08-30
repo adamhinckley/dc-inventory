@@ -1,0 +1,24 @@
+---
+description: Opaque overlay cards for tooltips, menus, popovers, and dialogs
+globs: apps/internal/**/*.tsx,packages/ui/**/*.tsx,packages/ui-internal/**/*.tsx
+alwaysApply: false
+---
+
+# Overlay surfaces
+
+Source: [`docs/work-dashboard-design-spec.md`](../../docs/work-dashboard-design-spec.md) §13.
+
+Floating chrome uses `.overlay` or `bg-surface-overlay` (solid hex). Carbon `$overlay` is the modal scrim only (`bg-backdrop`).
+
+```tsx
+// Wrong: no fill, invented class
+<Tooltip.Popup className="tooltip-bg border border-border shadow-overlay">
+
+// Wrong: scrim as the card
+<Tooltip.Popup className="bg-backdrop">
+
+// Right
+<Tooltip.Popup className="overlay rounded-section p-3 shadow-overlay">
+```
+
+Done when page or table text cannot be read through the popup.

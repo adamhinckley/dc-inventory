@@ -21,6 +21,7 @@ import {
   ChevronUp,
   ChevronsUpDown,
   Filter,
+  HelpCircle,
 } from 'lucide-react'
 import { PII_MASK_CLASS } from '#shared/constants/pii-mask'
 import { cn } from '#cn'
@@ -491,6 +492,12 @@ export function TableHeader({ className, ref, ...rest }: TableHeaderProps) {
                 )}
               >
                 {column.label}
+                {column.tooltip && (
+                  <HelpCircle
+                    aria-hidden
+                    className="size-icon-sm shrink-0 text-fg-tertiary"
+                  />
+                )}
                 {column.filterApplied && (
                   // Persistent column-level "filter applied" indicator. The
                   // hover-reveal cross-filter affordance stays in the cell;

@@ -23,6 +23,8 @@ Color, type, and dark opt-in: [`docs/work-dashboard-design-spec.md`](../../../wo
 
 Form rows: §12 of that spec. `FieldRow` + `LabeledField`. Controls share `--space-input-height`. The trailing action is `Button variant="primary"` at default `md` size, not `secondary` `size="sm"`.
 
+Overlay surfaces: §13. Tooltip, popover, menu, and dialog cards use `.overlay`. `bg-backdrop` is the modal scrim only.
+
 ## Allowed paths
 
 - `apps/internal/**`

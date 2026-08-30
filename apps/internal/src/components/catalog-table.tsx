@@ -10,6 +10,8 @@ import {
 } from "@dc-inventory/ui-internal";
 import { useCallback, useState } from "react";
 import { replaceTableUrlParams } from "../lib/table-url-params";
+import { CatalogCsvDownloadButton } from "./catalog-csv-download-button";
+import { CatalogImportDialog } from "./catalog-import-dialog";
 import { CatalogProductEditDialog } from "./catalog-product-edit-dialog";
 import { CatalogProductRowMenu } from "./catalog-product-row-menu";
 
@@ -51,8 +53,12 @@ export function CatalogTable({
         onParamsChange={onParamsChange}
         rowActions={rowActions}
       >
-        <DataTable.Search />
-        <DataTable.Filters />
+        <DataTable.Toolbar>
+          <DataTable.Search />
+          <DataTable.Filters />
+          <CatalogCsvDownloadButton />
+          <CatalogImportDialog />
+        </DataTable.Toolbar>
         <DataTable.Table />
         <DataTable.Pagination />
       </DataTable.Root>

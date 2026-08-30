@@ -1,12 +1,14 @@
 /**
  * Overlay (elevation-3) — Floating surfaces.
  * Dialogs, popovers, drawers, dropdowns, tooltips.
+ * Fill is opaque `--color-surface-overlay`. Carbon `$overlay` (60% black)
+ * is `--color-backdrop` / `bg-backdrop`, the modal scrim only.
  */
 
 /* --- Container -------------------------------------------------------------- */
 
-/** Solid border, no pseudo-element effects.
-    Shadow for depth is applied by component consumers (Dialog, Menu, Popover). */
+/** Solid fill + border. Do not add alpha or color-mix here.
+    Shadow for depth is applied by component consumers (Dialog, Menu, Popover, Tooltip). */
 
 .overlay {
   background-color: var(--color-surface-overlay);

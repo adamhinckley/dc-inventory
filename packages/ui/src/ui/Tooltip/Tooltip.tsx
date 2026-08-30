@@ -32,7 +32,7 @@ export interface TooltipProps {
  *   title + description, use `TooltipHelp` instead.
  * @avoid Rich content — use `Popover`. Wrapping elements that don't forward
  *   ref/props (Base UI needs to attach event handlers to the trigger).
- * @tokens tooltip-bg + border-border (popup surface), z-popover (positioner z-index)
+ * @tokens overlay (opaque E3 surface), z-popover (positioner z-index)
  */
 export function Tooltip({ content, children, hoverable }: TooltipProps) {
   if (!content) return children
@@ -42,7 +42,7 @@ export function Tooltip({ content, children, hoverable }: TooltipProps) {
       <BaseTooltip.Trigger render={children} />
       <BaseTooltip.Portal>
         <BaseTooltip.Positioner sideOffset={6} className="z-popover">
-          <BaseTooltip.Popup className="tooltip-bg border border-border max-w-[320px] rounded-section px-2.5 py-1.5 shadow-overlay">
+          <BaseTooltip.Popup className="overlay max-w-[320px] rounded-section px-2.5 py-1.5 shadow-overlay">
             <BaseTooltip.Arrow />
             <p className="overlay-description">{content}</p>
           </BaseTooltip.Popup>

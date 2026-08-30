@@ -4,6 +4,8 @@ export { formatMoneyMinorUnits } from "./lib/format-money";
 export { Button, buttonVariants, type ButtonProps } from "./primitives/button";
 export { Input, type InputProps } from "./primitives/input";
 export { Label, type LabelProps } from "./primitives/label";
+export { TextInput, type TextInputProps } from "./ui/TextInput";
+export { Checkbox, type CheckboxProps } from "./ui/Checkbox";
 export {
   FieldRow,
   LabeledField,
@@ -14,7 +16,7 @@ export { AppShell, useAppShellContext } from "./shells/AppShell";
 
 export { Combobox, type ComboboxProps } from "./ui/Combobox";
 export { Chip, type ChipProps } from "./ui/Chip";
-export { Table, useTable, type TableColumnDef } from "./ui/Table";
+export { Table, useTable, type TableColumnDef, type TableTooltip } from "./ui/Table";
 export {
   Form,
   scrollToFirstError,
@@ -26,6 +28,7 @@ export {
 } from "./ui/Form";
 export { FormDialog, type FormDialogProps } from "./ui/FormDialog";
 export { Dialog } from "./ui/Dialog";
+export { TooltipHelp, type TooltipHelpProps } from "./ui/TooltipHelp";
 export { Progress, type ProgressProps } from "./ui/Progress";
 export { Menu } from "./ui/Menu";
 export { DateInput, type DateInputProps } from "./ui/DateInput";
