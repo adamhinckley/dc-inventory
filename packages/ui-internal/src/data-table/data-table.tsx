@@ -1,16 +1,15 @@
 "use client";
 
-import { Button, Input, Label } from "@dc-inventory/ui";
-import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
+import { Input, Label, Table, useTable, type TableColumnDef } from "@dc-inventory/ui";
 import {
   createContext,
   useContext,
+  useMemo,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
 } from "react";
 import {
-  nextTableSort,
   type DataTableState,
   type ListQueryParams,
 } from "./list-params";
@@ -19,7 +18,7 @@ import {
   type TableFilterMeta,
   type TableMeta,
 } from "./table-meta";
-import { readFieldValue } from "./cell-value";
+import { formatFieldDisplay, readFieldValue } from "./cell-value";
 import {
   useDataTable,
   type ListQueryHook,
@@ -76,7 +75,7 @@ function useDataTableContext(): DataTableContextValue {
 }
 
 function cellValue(row: Record<string, unknown>, field: string): ReactNode {
-  const value = readFieldValue(row, field);
+  const value = formatFieldDisplay(readFieldValue(row, field));
   if (value === null || value === undefined) {
     return "—";
   }
@@ -286,7 +285,7 @@ export function DataTableRoot<
           | undefined,
       }}
     >
-      <div className="flex flex-col gap-field-group">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col gap-field-group">{children}</div>
     </DataTableContext.Provider>
   );
 }
@@ -314,7 +313,7 @@ export function DataTableSearch() {
   const searchId = `${idBase}-search`;
 
   return (
-    <div className="flex min-w-56 flex-1 flex-col gap-2">
+    <div className="flex min-w-56 shrink-0 flex-col gap-2">
       <Label htmlFor={searchId}>{meta.search.placeholder}</Label>
       <Input
         id={searchId}
@@ -358,7 +357,7 @@ export function DataTableFilters() {
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-field-group">
+    <div className="flex shrink-0 flex-wrap items-end gap-field-group">
       {meta.filters.map((filter) => (
         <FilterControl
           key={filter.param}
@@ -388,145 +387,148 @@ export function DataTableFilters() {
  * </DataTable.Root>
  * ```
  */
-export function DataTableTable() {
-  const { meta, items, query, busy, state, setState, getRowHref, linkField, renderRowLink, rowActions } =
-    useDataTableContext();
-  const hasRowActions = rowActions !== undefined;
-  const resolvedLinkField = linkField ?? meta.columns[0]?.field;
+const FILL_COLUMN_PREFERENCE = ["name", "supplierName", "productName"] as const;
+const NUMERIC_FIELDS = new Set([
+  "memberPrice",
+  "onHand",
+  "onOrder",
+  "allocated",
+  "available",
+  "qty",
+]);
+const CODE_FIELDS = new Set(["sku", "vendorNumber", "documentNumber"]);
 
-  function applySort(field: string) {
-    setState((current) => ({
-      ...current,
-      page: 1,
-      ...nextTableSort(meta, current, field),
-    }));
+function fillColumnId(meta: TableMeta): string {
+  const fields = meta.columns.map((column) => column.field);
+  for (const preferred of FILL_COLUMN_PREFERENCE) {
+    if (fields.includes(preferred)) {
+      return preferred;
+    }
   }
+  return fields[0] ?? meta.rowId;
+}
+
+function columnWidth(field: string): number | undefined {
+  if (FILL_COLUMN_PREFERENCE.includes(field as (typeof FILL_COLUMN_PREFERENCE)[number])) {
+    return undefined;
+  }
+  if (CODE_FIELDS.has(field)) {
+    return 160;
+  }
+  if (field === "createdAt") {
+    return 180;
+  }
+  if (NUMERIC_FIELDS.has(field)) {
+    return 100;
+  }
+  return 120;
+}
+
+export function DataTableTable() {
+  const {
+    meta,
+    items,
+    query,
+    busy,
+    state,
+    setState,
+    total,
+    page,
+    pageSize,
+    pageCount,
+    getRowHref,
+    linkField,
+    renderRowLink,
+    rowActions,
+  } = useDataTableContext();
+  const resolvedLinkField = linkField ?? meta.columns[0]?.field;
+  const fillColumn = fillColumnId(meta);
+
+  const columns = useMemo<TableColumnDef<Record<string, unknown>>[]>(
+    () =>
+      meta.columns.map((column) => {
+        const canSort = meta.sort?.fields.includes(column.field) ?? false;
+        return {
+          id: column.field,
+          label: column.label,
+          sort: canSort ? column.field : false,
+          width: columnWidth(column.field),
+          truncate: column.field !== fillColumn,
+          align: NUMERIC_FIELDS.has(column.field) ? "right" : "left",
+          render: ({ record }: { record: Record<string, unknown> }) => {
+            const href = getRowHref?.(record);
+            const content = renderCell(
+              record,
+              column.field,
+              href && column.field === resolvedLinkField ? href : undefined,
+              renderRowLink,
+            );
+            if (CODE_FIELDS.has(column.field)) {
+              return <span className="font-mono text-body-sm">{content}</span>;
+            }
+            return content;
+          },
+        };
+      }),
+    [fillColumn, getRowHref, meta.columns, meta.sort, renderRowLink, resolvedLinkField],
+  );
+
+  const table = useTable({
+    data: items as Record<string, unknown>[],
+    isPending: busy,
+    isError: query.isError === true,
+    columns,
+    getRowId: (row) => String(row[meta.rowId] ?? ""),
+    fillColumn,
+    enableSorting: Boolean(meta.sort),
+    enableSelection: false,
+    enablePagination: true,
+    defaultSortField: meta.sort?.defaultBy ?? null,
+    sort: {
+      field: state.sortBy || null,
+      direction: state.sortOrder,
+    },
+    onSortChange: (next) => {
+      setState((current) => ({
+        ...current,
+        page: 1,
+        sortBy: next.field ?? meta.sort?.defaultBy ?? current.sortBy,
+        sortOrder: next.direction,
+      }));
+    },
+    pagination: {
+      page: Math.max(0, page - 1),
+      pageSize,
+      totalRows: total,
+      canPreviousPage: page > 1,
+      canNextPage: page < pageCount,
+    },
+    onPaginationChange: (action) => {
+      setState((current) => {
+        if (action.type === "next") {
+          return { ...current, page: current.page + 1 };
+        }
+        if (action.type === "previous") {
+          return { ...current, page: Math.max(1, current.page - 1) };
+        }
+        return { ...current, page: 1, pageSize: action.pageSize };
+      });
+    },
+    rowActions,
+  });
 
   return (
-    <div className="section-flat">
-      <div className="overflow-x-auto bg-surface-raised scrollbar-track-raised">
-        <table className="w-full border-collapse bg-surface-card text-left text-body">
-        <thead>
-          <tr>
-            {meta.columns.map((column) => {
-              const canSort = meta.sort?.fields.includes(column.field) ?? false;
-              const isSorted = canSort && state.sortBy === column.field;
-              const chevron = canSort ? (
-                isSorted ? (
-                  state.sortOrder === "asc" ? (
-                    <ChevronUp className="size-icon" />
-                  ) : (
-                    <ChevronDown className="size-icon" />
-                  )
-                ) : (
-                  <ChevronsUpDown className="size-icon opacity-30" />
-                )
-              ) : null;
-              return (
-                <th
-                  key={column.field}
-                  scope="col"
-                  aria-sort={
-                    isSorted
-                      ? state.sortOrder === "asc"
-                        ? "ascending"
-                        : "descending"
-                      : undefined
-                  }
-                  className="section-content-column-header section-content-padding border-b border-border"
-                >
-                  {canSort ? (
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-tight bg-transparent p-0 text-inherit hover:text-fg"
-                      onClick={() => applySort(column.field)}
-                    >
-                      {column.label}
-                      {chevron}
-                    </button>
-                  ) : (
-                    column.label
-                  )}
-                </th>
-              );
-            })}
-            {hasRowActions ? (
-              <th
-                scope="col"
-                className="section-content-column-header section-content-padding border-b border-border"
-              >
-                Actions
-              </th>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {busy ? (
-            <tr>
-              <td
-                className="section-content-padding text-placeholder"
-                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
-              >
-                Loading…
-              </td>
-            </tr>
-          ) : query.isError ? (
-            <tr>
-              <td
-                className="section-content-padding text-error"
-                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
-              >
-                {query.error instanceof Error
-                  ? query.error.message
-                  : "Unable to load rows"}
-              </td>
-            </tr>
-          ) : items.length === 0 ? (
-            <tr>
-              <td
-                className="section-content-padding text-placeholder"
-                colSpan={meta.columns.length + (hasRowActions ? 1 : 0)}
-              >
-                No rows
-              </td>
-            </tr>
-          ) : (
-            items.map((item, index) => {
-              const row = item as Record<string, unknown>;
-              const rowKey = String(row[meta.rowId] ?? index);
-              const href = getRowHref?.(row);
-              return (
-                <tr key={rowKey}>
-                  {meta.columns.map((column) => (
-                    <td
-                      key={column.field}
-                      className={
-                        column.field === "sku" || column.field === "vendorNumber"
-                          ? "section-content-padding section-content-value-mono border-b border-border"
-                          : "section-content-padding section-content-value border-b border-border"
-                      }
-                    >
-                      {renderCell(
-                        row,
-                        column.field,
-                        href && column.field === resolvedLinkField ? href : undefined,
-                        renderRowLink,
-                      )}
-                    </td>
-                  ))}
-                  {hasRowActions ? (
-                    <td className="section-content-padding section-content-value border-b border-border">
-                      {rowActions(row)}
-                    </td>
-                  ) : null}
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-        </table>
-      </div>
-    </div>
+    <Table
+      sticky
+      className="min-h-0 flex-1"
+      table={table}
+      emptyMessage="No rows"
+    >
+      <Table.Header />
+      <Table.Body />
+      <Table.Empty />
+      <Table.Pagination />
+    </Table>
   );
 }
 
@@ -546,43 +548,7 @@ export function DataTableTable() {
  * ```
  */
 export function DataTablePagination() {
-  const { page, pageCount, total, busy, setState } = useDataTableContext();
-
-  return (
-    <div className="flex items-center justify-between gap-region text-body-sm text-fg-secondary">
-      <p className="tabular-nums">
-        Page {page} of {pageCount} · {total} rows
-      </p>
-      <div className="flex gap-action">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy || page <= 1 ? true : undefined}
-          onClick={() =>
-            setState((current) => ({
-              ...current,
-              page: Math.max(1, current.page - 1),
-            }))
-          }
-        >
-          Previous
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy || page >= pageCount ? true : undefined}
-          onClick={() =>
-            setState((current) => ({
-              ...current,
-              page: current.page + 1,
-            }))
-          }
-        >
-          Next
-        </Button>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 /**

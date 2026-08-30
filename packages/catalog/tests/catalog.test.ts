@@ -10,8 +10,10 @@ import { describe, expect, it } from "vitest";
 import { InMemoryProductPackagingRepository } from "../src/adapters/in-memory-product-packaging.js";
 import { InMemoryProductRepository } from "../src/adapters/in-memory-product-repository.js";
 import { InMemoryQtyReadPort } from "../src/adapters/in-memory-qty-read.js";
+import { InMemoryCatalogCsvWriter } from "../src/adapters/in-memory-catalog-csv-writer.js";
 import { InMemoryCatalogListQuery } from "../src/adapters/in-memory-catalog-list-query.js";
 import { CreateProductUseCase } from "../src/application/create-product.js";
+import { ExportStaffProductsCsvUseCase } from "../src/application/export-staff-products-csv.js";
 import { GetProductUseCase } from "../src/application/get-product.js";
 import { GetWholesaleProductUseCase } from "../src/application/get-wholesale-product.js";
 import { ListStaffProductsUseCase } from "../src/application/list-staff-products.js";
@@ -38,6 +40,10 @@ function harness() {
     getWholesale: new GetWholesaleProductUseCase(products, qty),
     listStaff: new ListStaffProductsUseCase(catalogList),
     listWholesale: new ListWholesaleCatalogUseCase(catalogList),
+    exportStaffCsv: new ExportStaffProductsCsvUseCase(
+      catalogList,
+      new InMemoryCatalogCsvWriter(),
+    ),
   };
 }
 
@@ -97,6 +103,35 @@ describe("Catalog use cases (in-memory)", () => {
     ]);
     expect(listed.items[1]?.product.inactive).toBe(true);
     expect(listed.items[1]?.product.webWholesale).toBe(false);
+  });
+
+  it("exports staff products as CSV using the same list filters", async () => {
+    const h = harness();
+    await createProduct(h, {
+      sku: "ALPHA",
+      name: 'Bolt, "hex"',
+      memberPriceCents: 1250,
+    });
+    await createProduct(h, { sku: "BETA", name: "Washer" });
+
+    const exported = await h.exportStaffCsv.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: OTHER_STAFF,
+      q: "ALPHA",
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    const csv = new TextDecoder().decode(exported.file.bytes);
+    expect(exported.file.filename).toBe("products.csv");
+    expect(exported.file.contentType).toBe("text/csv; charset=utf-8");
+    expect(exported.rowCount).toBe(1);
+    expect(exported.truncated).toBe(false);
+    expect(csv).toContain("SKU,Name,Member price");
+    expect(csv).toContain("ALPHA");
+    expect(csv).toContain('"Bolt, ""hex"""');
+    expect(csv).toContain("1250");
+    expect(csv).not.toContain("BETA");
   });
 
   it("applies shop visibility filters on the wholesale list", async () => {

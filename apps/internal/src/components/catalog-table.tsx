@@ -8,8 +8,10 @@ import {
   DataTable,
   type ListQueryParams,
 } from "@dc-inventory/ui-internal";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { replaceTableUrlParams } from "../lib/table-url-params";
+import { CatalogProductEditDialog } from "./catalog-product-edit-dialog";
+import { CatalogProductRowMenu } from "./catalog-product-row-menu";
 
 type CatalogListParams = NonNullable<
   Parameters<typeof useListInternalProducts>[0]
@@ -20,21 +22,51 @@ export function CatalogTable({
 }: {
   initialParams?: ListQueryParams;
 }) {
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
   const onParamsChange = useCallback((params: ListQueryParams) => {
     replaceTableUrlParams(listInternalProductsTable, params);
   }, []);
 
+  const rowActions = useCallback((row: Record<string, unknown>) => {
+    const id = typeof row.id === "string" ? row.id : "";
+    const sku = typeof row.sku === "string" ? row.sku : "product";
+    if (id === "") {
+      return null;
+    }
+    return (
+      <CatalogProductRowMenu
+        sku={sku}
+        onEdit={() => setEditingProductId(id)}
+      />
+    );
+  }, []);
+
   return (
-    <DataTable.Root<CatalogListParams>
-      meta={listInternalProductsTable}
-      queryHook={useListInternalProducts}
-      initialParams={initialParams}
-      onParamsChange={onParamsChange}
-    >
-      <DataTable.Search />
-      <DataTable.Filters />
-      <DataTable.Table />
-      <DataTable.Pagination />
-    </DataTable.Root>
+    <>
+      <DataTable.Root<CatalogListParams>
+        meta={listInternalProductsTable}
+        queryHook={useListInternalProducts}
+        initialParams={initialParams}
+        onParamsChange={onParamsChange}
+        rowActions={rowActions}
+      >
+        <DataTable.Search />
+        <DataTable.Filters />
+        <DataTable.Table />
+        <DataTable.Pagination />
+      </DataTable.Root>
+      {editingProductId ? (
+        <CatalogProductEditDialog
+          productId={editingProductId}
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingProductId(null);
+            }
+          }}
+        />
+      ) : null}
+    </>
   );
 }

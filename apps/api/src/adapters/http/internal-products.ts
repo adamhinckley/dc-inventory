@@ -17,7 +17,9 @@ import {
   productListResponseSchema,
   productPatchBodySchema,
   productWriteBodySchema,
+  productsExportQuerySchema,
   productsListTable,
+  binaryFileResponseSchema,
   qtyNotAllowedResponseSchema,
   skuImmutableResponseSchema,
   SPREADSHEET_UPLOAD_MAX_BYTES,
@@ -296,6 +298,46 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
 
 export function registerInternalProductStockRoutes(app: FastifyInstance): void {
   const routes = typed(app);
+
+  routes.get(
+    "/products/export",
+    {
+      schema: {
+        operationId: "exportInternalProducts",
+        tags: ["internal"],
+        summary:
+          "Export products as CSV using the same filters as the staff list (max 10000 rows)",
+        querystring: productsExportQuerySchema,
+        response: {
+          200: binaryFileResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const query = request.query as {
+        format: "csv";
+        q?: string;
+        sortBy: "sku" | "name" | "onHand" | "available" | "createdAt";
+        sortOrder: "asc" | "desc";
+        inactive?: boolean;
+      };
+      const result = await request.server.catalog.exportStaffProductsCsv.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        q: query.q,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+        inactive: query.inactive,
+      });
+      return reply
+        .code(200)
+        .header("Content-Type", result.file.contentType)
+        .header("Content-Disposition", `attachment; filename="${result.file.filename}"`)
+        .send(Buffer.from(result.file.bytes));
+    },
+  );
 
   routes.get(
     "/products",

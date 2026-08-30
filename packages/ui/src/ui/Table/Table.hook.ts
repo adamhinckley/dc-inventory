@@ -371,6 +371,11 @@ export interface ControlledPagination {
   totalRows: number
   canPreviousPage: boolean
   canNextPage: boolean
+  /**
+   * 0-based page index for the range readout. Omit when the parent is
+   * cursor-only (stays 0).
+   */
+  page?: number
 }
 
 export type PaginationAction =
@@ -634,8 +639,13 @@ export function useTable<T>(options: UseTableOptions<T>): TableInstance<T> {
     rows = data
     totalRows = controlledPagination.totalRows
     pagPageSize = controlledPagination.pageSize
-    pagPage = 0
-    pagTotalPages = 1
+    pagPage = controlledPagination.page ?? 0
+    pagTotalPages = Math.max(
+      1,
+      controlledPagination.totalRows >= 0
+        ? Math.ceil(controlledPagination.totalRows / controlledPagination.pageSize)
+        : 1,
+    )
     pagCanPrev = controlledPagination.canPreviousPage
     pagCanNext = controlledPagination.canNextPage
     pagOptions = pageSizeOptions ?? defaultPageSizeOptions

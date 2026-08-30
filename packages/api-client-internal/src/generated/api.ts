@@ -102,6 +102,10 @@ import type {
   CreateInternalSupplier403,
   CreateInternalSupplier409,
   CreateInternalSupplierBody,
+  ExportInternalProducts400,
+  ExportInternalProducts401,
+  ExportInternalProducts403,
+  ExportInternalProductsParams,
   ExportInternalPurchaseOrder401,
   ExportInternalPurchaseOrder403,
   ExportInternalPurchaseOrder404,
@@ -2739,6 +2743,119 @@ export function useGetInternalProduct<TData = Awaited<ReturnType<typeof getInter
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetInternalProductQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type exportInternalProductsResponse200 = {
+  data: Blob
+  status: 200
+}
+
+export type exportInternalProductsResponse400 = {
+  data: ExportInternalProducts400
+  status: 400
+}
+
+export type exportInternalProductsResponse401 = {
+  data: ExportInternalProducts401
+  status: 401
+}
+
+export type exportInternalProductsResponse403 = {
+  data: ExportInternalProducts403
+  status: 403
+}
+
+export type exportInternalProductsResponseSuccess = (exportInternalProductsResponse200) & {
+  headers: Headers;
+};
+export type exportInternalProductsResponseError = (exportInternalProductsResponse400 | exportInternalProductsResponse401 | exportInternalProductsResponse403) & {
+  headers: Headers;
+};
+
+export type exportInternalProductsResponse = (exportInternalProductsResponseSuccess | exportInternalProductsResponseError)
+
+export const getExportInternalProductsUrl = (params?: ExportInternalProductsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/products/export?${stringifiedParams}` : `/internal/products/export`
+}
+
+/**
+ * @summary Export products as CSV using the same filters as the staff list (max 10000 rows)
+ */
+export const exportInternalProducts = async (params?: ExportInternalProductsParams, options?: Parameters<typeof customFetch>[1]): Promise<exportInternalProductsResponse> => {
+
+  return customFetch<exportInternalProductsResponse>(getExportInternalProductsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportInternalProductsQueryKey = (params?: ExportInternalProductsParams,) => {
+    return [
+    `/internal/products/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportInternalProductsQueryOptions = <TData = Awaited<ReturnType<typeof exportInternalProducts>>, TError = ExportInternalProducts400 | ExportInternalProducts401 | ExportInternalProducts403>(params?: ExportInternalProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportInternalProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportInternalProductsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportInternalProducts>>> = ({ signal }) => exportInternalProducts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportInternalProducts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportInternalProductsQueryResult = NonNullable<Awaited<ReturnType<typeof exportInternalProducts>>>
+export type ExportInternalProductsQueryError = ExportInternalProducts400 | ExportInternalProducts401 | ExportInternalProducts403
+
+
+/**
+ * @summary Export products as CSV using the same filters as the staff list (max 10000 rows)
+ */
+
+export function useExportInternalProducts<TData = Awaited<ReturnType<typeof exportInternalProducts>>, TError = ExportInternalProducts400 | ExportInternalProducts401 | ExportInternalProducts403>(
+ params?: ExportInternalProductsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportInternalProducts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportInternalProductsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

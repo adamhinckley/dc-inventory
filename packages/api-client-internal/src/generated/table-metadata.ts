@@ -136,6 +136,11 @@ export const listInternalProductsTable = {
       "available",
       "createdAt"
     ]
+  },
+  "export": {
+    "formats": [
+      "csv"
+    ]
   }
 } as const satisfies InternalTableMetadata;
 

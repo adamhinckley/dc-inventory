@@ -452,7 +452,16 @@ export const productsListTable = {
     defaultOrder: "asc",
     fields: ["sku", "name", "onHand", "available", "createdAt"],
   },
+  export: { formats: ["csv"] as const },
 };
+
+export const productsExportQuerySchema = z.object({
+  format: z.enum(["csv"]).default("csv"),
+  q: z.string().optional(),
+  sortBy: z.enum(["sku", "name", "onHand", "available", "createdAt"]).default("sku"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
+  inactive: optionalBooleanQuery,
+});
 
 export const purchaseOrderStatusSchema = z.enum([
   "draft",

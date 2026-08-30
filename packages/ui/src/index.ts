@@ -14,7 +14,7 @@ export { AppShell, useAppShellContext } from "./shells/AppShell";
 
 export { Combobox, type ComboboxProps } from "./ui/Combobox";
 export { Chip, type ChipProps } from "./ui/Chip";
-export { Table, useTable } from "./ui/Table";
+export { Table, useTable, type TableColumnDef } from "./ui/Table";
 export {
   Form,
   scrollToFirstError,
@@ -26,6 +26,7 @@ export {
 } from "./ui/Form";
 export { FormDialog, type FormDialogProps } from "./ui/FormDialog";
 export { Dialog } from "./ui/Dialog";
+export { Progress, type ProgressProps } from "./ui/Progress";
 export { Menu } from "./ui/Menu";
 export { DateInput, type DateInputProps } from "./ui/DateInput";
 export { ExplorerView, useExplorerView } from "./layouts/ExplorerView";

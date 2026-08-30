@@ -48,9 +48,8 @@ describe("folder-per-surface layout", () => {
     expect(source).not.toContain("useId");
     expect(source).not.toMatch(/id="datatable-search"/);
     expect(source).not.toMatch(/id="datatable-sort"/);
-    expect(source).toContain("aria-sort");
-    expect(source).toContain('scope="col"');
-    expect(source).toContain("<button");
+    expect(source).toContain("useTable");
+    expect(source).toContain("<Table");
     expect(source).not.toMatch(/role=\{canSort \? "button"/);
     expect(source).not.toMatch(/<Label htmlFor=\{sortId\}>Sort<\/Label>/);
   });
