@@ -1,0 +1,20 @@
+---
+description: Agents must not start long-running servers; instruct the owner instead.
+alwaysApply: true
+---
+
+# Dev servers
+
+Mirror of [`AGENTS.md`](../../AGENTS.md) hard rule 11.
+
+Never start long-running servers: `pnpm dev:api`, `pnpm dev:internal`, `pnpm dev:wholesale`, `next dev`, `next start`, or `docker compose up` as a watch. Do not background them (`block_until_ms: 0`, `&`, `nohup`).
+
+If a server is needed, give the owner the commands and ports. Example:
+
+```bash
+# repo root — owner runs these in their own terminals
+pnpm dev:api          # Fastify :3001
+pnpm dev:internal     # dashboard :3000
+```
+
+Allowed without asking: one-shot `pnpm test`, `pnpm lint`, `pnpm db:migrate`, `pnpm gen:api`, and `curl` against a server the owner already started.

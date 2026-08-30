@@ -32,8 +32,9 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 | `pnpm test` | Vitest |
 | `pnpm lint` | Typecheck (`tsc --noEmit` plus API, shared-kernel, and client packages) |
 | `pnpm db:migrate` | Drizzle Kit migrate in `apps/api` only |
-| `pnpm dev:api` | API dev server (`apps/api`) |
-| `pnpm dev:wholesale` | Wholesale shop (`apps/wholesale`) |
+| `pnpm dev:api` | API dev server (`apps/api`) — owner runs this; agents do not |
+| `pnpm dev:internal` | Staff dashboard (`apps/internal`, :3000) — owner runs this; agents do not |
+| `pnpm dev:wholesale` | Wholesale shop (`apps/wholesale`) — owner runs this; agents do not |
 | `pnpm gen:api` | Export OpenAPI YAML + Orval clients |
 
 ## Hard rules
@@ -48,6 +49,7 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensin
 8. **Do not add** Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, LaunchDarkly-as-required-SDK, or a tax SDK outside `packages/tax/adapters`.
 9. **Linear:** all projects, issues, and sub-initiatives belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview).
 10. **One agent, one context, one branch.** Stop when the ticket’s tests are green. Do not expand scope.
+11. **Do not start long-running servers.** Never run `pnpm dev:api`, `pnpm dev:internal`, `pnpm dev:wholesale`, `next dev`, `next start`, or equivalent (foreground or background). Do not `docker compose up` as a watch. If a server is required, tell the owner the exact commands and ports; they start it. One-shot `pnpm test`, `pnpm lint`, `pnpm db:migrate`, and `pnpm gen:api` are allowed.
 
 ## Work packets
 
