@@ -152,7 +152,10 @@ export function MenuContent({
       <BaseMenu.Positioner side={side} align={align} sideOffset={4} className="z-popover">
         <BaseMenu.Popup
           ref={ref}
-          className={cn('z-popover overlay rounded-section p-item-y shadow-overlay', className)}
+          className={cn(
+            className,
+            'z-popover overlay rounded-section p-item-y shadow-overlay',
+          )}
           {...rest}
         >
           {children}

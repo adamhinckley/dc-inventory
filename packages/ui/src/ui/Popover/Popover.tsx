@@ -112,7 +112,10 @@ export function PopoverContent({
       >
         <BasePopover.Popup
           ref={ref}
-          className={cn('z-popover overlay rounded-section p-2 shadow-overlay', className)}
+          className={cn(
+            className,
+            'z-popover overlay rounded-section p-2 shadow-overlay',
+          )}
           {...rest}
         >
           {children}
