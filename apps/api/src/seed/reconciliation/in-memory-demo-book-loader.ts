@@ -192,9 +192,9 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
       snapshots.push({
         sku,
         locationId,
-        onHand: figures.onHand,
-        onOrder: figures.onOrder,
-        allocated: figures.allocated,
+        onHand: figures.figures.onHand,
+        onOrder: figures.figures.onOrder,
+        allocated: figures.figures.allocated,
       });
     }
 

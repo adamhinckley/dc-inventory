@@ -10,11 +10,13 @@ const MOVEMENT_TIE_ORDER: Record<DemoMovementRow["movementType"], number> = {
   InboundFromPo: 0,
   GoodsReceived: 1,
   InboundCancelled: 2,
-  Allocated: 3,
-  Deallocated: 4,
-  Shipped: 5,
-  AdjustmentIncrease: 6,
-  AdjustmentDecrease: 7,
+  Committed: 3,
+  Allocated: 4,
+  Decommitted: 5,
+  Deallocated: 6,
+  Shipped: 7,
+  AdjustmentIncrease: 8,
+  AdjustmentDecrease: 9,
 };
 
 export function stockKey(sku: string, locationId: string): string {

@@ -25,6 +25,8 @@ export const movementType = inventory.enum("movement_type", [
   "Allocated",
   "Deallocated",
   "Shipped",
+  "Committed",
+  "Decommitted",
   "AdjustmentIncrease",
   "AdjustmentDecrease",
 ]);
@@ -103,7 +105,7 @@ export const stockMovements = inventory.table(
     uniqueIndex("stock_movements_organization_id_once_only_provenance")
       .on(table.organizationId, table.refType, table.refId, table.sku, table.movementType)
       .where(
-        sql`${table.movementType} in ('InboundFromPo', 'Allocated', 'Deallocated', 'Shipped')`,
+        sql`${table.movementType} in ('InboundFromPo', 'InboundCancelled', 'Deallocated', 'Shipped')`,
       ),
   ],
 );
@@ -120,6 +122,10 @@ export const stockSnapshots = inventory.table(
     onHand: integer("on_hand").notNull().default(0),
     allocated: integer("allocated").notNull().default(0),
     onOrder: integer("on_order").notNull().default(0),
+    committed: integer("committed").notNull().default(0),
+    stickyLocked: boolean("sticky_locked").notNull().default(false),
+    windowOpensAt: timestamp("window_opens_at", { withTimezone: true, mode: "date" }),
+    windowClosesAt: timestamp("window_closes_at", { withTimezone: true, mode: "date" }),
     available: integer("available")
       .generatedAlwaysAs(sql`on_hand - allocated`)
       .notNull(),

@@ -271,11 +271,11 @@ idempotencyKey: "adj-dec-1",
       ],
     ])("%s applies the specified snapshot effect", async (_type, expected, run) => {
       const h = (await run()) as ReturnType<typeof harness>;
-      expect(await snapshot(h)).toEqual(expected);
+      expect(await snapshot(h)).toMatchObject(expected);
     });
 
     it("covers every movement type", () => {
-      expect(MOVEMENT_TYPES).toHaveLength(8);
+      expect(MOVEMENT_TYPES).toHaveLength(10);
     });
   });
 
@@ -310,7 +310,7 @@ idempotencyKey: "mix-alloc-b",
     });
     const figures = await snapshot(h);
     expect(figures.available).toBe(figures.onHand - figures.allocated);
-    expect(figures).toEqual({
+    expect(figures).toMatchObject({
       onHand: 20,
       onOrder: 0,
       allocated: 11,
@@ -382,7 +382,7 @@ idempotencyKey: "adj-dec-too-much-onhand",
         return;
       }
       expect(result.reason).toBe("insufficient_on_hand");
-      expect(await snapshot(h)).toEqual({
+      expect(await snapshot(h)).toMatchObject({
         onHand: 5,
         onOrder: 0,
         allocated: 0,
@@ -424,7 +424,7 @@ idempotencyKey: "adj-dec-too-much-available",
         return;
       }
       expect(result.reason).toBe("insufficient_available");
-      expect(await snapshot(h)).toEqual({
+      expect(await snapshot(h)).toMatchObject({
         onHand: 10,
         onOrder: 0,
         allocated: 8,
@@ -449,7 +449,7 @@ idempotencyKey: "adj-dec-too-much-available",
       expect(first.ok).toBe(true);
       expect(second.ok).toBe(true);
       expect(await movements(h)).toHaveLength(1);
-      expect(await snapshot(h)).toEqual({
+      expect(await snapshot(h)).toMatchObject({
         onHand: 0,
         onOrder: 4,
         allocated: 0,
@@ -484,7 +484,7 @@ idempotencyKey: "idem-conflict",
       }
       expect(second.reason).toBe("idempotency_conflict");
       expect(await movements(h)).toHaveLength(1);
-      expect(await snapshot(h)).toEqual({
+      expect(await snapshot(h)).toMatchObject({
         onHand: 0,
         onOrder: 4,
         allocated: 0,
@@ -515,7 +515,7 @@ idempotencyKey: "multi-sku",
       expect(await h.readModel.listMovements({ organizationId: DEFAULT_ORG })).toHaveLength(2);
       expect(await h.getSnapshot.execute({
  organizationId: DEFAULT_ORG,
-sku: SKU })).toEqual({
+sku: SKU })).toMatchObject({
         onHand: 0,
         onOrder: 2,
         allocated: 0,
@@ -523,7 +523,7 @@ sku: SKU })).toEqual({
       });
       expect(await h.getSnapshot.execute({
  organizationId: DEFAULT_ORG,
-sku: OTHER_SKU })).toEqual({
+sku: OTHER_SKU })).toMatchObject({
         onHand: 0,
         onOrder: 3,
         allocated: 0,
@@ -548,11 +548,7 @@ idempotencyKey: "prov-setup",
             refId: PO_ID,
           });
         }
-        if (
-          movementType === "Allocated" ||
-          movementType === "Deallocated" ||
-          movementType === "Shipped"
-        ) {
+        if (movementType === "Deallocated" || movementType === "Shipped") {
           await h.adjustmentIncrease.execute({
 
             organizationId: DEFAULT_ORG,
@@ -620,7 +616,7 @@ idempotencyKey: "partial-receive-2",
       expect(first.ok).toBe(true);
       expect(second.ok).toBe(true);
       expect(await movements(h)).toHaveLength(3);
-      expect(await snapshot(h)).toEqual({
+      expect(await snapshot(h)).toMatchObject({
         onHand: 7,
         onOrder: 3,
         allocated: 0,
@@ -651,7 +647,7 @@ idempotencyKey: "repeat-adj-2",
       expect(first.ok).toBe(true);
       expect(second.ok).toBe(true);
       expect(await movements(h)).toHaveLength(2);
-      expect(await snapshot(h)).toEqual({
+      expect(await snapshot(h)).toMatchObject({
         onHand: 5,
         onOrder: 0,
         allocated: 0,
@@ -778,7 +774,7 @@ idempotencyKey: "oversell-b",
 
       const successes = [first, second].filter((result) => result.ok);
       expect(successes).toHaveLength(1);
-      expect(await snapshot(h)).toEqual({
+      expect(await snapshot(h)).toMatchObject({
         onHand: 10,
         onOrder: 0,
         allocated: 8,
@@ -813,7 +809,7 @@ idempotencyKey: "oversell-b",
         sku: WIDGET_SKU,
         locationId: DEFAULT,
       });
-      expect(acme).toEqual({
+      expect(acme).toMatchObject({
         onHand: 10,
         onOrder: 0,
         allocated: 4,
@@ -825,7 +821,7 @@ idempotencyKey: "oversell-b",
         sku: WIDGET_SKU,
         locationId: DEFAULT,
       });
-      expect(beta).toEqual({
+      expect(beta).toMatchObject({
         onHand: 0,
         onOrder: 0,
         allocated: 0,
@@ -860,7 +856,7 @@ idempotencyKey: "oversell-b",
         organizationId: DEFAULT_ORG,
         sku: WIDGET_SKU,
         locationId: DEFAULT,
-      })).toEqual({
+      })).toMatchObject({
         onHand: 3,
         onOrder: 0,
         allocated: 0,
@@ -870,7 +866,7 @@ idempotencyKey: "oversell-b",
         organizationId: BETA_ORG,
         sku: WIDGET_SKU,
         locationId: DEFAULT,
-      })).toEqual({
+      })).toMatchObject({
         onHand: 5,
         onOrder: 0,
         allocated: 0,
@@ -928,16 +924,6 @@ idempotencyKey,
         quantity: 5,
         refType: "purchase_order",
         refId: PO_ID,
-      });
-    case "Allocated":
-      return h.allocated.execute({
-
-        organizationId: DEFAULT_ORG,
-idempotencyKey,
-        sku: SKU,
-        quantity: 4,
-        refType: "sales_order",
-        refId: SO_ID_2,
       });
     case "Deallocated":
       return h.deallocated.execute({

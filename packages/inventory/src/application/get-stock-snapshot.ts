@@ -1,8 +1,8 @@
 import { LocationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import type { OrganizationId } from "@dc-inventory/shared-kernel";
+import type { DemandStockFigures } from "../domain/demand-model.js";
 import type { IInventoryReadModel } from "../domain/ports/stock-ledger.js";
-import type { StockFigures } from "../domain/snapshot.js";
 
 export type GetStockSnapshotRequest = {
   organizationId: OrganizationId;
@@ -13,7 +13,7 @@ export type GetStockSnapshotRequest = {
 export class GetStockSnapshotUseCase {
   constructor(private readonly readModel: IInventoryReadModel) {}
 
-  async execute(input: GetStockSnapshotRequest): Promise<StockFigures> {
+  async execute(input: GetStockSnapshotRequest): Promise<DemandStockFigures> {
     return this.readModel.getSnapshot(
       input.sku,
       input.locationId ?? LocationId.DEFAULT,

@@ -1,6 +1,13 @@
 import { LocationId, OrganizationId, requireOrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { IClock } from "../domain/clock.js";
+import {
+  projectDemandFigures,
+  ZERO_DEMAND_STATE,
+  type DemandPersistedState,
+  type DemandStockFigures,
+} from "../domain/demand-model.js";
 import { MovementId } from "../domain/ids.js";
 import type { Movement, MovementRefType, MovementType } from "../domain/movement.js";
 import type {
@@ -23,6 +30,20 @@ export function isUnknownLocationCodeError(error: unknown): boolean {
   return error instanceof Error && error.message.startsWith("Unknown inventory location code");
 }
 
+function toDemandState(row: {
+  committed: number;
+  stickyLocked: boolean;
+  windowOpensAt: Date | null;
+  windowClosesAt: Date | null;
+}): DemandPersistedState {
+  return Object.freeze({
+    committed: row.committed,
+    stickyLocked: row.stickyLocked,
+    windowOpensAt: row.windowOpensAt,
+    windowClosesAt: row.windowClosesAt,
+  });
+}
+
 export class DrizzleInventoryReadModel implements IInventoryReadModel {
   constructor(
     private readonly db: InventoryReadDrizzle,
@@ -30,13 +51,14 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
       organizationId: OrganizationId,
       locationId: LocationId,
     ) => Promise<string>,
+    private readonly clock?: IClock,
   ) {}
 
   async getSnapshot(
     sku: Sku,
     locationId: LocationId,
     organizationId: OrganizationId,
-  ): Promise<ReturnType<typeof freezeStockFigures>> {
+  ): Promise<DemandStockFigures> {
     const org = resolveOrganizationId(organizationId);
     const locationUuid = await this.resolveLocationUuid(org, locationId);
     const rows = await this.db
@@ -44,6 +66,10 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
         onHand: stockSnapshots.onHand,
         onOrder: stockSnapshots.onOrder,
         allocated: stockSnapshots.allocated,
+        committed: stockSnapshots.committed,
+        stickyLocked: stockSnapshots.stickyLocked,
+        windowOpensAt: stockSnapshots.windowOpensAt,
+        windowClosesAt: stockSnapshots.windowClosesAt,
       })
       .from(stockSnapshots)
       .where(
@@ -56,9 +82,40 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
       .limit(1);
     const row = rows[0];
     if (row === undefined) {
-      return ZERO_STOCK_FIGURES;
+      const now = this.clock ? this.clock.now() : new Date();
+      return projectDemandFigures(ZERO_STOCK_FIGURES, ZERO_DEMAND_STATE, now);
     }
-    return freezeStockFigures(row.onHand, row.onOrder, row.allocated);
+    const figures = freezeStockFigures(row.onHand, row.onOrder, row.allocated);
+    const demand = toDemandState(row);
+    const now = this.clock ? this.clock.now() : new Date();
+    return projectDemandFigures(figures, demand, now);
+  }
+
+  async getDemandState(
+    sku: Sku,
+    locationId: LocationId,
+    organizationId: OrganizationId,
+  ): Promise<DemandPersistedState> {
+    const org = resolveOrganizationId(organizationId);
+    const locationUuid = await this.resolveLocationUuid(org, locationId);
+    const rows = await this.db
+      .select({
+        committed: stockSnapshots.committed,
+        stickyLocked: stockSnapshots.stickyLocked,
+        windowOpensAt: stockSnapshots.windowOpensAt,
+        windowClosesAt: stockSnapshots.windowClosesAt,
+      })
+      .from(stockSnapshots)
+      .where(
+        and(
+          eq(stockSnapshots.organizationId, org),
+          eq(stockSnapshots.sku, sku.value),
+          eq(stockSnapshots.locationId, locationUuid),
+        ),
+      )
+      .limit(1);
+    const row = rows[0];
+    return row === undefined ? ZERO_DEMAND_STATE : toDemandState(row);
   }
 
   async listMovements(filter: MovementListFilter): Promise<readonly Movement[]> {

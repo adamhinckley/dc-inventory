@@ -329,7 +329,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
       LocationId.DEFAULT,
       OrganizationId.DEFAULT,
     );
-    expect(zeroStock).toEqual({
+    expect(zeroStock).toMatchObject({
       onHand: 0,
       onOrder: 0,
       allocated: 0,
@@ -469,7 +469,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
       LocationId.DEFAULT,
       OrganizationId.DEFAULT,
     );
-    expect(finalSnapshot).toEqual({
+    expect(finalSnapshot).toMatchObject({
       onHand: RECEIVE_QTY - SELL_QTY,
       onOrder: 0,
       allocated: 0,

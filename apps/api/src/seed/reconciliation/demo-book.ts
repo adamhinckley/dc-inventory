@@ -157,6 +157,8 @@ export type DemoMovementType =
   | "Allocated"
   | "Deallocated"
   | "Shipped"
+  | "Committed"
+  | "Decommitted"
   | "AdjustmentIncrease"
   | "AdjustmentDecrease";
 
