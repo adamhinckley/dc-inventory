@@ -1,8 +1,10 @@
 import type { IQtyReadPort, ProductQty } from "@dc-inventory/catalog";
+import type { IClock } from "@dc-inventory/inventory";
 import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray } from "drizzle-orm";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
 
@@ -13,7 +15,10 @@ const DEFAULT_LOCATION_CODE = "DEFAULT";
  * Lives in the API app so the Catalog Postgres adapter never imports inventory.
  */
 export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
-  constructor(private readonly db: AppDrizzle) {}
+  constructor(
+    private readonly db: AppDrizzle,
+    private readonly clock?: IClock,
+  ) {}
 
   async readBySkus(
     organizationId: OrganizationId,
@@ -43,7 +48,10 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
         onHand: stockSnapshots.onHand,
         onOrder: stockSnapshots.onOrder,
         allocated: stockSnapshots.allocated,
-        available: stockSnapshots.available,
+        committed: stockSnapshots.committed,
+        stickyLocked: stockSnapshots.stickyLocked,
+        windowOpensAt: stockSnapshots.windowOpensAt,
+        windowClosesAt: stockSnapshots.windowClosesAt,
       })
       .from(stockSnapshots)
       .where(
@@ -56,13 +64,9 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
           ),
         ),
       );
+    const now = this.clock ? this.clock.now() : new Date();
     for (const row of rows) {
-      result.set(row.sku, {
-        onHand: row.onHand,
-        onOrder: row.onOrder,
-        allocated: row.allocated,
-        available: row.available,
-      });
+      result.set(row.sku, productQtyFromSnapshotRow(row, now));
     }
     return result;
   }

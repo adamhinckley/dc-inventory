@@ -4,6 +4,7 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListWholesaleCatalog200ItemsItemSellState } from './listWholesaleCatalog200ItemsItemSellState';
 
 export type ListWholesaleCatalog200ItemsItem = {
   /** @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$ */
@@ -22,4 +23,16 @@ export type ListWholesaleCatalog200ItemsItem = {
      * @maximum 9007199254740991
      */
   available: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  committed: number;
+  sellState: ListWholesaleCatalog200ItemsItemSellState;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  availableToSell: number | null;
 };

@@ -29,6 +29,9 @@ export class InventoryReadModelQtyReadAdapter implements IQtyReadPort {
         onOrder: snapshot.onOrder,
         allocated: snapshot.allocated,
         available: snapshot.available,
+        committed: snapshot.committed,
+        sellState: snapshot.sellState,
+        availableToSell: snapshot.availableToSell,
       });
     }
     return result;

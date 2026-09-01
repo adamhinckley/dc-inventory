@@ -2197,6 +2197,20 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  committed:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  sellState:
+                    type: string
+                    enum:
+                      - open
+                      - locked
+                  availableToSell:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
                 required:
                   - id
                   - sku
@@ -2214,6 +2228,9 @@ paths:
                   - onOrder
                   - allocated
                   - available
+                  - committed
+                  - sellState
+                  - availableToSell
                 additionalProperties: false
         "400":
           description: Default Response
@@ -2456,6 +2473,20 @@ paths:
                           type: integer
                           minimum: -9007199254740991
                           maximum: 9007199254740991
+                        committed:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        sellState:
+                          type: string
+                          enum:
+                            - open
+                            - locked
+                        availableToSell:
+                          nullable: true
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
                         caseQty:
                           nullable: true
                           type: integer
@@ -2479,6 +2510,9 @@ paths:
                         - onOrder
                         - allocated
                         - available
+                        - committed
+                        - sellState
+                        - availableToSell
                         - caseQty
                         - createdAt
                       additionalProperties: false
@@ -2670,6 +2704,20 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  committed:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  sellState:
+                    type: string
+                    enum:
+                      - open
+                      - locked
+                  availableToSell:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
                 required:
                   - id
                   - sku
@@ -2687,6 +2735,9 @@ paths:
                   - onOrder
                   - allocated
                   - available
+                  - committed
+                  - sellState
+                  - availableToSell
                 additionalProperties: false
         "400":
           description: Default Response
@@ -2893,6 +2944,20 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  committed:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  sellState:
+                    type: string
+                    enum:
+                      - open
+                      - locked
+                  availableToSell:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
                 required:
                   - id
                   - sku
@@ -2910,6 +2975,9 @@ paths:
                   - onOrder
                   - allocated
                   - available
+                  - committed
+                  - sellState
+                  - availableToSell
                 additionalProperties: false
         "400":
           description: Default Response
@@ -3076,6 +3144,20 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  committed:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  sellState:
+                    type: string
+                    enum:
+                      - open
+                      - locked
+                  availableToSell:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
                 required:
                   - id
                   - sku
@@ -3093,6 +3175,9 @@ paths:
                   - onOrder
                   - allocated
                   - available
+                  - committed
+                  - sellState
+                  - availableToSell
                 additionalProperties: false
         "401":
           description: Default Response

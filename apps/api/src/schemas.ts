@@ -67,6 +67,18 @@ export const listQuerySchema = z.object({
   inactive: optionalBooleanQuery,
 });
 
+export const sellStateSchema = z.enum(["open", "locked"]);
+
+export const productQtyFieldsSchema = z.object({
+  onHand: z.number().int(),
+  onOrder: z.number().int(),
+  allocated: z.number().int(),
+  available: z.number().int(),
+  committed: z.number().int(),
+  sellState: sellStateSchema,
+  availableToSell: z.number().int().nullable(),
+});
+
 export const productListItemSchema = z.object({
   id: z.string().uuid(),
   sku: z.string(),
@@ -76,10 +88,7 @@ export const productListItemSchema = z.object({
   inactive: z.boolean(),
   discontinued: z.boolean(),
   webWholesale: z.boolean(),
-  onHand: z.number().int(),
-  onOrder: z.number().int(),
-  allocated: z.number().int(),
-  available: z.number().int(),
+  ...productQtyFieldsSchema.shape,
   caseQty: z.number().int().positive().nullable(),
   createdAt: z.string().datetime(),
 });
@@ -107,6 +116,9 @@ export const catalogItemSchema = z.object({
   wholesalePrice: z.number().int(),
   currency: z.string(),
   available: z.number().int(),
+  committed: z.number().int(),
+  sellState: sellStateSchema,
+  availableToSell: z.number().int().nullable(),
 });
 
 export const catalogListResponseSchema = z.object({
@@ -180,10 +192,7 @@ export const productDetailSchema = z.object({
   webWholesale: z.boolean(),
   taxCategoryCode: z.string().nullable(),
   caseQty: z.number().int().positive().nullable(),
-  onHand: z.number().int(),
-  onOrder: z.number().int(),
-  allocated: z.number().int(),
-  available: z.number().int(),
+  ...productQtyFieldsSchema.shape,
 });
 
 export const duplicateSkuResponseSchema = z.object({
