@@ -325,17 +325,19 @@ describe("replay sales orders (in-memory)", () => {
       organizationId: OrganizationId.DEFAULT,
       locationId: LocationId.DEFAULT,
     });
+    const committed = movements.filter((row) => row.movementType === "Committed");
     const allocated = movements.filter((row) => row.movementType === "Allocated");
     const shippedMovements = movements.filter((row) => row.movementType === "Shipped");
-    const expectedAllocatedLines = plan.salesOrders
+    const expectedConfirmedLines = plan.salesOrders
       .filter((order) => order.status !== "leftoverDraft")
       .reduce((sum, order) => sum + order.lines.length, 0);
     const expectedShippedLines = plan.salesOrders
       .filter((order) => order.status === "shipped")
       .reduce((sum, order) => sum + order.lines.length, 0);
-    expect(allocated.length).toBe(expectedAllocatedLines);
+    expect(committed.length).toBe(expectedConfirmedLines);
     expect(shippedMovements.length).toBe(expectedShippedLines);
-    expect(allocated.length).toBeGreaterThan(shippedMovements.length);
+    expect(committed.length).toBeGreaterThan(shippedMovements.length);
+    expect(allocated.length).toBeGreaterThan(0);
 
     const orderById = new Map(listed.items.map((row) => [row.id, row]));
     for (const movement of movements) {
@@ -354,8 +356,8 @@ describe("replay sales orders (in-memory)", () => {
     }
 
     for (const order of confirmed) {
-      const allocatedForSo = allocated.filter((row) => row.refId === order.id);
-      expect(allocatedForSo.length).toBe(order.lines.length);
+      const committedForSo = committed.filter((row) => row.refId === order.id);
+      expect(committedForSo.length).toBe(order.lines.length);
       expect(shippedMovements.some((row) => row.refId === order.id)).toBe(false);
     }
   }, 600_000);
