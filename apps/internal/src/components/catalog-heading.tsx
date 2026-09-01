@@ -8,7 +8,7 @@ export function CatalogHeading() {
       <h1 className="page-title">Catalog</h1>
       <TooltipHelp
         title="Catalog"
-        description="Staff product list from the internal API. Quantities are displayed as returned. This page does not write inventory."
+        description="Products you sell. Inventory is updated by receiving a PO or posting an adjustment, not from this list."
         data-testid="catalog-page-help"
       />
     </header>
