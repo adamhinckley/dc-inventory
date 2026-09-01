@@ -1,7 +1,7 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
-import type { SalesOrder } from "../domain/sales-order.js";
+import { liveSalesOrderLines, type SalesOrder } from "../domain/sales-order.js";
 
 export type ShipSalesOrderRequest = {
   organizationId: OrganizationId;
@@ -22,11 +22,8 @@ export type ShipSalesOrderResult =
         | "accounting_invalid";
     };
 
-function computeSubtotalCents(order: SalesOrder): number {
-  return order.lines.reduce(
-    (sum, line) => sum + line.qty * line.unitPrice.amountMinor,
-    0,
-  );
+function computeSubtotalCents(lines: readonly SalesOrder["lines"][number][]): number {
+  return lines.reduce((sum, line) => sum + line.qty * line.unitPrice.amountMinor, 0);
 }
 
 export class ShipSalesOrderUseCase {
@@ -49,17 +46,18 @@ export class ShipSalesOrderUseCase {
         if (existing.status !== "confirmed") {
           return { ok: false, reason: "illegal_transition" };
         }
-        if (existing.lines.length === 0) {
+        const liveLines = liveSalesOrderLines(existing.lines);
+        if (liveLines.length === 0) {
           return { ok: false, reason: "illegal_transition" };
         }
 
         await scope.inventory.lockSnapshots(
-          existing.lines.map((line) => ({
+          liveLines.map((line) => ({
             organizationId: existing.organizationId,
             sku: line.sku,
           })),
         );
-        for (const line of existing.lines) {
+        for (const line of liveLines) {
           const result = await scope.inventory.recordShipped({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:ship:${line.id}`,
@@ -75,8 +73,8 @@ export class ShipSalesOrderUseCase {
           }
         }
 
-        const subtotalCents = computeSubtotalCents(existing);
-        const currency = existing.lines[0]?.unitPrice.currency ?? "USD";
+        const subtotalCents = computeSubtotalCents(liveLines);
+        const currency = liveLines[0]?.unitPrice.currency ?? "USD";
         const invoiceResult = await scope.accounting.createInvoiceForOrder({
           organizationId: existing.organizationId,
           orderId: existing.id,

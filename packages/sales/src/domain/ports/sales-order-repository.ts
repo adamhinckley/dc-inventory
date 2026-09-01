@@ -128,6 +128,7 @@ export interface IInventoryCommandPort {
   recordCommitted(command: CommittedCommand): Promise<InventoryCommandResult>;
   matchesCommittedIdempotency(command: CommittedCommand): Promise<boolean>;
   recordDecommitted(command: DecommittedCommand): Promise<InventoryCommandResult>;
+  matchesDecommittedIdempotency(command: DecommittedCommand): Promise<boolean>;
   recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult>;
   recordDeallocated(command: DeallocatedCommand): Promise<InventoryCommandResult>;
   recordShipped(command: ShippedCommand): Promise<InventoryCommandResult>;

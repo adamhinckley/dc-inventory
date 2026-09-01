@@ -1,5 +1,5 @@
 export { AccountingCommandAdapter } from "./adapters/accounting-command-adapter.js";
-export { netOrderCoverQuantity } from "./adapters/order-cover.js";
+export { netOrderCoverQuantity, computeLineDeallocateQuantity } from "./adapters/order-cover.js";
 export { InMemoryCatalogProductPort } from "./adapters/in-memory-catalog-product-port.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { DrizzleSalesOrderRepository, type SalesDrizzle } from "./adapters/drizzle-sales-orders.js";
@@ -8,6 +8,7 @@ export { InMemorySalesUnitOfWork } from "./adapters/in-memory-sales-unit-of-work
 export { CancelSalesOrderUseCase } from "./application/cancel-sales-order.js";
 export { ConfirmSalesOrderUseCase } from "./application/confirm-sales-order.js";
 export { CreateSalesOrderUseCase } from "./application/create-sales-order.js";
+export { DecommitSalesOrderLineUseCase } from "./application/decommit-sales-order-line.js";
 export { GetSalesOrderUseCase } from "./application/get-sales-order.js";
 export { ListSalesOrdersUseCase } from "./application/list-sales-orders.js";
 export { ShipSalesOrderUseCase } from "./application/ship-sales-order.js";

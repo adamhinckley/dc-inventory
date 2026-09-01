@@ -17,6 +17,8 @@ export type SalesOrderLine = {
   readonly qty: number;
   readonly unitPrice: Money;
   readonly taxCategoryCode?: string;
+  /** Set when staff pull demand off this line (manufacturer miss / code red). */
+  readonly decommitted?: boolean;
 };
 
 export type SalesOrderShipSnapshot = {
@@ -37,3 +39,10 @@ export type SalesOrder = {
   readonly createdAt: Date;
   readonly lines: readonly SalesOrderLine[];
 } & SalesOrderShipSnapshot;
+
+/** Confirmed lines that still have live demand (not pulled via line-level decommit). */
+export function liveSalesOrderLines(
+  lines: readonly SalesOrderLine[],
+): readonly SalesOrderLine[] {
+  return lines.filter((line) => !line.decommitted);
+}
