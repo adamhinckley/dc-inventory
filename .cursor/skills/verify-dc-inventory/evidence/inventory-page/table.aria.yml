@@ -34,6 +34,32 @@
   - paragraph: Staff dashboard
 - main:
   - heading "Inventory" [level=1]
-  - paragraph: Placeholder inventory. Stock movements stay in Inventory — this page will not mutate available.
+  - button
+  - textbox "Search SKU or name"
+  - checkbox
+  - text: Hide empty inventory
+  - table:
+    - rowgroup:
+      - row "SKU Name On hand On order Allocated Committed (pre-sold) Available (warehouse) Available to sell Sell state":
+        - button "SKU"
+        - button "Name"
+        - button "On hand"
+        - button "On order"
+        - button "Allocated"
+        - button "Committed (pre-sold)"
+        - button "Available (warehouse)"
+        - button "Available to sell"
+        - button "Sell state"
+    - rowgroup:
+      - row "No results.":
+        - cell "No results."
+  - text: Rows per page
+  - combobox "Rows per page":
+    - option "25" [selected]
+    - option "50"
+    - option "100"
+  - text: 1–0 of 0
+  - button "Previous page" [disabled]
+  - button "Next page" [disabled]
   - paragraph: © 2026 Pull Clear Software
 - region "Notifications"

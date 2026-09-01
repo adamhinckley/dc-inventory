@@ -1,6 +1,6 @@
 ---
 name: verify-dc-inventory
-description: Drive DC Inventory the way a user does. Primary surface is the staff Next.js app apps/internal on port 3000 (catalog DataTable, inventory placeholder, purchasing, staff login). Also covers wholesale :3002 and Fastify :3001. Use when you need to launch, doctor, click through catalog/inventory, or capture proof.
+description: Drive DC Inventory the way a user does. Primary surface is the staff Next.js app apps/internal on port 3000 (catalog DataTable, inventory snapshot table, purchasing, staff login). Also covers wholesale :3002 and Fastify :3001. Use when you need to launch, doctor, click through catalog/inventory, or capture proof.
 ---
 
 # Verify DC Inventory
@@ -36,7 +36,7 @@ What `launch` does:
 
 1. Copies `.env.example` → `.env` and `apps/api/.env.example` → `apps/api/.env` when those files are missing. That is verification scaffolding, not a product change.
 2. Refuses to start if :3000, :3001, or :3002 is already taken by a process this skill did not record. `attach` or `teardown` instead.
-3. Runs `docker compose up -d --wait` when `docker` exists. If Docker is missing but `127.0.0.1:5432` accepts a connection, it continues and records `postgres: existing`. If neither, it exits and tells you to install Docker Engine and rerun, or start Postgres 18 locally with user/password/db `postgres` / `postgres` / `dc_inventory`.
+3. Runs `docker compose up -d --wait` when `docker` exists and Postgres was not already listening on `127.0.0.1:5432`. If Postgres was already up, launch skips Compose and teardown will not stop it. If Docker is missing but `127.0.0.1:5432` accepts a connection, it continues and records `postgres: existing`. If neither, it exits and tells you to install Docker Engine and rerun, or start Postgres 18 locally with user/password/db `postgres` / `postgres` / `dc_inventory`.
 4. Runs `pnpm db:migrate`.
 5. Seeds `--seed phase1` (`pnpm db:seed:phase1`) by default. `--seed demo` runs `pnpm seed:demo` (localhost-only; needs `DEMO_SEED_RESET=1` to wipe a dirty demo book). `--seed none` skips seed.
 6. Starts `pnpm dev:api` and `pnpm dev:internal` (and `pnpm dev:wholesale` if requested). PIDs and log paths go in `.cursor/skills/verify-dc-inventory/.run/state.json`.
@@ -119,14 +119,15 @@ Stable handles from this repo:
 | Catalog heading | `getByRole('heading', { name: 'Catalog' })` |
 | Catalog search | `getByRole('textbox', { name: 'Search SKU or name' })` |
 | Catalog import | `data-testid="catalog-import-dialog-trigger"` |
-| Inventory placeholder | heading `Inventory` |
+| Inventory heading | heading `Inventory`; help `data-testid="inventory-page-help"` |
+| Inventory table search | `getByRole('textbox', { name: 'Search SKU or name' })` on `/inventory` |
 | Purchasing tabs | `data-testid="purchasing-orders-router-tabs"` |
 | Account menu | `data-testid="shell-account-menu-trigger"` |
 | Wholesale nav | `getByRole('navigation', { name: 'Shop' })` |
 
 `login-staff` / `login-wholesale` read passwords from the environment. They never echo them.
 
-Catalog after seed is empty (`No rows`). That is the live table. See `features/catalog-list.md`.
+Catalog and inventory after seed are empty (`No results.`). That is the live table. See `features/catalog-list.md` and `features/inventory-page.md`.
 
 ## Evidence
 
@@ -155,7 +156,7 @@ node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs teardown
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs teardown --keep-compose
 ```
 
-Kills only PIDs in `.run/state.json` (API, Next, Chrome). Then, if this run started Compose, `docker compose stop` unless `--keep-compose`. Removes `.run/chrome-profile` and the state file. Leaves `evidence/` on disk.
+Kills only PIDs in `.run/state.json` (API, Next, Chrome). Then, only if this run started Compose (`docker compose up` because Postgres was down), `docker compose stop` unless `--keep-compose`. Removes `.run/chrome-profile` and the state file. Leaves `evidence/` on disk.
 
 Never `pkill -f pnpm` or `pkill -f next`. If a PID is already dead, skip it. If state says `attach: true`, teardown stops only the Chrome this CLI started.
 
@@ -176,6 +177,6 @@ CLI path: `.cursor/skills/verify-dc-inventory/control-dc-inventory.mjs`.
 
 First drive command installs Playwright into `.cursor/skills/verify-dc-inventory/node_modules` if needed (`npm install --prefix .cursor/skills/verify-dc-inventory`). Uses the machine `google-chrome` (`channel: "chrome"`). `--help` on the root and on each subcommand lists flags.
 
-Feature recipes: `features/`. Catalog list is the live staff feature. Inventory is a placeholder and still has a file.
+Feature recipes: `features/`. Catalog list and inventory snapshot are live staff features.
 
 After the map changes, run `/maintain-verification-skill`.

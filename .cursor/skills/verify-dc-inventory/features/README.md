@@ -21,18 +21,18 @@ Primary surface: staff dashboard `apps/internal` at `http://localhost:3000`. Oth
 - Browse `http://localhost:3000`, not `http://127.0.0.1:3000`. Next 16 blocks `/_next` assets from 127.0.0.1.
 - Staff identity after seed: organization `acme`, email `staff@local.test`. Password comes from `PHASE1_STAFF_PASSWORD` in `apps/api/.env`. Never invent one. Never print it.
 - Wholesale identity: organization `acme`, email `wholesale@local.test`. Password is `PHASE1_WHOLESALE_PASSWORD`.
-- `pnpm db:seed:phase1` and `pnpm seed:demo` both leave the catalog empty. Rows appear after Product Browser CSV import, not after seed. An empty table with headers is a valid catalog list.
+- `pnpm db:seed:phase1` and `pnpm seed:demo` both leave the catalog empty. Rows appear after Product Browser CSV import, not after seed. An empty table with headers is a valid catalog or inventory list.
 - Default ports cannot be remapped by this skill. If `:3000` or `:3001` is someone else's process, attach or stop. Do not launch a second stack.
-- Vocabulary on screen: `Available` is warehouse leftover (`on_hand − allocated`). It is not `availableToSell`. `Allocated` is warehouse cover. It is not `committed`. Do not invent ledger math.
+- Vocabulary on screen: `Available (warehouse)` is leftover (`available`). It is not `availableToSell`. `Allocated` is warehouse cover. It is not `committed`. Do not invent ledger math.
 
 ## Driving conventions
 
 - Start every recipe from a signed-out or freshly launched stack unless the feature file says otherwise.
 - Prefer role + accessible name, then `data-testid`. Do not click coordinates.
 - One structural action per command. Snapshot or screenshot after the state change you care about.
-- Internal list search uses the `x-table` placeholder as `aria-label`. Catalog search is `Search SKU or name`.
+- Internal list search uses the `x-table` placeholder as `aria-label`. Catalog and inventory search is `Search SKU or name`.
 - Sidebar links live under `navigation` named `Main navigation`, inside the `Workspace` group. If the tree only shows button `DC Workspace` or `Expand navigation`, the rail is collapsed: `click --role button --name "Expand navigation"` or `click --role button --name "DC Workspace"` first, or `goto --path /…`. The CLI sets the viewport to 1440×900 so the rail stays expanded.
-- Cleanup stops processes this run started. It must not delete `evidence/`.
+- Cleanup stops processes this run started. It must not delete `evidence/`. Teardown stops Compose only when this CLI started it.
 
 ## Proof and skip reporting
 
@@ -47,6 +47,6 @@ Primary surface: staff dashboard `apps/internal` at `http://localhost:3000`. Oth
 
 - [Staff login](./staff-login.md) — dialog or `/login`, then `/catalog`.
 - [Catalog list](./catalog-list.md) — live `DataTable` via `listInternalProductsTable`. Drive this first.
-- [Inventory page](./inventory-page.md) — placeholder. Still map and reach it.
+- [Inventory page](./inventory-page.md) — live `InventoryTable` snapshot (read-only). Drive after catalog or via direct `/inventory`.
 - [Purchasing](./purchasing.md) — draft / completed PO explorer.
 - [Wholesale catalog](./wholesale-catalog.md) — shop `/products` on :3002.
