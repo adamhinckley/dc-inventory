@@ -37,6 +37,7 @@ export {
 export { MovementId } from "./domain/ids.js";
 export type { IClock } from "./domain/clock.js";
 export {
+  applySetSellWindow,
   computeAvailableToSell,
   computeEffectiveSellState,
   computeLockedAvailableToSell,

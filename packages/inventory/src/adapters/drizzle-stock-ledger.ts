@@ -9,6 +9,7 @@ import {
   computeLockedAvailableToSell,
   computeReceiveCoverQuantity,
   coverIdempotencyKey,
+  applySetSellWindow,
   isSellWindowInvalid,
   observeWindowClose,
   type DemandPersistedState,
@@ -142,11 +143,11 @@ export class DrizzleStockLedger implements IStockLedger {
   }
 
   recordAllocated(command: RecordAllocatedCommand): Promise<StockCommandResult> {
-    return this.record("Allocated", command);
+    return this.recordWithDemandObservation("Allocated", command);
   }
 
   recordDeallocated(command: RecordDeallocatedCommand): Promise<StockCommandResult> {
-    return this.record("Deallocated", command);
+    return this.recordWithDemandObservation("Deallocated", command);
   }
 
   recordShipped(command: RecordShippedCommand): Promise<StockCommandResult> {
@@ -212,12 +213,10 @@ export class DrizzleStockLedger implements IStockLedger {
     const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
     const demand = await this.readModel.getDemandState(command.sku, locationId, organizationId);
     const now = this.clock.now();
-    const observed = observeWindowClose(
-      {
-        ...demand,
-        windowOpensAt: command.windowOpensAt,
-        windowClosesAt: command.windowClosesAt,
-      },
+    const nextDemand = applySetSellWindow(
+      demand,
+      command.windowOpensAt,
+      command.windowClosesAt,
       now,
     );
     const rows = await this.loadSnapshotRow(organizationId, command.sku, locationUuid);
@@ -227,9 +226,9 @@ export class DrizzleStockLedger implements IStockLedger {
     await this.db
       .update(stockSnapshots)
       .set({
-        windowOpensAt: observed.windowOpensAt,
-        windowClosesAt: observed.windowClosesAt,
-        stickyLocked: observed.stickyLocked,
+        windowOpensAt: nextDemand.windowOpensAt,
+        windowClosesAt: nextDemand.windowClosesAt,
+        stickyLocked: nextDemand.stickyLocked,
         updatedAt: new Date(),
       })
       .where(eq(stockSnapshots.id, rows.id));

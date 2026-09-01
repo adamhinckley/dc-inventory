@@ -7,6 +7,7 @@ import {
   computeLockedAvailableToSell,
   computeReceiveCoverQuantity,
   coverIdempotencyKey,
+  applySetSellWindow,
   isSellWindowInvalid,
   observeWindowClose,
   type DemandPersistedState,
@@ -67,11 +68,11 @@ export class InMemoryStockLedger implements IStockLedger {
   }
 
   recordAllocated(command: RecordAllocatedCommand): Promise<StockCommandResult> {
-    return this.record("Allocated", command);
+    return this.recordWithDemandObservation("Allocated", command);
   }
 
   recordDeallocated(command: RecordDeallocatedCommand): Promise<StockCommandResult> {
-    return this.record("Deallocated", command);
+    return this.recordWithDemandObservation("Deallocated", command);
   }
 
   recordShipped(command: RecordShippedCommand): Promise<StockCommandResult> {
@@ -128,15 +129,13 @@ export class InMemoryStockLedger implements IStockLedger {
 
     const demand = this.readModel.getDemandStateSync(command.sku, locationId, organizationId);
     const now = this.clock ? this.clock.now() : new Date();
-    const observed = observeWindowClose(
-      {
-        ...demand,
-        windowOpensAt: command.windowOpensAt,
-        windowClosesAt: command.windowClosesAt,
-      },
+    const nextDemand = applySetSellWindow(
+      demand,
+      command.windowOpensAt,
+      command.windowClosesAt,
       now,
     );
-    this.readModel.setDemandState(command.sku, locationId, observed, organizationId);
+    this.readModel.setDemandState(command.sku, locationId, nextDemand, organizationId);
     return { ok: true };
   }
 

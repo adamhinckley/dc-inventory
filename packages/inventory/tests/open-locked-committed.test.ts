@@ -1,5 +1,6 @@
 import { LocationId, OrganizationId, PurchaseOrderId, Sku } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
+import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { MOVEMENT_TYPES } from "../src/index.js";
 import {
   computeLockedAvailableToSell,
@@ -545,6 +546,78 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(snapshot.sellState).toBe("locked");
       expect(snapshot.stickyLocked).toBe(true);
     });
+  });
+
+  describe("sticky lock on window-close observation (ADR 0008 decision 4)", () => {
+    ownerIt(
+      "setSellWindow persists sticky from elapsed persisted window and does not reopen via extended dates",
+      async () => {
+        const clock = new InMemoryClock(INSIDE_WINDOW);
+        const h = demandModelHarness(clock);
+        await h.setSellWindow({
+          organizationId: DEFAULT_ORG,
+          sku: WINDOW_SKU,
+          windowOpensAt: WINDOW_OPENS,
+          windowClosesAt: WINDOW_CLOSES,
+        });
+
+        clock.advance(AFTER_WINDOW.getTime() - INSIDE_WINDOW.getTime());
+
+        const extendedCloses = new Date("2027-08-01T00:00:00.000Z");
+        await h.setSellWindow({
+          organizationId: DEFAULT_ORG,
+          sku: WINDOW_SKU,
+          windowOpensAt: WINDOW_OPENS,
+          windowClosesAt: extendedCloses,
+        });
+
+        const snapshot = await h.demandSnapshot(WINDOW_SKU);
+        expect(snapshot.stickyLocked).toBe(true);
+        expect(snapshot.sellState).toBe("locked");
+        expect(snapshot.windowClosesAt?.toISOString()).toBe(WINDOW_CLOSES.toISOString());
+      },
+    );
+
+    ownerIt(
+      "Allocated persists sticky when clock has passed windowClosesAt without a prior observing write",
+      async () => {
+        const clock = new InMemoryClock(INSIDE_WINDOW);
+        const h = demandModelHarness(clock);
+        await h.setSellWindow({
+          organizationId: DEFAULT_ORG,
+          sku: WINDOW_SKU,
+          windowOpensAt: WINDOW_OPENS,
+          windowClosesAt: WINDOW_CLOSES,
+        });
+        await h.adjustmentIncrease.execute({
+          organizationId: DEFAULT_ORG,
+          idempotencyKey: "alloc-window-sticky-on-hand",
+          sku: WINDOW_SKU,
+          quantity: 50,
+          refType: "adjustment",
+          refId: "alloc-window-sticky-on-hand",
+        });
+
+        clock.advance(AFTER_WINDOW.getTime() - INSIDE_WINDOW.getTime());
+
+        const beforeAlloc = await h.demandSnapshot(WINDOW_SKU);
+        expect(beforeAlloc.stickyLocked).toBe(false);
+        expect(beforeAlloc.sellState).toBe("locked");
+
+        const alloc = await h.allocated.execute({
+          organizationId: DEFAULT_ORG,
+          idempotencyKey: "alloc-after-window-close",
+          sku: WINDOW_SKU,
+          quantity: 10,
+          refType: "sales_order",
+          refId: SO_WINDOW,
+        });
+        expect(alloc.ok).toBe(true);
+
+        const snapshot = await h.demandSnapshot(WINDOW_SKU);
+        expect(snapshot.stickyLocked).toBe(true);
+      },
+    );
   });
 
   describe("ship and cancel compensations (I9, G2)", () => {

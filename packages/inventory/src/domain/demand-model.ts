@@ -65,6 +65,28 @@ export function observeWindowClose(
   return state;
 }
 
+/**
+ * Observe the persisted window first, then apply new instants only when still
+ * allowed to stay non-sticky. Prevents setSellWindow from reopening after close.
+ */
+export function applySetSellWindow(
+  demand: DemandPersistedState,
+  windowOpensAt: Date | null,
+  windowClosesAt: Date | null,
+  now: Date,
+): DemandPersistedState {
+  const observedPersisted = observeWindowClose(demand, now);
+  if (observedPersisted.stickyLocked) {
+    return observedPersisted;
+  }
+  const withNewWindow: DemandPersistedState = Object.freeze({
+    ...demand,
+    windowOpensAt,
+    windowClosesAt,
+  });
+  return observeWindowClose(withNewWindow, now);
+}
+
 export function computeEffectiveSellState(
   state: DemandPersistedState,
   now: Date,
