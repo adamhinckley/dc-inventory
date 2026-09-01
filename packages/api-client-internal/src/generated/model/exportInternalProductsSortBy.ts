@@ -12,7 +12,12 @@ export const ExportInternalProductsSortBy = {
   sku: 'sku',
   name: 'name',
   onHand: 'onHand',
+  onOrder: 'onOrder',
+  allocated: 'allocated',
   available: 'available',
+  committed: 'committed',
+  availableToSell: 'availableToSell',
+  sellState: 'sellState',
   caseQty: 'caseQty',
   createdAt: 'createdAt',
 } as const;

@@ -6,7 +6,12 @@ export type CatalogListSortBy =
   | "sku"
   | "name"
   | "onHand"
+  | "onOrder"
+  | "allocated"
   | "available"
+  | "committed"
+  | "availableToSell"
+  | "sellState"
   | "caseQty"
   | "createdAt";
 export type CatalogListSortOrder = "asc" | "desc";
@@ -21,6 +26,8 @@ export type CatalogListQuery = {
   sortOrder: CatalogListSortOrder;
   inactive?: boolean;
   shopVisibleOnly?: boolean;
+  /** When true, omit SKUs whose snapshot qty is all zero. */
+  hideZeroInventory?: boolean;
 };
 
 export type CatalogListRow = {

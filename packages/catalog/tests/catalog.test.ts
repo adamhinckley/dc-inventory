@@ -333,6 +333,42 @@ describe("Catalog use cases (in-memory)", () => {
     ]);
   });
 
+  it("can hide catalog rows whose inventory snapshot is all zero", async () => {
+    const h = harness();
+    const stocked = await createProduct(h, { sku: "STOCKED", name: "Stocked" });
+    const empty = await createProduct(h, { sku: "EMPTY", name: "Empty" });
+    h.qty.set(DEFAULT_ORG, stocked.sku.value, {
+      onHand: 3,
+      onOrder: 0,
+      allocated: 0,
+      available: 3,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    h.qty.set(DEFAULT_ORG, empty.sku.value, {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+
+    const filtered = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+      hideZeroInventory: true,
+    });
+    expect(filtered.items.map((row) => row.product.sku.value)).toEqual(["STOCKED"]);
+    expect(filtered.total).toBe(1);
+  });
+
   it("includes createdAt on each staff list row", async () => {
     const h = harness();
     const product = await createProduct(h);

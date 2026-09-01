@@ -2346,7 +2346,12 @@ paths:
               - sku
               - name
               - onHand
+              - onOrder
+              - allocated
               - available
+              - committed
+              - availableToSell
+              - sellState
               - caseQty
               - createdAt
           in: query
@@ -2372,6 +2377,18 @@ paths:
               - type: boolean
           in: query
           name: inactive
+          required: false
+        - schema:
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: hideZeroInventory
           required: false
       x-table:
         rowId: id
@@ -2411,6 +2428,8 @@ paths:
         filters:
           - param: inactive
             control: boolean
+          - param: hideZeroInventory
+            control: boolean
         sort:
           defaultBy: sku
           defaultOrder: asc
@@ -2418,7 +2437,12 @@ paths:
             - sku
             - name
             - onHand
+            - onOrder
+            - allocated
             - available
+            - committed
+            - availableToSell
+            - sellState
             - caseQty
             - createdAt
         export:
@@ -3259,7 +3283,12 @@ paths:
               - sku
               - name
               - onHand
+              - onOrder
+              - allocated
               - available
+              - committed
+              - availableToSell
+              - sellState
               - caseQty
               - createdAt
           in: query
@@ -3285,6 +3314,18 @@ paths:
               - type: boolean
           in: query
           name: inactive
+          required: false
+        - schema:
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: hideZeroInventory
           required: false
       responses:
         "200":

@@ -128,6 +128,10 @@ export const listInternalProductsTable = {
     {
       "param": "inactive",
       "control": "boolean"
+    },
+    {
+      "param": "hideZeroInventory",
+      "control": "boolean"
     }
   ],
   "sort": {
@@ -137,7 +141,12 @@ export const listInternalProductsTable = {
       "sku",
       "name",
       "onHand",
+      "onOrder",
+      "allocated",
       "available",
+      "committed",
+      "availableToSell",
+      "sellState",
       "caseQty",
       "createdAt"
     ]

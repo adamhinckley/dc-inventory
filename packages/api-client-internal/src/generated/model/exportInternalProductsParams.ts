@@ -14,4 +14,5 @@ q?: string;
 sortBy?: ExportInternalProductsSortBy;
 sortOrder?: ExportInternalProductsSortOrder;
 inactive?: 'true' | 'false' | boolean;
+hideZeroInventory?: 'true' | 'false' | boolean;
 };

@@ -32,6 +32,7 @@ export type ExportStaffProductsCsvRequest = {
   sortBy: CatalogListSortBy;
   sortOrder: CatalogListSortOrder;
   inactive?: boolean;
+  hideZeroInventory?: boolean;
 };
 
 export type ExportStaffProductsCsvResult = {
@@ -80,6 +81,7 @@ export class ExportStaffProductsCsvUseCase {
       sortBy: input.sortBy,
       sortOrder: input.sortOrder,
       inactive: input.inactive,
+      hideZeroInventory: input.hideZeroInventory,
     });
     const file = await this.csvWriter.write({
       filename: "products.csv",

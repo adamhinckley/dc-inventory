@@ -3,6 +3,22 @@ import { formatDateTime } from "@dc-inventory/ui";
 const ISO_INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
+/** Demand-model cells: open ATS is null; sell state is an API enum. */
+export function formatStockField(field: string, value: unknown): unknown {
+  if (field === "availableToSell" && (value === null || value === undefined)) {
+    return "Open";
+  }
+  if (field === "sellState") {
+    if (value === "open") {
+      return "Open";
+    }
+    if (value === "locked") {
+      return "Locked";
+    }
+  }
+  return formatFieldDisplay(value);
+}
+
 export function formatFieldDisplay(
   value: unknown,
   timeZone?: string,

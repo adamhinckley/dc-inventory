@@ -326,6 +326,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortBy: "sku" | "name" | "onHand" | "available" | "caseQty" | "createdAt";
         sortOrder: "asc" | "desc";
         inactive?: boolean;
+        hideZeroInventory?: boolean;
       };
       const result = await request.server.catalog.exportStaffProductsCsv.execute({
         organizationId: staffOrganizationId(request),
@@ -334,6 +335,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
         inactive: query.inactive,
+        hideZeroInventory: query.hideZeroInventory,
       });
       return reply
         .code(200)
@@ -367,6 +369,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortBy: "sku" | "name" | "onHand" | "available" | "caseQty" | "createdAt";
         sortOrder: "asc" | "desc";
         inactive?: boolean;
+        hideZeroInventory?: boolean;
       };
       const result = await request.server.catalog.listStaffProducts.execute({
         organizationId: staffOrganizationId(request),
@@ -377,6 +380,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
         inactive: query.inactive,
+        hideZeroInventory: query.hideZeroInventory,
       });
       return {
         items: result.items.map((row) =>

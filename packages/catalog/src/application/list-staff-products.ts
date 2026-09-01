@@ -1,16 +1,14 @@
 import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
-import type { ICatalogListQuery } from "../domain/ports/catalog-list-query.js";
+import type {
+  CatalogListSortBy,
+  CatalogListSortOrder,
+  ICatalogListQuery,
+} from "../domain/ports/catalog-list-query.js";
 import type { Product } from "../domain/product.js";
 import type { ProductQty } from "../domain/qty.js";
 
-export type StaffProductSortBy =
-  | "sku"
-  | "name"
-  | "onHand"
-  | "available"
-  | "caseQty"
-  | "createdAt";
-export type SortOrder = "asc" | "desc";
+export type StaffProductSortBy = CatalogListSortBy;
+export type SortOrder = CatalogListSortOrder;
 
 export type ListStaffProductsRequest = {
   organizationId: OrganizationId;
@@ -21,6 +19,7 @@ export type ListStaffProductsRequest = {
   sortBy: StaffProductSortBy;
   sortOrder: SortOrder;
   inactive?: boolean;
+  hideZeroInventory?: boolean;
 };
 
 export type StaffProductListRow = {
@@ -50,6 +49,7 @@ export class ListStaffProductsUseCase {
       sortBy: input.sortBy,
       sortOrder: input.sortOrder,
       inactive: input.inactive,
+      hideZeroInventory: input.hideZeroInventory,
     });
     return {
       items: [...page.items],
