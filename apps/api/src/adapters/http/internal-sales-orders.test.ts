@@ -46,6 +46,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
     name: "Acme Wholesale",
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
+    createdAt: new Date("2026-08-24T03:30:00.000Z"),
   });
   await productRepo.save({
     id: PRODUCT_ID,
