@@ -47,6 +47,7 @@ export type InventoryCommandFailureReason =
   | "invalid_quantity"
   | "insufficient_on_hand"
   | "insufficient_available"
+  | "insufficient_available_to_sell"
   | "idempotency_conflict"
   | "provenance_conflict";
 
@@ -55,6 +56,22 @@ export type InventoryCommandResult =
   | { ok: false; reason: InventoryCommandFailureReason };
 
 export type AllocatedCommand = {
+  organizationId: OrganizationId;
+  idempotencyKey: string;
+  sku: Sku;
+  quantity: number;
+  orderId: OrderId;
+};
+
+export type CommittedCommand = {
+  organizationId: OrganizationId;
+  idempotencyKey: string;
+  sku: Sku;
+  quantity: number;
+  orderId: OrderId;
+};
+
+export type DecommittedCommand = {
   organizationId: OrganizationId;
   idempotencyKey: string;
   sku: Sku;
@@ -100,11 +117,21 @@ export type AccountingCommandResult =
     }
   | { ok: false; reason: "invalid" };
 
+export type OrderCoverQuery = {
+  organizationId: OrganizationId;
+  sku: Sku;
+  orderId: OrderId;
+};
+
 export interface IInventoryCommandPort {
   lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void>;
+  recordCommitted(command: CommittedCommand): Promise<InventoryCommandResult>;
+  matchesCommittedIdempotency(command: CommittedCommand): Promise<boolean>;
+  recordDecommitted(command: DecommittedCommand): Promise<InventoryCommandResult>;
   recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult>;
   recordDeallocated(command: DeallocatedCommand): Promise<InventoryCommandResult>;
   recordShipped(command: ShippedCommand): Promise<InventoryCommandResult>;
+  getOrderCoverQuantity(query: OrderCoverQuery): Promise<number>;
 }
 
 export interface IAccountingCommandPort {

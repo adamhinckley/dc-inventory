@@ -52,18 +52,39 @@ export class CancelSalesOrderUseCase {
           })),
         );
         for (const line of existing.lines) {
-          const result = await scope.inventory.recordDeallocated({
+          const decommitResult = await scope.inventory.recordDecommitted({
             organizationId: existing.organizationId,
-            idempotencyKey: `${input.idempotencyKey}:cancel:${line.id}`,
+            idempotencyKey: `${input.idempotencyKey}:decommit:${line.id}`,
             sku: line.sku,
             quantity: line.qty,
             orderId: existing.id,
           });
-          if (!result.ok) {
-            if (result.reason === "idempotency_conflict") {
+          if (!decommitResult.ok) {
+            if (decommitResult.reason === "idempotency_conflict") {
               throw new SalesTransactionError("idempotency_conflict");
             }
             throw new SalesTransactionError("inventory_conflict");
+          }
+
+          const coverQty = await scope.inventory.getOrderCoverQuantity({
+            organizationId: existing.organizationId,
+            sku: line.sku,
+            orderId: existing.id,
+          });
+          if (coverQty > 0) {
+            const deallocateResult = await scope.inventory.recordDeallocated({
+              organizationId: existing.organizationId,
+              idempotencyKey: `${input.idempotencyKey}:deallocate:${line.id}`,
+              sku: line.sku,
+              quantity: coverQty,
+              orderId: existing.id,
+            });
+            if (!deallocateResult.ok) {
+              if (deallocateResult.reason === "idempotency_conflict") {
+                throw new SalesTransactionError("idempotency_conflict");
+              }
+              throw new SalesTransactionError("inventory_conflict");
+            }
           }
         }
 

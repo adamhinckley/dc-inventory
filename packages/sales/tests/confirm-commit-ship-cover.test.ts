@@ -21,8 +21,8 @@ import {
 const SO_LOCKED_FAIL = OrderId.parse("550e8400-e29b-41d4-a716-446655440061");
 
 describe("Sales confirm commits and ship cover (ADA-177)", () => {
-  /** Expected to fail until ADA-178. Change to `it` when sales confirm commits instead of allocating. */
-  const ownerIt = it.fails;
+  /** Expected to pass after ADA-178. */
+  const ownerIt = it;
 
   describe("open SKU confirm writes Committed and covers Allocated to leftover available (I6, G2)", () => {
     ownerIt("confirms far above on_hand with Committed only when no warehouse leftover exists", async () => {
