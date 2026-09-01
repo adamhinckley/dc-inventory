@@ -36,6 +36,40 @@ const BEFORE_WINDOW = new Date("2026-06-15T12:00:00.000Z");
 const INSIDE_WINDOW = new Date("2026-07-15T12:00:00.000Z");
 const AFTER_WINDOW = new Date("2026-09-01T12:00:00.000Z");
 
+/** Sticky-lock a SKU with on_order 0, then seed on-hand (ADR 0008: lock without open PO qty). */
+async function seedStickyLockedOnHand(
+  h: ReturnType<typeof demandModelHarness>,
+  sku: Sku,
+  onHand: number,
+  poId: PurchaseOrderId,
+  fixtureKey: string,
+) {
+  await h.inboundFromPo.execute({
+    organizationId: DEFAULT_ORG,
+    idempotencyKey: `${fixtureKey}-inbound`,
+    sku,
+    quantity: 10,
+    refType: "purchase_order",
+    refId: poId,
+  });
+  await h.inboundCancelled.execute({
+    organizationId: DEFAULT_ORG,
+    idempotencyKey: `${fixtureKey}-cancel`,
+    sku,
+    quantity: 10,
+    refType: "purchase_order",
+    refId: poId,
+  });
+  await h.adjustmentIncrease.execute({
+    organizationId: DEFAULT_ORG,
+    idempotencyKey: `${fixtureKey}-on-hand`,
+    sku,
+    quantity: onHand,
+    refType: "adjustment",
+    refId: `${fixtureKey}-on-hand`,
+  });
+}
+
 describe("Inventory demand model — open/locked, committed, cover (ADA-174)", () => {
   describe("movement and snapshot contract", () => {
     it("includes Committed and Decommitted movement types", () => {
@@ -129,26 +163,15 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   describe("locked availableToSell gate (I9, G4)", () => {
     it("rejects a commit of 501 when on_hand 500 leaves availableToSell 500 and keeps available at 500", async () => {
       const h = demandModelHarness();
-      await h.inboundFromPo.execute({
-        organizationId: DEFAULT_ORG,
-        idempotencyKey: "lock-for-cap",
-        sku: LOCK_SKU,
-        quantity: 1,
-        refType: "purchase_order",
-        refId: PO_ID,
-      });
-      await h.adjustmentIncrease.execute({
-        organizationId: DEFAULT_ORG,
-        idempotencyKey: "seed-on-hand-500",
-        sku: LOCK_SKU,
-        quantity: 500,
-        refType: "adjustment",
-        refId: "seed-on-hand-500",
-      });
+      await seedStickyLockedOnHand(h, LOCK_SKU, 500, PO_ID, "lock-for-cap");
 
-      const before = await h.baseSnapshot(LOCK_SKU);
+      const before = await h.demandSnapshot(LOCK_SKU);
       expect(before.onHand).toBe(500);
+      expect(before.onOrder).toBe(0);
+      expect(before.committed).toBe(0);
       expect(before.available).toBe(500);
+      expect(before.availableToSell).toBe(500);
+      expect(before.sellState).toBe("locked");
 
       const oversell = await h.committed({
         organizationId: DEFAULT_ORG,
@@ -317,22 +340,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   describe("serialized locked confirms (I8)", () => {
     it("cannot let two locked confirms together exceed availableToSell", async () => {
       const h = demandModelHarness();
-      await h.inboundFromPo.execute({
-        organizationId: DEFAULT_ORG,
-        idempotencyKey: "concurrent-lock",
-        sku: LOCK_SKU,
-        quantity: 1,
-        refType: "purchase_order",
-        refId: PO_ID,
-      });
-      await h.adjustmentIncrease.execute({
-        organizationId: DEFAULT_ORG,
-        idempotencyKey: "concurrent-on-hand",
-        sku: LOCK_SKU,
-        quantity: 500,
-        refType: "adjustment",
-        refId: "concurrent-on-hand",
-      });
+      await seedStickyLockedOnHand(h, LOCK_SKU, 500, PO_ID, "concurrent-lock");
 
       const [first, second] = await Promise.all([
         h.committed({
@@ -398,7 +406,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
     });
 
     it("reopens only the SKUs listed in ReopenSkusForPresell", async () => {
-      const h = demandModelHarness();
+      const h = demandModelHarness(INSIDE_WINDOW);
       await lockSku(h, REOPEN_A, PO_ID, "reopen-lock-a");
       await lockSku(h, REOPEN_B, PO_ID, "reopen-lock-b");
       await lockSku(h, REOPEN_C, PO_ID, "reopen-lock-c");
