@@ -1,5 +1,4 @@
-import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
-import type { Sku } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, requireOrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import {
   projectDemandFigures,
@@ -21,7 +20,10 @@ import {
 
 type SnapshotKey = string;
 
-type InternalSnapshot = Readonly<{
+type StoredSnapshot = Readonly<{
+  organizationId: OrganizationId;
+  sku: Sku;
+  locationId: LocationId;
   figures: StockFigures;
   demand: DemandPersistedState;
 }>;
@@ -32,6 +34,36 @@ function snapshotKey(
   locationId: LocationId,
 ): SnapshotKey {
   return `${organizationId}:${sku.value}:${locationId}`;
+}
+
+function freezeStoredSnapshot(
+  organizationId: OrganizationId,
+  sku: Sku,
+  locationId: LocationId,
+  figures: StockFigures,
+  demand: DemandPersistedState,
+): StoredSnapshot {
+  return Object.freeze({
+    organizationId,
+    sku,
+    locationId,
+    figures: Object.freeze({ ...figures }),
+    demand: Object.freeze({ ...demand }),
+  });
+}
+
+function defaultStoredSnapshot(
+  organizationId: OrganizationId,
+  sku: Sku,
+  locationId: LocationId,
+): StoredSnapshot {
+  return freezeStoredSnapshot(
+    organizationId,
+    sku,
+    locationId,
+    ZERO_STOCK_FIGURES,
+    ZERO_DEMAND_STATE,
+  );
 }
 
 function resolveOrganizationId(organizationId: OrganizationId | undefined): OrganizationId {
@@ -56,13 +88,6 @@ function provenanceIndexKey(
   return `${organizationId}:${refType}:${refId}:${sku.value}:${movementType}`;
 }
 
-function defaultInternalSnapshot(): InternalSnapshot {
-  return Object.freeze({
-    figures: ZERO_STOCK_FIGURES,
-    demand: ZERO_DEMAND_STATE,
-  });
-}
-
 /**
  * In-memory read model for tests. Returns immutable snapshots; missing rows read as zero.
  *
@@ -70,7 +95,7 @@ function defaultInternalSnapshot(): InternalSnapshot {
  * movement list instead of cloning it, so demo seed playback stays linear.
  */
 export class InMemoryInventoryReadModel implements IInventoryReadModel {
-  private readonly snapshots = new Map<SnapshotKey, InternalSnapshot>();
+  private readonly snapshots = new Map<SnapshotKey, StoredSnapshot>();
   private readonly movements: Movement[] = [];
   private readonly byIdempotency = new Map<string, Movement>();
   private readonly byProvenance = new Set<string>();
@@ -88,10 +113,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     const org = resolveOrganizationId(organizationId);
     this.snapshots.set(
       snapshotKey(org, sku, locationId),
-      Object.freeze({
-        figures: Object.freeze({ ...figures }),
-        demand: Object.freeze({ ...demand }),
-      }),
+      freezeStoredSnapshot(org, sku, locationId, figures, demand),
     );
   }
 
@@ -164,9 +186,11 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     organizationId: OrganizationId,
   ): DemandStockFigures {
     const org = resolveOrganizationId(organizationId);
-    const internal = this.snapshots.get(snapshotKey(org, sku, locationId)) ?? defaultInternalSnapshot();
+    const stored =
+      this.snapshots.get(snapshotKey(org, sku, locationId)) ??
+      defaultStoredSnapshot(org, sku, locationId);
     const now = this.clock ? this.clock.now() : new Date();
-    return projectDemandFigures(internal.figures, internal.demand, now);
+    return projectDemandFigures(stored.figures, stored.demand, now);
   }
 
   getDemandStateSync(
@@ -175,8 +199,10 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     organizationId: OrganizationId,
   ): DemandPersistedState {
     const org = resolveOrganizationId(organizationId);
-    const internal = this.snapshots.get(snapshotKey(org, sku, locationId)) ?? defaultInternalSnapshot();
-    return internal.demand;
+    const stored =
+      this.snapshots.get(snapshotKey(org, sku, locationId)) ??
+      defaultStoredSnapshot(org, sku, locationId);
+    return stored.demand;
   }
 
   async getSnapshot(
@@ -185,6 +211,26 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     organizationId: OrganizationId,
   ): Promise<DemandStockFigures> {
     return this.getSnapshotSync(sku, locationId, organizationId);
+  }
+
+  /** Lists projected snapshots for an organization at a location (in-memory list queries). */
+  listOrganizationSnapshots(
+    organizationId: OrganizationId,
+    locationId: LocationId = LocationId.DEFAULT,
+  ): ReadonlyArray<{ sku: Sku; snapshot: DemandStockFigures }> {
+    const org = resolveOrganizationId(organizationId);
+    const rows: { sku: Sku; snapshot: DemandStockFigures }[] = [];
+    const now = this.clock ? this.clock.now() : new Date();
+    for (const stored of this.snapshots.values()) {
+      if (stored.organizationId !== org || stored.locationId !== locationId) {
+        continue;
+      }
+      rows.push({
+        sku: stored.sku,
+        snapshot: projectDemandFigures(stored.figures, stored.demand, now),
+      });
+    }
+    return rows;
   }
 
   async listMovements(filter: MovementListFilter): Promise<readonly Movement[]> {
@@ -205,7 +251,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     });
   }
 
-  cloneSnapshots(): Map<SnapshotKey, InternalSnapshot> {
+  cloneSnapshots(): Map<SnapshotKey, StoredSnapshot> {
     return new Map(this.snapshots);
   }
 
@@ -213,7 +259,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     return this.movements.slice();
   }
 
-  restoreSnapshots(snapshots: Map<SnapshotKey, InternalSnapshot>): void {
+  restoreSnapshots(snapshots: Map<SnapshotKey, StoredSnapshot>): void {
     this.snapshots.clear();
     for (const [key, value] of snapshots) {
       this.snapshots.set(key, value);
@@ -237,7 +283,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   ): void {
     const org = resolveOrganizationId(organizationId);
     const key = snapshotKey(org, sku, locationId);
-    const current = this.snapshots.get(key) ?? defaultInternalSnapshot();
+    const current = this.snapshots.get(key) ?? defaultStoredSnapshot(org, sku, locationId);
     const nextFigures = freezeStockFigures(
       current.figures.onHand + (delta.onHand ?? 0),
       current.figures.onOrder + (delta.onOrder ?? 0),
@@ -253,10 +299,7 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     });
     this.snapshots.set(
       key,
-      Object.freeze({
-        figures: nextFigures,
-        demand: nextDemand,
-      }),
+      freezeStoredSnapshot(org, sku, locationId, nextFigures, nextDemand),
     );
   }
 
@@ -268,13 +311,10 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
   ): void {
     const org = resolveOrganizationId(organizationId);
     const key = snapshotKey(org, sku, locationId);
-    const current = this.snapshots.get(key) ?? defaultInternalSnapshot();
+    const current = this.snapshots.get(key) ?? defaultStoredSnapshot(org, sku, locationId);
     this.snapshots.set(
       key,
-      Object.freeze({
-        figures: current.figures,
-        demand: Object.freeze({ ...demand }),
-      }),
+      freezeStoredSnapshot(org, sku, locationId, current.figures, demand),
     );
   }
 }
