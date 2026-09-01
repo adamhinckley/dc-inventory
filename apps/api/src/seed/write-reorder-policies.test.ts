@@ -34,15 +34,14 @@ import {
 import { isDemoLowStock } from "./reconciliation/assert-demo-book.js";
 import {
   productNameBySkuFromPlan,
-  runReplayPurchaseOrders,
   supplierIdByKeyFromPlan,
 } from "./replay-purchase-orders.js";
 import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
-  runReplaySalesOrders,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
+import { runReplayDemoOrders } from "./replay-demo-orders.js";
 import { runReplayPayments } from "./replay-payments.js";
 import { runWriteReorderPolicies } from "./write-reorder-policies.js";
 import { runWriteStaticDemoBook } from "./write-static-demo-book.js";
@@ -130,19 +129,10 @@ describe("write reorder policies (in-memory)", () => {
     const accountingUow = new InMemoryAccountingUnitOfWork(uow.invoices);
     await copySuppliers(plan, staticPorts.suppliers, uow.suppliers);
 
-    await runReplayPurchaseOrders(
-      { uow: uow.purchasing, clock },
+    await runReplayDemoOrders(
       {
-        plan,
-        supplierIdByKey: await supplierIdByKeyFromPlan(plan, uow.suppliers),
-        productNameBySku: productNameBySkuFromPlan(plan),
-        staffUserId: staticResult.staff.id,
-      },
-    );
-
-    await runReplaySalesOrders(
-      {
-        uow: uow.sales,
+        purchasing: uow.purchasing,
+        sales: uow.sales,
         clock,
         customers: staticPorts.customers,
         products: staticPorts.products,
@@ -150,6 +140,7 @@ describe("write reorder policies (in-memory)", () => {
       },
       {
         plan,
+        supplierIdByKey: await supplierIdByKeyFromPlan(plan, uow.suppliers),
         customerIdByKey: await customerIdByKeyFromPlan(plan, staticPorts.customers),
         productNameBySku: productNameBySkuFromPlan(plan),
         currencyBySku: currencyBySkuFromPlan(plan),

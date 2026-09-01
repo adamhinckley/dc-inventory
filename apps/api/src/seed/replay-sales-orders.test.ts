@@ -43,15 +43,14 @@ import type { StaticDemoSeedPorts } from "./ports/static-seed-types.js";
 import { FULL_DEMO_RECONCILIATION_EXPECTATIONS } from "./reconciliation/expectations.js";
 import {
   productNameBySkuFromPlan,
-  runReplayPurchaseOrders,
   supplierIdByKeyFromPlan,
 } from "./replay-purchase-orders.js";
 import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
-  runReplaySalesOrders,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
+import { runReplayDemoOrders } from "./replay-demo-orders.js";
 import { runWriteStaticDemoBook } from "./write-static-demo-book.js";
 
 const SEED_TODAY = new Date("2026-08-24T15:30:00.000Z");
@@ -136,19 +135,10 @@ describe("replay sales orders (in-memory)", () => {
     const uow = new InMemoryUnitOfWork(clock);
     await copySuppliers(plan, staticPorts.suppliers, uow.suppliers);
 
-    await runReplayPurchaseOrders(
-      { uow: uow.purchasing, clock },
+    const replay = await runReplayDemoOrders(
       {
-        plan,
-        supplierIdByKey: await supplierIdByKeyFromPlan(plan, uow.suppliers),
-        productNameBySku: productNameBySkuFromPlan(plan),
-        staffUserId: staticResult.staff.id,
-      },
-    );
-
-    const replay = await runReplaySalesOrders(
-      {
-        uow: uow.sales,
+        purchasing: uow.purchasing,
+        sales: uow.sales,
         clock,
         customers: staticPorts.customers,
         products: staticPorts.products,
@@ -156,6 +146,7 @@ describe("replay sales orders (in-memory)", () => {
       },
       {
         plan,
+        supplierIdByKey: await supplierIdByKeyFromPlan(plan, uow.suppliers),
         customerIdByKey: await customerIdByKeyFromPlan(plan, staticPorts.customers),
         productNameBySku: productNameBySkuFromPlan(plan),
         currencyBySku: currencyBySkuFromPlan(plan),

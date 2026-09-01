@@ -1,4 +1,3 @@
-import { DrizzleCustomerRepository } from "@dc-inventory/customers";
 import type { StaffUserId } from "@dc-inventory/shared-kernel";
 import type { AppDrizzle, SqlClient } from "../infrastructure/db.js";
 import type { DemoSeedDeadline } from "./demo-seed-deadline.js";
@@ -6,12 +5,8 @@ import type { DemoSeedProgressReporter } from "./demo-seed-progress.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import type { Phase1SeedSecrets } from "./run-phase1-seed.js";
 import { runAssertDemoBookOnDb } from "./run-assert-demo-book-on-db.js";
+import { runReplayDemoOrdersOnDb } from "./run-replay-demo-orders-on-db.js";
 import { runReplayPaymentsOnDb } from "./run-replay-payments-on-db.js";
-import { runReplayPurchaseOrdersOnDb } from "./run-replay-purchase-orders-on-db.js";
-import {
-  customerIdByKeyFromPlan,
-  runReplaySalesOrdersOnDb,
-} from "./run-replay-sales-orders-on-db.js";
 import { runWriteReorderPoliciesOnDb } from "./run-write-reorder-policies-on-db.js";
 import { runWriteStaticDemoBookOnDb } from "./run-write-static-demo-book-on-db.js";
 import type { DemoReconciliationExpectations } from "./reconciliation/expectations.js";
@@ -69,19 +64,9 @@ export async function runDemoSeedOnDb(
     };
   }
 
-  tick(input, "purchase order playback");
-  await runReplayPurchaseOrdersOnDb(input.db, input.plan, {
+  tick(input, "order playback");
+  await runReplayDemoOrdersOnDb(input.db, input.plan, {
     staffUserId: staticResult.staff.id,
-    assertWithinBudget,
-  });
-
-  const customers = new DrizzleCustomerRepository(input.db as never);
-  const customerIdByKey = await customerIdByKeyFromPlan(input.plan, customers);
-
-  tick(input, "sales order playback");
-  await runReplaySalesOrdersOnDb(input.db, input.plan, {
-    staffUserId: staticResult.staff.id,
-    customerIdByKey,
     assertWithinBudget,
   });
 

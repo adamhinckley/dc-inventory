@@ -40,15 +40,14 @@ import {
 } from "./reconciliation/assert-demo-book.js";
 import {
   productNameBySkuFromPlan,
-  runReplayPurchaseOrders,
   supplierIdByKeyFromPlan,
 } from "./replay-purchase-orders.js";
 import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
-  runReplaySalesOrders,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
+import { runReplayDemoOrders } from "./replay-demo-orders.js";
 import { buildSalesOrderIdByPlanKey, runReplayPayments } from "./replay-payments.js";
 import { runWriteStaticDemoBook } from "./write-static-demo-book.js";
 
@@ -135,19 +134,10 @@ describe("replay payments (in-memory)", () => {
     const accountingUow = new InMemoryAccountingUnitOfWork(uow.invoices);
     await copySuppliers(plan, staticPorts.suppliers, uow.suppliers);
 
-    await runReplayPurchaseOrders(
-      { uow: uow.purchasing, clock },
+    await runReplayDemoOrders(
       {
-        plan,
-        supplierIdByKey: await supplierIdByKeyFromPlan(plan, uow.suppliers),
-        productNameBySku: productNameBySkuFromPlan(plan),
-        staffUserId: staticResult.staff.id,
-      },
-    );
-
-    await runReplaySalesOrders(
-      {
-        uow: uow.sales,
+        purchasing: uow.purchasing,
+        sales: uow.sales,
         clock,
         customers: staticPorts.customers,
         products: staticPorts.products,
@@ -155,6 +145,7 @@ describe("replay payments (in-memory)", () => {
       },
       {
         plan,
+        supplierIdByKey: await supplierIdByKeyFromPlan(plan, uow.suppliers),
         customerIdByKey: await customerIdByKeyFromPlan(plan, staticPorts.customers),
         productNameBySku: productNameBySkuFromPlan(plan),
         currencyBySku: currencyBySkuFromPlan(plan),
