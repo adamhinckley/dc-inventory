@@ -744,12 +744,20 @@ async function cmdLaunch(flags) {
   }
 
   const docker = which("docker");
-  const postgresUp = await tcpOpen(DEFAULTS.postgresHost, DEFAULTS.postgresPort);
+  const postgresUpBeforeLaunch = await tcpOpen(DEFAULTS.postgresHost, DEFAULTS.postgresPort);
   let postgresMode = "existing";
   if (docker) {
     postgresMode = "compose";
-    plan.push({ step: "compose", command: "docker compose up -d --wait" });
-  } else if (postgresUp) {
+    if (postgresUpBeforeLaunch) {
+      plan.push({
+        step: "compose",
+        mode: "already-up",
+        note: "Postgres already listening; skip docker compose up; teardown will not stop Compose",
+      });
+    } else {
+      plan.push({ step: "compose", command: "docker compose up -d --wait" });
+    }
+  } else if (postgresUpBeforeLaunch) {
     plan.push({ step: "postgres", mode: "existing", host: "127.0.0.1:5432" });
   } else {
     const noPostgres = {
@@ -809,7 +817,8 @@ async function cmdLaunch(flags) {
     return;
   }
 
-  if (postgresMode === "compose") {
+  let startedCompose = false;
+  if (postgresMode === "compose" && !postgresUpBeforeLaunch) {
     const compose = runCommand("docker", ["compose", "up", "-d", "--wait"], { timeoutMs: 180_000 });
     if (compose.status !== 0) {
       fail(
@@ -820,6 +829,7 @@ async function cmdLaunch(flags) {
       );
       return;
     }
+    startedCompose = true;
   }
 
   const migrate = runCommand("pnpm", ["db:migrate"], { timeoutMs: 120_000 });
@@ -880,7 +890,6 @@ async function cmdLaunch(flags) {
   }
 
   ensureDir(RUN_DIR);
-  const startedCompose = postgresMode === "compose";
 
   if (surfaces.includes("api") && !(await tcpOpen("127.0.0.1", 3001))) {
     pids.api = spawnLogged("pnpm", ["dev:api"], join(RUN_DIR, "api.log"));
