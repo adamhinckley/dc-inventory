@@ -261,6 +261,9 @@ describe("Catalog use cases (in-memory)", () => {
       onOrder: 0,
       allocated: 0,
       available: 0,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
     });
 
     h.qty.set(DEFAULT_ORG, product.sku.value, {
@@ -268,6 +271,9 @@ describe("Catalog use cases (in-memory)", () => {
       onOrder: 4,
       allocated: 3,
       available: 7,
+      committed: 2,
+      sellState: "locked",
+      availableToSell: 12,
     });
     const withSnapshot = await h.get.execute({
       organizationId: DEFAULT_ORG,
@@ -277,7 +283,15 @@ describe("Catalog use cases (in-memory)", () => {
     expect(withSnapshot).toEqual({
       ok: true,
       product,
-      qty: { onHand: 10, onOrder: 4, allocated: 3, available: 7 },
+      qty: {
+        onHand: 10,
+        onOrder: 4,
+        allocated: 3,
+        available: 7,
+        committed: 2,
+        sellState: "locked",
+        availableToSell: 12,
+      },
       caseQty: null,
     });
   });
@@ -291,12 +305,18 @@ describe("Catalog use cases (in-memory)", () => {
       onOrder: 0,
       allocated: 0,
       available: 2,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
     });
     h.qty.set(DEFAULT_ORG, high.sku.value, {
       onHand: 40,
       onOrder: 0,
       allocated: 0,
       available: 40,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
     });
 
     const listed = await h.listStaff.execute({

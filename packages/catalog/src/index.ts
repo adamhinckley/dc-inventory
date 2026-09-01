@@ -57,4 +57,4 @@ export type {
 export type { IQtyReadPort } from "./domain/ports/qty-read.js";
 export type { ISupplierLinkPort, SupplierLinkRequest, SupplierLinkResult } from "./domain/ports/supplier-link.js";
 export type { IWorkbookParser, WorkbookRow } from "./domain/ports/workbook-parser.js";
-export { ZERO_QTY, type ProductQty } from "./domain/qty.js";
+export { ZERO_QTY, type ProductQty, type SellState } from "./domain/qty.js";
