@@ -1,6 +1,7 @@
 import { OrganizationId, Sku, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryCatalogSkuLookupPort } from "../src/adapters/in-memory-catalog-sku-lookup.js";
+import { InMemoryFactorySendCatalogPort } from "../src/adapters/in-memory-factory-send-catalog.js";
 import { InMemorySupplierProductQtyReadPort } from "../src/adapters/in-memory-supplier-product-qty-read.js";
 import { InMemorySupplierProductRepository } from "../src/adapters/in-memory-supplier-product-repository.js";
 import { InMemorySupplierRepository } from "../src/adapters/in-memory-supplier-repository.js";
@@ -19,17 +20,20 @@ function harness() {
   const supplierProducts = new InMemorySupplierProductRepository();
   const catalog = new InMemoryCatalogSkuLookupPort();
   const qty = new InMemorySupplierProductQtyReadPort();
+  const factorySendCatalog = new InMemoryFactorySendCatalogPort();
   return {
     suppliers,
     supplierProducts,
     catalog,
     qty,
+    factorySendCatalog,
     createSupplier: new CreateSupplierUseCase(suppliers),
     listSupplierProducts: new ListSupplierProductsUseCase(
       suppliers,
       supplierProducts,
       catalog,
       qty,
+      factorySendCatalog,
     ),
     assignSupplierProduct: new AssignSupplierProductUseCase(
       suppliers,
@@ -59,7 +63,10 @@ describe("Supplier products use cases (in-memory)", () => {
       onOrder: 5,
       allocated: 2,
       available: 8,
+      committed: 22,
+      uncovered: 7,
     });
+    h.factorySendCatalog.set(DEFAULT_ORG, "WIDGET-1", { caseQty: 12 });
 
     const assigned = await h.assignSupplierProduct.execute({
       organizationId: DEFAULT_ORG,
@@ -96,7 +103,15 @@ describe("Supplier products use cases (in-memory)", () => {
       supplierSku: "ACME-W1",
       minOrderQty: 12,
       lastPoCostCents: 499,
-      qty: { onHand: 10, onOrder: 5, allocated: 2, available: 8 },
+      caseQty: 12,
+      qty: {
+        onHand: 10,
+        onOrder: 5,
+        allocated: 2,
+        available: 8,
+        committed: 22,
+        uncovered: 7,
+      },
     });
 
     const updated = await h.updateSupplierProduct.execute({
@@ -317,6 +332,8 @@ describe("Supplier products use cases (in-memory)", () => {
         onOrder: 0,
         allocated: 0,
         available: 0,
+        committed: 0,
+        uncovered: 0,
       });
     }
   });

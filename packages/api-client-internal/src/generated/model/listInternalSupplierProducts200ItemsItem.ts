@@ -36,5 +36,11 @@ export type ListInternalSupplierProducts200ItemsItem = {
      * @maxLength 3
      */
   currency: string;
+  /**
+     * @maximum 9007199254740991
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  caseQty: number | null;
   qty: ListInternalSupplierProducts200ItemsItemQty;
 };

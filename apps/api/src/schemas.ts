@@ -703,6 +703,8 @@ export const supplierProductQtySchema = z.object({
   onOrder: z.number().int(),
   allocated: z.number().int(),
   available: z.number().int(),
+  committed: z.number().int(),
+  uncovered: z.number().int(),
 });
 
 export const supplierProductItemSchema = z.object({
@@ -714,6 +716,7 @@ export const supplierProductItemSchema = z.object({
   minOrderAmountCents: z.number().int().nullable(),
   lastPoCostCents: z.number().int().nullable(),
   currency: z.string().length(3),
+  caseQty: z.number().int().positive().nullable(),
   qty: supplierProductQtySchema,
 });
 

@@ -3,6 +3,7 @@ import type {
   IProductRepository,
   IQtyReadPort,
 } from "@dc-inventory/catalog";
+import { computeUncovered } from "@dc-inventory/inventory";
 import type {
   ICatalogSkuLookupPort,
   IFactorySendCatalogPort,
@@ -27,7 +28,22 @@ export function catalogSkuLookupPort(productRepo: IProductRepository): ICatalogS
 
 export function supplierProductQtyReadPort(qtyRead: IQtyReadPort): ISupplierProductQtyReadPort {
   return {
-    readBySkus: (organizationId, skus) => qtyRead.readBySkus(organizationId, skus),
+    async readBySkus(organizationId, skus) {
+      const snapshots = await qtyRead.readBySkus(organizationId, skus);
+      return new Map(
+        [...snapshots.entries()].map(([sku, qty]) => [
+          sku,
+          {
+            onHand: qty.onHand,
+            onOrder: qty.onOrder,
+            allocated: qty.allocated,
+            available: qty.available,
+            committed: qty.committed,
+            uncovered: computeUncovered(qty.committed, qty.onHand, qty.onOrder),
+          },
+        ]),
+      );
+    },
   };
 }
 

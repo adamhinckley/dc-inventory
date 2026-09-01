@@ -54,7 +54,10 @@ import {
   missingCaseQtyRowElementId,
   type FactorySendRow,
 } from "../lib/factory-send-table";
-import { draftLineFromVendorProduct } from "../lib/purchase-order-line-adder";
+import {
+  casesForDraftPoQty,
+  draftLineFromVendorProduct,
+} from "../lib/purchase-order-line-adder";
 import {
   appendPurchaseOrderLine,
   coalescePurchaseOrderLines,
@@ -296,6 +299,7 @@ function PurchaseOrderLineQtyInput({
 }
 
 function PurchaseOrderLinesTable({
+  supplierId,
   lines,
   blockedSkus,
   purchaseOrderId,
@@ -303,6 +307,7 @@ function PurchaseOrderLinesTable({
   onRemoveSelected,
   disabled = false,
 }: {
+  supplierId: string | null;
   lines: PurchaseOrderLineDraft[];
   blockedSkus: ReadonlySet<string>;
   purchaseOrderId?: string;
@@ -311,6 +316,25 @@ function PurchaseOrderLinesTable({
   disabled?: boolean;
 }) {
   const [caseQtySku, setCaseQtySku] = useState<string | null>(null);
+  const supplierProductsParams = { page: 1, pageSize: 100 };
+  const productsQuery = useListInternalSupplierProducts(
+    supplierId ?? "",
+    supplierProductsParams,
+    {
+      query: {
+        enabled: supplierId !== null,
+        queryKey: getListInternalSupplierProductsQueryKey(
+          supplierId ?? "",
+          supplierProductsParams,
+        ),
+      },
+    },
+  );
+  const productBySku = useMemo(() => {
+    const items =
+      productsQuery.data?.status === 200 ? productsQuery.data.data.items : [];
+    return new Map(items.map((product) => [product.sku, product]));
+  }, [productsQuery.data]);
   const rows = useMemo<PurchaseOrderLineRow[]>(
     () => lines.map((line, rowIndex) => ({ ...line, rowIndex })),
     [lines],
@@ -342,6 +366,50 @@ function PurchaseOrderLinesTable({
           ),
       },
       { id: "name", label: "Product", sort: false as const },
+      {
+        id: "onHand",
+        label: "On hand",
+        sort: false as const,
+        width: 100,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          productBySku.get(record.sku)?.qty.onHand ?? 0,
+      },
+      {
+        id: "preSold",
+        label: "Pre-sold",
+        sort: false as const,
+        width: 100,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          productBySku.get(record.sku)?.qty.committed ?? 0,
+      },
+      {
+        id: "need",
+        label: "Need",
+        sort: false as const,
+        width: 100,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          productBySku.get(record.sku)?.qty.uncovered ?? 0,
+      },
+      {
+        id: "cases",
+        label: "Cases",
+        sort: false as const,
+        width: 88,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) => {
+          const cases = casesForDraftPoQty(
+            record.qty,
+            productBySku.get(record.sku)?.caseQty ?? null,
+          );
+          if (cases === null) {
+            return "";
+          }
+          return Number.isInteger(cases) ? cases : cases.toFixed(2);
+        },
+      },
       {
         id: "caseQtyAction",
         label: "",
@@ -379,7 +447,7 @@ function PurchaseOrderLinesTable({
         ),
       },
     ],
-    [blockedSkus, disabled, onUpdateQty],
+    [blockedSkus, disabled, onUpdateQty, productBySku],
   );
 
   const table = useTable({
@@ -961,6 +1029,7 @@ function PurchaseOrderWorkspaceBody({
       ) : null}
 
       <PurchaseOrderLinesTable
+        supplierId={activeSupplierId}
         lines={lines}
         blockedSkus={blockedSkus}
         purchaseOrderId={purchaseOrderId}
