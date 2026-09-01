@@ -5,7 +5,7 @@
 
 One Postgres database · schema per context · inventory is the only place quantities are written.
 
-Source dump: product browser CSV (`product_id` … `disc_over_sold_percent`). Field meanings in [`product_browser_schema_glossary.csv`](../product_browser_schema_glossary.csv) are **unverified**. Do not copy that spreadsheet 1:1 into Postgres.
+Source dump: product browser CSV (`product_id` … `disc_over_sold_percent`). Field meanings in [`product-browser-schema-glossary.md`](./product-browser-schema-glossary.md) are **unverified**. Do not copy that spreadsheet 1:1 into Postgres.
 
 Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md)
 
@@ -275,7 +275,7 @@ Columns are a first cut from the glossary. Money is integer cents. Quantities ar
 | `length` `width` `height` `diameter` `size` | matching | Product body, not carton |
 | `weight` `weight_uom` | `wt` `wt_uom` | |
 | `list_price_cents` | `lp_price` | Wholesale list — confirm |
-| `member_price_cents` | `mp_price` | Meaning of LP vs MP is unverified |
+| `member_price_cents` | `mp_price` | Master pack price. Column name still says member; do not read that as a membership tier |
 | `original_wholesale_price_cents` | `original_wholesale_price` | History vs current price? |
 | `catalog_page` | `catalog_pg_num` | |
 | `default_order_qty` | `def_qty` | Cart / PO default |
