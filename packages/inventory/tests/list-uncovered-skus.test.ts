@@ -18,10 +18,12 @@ const COVER_SKU = Sku.parse("UNCOVERED-COVER-1");
 const FLOOR_SKU = Sku.parse("UNCOVERED-FLOOR-1");
 const SORT_B = Sku.parse("UNCOVERED-B");
 const SORT_A = Sku.parse("UNCOVERED-A");
+const COLON_SKU = Sku.parse("STYLE:COLOR");
 
 const SO_OPEN = "550e8400-e29b-41d4-a716-446655440070";
 const SO_COVER = "550e8400-e29b-41d4-a716-446655440071";
 const SO_FLOOR = "550e8400-e29b-41d4-a716-446655440072";
+const SO_COLON = "550e8400-e29b-41d4-a716-446655440073";
 const PO_COVER = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440080");
 
 function harness() {
@@ -146,6 +148,34 @@ describe("List uncovered SKUs — demand-to-PO query (ADA-180)", () => {
     });
     expect(result.total).toBe(0);
     expect(result.items).toEqual([]);
+  });
+
+  it("lists SKUs whose code contains a colon", async () => {
+    const h = harness();
+    const commit = await h.committed({
+      organizationId: DEFAULT_ORG,
+      idempotencyKey: "colon-commit-800",
+      sku: COLON_SKU,
+      quantity: 800,
+      refType: "sales_order",
+      refId: SO_COLON,
+    });
+    expect(commit.ok).toBe(true);
+
+    const result = await h.listUncovered.execute({
+      organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 50,
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({
+      sku: COLON_SKU,
+      committed: 800,
+      onHand: 0,
+      onOrder: 0,
+      uncovered: computeUncovered(800, 0, 0),
+    });
   });
 
   it("sorts by sku ascending and paginates", async () => {
