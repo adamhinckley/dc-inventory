@@ -5608,6 +5608,12 @@ paths:
                           type: string
                           minLength: 3
                           maxLength: 3
+                        caseQty:
+                          nullable: true
+                          type: integer
+                          minimum: 0
+                          exclusiveMinimum: true
+                          maximum: 9007199254740991
                         qty:
                           type: object
                           properties:
@@ -5627,11 +5633,21 @@ paths:
                               type: integer
                               minimum: -9007199254740991
                               maximum: 9007199254740991
+                            committed:
+                              type: integer
+                              minimum: -9007199254740991
+                              maximum: 9007199254740991
+                            uncovered:
+                              type: integer
+                              minimum: -9007199254740991
+                              maximum: 9007199254740991
                           required:
                             - onHand
                             - onOrder
                             - allocated
                             - available
+                            - committed
+                            - uncovered
                           additionalProperties: false
                       required:
                         - id
@@ -5642,6 +5658,7 @@ paths:
                         - minOrderAmountCents
                         - lastPoCostCents
                         - currency
+                        - caseQty
                         - qty
                       additionalProperties: false
                   page:

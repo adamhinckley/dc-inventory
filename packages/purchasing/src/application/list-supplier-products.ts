@@ -1,5 +1,6 @@
 import type { OrganizationId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import type { ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
+import type { IFactorySendCatalogPort } from "../domain/ports/factory-send-catalog.js";
 import type {
   ICatalogSkuLookupPort,
   ISupplierProductQtyReadPort,
@@ -17,6 +18,7 @@ export type SupplierProductListRow = {
   minOrderAmountCents: number | null;
   lastPoCostCents: number | null;
   currency: string;
+  caseQty: number | null;
   qty: SupplierProductQty;
 };
 
@@ -47,6 +49,7 @@ export class ListSupplierProductsUseCase {
     private readonly supplierProducts: ISupplierProductRepository,
     private readonly catalog: ICatalogSkuLookupPort,
     private readonly qty: ISupplierProductQtyReadPort,
+    private readonly factorySendCatalog: IFactorySendCatalogPort,
   ) {}
 
   async execute(input: ListSupplierProductsRequest): Promise<ListSupplierProductsResult> {
@@ -70,6 +73,10 @@ export class ListSupplierProductsUseCase {
     const names = await Promise.all(
       page.items.map((row) => this.catalog.findBySku(input.organizationId, row.sku)),
     );
+    const packaging = await this.factorySendCatalog.readBySkus(
+      input.organizationId,
+      page.items.map((row) => row.sku),
+    );
     const items: SupplierProductListRow[] = page.items.map((row, index) => ({
       id: row.id,
       sku: row.sku.value,
@@ -79,6 +86,7 @@ export class ListSupplierProductsUseCase {
       minOrderAmountCents: row.minOrderAmountCents,
       lastPoCostCents: row.lastPoCostCents,
       currency: row.currency,
+      caseQty: packaging.get(row.sku.value)?.caseQty ?? null,
       qty: snapshots.get(row.sku.value) ?? ZERO_SUPPLIER_PRODUCT_QTY,
     }));
     return {

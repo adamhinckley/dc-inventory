@@ -63,6 +63,9 @@ async function startSupplierProductsApp() {
     onOrder: 3,
     allocated: 1,
     available: 11,
+    committed: 22,
+    sellState: "locked",
+    availableToSell: -7,
   });
   const supplierRepo = new InMemorySupplierRepository();
   const supplierProductRepo = new InMemorySupplierProductRepository();
@@ -165,7 +168,15 @@ describe("internal supplier products HTTP", () => {
           sku: "WIDGET-1",
           catalogName: "Blue Widget",
           supplierSku: "ACME-W1",
-          qty: { onHand: 12, onOrder: 3, allocated: 1, available: 11 },
+          caseQty: null,
+          qty: {
+            onHand: 12,
+            onOrder: 3,
+            allocated: 1,
+            available: 11,
+            committed: 22,
+            uncovered: 7,
+          },
         },
       ],
     });

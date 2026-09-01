@@ -54,7 +54,12 @@ import {
   missingCaseQtyRowElementId,
   type FactorySendRow,
 } from "../lib/factory-send-table";
-import { draftLineFromVendorProduct } from "../lib/purchase-order-line-adder";
+import {
+  casesForDraftPoQty,
+  draftLineFromVendorProduct,
+} from "../lib/purchase-order-line-adder";
+import { formatSupplierProductQtyDisplay } from "../lib/supplier-product-by-sku";
+import { useSupplierProductsBySku } from "../lib/use-supplier-products-by-sku";
 import {
   appendPurchaseOrderLine,
   coalescePurchaseOrderLines,
@@ -296,6 +301,7 @@ function PurchaseOrderLineQtyInput({
 }
 
 function PurchaseOrderLinesTable({
+  supplierId,
   lines,
   blockedSkus,
   purchaseOrderId,
@@ -303,6 +309,7 @@ function PurchaseOrderLinesTable({
   onRemoveSelected,
   disabled = false,
 }: {
+  supplierId: string | null;
   lines: PurchaseOrderLineDraft[];
   blockedSkus: ReadonlySet<string>;
   purchaseOrderId?: string;
@@ -311,6 +318,8 @@ function PurchaseOrderLinesTable({
   disabled?: boolean;
 }) {
   const [caseQtySku, setCaseQtySku] = useState<string | null>(null);
+  const lineSkus = useMemo(() => lines.map((line) => line.sku), [lines]);
+  const { productBySku, statusBySku } = useSupplierProductsBySku(supplierId, lineSkus);
   const rows = useMemo<PurchaseOrderLineRow[]>(
     () => lines.map((line, rowIndex) => ({ ...line, rowIndex })),
     [lines],
@@ -342,6 +351,63 @@ function PurchaseOrderLinesTable({
           ),
       },
       { id: "name", label: "Product", sort: false as const },
+      {
+        id: "onHand",
+        label: "On hand",
+        sort: false as const,
+        width: 100,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          formatSupplierProductQtyDisplay(
+            statusBySku.get(record.sku) ?? "loading",
+            productBySku.get(record.sku)?.qty.onHand,
+          ),
+      },
+      {
+        id: "preSold",
+        label: "Pre-sold",
+        sort: false as const,
+        width: 100,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          formatSupplierProductQtyDisplay(
+            statusBySku.get(record.sku) ?? "loading",
+            productBySku.get(record.sku)?.qty.committed,
+          ),
+      },
+      {
+        id: "need",
+        label: "Need",
+        sort: false as const,
+        width: 100,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          formatSupplierProductQtyDisplay(
+            statusBySku.get(record.sku) ?? "loading",
+            productBySku.get(record.sku)?.qty.uncovered,
+          ),
+      },
+      {
+        id: "cases",
+        label: "Cases",
+        sort: false as const,
+        width: 88,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) => {
+          const status = statusBySku.get(record.sku) ?? "loading";
+          if (status !== "ready") {
+            return "";
+          }
+          const cases = casesForDraftPoQty(
+            record.qty,
+            productBySku.get(record.sku)?.caseQty ?? null,
+          );
+          if (cases === null) {
+            return "";
+          }
+          return Number.isInteger(cases) ? cases : cases.toFixed(2);
+        },
+      },
       {
         id: "caseQtyAction",
         label: "",
@@ -379,7 +445,7 @@ function PurchaseOrderLinesTable({
         ),
       },
     ],
-    [blockedSkus, disabled, onUpdateQty],
+    [blockedSkus, disabled, onUpdateQty, productBySku, statusBySku],
   );
 
   const table = useTable({
@@ -961,6 +1027,7 @@ function PurchaseOrderWorkspaceBody({
       ) : null}
 
       <PurchaseOrderLinesTable
+        supplierId={activeSupplierId}
         lines={lines}
         blockedSkus={blockedSkus}
         purchaseOrderId={purchaseOrderId}

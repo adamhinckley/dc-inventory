@@ -421,6 +421,7 @@ function purchasingServices(
       supplierProductRepo,
       catalogSkuLookup,
       supplierProductQty,
+      factorySendCatalog,
     ),
     assignSupplierProduct: new AssignSupplierProductUseCase(
       supplierRepo,

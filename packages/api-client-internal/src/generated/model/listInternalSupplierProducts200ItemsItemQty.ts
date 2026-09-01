@@ -26,4 +26,14 @@ export type ListInternalSupplierProducts200ItemsItemQty = {
      * @maximum 9007199254740991
      */
   available: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  committed: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  uncovered: number;
 };
