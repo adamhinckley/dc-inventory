@@ -1,4 +1,10 @@
-import { computeSnapshotDelta, isPositiveIntegerQuantity } from "@dc-inventory/inventory/ledger-rules";
+import { computeSnapshotDelta, isPositiveIntegerQuantity, type SnapshotDelta } from "@dc-inventory/inventory/ledger-rules";
+import {
+  computeEffectiveSellState,
+  computeLockedAvailableToSell,
+  ZERO_DEMAND_STATE,
+  type DemandPersistedState,
+} from "@dc-inventory/inventory";
 import {
   freezeStockFigures,
   ZERO_STOCK_FIGURES,
@@ -37,12 +43,49 @@ function movementError(movement: DemoMovementRow, reason: string): string {
   return `${movement.sku} ${movement.movementType}: ${reason}`;
 }
 
+type ReplaySkuState = Readonly<{
+  figures: StockFigures;
+  demand: DemandPersistedState;
+}>;
+
 type ReplayOk = { ok: true; figures: Map<string, StockFigures> };
 type ReplayFail = { ok: false; movement: DemoMovementRow; error: string };
 
+function defaultReplayState(): ReplaySkuState {
+  return { figures: ZERO_STOCK_FIGURES, demand: ZERO_DEMAND_STATE };
+}
+
+function applyDelta(state: ReplaySkuState, delta: SnapshotDelta): ReplaySkuState {
+  const nextFigures = freezeStockFigures(
+    state.figures.onHand + (delta.onHand ?? 0),
+    state.figures.onOrder + (delta.onOrder ?? 0),
+    state.figures.allocated + (delta.allocated ?? 0),
+  );
+  const nextDemand: DemandPersistedState = Object.freeze({
+    committed: state.demand.committed + (delta.committed ?? 0),
+    stickyLocked: delta.stickyLocked ?? state.demand.stickyLocked,
+    windowOpensAt:
+      delta.windowOpensAt !== undefined ? delta.windowOpensAt : state.demand.windowOpensAt,
+    windowClosesAt:
+      delta.windowClosesAt !== undefined ? delta.windowClosesAt : state.demand.windowClosesAt,
+  });
+  return { figures: nextFigures, demand: nextDemand };
+}
+
+function validateNonNegative(state: ReplaySkuState, movement: DemoMovementRow): string | undefined {
+  const { figures, demand } = state;
+  if (figures.onHand < 0 || figures.onOrder < 0 || figures.allocated < 0 || demand.committed < 0) {
+    return `${movement.sku} went negative after ${movement.movementType}`;
+  }
+  if (figures.available < 0) {
+    return `${movement.sku} available went negative after ${movement.movementType}`;
+  }
+  return undefined;
+}
+
 function replayStockFromMovements(movements: readonly DemoMovementRow[]): ReplayOk | ReplayFail {
   const sorted = sortMovementsForReplay(movements);
-  const figures = new Map<string, StockFigures>();
+  const stateByKey = new Map<string, ReplaySkuState>();
   for (const movement of sorted) {
     if (!isPositiveIntegerQuantity(movement.quantity)) {
       return {
@@ -52,24 +95,47 @@ function replayStockFromMovements(movements: readonly DemoMovementRow[]): Replay
       };
     }
     const key = stockKey(movement.sku, movement.locationId);
-    const current = figures.get(key) ?? ZERO_STOCK_FIGURES;
-    const delta = computeSnapshotDelta(movement.movementType, movement.quantity, current);
+    const current = stateByKey.get(key) ?? defaultReplayState();
+
+    if (movement.movementType === "Committed") {
+      const sellState = computeEffectiveSellState(current.demand, movement.createdAt);
+      if (sellState === "locked") {
+        const availableToSell = computeLockedAvailableToSell(
+          current.figures.onHand,
+          current.figures.onOrder,
+          current.demand.committed,
+        );
+        if (movement.quantity > availableToSell) {
+          return {
+            ok: false,
+            movement,
+            error: movementError(movement, "insufficient available to sell on locked SKU"),
+          };
+        }
+      }
+    }
+
+    const delta = computeSnapshotDelta(
+      movement.movementType,
+      movement.quantity,
+      current.figures,
+      current.demand.committed,
+    );
     if (!delta.ok) {
       return { ok: false, movement, error: movementError(movement, delta.reason) };
     }
-    const next = freezeStockFigures(
-      current.onHand + (delta.delta.onHand ?? 0),
-      current.onOrder + (delta.delta.onOrder ?? 0),
-      current.allocated + (delta.delta.allocated ?? 0),
-    );
-    if (next.onHand < 0 || next.onOrder < 0 || next.allocated < 0) {
-      return {
-        ok: false,
-        movement,
-        error: `${movement.sku} went negative after ${movement.movementType}`,
-      };
+
+    const next = applyDelta(current, delta.delta);
+    const negative = validateNonNegative(next, movement);
+    if (negative !== undefined) {
+      return { ok: false, movement, error: negative };
     }
-    figures.set(key, next);
+    stateByKey.set(key, next);
+  }
+
+  const figures = new Map<string, StockFigures>();
+  for (const [key, state] of stateByKey) {
+    figures.set(key, state.figures);
   }
   return { ok: true, figures };
 }

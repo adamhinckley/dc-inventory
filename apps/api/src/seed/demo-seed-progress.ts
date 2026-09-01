@@ -1,6 +1,7 @@
 export type DemoSeedStage =
   | "preflight"
   | "static master data"
+  | "order playback"
   | "purchase order playback"
   | "sales order playback"
   | "payment playback"

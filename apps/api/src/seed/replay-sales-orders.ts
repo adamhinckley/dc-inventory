@@ -84,7 +84,7 @@ export async function customerIdByKeyFromPlan(
   return map;
 }
 
-function demoCustomerLookup(
+export function demoCustomerLookup(
   customers: Pick<ICustomerRepository, "findById">,
 ): ICustomerLookupPort {
   return {

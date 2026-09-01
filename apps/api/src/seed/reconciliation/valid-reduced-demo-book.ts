@@ -358,6 +358,13 @@ export function buildValidReducedDemoBook(): DemoBook {
       {
         sku: row.sku,
         locationId: LOCATION,
+        movementType: "Committed",
+        quantity: 1,
+        createdAt: at,
+      },
+      {
+        sku: row.sku,
+        locationId: LOCATION,
         movementType: "Allocated",
         quantity: 1,
         createdAt: at,
@@ -369,7 +376,21 @@ export function buildValidReducedDemoBook(): DemoBook {
     {
       sku: "HEX-BOLT-GALV",
       locationId: LOCATION,
+      movementType: "Committed",
+      quantity: 1,
+      createdAt: daysAgo(1),
+    },
+    {
+      sku: "HEX-BOLT-GALV",
+      locationId: LOCATION,
       movementType: "Allocated",
+      quantity: 1,
+      createdAt: daysAgo(1),
+    },
+    {
+      sku: "WASHER-SS-PACK",
+      locationId: LOCATION,
+      movementType: "Committed",
       quantity: 1,
       createdAt: daysAgo(1),
     },

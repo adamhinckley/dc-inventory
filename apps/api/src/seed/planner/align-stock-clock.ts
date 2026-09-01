@@ -9,14 +9,18 @@ function receivedQtyOnOrder(order: PlannedPurchaseOrder, sku: string): number {
 
 type StockOp = {
   time: number;
-  kind: "alloc" | "ship";
+  kind: "commit" | "ship";
   qty: number;
 };
+
+function confirmCoverQuantity(commitQuantity: number, onHand: number, allocated: number): number {
+  return Math.min(commitQuantity, onHand - allocated);
+}
 
 /**
  * Playback writes every PO receive before any SO, so the live ledger has stock.
  * Reconciliation replays by movement createdAt. Pull later receives onto the
- * seed clock so they land before the allocate that needs them.
+ * seed clock so shipped orders are fully covered before ship.
  */
 export function alignDemoPlanStockClock(plan: DemoBookPlan): void {
   const shipInstantByKey = new Map(
@@ -60,12 +64,12 @@ function alignSku(
       continue;
     }
     const shipAt = shipInstantByKey.get(order.key) ?? order.plannedInstant;
-    const allocTime = allocateInstant(
+    const commitTime = allocateInstant(
       order.plannedInstant,
       shipAt,
       order.status === "shipped",
     ).getTime();
-    ops.push({ time: allocTime, kind: "alloc", qty: line.qty });
+    ops.push({ time: commitTime, kind: "commit", qty: line.qty });
     if (order.status === "shipped") {
       ops.push({ time: shipAt.getTime(), kind: "ship", qty: line.qty });
     }
@@ -77,29 +81,35 @@ function alignSku(
     if (left.kind === right.kind) {
       return 0;
     }
-    return left.kind === "alloc" ? -1 : 1;
+    return left.kind === "commit" ? -1 : 1;
   });
 
   let recvIndex = 0;
   let onHand = 0;
   let allocated = 0;
+  let committed = 0;
   for (const op of ops) {
     if (op.kind === "ship") {
+      while (allocated < op.qty || onHand < op.qty) {
+        const next = recvs[recvIndex];
+        if (next === undefined) {
+          throw new Error(`cannot cover ${sku} ship at ${new Date(op.time).toISOString()}`);
+        }
+        recvIndex += 1;
+        if (next.order.plannedInstant.getTime() >= op.time) {
+          next.order.plannedInstant = new Date(Math.max(plan.historicalStart.getTime(), op.time - 1));
+        }
+        onHand += next.qty;
+        const fifoCover = Math.min(next.qty, Math.max(0, committed - allocated));
+        allocated += fifoCover;
+      }
       allocated -= op.qty;
       onHand -= op.qty;
+      committed -= op.qty;
       continue;
     }
-    while (onHand - allocated < op.qty) {
-      const next = recvs[recvIndex];
-      if (next === undefined) {
-        throw new Error(`cannot cover ${sku} allocate at ${new Date(op.time).toISOString()}`);
-      }
-      recvIndex += 1;
-      if (next.order.plannedInstant.getTime() >= op.time) {
-        next.order.plannedInstant = new Date(Math.max(plan.historicalStart.getTime(), op.time - 1));
-      }
-      onHand += next.qty;
-    }
-    allocated += op.qty;
+    const cover = confirmCoverQuantity(op.qty, onHand, allocated);
+    committed += op.qty;
+    allocated += cover;
   }
 }

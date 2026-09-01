@@ -23,15 +23,14 @@ import { InMemoryDemoBookLoader, type InMemoryDemoBookLoadPorts } from "./reconc
 import type { DemoReconciliationResult } from "./reconciliation/contracts.js";
 import {
   productNameBySkuFromPlan,
-  runReplayPurchaseOrders,
   supplierIdByKeyFromPlan,
 } from "./replay-purchase-orders.js";
 import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
-  runReplaySalesOrders,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
+import { runReplayDemoOrders } from "./replay-demo-orders.js";
 import { runReplayPayments } from "./replay-payments.js";
 import type { Phase1SeedSecrets } from "./run-phase1-seed.js";
 import { runWriteReorderPolicies } from "./write-reorder-policies.js";
@@ -153,22 +152,11 @@ export async function runDemoSeedInMemory(
   const accountingUow = new InMemoryAccountingUnitOfWork(uow.invoices);
   await copySuppliers(input.plan, staticPorts.suppliers, uow.suppliers);
 
-  tick(input, "purchase order playback");
-  await runReplayPurchaseOrders(
-    { uow: uow.purchasing, clock },
+  tick(input, "order playback");
+  await runReplayDemoOrders(
     {
-      plan: input.plan,
-      supplierIdByKey: await supplierIdByKeyFromPlan(input.plan, uow.suppliers),
-      productNameBySku: productNameBySkuFromPlan(input.plan),
-      staffUserId: staticResult.staff.id,
-      assertWithinBudget,
-    },
-  );
-
-  tick(input, "sales order playback");
-  await runReplaySalesOrders(
-    {
-      uow: uow.sales,
+      purchasing: uow.purchasing,
+      sales: uow.sales,
       clock,
       customers: staticPorts.customers,
       products: staticPorts.products,
@@ -176,6 +164,7 @@ export async function runDemoSeedInMemory(
     },
     {
       plan: input.plan,
+      supplierIdByKey: await supplierIdByKeyFromPlan(input.plan, uow.suppliers),
       customerIdByKey: await customerIdByKeyFromPlan(input.plan, staticPorts.customers),
       productNameBySku: productNameBySkuFromPlan(input.plan),
       currencyBySku: currencyBySkuFromPlan(input.plan),
