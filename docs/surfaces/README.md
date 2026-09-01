@@ -28,7 +28,7 @@ What a staff user and a wholesale client can both see (different sessions; the c
 | Description | May be empty in today’s dump |
 | Secondary name | Drop if unused after review |
 | Product images | Staff upload; shop displays |
-| Wholesale selling price | One of list price, member price, or original wholesale — business must pick |
+| Wholesale selling price | One of list price, master pack price, or original wholesale — business must pick |
 | Available quantity | On hand minus allocated. Shop may instead show only in stock / not |
 | Unit of measure | Sell / inventory unit |
 | Default order quantity | Cart / line default |

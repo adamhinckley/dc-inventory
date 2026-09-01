@@ -4,6 +4,8 @@ Unverified meanings for columns in the source product browser dump (`product_id`
 
 Use the Verified column when a description matches the source system.
 
+David (2026-08-31) also named an inner pack price. No dump column uses that name. Do not invent one.
+
 | Field | Description | Verified |
 | --- | --- | --- |
 | product_id | Primary SKU or product identifier used as the unique key for inventory records. | - [ ] |
@@ -35,7 +37,7 @@ Use the Verified column when a description matches the source system.
 | min_order_amt | Minimum purchase order dollar amount required by the vendor. | - [ ] |
 | upcode | UPC or barcode identifier for scanning and retail integration. | - [ ] |
 | lp_price | List price, likely the published wholesale list price. | - [ ] |
-| mp_price | Master pack price. | - [x] |
+| mp_price | Master pack price, also master carton price. What they sell the master pack for. | - [x] |
 | original_wholesale_price | Original catalog wholesale price before current pricing changes. | - [ ] |
 | catalog_pg_num | Reference to a printed or digital catalog page number. | - [ ] |
 | location | Warehouse or storage location code where stock is held. | - [ ] |

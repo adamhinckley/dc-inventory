@@ -38,6 +38,7 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`wholesale.md`](.
 | Invoice PDF | |
 | Attach a file to an invoice | |
 | Role-gated staff actions | Admin, purchasing, warehouse, sales support (matrix TBD) |
+| Sold / cost report | Units shipped, dollars taken in, cost, gain. Accountant role. Not a GL. About twice a month. |
 
 ## Product and catalog information
 
@@ -54,7 +55,7 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`wholesale.md`](.
 | Weight and weight unit | wt, wt_uom |
 | Default weight when weight is 0 | def_wt, def_wt_uom |
 | List price | lp_price |
-| Member price | mp_price |
+| Master pack price | mp_price |
 | Original wholesale price | original_wholesale_price |
 | Catalog page number | catalog_pg_num |
 | Default order quantity | def_qty |
@@ -108,6 +109,7 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`wholesale.md`](.
 | Purchase order header and lines | sku/name frozen on lines |
 | PO status (open / received, TBD) | |
 | Receiving against a PO | |
+| Need, then cases rounded up to master pack | On hand vs pre-sold (committed). Confirm whether inbound PO qty stays in uncovered. |
 
 ## Customers, sales, money
 

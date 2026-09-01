@@ -479,7 +479,11 @@ Credit is named as a use-case invariant but not specified.
 
 ### G8. Staff RBAC matrix
 
-**Closed for v1:** Identity defines four staff roles and a static action policy. Any listed
+**Reopened.** Owner named **internal super user** and **accountant** (read accounting
+data only). The table below still ships until a replacement matrix is accepted. Do not
+invent accountant or rename `admin` in code without that table.
+
+**Closed for v1 (current ship):** Identity defines four staff roles and a static action policy. Any listed
 role may read internal catalog, customer, purchasing, stock, sales, and invoice data.
 Commands use this matrix:
 
