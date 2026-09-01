@@ -22,4 +22,5 @@ pageSize?: number;
 sortBy?: ListInternalProductsSortBy;
 sortOrder?: ListInternalProductsSortOrder;
 inactive?: 'true' | 'false' | boolean;
+hideZeroInventory?: 'true' | 'false' | boolean;
 };

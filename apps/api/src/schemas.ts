@@ -58,13 +58,28 @@ const optionalBooleanQuery = z
     return value === true || value === "true";
   });
 
+export const staffProductSortByValues = [
+  "sku",
+  "name",
+  "onHand",
+  "onOrder",
+  "allocated",
+  "available",
+  "committed",
+  "availableToSell",
+  "sellState",
+  "caseQty",
+  "createdAt",
+] as const;
+
 export const listQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  sortBy: z.enum(["sku", "name", "onHand", "available", "caseQty", "createdAt"]).default("sku"),
+  sortBy: z.enum(staffProductSortByValues).default("sku"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
   inactive: optionalBooleanQuery,
+  hideZeroInventory: optionalBooleanQuery,
 });
 
 export const sellStateSchema = z.enum(["open", "locked"]);
@@ -457,11 +472,14 @@ export const productsListTable = {
     fields: ["sku", "name"],
     placeholder: "Search SKU or name",
   },
-  filters: [{ param: "inactive", control: "boolean" }],
+  filters: [
+    { param: "inactive", control: "boolean" },
+    { param: "hideZeroInventory", control: "boolean" },
+  ],
   sort: {
     defaultBy: "sku",
     defaultOrder: "asc",
-    fields: ["sku", "name", "onHand", "available", "caseQty", "createdAt"],
+    fields: [...staffProductSortByValues],
   },
   export: { formats: ["csv"] as const },
 };
@@ -469,9 +487,10 @@ export const productsListTable = {
 export const productsExportQuerySchema = z.object({
   format: z.enum(["csv"]).default("csv"),
   q: z.string().optional(),
-  sortBy: z.enum(["sku", "name", "onHand", "available", "caseQty", "createdAt"]).default("sku"),
+  sortBy: z.enum(staffProductSortByValues).default("sku"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
   inactive: optionalBooleanQuery,
+  hideZeroInventory: optionalBooleanQuery,
 });
 
 export const purchaseOrderStatusSchema = z.enum([

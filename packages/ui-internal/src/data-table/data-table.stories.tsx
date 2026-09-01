@@ -129,6 +129,72 @@ export const ProductsList: Story = {
   },
 };
 
+const inventoryRows = [
+  {
+    id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    sku: "BOLT-HEX-38",
+    name: "Galvanized hex bolt",
+    onHand: 50,
+    onOrder: 12,
+    allocated: 2,
+    committed: 8,
+    available: 48,
+    availableToSell: 54,
+    sellState: "locked",
+  },
+  {
+    id: "2f1a0b8c-3d4e-4f5a-8b6c-7d8e9f0a1b2c",
+    sku: "WASH-SS-10",
+    name: "Stainless washer pack",
+    onHand: 0,
+    onOrder: 0,
+    allocated: 0,
+    committed: 20,
+    available: 0,
+    availableToSell: null,
+    sellState: "open",
+  },
+];
+
+const inventoryListTable = {
+  rowId: "id",
+  columns: [
+    { field: "sku", label: "SKU" },
+    { field: "name", label: "Name" },
+    { field: "onHand", label: "On hand" },
+    { field: "onOrder", label: "On order" },
+    { field: "allocated", label: "Allocated" },
+    { field: "committed", label: "Committed (pre-sold)" },
+    { field: "available", label: "Available (warehouse)" },
+    { field: "availableToSell", label: "Available to sell" },
+    { field: "sellState", label: "Sell state" },
+  ],
+  search: {
+    param: "q",
+    fields: ["sku", "name"],
+    placeholder: "Search SKU or name",
+  },
+} as const satisfies TableMeta;
+
+export const InventorySnapshot: Story = {
+  args: {
+    meta: inventoryListTable,
+    queryHook: () => ({
+      data: {
+        data: {
+          items: inventoryRows,
+          page: 1,
+          pageSize: 25,
+          total: inventoryRows.length,
+        },
+        status: 200,
+      },
+      isPending: false,
+      isError: false,
+    }),
+  },
+};
+
 export const Empty: Story = {
   args: {
     meta: productsListTable,

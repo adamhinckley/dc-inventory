@@ -129,6 +129,20 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
     await sql.end({ timeout: 5 });
   });
 
+  it("joins snapshots for hideZeroInventory counts without error", async () => {
+    const adapter = new CatalogInventoryListQuery(db);
+    const page = await adapter.list({
+      organizationId: ORG,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+      hideZeroInventory: true,
+    });
+    expect(page.total).toBe(5);
+    expect(page.items).toHaveLength(5);
+  });
+
   it("keeps equal stock sorts stable on the second catalog page", async () => {
     const adapter = new CatalogInventoryListQuery(db);
     queryLog.length = 0;

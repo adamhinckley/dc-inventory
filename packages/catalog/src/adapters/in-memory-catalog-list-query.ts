@@ -8,6 +8,10 @@ import type { IProductPackagingRepository } from "../domain/ports/product-packag
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import { ZERO_QTY } from "../domain/qty.js";
 
+function hasNonZeroInventoryQty(qty: typeof ZERO_QTY): boolean {
+  return qty.onHand > 0 || qty.onOrder > 0 || qty.allocated > 0 || qty.committed > 0;
+}
+
 function compareRows(a: CatalogListRow, b: CatalogListRow, query: CatalogListQuery): number {
   let comparison = 0;
   if (query.sortBy === "sku") {
@@ -16,8 +20,29 @@ function compareRows(a: CatalogListRow, b: CatalogListRow, query: CatalogListQue
     comparison = a.product.name.localeCompare(b.product.name);
   } else if (query.sortBy === "onHand") {
     comparison = a.qty.onHand - b.qty.onHand;
+  } else if (query.sortBy === "onOrder") {
+    comparison = a.qty.onOrder - b.qty.onOrder;
+  } else if (query.sortBy === "allocated") {
+    comparison = a.qty.allocated - b.qty.allocated;
   } else if (query.sortBy === "available") {
     comparison = a.qty.available - b.qty.available;
+  } else if (query.sortBy === "committed") {
+    comparison = a.qty.committed - b.qty.committed;
+  } else if (query.sortBy === "availableToSell") {
+    const aValue = a.qty.availableToSell;
+    const bValue = b.qty.availableToSell;
+    if (aValue === null && bValue === null) {
+      comparison = 0;
+    } else if (aValue === null) {
+      comparison = query.sortOrder === "desc" ? -1 : 1;
+    } else if (bValue === null) {
+      comparison = query.sortOrder === "desc" ? 1 : -1;
+    } else {
+      comparison = aValue - bValue;
+    }
+  } else if (query.sortBy === "sellState") {
+    const rank = (sellState: typeof a.qty.sellState) => (sellState === "open" ? 0 : 1);
+    comparison = rank(a.qty.sellState) - rank(b.qty.sellState);
   } else if (query.sortBy === "caseQty") {
     comparison = (a.caseQty ?? 0) - (b.caseQty ?? 0);
   } else {
@@ -57,11 +82,15 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
       createdAt: row.createdAt,
       caseQty: packs[index]?.caseQty ?? null,
     }));
-    rows.sort((a, b) => compareRows(a, b, query));
+    const visibleRows =
+      query.hideZeroInventory === true
+        ? rows.filter((row) => hasNonZeroInventoryQty(row.qty))
+        : rows;
+    visibleRows.sort((a, b) => compareRows(a, b, query));
     const offset = (query.page - 1) * query.pageSize;
     return {
-      items: rows.slice(offset, offset + query.pageSize),
-      total: rows.length,
+      items: visibleRows.slice(offset, offset + query.pageSize),
+      total: visibleRows.length,
     };
   }
 }

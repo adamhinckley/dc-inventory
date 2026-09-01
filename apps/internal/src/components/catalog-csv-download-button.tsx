@@ -1,9 +1,9 @@
 "use client";
 
-import { listInternalProductsTable } from "@dc-inventory/api-client-internal";
 import { Button } from "@dc-inventory/ui";
 import { Download } from "lucide-react";
 import { useState } from "react";
+import { catalogListTable } from "../lib/catalog-list-table";
 import { downloadProductsCsv } from "../lib/download-products-csv";
 import { listParamsFromSearchParams } from "../lib/table-url-params";
 
@@ -16,7 +16,7 @@ export function CatalogCsvDownloadButton() {
     setPending(true);
     try {
       const params = listParamsFromSearchParams(
-        listInternalProductsTable,
+        catalogListTable,
         Object.fromEntries(new URLSearchParams(window.location.search)),
       );
       await downloadProductsCsv({

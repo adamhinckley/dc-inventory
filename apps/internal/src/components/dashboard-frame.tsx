@@ -4,6 +4,7 @@ import { AppShell } from "@dc-inventory/ui";
 import type { ReactNode } from "react";
 import { dashboardNav } from "../lib/dashboard-routes";
 import { AccountNavMenu } from "./account-nav-menu";
+import { DashboardTableUrlCleanup } from "./dashboard-table-url-cleanup";
 import { StaffSessionGate } from "./staff-sign-in-dialog";
 
 function WorkspaceMark() {
@@ -17,6 +18,7 @@ function WorkspaceMark() {
 export function DashboardFrame({ children }: { children: ReactNode }) {
   return (
     <StaffSessionGate>
+      <DashboardTableUrlCleanup />
       <AppShell
         nav={
           <AppShell.Nav href="/catalog">

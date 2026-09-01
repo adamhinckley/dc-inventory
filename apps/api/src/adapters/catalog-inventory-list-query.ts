@@ -13,7 +13,7 @@ import {
 } from "@dc-inventory/catalog/schema";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
-import { and, asc, count, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
@@ -89,31 +89,75 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
         );
       clauses.push(inArray(products.id, productIds));
     }
-    const where = and(...clauses);
     const onHand = sql<number>`coalesce(${stockSnapshots.onHand}, 0)`;
     const onOrder = sql<number>`coalesce(${stockSnapshots.onOrder}, 0)`;
     const allocated = sql<number>`coalesce(${stockSnapshots.allocated}, 0)`;
     const available = sql<number>`coalesce(${stockSnapshots.available}, 0)`;
     const committed = sql<number>`coalesce(${stockSnapshots.committed}, 0)`;
+    if (query.hideZeroInventory === true) {
+      clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
+    }
+    const where = and(...clauses);
     const stickyLocked = sql<boolean>`coalesce(${stockSnapshots.stickyLocked}, false)`;
     const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
-    const sortExpression =
-      query.sortBy === "sku"
-        ? products.sku
-        : query.sortBy === "name"
-          ? products.name
-          : query.sortBy === "onHand"
-            ? onHand
-          : query.sortBy === "available"
-            ? available
-            : query.sortBy === "caseQty"
-              ? caseQty
-              : products.createdAt;
+    const now = this.clock ? this.clock.now() : new Date();
+    const isLockedForSell = sql<boolean>`(
+      ${stickyLocked}
+      OR (${stockSnapshots.windowOpensAt} IS NOT NULL AND ${stockSnapshots.windowOpensAt} > ${now})
+      OR (${stockSnapshots.windowClosesAt} IS NOT NULL AND ${stockSnapshots.windowClosesAt} <= ${now})
+    )`;
+    const availableToSellSort = sql<number | null>`CASE
+      WHEN ${isLockedForSell} THEN ${onHand} + ${onOrder} - ${committed}
+      ELSE NULL
+    END`;
     const direction = query.sortOrder === "desc" ? desc : asc;
+    const tieBreak = asc(products.id);
+    const orderBy =
+      query.sortBy === "sku"
+        ? [direction(products.sku), tieBreak]
+        : query.sortBy === "name"
+          ? [direction(products.name), tieBreak]
+          : query.sortBy === "onHand"
+            ? [direction(onHand), tieBreak]
+            : query.sortBy === "onOrder"
+              ? [direction(onOrder), tieBreak]
+              : query.sortBy === "allocated"
+                ? [direction(allocated), tieBreak]
+                : query.sortBy === "available"
+                  ? [direction(available), tieBreak]
+                  : query.sortBy === "committed"
+                    ? [direction(committed), tieBreak]
+                    : query.sortBy === "sellState"
+                      ? [direction(isLockedForSell), tieBreak]
+                      : query.sortBy === "availableToSell"
+                        ? query.sortOrder === "desc"
+                          ? [sql`${availableToSellSort} DESC NULLS FIRST`, tieBreak]
+                          : [sql`${availableToSellSort} ASC NULLS LAST`, tieBreak]
+                        : query.sortBy === "caseQty"
+                          ? [direction(caseQty), tieBreak]
+                          : [direction(products.createdAt), tieBreak];
     const offset = (query.page - 1) * query.pageSize;
 
+    const locationJoin = and(
+      eq(locations.organizationId, products.organizationId),
+      eq(locations.code, DEFAULT_LOCATION_CODE),
+    );
+    const snapshotJoin = and(
+      eq(stockSnapshots.organizationId, products.organizationId),
+      eq(stockSnapshots.sku, products.sku),
+      eq(stockSnapshots.locationId, locations.id),
+    );
+    const countFrom =
+      query.hideZeroInventory === true
+        ? this.db
+            .select({ value: count() })
+            .from(products)
+            .leftJoin(locations, locationJoin)
+            .leftJoin(stockSnapshots, snapshotJoin)
+        : this.db.select({ value: count() }).from(products);
+
     const [totalRows, rows] = await Promise.all([
-      this.db.select({ value: count() }).from(products).where(where),
+      countFrom.where(where),
       this.db
         .select({
           id: products.id,
@@ -140,29 +184,14 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           caseQty: productPackaging.caseQty,
         })
         .from(products)
-        .leftJoin(
-          locations,
-          and(
-            eq(locations.organizationId, products.organizationId),
-            eq(locations.code, DEFAULT_LOCATION_CODE),
-          ),
-        )
-        .leftJoin(
-          stockSnapshots,
-          and(
-            eq(stockSnapshots.organizationId, products.organizationId),
-            eq(stockSnapshots.sku, products.sku),
-            eq(stockSnapshots.locationId, locations.id),
-          ),
-        )
+        .leftJoin(locations, locationJoin)
+        .leftJoin(stockSnapshots, snapshotJoin)
         .leftJoin(productPackaging, eq(productPackaging.productId, products.id))
         .where(where)
-        .orderBy(direction(sortExpression), asc(products.id))
+        .orderBy(...orderBy)
         .limit(query.pageSize)
         .offset(offset),
     ]);
-
-    const now = this.clock ? this.clock.now() : new Date();
 
     return {
       items: rows.map((row) => ({

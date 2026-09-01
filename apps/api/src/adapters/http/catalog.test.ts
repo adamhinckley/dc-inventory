@@ -192,22 +192,31 @@ describe("catalog HTTP", () => {
     });
   });
 
-  it("accepts sortBy=onHand on the staff product list", async () => {
+  it("accepts inventory snapshot sort keys on the staff product list", async () => {
     const app = await startCatalogApp();
     const cookie = await staffCookie(app);
-    const rejected = await app.inject({
-      method: "GET",
-      url: "/internal/products?sortBy=onOrder",
-      cookies: { [STAFF_SESSION_COOKIE]: cookie },
-    });
-    expect(rejected.statusCode).toBe(400);
 
-    const listed = await app.inject({
+    for (const sortBy of [
+      "onOrder",
+      "allocated",
+      "committed",
+      "availableToSell",
+      "sellState",
+    ] as const) {
+      const listed = await app.inject({
+        method: "GET",
+        url: `/internal/products?sortBy=${sortBy}&sortOrder=desc`,
+        cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      });
+      expect(listed.statusCode, sortBy).toBe(200);
+    }
+
+    const byOnHand = await app.inject({
       method: "GET",
       url: "/internal/products?sortBy=onHand&sortOrder=desc",
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
-    expect(listed.statusCode).toBe(200);
+    expect(byOnHand.statusCode).toBe(200);
 
     const byCaseQty = await app.inject({
       method: "GET",

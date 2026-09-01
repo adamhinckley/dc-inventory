@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatFieldDisplay, readFieldValue } from "../src/data-table/cell-value";
+import {
+  formatFieldDisplay,
+  formatStockField,
+  readFieldValue,
+} from "../src/data-table/cell-value";
 
 describe("readFieldValue", () => {
   it("reads flat and nested fields", () => {
@@ -25,5 +29,19 @@ describe("formatFieldDisplay", () => {
   it("leaves non-instant values unchanged", () => {
     expect(formatFieldDisplay("BOLT-1")).toBe("BOLT-1");
     expect(formatFieldDisplay(12)).toBe(12);
+  });
+});
+
+describe("formatStockField", () => {
+  it("shows Open when available to sell has no numeric cap", () => {
+    expect(formatStockField("availableToSell", null)).toBe("Open");
+    expect(formatStockField("availableToSell", undefined)).toBe("Open");
+    expect(formatStockField("availableToSell", 14)).toBe(14);
+  });
+
+  it("labels sell state without inventing a third value", () => {
+    expect(formatStockField("sellState", "open")).toBe("Open");
+    expect(formatStockField("sellState", "locked")).toBe("Locked");
+    expect(formatStockField("committed", 22)).toBe(22);
   });
 });

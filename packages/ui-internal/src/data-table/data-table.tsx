@@ -27,7 +27,7 @@ import {
   type TableFilterMeta,
   type TableMeta,
 } from "./table-meta";
-import { formatFieldDisplay, readFieldValue } from "./cell-value";
+import { formatStockField, readFieldValue } from "./cell-value";
 import {
   useDataTable,
   type ListQueryHook,
@@ -46,6 +46,10 @@ export type DataTableRootProps<
   queryHook: ListQueryHook<TParams, TRow>;
   /** Option lists for `select` filters that already exist on `meta.filters`. */
   filterOptions?: Partial<Record<string, readonly FilterOption[]>>;
+  /** Readable labels for boolean/text filters when `param` is not enough. */
+  filterLabels?: Partial<Record<string, string>>;
+  /** Default-on boolean filters: checked unless explicitly `false`. */
+  filterDefaults?: Partial<Record<string, boolean>>;
   /** Parsed App Router `searchParams` (or Storybook in-memory seed). */
   initialParams?: ListQueryParams;
   /** Page-owned URL adapter. Omit in Storybook. */
@@ -65,6 +69,8 @@ export type DataTableRootProps<
 
 type DataTableContextValue = ReturnType<typeof useDataTable> & {
   filterOptions?: DataTableRootProps["filterOptions"];
+  filterLabels?: DataTableRootProps["filterLabels"];
+  filterDefaults?: DataTableRootProps["filterDefaults"];
   /** Per-Root prefix so two tables do not share form-control IDs. */
   idBase: string;
   getRowHref?: (row: Record<string, unknown>) => string | undefined;
@@ -85,7 +91,7 @@ function useDataTableContext(): DataTableContextValue {
 }
 
 function cellValue(row: Record<string, unknown>, field: string): ReactNode {
-  const value = formatFieldDisplay(readFieldValue(row, field));
+  const value = formatStockField(field, readFieldValue(row, field));
   if (value === null || value === undefined) {
     return "—";
   }
@@ -122,12 +128,16 @@ function FilterControl({
   setState,
   options,
   idBase,
+  label,
+  filterDefaults,
 }: {
   filter: TableFilterMeta;
   state: DataTableState;
   setState: Dispatch<SetStateAction<DataTableState>>;
   options: readonly FilterOption[] | undefined;
   idBase: string;
+  label: string;
+  filterDefaults?: Partial<Record<string, boolean>>;
 }) {
   const setFilter = (param: string, value: string | boolean | undefined) => {
     setState((current) => ({
@@ -141,7 +151,7 @@ function FilterControl({
   if (filter.control === "select") {
     return (
       <div className="flex min-w-40 flex-col gap-2">
-        <Label htmlFor={filterId}>{filter.param}</Label>
+        <Label htmlFor={filterId}>{label}</Label>
         <select
           id={filterId}
           className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
@@ -162,17 +172,25 @@ function FilterControl({
   }
 
   if (filter.control === "boolean") {
+    const defaultOn = filterDefaults?.[filter.param] === true;
     return (
       <div className="flex shrink-0 items-center gap-2">
         <Checkbox
           id={filterId}
           density="compact"
-          checked={state.filters[filter.param] === true}
+          checked={
+            defaultOn
+              ? state.filters[filter.param] !== false
+              : state.filters[filter.param] === true
+          }
           onChange={(checked) =>
-            setFilter(filter.param, checked ? true : undefined)
+            setFilter(
+              filter.param,
+              defaultOn ? (checked ? undefined : false) : checked ? true : undefined,
+            )
           }
         />
-        <Label htmlFor={filterId}>{filter.param}</Label>
+        <Label htmlFor={filterId}>{label}</Label>
       </div>
     );
   }
@@ -182,7 +200,7 @@ function FilterControl({
     return (
       <div className="flex flex-wrap gap-4">
         <div className="flex min-w-40 flex-col gap-2">
-          <Label htmlFor={filterId}>{filter.param}</Label>
+          <Label htmlFor={filterId}>{label}</Label>
           <Input
             id={filterId}
             type="date"
@@ -212,7 +230,7 @@ function FilterControl({
   const inputType = filter.control === "date" ? "date" : "text";
   return (
     <div className="flex min-w-40 flex-col gap-2">
-      <Label htmlFor={filterId}>{filter.param}</Label>
+      <Label htmlFor={filterId}>{label}</Label>
       <Input
         id={filterId}
         type={inputType}
@@ -262,6 +280,8 @@ export function DataTableRoot<
   meta,
   queryHook,
   filterOptions,
+  filterLabels,
+  filterDefaults,
   initialParams,
   onParamsChange,
   idPrefix,
@@ -284,6 +304,8 @@ export function DataTableRoot<
       value={{
         ...table,
         filterOptions,
+        filterLabels,
+        filterDefaults,
         idBase,
         getRowHref: getRowHref as
           | ((row: Record<string, unknown>) => string | undefined)
@@ -378,7 +400,8 @@ export function DataTableToolbar({ children }: { children: ReactNode }) {
  * ```
  */
 export function DataTableFilters() {
-  const { meta, state, setState, filterOptions, idBase } = useDataTableContext();
+  const { meta, state, setState, filterOptions, filterLabels, filterDefaults, idBase } =
+    useDataTableContext();
   if (!meta.filters || meta.filters.length === 0) {
     return null;
   }
@@ -393,6 +416,8 @@ export function DataTableFilters() {
           setState={setState}
           options={filterOptions?.[filter.param]}
           idBase={idBase}
+          label={filterLabels?.[filter.param] ?? filter.param}
+          filterDefaults={filterDefaults}
         />
       ))}
     </div>
@@ -421,6 +446,8 @@ const NUMERIC_FIELDS = new Set([
   "onOrder",
   "allocated",
   "available",
+  "committed",
+  "availableToSell",
   "qty",
   "caseQty",
 ]);
@@ -447,6 +474,21 @@ const INVENTORY_CYCLE_HEADER_HELP: Record<string, TableTooltip> = {
     title: "Available",
     description:
       "Warehouse leftover: on hand minus allocated. What can still be picked from the floor. Not available to sell — that figure also counts inbound and pre-sold demand.",
+  },
+  committed: {
+    title: "Committed (pre-sold)",
+    description:
+      "Confirmed sales not yet shipped or decommitted. The demand side of available to sell. Not warehouse allocated.",
+  },
+  availableToSell: {
+    title: "Available to sell",
+    description:
+      "What a customer may still buy. Locked SKUs use on hand plus on order minus committed. Open SKUs have no numeric cap (shown as Open).",
+  },
+  sellState: {
+    title: "Sell state",
+    description:
+      "Open: confirm is not capped by available to sell. Locked: first factory PO (or sell window) closed infinity. Receive does not reopen.",
   },
 };
 

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  listInternalProductsTable,
   useListInternalProducts,
 } from "@dc-inventory/api-client-internal";
 import {
@@ -9,6 +8,7 @@ import {
   type ListQueryParams,
 } from "@dc-inventory/ui-internal";
 import { useCallback, useState } from "react";
+import { catalogListTable } from "../lib/catalog-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 import { CatalogCsvDownloadButton } from "./catalog-csv-download-button";
 import { CatalogImportDialog } from "./catalog-import-dialog";
@@ -27,7 +27,7 @@ export function CatalogTable({
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(listInternalProductsTable, params);
+    replaceTableUrlParams(catalogListTable, params);
   }, []);
 
   const rowActions = useCallback((row: Record<string, unknown>) => {
@@ -47,7 +47,7 @@ export function CatalogTable({
   return (
     <>
       <DataTable.Root<CatalogListParams>
-        meta={listInternalProductsTable}
+        meta={catalogListTable}
         queryHook={useListInternalProducts}
         initialParams={initialParams}
         onParamsChange={onParamsChange}
