@@ -1,7 +1,7 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
-import type { SalesOrder } from "../domain/sales-order.js";
+import { liveSalesOrderLines, type SalesOrder } from "../domain/sales-order.js";
 
 export type CancelSalesOrderRequest = {
   organizationId: OrganizationId;
@@ -46,12 +46,12 @@ export class CancelSalesOrderUseCase {
         }
 
         await scope.inventory.lockSnapshots(
-          existing.lines.map((line) => ({
+          liveSalesOrderLines(existing.lines).map((line) => ({
             organizationId: existing.organizationId,
             sku: line.sku,
           })),
         );
-        for (const line of existing.lines) {
+        for (const line of liveSalesOrderLines(existing.lines)) {
           const decommitResult = await scope.inventory.recordDecommitted({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:decommit:${line.id}`,

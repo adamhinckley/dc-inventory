@@ -25,6 +25,7 @@ function toLine(line: SalesOrderLine): SalesOrderLine {
     qty: line.qty,
     unitPrice: Money.fromMinorUnits(line.unitPrice.amountMinor, line.unitPrice.currency),
     taxCategoryCode: line.taxCategoryCode,
+    ...(line.decommitted ? { decommitted: true as const } : {}),
   };
 }
 

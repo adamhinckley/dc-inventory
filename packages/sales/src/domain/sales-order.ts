@@ -39,3 +39,10 @@ export type SalesOrder = {
   readonly createdAt: Date;
   readonly lines: readonly SalesOrderLine[];
 } & SalesOrderShipSnapshot;
+
+/** Confirmed lines that still have live demand (not pulled via line-level decommit). */
+export function liveSalesOrderLines(
+  lines: readonly SalesOrderLine[],
+): readonly SalesOrderLine[] {
+  return lines.filter((line) => !line.decommitted);
+}

@@ -312,4 +312,177 @@ describe("Line-level decommit (ADA-181)", () => {
     }
     expect(onShipped.reason).toBe("illegal_transition");
   });
+
+  it("ships remaining live lines after one line is decommitted", async () => {
+    const h = salesDemandHarness();
+    await seedStickyLockedOnHand(h, LOCK_SKU, 30, PO_COVER, "ship-after-decommit-lock");
+    await seedOnHand(h, OPEN_SKU, 10, "ship-after-decommit-open");
+
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [
+        { productId: LOCK_PRODUCT_ID, qty: 12 },
+        { productId: OPEN_PRODUCT_ID, qty: 5 },
+      ],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "ship-after-decommit-confirm",
+    });
+    expect(confirmed.ok).toBe(true);
+
+    const lockLine = created.salesOrder.lines.find((line) => line.sku.equals(LOCK_SKU));
+    expect(lockLine).toBeDefined();
+    if (lockLine === undefined) {
+      return;
+    }
+
+    const decommitted = await h.decommitLine.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      lineId: lockLine.id,
+      idempotencyKey: "ship-after-decommit-pull",
+    });
+    expect(decommitted.ok).toBe(true);
+
+    const shipped = await h.ship.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "ship-after-decommit-ship",
+    });
+    expect(shipped.ok).toBe(true);
+    if (!shipped.ok) {
+      return;
+    }
+    expect(shipped.salesOrder.status).toBe("shipped");
+
+    const invoice = await h.uow.invoices.findByOrderId(DEFAULT_ORG, created.salesOrder.id);
+    expect(invoice).not.toBeNull();
+    expect(invoice?.total.amountMinor).toBe(5 * 500);
+
+    const lockMovements = await h.readModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: LOCK_SKU,
+      locationId: DEFAULT_LOCATION,
+    });
+    const openMovements = await h.readModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: OPEN_SKU,
+      locationId: DEFAULT_LOCATION,
+    });
+    expect(
+      lockMovements.filter(
+        (movement) =>
+          movement.movementType === "Shipped" && movement.refId === created.salesOrder.id,
+      ),
+    ).toHaveLength(0);
+    expect(
+      openMovements.filter(
+        (movement) =>
+          movement.movementType === "Shipped" && movement.refId === created.salesOrder.id,
+      ),
+    ).toHaveLength(1);
+    expect(
+      openMovements.find(
+        (movement) =>
+          movement.movementType === "Shipped" && movement.refId === created.salesOrder.id,
+      )?.quantity,
+    ).toBe(5);
+  });
+
+  it("cancels remaining live lines after one line is decommitted", async () => {
+    const h = salesDemandHarness();
+    await seedStickyLockedOnHand(h, LOCK_SKU, 30, PO_COVER, "cancel-after-decommit-lock");
+    await seedOnHand(h, OPEN_SKU, 10, "cancel-after-decommit-open");
+
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [
+        { productId: LOCK_PRODUCT_ID, qty: 12 },
+        { productId: OPEN_PRODUCT_ID, qty: 5 },
+      ],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "cancel-after-decommit-confirm",
+    });
+    expect(confirmed.ok).toBe(true);
+
+    const lockLine = created.salesOrder.lines.find((line) => line.sku.equals(LOCK_SKU));
+    expect(lockLine).toBeDefined();
+    if (lockLine === undefined) {
+      return;
+    }
+
+    const decommitted = await h.decommitLine.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      lineId: lockLine.id,
+      idempotencyKey: "cancel-after-decommit-pull",
+    });
+    expect(decommitted.ok).toBe(true);
+
+    const cancelled = await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "cancel-after-decommit-cancel",
+    });
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) {
+      return;
+    }
+    expect(cancelled.salesOrder.status).toBe("cancelled");
+
+    const lockMovements = await h.readModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: LOCK_SKU,
+      locationId: DEFAULT_LOCATION,
+    });
+    const openMovements = await h.readModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: OPEN_SKU,
+      locationId: DEFAULT_LOCATION,
+    });
+    expect(
+      lockMovements.filter(
+        (movement) =>
+          movement.movementType === "Decommitted" && movement.refId === created.salesOrder.id,
+      ),
+    ).toHaveLength(1);
+    expect(
+      openMovements.filter(
+        (movement) =>
+          movement.movementType === "Decommitted" && movement.refId === created.salesOrder.id,
+      ),
+    ).toHaveLength(1);
+
+    const afterOpen = await h.demandSnapshot(OPEN_SKU);
+    const afterLock = await h.demandSnapshot(LOCK_SKU);
+    expect(afterOpen.committed).toBe(0);
+    expect(afterOpen.allocated).toBe(0);
+    expect(afterLock.committed).toBe(0);
+    expect(afterLock.allocated).toBe(0);
+  });
 });
