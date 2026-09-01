@@ -95,6 +95,24 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
     );
   }
 
+  async matchesDecommittedIdempotency(command: DecommittedCommand): Promise<boolean> {
+    const movements = await this.readModel.listMovements({
+      organizationId: command.organizationId,
+      sku: command.sku,
+      locationId: LocationId.DEFAULT,
+    });
+    const existing = movements.find((movement) => movement.idempotencyKey === command.idempotencyKey);
+    if (existing === undefined) {
+      return false;
+    }
+    return (
+      existing.movementType === "Decommitted" &&
+      existing.quantity === command.quantity &&
+      existing.refType === "sales_order" &&
+      existing.refId === command.orderId
+    );
+  }
+
   async recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult> {
     return mapResult(
       await new RecordAllocatedUseCase(this.ledger).execute({

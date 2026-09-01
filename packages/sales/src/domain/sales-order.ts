@@ -17,6 +17,8 @@ export type SalesOrderLine = {
   readonly qty: number;
   readonly unitPrice: Money;
   readonly taxCategoryCode?: string;
+  /** Set when staff pull demand off this line (manufacturer miss / code red). */
+  readonly decommitted?: boolean;
 };
 
 export type SalesOrderShipSnapshot = {

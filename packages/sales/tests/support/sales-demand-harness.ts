@@ -25,6 +25,7 @@ import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
+  DecommitSalesOrderLineUseCase,
   ShipSalesOrderUseCase,
 } from "../../src/index.js";
 
@@ -93,6 +94,7 @@ export function salesDemandHarness(clock?: IClock) {
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
   const confirm = new ConfirmSalesOrderUseCase(uow);
   const cancel = new CancelSalesOrderUseCase(uow);
+  const decommitLine = new DecommitSalesOrderLineUseCase(uow);
   const ship = new ShipSalesOrderUseCase(uow);
   const snapshot = new GetStockSnapshotUseCase(readModel);
 
@@ -133,6 +135,7 @@ export function salesDemandHarness(clock?: IClock) {
     create,
     confirm,
     cancel,
+    decommitLine,
     ship,
     snapshot,
     inboundFromPo,
