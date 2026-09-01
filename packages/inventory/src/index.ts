@@ -3,6 +3,7 @@ export { InMemoryInventoryReadModel } from "./adapters/in-memory-inventory-read-
 export { InMemoryInventoryUnitOfWork } from "./adapters/in-memory-inventory-unit-of-work.js";
 export type { InventoryUnitOfWorkScope } from "./adapters/in-memory-inventory-unit-of-work.js";
 export { InMemoryStockLedger } from "./adapters/in-memory-stock-ledger.js";
+export { InMemoryUncoveredListQuery } from "./adapters/in-memory-uncovered-list-query.js";
 export { DrizzleInventoryReadModel } from "./adapters/drizzle-inventory-read-model.js";
 export type { InventoryReadDrizzle } from "./adapters/drizzle-inventory-read-model.js";
 export { DrizzleStockLedger } from "./adapters/drizzle-stock-ledger.js";
@@ -16,6 +17,7 @@ export {
   type Phase2BootstrapResult,
 } from "./bootstrap/run-phase2-bootstrap.js";
 export { GetStockSnapshotUseCase } from "./application/get-stock-snapshot.js";
+export { ListUncoveredSkusUseCase } from "./application/list-uncovered-skus.js";
 export { RecordAdjustmentDecreaseUseCase } from "./application/record-adjustment-decrease.js";
 export { RecordAdjustmentIncreaseUseCase } from "./application/record-adjustment-increase.js";
 export { RecordAllocatedUseCase } from "./application/record-allocated.js";
@@ -81,6 +83,12 @@ export type {
   StockCommandResult,
   StockSnapshotLock,
 } from "./domain/ports/stock-ledger.js";
+export type {
+  IUncoveredListQuery,
+  UncoveredListPage,
+  UncoveredListQuery,
+  UncoveredListRow,
+} from "./domain/ports/uncovered-list-query.js";
 export {
   computeAvailable,
   freezeStockFigures,

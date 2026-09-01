@@ -1,5 +1,4 @@
-import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
-import type { Sku } from "@dc-inventory/shared-kernel";
+import { LocationId, OrganizationId, requireOrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import {
   projectDemandFigures,
@@ -185,6 +184,29 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     organizationId: OrganizationId,
   ): Promise<DemandStockFigures> {
     return this.getSnapshotSync(sku, locationId, organizationId);
+  }
+
+  /** Lists projected snapshots for an organization at a location (in-memory list queries). */
+  listOrganizationSnapshots(
+    organizationId: OrganizationId,
+    locationId: LocationId = LocationId.DEFAULT,
+  ): ReadonlyArray<{ sku: Sku; snapshot: DemandStockFigures }> {
+    const org = resolveOrganizationId(organizationId);
+    const rows: { sku: Sku; snapshot: DemandStockFigures }[] = [];
+    for (const [key, internal] of this.snapshots) {
+      const [keyOrg, skuValue, keyLocation] = key.split(":");
+      if (keyOrg !== org || keyLocation !== locationId || skuValue === undefined) {
+        continue;
+      }
+      const sku = Sku.parse(skuValue);
+      const snapshot = projectDemandFigures(
+        internal.figures,
+        internal.demand,
+        this.clock ? this.clock.now() : new Date(),
+      );
+      rows.push({ sku, snapshot });
+    }
+    return rows;
   }
 
   async listMovements(filter: MovementListFilter): Promise<readonly Movement[]> {
