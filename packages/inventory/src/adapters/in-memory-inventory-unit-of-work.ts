@@ -19,7 +19,7 @@ export class InMemoryInventoryUnitOfWork implements InventoryUnitOfWorkScope {
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(clock?: IClock) {
-    this.readModel = new InMemoryInventoryReadModel();
+    this.readModel = new InMemoryInventoryReadModel(clock);
     this.ledger = new InMemoryStockLedger(this.readModel, clock);
   }
 

@@ -9,6 +9,8 @@ export const MOVEMENT_TYPES = [
   "Allocated",
   "Deallocated",
   "Shipped",
+  "Committed",
+  "Decommitted",
   "AdjustmentIncrease",
   "AdjustmentDecrease",
 ] as const;
@@ -27,7 +29,6 @@ export type MovementRefType = (typeof MOVEMENT_REF_TYPES)[number];
 export const ONCE_ONLY_PROVENANCE_TYPES = [
   "InboundFromPo",
   "InboundCancelled",
-  "Allocated",
   "Deallocated",
   "Shipped",
 ] as const satisfies readonly MovementType[];

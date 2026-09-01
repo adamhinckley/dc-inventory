@@ -72,7 +72,7 @@ async function seedStickyLockedOnHand(
 
 describe("Inventory demand model — open/locked, committed, cover (ADA-174)", () => {
   /** Expected to fail until ADA-176. Change to `it` when the demand-model ledger ships. */
-  const ownerIt = it.fails;
+  const ownerIt = it;
 
   describe("movement and snapshot contract", () => {
     ownerIt("includes Committed and Decommitted movement types", () => {

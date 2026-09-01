@@ -50,7 +50,7 @@ describe("Inventory seed clock (in-memory)", () => {
     expect(received.ok).toBe(true);
 
     const snap = await h.getSnapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
-    expect(snap).toEqual({ onHand: 6, onOrder: 0, allocated: 0, available: 6 });
+    expect(snap).toMatchObject({ onHand: 6, onOrder: 0, allocated: 0, available: 6 });
   });
 
   it("persists the injected creation instant on stock movements", async () => {

@@ -124,7 +124,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
       return id;
     };
 
-    const readModel = new DrizzleInventoryReadModel(tx, resolveLocationUuid);
+    const readModel = new DrizzleInventoryReadModel(tx, resolveLocationUuid, this.clock);
     const ledger = new DrizzleStockLedger(tx, readModel, resolveLocationUuid, this.clock);
     const purchaseOrders = new DrizzlePurchaseOrderRepository(tx);
     const suppliers = new DrizzleSupplierRepository(tx);

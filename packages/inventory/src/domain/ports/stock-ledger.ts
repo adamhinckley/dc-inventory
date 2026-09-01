@@ -1,12 +1,16 @@
 import type { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
+import type { DemandStockFigures } from "../demand-model.js";
 import type { Movement, MovementRefType } from "../movement.js";
-import type { StockFigures } from "../snapshot.js";
 
 export type StockCommandFailureReason =
   | "invalid_quantity"
   | "insufficient_on_hand"
   | "insufficient_available"
+  | "insufficient_allocated"
+  | "insufficient_committed"
+  | "insufficient_available_to_sell"
+  | "invalid_sell_window"
   | "idempotency_conflict"
   | "provenance_conflict";
 
@@ -62,6 +66,33 @@ export type RecordAdjustmentDecreaseCommand = StockCommandBase & {
   refType: "adjustment";
 };
 
+export type RecordCommittedCommand = StockCommandBase & {
+  refType: "sales_order";
+};
+
+export type RecordDecommittedCommand = StockCommandBase & {
+  refType: "sales_order";
+};
+
+export type ReopenSkusForPresellCommand = {
+  organizationId: OrganizationId;
+  skus: readonly Sku[];
+  windowOpensAt?: Date | null;
+  windowClosesAt?: Date | null;
+};
+
+export type SetSellWindowCommand = {
+  organizationId: OrganizationId;
+  sku: Sku;
+  locationId?: LocationId;
+  windowOpensAt: Date | null;
+  windowClosesAt: Date | null;
+};
+
+export type DemandCommandResult =
+  | { ok: true }
+  | { ok: false; reason: StockCommandFailureReason };
+
 /**
  * Inventory command port. Movement recording and snapshot projection are
  * implemented by adapters; callers use application use cases.
@@ -85,6 +116,10 @@ export interface IStockLedger {
   recordAdjustmentDecrease(
     command: RecordAdjustmentDecreaseCommand,
   ): Promise<StockCommandResult>;
+  recordCommitted(command: RecordCommittedCommand): Promise<StockCommandResult>;
+  recordDecommitted(command: RecordDecommittedCommand): Promise<StockCommandResult>;
+  reopenSkusForPresell(command: ReopenSkusForPresellCommand): Promise<DemandCommandResult>;
+  setSellWindow(command: SetSellWindowCommand): Promise<DemandCommandResult>;
 }
 
 export type MovementListFilter = {
@@ -101,6 +136,6 @@ export interface IInventoryReadModel {
     sku: Sku,
     locationId: LocationId,
     organizationId: OrganizationId,
-  ): Promise<StockFigures>;
+  ): Promise<DemandStockFigures>;
   listMovements(filter: MovementListFilter): Promise<readonly Movement[]>;
 }
