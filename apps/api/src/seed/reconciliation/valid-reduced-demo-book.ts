@@ -26,9 +26,9 @@ function pad(prefix: string, n: number): string {
 }
 
 const GENERATED_PRODUCTS = [
-  { sku: "DEM-00001", name: "Grade 5 hex cap", memberPriceCents: 100 },
-  { sku: "DEM-00002", name: "Steel fender washer", memberPriceCents: 200 },
-  { sku: "DEM-00003", name: "Coarse mill stud", memberPriceCents: 300 },
+  { sku: "DEM-00001", name: "Grade 5 hex cap", masterPackPrice: 100 },
+  { sku: "DEM-00002", name: "Steel fender washer", masterPackPrice: 200 },
+  { sku: "DEM-00003", name: "Coarse mill stud", masterPackPrice: 300 },
 ] as const;
 
 export const REDUCED_DEMO_RECONCILIATION_EXPECTATIONS: DemoReconciliationExpectations = {
@@ -71,7 +71,7 @@ export function buildValidReducedDemoBook(): DemoBook {
       name: row.name,
       description: null,
       uom: row.uom,
-      memberPriceCents: row.memberPriceCents,
+      masterPackPrice: row.masterPackPrice,
       listPriceCents: null,
       currency: row.currency,
       webWholesale: true,
@@ -83,7 +83,7 @@ export function buildValidReducedDemoBook(): DemoBook {
       name: row.name,
       description: null,
       uom: "EA",
-      memberPriceCents: row.memberPriceCents,
+      masterPackPrice: row.masterPackPrice,
       listPriceCents: null,
       currency: "USD" as const,
       webWholesale: true,
@@ -241,7 +241,7 @@ export function buildValidReducedDemoBook(): DemoBook {
     { purchaseOrderId: "po-10", sku: "DEM-00003", qty: 6, receivedQty: 0 },
   ];
 
-  const priceBySku = new Map(products.map((row) => [row.sku, row.memberPriceCents]));
+  const priceBySku = new Map(products.map((row) => [row.sku, row.masterPackPrice]));
 
   type ShippedSpec = {
     id: string;

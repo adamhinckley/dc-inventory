@@ -73,7 +73,7 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
       const sku = `ADA209-${index + 1}`;
       await sql`
         insert into catalog.products
-          (id, organization_id, sku, name, uom, member_price_cents, currency, web_wholesale)
+          (id, organization_id, sku, name, uom, master_pack_price_cents, currency, web_wholesale)
         values (${productId}, ${ORG}, ${sku}, 'Equal name', 'EA', 100, 'USD', true)
       `;
       await sql`

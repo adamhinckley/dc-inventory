@@ -5,7 +5,7 @@ export type PlannedProduct = {
   sku: string;
   name: string;
   uom: string;
-  memberPriceCents: number;
+  masterPackPrice: number;
   description: null;
   listPriceCents: null;
   currency: "USD";

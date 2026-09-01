@@ -14,7 +14,7 @@ export type UpdateInternalProductBySkuBody = {
      * @minimum -9007199254740991
      * @maximum 9007199254740991
      */
-  memberPriceCents?: number;
+  masterPackPrice?: number;
   /**
      * @minLength 3
      * @maxLength 3

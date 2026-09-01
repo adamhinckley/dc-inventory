@@ -12,7 +12,7 @@ export const STAFF_PRODUCTS_EXPORT_ROW_CAP = 10_000;
 export const STAFF_PRODUCTS_CSV_COLUMNS = [
   { key: "sku", header: "SKU" },
   { key: "name", header: "Name" },
-  { key: "memberPrice", header: "Member price" },
+  { key: "masterPackPrice", header: "Master pack price" },
   { key: "currency", header: "Currency" },
   { key: "inactive", header: "Inactive" },
   { key: "discontinued", header: "Discontinued" },
@@ -48,8 +48,8 @@ function csvRow(row: CatalogListRow): Record<string, string> {
   return {
     sku: row.product.sku.value,
     name: row.product.name,
-    memberPrice: String(row.product.memberPrice.amountMinor),
-    currency: row.product.memberPrice.currency,
+    masterPackPrice: (row.product.masterPackPrice.amountMinor / 100).toFixed(2),
+    currency: row.product.masterPackPrice.currency,
     inactive: String(row.product.inactive),
     discontinued: String(row.product.discontinued),
     webWholesale: String(row.product.webWholesale),

@@ -10,8 +10,8 @@ export const GENERATED_SKU_COUNT = 130;
 export const GENERATED_SKU_FIRST = 1;
 export const GENERATED_SKU_LAST = 130;
 
-export const MEMBER_PRICE_MIN_CENTS = 25;
-export const MEMBER_PRICE_MAX_CENTS = 2_500;
+export const MASTER_PACK_PRICE_MIN_CENTS = 25;
+export const MASTER_PACK_PRICE_MAX_CENTS = 2_500;
 
 export const PO_LINE_COUNT_MIN = 4;
 export const PO_LINE_COUNT_MAX = 12;

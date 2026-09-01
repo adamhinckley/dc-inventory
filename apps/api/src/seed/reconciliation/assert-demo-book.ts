@@ -285,7 +285,7 @@ function checkPhase1Fixtures(ctx: Ctx): DemoReconciliationResult | undefined {
     if (
       product.name !== fixture.name ||
       product.uom !== fixture.uom ||
-      product.memberPriceCents !== fixture.memberPriceCents ||
+      product.masterPackPrice !== fixture.masterPackPrice ||
       product.currency !== fixture.currency
     ) {
       return failContract("phase1_fixture_preservation", `${sku} drifted from the Phase 1 fixture`);

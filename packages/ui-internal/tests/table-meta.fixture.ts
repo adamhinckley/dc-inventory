@@ -5,7 +5,7 @@ export const productsListTableFixture = {
   columns: [
     { field: "sku", label: "SKU" },
     { field: "name", label: "Name" },
-    { field: "memberPrice", label: "Member price" },
+    { field: "masterPackPrice", label: "Master pack price" },
     { field: "currency", label: "Currency" },
     { field: "inactive", label: "Inactive" },
     { field: "discontinued", label: "Discontinued" },

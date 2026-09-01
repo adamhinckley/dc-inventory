@@ -94,7 +94,7 @@ describe("staff RBAC HTTP guard", () => {
           sku: "RBAC-1",
           name: "RBAC test product",
           uom: "EA",
-          memberPriceCents: 100,
+          masterPackPrice: 100,
         },
       }),
     );

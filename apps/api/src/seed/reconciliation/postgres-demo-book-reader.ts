@@ -89,7 +89,7 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           name: products.name,
           description: products.description,
           uom: products.uom,
-          memberPriceCents: products.memberPriceCents,
+          masterPackPrice: products.masterPackPrice,
           listPriceCents: products.listPriceCents,
           currency: products.currency,
           webWholesale: products.webWholesale,

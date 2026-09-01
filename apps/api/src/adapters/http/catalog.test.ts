@@ -133,7 +133,7 @@ describe("catalog HTTP", () => {
         sku: "HEX-BOLT-GALV",
         name: "Galvanized hex bolt",
         uom: "EA",
-        memberPriceCents: 1250,
+        masterPackPrice: 1250,
         currency: "USD",
         webWholesale: true,
       },
@@ -157,7 +157,7 @@ describe("catalog HTTP", () => {
         {
           sku: "HEX-BOLT-GALV",
           name: "Galvanized hex bolt",
-          memberPrice: 1250,
+          masterPackPrice: 1250,
           currency: "USD",
           inactive: false,
           discontinued: false,
@@ -231,7 +231,7 @@ describe("catalog HTTP", () => {
         sku: "HEX-BOLT-GALV",
         name: "Galvanized hex bolt",
         uom: "EA",
-        memberPriceCents: 1250,
+        masterPackPrice: 1250,
         currency: "USD",
         webWholesale: true,
       },
@@ -244,7 +244,7 @@ describe("catalog HTTP", () => {
         sku: "WASHER",
         name: "Washer",
         uom: "EA",
-        memberPriceCents: 50,
+        masterPackPrice: 50,
         currency: "USD",
         webWholesale: true,
       },
@@ -265,7 +265,7 @@ describe("catalog HTTP", () => {
     expect(exported.statusCode).toBe(200);
     expect(exported.headers["content-type"]).toMatch(/text\/csv/);
     expect(exported.headers["content-disposition"]).toContain("products.csv");
-    expect(exported.body).toContain("SKU,Name,Member price");
+    expect(exported.body).toContain("SKU,Name,Master pack price");
     expect(exported.body).toContain("HEX-BOLT-GALV");
     expect(exported.body).not.toContain("WASHER");
   });
@@ -285,7 +285,7 @@ describe("catalog HTTP", () => {
         sku: "HEX-BOLT-GALV",
         name: "Galvanized hex bolt",
         uom: "EA",
-        memberPriceCents: 1250,
+        masterPackPrice: 1250,
         webWholesale: true,
       },
     });
@@ -297,7 +297,7 @@ describe("catalog HTTP", () => {
         sku: "INTERNAL-ONLY",
         name: "Internal washer",
         uom: "EA",
-        memberPriceCents: 100,
+        masterPackPrice: 100,
         webWholesale: false,
       },
     });
@@ -367,7 +367,7 @@ describe("catalog HTTP", () => {
         sku: "HEX-BOLT-GALV",
         name: "Galvanized hex bolt",
         uom: "EA",
-        memberPriceCents: 1250,
+        masterPackPrice: 1250,
         available: 12,
       },
     });
@@ -490,7 +490,7 @@ describe("catalog HTTP", () => {
         {
           sku: "DC-IMPORT-1",
           name: "Crystal Drop",
-          memberPrice: 1020,
+          masterPackPrice: 1020,
           available: 0,
           onHand: 0,
         },

@@ -4,6 +4,7 @@ import {
   Checkbox,
   Input,
   Label,
+  formatMoneyMinorUnits,
   Table,
   TextInput,
   useTable,
@@ -84,8 +85,17 @@ function useDataTableContext(): DataTableContextValue {
   return value;
 }
 
+const MONEY_MINOR_FIELDS = new Set(["masterPackPrice"]);
+
 function cellValue(row: Record<string, unknown>, field: string): ReactNode {
-  const value = formatFieldDisplay(readFieldValue(row, field));
+  const raw = readFieldValue(row, field);
+  if (MONEY_MINOR_FIELDS.has(field) && typeof raw === "number") {
+    const currency = typeof row.currency === "string" ? row.currency : "USD";
+    return (
+      <span className="tabular-nums">{formatMoneyMinorUnits(raw, currency)}</span>
+    );
+  }
+  const value = formatFieldDisplay(raw);
   if (value === null || value === undefined) {
     return "—";
   }
@@ -416,7 +426,7 @@ export function DataTableFilters() {
  */
 const FILL_COLUMN_PREFERENCE = ["name", "supplierName", "productName"] as const;
 const NUMERIC_FIELDS = new Set([
-  "memberPrice",
+  "masterPackPrice",
   "onHand",
   "onOrder",
   "allocated",

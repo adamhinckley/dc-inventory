@@ -87,7 +87,7 @@ def main() -> None:
     print("for line in payload['lines']:")
     print("    post_ok(f'{api}/internal/products', {")
     print("        'sku': line['sku'], 'name': line['name'], 'uom': 'EA',")
-    print("        'memberPriceCents': 0,")
+    print("        'masterPackPrice': 0,")
     print("    })")
     print("    supplier_product = {")
     print("        'sku': line['sku'], 'supplierSku': line['supplierSku'],")

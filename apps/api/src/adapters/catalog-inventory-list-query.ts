@@ -24,7 +24,7 @@ function productFromRow(row: {
   name: string;
   description: string | null;
   uom: string;
-  memberPriceCents: number;
+  masterPackPrice: number;
   currency: string;
   inactive: boolean;
   discontinued: boolean;
@@ -38,7 +38,7 @@ function productFromRow(row: {
     name: row.name,
     description: row.description,
     uom: row.uom,
-    memberPrice: Money.fromMinorUnits(row.memberPriceCents, row.currency),
+    masterPackPrice: Money.fromMinorUnits(row.masterPackPrice, row.currency),
     inactive: row.inactive,
     discontinued: row.discontinued,
     webWholesale: row.webWholesale,
@@ -115,7 +115,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           name: products.name,
           description: products.description,
           uom: products.uom,
-          memberPriceCents: products.memberPriceCents,
+          masterPackPrice: products.masterPackPrice,
           currency: products.currency,
           inactive: products.inactive,
           discontinued: products.discontinued,

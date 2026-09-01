@@ -51,7 +51,7 @@ async function startSupplierProductsApp() {
     sku: "WIDGET-1",
     name: "Blue Widget",
     uom: "EA",
-    memberPriceCents: 1000,
+    masterPackPrice: 1000,
     taxCategoryCode: "P0000000",
   });
   if (!created.ok) {

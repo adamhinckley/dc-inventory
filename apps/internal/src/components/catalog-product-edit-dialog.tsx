@@ -16,7 +16,7 @@ const editProductSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional().nullable(),
   uom: z.string().min(1),
-  memberPriceCents: z.coerce.number().int(),
+  masterPackPrice: z.coerce.number().nonnegative(),
   currency: z.string().length(3),
   taxCategoryCode: z.string().optional().nullable(),
   caseQty: z.preprocess(
@@ -81,7 +81,7 @@ export function CatalogProductEditDialog({
         name: product.name,
         description: product.description ?? "",
         uom: product.uom,
-        memberPriceCents: product.memberPriceCents,
+        masterPackPrice: product.masterPackPrice / 100,
         currency: product.currency,
         taxCategoryCode: product.taxCategoryCode ?? "",
         caseQty: product.caseQty,
@@ -96,7 +96,7 @@ export function CatalogProductEditDialog({
             name: data.name.trim(),
             description: data.description?.trim() ? data.description.trim() : null,
             uom: data.uom.trim(),
-            memberPriceCents: data.memberPriceCents,
+            masterPackPrice: Math.round(data.masterPackPrice * 100),
             currency: data.currency,
             taxCategoryCode: data.taxCategoryCode?.trim()
               ? data.taxCategoryCode.trim()
@@ -124,10 +124,10 @@ export function CatalogProductEditDialog({
       />
       <Form.Field name="uom" label="UOM" required form={{ kind: "text" }} />
       <Form.Field
-        name="memberPriceCents"
-        label="Member price (¢)"
+        name="masterPackPrice"
+        label="Master pack price"
         required
-        form={{ kind: "number" }}
+        form={{ kind: "number", step: 0.01 }}
       />
       <Form.Field name="currency" label="Currency" required form={{ kind: "text" }} />
       <Form.Field

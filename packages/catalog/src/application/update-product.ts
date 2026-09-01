@@ -13,7 +13,7 @@ export type UpdateProductRequest = {
   sku?: string;
   name?: string;
   uom?: string;
-  memberPriceCents?: number;
+  masterPackPrice?: number;
   currency?: string;
   inactive?: boolean;
   discontinued?: boolean;
@@ -75,8 +75,8 @@ export class UpdateProductUseCase {
           ? null
           : input.taxCategoryCode.trim() || null;
     try {
-      const currency = input.currency ?? existing.memberPrice.currency;
-      const cents = input.memberPriceCents ?? existing.memberPrice.amountMinor;
+      const currency = input.currency ?? existing.masterPackPrice.currency;
+      const cents = input.masterPackPrice ?? existing.masterPackPrice.amountMinor;
       const product: Product = {
         id: existing.id,
         organizationId: existing.organizationId,
@@ -84,7 +84,7 @@ export class UpdateProductUseCase {
         name,
         description,
         uom,
-        memberPrice: Money.fromMinorUnits(cents, currency),
+        masterPackPrice: Money.fromMinorUnits(cents, currency),
         inactive: input.inactive ?? existing.inactive,
         discontinued: input.discontinued ?? existing.discontinued,
         webWholesale: input.webWholesale ?? existing.webWholesale,

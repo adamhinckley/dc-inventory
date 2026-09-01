@@ -4,7 +4,7 @@ export type DemoProductRow = {
   name: string;
   description: string | null;
   uom: string;
-  memberPriceCents: number;
+  masterPackPrice: number;
   listPriceCents: number | null;
   currency: string;
   webWholesale: boolean;

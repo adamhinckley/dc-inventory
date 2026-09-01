@@ -70,7 +70,7 @@ async function upsertProduct(
     name: planned.name,
     description: planned.description,
     uom: planned.uom,
-    memberPrice: Money.fromMinorUnits(planned.memberPriceCents, planned.currency),
+    masterPackPrice: Money.fromMinorUnits(planned.masterPackPrice, planned.currency),
     inactive: false,
     discontinued: false,
     webWholesale: planned.webWholesale,

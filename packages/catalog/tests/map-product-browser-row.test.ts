@@ -31,7 +31,7 @@ describe("mapProductBrowserRow", () => {
     if (!mapped.ok) {
       return;
     }
-    expect(mapped.value.memberPriceCents).toBe(1020);
+    expect(mapped.value.masterPackPrice).toBe(1020);
     expect(mapped.value.lastPoCostCents).toBe(357);
     expect(mapped.value.webWholesale).toBe(true);
     expect(mapped.value.minOrderQty).toBeNull();
