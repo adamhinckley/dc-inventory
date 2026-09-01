@@ -2,14 +2,14 @@
 
 This directory is the source for driving user-facing behavior. Read it before you touch the app. Then open the matching feature file and treat its commands as literal.
 
-Primary surface: staff dashboard `apps/internal` at `http://127.0.0.1:3000`. Other surfaces exist. Do not treat them as the default.
+Primary surface: staff dashboard `apps/internal` at `http://localhost:3000`. Other surfaces exist. Do not treat them as the default.
 
 ## Surfaces
 
 | Surface | Origin | What a user sees |
 |---|---|---|
-| Staff dashboard (primary) | `http://127.0.0.1:3000` | AppShell + tables. Cookie `staff_session`. |
-| Wholesale shop | `http://127.0.0.1:3002` | Product cards, cart, checkout. Cookie `wholesale_session`. |
+| Staff dashboard (primary) | `http://localhost:3000` | AppShell + tables. Cookie `staff_session`. |
+| Wholesale shop | `http://localhost:3002` | Product cards, cart, checkout. Cookie `wholesale_session`. |
 | Fastify API | `http://127.0.0.1:3001` | `/health`, `/ready`, `/internal/*`, `/wholesale/*`. Fly in prod. |
 | Ops UI | not in this repo yet | `/ops` API mount may exist. Do not invent an ops app. |
 
@@ -18,6 +18,7 @@ Primary surface: staff dashboard `apps/internal` at `http://127.0.0.1:3000`. Oth
 - Repo root is the cwd for `pnpm` and Compose.
 - `control` means `node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs`.
 - `control doctor` is green for the surfaces you will drive. Internal proof needs API + staff app.
+- Browse `http://localhost:3000`, not `http://127.0.0.1:3000`. Next 16 blocks `/_next` assets from 127.0.0.1.
 - Staff identity after seed: organization `acme`, email `staff@local.test`. Password comes from `PHASE1_STAFF_PASSWORD` in `apps/api/.env`. Never invent one. Never print it.
 - Wholesale identity: organization `acme`, email `wholesale@local.test`. Password is `PHASE1_WHOLESALE_PASSWORD`.
 - `pnpm db:seed:phase1` and `pnpm seed:demo` both leave the catalog empty. Rows appear after Product Browser CSV import, not after seed. An empty table with headers is a valid catalog list.
@@ -30,7 +31,7 @@ Primary surface: staff dashboard `apps/internal` at `http://127.0.0.1:3000`. Oth
 - Prefer role + accessible name, then `data-testid`. Do not click coordinates.
 - One structural action per command. Snapshot or screenshot after the state change you care about.
 - Internal list search uses the `x-table` placeholder as `aria-label`. Catalog search is `Search SKU or name`.
-- Sidebar links live under `navigation` named `Main navigation`. Click `Catalog` / `Inventory` / `Purchasing` there, not the page title.
+- Sidebar links live under `navigation` named `Main navigation`, inside the `Workspace` group. If the tree only shows button `DC Workspace` or `Expand navigation`, the rail is collapsed: `click --role button --name "Expand navigation"` or `click --role button --name "DC Workspace"` first, or `goto --path /…`. The CLI sets the viewport to 1440×900 so the rail stays expanded.
 - Cleanup stops processes this run started. It must not delete `evidence/`.
 
 ## Proof and skip reporting

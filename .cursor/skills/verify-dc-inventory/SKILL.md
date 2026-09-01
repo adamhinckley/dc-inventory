@@ -23,6 +23,7 @@ Read `features/README.md`, then the feature file you are proving.
 Repo-root commands. This skill is allowed to start `pnpm dev:api` and `pnpm dev:internal` even though ordinary coding tickets are not.
 
 Default stack: Compose Postgres :5432, Fastify :3001, staff app :3000.
+Use `http://localhost:3000`, not `http://127.0.0.1:3000`. Next.js 16 blocks `/_next` chunks from 127.0.0.1 when the dev server origin is localhost, so the sign-in form never hydrates.
 
 ```bash
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs launch
@@ -53,7 +54,7 @@ Teardown is the Cleanup section. `launch --dry-run` prints the planned steps and
 
 ```bash
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs attach
-node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs attach --internal-url http://127.0.0.1:3000 --api-url http://127.0.0.1:3001
+node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs attach --internal-url http://localhost:3000 --api-url http://localhost:3001
 ```
 
 Attach never kills those processes.
@@ -92,8 +93,8 @@ Prefer role + name. Then `data-testid`. Coordinates require `--force-coords` and
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs goto --path /catalog
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs login-staff
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs wait-settle
-node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs click --role link --name Catalog --within-role navigation --within-name "Main navigation"
-node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs click --role link --name Inventory --within-role navigation --within-name "Main navigation"
+node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs click --role link --name Catalog
+node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs click --role link --name Inventory
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs fill --role textbox --name "Search SKU or name" --value HEX
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs fill --label Email --value staff@local.test
 node .cursor/skills/verify-dc-inventory/control-dc-inventory.mjs fill --label Password --value-from-env PHASE1_STAFF_PASSWORD
@@ -114,7 +115,7 @@ Stable handles from this repo:
 | Staff sign-in dialog | `getByRole('dialog', { name: 'Sign in' })` or `data-testid="auth-sign-in-dialog"` |
 | Org / email / password | labels `Organization`, `Email`, `Password` |
 | Submit | `getByRole('button', { name: 'Continue' })` |
-| Sidebar | `getByRole('navigation', { name: 'Main navigation' })` then link `Catalog`, `Inventory`, `Purchasing`, `Customers`, `Sales`, `Accounting`, `Reports` |
+| Sidebar | Expand first if needed (`Expand navigation` / `DC Workspace`), then `getByRole('navigation', { name: 'Main navigation' })` → link `Catalog`, `Inventory`, `Purchasing`, `Customers`, `Sales`, `Accounting`, `Reports` |
 | Catalog heading | `getByRole('heading', { name: 'Catalog' })` |
 | Catalog search | `getByRole('textbox', { name: 'Search SKU or name' })` |
 | Catalog import | `data-testid="catalog-import-dialog-trigger"` |

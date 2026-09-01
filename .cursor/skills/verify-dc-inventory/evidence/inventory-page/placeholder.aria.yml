@@ -1,0 +1,39 @@
+- alert
+- complementary "Navigation":
+  - link "Home":
+    - /url: /catalog
+    - text: DC Internal
+  - navigation "Main navigation":
+    - navigation "Workspace":
+      - button "DC Workspace" [expanded]
+      - list:
+        - listitem:
+          - link "Catalog":
+            - /url: /catalog
+        - listitem:
+          - link "Customers":
+            - /url: /customers
+        - listitem:
+          - link "Purchasing":
+            - /url: /purchasing
+        - listitem:
+          - link "Inventory":
+            - /url: /inventory
+        - listitem:
+          - link "Sales":
+            - /url: /sales
+        - listitem:
+          - link "Accounting":
+            - /url: /accounting
+        - listitem:
+          - link "Reports":
+            - /url: /reports
+  - button "Account"
+  - button "Collapse navigation"
+- banner "Top bar":
+  - paragraph: Staff dashboard
+- main:
+  - heading "Inventory" [level=1]
+  - paragraph: Placeholder inventory. Stock movements stay in Inventory — this page will not mutate available.
+  - paragraph: © 2026 Pull Clear Software
+- region "Notifications"

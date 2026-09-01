@@ -1,6 +1,6 @@
 # Wholesale catalog
 
-Wholesale catalog is the client shop product list at `http://127.0.0.1:3002/products`. Cards display price and `available` as the API returned them. The page does not compute stock.
+Wholesale catalog is the client shop product list at `http://localhost:3002/products`. Cards display price and `available` as the API returned them. The page does not compute stock.
 
 ## Sub-features
 
@@ -13,7 +13,7 @@ Wholesale catalog is the client shop product list at `http://127.0.0.1:3002/prod
 ## How to get to it (user POV)
 
 - Start wholesale (`launch --surfaces wholesale` or `pnpm dev:wholesale`) in addition to the API.
-- Open `http://127.0.0.1:3002/products`, or choose `Products` in `Shop` navigation.
+- Open `http://localhost:3002/products`, or choose `Products` in `Shop` navigation.
 - Brand `DC Wholesale` / `Order for your account` also goes to `/products`.
 - Footer says `Wholesale client shop — not the staff dashboard.`
 
@@ -24,7 +24,7 @@ Preconditions:
 - `control doctor` is green for `api` + `wholesale`. Staff :3000 is not required.
 - Browser base is the wholesale origin. `goto` uses `--surface wholesale` or an absolute URL.
 
-- **Attach shop origin.** If you launched only staff earlier, `launch --surfaces wholesale` or `attach` with `--wholesale-url http://127.0.0.1:3002`.
+- **Attach shop origin.** If you launched only staff earlier, `launch --surfaces wholesale` or `attach` with `--wholesale-url http://localhost:3002`.
 - **Open products.** `goto --path /products --surface wholesale` then `wait-settle`. Heading `Products`. Copy says wholesale prices and availability come from the catalog API and that the page does not compute stock.
 - **Empty seed.** After phase 1 or demo seed, the muted line `No products in the catalog yet.` is the expected body.
 - **API down.** Stop the API and reload. Alert `Catalog is unavailable. Start the API with \`pnpm dev:api\` and reload.`

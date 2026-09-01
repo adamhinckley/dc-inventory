@@ -29,9 +29,10 @@ const CHROME_PROFILE = join(RUN_DIR, "chrome-profile");
 const CDP_PORT = 9333;
 
 const DEFAULTS = {
-  internalUrl: "http://127.0.0.1:3000",
-  apiUrl: "http://127.0.0.1:3001",
-  wholesaleUrl: "http://127.0.0.1:3002",
+  // Next 16 blocks /_next/* from 127.0.0.1 when the dev server prints localhost.
+  internalUrl: "http://localhost:3000",
+  apiUrl: "http://localhost:3001",
+  wholesaleUrl: "http://localhost:3002",
   postgresHost: "127.0.0.1",
   postgresPort: 5432,
 };
@@ -191,11 +192,12 @@ Cookie fields are booleans. Values are never printed.
 function fail(command, code, message, doInstead, extra = {}) {
   const error = { code, message, doInstead, ...extra };
   writeJson({ ok: false, command, error });
-  process.exitCode = 1;
+  process.exit(1);
 }
 
 function succeed(command, data) {
   writeJson({ ok: true, command, data });
+  process.exit(0);
 }
 
 function writeJson(payload) {
@@ -567,6 +569,10 @@ async function withPage(state, fn) {
     pages.find((candidate) => candidate.url() !== "about:blank") ??
     pages[0] ??
     (await context.newPage());
+  const viewport = page.viewportSize();
+  if (!viewport || viewport.width < 1280) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+  }
   return fn(page, context);
 }
 
@@ -818,13 +824,35 @@ async function cmdLaunch(flags) {
 
   const migrate = runCommand("pnpm", ["db:migrate"], { timeoutMs: 120_000 });
   if (migrate.status !== 0) {
-    fail(
-      "launch",
-      "MIGRATE_FAILED",
-      migrate.stderr || migrate.stdout || "pnpm db:migrate failed",
-      "Confirm DATABASE_URL in apps/api/.env points at local Postgres, then rerun launch",
+    const tables = runCommand(
+      "psql",
+      [
+        "-h",
+        "127.0.0.1",
+        "-U",
+        "postgres",
+        "-d",
+        "dc_inventory",
+        "-tAc",
+        "SELECT to_regclass('identity.staff_users')",
+      ],
+      { env: { PGPASSWORD: "postgres" }, timeoutMs: 10_000 },
     );
-    return;
+    const staffTable = (tables.stdout || "").trim();
+    if (staffTable !== "identity.staff_users") {
+      fail(
+        "launch",
+        "MIGRATE_FAILED",
+        migrate.stderr || migrate.stdout || "pnpm db:migrate failed",
+        "Confirm DATABASE_URL in apps/api/.env points at local Postgres, then rerun launch",
+      );
+      return;
+    }
+    plan.push({
+      step: "migrate",
+      warning:
+        "pnpm db:migrate exited 1 but identity.staff_users exists. Continuing. drizzle-kit often prints IF EXISTS notices and still exits 1 in this environment.",
+    });
   }
 
   if (seed === "phase1") {

@@ -12,7 +12,7 @@ Inventory in the staff nav is still a placeholder. The route exists so agents ca
 
 - Sign in.
 - Choose `Inventory` in `Main navigation`.
-- Or open `http://127.0.0.1:3000/inventory`.
+- Or open `http://localhost:3000/inventory`.
 
 ## Driving it with control-dc-inventory
 
@@ -21,7 +21,7 @@ Preconditions:
 - Staff session is valid.
 - `control doctor` is green for `internal`.
 
-- **Open from nav.** From `/catalog`, run `click --role link --name Inventory --within-role navigation --within-name "Main navigation"` then `wait-settle`. URL is `/inventory`.
+- **Open from nav.** From `/catalog`, run `click --role link --name Inventory` then `wait-settle`. URL is `/inventory`. Use `goto --path /inventory` if the Workspace group is collapsed.
 - **Direct path.** `goto --path /inventory` then `wait-settle`. Same page.
 - **Read copy.** Heading `Inventory`. Body includes `Placeholder inventory. Stock movements stay in Inventory — this page will not mutate available.`
 - **Proof of placeholder.** `snapshot --aria --path .cursor/skills/verify-dc-inventory/evidence/inventory-page/placeholder.aria.yml` and `screenshot --path .cursor/skills/verify-dc-inventory/evidence/inventory-page/placeholder.png`. Artifacts show the heading and that sentence. They must not show a stock grid pretending to be done.

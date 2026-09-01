@@ -1,0 +1,38 @@
+{
+  "feature": "catalog-list",
+  "ranAt": "2026-09-01T17:55:00Z",
+  "surface": "http://localhost:3000",
+  "notes": [
+    "Staff form login. Password read from apps/api/.env, not printed.",
+    "Phase 1 seed left catalog empty. Table shows No results. That is the live DataTable.",
+    "Search HEX still No results. URL gained q=HEX.",
+    "Nav Catalog link works after Workspace is expanded. --within-role navigation is optional and can miss nested list items."
+  ],
+  "commands": [
+    "doctor",
+    "launch --seed phase1",
+    "login-staff",
+    "wait-settle",
+    "snapshot --aria --path .cursor/skills/verify-dc-inventory/evidence/catalog-list/table.aria.yml",
+    "screenshot --path .cursor/skills/verify-dc-inventory/evidence/catalog-list/table.png --full-page",
+    "fill --role textbox --name \"Search SKU or name\" --value HEX",
+    "goto --path /inventory",
+    "click --role link --name Catalog",
+    "state",
+    "teardown --dry-run",
+    "teardown"
+  ],
+  "observed": {
+    "loginUrl": "http://localhost:3000/catalog?page=1&sortBy=sku&sortOrder=asc",
+    "staffSessionCookie": true,
+    "passwordSource": "apps/api/.env",
+    "emptyState": "No results.",
+    "columnsSeen": [
+      "SKU",
+      "Name",
+      "Member price",
+      "Available",
+      "Allocated"
+    ]
+  }
+}

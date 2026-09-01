@@ -11,7 +11,7 @@ Staff sign-in opens a form (route `/login` or a blocking dialog on any dashboard
 
 ## How to get to it (user POV)
 
-- Open `http://127.0.0.1:3000` or `/catalog` while signed out. The dialog titled `Sign in` appears (`data-testid="auth-sign-in-dialog"`).
+- Open `http://localhost:3000` or `/catalog` while signed out. The dialog titled `Sign in` appears (`data-testid="auth-sign-in-dialog"`).
 - Open `/login` directly. Heading `Sign in`. Copy on the page names organization `acme` and email `staff@local.test`.
 - After success the dashboard chrome says `Staff dashboard` and the nav includes Catalog.
 
