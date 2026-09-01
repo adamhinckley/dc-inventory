@@ -23,6 +23,19 @@ type SkuReplayState = Readonly<{
   demand: DemandPersistedState;
 }>;
 
+type SkuEvent =
+  | { kind: "inbound"; sku: string; qty: number; at: Date }
+  | { kind: "receive"; sku: string; qty: number; at: Date }
+  | { kind: "confirm"; sku: string; qty: number; at: Date }
+  | { kind: "ship"; sku: string; qty: number; at: Date };
+
+const EVENT_ORDER: Record<SkuEvent["kind"], number> = {
+  inbound: 0,
+  receive: 1,
+  confirm: 2,
+  ship: 3,
+};
+
 function defaultSkuState(): SkuReplayState {
   return { figures: ZERO_STOCK_FIGURES, demand: ZERO_DEMAND_STATE };
 }
@@ -103,40 +116,28 @@ function applyMovement(
   return applyDelta(state, delta.delta);
 }
 
-/**
- * Seed-clock movements as reconciliation will sort them: received POs inbound+receive
- * at the PO instant (with FIFO cover allocations); confirmed SOs commit at the SO
- * instant and cover Allocated up to leftover available; shipped SOs ship at the
- * invoice instant (Idle Park ages may precede the SO instant).
- */
-export function movementsFromDemoPlan(plan: DemoBookPlan): DemoMovementRow[] {
-  const rows: DemoMovementRow[] = [];
+function collectSkuEvents(plan: DemoBookPlan): SkuEvent[] {
+  const events: SkuEvent[] = [];
   const shipInstantByKey = new Map(
     plan.shippedInvoices.map((row) => [row.salesOrderKey, row.plannedInstant]),
   );
-  const stateBySku = new Map<string, SkuReplayState>();
-
-  const skuState = (sku: string): SkuReplayState => stateBySku.get(sku) ?? defaultSkuState();
-  const setSkuState = (sku: string, state: SkuReplayState): void => {
-    stateBySku.set(sku, state);
-  };
 
   for (const order of plan.purchaseOrders) {
     for (const line of order.lines) {
-      const at = order.plannedInstant;
-      let state = skuState(line.sku);
-      state = applyMovement(state, "InboundFromPo", line.qty, at);
-      pushMovement(rows, line.sku, "InboundFromPo", line.qty, at);
+      events.push({
+        kind: "inbound",
+        sku: line.sku,
+        qty: line.qty,
+        at: order.plannedInstant,
+      });
       if (order.status === "received") {
-        state = applyMovement(state, "GoodsReceived", line.qty, at);
-        pushMovement(rows, line.sku, "GoodsReceived", line.qty, at);
-        const coverQty = receiveCoverQuantity(line.qty, state.figures, state.demand.committed);
-        if (coverQty > 0) {
-          state = applyMovement(state, "Allocated", coverQty, at);
-          pushMovement(rows, line.sku, "Allocated", coverQty, at);
-        }
+        events.push({
+          kind: "receive",
+          sku: line.sku,
+          qty: line.qty,
+          at: order.plannedInstant,
+        });
       }
-      setSkuState(line.sku, state);
     }
   }
 
@@ -154,20 +155,70 @@ export function movementsFromDemoPlan(plan: DemoBookPlan): DemoMovementRow[] {
         shipAt,
         order.status === "shipped",
       );
-      let state = skuState(line.sku);
-      state = applyMovement(state, "Committed", line.qty, confirmAt);
-      pushMovement(rows, line.sku, "Committed", line.qty, confirmAt);
-      const coverQty = confirmCoverQuantity(line.qty, state.figures);
-      if (coverQty > 0) {
-        state = applyMovement(state, "Allocated", coverQty, confirmAt);
-        pushMovement(rows, line.sku, "Allocated", coverQty, confirmAt);
-      }
+      events.push({ kind: "confirm", sku: line.sku, qty: line.qty, at: confirmAt });
       if (order.status === "shipped") {
-        state = applyMovement(state, "Shipped", line.qty, shipAt);
-        pushMovement(rows, line.sku, "Shipped", line.qty, shipAt);
+        events.push({ kind: "ship", sku: line.sku, qty: line.qty, at: shipAt });
       }
-      setSkuState(line.sku, state);
     }
+  }
+
+  return events.sort((left, right) => {
+    const byTime = left.at.getTime() - right.at.getTime();
+    if (byTime !== 0) {
+      return byTime;
+    }
+    return EVENT_ORDER[left.kind] - EVENT_ORDER[right.kind];
+  });
+}
+
+/**
+ * Seed-clock movements as reconciliation will sort them: PO inbound/receive and SO
+ * commit/ship interleave by createdAt. Confirm cover Allocated is sized from
+ * on_hand present at confirmAt; later GoodsReceived emits FIFO cover Allocated.
+ */
+export function movementsFromDemoPlan(plan: DemoBookPlan): DemoMovementRow[] {
+  const rows: DemoMovementRow[] = [];
+  const stateBySku = new Map<string, SkuReplayState>();
+
+  const skuState = (sku: string): SkuReplayState => stateBySku.get(sku) ?? defaultSkuState();
+  const setSkuState = (sku: string, state: SkuReplayState): void => {
+    stateBySku.set(sku, state);
+  };
+
+  for (const event of collectSkuEvents(plan)) {
+    let state = skuState(event.sku);
+    switch (event.kind) {
+      case "inbound":
+        state = applyMovement(state, "InboundFromPo", event.qty, event.at);
+        pushMovement(rows, event.sku, "InboundFromPo", event.qty, event.at);
+        break;
+      case "receive": {
+        state = applyMovement(state, "GoodsReceived", event.qty, event.at);
+        pushMovement(rows, event.sku, "GoodsReceived", event.qty, event.at);
+        const fifoCover = receiveCoverQuantity(event.qty, state.figures, state.demand.committed);
+        if (fifoCover > 0) {
+          state = applyMovement(state, "Allocated", fifoCover, event.at);
+          pushMovement(rows, event.sku, "Allocated", fifoCover, event.at);
+        }
+        break;
+      }
+      case "confirm":
+        state = applyMovement(state, "Committed", event.qty, event.at);
+        pushMovement(rows, event.sku, "Committed", event.qty, event.at);
+        {
+          const coverQty = confirmCoverQuantity(event.qty, state.figures);
+          if (coverQty > 0) {
+            state = applyMovement(state, "Allocated", coverQty, event.at);
+            pushMovement(rows, event.sku, "Allocated", coverQty, event.at);
+          }
+        }
+        break;
+      case "ship":
+        state = applyMovement(state, "Shipped", event.qty, event.at);
+        pushMovement(rows, event.sku, "Shipped", event.qty, event.at);
+        break;
+    }
+    setSkuState(event.sku, state);
   }
 
   return rows;
