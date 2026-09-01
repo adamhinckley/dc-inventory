@@ -48,6 +48,8 @@ export type DataTableRootProps<
   filterOptions?: Partial<Record<string, readonly FilterOption[]>>;
   /** Readable labels for boolean/text filters when `param` is not enough. */
   filterLabels?: Partial<Record<string, string>>;
+  /** Default-on boolean filters: checked unless explicitly `false`. */
+  filterDefaults?: Partial<Record<string, boolean>>;
   /** Parsed App Router `searchParams` (or Storybook in-memory seed). */
   initialParams?: ListQueryParams;
   /** Page-owned URL adapter. Omit in Storybook. */
@@ -68,6 +70,7 @@ export type DataTableRootProps<
 type DataTableContextValue = ReturnType<typeof useDataTable> & {
   filterOptions?: DataTableRootProps["filterOptions"];
   filterLabels?: DataTableRootProps["filterLabels"];
+  filterDefaults?: DataTableRootProps["filterDefaults"];
   /** Per-Root prefix so two tables do not share form-control IDs. */
   idBase: string;
   getRowHref?: (row: Record<string, unknown>) => string | undefined;
@@ -126,6 +129,7 @@ function FilterControl({
   options,
   idBase,
   label,
+  filterDefaults,
 }: {
   filter: TableFilterMeta;
   state: DataTableState;
@@ -133,6 +137,7 @@ function FilterControl({
   options: readonly FilterOption[] | undefined;
   idBase: string;
   label: string;
+  filterDefaults?: Partial<Record<string, boolean>>;
 }) {
   const setFilter = (param: string, value: string | boolean | undefined) => {
     setState((current) => ({
@@ -167,14 +172,22 @@ function FilterControl({
   }
 
   if (filter.control === "boolean") {
+    const defaultOn = filterDefaults?.[filter.param] === true;
     return (
       <div className="flex shrink-0 items-center gap-2">
         <Checkbox
           id={filterId}
           density="compact"
-          checked={state.filters[filter.param] === true}
+          checked={
+            defaultOn
+              ? state.filters[filter.param] !== false
+              : state.filters[filter.param] === true
+          }
           onChange={(checked) =>
-            setFilter(filter.param, checked ? true : undefined)
+            setFilter(
+              filter.param,
+              defaultOn ? (checked ? undefined : false) : checked ? true : undefined,
+            )
           }
         />
         <Label htmlFor={filterId}>{label}</Label>
@@ -268,6 +281,7 @@ export function DataTableRoot<
   queryHook,
   filterOptions,
   filterLabels,
+  filterDefaults,
   initialParams,
   onParamsChange,
   idPrefix,
@@ -291,6 +305,7 @@ export function DataTableRoot<
         ...table,
         filterOptions,
         filterLabels,
+        filterDefaults,
         idBase,
         getRowHref: getRowHref as
           | ((row: Record<string, unknown>) => string | undefined)
@@ -385,7 +400,7 @@ export function DataTableToolbar({ children }: { children: ReactNode }) {
  * ```
  */
 export function DataTableFilters() {
-  const { meta, state, setState, filterOptions, filterLabels, idBase } =
+  const { meta, state, setState, filterOptions, filterLabels, filterDefaults, idBase } =
     useDataTableContext();
   if (!meta.filters || meta.filters.length === 0) {
     return null;
@@ -402,6 +417,7 @@ export function DataTableFilters() {
           options={filterOptions?.[filter.param]}
           idBase={idBase}
           label={filterLabels?.[filter.param] ?? filter.param}
+          filterDefaults={filterDefaults}
         />
       ))}
     </div>

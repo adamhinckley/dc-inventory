@@ -1,11 +1,17 @@
 import { readFileSync } from "node:fs";
-import { listInternalProductsTable as productsListTable } from "@dc-inventory/api-client-internal";
+import {
+  listInternalProductsTable as productsListTable,
+  listInternalPurchaseOrdersTable,
+} from "@dc-inventory/api-client-internal";
 import { describe, expect, it } from "vitest";
 import {
+  allStaffTableUrlKeys,
   listParamsFromSearchParams,
+  tableParamsForUrl,
   tableSearchFromParams,
   tableUrlKeys,
 } from "./table-url-params";
+import { inventoryListTable } from "./inventory-list-table";
 
 const dateRangeMeta = {
   ...productsListTable,
@@ -99,12 +105,59 @@ describe("tableSearchFromParams", () => {
   it("clears a previous q when search is empty", () => {
     const next = tableSearchFromParams(
       productsListTable,
-      { page: 1, sortBy: "sku", sortOrder: "asc" },
+      tableParamsForUrl(productsListTable, {
+        page: 1,
+        sortBy: "sku",
+        sortOrder: "asc",
+      }),
       "?q=bolt&page=2",
     );
     const params = new URLSearchParams(next);
     expect(params.has("q")).toBe(false);
-    expect(params.get("page")).toBe("1");
+    expect(params.has("page")).toBe(false);
+    expect(params.has("sortBy")).toBe(false);
+    expect(params.has("sortOrder")).toBe(false);
+  });
+
+  it("drops list keys from other staff tables", () => {
+    const next = tableSearchFromParams(
+      inventoryListTable,
+      tableParamsForUrl(
+        inventoryListTable,
+        { page: 1, sortBy: "sku", sortOrder: "asc", hideZeroInventory: true },
+        { booleanFilterDefaults: { hideZeroInventory: true } },
+      ),
+      "?status=open&supplierId=abc&page=3&q=bolt",
+    );
+    const params = new URLSearchParams(next);
+    expect(params.has("page")).toBe(false);
+    expect(params.has("hideZeroInventory")).toBe(false);
+    expect(params.has("status")).toBe(false);
+    expect(params.has("supplierId")).toBe(false);
+    expect(params.has("q")).toBe(false);
+  });
+
+  it("keeps hideZeroInventory=false when opting out of the inventory default", () => {
+    const next = tableSearchFromParams(
+      inventoryListTable,
+      tableParamsForUrl(
+        inventoryListTable,
+        { hideZeroInventory: false },
+        { booleanFilterDefaults: { hideZeroInventory: true } },
+      ),
+      "",
+    );
+    expect(new URLSearchParams(next).get("hideZeroInventory")).toBe("false");
+  });
+});
+
+describe("allStaffTableUrlKeys", () => {
+  it("includes keys from every generated staff table", () => {
+    const keys = allStaffTableUrlKeys();
+    for (const key of tableUrlKeys(listInternalPurchaseOrdersTable)) {
+      expect(keys).toContain(key);
+    }
+    expect(keys).toContain("hideZeroInventory");
   });
 });
 
@@ -116,6 +169,7 @@ describe("tableUrlKeys", () => {
       "sortOrder",
       "q",
       "inactive",
+      "hideZeroInventory",
     ]);
   });
 });

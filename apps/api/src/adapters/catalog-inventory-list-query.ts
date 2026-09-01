@@ -138,8 +138,26 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
                           : [direction(products.createdAt), tieBreak];
     const offset = (query.page - 1) * query.pageSize;
 
+    const locationJoin = and(
+      eq(locations.organizationId, products.organizationId),
+      eq(locations.code, DEFAULT_LOCATION_CODE),
+    );
+    const snapshotJoin = and(
+      eq(stockSnapshots.organizationId, products.organizationId),
+      eq(stockSnapshots.sku, products.sku),
+      eq(stockSnapshots.locationId, locations.id),
+    );
+    const countFrom =
+      query.hideZeroInventory === true
+        ? this.db
+            .select({ value: count() })
+            .from(products)
+            .leftJoin(locations, locationJoin)
+            .leftJoin(stockSnapshots, snapshotJoin)
+        : this.db.select({ value: count() }).from(products);
+
     const [totalRows, rows] = await Promise.all([
-      this.db.select({ value: count() }).from(products).where(where),
+      countFrom.where(where),
       this.db
         .select({
           id: products.id,
@@ -166,21 +184,8 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           caseQty: productPackaging.caseQty,
         })
         .from(products)
-        .leftJoin(
-          locations,
-          and(
-            eq(locations.organizationId, products.organizationId),
-            eq(locations.code, DEFAULT_LOCATION_CODE),
-          ),
-        )
-        .leftJoin(
-          stockSnapshots,
-          and(
-            eq(stockSnapshots.organizationId, products.organizationId),
-            eq(stockSnapshots.sku, products.sku),
-            eq(stockSnapshots.locationId, locations.id),
-          ),
-        )
+        .leftJoin(locations, locationJoin)
+        .leftJoin(stockSnapshots, snapshotJoin)
         .leftJoin(productPackaging, eq(productPackaging.productId, products.id))
         .where(where)
         .orderBy(...orderBy)

@@ -1,5 +1,5 @@
 import { listInternalProductsTable } from "@dc-inventory/api-client-internal";
-import type { TableMeta } from "@dc-inventory/ui-internal";
+import type { ListQueryParams, TableMeta } from "@dc-inventory/ui-internal";
 
 const INVENTORY_SORT_FIELDS = [
   "sku",
@@ -42,6 +42,11 @@ export const inventoryListTable = {
   },
 } as const satisfies TableMeta;
 
+/** Checked by default; only `false` is shareable in the URL. */
+export const inventoryFilterDefaults = {
+  hideZeroInventory: true,
+} as const;
+
 /** Inventory defaults to hiding catalog SKUs with an all-zero snapshot. */
 export function inventoryListInitialParams(
   searchParams: Record<string, string | string[] | undefined>,
@@ -50,9 +55,15 @@ export function inventoryListInitialParams(
     params: Record<string, string | string[] | undefined>,
   ) => Record<string, string | number | boolean | undefined>,
 ): Record<string, string | number | boolean | undefined> {
-  const parsed = parse(inventoryListTable, searchParams);
+  return parse(inventoryListTable, searchParams);
+}
+
+/** Applies inventory list defaults for Orval without serializing them to the URL. */
+export function inventoryListQueryParams(
+  params?: ListQueryParams,
+): ListQueryParams {
   return {
-    ...parsed,
-    hideZeroInventory: parsed.hideZeroInventory ?? true,
+    ...params,
+    hideZeroInventory: params?.hideZeroInventory !== false,
   };
 }

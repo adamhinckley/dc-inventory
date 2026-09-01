@@ -2,6 +2,7 @@ import { listInternalProductsTable } from "@dc-inventory/api-client-internal";
 import { describe, expect, it } from "vitest";
 import {
   inventoryListInitialParams,
+  inventoryListQueryParams,
   inventoryListTable,
 } from "./inventory-list-table";
 import { listParamsFromSearchParams } from "./table-url-params";
@@ -51,15 +52,17 @@ describe("inventoryListTable", () => {
     expect(inventoryListTable.filters).toEqual([
       { param: "hideZeroInventory", control: "boolean" },
     ]);
-    expect(inventoryListInitialParams({}, listParamsFromSearchParams)).toEqual({
-      hideZeroInventory: true,
-    });
+    expect(inventoryListInitialParams({}, listParamsFromSearchParams)).toEqual({});
+    expect(inventoryListQueryParams({})).toEqual({ hideZeroInventory: true });
     expect(
       inventoryListInitialParams(
         { hideZeroInventory: "false" },
         listParamsFromSearchParams,
       ),
     ).toEqual({
+      hideZeroInventory: false,
+    });
+    expect(inventoryListQueryParams({ hideZeroInventory: false })).toEqual({
       hideZeroInventory: false,
     });
   });

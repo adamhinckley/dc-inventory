@@ -1,11 +1,29 @@
+import { internalTableMetadata } from "@dc-inventory/api-client-internal";
 import {
   declaredFilterParams,
   parseBooleanFilterParam,
   type ListQueryParams,
   type TableMeta,
 } from "@dc-inventory/ui-internal";
+import { inventoryListTable } from "./inventory-list-table";
 
 export type SearchParamsRecord = Record<string, string | string[] | undefined>;
+
+const STAFF_TABLE_METAS: readonly TableMeta[] = [
+  ...Object.values(internalTableMetadata),
+  inventoryListTable,
+];
+
+/** Union of unprefixed list keys used on any staff dashboard table. */
+export function allStaffTableUrlKeys(): string[] {
+  const keys = new Set<string>();
+  for (const meta of STAFF_TABLE_METAS) {
+    for (const key of tableUrlKeys(meta)) {
+      keys.add(key);
+    }
+  }
+  return [...keys];
+}
 
 /** Unprefixed v1 keys: page, sort, search param, and declared `x-table` filters. */
 export function tableUrlKeys(meta: TableMeta): string[] {
@@ -90,6 +108,48 @@ export function listParamsFromSearchParams(
   return params;
 }
 
+export type TableUrlWriteOptions = {
+  /** Boolean filters omitted from the URL when they match this default. */
+  booleanFilterDefaults?: Record<string, boolean>;
+};
+
+/**
+ * Drops table defaults so a clean address bar stays clean after reload.
+ * API/query hooks may still apply their own defaults separately.
+ */
+export function tableParamsForUrl(
+  meta: TableMeta,
+  params: ListQueryParams,
+  options?: TableUrlWriteOptions,
+): ListQueryParams {
+  const urlParams: ListQueryParams = { ...params };
+
+  delete urlParams.pageSize;
+
+  if (urlParams.page === 1) {
+    delete urlParams.page;
+  }
+
+  if (meta.sort) {
+    if (urlParams.sortBy === meta.sort.defaultBy) {
+      delete urlParams.sortBy;
+    }
+    if (urlParams.sortOrder === meta.sort.defaultOrder) {
+      delete urlParams.sortOrder;
+    }
+  }
+
+  for (const [key, defaultValue] of Object.entries(
+    options?.booleanFilterDefaults ?? {},
+  )) {
+    if (urlParams[key] === defaultValue) {
+      delete urlParams[key];
+    }
+  }
+
+  return urlParams;
+}
+
 /** Builds the next `?query` string for `replaceState` (never a new history entry). */
 export function tableSearchFromParams(
   meta: TableMeta,
@@ -99,11 +159,10 @@ export function tableSearchFromParams(
   const search = new URLSearchParams(
     currentSearch.startsWith("?") ? currentSearch.slice(1) : currentSearch,
   );
-  const keys = tableUrlKeys(meta);
-  for (const key of keys) {
+  for (const key of allStaffTableUrlKeys()) {
     search.delete(key);
   }
-  for (const key of keys) {
+  for (const key of tableUrlKeys(meta)) {
     const value = params[key];
     if (value === undefined || value === "") {
       continue;
@@ -115,20 +174,54 @@ export function tableSearchFromParams(
 }
 
 /**
+ * Drops every staff list key from the current URL. Used on route changes so
+ * catalog filters do not leak into inventory (and vice versa).
+ */
+export function stripStaffTableUrlParams(pathname?: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const search = new URLSearchParams(window.location.search);
+  let changed = false;
+  for (const key of allStaffTableUrlKeys()) {
+    if (search.has(key)) {
+      search.delete(key);
+      changed = true;
+    }
+  }
+  if (!changed) {
+    return;
+  }
+  const path = pathname ?? window.location.pathname;
+  const query = search.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${path}${query === "" ? "" : `?${query}`}${window.location.hash}`,
+  );
+}
+
+/**
  * Writes table keys with `history.replaceState` so the back button is not a
  * stack of every keystroke. Does not import Next navigation.
  */
 export function replaceTableUrlParams(
   meta: TableMeta,
   params: ListQueryParams,
+  options?: TableUrlWriteOptions,
 ): void {
   if (typeof window === "undefined") {
     return;
   }
-  const next = tableSearchFromParams(meta, params, window.location.search);
-  window.history.replaceState(
-    window.history.state,
-    "",
-    `${window.location.pathname}${next}${window.location.hash}`,
+  const next = tableSearchFromParams(
+    meta,
+    tableParamsForUrl(meta, params, options),
+    window.location.search,
   );
+  const target = `${window.location.pathname}${next}${window.location.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (target === current) {
+    return;
+  }
+  window.history.replaceState(window.history.state, "", target);
 }

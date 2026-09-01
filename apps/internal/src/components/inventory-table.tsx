@@ -1,14 +1,23 @@
 "use client";
 
 import { useListInternalProducts } from "@dc-inventory/api-client-internal";
-import { DataTable, type ListQueryParams } from "@dc-inventory/ui-internal";
+import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
 import { useCallback } from "react";
-import { inventoryListTable } from "../lib/inventory-list-table";
+import {
+  inventoryFilterDefaults,
+  inventoryListQueryParams,
+  inventoryListTable,
+} from "../lib/inventory-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
 type InventoryListParams = NonNullable<
   Parameters<typeof useListInternalProducts>[0]
 >;
+
+const useInventoryListProducts: ListQueryHook<InventoryListParams> = (params) =>
+  useListInternalProducts(
+    inventoryListQueryParams(params) as InventoryListParams,
+  );
 
 export function InventoryTable({
   initialParams,
@@ -16,15 +25,18 @@ export function InventoryTable({
   initialParams?: ListQueryParams;
 }) {
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(inventoryListTable, params);
+    replaceTableUrlParams(inventoryListTable, params, {
+      booleanFilterDefaults: inventoryFilterDefaults,
+    });
   }, []);
 
   return (
     <DataTable.Root<InventoryListParams>
       meta={inventoryListTable}
-      queryHook={useListInternalProducts}
+      queryHook={useInventoryListProducts}
       initialParams={initialParams}
       onParamsChange={onParamsChange}
+      filterDefaults={inventoryFilterDefaults}
       filterLabels={{ hideZeroInventory: "Hide empty inventory" }}
     >
       <DataTable.Toolbar>
