@@ -1,0 +1,9 @@
+{
+  "name": "verify-dc-inventory",
+  "private": true,
+  "type": "module",
+  "description": "Agent CLI for verify-dc-inventory. Not a workspace package.",
+  "dependencies": {
+    "playwright": "^1.55.0"
+  }
+}
