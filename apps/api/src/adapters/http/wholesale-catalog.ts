@@ -28,6 +28,9 @@ function mapCatalogItem(product: Product, qty: ProductQty) {
     wholesalePrice: product.memberPrice.amountMinor,
     currency: product.memberPrice.currency,
     available: qty.available,
+    committed: qty.committed,
+    sellState: qty.sellState,
+    availableToSell: qty.availableToSell,
   };
 }
 

@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import type { Product, ProductQty } from "@dc-inventory/catalog";
+import { ZERO_QTY, type Product, type ProductQty } from "@dc-inventory/catalog";
 import { CsvWorkbookParser } from "@dc-inventory/catalog";
 import { ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
@@ -42,6 +42,9 @@ function mapQty(qty: ProductQty) {
     onOrder: qty.onOrder,
     allocated: qty.allocated,
     available: qty.available,
+    committed: qty.committed,
+    sellState: qty.sellState,
+    availableToSell: qty.availableToSell,
   };
 }
 
@@ -211,12 +214,7 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
         return sendInvalid(reply);
       }
       return reply.code(201).send(
-        mapDetail(result.product, {
-          onHand: 0,
-          onOrder: 0,
-          allocated: 0,
-          available: 0,
-        }),
+        mapDetail(result.product, ZERO_QTY),
       );
     },
   );

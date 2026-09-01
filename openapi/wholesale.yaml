@@ -256,6 +256,20 @@ paths:
                           type: integer
                           minimum: -9007199254740991
                           maximum: 9007199254740991
+                        committed:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        sellState:
+                          type: string
+                          enum:
+                            - open
+                            - locked
+                        availableToSell:
+                          nullable: true
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
                       required:
                         - id
                         - name
@@ -263,6 +277,9 @@ paths:
                         - wholesalePrice
                         - currency
                         - available
+                        - committed
+                        - sellState
+                        - availableToSell
                       additionalProperties: false
                   page:
                     type: integer
@@ -361,6 +378,20 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  committed:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  sellState:
+                    type: string
+                    enum:
+                      - open
+                      - locked
+                  availableToSell:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
                 required:
                   - id
                   - name
@@ -368,6 +399,9 @@ paths:
                   - wholesalePrice
                   - currency
                   - available
+                  - committed
+                  - sellState
+                  - availableToSell
                 additionalProperties: false
         "401":
           description: Default Response

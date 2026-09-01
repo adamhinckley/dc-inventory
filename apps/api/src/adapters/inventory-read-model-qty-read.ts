@@ -5,7 +5,8 @@ import { LocationId, OrganizationId, type Sku } from "@dc-inventory/shared-kerne
 /**
  * API adapter for the Catalog-owned qty read port.
  * Reads movement-derived snapshots from the in-memory inventory read model.
- * Missing or all-zero snapshots are omitted — callers treat that as 0.
+ * Every requested SKU is projected from Inventory; callers treat a missing map
+ * entry as {@link ZERO_QTY}.
  */
 export class InventoryReadModelQtyReadAdapter implements IQtyReadPort {
   constructor(private readonly readModel: IInventoryReadModel) {}
@@ -21,14 +22,14 @@ export class InventoryReadModelQtyReadAdapter implements IQtyReadPort {
         LocationId.DEFAULT,
         organizationId,
       );
-      if (snapshot.onHand === 0 && snapshot.onOrder === 0 && snapshot.allocated === 0) {
-        continue;
-      }
       result.set(sku.value, {
         onHand: snapshot.onHand,
         onOrder: snapshot.onOrder,
         allocated: snapshot.allocated,
         available: snapshot.available,
+        committed: snapshot.committed,
+        sellState: snapshot.sellState,
+        availableToSell: snapshot.availableToSell,
       });
     }
     return result;

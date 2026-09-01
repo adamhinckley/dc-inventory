@@ -604,14 +604,14 @@ export function composeAppServices(
   const qtyRead =
     overrides.qtyRead ??
     (appDb
-      ? new StockSnapshotQtyReadAdapter(appDb)
+      ? new StockSnapshotQtyReadAdapter(appDb, clock)
       : inMemoryUow
         ? new InventoryReadModelQtyReadAdapter(inMemoryUow.inventory.readModel)
         : new InMemoryQtyReadPort());
   const catalogListQuery =
     overrides.catalogListQuery ??
     (appDb
-      ? new CatalogInventoryListQuery(appDb)
+      ? new CatalogInventoryListQuery(appDb, clock)
       : new InMemoryCatalogListQuery(productRepo, qtyRead, productPackagingRepo));
 
   const purchaseOrderRepo =
