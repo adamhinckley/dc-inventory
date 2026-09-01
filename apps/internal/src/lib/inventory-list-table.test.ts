@@ -48,22 +48,22 @@ describe("inventoryListTable", () => {
     )).toBe(true);
   });
 
-  it("defaults hideZeroInventory on unless the URL opts out", () => {
+  it("keeps hide-empty off unless the URL opts in", () => {
     expect(inventoryListTable.filters).toEqual([
       { param: "hideZeroInventory", control: "boolean" },
     ]);
     expect(inventoryListInitialParams({}, listParamsFromSearchParams)).toEqual({});
-    expect(inventoryListQueryParams({})).toEqual({ hideZeroInventory: true });
+    expect(inventoryListQueryParams({})).toEqual({});
     expect(
       inventoryListInitialParams(
-        { hideZeroInventory: "false" },
+        { hideZeroInventory: "true" },
         listParamsFromSearchParams,
       ),
     ).toEqual({
-      hideZeroInventory: false,
+      hideZeroInventory: true,
     });
-    expect(inventoryListQueryParams({ hideZeroInventory: false })).toEqual({
-      hideZeroInventory: false,
+    expect(inventoryListQueryParams({ hideZeroInventory: true })).toEqual({
+      hideZeroInventory: true,
     });
   });
 });

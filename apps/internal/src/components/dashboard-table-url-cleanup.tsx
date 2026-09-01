@@ -8,6 +8,15 @@ import { stripStaffTableUrlParams } from "../lib/table-url-params";
 export function DashboardTableUrlCleanup() {
   const pathname = usePathname();
   const previousPathname = useRef<string | null>(null);
+  const skipNextStrip = useRef(false);
+
+  useEffect(() => {
+    const onPopState = () => {
+      skipNextStrip.current = true;
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   useEffect(() => {
     const current = pathname ?? "";
@@ -15,7 +24,10 @@ export function DashboardTableUrlCleanup() {
       previousPathname.current !== null &&
       previousPathname.current !== current
     ) {
-      stripStaffTableUrlParams(current);
+      if (!skipNextStrip.current) {
+        stripStaffTableUrlParams(current);
+      }
+      skipNextStrip.current = false;
     }
     previousPathname.current = current;
   }, [pathname]);

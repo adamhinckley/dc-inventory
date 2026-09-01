@@ -12,6 +12,7 @@ import {
   tableUrlKeys,
 } from "./table-url-params";
 import { inventoryListTable } from "./inventory-list-table";
+import { catalogListTable } from "./catalog-list-table";
 
 const dateRangeMeta = {
   ...productsListTable,
@@ -122,32 +123,20 @@ describe("tableSearchFromParams", () => {
   it("drops list keys from other staff tables", () => {
     const next = tableSearchFromParams(
       inventoryListTable,
-      tableParamsForUrl(
-        inventoryListTable,
-        { page: 1, sortBy: "sku", sortOrder: "asc", hideZeroInventory: true },
-        { booleanFilterDefaults: { hideZeroInventory: true } },
-      ),
+      tableParamsForUrl(inventoryListTable, {
+        page: 1,
+        sortBy: "sku",
+        sortOrder: "asc",
+        hideZeroInventory: true,
+      }),
       "?status=open&supplierId=abc&page=3&q=bolt",
     );
     const params = new URLSearchParams(next);
     expect(params.has("page")).toBe(false);
-    expect(params.has("hideZeroInventory")).toBe(false);
+    expect(params.get("hideZeroInventory")).toBe("true");
     expect(params.has("status")).toBe(false);
     expect(params.has("supplierId")).toBe(false);
     expect(params.has("q")).toBe(false);
-  });
-
-  it("keeps hideZeroInventory=false when opting out of the inventory default", () => {
-    const next = tableSearchFromParams(
-      inventoryListTable,
-      tableParamsForUrl(
-        inventoryListTable,
-        { hideZeroInventory: false },
-        { booleanFilterDefaults: { hideZeroInventory: true } },
-      ),
-      "",
-    );
-    expect(new URLSearchParams(next).get("hideZeroInventory")).toBe("false");
   });
 });
 
@@ -170,6 +159,16 @@ describe("tableUrlKeys", () => {
       "q",
       "inactive",
       "hideZeroInventory",
+    ]);
+  });
+
+  it("keeps hideZeroInventory off catalog chrome keys", () => {
+    expect(tableUrlKeys(catalogListTable)).toEqual([
+      "page",
+      "sortBy",
+      "sortOrder",
+      "q",
+      "inactive",
     ]);
   });
 });

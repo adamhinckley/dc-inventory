@@ -42,12 +42,7 @@ export const inventoryListTable = {
   },
 } as const satisfies TableMeta;
 
-/** Checked by default; only `false` is shareable in the URL. */
-export const inventoryFilterDefaults = {
-  hideZeroInventory: true,
-} as const;
-
-/** Inventory defaults to hiding catalog SKUs with an all-zero snapshot. */
+/** Inventory defaults to every catalog SKU + snapshot qty (zeros included). */
 export function inventoryListInitialParams(
   searchParams: Record<string, string | string[] | undefined>,
   parse: (
@@ -58,12 +53,9 @@ export function inventoryListInitialParams(
   return parse(inventoryListTable, searchParams);
 }
 
-/** Applies inventory list defaults for Orval without serializing them to the URL. */
+/** Passes list params through; hide-empty is opt-in via `hideZeroInventory: true`. */
 export function inventoryListQueryParams(
   params?: ListQueryParams,
 ): ListQueryParams {
-  return {
-    ...params,
-    hideZeroInventory: params?.hideZeroInventory !== false,
-  };
+  return params ?? {};
 }

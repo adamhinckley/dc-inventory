@@ -1,6 +1,6 @@
-import { listInternalProductsTable } from "@dc-inventory/api-client-internal";
 import { CatalogHeading } from "../../../components/catalog-heading";
 import { CatalogTable } from "../../../components/catalog-table";
+import { catalogListTable } from "../../../lib/catalog-list-table";
 import { listParamsFromSearchParams } from "../../../lib/table-url-params";
 
 type CatalogSearchParams = Record<string, string | string[] | undefined>;
@@ -11,7 +11,7 @@ export default async function CatalogPage({
   searchParams: Promise<CatalogSearchParams>;
 }) {
   const initialParams = listParamsFromSearchParams(
-    listInternalProductsTable,
+    catalogListTable,
     await searchParams,
   );
 

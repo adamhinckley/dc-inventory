@@ -4,7 +4,6 @@ import { useListInternalProducts } from "@dc-inventory/api-client-internal";
 import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
 import { useCallback } from "react";
 import {
-  inventoryFilterDefaults,
   inventoryListQueryParams,
   inventoryListTable,
 } from "../lib/inventory-list-table";
@@ -25,9 +24,7 @@ export function InventoryTable({
   initialParams?: ListQueryParams;
 }) {
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(inventoryListTable, params, {
-      booleanFilterDefaults: inventoryFilterDefaults,
-    });
+    replaceTableUrlParams(inventoryListTable, params);
   }, []);
 
   return (
@@ -36,7 +33,6 @@ export function InventoryTable({
       queryHook={useInventoryListProducts}
       initialParams={initialParams}
       onParamsChange={onParamsChange}
-      filterDefaults={inventoryFilterDefaults}
       filterLabels={{ hideZeroInventory: "Hide empty inventory" }}
     >
       <DataTable.Toolbar>
