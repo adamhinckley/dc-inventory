@@ -72,6 +72,7 @@ async function startPhase2ManualFlowApp() {
     name: "Acme Wholesale",
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
+    createdAt: new Date("2026-08-24T03:30:00.000Z"),
   });
 
   await staffUsers.save({

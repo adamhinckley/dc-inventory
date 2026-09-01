@@ -88,6 +88,7 @@ async function startTwoOrgIsolationApp() {
     name: "Acme Wholesale",
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
+    createdAt: new Date("2026-08-24T03:30:00.000Z"),
   });
   await customerRepo.save({
     id: BETA_CUSTOMER_ID,
@@ -95,6 +96,7 @@ async function startTwoOrgIsolationApp() {
     name: "Beta Wholesale",
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
+    createdAt: new Date("2026-08-24T03:30:00.000Z"),
   });
 
   await wholesaleUsers.save({
