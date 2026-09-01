@@ -53,7 +53,7 @@ async function createProduct(
     sku: string;
     name: string;
     uom: string;
-    memberPriceCents: number;
+    masterPackPrice: number;
     inactive: boolean;
     discontinued: boolean;
     webWholesale: boolean;
@@ -65,7 +65,7 @@ async function createProduct(
     sku: overrides.sku ?? "HEX-BOLT-GALV",
     name: overrides.name ?? "Galvanized hex bolt",
     uom: overrides.uom ?? "EA",
-    memberPriceCents: overrides.memberPriceCents ?? 1250,
+    masterPackPrice: overrides.masterPackPrice ?? 1250,
     currency: "USD",
     inactive: overrides.inactive ?? false,
     discontinued: overrides.discontinued ?? false,
@@ -160,7 +160,7 @@ describe("Catalog use cases (in-memory)", () => {
     await createProduct(h, {
       sku: "ALPHA",
       name: 'Bolt, "hex"',
-      memberPriceCents: 1250,
+      masterPackPrice: 1250,
     });
     await createProduct(h, { sku: "BETA", name: "Washer" });
 
@@ -177,10 +177,10 @@ describe("Catalog use cases (in-memory)", () => {
     expect(exported.file.contentType).toBe("text/csv; charset=utf-8");
     expect(exported.rowCount).toBe(1);
     expect(exported.truncated).toBe(false);
-    expect(csv).toContain("SKU,Name,Member price");
+    expect(csv).toContain("SKU,Name,Master pack price");
     expect(csv).toContain("ALPHA");
     expect(csv).toContain('"Bolt, ""hex"""');
-    expect(csv).toContain("1250");
+    expect(csv).toContain("12.50");
     expect(csv).not.toContain("BETA");
   });
 
@@ -215,7 +215,7 @@ describe("Catalog use cases (in-memory)", () => {
     });
     expect(listed.total).toBe(1);
     expect(listed.items[0]?.product.sku.value).toBe("SHOP-OK");
-    expect(listed.items[0]?.product.memberPrice.amountMinor).toBe(1250);
+    expect(listed.items[0]?.product.masterPackPrice.amountMinor).toBe(1250);
   });
 
   it("constrains the wholesale list to products in the requested category", async () => {
@@ -336,7 +336,7 @@ describe("Catalog use cases (in-memory)", () => {
       sku: "HEX-BOLT-GALV",
       name: "Galvanized hex bolt",
       uom: "EA",
-      memberPriceCents: 1250,
+      masterPackPrice: 1250,
       available: 99,
     } as Parameters<CreateProductUseCase["execute"]>[0] & { available: number });
     expect(created).toEqual({ ok: false, reason: "qty_not_allowed" });
@@ -430,7 +430,7 @@ describe("Catalog use cases (in-memory)", () => {
       sku: "WIDGET-1",
       name: "Acme widget",
       uom: "EA",
-      memberPriceCents: 1000,
+      masterPackPrice: 1000,
     });
     const beta = await h.create.execute({
       organizationId: BETA_ORG,
@@ -438,7 +438,7 @@ describe("Catalog use cases (in-memory)", () => {
       sku: "WIDGET-1",
       name: "Beta widget",
       uom: "EA",
-      memberPriceCents: 2000,
+      masterPackPrice: 2000,
     });
     expect(acme.ok).toBe(true);
     expect(beta.ok).toBe(true);
@@ -460,7 +460,7 @@ describe("Catalog use cases (in-memory)", () => {
       sku: "WIDGET-1",
       name: "Duplicate",
       uom: "EA",
-      memberPriceCents: 999,
+      masterPackPrice: 999,
     });
     expect(duplicateInAcme).toEqual({ ok: false, reason: "duplicate_sku" });
 

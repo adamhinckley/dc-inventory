@@ -12,8 +12,8 @@ import {
   EXEMPTION_CUSTOMER_FRACTION,
   GENERATED_SKU_FIRST,
   GENERATED_SKU_PREFIX,
-  MEMBER_PRICE_MAX_CENTS,
-  MEMBER_PRICE_MIN_CENTS,
+  MASTER_PACK_PRICE_MAX_CENTS,
+  MASTER_PACK_PRICE_MIN_CENTS,
   SUPPLIER_SKU_TARGET,
   type DemoCounts,
 } from "./constants.js";
@@ -56,7 +56,7 @@ export function planProducts(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS
     sku: row.sku,
     name: row.name,
     uom: row.uom,
-    memberPriceCents: row.memberPriceCents,
+    masterPackPrice: row.masterPackPrice,
     description: null,
     listPriceCents: null,
     currency: "USD",
@@ -89,7 +89,7 @@ export function planProducts(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS
       sku,
       name,
       uom: "EA",
-      memberPriceCents: rng.int(MEMBER_PRICE_MIN_CENTS, MEMBER_PRICE_MAX_CENTS),
+      masterPackPrice: rng.int(MASTER_PACK_PRICE_MIN_CENTS, MASTER_PACK_PRICE_MAX_CENTS),
       description: null,
       listPriceCents: null,
       currency: "USD",
@@ -327,7 +327,7 @@ export function assertPhase1FixturesPreserved(products: readonly PlannedProduct[
     if (!row) {
       throw new Error(`missing Phase 1 SKU ${fixture.sku}`);
     }
-    if (row.name !== fixture.name || row.uom !== fixture.uom || row.memberPriceCents !== fixture.memberPriceCents) {
+    if (row.name !== fixture.name || row.uom !== fixture.uom || row.masterPackPrice !== fixture.masterPackPrice) {
       throw new Error(`Phase 1 fixture drift for ${fixture.sku}`);
     }
   }

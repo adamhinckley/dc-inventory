@@ -16,7 +16,7 @@ export type CreateProductRequest = {
   sku: string;
   name: string;
   uom: string;
-  memberPriceCents: number;
+  masterPackPrice: number;
   currency?: string;
   inactive?: boolean;
   discontinued?: boolean;
@@ -63,8 +63,8 @@ export class CreateProductUseCase {
         name,
         description,
         uom,
-        memberPrice: Money.fromMinorUnits(
-          input.memberPriceCents,
+        masterPackPrice: Money.fromMinorUnits(
+          input.masterPackPrice,
           input.currency ?? "USD",
         ),
         inactive: input.inactive ?? false,

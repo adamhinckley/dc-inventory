@@ -121,7 +121,7 @@ async function startTwoOrgIsolationApp() {
     sku: WIDGET_SKU.value,
     name: "Acme widget",
     uom: "EA",
-    memberPriceCents: 1000,
+    masterPackPrice: 1000,
     currency: "USD",
     webWholesale: true,
   });
@@ -131,7 +131,7 @@ async function startTwoOrgIsolationApp() {
     sku: WIDGET_SKU.value,
     name: "Beta widget",
     uom: "EA",
-    memberPriceCents: 2000,
+    masterPackPrice: 2000,
     currency: "USD",
     webWholesale: true,
   });
@@ -353,7 +353,7 @@ describe("two-org HTTP isolation (ADA-169)", () => {
         sku: "ACME-ONLY-SKU",
         name: "Acme-only product",
         uom: "EA",
-        memberPriceCents: 500,
+        masterPackPrice: 500,
         webWholesale: true,
       },
     });

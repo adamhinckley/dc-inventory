@@ -7,7 +7,7 @@ export type Product = {
   name: string;
   description: string | null;
   uom: string;
-  memberPrice: Money;
+  masterPackPrice: Money;
   inactive: boolean;
   discontinued: boolean;
   webWholesale: boolean;

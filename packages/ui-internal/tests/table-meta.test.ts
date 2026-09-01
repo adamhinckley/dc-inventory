@@ -12,7 +12,7 @@ describe("generated x-table meta shape", () => {
     expect(meta.columns.map((column) => column.field)).toEqual([
       "sku",
       "name",
-      "memberPrice",
+      "masterPackPrice",
       "currency",
       "inactive",
       "discontinued",
@@ -56,7 +56,7 @@ function staffListMeta(columns: readonly string[]): TableMeta {
 describe("tableControlIdBase", () => {
   it("is deterministic from meta so SSR and hydration share form-control ids", () => {
     expect(tableControlIdBase(productsListTableFixture)).toBe(
-      "dt-q-inactive-sku-id-sku-name-memberPrice-currency-inactive-discontinued-webWholesale-onHand-onOrder-allocated-available-createdAt",
+      "dt-q-inactive-sku-id-sku-name-masterPackPrice-currency-inactive-discontinued-webWholesale-onHand-onOrder-allocated-available-createdAt",
     );
     expect(tableControlIdBase(productsListTableFixture)).toBe(
       tableControlIdBase(productsListTableFixture),

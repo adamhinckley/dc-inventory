@@ -55,7 +55,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
     name: "Catalog hex bolt",
     description: null,
     uom: "EA",
-    memberPrice: Money.fromMinorUnits(250, "USD"),
+    masterPackPrice: Money.fromMinorUnits(250, "USD"),
     inactive: options.productInactive ?? false,
     discontinued: false,
     webWholesale: true,

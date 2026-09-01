@@ -12,7 +12,7 @@ export type ProductBrowserMappedRow = {
   name: string;
   description: string | null;
   uom: string;
-  memberPriceCents: number;
+  masterPackPrice: number;
   inactive: boolean;
   discontinued: boolean;
   webWholesale: boolean;
@@ -153,9 +153,9 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
     errors.push({ row: rowNumber, field: "item", message: "Name is required" });
   }
 
-  const memberPrice = dollarsToCents(mpRaw);
-  if (!memberPrice.ok) {
-    errors.push({ row: rowNumber, field: "mp_price", message: "Member price must be a non-negative dollar amount" });
+  const masterPackPrice = dollarsToCents(mpRaw);
+  if (!masterPackPrice.ok) {
+    errors.push({ row: rowNumber, field: "mp_price", message: "Master pack price must be a non-negative dollar amount" });
   }
 
   const minOrderQty = optionalPositiveInt(minOrderRaw);
@@ -225,7 +225,7 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
       name,
       description,
       uom,
-      memberPriceCents: memberPrice.ok ? memberPrice.cents : 0,
+      masterPackPrice: masterPackPrice.ok ? masterPackPrice.cents : 0,
       inactive: parseWorkbookBoolean(cell(row, "inactive")),
       discontinued: parseWorkbookBoolean(cell(row, "discontin")),
       webWholesale: parseWorkbookBoolean(cell(row, "webwholesale")),

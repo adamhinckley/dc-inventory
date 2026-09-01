@@ -73,7 +73,7 @@ describe("planDemoBook", () => {
       const row = plan.master.products.find((product) => product.sku === fixture.sku);
       expect(row?.name).toBe(fixture.name);
       expect(row?.uom).toBe(fixture.uom);
-      expect(row?.memberPriceCents).toBe(fixture.memberPriceCents);
+      expect(row?.masterPackPrice).toBe(fixture.masterPackPrice);
     }
     const generated = plan.master.products.filter((row) => !row.isPhase1Fixture);
     expect(generated).toHaveLength(GENERATED_SKU_COUNT);

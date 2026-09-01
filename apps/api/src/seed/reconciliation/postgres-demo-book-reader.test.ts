@@ -18,7 +18,7 @@ const EXPECTED_SELECT_SHAPES: readonly (readonly string[])[] = [
     "name",
     "description",
     "uom",
-    "memberPriceCents",
+    "masterPackPrice",
     "listPriceCents",
     "currency",
     "webWholesale",

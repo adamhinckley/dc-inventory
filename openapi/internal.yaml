@@ -2114,7 +2114,7 @@ paths:
                 uom:
                   type: string
                   minLength: 1
-                memberPriceCents:
+                masterPackPrice:
                   type: integer
                   minimum: -9007199254740991
                   maximum: 9007199254740991
@@ -2138,7 +2138,7 @@ paths:
                 - sku
                 - name
                 - uom
-                - memberPriceCents
+                - masterPackPrice
       responses:
         "201":
           description: Default Response
@@ -2160,7 +2160,7 @@ paths:
                     type: string
                   uom:
                     type: string
-                  memberPriceCents:
+                  masterPackPrice:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
@@ -2203,7 +2203,7 @@ paths:
                   - name
                   - description
                   - uom
-                  - memberPriceCents
+                  - masterPackPrice
                   - currency
                   - inactive
                   - discontinued
@@ -2363,8 +2363,8 @@ paths:
             label: SKU
           - field: name
             label: Name
-          - field: memberPrice
-            label: Member price
+          - field: masterPackPrice
+            label: Master pack price
           - field: currency
             label: Currency
           - field: inactive
@@ -2428,7 +2428,7 @@ paths:
                           type: string
                         name:
                           type: string
-                        memberPrice:
+                        masterPackPrice:
                           type: integer
                           minimum: -9007199254740991
                           maximum: 9007199254740991
@@ -2470,7 +2470,7 @@ paths:
                         - id
                         - sku
                         - name
-                        - memberPrice
+                        - masterPackPrice
                         - currency
                         - inactive
                         - discontinued
@@ -2579,7 +2579,7 @@ paths:
                 uom:
                   type: string
                   minLength: 1
-                memberPriceCents:
+                masterPackPrice:
                   type: integer
                   minimum: -9007199254740991
                   maximum: 9007199254740991
@@ -2633,7 +2633,7 @@ paths:
                     type: string
                   uom:
                     type: string
-                  memberPriceCents:
+                  masterPackPrice:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
@@ -2676,7 +2676,7 @@ paths:
                   - name
                   - description
                   - uom
-                  - memberPriceCents
+                  - masterPackPrice
                   - currency
                   - inactive
                   - discontinued
@@ -2801,7 +2801,7 @@ paths:
                 uom:
                   type: string
                   minLength: 1
-                memberPriceCents:
+                masterPackPrice:
                   type: integer
                   minimum: -9007199254740991
                   maximum: 9007199254740991
@@ -2856,7 +2856,7 @@ paths:
                     type: string
                   uom:
                     type: string
-                  memberPriceCents:
+                  masterPackPrice:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
@@ -2899,7 +2899,7 @@ paths:
                   - name
                   - description
                   - uom
-                  - memberPriceCents
+                  - masterPackPrice
                   - currency
                   - inactive
                   - discontinued
@@ -3039,7 +3039,7 @@ paths:
                     type: string
                   uom:
                     type: string
-                  memberPriceCents:
+                  masterPackPrice:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
@@ -3082,7 +3082,7 @@ paths:
                   - name
                   - description
                   - uom
-                  - memberPriceCents
+                  - masterPackPrice
                   - currency
                   - inactive
                   - discontinued

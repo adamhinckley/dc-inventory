@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Catalog persistence models. Shop price is MP (`member_price_cents`).
+ * Catalog persistence models. Shop price is master pack price (`master_pack_price_cents`).
  * `list_price_cents` is a dump stub — shop / cart / snapshots must not read it.
  * Wholesale visibility is `web_wholesale` only.
  */
@@ -52,7 +52,7 @@ export const products = catalog.table(
   size: text("size"),
   weight: text("weight"),
   weightUom: text("weight_uom"),
-  memberPriceCents: bigint("member_price_cents", { mode: "number" }).notNull(),
+  masterPackPrice: bigint("master_pack_price_cents", { mode: "number" }).notNull(),
   listPriceCents: bigint("list_price_cents", { mode: "number" }),
   currency: char("currency", { length: 3 }).notNull().default("USD"),
   catalogPage: text("catalog_page"),

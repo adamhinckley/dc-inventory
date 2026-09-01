@@ -98,7 +98,7 @@ async function startPhase2ManualFlowApp() {
     sku: SKU.value,
     name: "Galvanized hex bolt",
     uom: "EA",
-    memberPriceCents: UNIT_PRICE_CENTS,
+    masterPackPrice: UNIT_PRICE_CENTS,
     currency: "USD",
     inactive: false,
     discontinued: false,

@@ -26,7 +26,7 @@ export type Phase1ProductFixture = {
   sku: Phase1ProductSku;
   name: string;
   uom: string;
-  memberPriceCents: number;
+  masterPackPrice: number;
   currency: "USD";
 };
 
@@ -35,35 +35,35 @@ export const PHASE1_PRODUCTS: readonly Phase1ProductFixture[] = [
     sku: "HEX-BOLT-GALV",
     name: "Galvanized hex bolt",
     uom: "EA",
-    memberPriceCents: 1250,
+    masterPackPrice: 1250,
     currency: "USD",
   },
   {
     sku: "WASHER-SS-PACK",
     name: "Stainless washer pack",
     uom: "PK",
-    memberPriceCents: 450,
+    masterPackPrice: 450,
     currency: "USD",
   },
   {
     sku: "LOCK-NUT-NYL",
     name: "Nylon lock nut",
     uom: "EA",
-    memberPriceCents: 85,
+    masterPackPrice: 85,
     currency: "USD",
   },
   {
     sku: "FLAT-WASHER-ZINC",
     name: "Zinc flat washer",
     uom: "EA",
-    memberPriceCents: 35,
+    masterPackPrice: 35,
     currency: "USD",
   },
   {
     sku: "COUPLING-NUT-GR8",
     name: "Grade 8 coupling nut",
     uom: "EA",
-    memberPriceCents: 275,
+    masterPackPrice: 275,
     currency: "USD",
   },
 ];

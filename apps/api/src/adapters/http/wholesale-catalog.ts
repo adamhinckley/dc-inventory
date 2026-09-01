@@ -25,8 +25,8 @@ function mapCatalogItem(product: Product, qty: ProductQty) {
     id: product.id,
     name: product.name,
     imageUrl: null,
-    wholesalePrice: product.memberPrice.amountMinor,
-    currency: product.memberPrice.currency,
+    wholesalePrice: product.masterPackPrice.amountMinor,
+    currency: product.masterPackPrice.currency,
     available: qty.available,
   };
 }

@@ -275,7 +275,7 @@ Columns are a first cut from the glossary. Money is integer cents. Quantities ar
 | `length` `width` `height` `diameter` `size` | matching | Product body, not carton |
 | `weight` `weight_uom` | `wt` `wt_uom` | |
 | `list_price_cents` | `lp_price` | Wholesale list — confirm |
-| `member_price_cents` | `mp_price` | Meaning of LP vs MP is unverified |
+| `master_pack_price_cents` | `mp_price` | Master pack price (what they sell the pack for). Not a membership tier |
 | `original_wholesale_price_cents` | `original_wholesale_price` | History vs current price? |
 | `catalog_page` | `catalog_pg_num` | |
 | `default_order_qty` | `def_qty` | Cart / PO default |

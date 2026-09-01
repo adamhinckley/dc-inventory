@@ -72,8 +72,8 @@ export const listInternalProductsTable = {
       "label": "Name"
     },
     {
-      "field": "memberPrice",
-      "label": "Member price"
+      "field": "masterPackPrice",
+      "label": "Master pack price"
     },
     {
       "field": "currency",

@@ -18,7 +18,7 @@ export function catalogProductPort(
         organizationId: product.organizationId,
         sku: product.sku,
         name: product.name,
-        unitPrice: product.memberPrice,
+        unitPrice: product.masterPackPrice,
         taxCategoryCode: product.taxCategoryCode ?? undefined,
         active: !product.inactive && !product.discontinued,
       };

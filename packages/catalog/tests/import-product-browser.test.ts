@@ -153,7 +153,7 @@ describe("ImportProductBrowserUseCase", () => {
     const listed = await h.products.listMatching({ organizationId: ORG });
     expect(listed).toHaveLength(1);
     expect(listed[0]?.product.name).toBe("New name");
-    expect(listed[0]?.product.memberPrice.amountMinor).toBe(1150);
+    expect(listed[0]?.product.masterPackPrice.amountMinor).toBe(1150);
     expect(await h.packaging.findByProductId(listed[0]!.product.id)).toMatchObject({
       caseQty: 192,
       caseLength: null,

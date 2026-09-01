@@ -164,7 +164,7 @@ describe("static demo book writer (in-memory)", () => {
       }
       expect(product.name).toBe(fixture.name);
       expect(product.uom).toBe(fixture.uom);
-      expect(product.memberPrice.amountMinor).toBe(fixture.memberPriceCents);
+      expect(product.masterPackPrice.amountMinor).toBe(fixture.masterPackPrice);
       expect(product.taxCategoryCode).toBe("TANGIBLE");
     }
 
@@ -180,8 +180,8 @@ describe("static demo book writer (in-memory)", () => {
       expect(product?.name).toBe(planned.name);
       expect(product?.uom).toBe(planned.uom);
       expect(product?.description).toBeNull();
-      expect(product?.memberPrice.amountMinor).toBe(planned.memberPriceCents);
-      expect(product?.memberPrice.currency).toBe(planned.currency);
+      expect(product?.masterPackPrice.amountMinor).toBe(planned.masterPackPrice);
+      expect(product?.masterPackPrice.currency).toBe(planned.currency);
       expect(product?.webWholesale).toBe(true);
       expect(product?.taxCategoryCode).toBe(planned.taxCategoryCode);
     }
