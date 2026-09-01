@@ -194,3 +194,55 @@ export async function seedOnHand(
     refId: `${fixtureKey}-on-hand`,
   });
 }
+
+/**
+ * Commit qty while the SKU is still open (no ATP cap), sticky-lock, then seed on-hand.
+ * Yields locked committed with allocated=0 so warehouse leftover and locked ATP diverge.
+ */
+export async function seedLockedCommittedWithoutCover(
+  h: SalesDemandHarness,
+  sku: Sku,
+  committedQty: number,
+  onHand: number,
+  poId: PurchaseOrderId,
+  commitRefId: string,
+  fixtureKey: string,
+) {
+  const commit = await h.committed.execute({
+    organizationId: DEFAULT_ORG,
+    idempotencyKey: `${fixtureKey}-commit`,
+    sku,
+    quantity: committedQty,
+    refType: "sales_order",
+    refId: commitRefId,
+  });
+  if (!commit.ok) {
+    throw new Error(`seed commit failed: ${commit.reason}`);
+  }
+
+  await h.inboundFromPo.execute({
+    organizationId: DEFAULT_ORG,
+    idempotencyKey: `${fixtureKey}-inbound`,
+    sku,
+    quantity: 10,
+    refType: "purchase_order",
+    refId: poId,
+  });
+  await h.inboundCancelled.execute({
+    organizationId: DEFAULT_ORG,
+    idempotencyKey: `${fixtureKey}-cancel`,
+    sku,
+    quantity: 10,
+    refType: "purchase_order",
+    refId: poId,
+  });
+
+  await h.adjustmentIncrease.execute({
+    organizationId: DEFAULT_ORG,
+    idempotencyKey: `${fixtureKey}-on-hand`,
+    sku,
+    quantity: onHand,
+    refType: "adjustment",
+    refId: `${fixtureKey}-on-hand`,
+  });
+}

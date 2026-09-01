@@ -12,6 +12,7 @@ import {
   OPEN_SKU,
   PO_COVER,
   salesDemandHarness,
+  seedLockedCommittedWithoutCover,
   seedOnHand,
   seedStickyLockedOnHand,
   STAFF_ID,
@@ -100,23 +101,23 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
   describe("locked SKU confirm gates on availableToSell (I9, G4)", () => {
     ownerIt("rejects a confirm that exceeds availableToSell all-or-nothing even when warehouse available would allow allocate", async () => {
       const h = salesDemandHarness();
-      await seedStickyLockedOnHand(h, LOCK_SKU, 600, PO_COVER, "locked-atp-gate");
-
-      const preCommit = await h.committed.execute({
-        organizationId: DEFAULT_ORG,
-        idempotencyKey: "seed-committed-200",
-        sku: LOCK_SKU,
-        quantity: 200,
-        refType: "sales_order",
-        refId: SO_LOCKED_FAIL,
-      });
-      expect(preCommit.ok).toBe(true);
+      await seedLockedCommittedWithoutCover(
+        h,
+        LOCK_SKU,
+        200,
+        600,
+        PO_COVER,
+        SO_LOCKED_FAIL,
+        "locked-atp-gate",
+      );
 
       const before = await h.demandSnapshot(LOCK_SKU);
       expect(before.onHand).toBe(600);
       expect(before.committed).toBe(200);
-      expect(before.availableToSell).toBe(400);
+      expect(before.allocated).toBe(0);
       expect(before.available).toBe(600);
+      expect(before.availableToSell).toBe(400);
+      expect(before.sellState).toBe("locked");
 
       const draft = await h.createDraft(LOCK_PRODUCT_ID, 401);
       expect(draft.ok).toBe(true);
