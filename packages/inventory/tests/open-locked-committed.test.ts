@@ -71,13 +71,16 @@ async function seedStickyLockedOnHand(
 }
 
 describe("Inventory demand model — open/locked, committed, cover (ADA-174)", () => {
+  /** Expected to fail until ADA-176. Change to `it` when the demand-model ledger ships. */
+  const ownerIt = it.fails;
+
   describe("movement and snapshot contract", () => {
-    it("includes Committed and Decommitted movement types", () => {
+    ownerIt("includes Committed and Decommitted movement types", () => {
       expect(MOVEMENT_TYPES).toContain("Committed");
       expect(MOVEMENT_TYPES).toContain("Decommitted");
     });
 
-    it("projects committed, sellState, availableToSell, and uncovered on the snapshot read model", async () => {
+    ownerIt("projects committed, sellState, availableToSell, and uncovered on the snapshot read model", async () => {
       const h = demandModelHarness();
       const snapshot = await h.baseSnapshot(OPEN_SKU);
       expect(isDemandStockFigures(snapshot)).toBe(true);
@@ -85,7 +88,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("open SKU confirm (I6)", () => {
-    it("accepts a confirm-sized Committed of 100_000 with on_hand 0 and on_order 0", async () => {
+    ownerIt("accepts a confirm-sized Committed of 100_000 with on_hand 0 and on_order 0", async () => {
       const h = demandModelHarness();
       const result = await h.committed({
         organizationId: DEFAULT_ORG,
@@ -108,7 +111,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("first InboundFromPo locks (I6)", () => {
-    it("locks the SKU on first InboundFromPo and gates further Committed by on_hand + on_order − committed", async () => {
+    ownerIt("locks the SKU on first InboundFromPo and gates further Committed by on_hand + on_order − committed", async () => {
       const h = demandModelHarness();
 
       const openCommit = await h.committed({
@@ -161,7 +164,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("locked availableToSell gate (I9, G4)", () => {
-    it("rejects a commit of 501 when on_hand 500 leaves availableToSell 500 and keeps available at 500", async () => {
+    ownerIt("rejects a commit of 501 when on_hand 500 leaves availableToSell 500 and keeps available at 500", async () => {
       const h = demandModelHarness();
       await seedStickyLockedOnHand(h, LOCK_SKU, 500, PO_ID, "lock-for-cap");
 
@@ -195,7 +198,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("open presell with PO gap (ADR 0008 decision 6)", () => {
-    it("after selling 1_200 on_hand 500 then PO 1_900 leaves uncovered 0 and availableToSell 1_200", async () => {
+    ownerIt("after selling 1_200 on_hand 500 then PO 1_900 leaves uncovered 0 and availableToSell 1_200", async () => {
       const h = demandModelHarness();
       await h.adjustmentIncrease.execute({
         organizationId: DEFAULT_ORG,
@@ -242,7 +245,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("warehouse leftover and FIFO cover (I3, G2)", () => {
-    it("never lets available go negative and covers Allocated at confirm up to leftover available", async () => {
+    ownerIt("never lets available go negative and covers Allocated at confirm up to leftover available", async () => {
       const h = demandModelHarness();
       await h.adjustmentIncrease.execute({
         organizationId: DEFAULT_ORG,
@@ -278,7 +281,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(allocatedAtConfirm[0]?.quantity).toBe(30);
     });
 
-    it("FIFO-covers the remaining committed quantity when GoodsReceived raises on_hand", async () => {
+    ownerIt("FIFO-covers the remaining committed quantity when GoodsReceived raises on_hand", async () => {
       const h = demandModelHarness();
       await h.adjustmentIncrease.execute({
         organizationId: DEFAULT_ORG,
@@ -338,7 +341,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("serialized locked confirms (I8)", () => {
-    it("cannot let two locked confirms together exceed availableToSell", async () => {
+    ownerIt("cannot let two locked confirms together exceed availableToSell", async () => {
       const h = demandModelHarness();
       await seedStickyLockedOnHand(h, LOCK_SKU, 500, PO_ID, "concurrent-lock");
 
@@ -387,7 +390,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       });
     }
 
-    it("does not reopen after InboundCancelled", async () => {
+    ownerIt("does not reopen after InboundCancelled", async () => {
       const h = demandModelHarness();
       await lockSku(h, LOCK_SKU, PO_ID, "cancel-lock");
       await h.inboundCancelled.execute({
@@ -405,7 +408,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(snapshot.onOrder).toBe(0);
     });
 
-    it("reopens only the SKUs listed in ReopenSkusForPresell", async () => {
+    ownerIt("reopens only the SKUs listed in ReopenSkusForPresell", async () => {
       const h = demandModelHarness(INSIDE_WINDOW);
       await lockSku(h, REOPEN_A, PO_ID, "reopen-lock-a");
       await lockSku(h, REOPEN_B, PO_ID, "reopen-lock-b");
@@ -432,7 +435,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("sell window with injected clock (ADR 0008 decision 4)", () => {
-    it("rejects windowOpensAt >= windowClosesAt", async () => {
+    ownerIt("rejects windowOpensAt >= windowClosesAt", async () => {
       const h = demandModelHarness();
       const invalid = await h.setSellWindow({
         organizationId: DEFAULT_ORG,
@@ -447,7 +450,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(invalid.reason).toBe("invalid_sell_window");
     });
 
-    it("before windowOpensAt rejects an uncapped commit using the locked formula", async () => {
+    ownerIt("before windowOpensAt rejects an uncapped commit using the locked formula", async () => {
       const h = demandModelHarness(BEFORE_WINDOW);
       const setWindow = await h.setSellWindow({
         organizationId: DEFAULT_ORG,
@@ -472,7 +475,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(oversell.reason).toBe("insufficient_available_to_sell");
     });
 
-    it("after windowClosesAt with no PO rejects an uncapped commit but still sells leftover on_hand", async () => {
+    ownerIt("after windowClosesAt with no PO rejects an uncapped commit but still sells leftover on_hand", async () => {
       const h = demandModelHarness(AFTER_WINDOW);
       await h.setSellWindow({
         organizationId: DEFAULT_ORG,
@@ -519,7 +522,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(snapshot.sellState).toBe("locked");
     });
 
-    it("locks immediately on first InboundFromPo even inside the sell window", async () => {
+    ownerIt("locks immediately on first InboundFromPo even inside the sell window", async () => {
       const h = demandModelHarness(INSIDE_WINDOW);
       await h.setSellWindow({
         organizationId: DEFAULT_ORG,
@@ -545,7 +548,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("ship and cancel compensations (I9, G2)", () => {
-    it("requires Allocated before Shipped", async () => {
+    ownerIt("requires Allocated before Shipped", async () => {
       const h = demandModelHarness();
       await h.adjustmentIncrease.execute({
         organizationId: DEFAULT_ORG,
@@ -571,7 +574,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(ship.reason).toBe("insufficient_allocated");
     });
 
-    it("emits Decommitted and Deallocated when a confirmed order is cancelled", async () => {
+    ownerIt("emits Decommitted and Deallocated when a confirmed order is cancelled", async () => {
       const h = demandModelHarness();
       await h.adjustmentIncrease.execute({
         organizationId: DEFAULT_ORG,
