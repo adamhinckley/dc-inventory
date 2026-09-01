@@ -18,7 +18,7 @@ Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./data
 
 ## Catalog and pricing
 
-- [ ] Which price is the **wholesale shop price**: LP, MP, or original wholesale?
+- [ ] Which price is the **wholesale shop price**: LP (list), MP (master pack), or original wholesale?
 - [ ] What does **`c_to_c`** mean in the current system? Keep, drop, or rename?
 - [ ] Are **`category_1` … `category_10`** merchandising **tags** (a SKU can be in several), or a real **hierarchy**?
 - [ ] The dump has two product flags: whether the SKU shows on the wholesale shop (`web_wholesale`, v1) and whether it shows on a consumer storefront (`web_retail`). Keep the consumer storefront flag for a later retail site, or drop it in v1?
@@ -34,7 +34,8 @@ Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./data
 
 ## Customers and the shop
 
-- [ ] What **staff roles** exist (purchasing, warehouse, sales support, admin), and who may create POs, adjust stock, or issue invoices?
+- [ ] What **staff roles** exist? Owner named **internal super user** and **accountant** (sold / cost report: units shipped, take-in, cost, gain; about twice a month). G8 still ships `admin` / purchasing / warehouse / sales support. Who may create POs, adjust stock, or issue invoices, and is super user a rename of `admin`?
+- [x] Wholesale shop logins: **customer user** (one Customer), **sales rep** (many Customers), **wholesale super user** (every Customer, order on behalf, every shop order, current on refresh, invites sales reps and customer users to register). Does “order on behalf” stay on internal (`sales_support`) as well?
 - [ ] Do wholesale clients see **available quantity** on the shop, or only “in stock / not”?
 - [ ] Do you collect a **ship-to address** on every order today (needed for tax quote)?
 - [ ] Are most accounts **resale-exempt** (certificate on file), **taxable**, or mixed? (v1 quotes/commits tax via [`tax.md`](./tax.md); this sets engine and exemption expectations.)

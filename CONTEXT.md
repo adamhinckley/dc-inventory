@@ -27,7 +27,7 @@ The staff dashboard (`apps/internal`): tables, reports, charts, and CRUD. Not th
 _Avoid_: Admin app, back office (unless speaking casually), spreadsheet UI as the product name
 
 **Wholesale app**:
-The client e-commerce app (`apps/wholesale`): browse, PDP, cart, checkout, order history. Not a `DataTable` product.
+The client e-commerce app (`apps/wholesale`): browse, PDP, cart, checkout, order history. Customer users, sales reps, and a shop super user log in here. Not a `DataTable` product.
 _Avoid_: Storefront as a synonym in tickets (prefer Wholesale app), shop admin
 
 **Ops app**:
@@ -70,7 +70,47 @@ _Avoid_: closed season, sold out as a company flag
 
 **Uncovered**:
 `max(0, committed − on_hand − on_order)`. The factory to-order list. Not a shop number.
-_Avoid_: available to sell, backorder document, purchase request
+_Avoid_: available to sell, backorder document, purchase request, need (David's spoken shortfall often skips on-order)
+
+**Need**:
+How many more units to buy for a SKU. On the catalog David wants on hand and pre-sold so the shortfall is obvious. Factory buy rounds up to the next master pack, then shows cases.
+_Avoid_: uncovered (same job, but uncovered also subtracts on-order)
+
+### Actors
+
+**Customer**:
+The wholesale buyer account. Terms, credit, ship-tos. Not a login.
+_Avoid_: user, client (when you mean the account)
+
+**Wholesale customer user**:
+A wholesale-app login bound to one Customer.
+_Avoid_: customer (that's the account)
+
+**Sales rep**:
+A wholesale-app login that can place orders for more than one Customer.
+_Avoid_: sales support (that is staff on the internal app)
+
+**Wholesale super user**:
+A wholesale-app login that can see every Customer, place orders for any of them, see every shop order, and invite sales reps and customer users to register.
+_Avoid_: internal super user, operator
+
+**Internal super user**:
+Staff who can do every action on the internal app.
+_Avoid_: admin (in product speech), operator, wholesale super user
+
+**Accountant**:
+Staff who logs into the internal app to pull the sold / cost report. She types those numbers into QuickBooks herself.
+_Avoid_: bookkeeper who posts payments, controller, QuickBooks integration (that is later)
+
+**Sold / cost report**:
+Period totals: units shipped, dollars taken in, cost of those units, gain. About twice a month. Not a general ledger and not a P&L.
+_Avoid_: GL, P&L, line-item gains and losses
+
+### Catalog and pricing
+
+**Master pack price**:
+The price of a product's master pack. Also called master carton price.
+_Avoid_: Member price, MAP (as a reading of MP), inner pack price
 
 ### Building blocks
 
