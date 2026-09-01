@@ -276,7 +276,7 @@ describe("Sales (in-memory)", () => {
     expect(snap.available).toBe(0);
   });
 
-  it("confirms with all-or-nothing ATP and allocates inventory", async () => {
+  it("confirms with commit plus cover allocation per line", async () => {
     const h = await harness();
     await seedStock(h, SKU, 10);
 
@@ -296,27 +296,11 @@ describe("Sales (in-memory)", () => {
 
     await seedStock(h, SKU_B, 2);
 
-    const failed = await h.confirm.execute({
-      organizationId: DEFAULT_ORG,
-      staffUserId: STAFF_ID,
-      salesOrderId: created.salesOrder.id,
-      idempotencyKey: "confirm-short",
-    });
-    expect(failed.ok).toBe(false);
-    if (failed.ok) {
-      return;
-    }
-    expect(failed.reason).toBe("insufficient_atp");
-
-    const reloaded = await h.uow.salesOrders.findById(DEFAULT_ORG, created.salesOrder.id);
-    expect(reloaded?.status).toBe("draft");
-
-    await seedStock(h, SKU_B, 1);
     const confirmed = await h.confirm.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
-      idempotencyKey: "confirm-ok",
+      idempotencyKey: "confirm-partial-cover",
     });
     expect(confirmed.ok).toBe(true);
     if (!confirmed.ok) {
@@ -325,10 +309,12 @@ describe("Sales (in-memory)", () => {
     expect(confirmed.salesOrder.status).toBe("confirmed");
 
     const snapA = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
+    expect(snapA.committed).toBe(4);
     expect(snapA.allocated).toBe(4);
     expect(snapA.available).toBe(6);
     const snapB = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU_B, locationId: DEFAULT });
-    expect(snapB.allocated).toBe(3);
+    expect(snapB.committed).toBe(3);
+    expect(snapB.allocated).toBe(2);
     expect(snapB.available).toBe(0);
   });
 
@@ -371,7 +357,7 @@ describe("Sales (in-memory)", () => {
     expect(snap.available).toBe(8);
   });
 
-  it("prevents two confirms that together exceed available", async () => {
+  it("allows multiple open confirms that share warehouse leftover", async () => {
     const h = await harness();
     await seedStock(h, SKU, 5);
 
@@ -407,11 +393,12 @@ describe("Sales (in-memory)", () => {
       salesOrderId: secondOrder.salesOrder.id,
       idempotencyKey: "confirm-b",
     });
-    expect(secondConfirm.ok).toBe(false);
-    if (secondConfirm.ok) {
-      return;
-    }
-    expect(secondConfirm.reason).toBe("insufficient_atp");
+    expect(secondConfirm.ok).toBe(true);
+
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
+    expect(snap.committed).toBe(8);
+    expect(snap.allocated).toBe(5);
+    expect(snap.available).toBe(0);
   });
 
   it("ships confirmed orders atomically with zero-tax invoice", async () => {

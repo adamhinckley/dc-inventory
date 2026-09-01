@@ -37,6 +37,21 @@ export class ConfirmSalesOrderUseCase {
         if (existing === null) {
           return { ok: false, reason: "not_found" };
         }
+        if (existing.status === "confirmed") {
+          for (const line of existing.lines) {
+            const matches = await scope.inventory.matchesCommittedIdempotency({
+              organizationId: existing.organizationId,
+              idempotencyKey: `${input.idempotencyKey}:confirm:${line.id}`,
+              sku: line.sku,
+              quantity: line.qty,
+              orderId: existing.id,
+            });
+            if (!matches) {
+              return { ok: false, reason: "illegal_transition" };
+            }
+          }
+          return { ok: true, salesOrder: existing };
+        }
         if (existing.status !== "draft") {
           return { ok: false, reason: "illegal_transition" };
         }
@@ -51,7 +66,7 @@ export class ConfirmSalesOrderUseCase {
           })),
         );
         for (const line of existing.lines) {
-          const result = await scope.inventory.recordAllocated({
+          const result = await scope.inventory.recordCommitted({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:confirm:${line.id}`,
             sku: line.sku,
@@ -62,7 +77,10 @@ export class ConfirmSalesOrderUseCase {
             if (result.reason === "idempotency_conflict") {
               throw new SalesTransactionError("idempotency_conflict");
             }
-            if (result.reason === "insufficient_available") {
+            if (
+              result.reason === "insufficient_available_to_sell" ||
+              result.reason === "insufficient_available"
+            ) {
               throw new SalesTransactionError("insufficient_atp");
             }
             throw new SalesTransactionError("inventory_conflict");

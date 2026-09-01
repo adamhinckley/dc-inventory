@@ -1,22 +1,30 @@
 import {
   InMemoryInventoryUnitOfWork,
   RecordAllocatedUseCase,
+  RecordCommittedUseCase,
   RecordDeallocatedUseCase,
+  RecordDecommittedUseCase,
   RecordShippedUseCase,
+  type IInventoryReadModel,
   type IStockLedger,
 } from "@dc-inventory/inventory";
+import { LocationId } from "@dc-inventory/shared-kernel";
 import { InMemoryInvoiceRepository } from "@dc-inventory/accounting";
 import type { IClock } from "../domain/clock.js";
 import type {
   AllocatedCommand,
+  CommittedCommand,
   DeallocatedCommand,
+  DecommittedCommand,
   IInventoryCommandPort,
   InventorySnapshotLock,
   InventoryCommandResult,
   ISalesUnitOfWork,
+  OrderCoverQuery,
   ShippedCommand,
 } from "../domain/ports/sales-order-repository.js";
 import { AccountingCommandAdapter } from "./accounting-command-adapter.js";
+import { netOrderCoverQuantity } from "./order-cover.js";
 import { InMemorySalesOrderRepository } from "./in-memory-sales-order-repository.js";
 
 function mapResult(
@@ -34,10 +42,57 @@ function mapResult(
 }
 
 class InventoryCommandAdapter implements IInventoryCommandPort {
-  constructor(private readonly ledger: IStockLedger) {}
+  constructor(
+    private readonly ledger: IStockLedger,
+    private readonly readModel: IInventoryReadModel,
+  ) {}
 
   lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void> {
     return this.ledger.lockSnapshots(snapshots);
+  }
+
+  async recordCommitted(command: CommittedCommand): Promise<InventoryCommandResult> {
+    return mapResult(
+      await new RecordCommittedUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
+        idempotencyKey: command.idempotencyKey,
+        sku: command.sku,
+        quantity: command.quantity,
+        refType: "sales_order",
+        refId: command.orderId,
+      }),
+    );
+  }
+
+  async matchesCommittedIdempotency(command: CommittedCommand): Promise<boolean> {
+    const movements = await this.readModel.listMovements({
+      organizationId: command.organizationId,
+      sku: command.sku,
+      locationId: LocationId.DEFAULT,
+    });
+    const existing = movements.find((movement) => movement.idempotencyKey === command.idempotencyKey);
+    if (existing === undefined) {
+      return false;
+    }
+    return (
+      existing.movementType === "Committed" &&
+      existing.quantity === command.quantity &&
+      existing.refType === "sales_order" &&
+      existing.refId === command.orderId
+    );
+  }
+
+  async recordDecommitted(command: DecommittedCommand): Promise<InventoryCommandResult> {
+    return mapResult(
+      await new RecordDecommittedUseCase(this.ledger).execute({
+        organizationId: command.organizationId,
+        idempotencyKey: command.idempotencyKey,
+        sku: command.sku,
+        quantity: command.quantity,
+        refType: "sales_order",
+        refId: command.orderId,
+      }),
+    );
   }
 
   async recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult> {
@@ -78,6 +133,15 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
       }),
     );
   }
+
+  async getOrderCoverQuantity(query: OrderCoverQuery): Promise<number> {
+    const movements = await this.readModel.listMovements({
+      organizationId: query.organizationId,
+      sku: query.sku,
+      locationId: LocationId.DEFAULT,
+    });
+    return netOrderCoverQuantity(movements, query.orderId);
+  }
 }
 
 export class InMemorySalesUnitOfWork implements ISalesUnitOfWork {
@@ -89,7 +153,10 @@ export class InMemorySalesUnitOfWork implements ISalesUnitOfWork {
 
   constructor(clock?: IClock) {
     this.inventoryUow = new InMemoryInventoryUnitOfWork(clock);
-    this.inventory = new InventoryCommandAdapter(this.inventoryUow.ledger);
+    this.inventory = new InventoryCommandAdapter(
+      this.inventoryUow.ledger,
+      this.inventoryUow.readModel,
+    );
     this.accounting = new AccountingCommandAdapter(this.invoices, clock);
   }
 

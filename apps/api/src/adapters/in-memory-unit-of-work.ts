@@ -45,7 +45,10 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
     };
     this.salesScope = {
       salesOrders: this.salesOrders,
-      inventory: new SalesStockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
+      inventory: new SalesStockLedgerInventoryCommandAdapter(
+        this.inventoryUow.ledger,
+        this.inventoryUow.readModel,
+      ),
       accounting: new SalesInvoiceAccountingCommandAdapter(this.invoices, clock),
       run: (work) => this.run((scope) => work(scope.sales)),
     };

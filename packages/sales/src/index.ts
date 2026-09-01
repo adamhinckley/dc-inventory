@@ -1,4 +1,5 @@
 export { AccountingCommandAdapter } from "./adapters/accounting-command-adapter.js";
+export { netOrderCoverQuantity } from "./adapters/order-cover.js";
 export { InMemoryCatalogProductPort } from "./adapters/in-memory-catalog-product-port.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { DrizzleSalesOrderRepository, type SalesDrizzle } from "./adapters/drizzle-sales-orders.js";
@@ -20,8 +21,10 @@ export type {
 export type {
   AccountingCommandResult,
   AllocatedCommand,
+  CommittedCommand,
   CreateInvoiceForOrderCommand,
   DeallocatedCommand,
+  DecommittedCommand,
   IAccountingCommandPort,
   ICustomerLookupPort,
   IInventoryCommandPort,
@@ -29,6 +32,7 @@ export type {
   InventorySnapshotLock,
   ISalesOrderRepository,
   ISalesUnitOfWork,
+  OrderCoverQuery,
   ShippedCommand,
   UnnumberedSalesOrder,
 } from "./domain/ports/sales-order-repository.js";
