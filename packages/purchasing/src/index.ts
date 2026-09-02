@@ -45,6 +45,7 @@ export type {
   IPurchasingUnitOfWork,
   ISupplierRepository,
   ListSuppliersQuery,
+  PurchaseOrderListSortBy,
   SupplierListPage,
   UnnumberedPurchaseOrder,
 } from "./domain/ports/purchase-order-repository.js";

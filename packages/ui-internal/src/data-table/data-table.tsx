@@ -349,7 +349,7 @@ export function DataTableSearch() {
     <TextInput
       id={searchId}
       density="compact"
-      className={inToolbar ? "min-w-56 flex-1" : "min-w-56"}
+      className="w-52 shrink-0"
       aria-label={meta.search.placeholder}
       value={state.search}
       placeholder={meta.search.placeholder}
@@ -450,6 +450,7 @@ const NUMERIC_FIELDS = new Set([
   "availableToSell",
   "qty",
   "caseQty",
+  "remaining",
 ]);
 const CODE_FIELDS = new Set(["sku", "vendorNumber", "documentNumber"]);
 

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Package, ShoppingCart } from 'lucide-react'
+import { Breadcrumb } from '#ds/ui/Breadcrumb'
 import { Button } from '#ds/ui/Button'
 import { AppShell } from './index'
 
@@ -39,6 +40,10 @@ export const Dashboard: Story = {
         }
         topbar={
           <AppShell.Topbar>
+            <Breadcrumb data-testid="story-shell-breadcrumb">
+              <Breadcrumb.Item href="/catalog">Catalog</Breadcrumb.Item>
+              <Breadcrumb.Item current>Products</Breadcrumb.Item>
+            </Breadcrumb>
             <AppShell.TopbarActions>
               <Button size="sm" data-testid="story-shell-help">
                 Help

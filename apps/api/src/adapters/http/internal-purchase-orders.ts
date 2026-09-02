@@ -95,7 +95,13 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         q?: string;
         page: number;
         pageSize: number;
-        sortBy: "documentNumber" | "status";
+        sortBy:
+          | "documentNumber"
+          | "status"
+          | "supplierName"
+          | "shipDate"
+          | "cancelDate"
+          | "remaining";
         sortOrder: "asc" | "desc";
         status?: PurchaseOrder["status"];
         supplierId?: string;

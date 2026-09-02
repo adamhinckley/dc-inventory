@@ -13,12 +13,23 @@ export type PurchaseOrderListPage = {
   total: number;
 };
 
+export const purchaseOrderListSortFields = [
+  "documentNumber",
+  "status",
+  "supplierName",
+  "shipDate",
+  "cancelDate",
+  "remaining",
+] as const;
+
+export type PurchaseOrderListSortBy = (typeof purchaseOrderListSortFields)[number];
+
 export type ListPurchaseOrdersQuery = {
   organizationId: OrganizationId;
   q?: string;
   page: number;
   pageSize: number;
-  sortBy?: "documentNumber" | "status";
+  sortBy?: PurchaseOrderListSortBy;
   sortOrder?: "asc" | "desc";
   status?: PurchaseOrderStatus;
   supplierId?: SupplierId;

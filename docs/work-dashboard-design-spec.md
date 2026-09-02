@@ -287,7 +287,9 @@ Recharts consumes **report** series from the API ([`architecture.md`](./architec
 
 One height. Readable actions. Agents copy this; they do not invent `h-*` on a single control.
 
-**Height.** Comfortable-density Input, TextInput, Select, Combobox, Autocomplete, TagInput, NumberInput, DateInput, DateRangeInput, PhoneInput, and Button `md` / `lg` all use `min-h-(--space-input-height)` (38px, `--space-input-height` in `packages/ui/src/tokens/shared.css`). Compact density is FilterBar and list-table toolbars (`DataTable.Toolbar` + `TextInput density="compact"`).
+**Height.** Comfortable-density Input, TextInput, Select, Combobox, Autocomplete, TagInput, NumberInput, DateInput, DateRangeInput, PhoneInput, and Button `md` / `lg` all use `min-h-(--space-input-height)` (38px, `--space-input-height` in `packages/ui/src/tokens/shared.css`). Compact density is FilterBar, list-table toolbars (`DataTable.Search`), and any find / open-by-number / filter text field (`TextInput density="compact"`).
+
+**Search and lookup width.** Those compact search fields stay `w-52` (~208px) and `shrink-0`. They are only as wide as a document number or SKU query needs. Do not give them `flex-1` or `w-full` so they stretch across the page. `LabeledField className="min-w-56 flex-1"` is for real form fields (vendor, product), not search.
 
 **Components.** Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledField` from `@dc-inventory/ui`. Do not drop a raw `<input>` or `<select>` with one-off padding.
 
