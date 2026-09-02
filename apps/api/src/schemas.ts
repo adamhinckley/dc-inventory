@@ -624,6 +624,16 @@ export const purchaseOrderReceiveBodySchema = z.object({
     .min(1),
 });
 
+export const purchaseOrderGoodsReceivedItemSchema = z.object({
+  createdAt: z.string().datetime(),
+  sku: z.string(),
+  quantity: z.number().int().positive(),
+});
+
+export const purchaseOrderGoodsReceivedListResponseSchema = z.object({
+  items: z.array(purchaseOrderGoodsReceivedItemSchema),
+});
+
 export const conflictResponseSchema = z.object({
   error: z.literal("conflict"),
 });

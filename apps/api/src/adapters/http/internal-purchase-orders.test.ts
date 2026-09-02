@@ -89,6 +89,93 @@ describe("internal purchase orders HTTP", () => {
     expect(response.json()).toEqual({ error: "unauthorized" });
   });
 
+  it("lists goods-received history for a purchase order", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 100 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string; lines: Array<{ id: string }> };
+
+    const unauthorized = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/goods-received`,
+    });
+    expect(unauthorized.statusCode).toBe(401);
+    expect(unauthorized.json()).toEqual({ error: "unauthorized" });
+
+    const missing = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders/99999999-9999-4999-8999-999999999999/goods-received",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toEqual({ error: "not_found" });
+
+    const empty = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/goods-received`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(empty.statusCode).toBe(200);
+    expect(empty.json()).toEqual({ items: [] });
+
+    await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-gr-hist-confirm" },
+    });
+
+    const firstReceive = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/receive`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        idempotencyKey: "http-gr-hist-receive-1",
+        lines: [{ lineId: po.lines[0]!.id, quantity: 40 }],
+      },
+    });
+    expect(firstReceive.statusCode).toBe(200);
+
+    const secondReceive = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/receive`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        idempotencyKey: "http-gr-hist-receive-2",
+        lines: [{ lineId: po.lines[0]!.id, quantity: 60 }],
+      },
+    });
+    expect(secondReceive.statusCode).toBe(200);
+
+    const history = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/goods-received`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(history.statusCode).toBe(200);
+    const body = history.json() as {
+      items: Array<{ createdAt: string; sku: string; quantity: number }>;
+    };
+    expect(body.items).toHaveLength(2);
+    expect(body.items[0]).toMatchObject({ sku: "HEX-BOLT-GALV", quantity: 40 });
+    expect(body.items[1]).toMatchObject({ sku: "HEX-BOLT-GALV", quantity: 60 });
+    expect(Date.parse(body.items[0]!.createdAt)).toBeLessThanOrEqual(
+      Date.parse(body.items[1]!.createdAt),
+    );
+    expect(body.items[0]).not.toHaveProperty("idempotencyKey");
+    expect(body.items[0]).not.toHaveProperty("actor");
+  });
+
   it("rejects invalid create body with Zod", async () => {
     const app = await startPurchasingApp();
     const cookie = await staffCookie(app);

@@ -17,6 +17,12 @@ export {
   type Phase2BootstrapResult,
 } from "./bootstrap/run-phase2-bootstrap.js";
 export { GetStockSnapshotUseCase } from "./application/get-stock-snapshot.js";
+export {
+  ListPurchaseOrderGoodsReceivedUseCase,
+  type ListPurchaseOrderGoodsReceivedRequest,
+  type ListPurchaseOrderGoodsReceivedResult,
+  type PurchaseOrderGoodsReceivedItem,
+} from "./application/list-purchase-order-goods-received.js";
 export { ListUncoveredSkusUseCase } from "./application/list-uncovered-skus.js";
 export { RecordAdjustmentDecreaseUseCase } from "./application/record-adjustment-decrease.js";
 export { RecordAdjustmentIncreaseUseCase } from "./application/record-adjustment-increase.js";
@@ -61,6 +67,7 @@ export {
   type MovementRefType,
   type MovementType,
 } from "./domain/movement.js";
+export type { IPurchaseOrderLookup } from "./domain/ports/purchase-order-lookup.js";
 export type {
   IInventoryReadModel,
   IStockLedger,

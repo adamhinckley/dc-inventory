@@ -17,6 +17,7 @@ import {
   purchaseOrderListQuerySchema,
   purchaseOrderListResponseSchema,
   purchaseOrderReceiveBodySchema,
+  purchaseOrderGoodsReceivedListResponseSchema,
   purchaseOrderReplaceLinesBodySchema,
   purchaseOrderWriteBodySchema,
   purchaseOrdersListTable,
@@ -229,6 +230,38 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         return sendNotFound(reply);
       }
       return mapPurchaseOrder(result.purchaseOrder);
+    },
+  );
+
+  routes.get(
+    "/purchase-orders/:id/goods-received",
+    {
+      schema: {
+        operationId: "listInternalPurchaseOrderGoodsReceived",
+        tags: ["internal"],
+        summary: "List GoodsReceived movements for a purchase order",
+        params: purchaseOrderIdParamsSchema,
+        response: {
+          200: purchaseOrderGoodsReceivedListResponseSchema,
+          ...readErrors,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.inventory.listPurchaseOrderGoodsReceived.execute({
+        organizationId: staffOrganizationId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return {
+        items: result.items.map((item) => ({
+          createdAt: item.createdAt.toISOString(),
+          sku: item.sku.value,
+          quantity: item.quantity,
+        })),
+      };
     },
   );
 
