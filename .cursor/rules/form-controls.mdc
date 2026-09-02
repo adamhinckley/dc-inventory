@@ -14,7 +14,7 @@ Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledFi
 // Wrong: raw input, invented height, sm secondary as the row action
 <div className="flex items-center gap-2">
   <input className="h-10 rounded-md" />
-  <Button variant="secondary" size="sm">Add line</Button>
+  <Button variant="secondary" size="sm">Add Line</Button>
 </div>
 
 // Wrong: items-center lines the button up with labels, not inputs
@@ -23,7 +23,7 @@ Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledFi
     <Label>Vendor product</Label>
     <Combobox />
   </div>
-  <Button size="sm">Add line</Button>
+  <Button size="sm">Add Line</Button>
 </div>
 
 // Right
@@ -32,11 +32,13 @@ Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledFi
     <Label htmlFor="product">Vendor product</Label>
     <Combobox id="product" />
   </LabeledField>
-  <Button type="submit" variant="primary">Add line</Button>
+  <Button type="submit" variant="primary">Add Line</Button>
 </FieldRow>
 ```
 
 - Row action: `variant="primary"`, default `md` size. `sm` / `ghost` are toolbar and table only.
+- Button labels are Title Case and bold. Do not pass `font-medium` or sentence-case copy.
+- On a page that hosts a table with actions, every `Button` includes a leading lucide icon. Pick the icon that matches the verb.
 - Find, open-by-number, and list search use `TextInput density="compact"` at `w-52 shrink-0`. Never `flex-1` / `w-full` on a search field. Table search is `DataTable.Search`. Do not stack a second label above a toolbar placeholder; a short label is fine for a named lookup (`Open by PO #`).
 - Label to control: `gap-field`. Field to field: `gap-field-group`. Row to table: `gap-form-section`.
 - Never set `h-*`, `min-h-*`, or `py-*` on one control to make it fit.

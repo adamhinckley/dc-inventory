@@ -29,7 +29,7 @@ import {
   useTable,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, Download, Trash2 } from "lucide-react";
+import { CircleCheck, Download, Package, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { createPortal } from "react-dom";
@@ -131,7 +131,8 @@ function MissingCaseQtyDownloadDialog({
               onProceed();
             }}
           >
-            Download anyway
+            <Download className="size-icon-lg" aria-hidden />
+            Download Anyway
           </Button>
           <Button
             type="button"
@@ -143,7 +144,8 @@ function MissingCaseQtyDownloadDialog({
               }, 200);
             }}
           >
-            Add case quantity
+            <Package className="size-icon-lg" aria-hidden />
+            Add Case Quantity
           </Button>
         </Dialog.Footer>
       </Dialog.Content>
@@ -440,6 +442,7 @@ function PurchaseOrderLinesTable({
               onClick={() => setCaseQtySku(record.sku)}
               data-testid={`purchasing-po-line-enter-case-qty-${record.rowIndex}`}
             >
+              <Package className="size-icon" aria-hidden />
               Enter Case Quantity
             </Button>
           ) : null,
@@ -499,7 +502,7 @@ function PurchaseOrderLinesTable({
             }}
           >
             <Trash2 className="size-icon-lg" aria-hidden />
-            Remove selected
+            Remove Selected
           </Button>
         </Table.BulkActions>
       </Table>
@@ -1189,6 +1192,7 @@ function FactorySendLinesTable({ purchaseOrderId }: { purchaseOrderId: string })
             onClick={() => setCaseQtySku(sku)}
             data-testid={`purchasing-factory-send-enter-case-qty-${sku}`}
           >
+            <Package className="size-icon" aria-hidden />
             Enter Case Quantity
           </Button>
         );

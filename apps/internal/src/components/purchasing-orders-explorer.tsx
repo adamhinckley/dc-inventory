@@ -2,7 +2,7 @@
 
 import { buttonVariants, ExplorerView } from "@dc-inventory/ui";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
-import { Plus } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { OpenPurchaseOrderByDocumentNumber } from "./open-purchase-order-by-document-number";
@@ -32,6 +32,7 @@ export function PurchasingOrdersExplorer({
               href="/purchasing/suppliers"
               className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
+              <Building2 className="size-icon-lg" aria-hidden />
               Suppliers
             </Link>
             <Link
@@ -39,7 +40,7 @@ export function PurchasingOrdersExplorer({
               className={buttonVariants({ variant: "primary", size: "sm" })}
             >
               <Plus className="size-icon-lg" />
-              New draft PO
+              New Draft PO
             </Link>
           </div>
         </header>

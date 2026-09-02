@@ -202,9 +202,12 @@ export interface ExplorerViewCreateButtonProps
 }
 
 /**
- * Renders a "Create" button that opens the CreateDialog. Only visible when a
+ * Renders a create button that opens the CreateDialog. Only visible when a
  * `<ExplorerView.CreateDialog>` is present. Place inside `PageHeader.Actions`
  * or wherever the trigger should appear.
+ *
+ * Always includes a leading `Plus` icon. Pass a Title Case label as children
+ * (`New Supplier`). Defaults to `Create` when children are omitted.
  *
  * Defaults to `variant="primary"` and `size="sm"`. Consumers can override
  * either by passing a different value.
@@ -217,6 +220,7 @@ export function ExplorerViewCreateButton({
   variant = 'primary',
   size = 'sm',
   'data-testid': testid,
+  children,
   ...rest
 }: ExplorerViewCreateButtonProps) {
   const ctx = use(ExplorerViewContext)
@@ -233,7 +237,7 @@ export function ExplorerViewCreateButton({
       {...rest}
     >
       <Plus className="size-icon-lg" />
-      Create
+      {children ?? 'Create'}
     </Button>
   )
 }

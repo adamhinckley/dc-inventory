@@ -25,6 +25,18 @@ describe("computeColumnWidths", () => {
     ).toEqual([140, 360]);
   });
 
+  it("reserves the labeled row-actions column so icon+label buttons fit", () => {
+    expect(
+      computeColumnWidths(
+        [column("sku", { width: 140 }), column("name")],
+        false,
+        true,
+        500,
+        "name",
+      ),
+    ).toEqual([140, 160]);
+  });
+
   it("keeps the fill column at its floor when fixed columns overflow the card", () => {
     expect(
       computeColumnWidths(

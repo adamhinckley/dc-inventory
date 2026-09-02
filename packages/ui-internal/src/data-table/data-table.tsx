@@ -62,7 +62,7 @@ export type DataTableRootProps<
   linkField?: string;
   /** Optional wrapper for link cells (e.g. Next.js `Link`). Defaults to `<a href>`. */
   renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode;
-  /** Trailing actions column (edit, unlink, etc.). */
+  /** Trailing actions column. Each `Button` includes a leading icon and a Title Case label. */
   rowActions?: (row: TRow) => ReactNode;
   children: ReactNode;
 };

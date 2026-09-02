@@ -39,7 +39,7 @@ import './Table.css'
 
 // Reserved widths in px for the optional leading checkbox col + trailing actions col.
 const SELECTION_WIDTH = 40
-const ACTIONS_WIDTH = 48
+const ACTIONS_WIDTH = 200
 
 // Width applied to a non-fill column that declares neither `width` nor
 // `minWidth`. Wide enough to fit a typical short label + sort chevron.
@@ -323,7 +323,7 @@ export function TableRoot({
                   : undefined
           return <col key={column.id} style={width ? { width } : undefined} />
         })}
-        {table.rowActions && <col className="w-12" />}
+        {table.rowActions && <col style={{ width: ACTIONS_WIDTH }} />}
       </colgroup>
       {headerNode}
       {bodyNode}
@@ -537,7 +537,9 @@ export function TableHeader({ className, ref, ...rest }: TableHeaderProps) {
           }
           return th
         })}
-        {table.rowActions && <th className="w-12 section-content-padding" aria-label="Actions" />}
+        {table.rowActions && (
+          <th className="section-content-padding" style={{ width: ACTIONS_WIDTH }} aria-label="Actions" />
+        )}
       </tr>
     </thead>
   )
@@ -628,7 +630,9 @@ export function TableBody({ className, ref, ...rest }: TableBodyProps) {
                 </td>
               )
             })}
-            {table.rowActions && <td className="w-12 section-content-padding" />}
+            {table.rowActions && (
+              <td className="section-content-padding" style={{ width: ACTIONS_WIDTH }} />
+            )}
           </tr>
         ))}
       </tbody>
@@ -914,7 +918,7 @@ export function TableBody({ className, ref, ...rest }: TableBodyProps) {
               )
             })}
             {table.rowActions && (
-              <td className="w-12 section-content-padding">
+              <td className="section-content-padding" style={{ width: ACTIONS_WIDTH }}>
                 <div className="flex justify-end">{table.rowActions(row)}</div>
               </td>
             )}
@@ -1107,7 +1111,8 @@ export function TablePagination({ className, ref, ...rest }: TablePaginationProp
  * one row is selected. Shows a count + caller-provided action buttons.
  *
  * @when Multi-row operations (Archive, Delete, Tag) on selectable tables.
- *   Pass action buttons as children.
+ *   Pass action buttons as children. Each Button is Title Case, bold, and
+ *   includes a leading lucide icon.
  * @avoid Putting per-row actions here — those belong in `useTable`'s
  *   `rowActions` slot.
  */

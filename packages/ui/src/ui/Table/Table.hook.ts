@@ -131,7 +131,7 @@ export interface TableInstance<T> {
    */
   isError: boolean
   /**
-   * A fetch is in flight. The error card's "Try again" button renders its
+   * A fetch is in flight. The error card's "Try Again" button renders its
    * loading state while true, so a retry visibly does something.
    */
   isFetching: boolean
@@ -400,13 +400,13 @@ export interface UseTableOptions<T> {
   isError?: boolean
   /**
    * A fetch is in flight — typically `isFetching` from a list hook. While
-   * the error card is showing, this puts its "Try again" button into a
+   * the error card is showing, this puts its "Try Again" button into a
    * loading state so a slow retry doesn't read as a dead button (TanStack
    * keeps `isError: true` until the refetch resolves).
    */
   isFetching?: boolean
   /**
-   * Re-runs the backing query — the error card's "Try again" button.
+   * Re-runs the backing query — the error card's "Try Again" button.
    * Typically `refetch` from the list hook. Omit to render the card
    * without a retry affordance.
    */
@@ -415,7 +415,10 @@ export interface UseTableOptions<T> {
   getRowId: (row: T) => string
   /** Extra classes on the data row, e.g. a warning highlight. */
   getRowClassName?: (row: T) => string | undefined
-  /** Render a trailing actions cell per row. */
+  /**
+   * Render a trailing actions cell per row. Each control is a `Button` with a
+   * leading lucide icon and a Title Case label (`Edit`, `Unlink`).
+   */
   rowActions?: (row: T) => ReactNode
   enableSorting?: boolean
   enableSelection?: boolean

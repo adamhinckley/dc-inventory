@@ -1,3 +1,4 @@
+import { RotateCw } from 'lucide-react'
 import { LoadingButton } from '#ds/ui/LoadingButton'
 import { cn } from '#cn'
 
@@ -6,7 +7,7 @@ export interface ErrorStateProps {
   message?: string
   onRetry?: () => void
   /**
-   * The retry is in flight — the "Try again" button shows its loading state.
+   * The retry is in flight — the "Try Again" button shows its loading state.
    * Wire to the backing query's `isFetching`: after a retry click the query
    * stays `isError: true` until it resolves, so without this a slow retry
    * reads as a dead button.
@@ -51,7 +52,8 @@ export function ErrorState({
           onClick={onRetry}
           data-testid={testid ? `${testid}-retry` : 'error-state-retry'}
         >
-          Try again
+          <RotateCw className="size-icon" aria-hidden />
+          Try Again
         </LoadingButton>
       )}
     </div>

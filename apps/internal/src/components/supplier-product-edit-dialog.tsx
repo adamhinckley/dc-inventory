@@ -5,6 +5,7 @@ import {
   useUpdateInternalSupplierProduct,
 } from "@dc-inventory/api-client-internal";
 import { Form, FormDialog } from "@dc-inventory/ui";
+import { Save } from "lucide-react";
 import { z } from "zod";
 import type { SupplierProductRow } from "../lib/supplier-product-types";
 
@@ -60,7 +61,12 @@ export function SupplierProductEditDialog({
       }
       successMessage="Vendor SKU updated"
       invalidate={getListInternalSupplierProductsQueryKey(supplierId)}
-      submitLabel="Save changes"
+      submitLabel={
+        <>
+          <Save className="size-icon-lg" aria-hidden />
+          Save Changes
+        </>
+      }
     >
       <Form.Field name="supplierSku" label="Vendor item #" form={{ kind: "text" }} />
       <Form.Field

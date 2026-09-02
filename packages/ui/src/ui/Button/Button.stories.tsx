@@ -36,7 +36,7 @@ export const Sizes: Story = {
   render: () => (
     <div className="flex items-center gap-action">
       <Button size="xs" data-testid="story-button-xs">
-        Extra small
+        Extra Small
       </Button>
       <Button size="sm" data-testid="story-button-sm">
         Small

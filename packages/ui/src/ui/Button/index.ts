@@ -1,5 +1,9 @@
 /**
- * Standard button. Five visual variants and three sizes.
+ * Standard button. Five visual variants and four sizes.
+ *
+ * Labels are always Title Case and bold. On a page that hosts a table with
+ * actions, every Button includes a leading lucide icon. Do not override
+ * `font-bold` or pass sentence-case copy.
  *
  * @when Any clickable action — primary CTAs, cancel buttons, toolbar
  *   actions, submit/cancel pairs in dialogs.

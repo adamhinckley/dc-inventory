@@ -23,6 +23,9 @@ export interface LoadingButtonProps extends ButtonProps {
  * auto-disables, sets `aria-busy`, and swaps its content for a `Spinner` (or
  * `loadingContent` if provided).
  *
+ * Labels follow `Button`: Title Case and bold. On a page that hosts a table
+ * with actions, include a leading lucide icon.
+ *
  * @when Any clickable action that kicks off async work — form submits, save
  *   buttons, async row actions, mutations. Reach for this whenever a click
  *   triggers a request that needs in-flight feedback.

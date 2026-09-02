@@ -6,7 +6,7 @@ const meta = {
   tags: ['autodocs'],
   component: LoadingButton,
   args: {
-    children: 'Save product',
+    children: 'Save Product',
     variant: 'primary',
     'data-testid': 'story-loading-button',
   },

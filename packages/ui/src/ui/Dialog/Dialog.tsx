@@ -118,7 +118,7 @@ export function DialogRoot({ children, open, onOpenChange }: DialogRootProps) {
  *   `children` — use `render` instead.
  * @example
  * // Interactive component as the trigger
- * <Dialog.Trigger render={<Button variant="primary">New user</Button>} />
+ * <Dialog.Trigger render={<Button variant="primary">New User</Button>} />
  *
  * // Plain markup as the trigger
  * <Dialog.Trigger className="text-sm underline">Open</Dialog.Trigger>
