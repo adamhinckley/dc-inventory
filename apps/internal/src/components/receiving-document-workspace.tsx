@@ -327,23 +327,23 @@ export function ReceivingDocumentLines() {
           {actionError}
         </p>
       ) : null}
+      <TextInput
+        id="receiving-find"
+        type="search"
+        density="compact"
+        className="w-52 shrink-0"
+        aria-label="Find"
+        value={find}
+        onChange={setFind}
+        placeholder="SKU or name"
+        data-testid="receiving-document-find-input"
+      />
       <form
         id="receiving-receive-form"
         className="flex min-h-0 flex-1 flex-col gap-form-section"
         onSubmit={submitReceive}
       >
         <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-field-group">
-          <TextInput
-            id="receiving-find"
-            type="search"
-            density="compact"
-            className="w-52 shrink-0"
-            aria-label="Find"
-            value={find}
-            onChange={setFind}
-            placeholder="SKU or name"
-            data-testid="receiving-document-find-input"
-          />
           <div className="flex shrink-0 items-center gap-field">
             <Checkbox
               id="receiving-remaining-only"
