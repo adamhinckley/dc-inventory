@@ -5,7 +5,7 @@
   Wholesale is e-commerce chrome (browse, cards, cart), not DataTable.
 */
 @theme {
-  --font-sans: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree, "Figtree"), ui-sans-serif, system-ui, sans-serif;
   --color-canvas: #f6f1e8;
   --color-ink: #1f1b16;
   --color-ink-muted: #5c5348;

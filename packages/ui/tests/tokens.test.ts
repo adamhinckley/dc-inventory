@@ -24,9 +24,10 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     expect(css).toContain("@custom-variant dark");
   });
 
-  it("loads IBM Plex from the same Google Fonts stylesheet Storybook and the app share", () => {
+  it("uses Figtree via next/font in apps and a Storybook fallback, not a runtime Google Fonts @import", () => {
+    expect(css).not.toContain("fonts.googleapis.com");
     expect(css).toContain(
-      "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap",
+      '--font-sans: var(--font-figtree, "Figtree"), ui-sans-serif, system-ui, sans-serif',
     );
   });
 
