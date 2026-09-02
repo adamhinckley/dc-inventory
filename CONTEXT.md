@@ -72,6 +72,28 @@ _Avoid_: closed season, sold out as a company flag
 `max(0, committed − on_hand − on_order)`. The factory to-order list. Not a shop number.
 _Avoid_: available to sell, backorder document, purchase request
 
+### Purchasing and receiving
+
+**Receiving**:
+Staff work of recording a receipt against a confirmed factory purchase order. Inventory then writes `GoodsReceived`. The inbound pile is confirmed POs that still have remaining inbound.
+_Avoid_: On the way (as the page title), inbound (as the name of the work), sales-order receiving
+
+**Remaining** (purchase order line):
+Ordered qty not yet received. Still on `on_order` until receive or cancel remaining. Not extra, not warehouse leftover (`available`).
+_Avoid_: leftover (that is `available`), extra, overage
+
+**Cancel remaining**:
+Staff action on Receiving: remaining on this PO will never be stock. Writes `InboundCancelled`; the PO becomes **received**. Not extra, not un-receive.
+_Avoid_: cancelled (PO status), close remaining inbound, close-short (working names)
+
+**Received** (purchase order):
+Inbound on that PO is done — no remaining `on_order` from it. Includes every line filled, and cancel remaining. Not “every ordered unit arrived.”
+_Avoid_: cancelled (that is a PO that never put stock away), completed
+
+**Cancelled** (purchase order):
+The PO is dead with no stock from it — draft killed, or confirmed inbound killed before any receive. Not cancel remaining after goods landed.
+_Avoid_: received, cancel remaining (that is the Receiving action)
+
 ### Building blocks
 
 **Shared kernel**:
