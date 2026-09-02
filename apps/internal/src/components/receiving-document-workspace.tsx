@@ -364,7 +364,7 @@ function ReceivingDocumentBody({
         </header>
       </ExplorerView.Header>
       <ExplorerView.Content>
-        <form className="flex min-h-0 flex-1 flex-col gap-form-section" onSubmit={submitReceive}>
+        <div className="flex min-h-0 flex-1 flex-col gap-form-section">
           <FieldRow>
             <LabeledField className="min-w-56 flex-1">
               <Label htmlFor="receiving-find">Find</Label>
@@ -391,43 +391,48 @@ function ReceivingDocumentBody({
             </LabeledField>
           </FieldRow>
 
-          <Table
-            sticky
-            className="min-h-0 flex-1"
-            table={table}
-            emptyMessage={
-              remainingOnly || find.trim().length > 0
-                ? "No lines match the current filters."
-                : "This purchase order has no lines."
-            }
+          <form
+            className="flex min-h-0 flex-1 flex-col gap-form-section"
+            onSubmit={submitReceive}
           >
-            <Table.Header />
-            <Table.Body />
-            <Table.Empty />
-          </Table>
-
-          {po.status !== "confirmed" ? (
-            <p className="text-body-sm text-fg-secondary" role="status">
-              Only confirmed purchase orders can be received.
-            </p>
-          ) : null}
-
-          {actionError ? (
-            <p className="text-body-sm text-error" role="alert">
-              {actionError}
-            </p>
-          ) : null}
-
-          <FieldRow>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={!canReceive || receiveMutation.isPending}
+            <Table
+              sticky
+              className="min-h-0 flex-1"
+              table={table}
+              emptyMessage={
+                remainingOnly || find.trim().length > 0
+                  ? "No lines match the current filters."
+                  : "This purchase order has no lines."
+              }
             >
-              {receiveMutation.isPending ? "Receiving…" : "Receive"}
-            </Button>
-          </FieldRow>
-        </form>
+              <Table.Header />
+              <Table.Body />
+              <Table.Empty />
+            </Table>
+
+            {po.status !== "confirmed" ? (
+              <p className="text-body-sm text-fg-secondary" role="status">
+                Only confirmed purchase orders can be received.
+              </p>
+            ) : null}
+
+            {actionError ? (
+              <p className="text-body-sm text-error" role="alert">
+                {actionError}
+              </p>
+            ) : null}
+
+            <FieldRow>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={!canReceive || receiveMutation.isPending}
+              >
+                {receiveMutation.isPending ? "Receiving…" : "Receive"}
+              </Button>
+            </FieldRow>
+          </form>
+        </div>
       </ExplorerView.Content>
     </ExplorerView>
   );
@@ -441,17 +446,6 @@ export function ReceivingDocumentWorkspace({
   const poQuery = useGetInternalPurchaseOrder(purchaseOrderId);
   const po = poQuery.data?.status === 200 ? poQuery.data.data : undefined;
 
-  useEffect(() => {
-    if (!poQuery.isError) {
-      return;
-    }
-    const message =
-      poQuery.error instanceof Error ? poQuery.error.message : "";
-    if (message.includes("404")) {
-      notFound();
-    }
-  }, [poQuery.error, poQuery.isError]);
-
   if (poQuery.isLoading) {
     return (
       <p className="text-body-sm text-fg-secondary">Loading purchase order…</p>
@@ -459,6 +453,11 @@ export function ReceivingDocumentWorkspace({
   }
 
   if (poQuery.isError) {
+    const message =
+      poQuery.error instanceof Error ? poQuery.error.message : "";
+    if (message.includes("404")) {
+      notFound();
+    }
     return (
       <p className="text-body-sm text-error" role="alert">
         Could not load purchase order.
@@ -468,7 +467,6 @@ export function ReceivingDocumentWorkspace({
 
   if (!po) {
     notFound();
-    return null;
   }
 
   return (
