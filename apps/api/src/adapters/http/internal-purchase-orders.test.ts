@@ -105,6 +105,43 @@ describe("internal purchase orders HTTP", () => {
     expect(response.json()).toEqual({ error: "unauthorized" });
   });
 
+  it("gets a purchase order by exact document number", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 12 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string; documentNumber: string };
+
+    const found = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/by-document-number/${po.documentNumber}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(found.statusCode).toBe(200);
+    expect(found.json()).toMatchObject({
+      id: po.id,
+      documentNumber: po.documentNumber,
+      status: "draft",
+    });
+
+    const missing = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders/by-document-number/PO-99999",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toEqual({ error: "not_found" });
+  });
+
   it("lists goods-received history for a purchase order", async () => {
     const app = await startPurchasingApp();
     const cookie = await staffCookie(app);

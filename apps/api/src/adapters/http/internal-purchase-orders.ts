@@ -11,6 +11,7 @@ import {
   purchaseOrderCommandBodySchema,
   purchaseOrderIdParamsSchema,
   purchaseOrderExportQuerySchema,
+  purchaseOrderDocumentNumberParamsSchema,
   purchaseOrderFactorySendResponseSchema,
   binaryFileResponseSchema,
   purchaseOrderItemSchema,
@@ -161,6 +162,33 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         return sendInvalid(reply);
       }
       return reply.code(201).send(mapPurchaseOrder(result.purchaseOrder));
+    },
+  );
+
+  routes.get(
+    "/purchase-orders/by-document-number/:documentNumber",
+    {
+      schema: {
+        operationId: "getInternalPurchaseOrderByDocumentNumber",
+        tags: ["internal"],
+        summary: "Get purchase order by exact document number",
+        params: purchaseOrderDocumentNumberParamsSchema,
+        response: {
+          200: purchaseOrderItemSchema,
+          ...readErrors,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.getPurchaseOrderByDocumentNumber.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        documentNumber: request.params.documentNumber,
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return mapPurchaseOrder(result.purchaseOrder);
     },
   );
 

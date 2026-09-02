@@ -1310,13 +1310,6 @@ function ConfirmedPurchaseOrderView({
           Purchasing
         </Link>
         <span aria-hidden="true"> / </span>
-        <Link
-          href="/purchasing/completed"
-          className="text-link hover:text-link-hover"
-        >
-          Completed
-        </Link>
-        <span aria-hidden="true"> / </span>
         <span>{documentNumber}</span>
       </nav>
       <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">

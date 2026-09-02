@@ -14,5 +14,5 @@ export default async function PurchasingPage({
     await searchParams,
   );
 
-  return <PurchasingOrdersExplorer list="draft" initialParams={initialParams} />;
+  return <PurchasingOrdersExplorer initialParams={initialParams} />;
 }
