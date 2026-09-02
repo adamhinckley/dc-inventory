@@ -26,5 +26,7 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "components/purchase-order-workspace.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/product-case-qty-dialog.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchasing-orders-explorer.tsx"))).toBe(true);
+    expect(existsSync(join(srcRoot, "components/receiving-inbound-explorer.tsx"))).toBe(true);
+    expect(existsSync(join(srcRoot, "components/receiving-inbound-table.tsx"))).toBe(true);
   });
 });
