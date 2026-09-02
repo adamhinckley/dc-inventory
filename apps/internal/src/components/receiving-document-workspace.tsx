@@ -690,23 +690,25 @@ function ReceivingDocumentBody({
                   type="button"
                   variant="secondary"
                   disabled={cancelRemainingMutation.isPending}
-                  onClick={() => setCancelRemainingDialogOpen(true)}
+                  onClick={() => {
+                    setCancelRemainingError(null);
+                    setCancelRemainingDialogOpen(true);
+                  }}
                 >
                   Cancel remaining
                 </Button>
               ) : null}
             </FieldRow>
-
-            {cancelRemainingError ? (
-              <p className="text-body-sm text-error" role="alert">
-                {cancelRemainingError}
-              </p>
-            ) : null}
           </form>
 
           <Dialog
             open={cancelRemainingDialogOpen}
-            onOpenChange={setCancelRemainingDialogOpen}
+            onOpenChange={(open) => {
+              setCancelRemainingDialogOpen(open);
+              if (!open) {
+                setCancelRemainingError(null);
+              }
+            }}
           >
             <Dialog.Content
               size="sm"
@@ -717,10 +719,17 @@ function ReceivingDocumentBody({
                 <Dialog.Close />
               </Dialog.Header>
               <Dialog.Body>
-                <Dialog.Description>
-                  Remaining on this PO will never be stock; document becomes
-                  received.
-                </Dialog.Description>
+                <div className="flex flex-col gap-field-group">
+                  <Dialog.Description>
+                    Remaining on this PO will never be stock; document becomes
+                    received.
+                  </Dialog.Description>
+                  {cancelRemainingError ? (
+                    <p className="text-body-sm text-error" role="alert">
+                      {cancelRemainingError}
+                    </p>
+                  ) : null}
+                </div>
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.Close
