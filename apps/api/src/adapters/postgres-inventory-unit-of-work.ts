@@ -37,16 +37,22 @@ import {
  */
 export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   private readonly defaultLocationUuidByOrg = new Map<string, Promise<string>>();
+  readonly inventory: IUnitOfWork["inventory"];
 
   constructor(
     private readonly db: AppDrizzle,
     private readonly clock: IClock,
-  ) {}
-
-  readonly inventory = {
-    ledger: null as unknown as DrizzleStockLedger,
-    readModel: null as unknown as DrizzleInventoryReadModel,
-  };
+  ) {
+    this.inventory = {
+      ledger: null as unknown as DrizzleStockLedger,
+      readModel: new DrizzleInventoryReadModel(
+        db,
+        (organizationId, locationId) =>
+          this.resolveLocationUuid(this.db, organizationId, locationId),
+        clock,
+      ),
+    };
+  }
 
   get purchasing(): IUnitOfWork["purchasing"] {
     const self = this;
@@ -100,29 +106,10 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     tx: InventoryDrizzle & PurchasingDrizzle & SalesDrizzle & AccountingDrizzle,
     work: (uow: IUnitOfWork) => Promise<T>,
   ): Promise<T> {
-    const resolveLocationUuid = async (
+    const resolveLocationUuid = (
       organizationId: OrganizationId,
       locationId: LocationId,
-    ): Promise<string> => {
-      if (locationId === LocationId.DEFAULT) {
-        return this.getDefaultLocationUuid(organizationId);
-      }
-      const rows = await tx
-        .select({ id: locations.id })
-        .from(locations)
-        .where(
-          and(
-            eq(locations.organizationId, organizationId),
-            eq(locations.code, locationId),
-          ),
-        )
-        .limit(1);
-      const id = rows[0]?.id;
-      if (id === undefined) {
-        throw new Error(`Unknown inventory location code ${locationId}`);
-      }
-      return id;
-    };
+    ): Promise<string> => this.resolveLocationUuid(tx, organizationId, locationId);
 
     const readModel = new DrizzleInventoryReadModel(tx, resolveLocationUuid, this.clock);
     const ledger = new DrizzleStockLedger(tx, readModel, resolveLocationUuid, this.clock);
@@ -158,6 +145,31 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
       run: (innerWork) => this.runOnTransaction(tx, innerWork),
     };
     return work(scope);
+  }
+
+  private async resolveLocationUuid(
+    db: Pick<AppDrizzle, "select">,
+    organizationId: OrganizationId,
+    locationId: LocationId,
+  ): Promise<string> {
+    if (locationId === LocationId.DEFAULT) {
+      return this.getDefaultLocationUuid(organizationId);
+    }
+    const rows = await db
+      .select({ id: locations.id })
+      .from(locations)
+      .where(
+        and(
+          eq(locations.organizationId, organizationId),
+          eq(locations.code, locationId),
+        ),
+      )
+      .limit(1);
+    const id = rows[0]?.id;
+    if (id === undefined) {
+      throw new Error(`Unknown inventory location code ${locationId}`);
+    }
+    return id;
   }
 
   private getDefaultLocationUuid(organizationId: OrganizationId): Promise<string> {
