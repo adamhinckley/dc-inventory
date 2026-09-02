@@ -20,4 +20,9 @@ export type ListInternalPurchaseOrders200ItemsItem = {
   cancelDate: string | null;
   lines: ListInternalPurchaseOrders200ItemsItemLinesItem[];
   supplierName: string;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  remaining: number;
 };

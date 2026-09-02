@@ -31,6 +31,9 @@ describe("internal dashboard shell", () => {
     expect(
       existsSync(join(srcRoot, "app/(dashboard)/receiving/[id]/page.tsx")),
     ).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/receiving/[id]/history/page.tsx")),
+    ).toBe(true);
     expect(existsSync(join(srcRoot, "components/receiving-document-workspace.tsx"))).toBe(
       true,
     );

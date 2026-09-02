@@ -11,12 +11,19 @@ export const receivingListTable = {
     { field: "documentNumber", label: "PO #" },
     { field: "supplierName", label: "Supplier" },
     { field: "shipDate", label: "Ship date" },
+    { field: "cancelDate", label: "Cancel date" },
     { field: "remaining", label: "Remaining" },
   ],
   search: listInternalPurchaseOrdersTable.search,
   sort: {
     defaultBy: listInternalPurchaseOrdersTable.sort.defaultBy,
     defaultOrder: listInternalPurchaseOrdersTable.sort.defaultOrder,
-    fields: ["documentNumber"],
+    fields: [
+      "documentNumber",
+      "supplierName",
+      "shipDate",
+      "cancelDate",
+      "remaining",
+    ],
   },
 } as const satisfies TableMeta;

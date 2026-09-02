@@ -10,6 +10,7 @@ import type {
   IPurchaseOrderRepository,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
+  PurchaseOrderListSortBy,
   UnnumberedPurchaseOrder,
 } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
@@ -40,9 +41,45 @@ function toOrder(order: PurchaseOrder): PurchaseOrder {
   };
 }
 
+function remainingQty(order: PurchaseOrder): number {
+  return order.lines.reduce((total, line) => total + (line.qty - line.receivedQty), 0);
+}
+
+function compareNullableDate(left: string | null, right: string | null): number {
+  return (left ?? "").localeCompare(right ?? "");
+}
+
+function comparePurchaseOrderSort(
+  left: { row: Stored; supplierName: string },
+  right: { row: Stored; supplierName: string },
+  sortBy: PurchaseOrderListSortBy,
+): number {
+  switch (sortBy) {
+    case "status":
+      return left.row.order.status.localeCompare(right.row.order.status);
+    case "supplierName":
+      return left.supplierName.localeCompare(right.supplierName);
+    case "shipDate":
+      return compareNullableDate(left.row.order.shipDate, right.row.order.shipDate);
+    case "cancelDate":
+      return compareNullableDate(left.row.order.cancelDate, right.row.order.cancelDate);
+    case "remaining":
+      return remainingQty(left.row.order) - remainingQty(right.row.order);
+    default:
+      return left.row.order.documentNumber.localeCompare(right.row.order.documentNumber);
+  }
+}
+
 export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository {
   private readonly byId = new Map<PurchaseOrderId, Stored>();
   private readonly nextSequenceByOrg = new Map<string, number>();
+
+  constructor(
+    private readonly supplierName = async (
+      _organizationId: OrganizationId,
+      _supplierId: SupplierId,
+    ): Promise<string> => "",
+  ) {}
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
     const needle = query.q?.trim().toLowerCase() ?? "";
@@ -58,17 +95,22 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
       }
       return needle.length === 0 || row.order.documentNumber.toLowerCase().includes(needle);
     });
-    rows.sort((a, b) => {
-      const cmp =
-        query.sortBy === "status"
-          ? a.order.status.localeCompare(b.order.status)
-          : a.order.documentNumber.localeCompare(b.order.documentNumber);
+    const withKeys = await Promise.all(
+      rows.map(async (row) => ({
+        row,
+        supplierName: await this.supplierName(row.order.organizationId, row.order.supplierId),
+      })),
+    );
+    const sortBy: PurchaseOrderListSortBy = query.sortBy ?? "documentNumber";
+    withKeys.sort((a, b) => {
+      const cmp = comparePurchaseOrderSort(a, b, sortBy);
       return query.sortOrder === "desc" ? -cmp : cmp;
     });
+    const sortedRows = withKeys.map((entry) => entry.row);
     const start = (query.page - 1) * query.pageSize;
     return {
-      items: rows.slice(start, start + query.pageSize).map((row) => row.order),
-      total: rows.length,
+      items: sortedRows.slice(start, start + query.pageSize).map((row) => row.order),
+      total: sortedRows.length,
     };
   }
 

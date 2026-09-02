@@ -1,7 +1,7 @@
 import type { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
 import type { DemandStockFigures } from "../demand-model.js";
-import type { Movement, MovementRefType } from "../movement.js";
+import type { Movement, MovementRefType, MovementType } from "../movement.js";
 
 export type StockCommandFailureReason =
   | "invalid_quantity"
@@ -126,6 +126,9 @@ export type MovementListFilter = {
   organizationId: OrganizationId;
   sku?: Sku;
   locationId?: LocationId;
+  movementType?: MovementType;
+  refType?: MovementRefType;
+  refId?: string;
 };
 
 /**

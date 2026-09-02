@@ -21,8 +21,7 @@ export function PurchasingOrdersExplorer({
         {children}
         <header className="mt-2 flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
-            <p className="text-label text-fg-secondary">Purchasing</p>
-            <h1 className="page-title mt-1">Purchase orders</h1>
+            <h1 className="page-title">Purchase orders</h1>
             <p className="page-description mt-2">
               Draft purchase orders stay editable here. Open a confirmed or received PO by
               document number, or browse inbound POs under Receiving.

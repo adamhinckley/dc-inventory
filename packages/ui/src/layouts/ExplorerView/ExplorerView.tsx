@@ -56,6 +56,10 @@ export interface ExplorerViewContentProps extends ComponentPropsWithRef<'div'> {
   children: ReactNode
 }
 
+export interface ExplorerViewFooterProps extends ComponentPropsWithRef<'div'> {
+  children: ReactNode
+}
+
 export interface ExplorerViewCreateDialogProps {
   title: string
   size?: 'sm' | 'md' | 'lg' | 'xl'
@@ -75,23 +79,26 @@ export interface ExplorerViewCreateDialogProps {
 interface SplitResult {
   header: ReactNode
   content: ReactNode
+  footer: ReactNode
   createDialog: { props: ExplorerViewCreateDialogProps } | null
 }
 
 function splitChildren(children: ReactNode): SplitResult {
   let header: ReactNode = null
   let content: ReactNode = null
+  let footer: ReactNode = null
   let createDialog: SplitResult['createDialog'] = null
 
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return
     if (child.type === ExplorerViewHeader) header = child
     else if (child.type === ExplorerViewContent) content = child
+    else if (child.type === ExplorerViewFooter) footer = child
     else if (child.type === ExplorerViewCreateDialog)
       createDialog = child as unknown as SplitResult['createDialog']
   })
 
-  return { header, content, createDialog }
+  return { header, content, footer, createDialog }
 }
 
 // ---------------------------------------------------------------------------
@@ -99,14 +106,36 @@ function splitChildren(children: ReactNode): SplitResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Top-level header region. Renders inside a flex-shrink-0 wrapper with a
- * bottom border applied by the root — this component only provides internal
- * padding.
+ * Top-level header region. Canvas padding and a bottom border; override
+ * with `className="border-b-0"` when content already draws its own chrome.
  *
  * @when Page titles, breadcrumbs, action bars, or navigation controls.
- * @tokens px-canvas py-region-y (region padding)
+ * @tokens px-canvas py-region-y (region padding), border-border (header divider)
  */
 export function ExplorerViewHeader({ children, className, ref, ...rest }: ExplorerViewHeaderProps) {
+  return (
+    <div
+      ref={ref}
+      className={cn('flex-shrink-0 border-b border-border px-canvas py-region-y', className)}
+      {...rest}
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Bottom-pinned action region. Renders after Content as a flex-shrink-0
+ * bar with a top border so primary page actions stay visible while the
+ * content region scrolls.
+ *
+ * @when Page-level submit / confirm actions that must remain on screen
+ *   (receive, save, commit).
+ * @avoid Section actions that belong with a single card — keep those in
+ *   Content. Modal actions — use `Dialog.Footer`.
+ * @tokens px-canvas py-region-y (region padding), border-border (top divider)
+ */
+export function ExplorerViewFooter({ children, className, ref, ...rest }: ExplorerViewFooterProps) {
   return (
     <div ref={ref} className={cn('flex-shrink-0 px-canvas py-region-y', className)} {...rest}>
       {children}
@@ -138,7 +167,11 @@ export function ExplorerViewContent({
     <div
       ref={ref}
       tabIndex={-1}
-      className={cn('flex-1 overflow-auto p-canvas focus:outline-none', className)}
+      className={cn(
+        'flex-1 overflow-auto p-canvas focus:outline-none',
+        'has-data-sticky-table:flex has-data-sticky-table:min-h-0 has-data-sticky-table:flex-col has-data-sticky-table:overflow-hidden',
+        className,
+      )}
       {...rest}
     >
       {children}
@@ -211,8 +244,8 @@ export function ExplorerViewCreateButton({
 
 /**
  * Explorer-style layout that structures the content area into a Header,
- * scrollable Content region, and an optional create Dialog. Sub-components
- * are slotted by type — place them in any order.
+ * scrollable Content region, optional Footer, and an optional create Dialog.
+ * Sub-components are slotted by type — place them in any order.
  *
  * Provides context so `ExplorerView.CreateButton` can open the dialog from
  * anywhere within the tree.
@@ -221,15 +254,17 @@ export function ExplorerViewCreateButton({
  * @avoid Using without a Header or Content sub-component.
  */
 export function ExplorerViewRoot({ children, className, ref, ...rest }: ExplorerViewProps) {
-  const { header, content, createDialog } = splitChildren(children)
+  const { header, content, footer, createDialog } = splitChildren(children)
   const [createOpen, setCreateOpen] = useState(false)
 
   return (
     <ExplorerViewContext value={{ createOpen, setCreateOpen, hasCreateDialog: !!createDialog }}>
       <div ref={ref} className={cn('flex h-full flex-col', className)} {...rest}>
-        {header && <div className="flex-shrink-0 border-b border-border">{header}</div>}
+        {header && <div className="flex-shrink-0">{header}</div>}
 
         {content}
+
+        {footer && <div className="flex-shrink-0 border-t border-border">{footer}</div>}
 
         {createDialog && (
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>

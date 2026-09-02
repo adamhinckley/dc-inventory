@@ -14,7 +14,7 @@
 }
 
 @utility page-breadcrumb-separator {
-  /** Breadcrumb dividers — "/" */
+  /** Slash divider for ad-hoc trails. Prefer `Breadcrumb` (chevron) in the topbar. */
   @apply text-body-sm text-fg-muted;
 }
 

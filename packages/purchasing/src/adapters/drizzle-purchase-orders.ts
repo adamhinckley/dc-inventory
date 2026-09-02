@@ -7,6 +7,7 @@ import type {
   IPurchaseOrderRepository,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
+  PurchaseOrderListSortBy,
   UnnumberedPurchaseOrder,
 } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
@@ -14,6 +15,7 @@ import {
   documentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
+  suppliers,
 } from "../persistence/schema.js";
 
 export type PurchasingDrizzle = PostgresJsDatabase;
@@ -225,6 +227,31 @@ async function advanceCounter(
     });
 }
 
+function remainingQtyExpr() {
+  return sql`coalesce((
+    select sum(${purchaseOrderLines.qty} - ${purchaseOrderLines.receivedQty})
+    from ${purchaseOrderLines}
+    where ${purchaseOrderLines.purchaseOrderId} = ${purchaseOrders.id}
+  ), 0)`;
+}
+
+function purchaseOrderListSortColumn(sortBy: PurchaseOrderListSortBy) {
+  switch (sortBy) {
+    case "status":
+      return purchaseOrders.status;
+    case "shipDate":
+      return purchaseOrders.shipDate;
+    case "cancelDate":
+      return purchaseOrders.cancelDate;
+    case "supplierName":
+      return suppliers.name;
+    case "remaining":
+      return remainingQtyExpr();
+    default:
+      return purchaseOrders.documentNumber;
+  }
+}
+
 export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository {
   constructor(private readonly db: PurchasingDrizzle) {}
 
@@ -241,14 +268,14 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
     }
     const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
-    const sortColumn =
-      query.sortBy === "status" ? purchaseOrders.status : purchaseOrders.documentNumber;
+    const sortColumn = purchaseOrderListSortColumn(query.sortBy ?? "documentNumber");
     const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
     const [totalRows, headers] = await Promise.all([
       this.db.select({ value: count() }).from(purchaseOrders).where(where),
       this.db
-        .select()
+        .select({ header: purchaseOrders })
         .from(purchaseOrders)
+        .leftJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
         .where(where)
         .orderBy(order, asc(purchaseOrders.id))
         .limit(query.pageSize)
@@ -256,10 +283,10 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
     ]);
     const lines = await loadLinesByPurchaseOrderIds(
       this.db,
-      headers.map((header) => header.id),
+      headers.map((row) => row.header.id),
     );
     return {
-      items: headers.map((header) => toOrder(header, lines.get(header.id) ?? [])),
+      items: headers.map((row) => toOrder(row.header, lines.get(row.header.id) ?? [])),
       total: totalRows[0]?.value ?? 0,
     };
   }

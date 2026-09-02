@@ -80,8 +80,13 @@ class InventoryCommandAdapter implements IInventoryCommandPort {
 }
 
 export class InMemoryPurchasingUnitOfWork implements IPurchasingUnitOfWork {
-  readonly purchaseOrders = new InMemoryPurchaseOrderRepository();
   readonly suppliers = new InMemorySupplierRepository();
+  readonly purchaseOrders = new InMemoryPurchaseOrderRepository(
+    async (organizationId, supplierId) => {
+      const supplier = await this.suppliers.findById(organizationId, supplierId);
+      return supplier?.name ?? "";
+    },
+  );
   private readonly inventoryUow: InMemoryInventoryUnitOfWork;
   readonly inventory: InventoryCommandAdapter;
 

@@ -196,7 +196,11 @@ export const listInternalPurchaseOrdersTable = {
     "defaultOrder": "asc",
     "fields": [
       "documentNumber",
-      "status"
+      "status",
+      "supplierName",
+      "shipDate",
+      "cancelDate",
+      "remaining"
     ]
   }
 } as const satisfies InternalTableMetadata;

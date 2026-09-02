@@ -38,15 +38,12 @@ export class ListPurchaseOrderGoodsReceivedUseCase {
     const movements = await this.readModel.listMovements({
       organizationId: input.organizationId,
       locationId: LocationId.DEFAULT,
+      movementType: "GoodsReceived",
+      refType: "purchase_order",
+      refId: input.purchaseOrderId,
     });
 
-    const items = movements
-      .filter(
-        (movement) =>
-          movement.movementType === "GoodsReceived" &&
-          movement.refType === "purchase_order" &&
-          movement.refId === input.purchaseOrderId,
-      )
+    const items = [...movements]
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
       .map((movement) => ({
         createdAt: movement.createdAt,
