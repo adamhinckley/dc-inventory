@@ -11,4 +11,8 @@ export type ListInternalPurchaseOrdersSortBy = typeof ListInternalPurchaseOrders
 export const ListInternalPurchaseOrdersSortBy = {
   documentNumber: 'documentNumber',
   status: 'status',
+  supplierName: 'supplierName',
+  shipDate: 'shipDate',
+  cancelDate: 'cancelDate',
+  remaining: 'remaining',
 } as const;

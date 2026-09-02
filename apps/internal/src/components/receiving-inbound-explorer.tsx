@@ -10,17 +10,13 @@ export function ReceivingInboundExplorer({
   initialParams?: ListQueryParams;
 }) {
   return (
-    <ExplorerView className="min-h-[calc(100vh-12rem)]">
-      <ExplorerView.Header>
-        <header className="mt-2">
-          <p className="text-label text-fg-secondary">Receiving</p>
-          <h1 className="page-title mt-1">Inbound</h1>
-          <p className="page-description mt-2">
-            Confirmed purchase orders awaiting receipt.
-          </p>
+    <ExplorerView className="h-full min-h-0">
+      <ExplorerView.Header className="border-b-0 pb-tight">
+        <header>
+          <h1 className="page-title">Confirmed Purchase Orders</h1>
         </header>
       </ExplorerView.Header>
-      <ExplorerView.Content>
+      <ExplorerView.Content className="pt-tight">
         <ReceivingInboundTable initialParams={initialParams} />
       </ExplorerView.Content>
     </ExplorerView>

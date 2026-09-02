@@ -3,8 +3,8 @@
 import { useGetInternalSupplier } from "@dc-inventory/api-client-internal";
 import { DetailView, ExplorerView } from "@dc-inventory/ui";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
-import Link from "next/link";
 import type { SupplierDetail } from "../lib/supplier-types";
+import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { SupplierEditForm } from "./supplier-edit-form";
 import { SupplierProductAssignForm } from "./supplier-product-assign-form";
 import { SupplierProductsTable } from "./supplier-products-table";
@@ -18,6 +18,7 @@ export function SupplierDetailPage({
 }) {
   const query = useGetInternalSupplier(supplierId);
   const supplier = query.data?.status === 200 ? query.data.data : undefined;
+  useBreadcrumbLabel(supplierId, supplier?.vendorNumber);
 
   return (
     <DetailView<SupplierDetail>
@@ -28,21 +29,7 @@ export function SupplierDetailPage({
       {(loaded) => (
         <>
           <DetailView.Header>
-            <nav className="text-body-sm text-fg-secondary">
-              <Link href="/purchasing" className="text-link hover:text-link-hover">
-                Purchasing
-              </Link>
-              <span aria-hidden="true"> / </span>
-              <Link
-                href="/purchasing/suppliers"
-                className="text-link hover:text-link-hover"
-              >
-                Suppliers
-              </Link>
-              <span aria-hidden="true"> / </span>
-              <span>{loaded.vendorNumber}</span>
-            </nav>
-            <header className="mt-2 flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
+            <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h1 className="page-title">{loaded.name}</h1>
                 <p className="page-description mt-1 tabular-nums">

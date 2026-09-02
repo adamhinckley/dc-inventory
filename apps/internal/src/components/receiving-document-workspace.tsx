@@ -15,25 +15,31 @@ import {
 import {
   Button,
   Checkbox,
+  DescriptionList,
+  DevComment,
   Dialog,
   ExplorerView,
-  FieldRow,
   formatDateTime,
   Input,
   Label,
-  LabeledField,
+  RouterTabs,
   Table,
+  TextInput,
   useTable,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
+import { PackageCheck, PackageX } from "lucide-react";
 import { notFound } from "next/navigation";
+import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import {
+  createContext,
+  use,
   useCallback,
   useEffect,
   useMemo,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import { purchaseOrderLineRemainingQty } from "../lib/purchase-order-line-remaining-qty";
 import { purchaseOrderRemainingQty } from "../lib/purchase-order-remaining-qty";
@@ -60,16 +66,44 @@ type ReceiveLineRow = PurchaseOrderLine & {
   remaining: number;
 };
 
+type ReceivingDocumentContextValue = {
+  purchaseOrderId: string;
+  find: string;
+  setFind: (value: string) => void;
+  remainingOnly: boolean;
+  setRemainingOnly: (value: boolean) => void;
+  table: ReturnType<typeof useTable<ReceiveLineRow>>;
+  submitReceive: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  showShortPanel: boolean;
+  poStatus: InternalPurchaseOrder["status"];
+  canReceive: boolean;
+  receivePending: boolean;
+  actionError: string | null;
+  canCancelRemaining: boolean;
+  cancelRemainingPending: boolean;
+  openCancelRemaining: () => void;
+};
+
+const ReceivingDocumentContext = createContext<ReceivingDocumentContextValue | null>(
+  null,
+);
+
+function useReceivingDocument() {
+  const ctx = use(ReceivingDocumentContext);
+  if (!ctx) {
+    throw new Error(
+      "Receiving document tab must render inside ReceivingDocumentWorkspace",
+    );
+  }
+  return ctx;
+}
+
 function SupplierName({ supplierId }: { supplierId: string }) {
   const supplierQuery = useGetInternalSupplier(supplierId);
   if (supplierQuery.data?.status !== 200) {
-    return null;
+    return "—";
   }
-  return (
-    <p className="text-body-sm text-fg-secondary mt-1">
-      {supplierQuery.data.data.name}
-    </p>
-  );
+  return supplierQuery.data.data.name;
 }
 
 function ReceivingLineQtyInput({
@@ -236,38 +270,143 @@ function ReceivingHistorySection({
 
   if (historyQuery.isLoading) {
     return (
-      <section className="flex flex-col gap-form-section">
-        <h2 className="text-heading-sm">Receive history</h2>
-        <p className="text-body-sm text-fg-secondary">Loading history…</p>
-      </section>
+      <p className="text-body-sm text-fg-secondary">Loading history…</p>
     );
   }
 
   if (historyQuery.isError) {
     return (
-      <section className="flex flex-col gap-form-section">
-        <h2 className="text-heading-sm">Receive history</h2>
-        <p className="text-body-sm text-error" role="alert">
-          Could not load receive history.
-        </p>
-      </section>
+      <p className="text-body-sm text-error" role="alert">
+        Could not load receive history.
+      </p>
     );
   }
 
   return (
-    <section className="flex min-h-0 flex-col gap-form-section">
-      <h2 className="text-heading-sm">Receive history</h2>
-      <Table
-        className="min-h-0"
-        table={table}
-        emptyMessage="No goods received yet."
-      >
-        <Table.Header />
-        <Table.Body />
-        <Table.Empty />
-      </Table>
-    </section>
+    <Table
+      sticky
+      className="min-h-0 flex-1"
+      table={table}
+      emptyMessage="No goods received yet."
+    >
+      <Table.Header />
+      <Table.Body />
+      <Table.Empty />
+    </Table>
   );
+}
+
+export function ReceivingDocumentLines() {
+  const {
+    find,
+    setFind,
+    remainingOnly,
+    setRemainingOnly,
+    table,
+    submitReceive,
+    showShortPanel,
+    purchaseOrderId,
+    poStatus,
+    canReceive,
+    receivePending,
+    actionError,
+    canCancelRemaining,
+    cancelRemainingPending,
+    openCancelRemaining,
+  } = useReceivingDocument();
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-form-section">
+      {poStatus !== "confirmed" ? (
+        <p className="text-body-sm text-fg-secondary" role="status">
+          Only confirmed purchase orders can be received.
+        </p>
+      ) : null}
+      {actionError ? (
+        <p className="text-body-sm text-error" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+      <form
+        id="receiving-receive-form"
+        className="flex min-h-0 flex-1 flex-col gap-form-section"
+        onSubmit={submitReceive}
+      >
+        <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-field-group">
+          <TextInput
+            id="receiving-find"
+            type="search"
+            density="compact"
+            className="w-52 shrink-0"
+            aria-label="Find"
+            value={find}
+            onChange={setFind}
+            placeholder="SKU or name"
+            data-testid="receiving-document-find-input"
+          />
+          <div className="flex shrink-0 items-center gap-field">
+            <Checkbox
+              id="receiving-remaining-only"
+              density="compact"
+              checked={remainingOnly}
+              onChange={setRemainingOnly}
+              data-testid="receiving-document-remaining-only-checkbox"
+            />
+            <Label htmlFor="receiving-remaining-only">Remaining only</Label>
+          </div>
+          <div className="ml-auto flex shrink-0 items-center gap-field-group">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={!canCancelRemaining || cancelRemainingPending}
+              onClick={openCancelRemaining}
+            >
+              <PackageX className="size-icon-lg" aria-hidden />
+              Cancel remaining
+            </Button>
+            <div className="relative">
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={!canReceive || receivePending}
+              >
+                <PackageCheck className="size-icon-lg" aria-hidden />
+                {receivePending ? "Receiving…" : "Receive"}
+              </Button>
+              <DevComment align="end">
+                Does it make more sense to have one receive button or one on
+                every row?
+              </DevComment>
+            </div>
+          </div>
+        </div>
+        <Table
+          sticky
+          className="min-h-0 flex-1"
+          table={table}
+          emptyMessage={
+            remainingOnly || find.trim().length > 0
+              ? "No lines match the current filters."
+              : "This purchase order has no lines."
+          }
+        >
+          <Table.Header />
+          <Table.Body />
+          <Table.Empty />
+        </Table>
+      </form>
+      {showShortPanel ? (
+        <ReceivingShortPanel purchaseOrderId={purchaseOrderId} />
+      ) : null}
+    </div>
+  );
+}
+
+export function ReceivingDocumentHistory() {
+  const { purchaseOrderId } = useReceivingDocument();
+  return <ReceivingHistorySection purchaseOrderId={purchaseOrderId} />;
 }
 
 function ReceivingShortPanel({
@@ -341,9 +480,11 @@ function ReceivingShortPanel({
 function ReceivingDocumentBody({
   purchaseOrderId,
   po,
+  children,
 }: {
   purchaseOrderId: string;
   po: InternalPurchaseOrder;
+  children: ReactNode;
 }) {
   const queryClient = useQueryClient();
   const receiveMutation = useReceiveInternalPurchaseOrder();
@@ -589,117 +730,94 @@ function ReceivingDocumentBody({
     enablePagination: false,
   });
 
+  useBreadcrumbLabel(purchaseOrderId, po.documentNumber);
+
+  const openCancelRemaining = useCallback(() => {
+    setCancelRemainingError(null);
+    setCancelRemainingDialogOpen(true);
+  }, []);
+
   return (
-    <ExplorerView className="min-h-[calc(100vh-12rem)]">
-      <ExplorerView.Header>
-        <header className="mt-2">
-          <nav className="text-body-sm text-fg-secondary">
-            <Link href="/receiving" className="text-link hover:text-link-hover">
-              Receiving
-            </Link>
-            <span aria-hidden="true"> / </span>
-            <span>{po.documentNumber}</span>
-          </nav>
-          <h1 className="page-title mt-1">{po.documentNumber}</h1>
-          <SupplierName supplierId={po.supplierId} />
-          <dl className="mt-4 grid gap-field-group sm:grid-cols-3">
-            <div>
-              <dt className="text-label text-fg-secondary">Ship date</dt>
-              <dd className="mt-1 tabular-nums">{po.shipDate ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-label text-fg-secondary">Cancel date</dt>
-              <dd className="mt-1 tabular-nums">{po.cancelDate ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-label text-fg-secondary">Remaining</dt>
-              <dd className="mt-1 tabular-nums">{totalRemaining}</dd>
-            </div>
-          </dl>
+    <ReceivingDocumentContext
+      value={{
+        purchaseOrderId,
+        find,
+        setFind,
+        remainingOnly,
+        setRemainingOnly,
+        table,
+        submitReceive,
+        showShortPanel,
+        poStatus: po.status,
+        canReceive,
+        receivePending: receiveMutation.isPending,
+        actionError,
+        canCancelRemaining,
+        cancelRemainingPending: cancelRemainingMutation.isPending,
+        openCancelRemaining,
+      }}
+    >
+    <ExplorerView className="h-full min-h-0">
+      <ExplorerView.Header className="border-b-0">
+        <header>
+          <h1 className="sr-only">{po.documentNumber}</h1>
+          <DescriptionList
+            maxColumns={4}
+            data-testid="receiving-document-summary-list"
+          >
+            <DescriptionList.Item>
+              <DescriptionList.Term>PO number</DescriptionList.Term>
+              <DescriptionList.Data>{po.documentNumber}</DescriptionList.Data>
+            </DescriptionList.Item>
+            <DescriptionList.Item>
+              <DescriptionList.Term>Supplier</DescriptionList.Term>
+              <DescriptionList.Data>
+                <SupplierName supplierId={po.supplierId} />
+              </DescriptionList.Data>
+            </DescriptionList.Item>
+            <DescriptionList.Item>
+              <DescriptionList.Term>Ship date</DescriptionList.Term>
+              <DescriptionList.Data className="tabular-nums">
+                {po.shipDate ?? "—"}
+              </DescriptionList.Data>
+            </DescriptionList.Item>
+            <DescriptionList.Item>
+              <DescriptionList.Term>Cancel date</DescriptionList.Term>
+              <DescriptionList.Data className="tabular-nums">
+                {po.cancelDate ?? "—"}
+              </DescriptionList.Data>
+            </DescriptionList.Item>
+            <DescriptionList.Item>
+              <DescriptionList.Term>Remaining</DescriptionList.Term>
+              <DescriptionList.Data className="tabular-nums">
+                {totalRemaining}
+              </DescriptionList.Data>
+            </DescriptionList.Item>
+          </DescriptionList>
         </header>
       </ExplorerView.Header>
-      <ExplorerView.Content>
-        <div className="flex min-h-0 flex-1 flex-col gap-form-section">
-          <FieldRow>
-            <LabeledField className="min-w-56 flex-1">
-              <Label htmlFor="receiving-find">Find</Label>
-              <Input
-                id="receiving-find"
-                type="search"
-                value={find}
-                onChange={(event) => setFind(event.target.value)}
-                placeholder="SKU or name"
-              />
-            </LabeledField>
-            <LabeledField className="min-w-56">
-              <span className="text-label text-fg-secondary">Filter</span>
-              <div className="flex min-h-(--space-input-height) items-center gap-field">
-                <Checkbox
-                  id="receiving-remaining-only"
-                  checked={remainingOnly}
-                  onChange={setRemainingOnly}
-                />
-                <Label htmlFor="receiving-remaining-only" className="mb-0">
-                  Remaining only
-                </Label>
-              </div>
-            </LabeledField>
-          </FieldRow>
-
-          <form
-            className="flex min-h-0 flex-1 flex-col gap-form-section"
-            onSubmit={submitReceive}
-          >
-            <Table
-              sticky
-              className="min-h-0 flex-1"
-              table={table}
-              emptyMessage={
-                remainingOnly || find.trim().length > 0
-                  ? "No lines match the current filters."
-                  : "This purchase order has no lines."
-              }
-            >
-              <Table.Header />
-              <Table.Body />
-              <Table.Empty />
-            </Table>
-
-            {po.status !== "confirmed" ? (
-              <p className="text-body-sm text-fg-secondary" role="status">
-                Only confirmed purchase orders can be received.
-              </p>
-            ) : null}
-
-            {actionError ? (
-              <p className="text-body-sm text-error" role="alert">
-                {actionError}
-              </p>
-            ) : null}
-
-            <FieldRow>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={!canReceive || receiveMutation.isPending}
-              >
-                {receiveMutation.isPending ? "Receiving…" : "Receive"}
-              </Button>
-              {canCancelRemaining ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={cancelRemainingMutation.isPending}
-                  onClick={() => {
-                    setCancelRemainingError(null);
-                    setCancelRemainingDialogOpen(true);
-                  }}
-                >
-                  Cancel remaining
-                </Button>
-              ) : null}
-            </FieldRow>
-          </form>
+      <ExplorerView.Content className="flex min-h-0 flex-col overflow-hidden">
+        <RouterTabs
+          className="flex min-h-0 flex-1 flex-col"
+          data-testid="receiving-document-router-tabs"
+        >
+          <div className="relative shrink-0">
+            <DevComment placement="above">
+              What titles should these tabs have?
+            </DevComment>
+            <RouterTabs.List>
+              <RouterTabs.Trigger href={`/receiving/${purchaseOrderId}`} exact>
+                Lines
+              </RouterTabs.Trigger>
+              <RouterTabs.Trigger href={`/receiving/${purchaseOrderId}/history`}>
+                History
+              </RouterTabs.Trigger>
+            </RouterTabs.List>
+          </div>
+          <RouterTabs.Panel className="flex min-h-0 flex-1 flex-col p-0 pt-card">
+            {children}
+          </RouterTabs.Panel>
+        </RouterTabs>
 
           <Dialog
             open={cancelRemainingDialogOpen}
@@ -753,22 +871,18 @@ function ReceivingDocumentBody({
               </Dialog.Footer>
             </Dialog.Content>
           </Dialog>
-
-          {showShortPanel ? (
-            <ReceivingShortPanel purchaseOrderId={purchaseOrderId} />
-          ) : null}
-
-          <ReceivingHistorySection purchaseOrderId={purchaseOrderId} />
-        </div>
       </ExplorerView.Content>
     </ExplorerView>
+    </ReceivingDocumentContext>
   );
 }
 
 export function ReceivingDocumentWorkspace({
   purchaseOrderId,
+  children,
 }: {
   purchaseOrderId: string;
+  children: ReactNode;
 }) {
   const poQuery = useGetInternalPurchaseOrder(purchaseOrderId);
   const po = poQuery.data?.status === 200 ? poQuery.data.data : undefined;
@@ -800,6 +914,8 @@ export function ReceivingDocumentWorkspace({
     <ReceivingDocumentBody
       purchaseOrderId={purchaseOrderId}
       po={po as InternalPurchaseOrder}
-    />
+    >
+      {children}
+    </ReceivingDocumentBody>
   );
 }

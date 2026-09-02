@@ -37,6 +37,6 @@ Use `Input`, `Select`, `Combobox`, `Button`, `Label`, `FieldRow`, and `LabeledFi
 ```
 
 - Row action: `variant="primary"`, default `md` size. `sm` / `ghost` are toolbar and table only.
-- List search sits in `DataTable.Toolbar` with `TextInput density="compact"`. Do not stack a second label above the placeholder.
+- Find, open-by-number, and list search use `TextInput density="compact"` at `w-52 shrink-0`. Never `flex-1` / `w-full` on a search field. Table search is `DataTable.Search`. Do not stack a second label above a toolbar placeholder; a short label is fine for a named lookup (`Open by PO #`).
 - Label to control: `gap-field`. Field to field: `gap-field-group`. Row to table: `gap-form-section`.
 - Never set `h-*`, `min-h-*`, or `py-*` on one control to make it fit.

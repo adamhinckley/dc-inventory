@@ -3523,6 +3523,10 @@ paths:
             enum:
               - documentNumber
               - status
+              - supplierName
+              - shipDate
+              - cancelDate
+              - remaining
           in: query
           name: sortBy
           required: false

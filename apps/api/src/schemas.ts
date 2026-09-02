@@ -526,7 +526,16 @@ export const purchaseOrderListQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
+  sortBy: z
+    .enum([
+      "documentNumber",
+      "status",
+      "supplierName",
+      "shipDate",
+      "cancelDate",
+      "remaining",
+    ])
+    .default("documentNumber"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
   status: purchaseOrderStatusSchema.optional(),
   supplierId: z.string().uuid().optional(),

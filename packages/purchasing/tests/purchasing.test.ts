@@ -118,6 +118,54 @@ describe("Purchasing (in-memory)", () => {
     expect(searched.items.map((order) => order.documentNumber)).toEqual(["PO-00002"]);
   });
 
+  it("sorts listed purchase orders by ship date and remaining qty", async () => {
+    const h = await harness();
+    const later = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      shipDate: "2026-06-01",
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 2 }],
+    });
+    const sooner = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      shipDate: "2026-03-01",
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 9 }],
+    });
+    expect(later.ok && sooner.ok).toBe(true);
+    if (!later.ok || !sooner.ok) {
+      return;
+    }
+
+    const byShip = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "shipDate",
+      sortOrder: "asc",
+    });
+    expect(byShip.items.map((order) => order.documentNumber)).toEqual([
+      sooner.purchaseOrder.documentNumber,
+      later.purchaseOrder.documentNumber,
+    ]);
+
+    const byRemaining = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "remaining",
+      sortOrder: "desc",
+    });
+    expect(byRemaining.items.map((order) => order.documentNumber)).toEqual([
+      sooner.purchaseOrder.documentNumber,
+      later.purchaseOrder.documentNumber,
+    ]);
+  });
+
   it("confirms, partially receives, and completes with inventory movements", async () => {
     const h = await harness();
     const created = await h.create.execute({

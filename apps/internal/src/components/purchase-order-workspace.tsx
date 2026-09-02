@@ -19,6 +19,7 @@ import {
   Chip,
   Combobox,
   DateInput,
+  DevComment,
   Dialog,
   FieldRow,
   Input,
@@ -29,8 +30,8 @@ import {
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, Download, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { createPortal } from "react-dom";
 import {
   useCallback,
@@ -889,6 +890,7 @@ function PurchaseOrderWorkspaceBody({
   const title = isNew
     ? "New draft purchase order"
     : (initialDocumentNumber ?? "Draft PO");
+  useBreadcrumbLabel(purchaseOrderId, isNew ? undefined : title);
   const saveLabel =
     saveState === "saving"
       ? "Saving"
@@ -918,16 +920,6 @@ function PurchaseOrderWorkspaceBody({
           {saveLabel}
         </Chip>
       </DashboardTopbarPortal>
-      <nav>
-        <p className="text-body-sm text-fg-secondary">
-          <Link href="/purchasing" className="text-link hover:text-link-hover">
-            Purchasing
-          </Link>
-          <span aria-hidden="true"> / </span>
-          <span>{isNew ? "New" : title}</span>
-        </p>
-      </nav>
-
       <header>
         <h1 className="page-title">{title}</h1>
         <p className="page-description mt-2">
@@ -963,32 +955,38 @@ function PurchaseOrderWorkspaceBody({
       </FieldRow>
 
       <FieldRow>
-        <LabeledField className="min-w-56">
-          <Label htmlFor="po-ship-date">Ship date</Label>
-          <DateInput
-            id="po-ship-date"
-            value={shipDate}
-            onChange={(value) => setShipDate(value.length === 0 ? null : value)}
-            disabled={workspaceLocked}
-            yearNavigation
-            min="2020-01-01"
-            max="2040-12-31"
-            placeholder="Ship date"
-          />
-        </LabeledField>
-        <LabeledField className="min-w-56">
-          <Label htmlFor="po-cancel-date">Cancel date</Label>
-          <DateInput
-            id="po-cancel-date"
-            value={cancelDate}
-            onChange={(value) => setCancelDate(value.length === 0 ? null : value)}
-            disabled={workspaceLocked}
-            yearNavigation
-            min="2020-01-01"
-            max="2040-12-31"
-            placeholder="Cancel date"
-          />
-        </LabeledField>
+        <div className="relative flex flex-wrap items-end gap-field-group">
+          <LabeledField className="min-w-56">
+            <Label htmlFor="po-ship-date">Ship date</Label>
+            <DateInput
+              id="po-ship-date"
+              value={shipDate}
+              onChange={(value) => setShipDate(value.length === 0 ? null : value)}
+              disabled={workspaceLocked}
+              yearNavigation
+              min="2020-01-01"
+              max="2040-12-31"
+              placeholder="Ship date"
+            />
+          </LabeledField>
+          <LabeledField className="min-w-56">
+            <Label htmlFor="po-cancel-date">Cancel date</Label>
+            <DateInput
+              id="po-cancel-date"
+              value={cancelDate}
+              onChange={(value) => setCancelDate(value.length === 0 ? null : value)}
+              disabled={workspaceLocked}
+              yearNavigation
+              min="2020-01-01"
+              max="2040-12-31"
+              placeholder="Cancel date"
+            />
+          </LabeledField>
+          <DevComment>
+            Should these be required on every purchase order to be able to
+            finalize?
+          </DevComment>
+        </div>
         {purchaseOrderId ? (
           <div className="ml-auto flex flex-wrap items-end gap-field-group">
             <Button
@@ -1280,6 +1278,8 @@ function ConfirmedPurchaseOrderView({
   );
   const missingCaseQtySku = factorySendReady ? firstBlockedSku(factorySendRows) : null;
 
+  useBreadcrumbLabel(purchaseOrderId, documentNumber);
+
   const downloadXlsx = async () => {
     setExporting(true);
     setActionError(null);
@@ -1305,13 +1305,6 @@ function ConfirmedPurchaseOrderView({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-region">
-      <nav className="text-body-sm text-fg-secondary">
-        <Link href="/purchasing" className="text-link hover:text-link-hover">
-          Purchasing
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span>{documentNumber}</span>
-      </nav>
       <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="page-title">{documentNumber}</h1>

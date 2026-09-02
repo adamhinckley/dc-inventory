@@ -32,6 +32,9 @@ export { TooltipHelp, type TooltipHelpProps } from "./ui/TooltipHelp";
 export { Progress, type ProgressProps } from "./ui/Progress";
 export { Menu } from "./ui/Menu";
 export { DateInput, type DateInputProps } from "./ui/DateInput";
+export { DescriptionList } from "./ui/DescriptionList";
+export { Breadcrumb } from "./ui/Breadcrumb";
+export { DevComment, type DevCommentProps } from "./ui/DevComment";
 export { ExplorerView, useExplorerView } from "./layouts/ExplorerView";
 export { RouterTabs } from "./ui/RouterTabs";
 export {
