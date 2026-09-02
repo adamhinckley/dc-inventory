@@ -129,6 +129,30 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
     await sql.end({ timeout: 5 });
   });
 
+  it("sorts by availableToSell and sellState without binding a Date param", async () => {
+    const adapter = new CatalogInventoryListQuery(db);
+    const byAts = await adapter.list({
+      organizationId: ORG,
+      page: 1,
+      pageSize: 25,
+      sortBy: "availableToSell",
+      sortOrder: "desc",
+      hideZeroInventory: true,
+    });
+    expect(byAts.total).toBe(5);
+    expect(byAts.items).toHaveLength(5);
+
+    const bySellState = await adapter.list({
+      organizationId: ORG,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sellState",
+      sortOrder: "desc",
+    });
+    expect(bySellState.total).toBe(5);
+    expect(bySellState.items).toHaveLength(5);
+  });
+
   it("joins snapshots for hideZeroInventory counts without error", async () => {
     const adapter = new CatalogInventoryListQuery(db);
     const page = await adapter.list({
