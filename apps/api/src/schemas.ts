@@ -543,6 +543,10 @@ export const purchaseOrderIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const purchaseOrderDocumentNumberParamsSchema = z.object({
+  documentNumber: z.string().min(1),
+});
+
 export const purchaseOrderExportQuerySchema = z.object({
   format: z.enum(["xlsx", "csv"]).default("xlsx"),
 });

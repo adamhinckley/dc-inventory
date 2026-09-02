@@ -106,6 +106,7 @@ import {
   GetPurchaseOrderFactorySendUseCase,
   GetPurchaseOrderShortReadoutUseCase,
   GetPurchaseOrderUseCase,
+  GetPurchaseOrderByDocumentNumberUseCase,
   GetSupplierUseCase,
   InMemoryPurchaseOrderRepository,
   InMemorySupplierProductRepository,
@@ -224,6 +225,7 @@ export type PurchasingHttpServices = {
   listPurchaseOrders: ListPurchaseOrdersUseCase;
   createPurchaseOrder: CreatePurchaseOrderUseCase;
   getPurchaseOrder: GetPurchaseOrderUseCase;
+  getPurchaseOrderByDocumentNumber: GetPurchaseOrderByDocumentNumberUseCase;
   confirmPurchaseOrder: ConfirmPurchaseOrderUseCase;
   receivePurchaseOrder: ReceivePurchaseOrderUseCase;
   replacePurchaseOrderLines: ReplacePurchaseOrderLinesUseCase;
@@ -405,6 +407,9 @@ function purchasingServices(
       clock,
     ),
     getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
+    getPurchaseOrderByDocumentNumber: new GetPurchaseOrderByDocumentNumberUseCase(
+      purchaseOrderRepo,
+    ),
     confirmPurchaseOrder: new ConfirmPurchaseOrderUseCase(
       unitOfWork.purchasing,
       catalogSkuLookup,

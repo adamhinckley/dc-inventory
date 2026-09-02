@@ -1,20 +1,5 @@
-import { listInternalPurchaseOrdersTable } from "@dc-inventory/api-client-internal";
-import { PurchasingOrdersExplorer } from "../../../../components/purchasing-orders-explorer";
-import { listParamsFromSearchParams } from "../../../../lib/table-url-params";
+import { permanentRedirect } from "next/navigation";
 
-type PurchasingSearchParams = Record<string, string | string[] | undefined>;
-
-export default async function CompletedPurchaseOrdersPage({
-  searchParams,
-}: {
-  searchParams: Promise<PurchasingSearchParams>;
-}) {
-  const initialParams = listParamsFromSearchParams(
-    listInternalPurchaseOrdersTable,
-    await searchParams,
-  );
-
-  return (
-    <PurchasingOrdersExplorer list="completed" initialParams={initialParams} />
-  );
+export default function CompletedPurchaseOrdersRedirectPage() {
+  permanentRedirect("/purchasing");
 }

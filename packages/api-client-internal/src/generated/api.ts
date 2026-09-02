@@ -136,6 +136,10 @@ import type {
   GetInternalPurchaseOrder401,
   GetInternalPurchaseOrder403,
   GetInternalPurchaseOrder404,
+  GetInternalPurchaseOrderByDocumentNumber200,
+  GetInternalPurchaseOrderByDocumentNumber401,
+  GetInternalPurchaseOrderByDocumentNumber403,
+  GetInternalPurchaseOrderByDocumentNumber404,
   GetInternalPurchaseOrderFactorySend200,
   GetInternalPurchaseOrderFactorySend401,
   GetInternalPurchaseOrderFactorySend403,
@@ -3206,6 +3210,112 @@ export const useCreateInternalPurchaseOrder = <TError = CreateInternalPurchaseOr
       > => {
       return useMutation(getCreateInternalPurchaseOrderMutationOptions(options));
     }
+
+export type getInternalPurchaseOrderByDocumentNumberResponse200 = {
+  data: GetInternalPurchaseOrderByDocumentNumber200
+  status: 200
+}
+
+export type getInternalPurchaseOrderByDocumentNumberResponse401 = {
+  data: GetInternalPurchaseOrderByDocumentNumber401
+  status: 401
+}
+
+export type getInternalPurchaseOrderByDocumentNumberResponse403 = {
+  data: GetInternalPurchaseOrderByDocumentNumber403
+  status: 403
+}
+
+export type getInternalPurchaseOrderByDocumentNumberResponse404 = {
+  data: GetInternalPurchaseOrderByDocumentNumber404
+  status: 404
+}
+
+export type getInternalPurchaseOrderByDocumentNumberResponseSuccess = (getInternalPurchaseOrderByDocumentNumberResponse200) & {
+  headers: Headers;
+};
+export type getInternalPurchaseOrderByDocumentNumberResponseError = (getInternalPurchaseOrderByDocumentNumberResponse401 | getInternalPurchaseOrderByDocumentNumberResponse403 | getInternalPurchaseOrderByDocumentNumberResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalPurchaseOrderByDocumentNumberResponse = (getInternalPurchaseOrderByDocumentNumberResponseSuccess | getInternalPurchaseOrderByDocumentNumberResponseError)
+
+export const getGetInternalPurchaseOrderByDocumentNumberUrl = (documentNumber: string,) => {
+
+
+
+
+  return `/internal/purchase-orders/by-document-number/${documentNumber}`
+}
+
+/**
+ * @summary Get purchase order by exact document number
+ */
+export const getInternalPurchaseOrderByDocumentNumber = async (documentNumber: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalPurchaseOrderByDocumentNumberResponse> => {
+
+  return customFetch<getInternalPurchaseOrderByDocumentNumberResponse>(getGetInternalPurchaseOrderByDocumentNumberUrl(documentNumber),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalPurchaseOrderByDocumentNumberQueryKey = (documentNumber: string,) => {
+    return [
+    `/internal/purchase-orders/by-document-number/${documentNumber}`
+    ] as const;
+    }
+
+
+export const getGetInternalPurchaseOrderByDocumentNumberQueryOptions = <TData = Awaited<ReturnType<typeof getInternalPurchaseOrderByDocumentNumber>>, TError = GetInternalPurchaseOrderByDocumentNumber401 | GetInternalPurchaseOrderByDocumentNumber403 | GetInternalPurchaseOrderByDocumentNumber404>(documentNumber: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderByDocumentNumber>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalPurchaseOrderByDocumentNumberQueryKey(documentNumber);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalPurchaseOrderByDocumentNumber>>> = ({ signal }) => getInternalPurchaseOrderByDocumentNumber(documentNumber, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: documentNumber !== null && documentNumber !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderByDocumentNumber>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalPurchaseOrderByDocumentNumberQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalPurchaseOrderByDocumentNumber>>>
+export type GetInternalPurchaseOrderByDocumentNumberQueryError = GetInternalPurchaseOrderByDocumentNumber401 | GetInternalPurchaseOrderByDocumentNumber403 | GetInternalPurchaseOrderByDocumentNumber404
+
+
+/**
+ * @summary Get purchase order by exact document number
+ */
+
+export function useGetInternalPurchaseOrderByDocumentNumber<TData = Awaited<ReturnType<typeof getInternalPurchaseOrderByDocumentNumber>>, TError = GetInternalPurchaseOrderByDocumentNumber401 | GetInternalPurchaseOrderByDocumentNumber403 | GetInternalPurchaseOrderByDocumentNumber404>(
+ documentNumber: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderByDocumentNumber>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalPurchaseOrderByDocumentNumberQueryOptions(documentNumber,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type replaceInternalPurchaseOrderLinesResponse200 = {
   data: ReplaceInternalPurchaseOrderLines200

@@ -21,6 +21,7 @@ export { GetPurchaseOrderFactorySendUseCase } from "./application/get-purchase-o
 export { GetPurchaseOrderShortReadoutUseCase } from "./application/get-purchase-order-short-readout.js";
 export { CreateSupplierUseCase } from "./application/create-supplier.js";
 export { GetPurchaseOrderUseCase } from "./application/get-purchase-order.js";
+export { GetPurchaseOrderByDocumentNumberUseCase } from "./application/get-purchase-order-by-document-number.js";
 export { GetSupplierUseCase } from "./application/get-supplier.js";
 export { ListPurchaseOrdersUseCase } from "./application/list-purchase-orders.js";
 export { ListSupplierProductsUseCase } from "./application/list-supplier-products.js";
