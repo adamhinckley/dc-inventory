@@ -2,16 +2,23 @@
 
 import {
   getGetInternalPurchaseOrderQueryKey,
+  getGetInternalPurchaseOrderShortReadoutQueryKey,
+  getListInternalPurchaseOrderGoodsReceivedQueryKey,
   getListInternalPurchaseOrdersQueryKey,
+  useCancelRemainingInternalPurchaseOrder,
   useGetInternalPurchaseOrder,
+  useGetInternalPurchaseOrderShortReadout,
   useGetInternalSupplier,
+  useListInternalPurchaseOrderGoodsReceived,
   useReceiveInternalPurchaseOrder,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
   Checkbox,
+  Dialog,
   ExplorerView,
   FieldRow,
+  formatDateTime,
   Input,
   Label,
   LabeledField,
@@ -147,6 +154,190 @@ function filterReceiveLines(
   });
 }
 
+function purchaseOrderWasShortReceived(
+  lines: readonly PurchaseOrderLine[],
+): boolean {
+  return lines.some((line) => line.receivedQty < line.qty);
+}
+
+function purchaseOrderHasReceivedQty(
+  lines: readonly PurchaseOrderLine[],
+): boolean {
+  return lines.some((line) => line.receivedQty > 0);
+}
+
+type GoodsReceivedRow = {
+  id: string;
+  createdAt: string;
+  sku: string;
+  quantity: number;
+};
+
+function ReceivingHistorySection({
+  purchaseOrderId,
+}: {
+  purchaseOrderId: string;
+}) {
+  const historyQuery = useListInternalPurchaseOrderGoodsReceived(
+    purchaseOrderId,
+  );
+  const rows = useMemo<GoodsReceivedRow[]>(() => {
+    if (historyQuery.data?.status !== 200) {
+      return [];
+    }
+    return historyQuery.data.data.items.map((item, index) => ({
+      id: `${item.createdAt}-${item.sku}-${item.quantity}-${index}`,
+      createdAt: item.createdAt,
+      sku: item.sku,
+      quantity: item.quantity,
+    }));
+  }, [historyQuery.data]);
+
+  const columns = useMemo(
+    () => [
+      {
+        id: "when",
+        label: "When",
+        sort: false as const,
+        width: 200,
+        render: ({ record }: { record: GoodsReceivedRow }) =>
+          formatDateTime(record.createdAt, "UTC"),
+      },
+      {
+        id: "sku",
+        label: "SKU",
+        sort: false as const,
+        width: 160,
+        render: ({ record }: { record: GoodsReceivedRow }) => record.sku,
+      },
+      {
+        id: "qty",
+        label: "Qty",
+        sort: false as const,
+        width: 120,
+        align: "right" as const,
+        render: ({ record }: { record: GoodsReceivedRow }) => (
+          <span className="tabular-nums">{record.quantity}</span>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useTable({
+    data: rows,
+    columns,
+    getRowId: (row) => row.id,
+    fillColumn: "sku",
+    enableSorting: false,
+    enableSelection: false,
+    enablePagination: false,
+  });
+
+  if (historyQuery.isLoading) {
+    return (
+      <section className="flex flex-col gap-form-section">
+        <h2 className="text-heading-sm">Receive history</h2>
+        <p className="text-body-sm text-fg-secondary">Loading history…</p>
+      </section>
+    );
+  }
+
+  if (historyQuery.isError) {
+    return (
+      <section className="flex flex-col gap-form-section">
+        <h2 className="text-heading-sm">Receive history</h2>
+        <p className="text-body-sm text-error" role="alert">
+          Could not load receive history.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="flex min-h-0 flex-col gap-form-section">
+      <h2 className="text-heading-sm">Receive history</h2>
+      <Table
+        className="min-h-0"
+        table={table}
+        emptyMessage="No goods received yet."
+      >
+        <Table.Header />
+        <Table.Body />
+        <Table.Empty />
+      </Table>
+    </section>
+  );
+}
+
+function ReceivingShortPanel({
+  purchaseOrderId,
+}: {
+  purchaseOrderId: string;
+}) {
+  const shortReadoutQuery = useGetInternalPurchaseOrderShortReadout(
+    purchaseOrderId,
+  );
+
+  if (shortReadoutQuery.isLoading) {
+    return (
+      <section className="flex flex-col gap-form-section">
+        <h2 className="text-heading-sm">Short readout</h2>
+        <p className="text-body-sm text-fg-secondary">Loading short readout…</p>
+      </section>
+    );
+  }
+
+  if (shortReadoutQuery.isError) {
+    return (
+      <section className="flex flex-col gap-form-section">
+        <h2 className="text-heading-sm">Short readout</h2>
+        <p className="text-body-sm text-error" role="alert">
+          Could not load short readout.
+        </p>
+      </section>
+    );
+  }
+
+  if (shortReadoutQuery.data?.status !== 200) {
+    return null;
+  }
+
+  const { uncovered, affectedCustomers } = shortReadoutQuery.data.data;
+  const uncoveredRows = uncovered.filter((row) => row.uncovered > 0);
+  const hasUncovered = uncoveredRows.length > 0;
+
+  return (
+    <section className="flex flex-col gap-form-section">
+      <h2 className="text-heading-sm">Short readout</h2>
+      {hasUncovered ? (
+        <ul className="text-body-sm">
+          {uncoveredRows.map((row) => (
+            <li key={row.sku} className="tabular-nums">
+              {row.sku}: {row.uncovered} uncovered
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-body-sm text-fg-secondary">Nobody to chase.</p>
+      )}
+      {affectedCustomers.length > 0 ? (
+        <div>
+          <p className="text-label text-fg-secondary">Affected customers</p>
+          <ul className="mt-1 text-body-sm">
+            {affectedCustomers.map((customer) => (
+              <li key={customer.customerId}>{customer.name}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      <p className="text-body-sm text-fg-secondary">
+        Follow up with affected customers off the warehouse floor.
+      </p>
+    </section>
+  );
+}
+
 function ReceivingDocumentBody({
   purchaseOrderId,
   po,
@@ -156,9 +347,15 @@ function ReceivingDocumentBody({
 }) {
   const queryClient = useQueryClient();
   const receiveMutation = useReceiveInternalPurchaseOrder();
+  const cancelRemainingMutation = useCancelRemainingInternalPurchaseOrder();
+  const [cancelRemainingDialogOpen, setCancelRemainingDialogOpen] =
+    useState(false);
   const [find, setFind] = useState("");
   const [remainingOnly, setRemainingOnly] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [cancelRemainingError, setCancelRemainingError] = useState<
+    string | null
+  >(null);
   const [receiveQtyByLineId, setReceiveQtyByLineId] = useState<
     Record<string, number>
   >({});
@@ -194,6 +391,12 @@ function ReceivingDocumentBody({
   );
 
   const canReceive = po.status === "confirmed" && totalRemaining > 0;
+  const canCancelRemaining =
+    po.status === "confirmed" &&
+    totalRemaining > 0 &&
+    purchaseOrderHasReceivedQty(po.lines);
+  const showShortPanel =
+    po.status === "received" && purchaseOrderWasShortReceived(po.lines);
 
   const updateReceiveQty = useCallback((lineId: string, qty: number) => {
     setReceiveQtyByLineId((current) => ({ ...current, [lineId]: qty }));
@@ -234,6 +437,10 @@ function ReceivingDocumentBody({
           await queryClient.invalidateQueries({
             queryKey: getListInternalPurchaseOrdersQueryKey(),
           });
+          await queryClient.invalidateQueries({
+            queryKey:
+              getListInternalPurchaseOrderGoodsReceivedQueryKey(purchaseOrderId),
+          });
           return;
         }
         setActionError("Receive failed.");
@@ -252,6 +459,54 @@ function ReceivingDocumentBody({
       rows,
     ],
   );
+
+  const submitCancelRemaining = useCallback(async () => {
+    if (!canCancelRemaining || cancelRemainingMutation.isPending) {
+      return;
+    }
+
+    setCancelRemainingError(null);
+    try {
+      const result = await cancelRemainingMutation.mutateAsync({
+        id: purchaseOrderId,
+        data: { idempotencyKey: crypto.randomUUID() },
+      });
+      if (result.status === 200) {
+        setCancelRemainingDialogOpen(false);
+        await queryClient.invalidateQueries({
+          queryKey: getGetInternalPurchaseOrderQueryKey(purchaseOrderId),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: getListInternalPurchaseOrdersQueryKey(),
+        });
+        await queryClient.invalidateQueries({
+          queryKey:
+            getListInternalPurchaseOrderGoodsReceivedQueryKey(purchaseOrderId),
+        });
+        await queryClient.invalidateQueries({
+          queryKey:
+            getGetInternalPurchaseOrderShortReadoutQueryKey(purchaseOrderId),
+        });
+        return;
+      }
+      setCancelRemainingError("Cancel remaining failed.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Cancel remaining failed.";
+      if (message.includes("403")) {
+        setCancelRemainingError(
+          "Forbidden — requires warehouse stock manage and purchasing manage permissions.",
+        );
+        return;
+      }
+      setCancelRemainingError(message);
+    }
+  }, [
+    canCancelRemaining,
+    cancelRemainingMutation,
+    purchaseOrderId,
+    queryClient,
+  ]);
 
   const columns = useMemo(
     () => [
@@ -430,8 +685,71 @@ function ReceivingDocumentBody({
               >
                 {receiveMutation.isPending ? "Receiving…" : "Receive"}
               </Button>
+              {canCancelRemaining ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={cancelRemainingMutation.isPending}
+                  onClick={() => setCancelRemainingDialogOpen(true)}
+                >
+                  Cancel remaining
+                </Button>
+              ) : null}
             </FieldRow>
+
+            {cancelRemainingError ? (
+              <p className="text-body-sm text-error" role="alert">
+                {cancelRemainingError}
+              </p>
+            ) : null}
           </form>
+
+          <Dialog
+            open={cancelRemainingDialogOpen}
+            onOpenChange={setCancelRemainingDialogOpen}
+          >
+            <Dialog.Content
+              size="sm"
+              data-testid="receiving-cancel-remaining-confirm-dialog"
+            >
+              <Dialog.Header>
+                <Dialog.Title>Cancel remaining?</Dialog.Title>
+                <Dialog.Close />
+              </Dialog.Header>
+              <Dialog.Body>
+                <Dialog.Description>
+                  Remaining on this PO will never be stock; document becomes
+                  received.
+                </Dialog.Description>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.Close
+                  render={
+                    <Button type="button" variant="ghost" size="sm">
+                      Cancel
+                    </Button>
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={cancelRemainingMutation.isPending}
+                  onClick={() => void submitCancelRemaining()}
+                >
+                  {cancelRemainingMutation.isPending
+                    ? "Cancelling…"
+                    : "Cancel remaining"}
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog>
+
+          {showShortPanel ? (
+            <ReceivingShortPanel purchaseOrderId={purchaseOrderId} />
+          ) : null}
+
+          <ReceivingHistorySection purchaseOrderId={purchaseOrderId} />
         </div>
       </ExplorerView.Content>
     </ExplorerView>
