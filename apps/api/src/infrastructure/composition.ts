@@ -94,6 +94,7 @@ import {
 import {
   AssignSupplierProductUseCase,
   CancelPurchaseOrderUseCase,
+  CancelRemainingPurchaseOrderUseCase,
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
   CreateSupplierUseCase,
@@ -221,6 +222,7 @@ export type PurchasingHttpServices = {
   exportPurchaseOrder: ExportPurchaseOrderUseCase;
   getPurchaseOrderFactorySend: GetPurchaseOrderFactorySendUseCase;
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
+  cancelRemainingPurchaseOrder: CancelRemainingPurchaseOrderUseCase;
   listSuppliers: ListSuppliersUseCase;
   createSupplier: CreateSupplierUseCase;
   getSupplier: GetSupplierUseCase;
@@ -412,6 +414,7 @@ function purchasingServices(
       factorySendCatalog,
     ),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
+    cancelRemainingPurchaseOrder: new CancelRemainingPurchaseOrderUseCase(unitOfWork.purchasing),
     listSuppliers: new ListSuppliersUseCase(supplierRepo),
     createSupplier: new CreateSupplierUseCase(supplierRepo),
     getSupplier: new GetSupplierUseCase(supplierRepo),

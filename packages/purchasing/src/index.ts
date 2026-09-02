@@ -13,6 +13,7 @@ export { InMemoryWorkbookWriter } from "./adapters/in-memory-workbook-writer.js"
 export { ExcelJsWorkbookWriter } from "./adapters/exceljs-workbook-writer.js";
 export { AssignSupplierProductUseCase } from "./application/assign-supplier-product.js";
 export { CancelPurchaseOrderUseCase } from "./application/cancel-purchase-order.js";
+export { CancelRemainingPurchaseOrderUseCase } from "./application/cancel-remaining-purchase-order.js";
 export { ConfirmPurchaseOrderUseCase } from "./application/confirm-purchase-order.js";
 export { CreatePurchaseOrderUseCase } from "./application/create-purchase-order.js";
 export { ExportPurchaseOrderUseCase } from "./application/export-purchase-order.js";

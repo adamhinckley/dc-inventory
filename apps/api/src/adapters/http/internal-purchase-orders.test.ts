@@ -4,6 +4,7 @@ import {
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
+  type StaffRole,
 } from "@dc-inventory/identity";
 import { OrganizationId, SupplierId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
@@ -361,5 +362,154 @@ describe("internal purchase orders HTTP", () => {
     });
     expect(missing.statusCode).toBe(404);
     expect(missing.json()).toEqual({ error: "not_found" });
+  });
+
+  it("gates and runs cancel remaining on partially received purchase orders", async () => {
+    const passwords = new InMemoryPasswordHasher();
+    const organizations = new InMemoryOrganizationRepository();
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+    const staffUsers = new InMemoryStaffUserRepository();
+    const sessions = new InMemorySessionStore();
+    const unitOfWork = new InMemoryUnitOfWork();
+    const catalog = new InMemoryCatalogSkuLookupPort();
+    catalog.set(OrganizationId.DEFAULT, "HEX-BOLT-GALV", "Hex bolt from Catalog");
+    await unitOfWork.suppliers.save({
+      id: SUPPLIER_ID,
+      organizationId: OrganizationId.DEFAULT,
+      vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
+      name: PHASE2_SUPPLIER_NAME,
+    });
+
+    for (const [index, role] of (
+      ["admin", "warehouse", "purchasing"] as const
+    ).entries()) {
+      await staffUsers.save({
+        id: StaffUserId.parse(`20000000-0000-4000-8000-00000000000${index}`),
+        organizationId: OrganizationId.DEFAULT,
+        email: `${role}@cancel-remaining.test`,
+        passwordHash: await passwords.hash("staff-secret"),
+        roles: [role],
+      });
+    }
+
+    const app = await buildApp({
+      logger: false,
+      database: new InMemoryDatabase(),
+      clock: new InMemoryClock(new Date("2026-08-24T03:00:00.000Z")),
+      staffUsers,
+      sessions,
+      passwords,
+      organizationRepo: organizations,
+      unitOfWork,
+      purchaseOrderRepo: unitOfWork.purchaseOrders,
+      supplierRepo: unitOfWork.suppliers,
+      catalogSkuLookup: catalog,
+    });
+    apps.push(app);
+
+    async function roleCookie(role: StaffRole): Promise<string> {
+      const login = await app.inject({
+        method: "POST",
+        url: "/internal/auth/login",
+        payload: {
+          organizationSlug: "acme",
+          email: `${role}@cancel-remaining.test`,
+          password: "staff-secret",
+        },
+      });
+      const value = login.cookies.find((row) => row.name === STAFF_SESSION_COOKIE)?.value;
+      return value ?? "";
+    }
+
+    const adminCookie = await roleCookie("admin");
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: adminCookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 100 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string; lines: Array<{ id: string }> };
+
+    await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: adminCookie },
+      payload: { idempotencyKey: "http-cancel-remaining-confirm" },
+    });
+
+    await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/receive`,
+      cookies: { [STAFF_SESSION_COOKIE]: adminCookie },
+      payload: {
+        idempotencyKey: "http-cancel-remaining-receive",
+        lines: [{ lineId: po.lines[0]!.id, quantity: 90 }],
+      },
+    });
+
+    const unauthorized = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/cancel-remaining`,
+      payload: { idempotencyKey: "http-cancel-remaining-unauth" },
+    });
+    expect(unauthorized.statusCode).toBe(401);
+    expect(unauthorized.json()).toEqual({ error: "unauthorized" });
+
+    const warehouseCookie = await roleCookie("warehouse");
+    const warehouseForbidden = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/cancel-remaining`,
+      cookies: { [STAFF_SESSION_COOKIE]: warehouseCookie },
+      payload: { idempotencyKey: "http-cancel-remaining-warehouse" },
+    });
+    expect(warehouseForbidden.statusCode).toBe(403);
+    expect(warehouseForbidden.json()).toEqual({ error: "forbidden" });
+
+    const purchasingCookie = await roleCookie("purchasing");
+    const purchasingForbidden = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/cancel-remaining`,
+      cookies: { [STAFF_SESSION_COOKIE]: purchasingCookie },
+      payload: { idempotencyKey: "http-cancel-remaining-purchasing" },
+    });
+    expect(purchasingForbidden.statusCode).toBe(403);
+    expect(purchasingForbidden.json()).toEqual({ error: "forbidden" });
+
+    const closed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/cancel-remaining`,
+      cookies: { [STAFF_SESSION_COOKIE]: adminCookie },
+      payload: { idempotencyKey: "http-cancel-remaining-admin" },
+    });
+    expect(closed.statusCode).toBe(200);
+    expect(closed.json()).toMatchObject({
+      status: "received",
+      lines: [{ receivedQty: 90, qty: 100 }],
+    });
+
+    const draftPo = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: adminCookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 5 }],
+      },
+    });
+    expect(draftPo.statusCode).toBe(201);
+    const draft = draftPo.json() as { id: string };
+
+    const illegal = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${draft.id}/cancel-remaining`,
+      cookies: { [STAFF_SESSION_COOKIE]: adminCookie },
+      payload: { idempotencyKey: "http-cancel-remaining-illegal" },
+    });
+    expect(illegal.statusCode).toBe(409);
+    expect(illegal.json()).toEqual({ error: "conflict" });
   });
 });

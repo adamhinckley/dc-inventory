@@ -38,6 +38,12 @@ import type {
   CancelInternalSalesOrder404,
   CancelInternalSalesOrder409,
   CancelInternalSalesOrderBody,
+  CancelRemainingInternalPurchaseOrder200,
+  CancelRemainingInternalPurchaseOrder401,
+  CancelRemainingInternalPurchaseOrder403,
+  CancelRemainingInternalPurchaseOrder404,
+  CancelRemainingInternalPurchaseOrder409,
+  CancelRemainingInternalPurchaseOrderBody,
   ConfirmInternalPurchaseOrder200,
   ConfirmInternalPurchaseOrder400,
   ConfirmInternalPurchaseOrder401,
@@ -3822,6 +3828,118 @@ export const useReceiveInternalPurchaseOrder = <TError = ReceiveInternalPurchase
         TContext
       > => {
       return useMutation(getReceiveInternalPurchaseOrderMutationOptions(options));
+    }
+
+export type cancelRemainingInternalPurchaseOrderResponse200 = {
+  data: CancelRemainingInternalPurchaseOrder200
+  status: 200
+}
+
+export type cancelRemainingInternalPurchaseOrderResponse401 = {
+  data: CancelRemainingInternalPurchaseOrder401
+  status: 401
+}
+
+export type cancelRemainingInternalPurchaseOrderResponse403 = {
+  data: CancelRemainingInternalPurchaseOrder403
+  status: 403
+}
+
+export type cancelRemainingInternalPurchaseOrderResponse404 = {
+  data: CancelRemainingInternalPurchaseOrder404
+  status: 404
+}
+
+export type cancelRemainingInternalPurchaseOrderResponse409 = {
+  data: CancelRemainingInternalPurchaseOrder409
+  status: 409
+}
+
+export type cancelRemainingInternalPurchaseOrderResponseSuccess = (cancelRemainingInternalPurchaseOrderResponse200) & {
+  headers: Headers;
+};
+export type cancelRemainingInternalPurchaseOrderResponseError = (cancelRemainingInternalPurchaseOrderResponse401 | cancelRemainingInternalPurchaseOrderResponse403 | cancelRemainingInternalPurchaseOrderResponse404 | cancelRemainingInternalPurchaseOrderResponse409) & {
+  headers: Headers;
+};
+
+export type cancelRemainingInternalPurchaseOrderResponse = (cancelRemainingInternalPurchaseOrderResponseSuccess | cancelRemainingInternalPurchaseOrderResponseError)
+
+export const getCancelRemainingInternalPurchaseOrderUrl = (id: string,) => {
+
+
+
+
+  return `/internal/purchase-orders/${id}/cancel-remaining`
+}
+
+/**
+ * @summary Close leftover inbound on a partially received purchase order
+ */
+export const cancelRemainingInternalPurchaseOrder = async (id: string,
+    cancelRemainingInternalPurchaseOrderBody: CancelRemainingInternalPurchaseOrderBody, options?: Parameters<typeof customFetch>[1]): Promise<cancelRemainingInternalPurchaseOrderResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<cancelRemainingInternalPurchaseOrderResponse>(getCancelRemainingInternalPurchaseOrderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cancelRemainingInternalPurchaseOrderBody)
+  }
+);}
+
+
+
+
+
+export const getCancelRemainingInternalPurchaseOrderMutationOptions = <TError = CancelRemainingInternalPurchaseOrder401 | CancelRemainingInternalPurchaseOrder403 | CancelRemainingInternalPurchaseOrder404 | CancelRemainingInternalPurchaseOrder409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelRemainingInternalPurchaseOrder>>, TError,{id: string;data: CancelRemainingInternalPurchaseOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelRemainingInternalPurchaseOrder>>, TError,{id: string;data: CancelRemainingInternalPurchaseOrderBody}, TContext> => {
+
+const mutationKey = ['cancelRemainingInternalPurchaseOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelRemainingInternalPurchaseOrder>>, {id: string;data: CancelRemainingInternalPurchaseOrderBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  cancelRemainingInternalPurchaseOrder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelRemainingInternalPurchaseOrderMutationResult = NonNullable<Awaited<ReturnType<typeof cancelRemainingInternalPurchaseOrder>>>
+    export type CancelRemainingInternalPurchaseOrderMutationBody = CancelRemainingInternalPurchaseOrderBody
+    export type CancelRemainingInternalPurchaseOrderMutationError = CancelRemainingInternalPurchaseOrder401 | CancelRemainingInternalPurchaseOrder403 | CancelRemainingInternalPurchaseOrder404 | CancelRemainingInternalPurchaseOrder409
+
+    /**
+ * @summary Close leftover inbound on a partially received purchase order
+ */
+export const useCancelRemainingInternalPurchaseOrder = <TError = CancelRemainingInternalPurchaseOrder401 | CancelRemainingInternalPurchaseOrder403 | CancelRemainingInternalPurchaseOrder404 | CancelRemainingInternalPurchaseOrder409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelRemainingInternalPurchaseOrder>>, TError,{id: string;data: CancelRemainingInternalPurchaseOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelRemainingInternalPurchaseOrder>>,
+        TError,
+        {id: string;data: CancelRemainingInternalPurchaseOrderBody},
+        TContext
+      > => {
+      return useMutation(getCancelRemainingInternalPurchaseOrderMutationOptions(options));
     }
 
 export type cancelInternalPurchaseOrderResponse200 = {
