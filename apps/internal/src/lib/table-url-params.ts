@@ -6,12 +6,14 @@ import {
   type TableMeta,
 } from "@dc-inventory/ui-internal";
 import { inventoryListTable } from "./inventory-list-table";
+import { receivingListTable } from "./receiving-list-table";
 
 export type SearchParamsRecord = Record<string, string | string[] | undefined>;
 
 const STAFF_TABLE_METAS: readonly TableMeta[] = [
   ...Object.values(internalTableMetadata),
   inventoryListTable,
+  receivingListTable,
 ];
 
 /** Union of unprefixed list keys used on any staff dashboard table. */
