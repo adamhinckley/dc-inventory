@@ -3,6 +3,7 @@ import type { SupplierProductRow } from "./supplier-product-types";
 import {
   buildSupplierProductBySku,
   findExactSupplierProductInList,
+  formatSupplierProductCaseQtyDisplay,
   formatSupplierProductQtyDisplay,
   supplierProductFromListResponse,
   supplierProductLookupStatus,
@@ -84,6 +85,15 @@ describe("formatSupplierProductQtyDisplay", () => {
     expect(formatSupplierProductQtyDisplay("missing", 0)).toBe("—");
     expect(formatSupplierProductQtyDisplay("ready", 0)).toBe("0");
     expect(formatSupplierProductQtyDisplay("ready", 12)).toBe("12");
+  });
+});
+
+describe("formatSupplierProductCaseQtyDisplay", () => {
+  it("shows pack size and does not treat missing case qty as zero", () => {
+    expect(formatSupplierProductCaseQtyDisplay("loading", 12)).toBe("—");
+    expect(formatSupplierProductCaseQtyDisplay("missing", 12)).toBe("—");
+    expect(formatSupplierProductCaseQtyDisplay("ready", null)).toBe("—");
+    expect(formatSupplierProductCaseQtyDisplay("ready", 12)).toBe("12");
   });
 });
 

@@ -58,7 +58,10 @@ import {
   casesForDraftPoQty,
   draftLineFromVendorProduct,
 } from "../lib/purchase-order-line-adder";
-import { formatSupplierProductQtyDisplay } from "../lib/supplier-product-by-sku";
+import {
+  formatSupplierProductCaseQtyDisplay,
+  formatSupplierProductQtyDisplay,
+} from "../lib/supplier-product-by-sku";
 import { useSupplierProductsBySku } from "../lib/use-supplier-products-by-sku";
 import {
   appendPurchaseOrderLine,
@@ -385,6 +388,18 @@ function PurchaseOrderLinesTable({
           formatSupplierProductQtyDisplay(
             statusBySku.get(record.sku) ?? "loading",
             productBySku.get(record.sku)?.qty.uncovered,
+          ),
+      },
+      {
+        id: "caseQty",
+        label: "Case qty",
+        sort: false as const,
+        width: 100,
+        align: "right" as const,
+        render: ({ record }: { record: PurchaseOrderLineRow }) =>
+          formatSupplierProductCaseQtyDisplay(
+            statusBySku.get(record.sku) ?? "loading",
+            productBySku.get(record.sku)?.caseQty,
           ),
       },
       {

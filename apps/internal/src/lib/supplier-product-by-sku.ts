@@ -61,3 +61,14 @@ export function formatSupplierProductQtyDisplay(
   }
   return String(value ?? 0);
 }
+
+/** Pack size is the catalog case qty. Missing renders as "—", not 0. */
+export function formatSupplierProductCaseQtyDisplay(
+  status: SupplierProductLookupStatus,
+  caseQty: number | null | undefined,
+): string {
+  if (status !== "ready" || caseQty === null || caseQty === undefined) {
+    return "—";
+  }
+  return String(caseQty);
+}
