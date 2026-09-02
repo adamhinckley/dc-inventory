@@ -54,6 +54,13 @@ function mapPurchaseOrder(order: PurchaseOrder) {
   };
 }
 
+function purchaseOrderRemainingQty(order: PurchaseOrder): number {
+  return order.lines.reduce(
+    (total, line) => total + (line.qty - line.receivedQty),
+    0,
+  );
+}
+
 function sendNotFound(reply: FastifyReply) {
   return reply.code(404).send({ error: "not_found" as const });
 }
@@ -122,6 +129,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         items: result.items.map((order) => ({
           ...mapPurchaseOrder(order),
           supplierName: result.supplierNames.get(order.supplierId) ?? "",
+          remaining: purchaseOrderRemainingQty(order),
         })),
         page: result.page,
         pageSize: result.pageSize,

@@ -6,7 +6,7 @@ import {
   createContext,
   use,
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -51,7 +51,7 @@ export function useBreadcrumbLabel(key: string | undefined, label: string | unde
   }
   const { setLabel } = ctx;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!key || !label) {
       return;
     }

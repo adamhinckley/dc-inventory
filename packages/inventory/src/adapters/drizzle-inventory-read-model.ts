@@ -1,5 +1,4 @@
 import {
-  InvalidIdError,
   InvalidSkuError,
   LocationId,
   OrganizationId,
@@ -171,7 +170,7 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
       try {
         movements.push(this.toMovement(row, rowLocationId, rowOrganizationId));
       } catch (error) {
-        if (error instanceof InvalidSkuError || error instanceof InvalidIdError) {
+        if (error instanceof InvalidSkuError) {
           continue;
         }
         throw error;

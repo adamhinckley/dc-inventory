@@ -1,4 +1,4 @@
-import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { InvalidIdError, LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { DrizzleInventoryReadModel } from "../src/adapters/drizzle-inventory-read-model.js";
 
@@ -71,5 +71,29 @@ describe("DrizzleInventoryReadModel listMovements", () => {
     const movements = await readModel.listMovements({ organizationId: DEFAULT_ORG });
     expect(movements).toHaveLength(1);
     expect(movements[0]?.sku.value).toBe("WIDGET-1");
+  });
+
+  it("rethrows InvalidIdError so a bad movement id is not hidden from callers", async () => {
+    const rows = [
+      movementRow(DEFAULT_ORG, DEFAULT_LOCATION_UUID),
+      {
+        ...movementRow(DEFAULT_ORG, DEFAULT_LOCATION_UUID),
+        id: "not-a-uuid",
+        idempotencyKey: "key-2",
+      },
+    ];
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: async () => rows,
+        }),
+      }),
+    };
+
+    const readModel = new DrizzleInventoryReadModel(db as never, async () => DEFAULT_LOCATION_UUID);
+
+    await expect(
+      readModel.listMovements({ organizationId: DEFAULT_ORG }),
+    ).rejects.toThrow(InvalidIdError);
   });
 });
