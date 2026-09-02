@@ -28,5 +28,11 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "components/purchasing-orders-explorer.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/receiving-inbound-explorer.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/receiving-inbound-table.tsx"))).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/receiving/[id]/page.tsx")),
+    ).toBe(true);
+    expect(existsSync(join(srcRoot, "components/receiving-document-workspace.tsx"))).toBe(
+      true,
+    );
   });
 });
