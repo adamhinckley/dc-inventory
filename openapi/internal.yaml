@@ -3581,6 +3581,10 @@ paths:
           fields:
             - documentNumber
             - status
+            - supplierName
+            - shipDate
+            - cancelDate
+            - remaining
       responses:
         "200":
           description: Default Response
@@ -3647,6 +3651,10 @@ paths:
                             additionalProperties: false
                         supplierName:
                           type: string
+                        remaining:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
                       required:
                         - id
                         - supplierId
@@ -3656,6 +3664,7 @@ paths:
                         - cancelDate
                         - lines
                         - supplierName
+                        - remaining
                       additionalProperties: false
                   page:
                     type: integer

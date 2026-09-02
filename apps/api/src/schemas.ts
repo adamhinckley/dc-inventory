@@ -520,6 +520,7 @@ export const purchaseOrderItemSchema = z.object({
 
 export const purchaseOrderListItemSchema = purchaseOrderItemSchema.extend({
   supplierName: z.string(),
+  remaining: z.number().int(),
 });
 
 export const purchaseOrderListQuerySchema = z.object({
@@ -685,7 +686,14 @@ export const purchaseOrdersListTable = {
   sort: {
     defaultBy: "documentNumber",
     defaultOrder: "asc",
-    fields: ["documentNumber", "status"],
+    fields: [
+      "documentNumber",
+      "status",
+      "supplierName",
+      "shipDate",
+      "cancelDate",
+      "remaining",
+    ],
   },
 };
 
