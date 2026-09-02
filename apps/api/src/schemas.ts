@@ -634,6 +634,21 @@ export const purchaseOrderGoodsReceivedListResponseSchema = z.object({
   items: z.array(purchaseOrderGoodsReceivedItemSchema),
 });
 
+export const purchaseOrderShortReadoutUncoveredRowSchema = z.object({
+  sku: z.string(),
+  uncovered: z.number().int().nonnegative(),
+});
+
+export const purchaseOrderShortReadoutAffectedCustomerSchema = z.object({
+  customerId: z.string().uuid(),
+  name: z.string(),
+});
+
+export const purchaseOrderShortReadoutResponseSchema = z.object({
+  uncovered: z.array(purchaseOrderShortReadoutUncoveredRowSchema),
+  affectedCustomers: z.array(purchaseOrderShortReadoutAffectedCustomerSchema),
+});
+
 export const conflictResponseSchema = z.object({
   error: z.literal("conflict"),
 });

@@ -140,6 +140,10 @@ import type {
   GetInternalPurchaseOrderFactorySend401,
   GetInternalPurchaseOrderFactorySend403,
   GetInternalPurchaseOrderFactorySend404,
+  GetInternalPurchaseOrderShortReadout200,
+  GetInternalPurchaseOrderShortReadout401,
+  GetInternalPurchaseOrderShortReadout403,
+  GetInternalPurchaseOrderShortReadout404,
   GetInternalSalesOrder200,
   GetInternalSalesOrder401,
   GetInternalSalesOrder403,
@@ -3694,6 +3698,112 @@ export function useGetInternalPurchaseOrderFactorySend<TData = Awaited<ReturnTyp
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetInternalPurchaseOrderFactorySendQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getInternalPurchaseOrderShortReadoutResponse200 = {
+  data: GetInternalPurchaseOrderShortReadout200
+  status: 200
+}
+
+export type getInternalPurchaseOrderShortReadoutResponse401 = {
+  data: GetInternalPurchaseOrderShortReadout401
+  status: 401
+}
+
+export type getInternalPurchaseOrderShortReadoutResponse403 = {
+  data: GetInternalPurchaseOrderShortReadout403
+  status: 403
+}
+
+export type getInternalPurchaseOrderShortReadoutResponse404 = {
+  data: GetInternalPurchaseOrderShortReadout404
+  status: 404
+}
+
+export type getInternalPurchaseOrderShortReadoutResponseSuccess = (getInternalPurchaseOrderShortReadoutResponse200) & {
+  headers: Headers;
+};
+export type getInternalPurchaseOrderShortReadoutResponseError = (getInternalPurchaseOrderShortReadoutResponse401 | getInternalPurchaseOrderShortReadoutResponse403 | getInternalPurchaseOrderShortReadoutResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalPurchaseOrderShortReadoutResponse = (getInternalPurchaseOrderShortReadoutResponseSuccess | getInternalPurchaseOrderShortReadoutResponseError)
+
+export const getGetInternalPurchaseOrderShortReadoutUrl = (id: string,) => {
+
+
+
+
+  return `/internal/purchase-orders/${id}/short-readout`
+}
+
+/**
+ * @summary Return uncovered SKUs and affected customers for a purchase order
+ */
+export const getInternalPurchaseOrderShortReadout = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalPurchaseOrderShortReadoutResponse> => {
+
+  return customFetch<getInternalPurchaseOrderShortReadoutResponse>(getGetInternalPurchaseOrderShortReadoutUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalPurchaseOrderShortReadoutQueryKey = (id: string,) => {
+    return [
+    `/internal/purchase-orders/${id}/short-readout`
+    ] as const;
+    }
+
+
+export const getGetInternalPurchaseOrderShortReadoutQueryOptions = <TData = Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>, TError = GetInternalPurchaseOrderShortReadout401 | GetInternalPurchaseOrderShortReadout403 | GetInternalPurchaseOrderShortReadout404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalPurchaseOrderShortReadoutQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>> = ({ signal }) => getInternalPurchaseOrderShortReadout(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalPurchaseOrderShortReadoutQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>>
+export type GetInternalPurchaseOrderShortReadoutQueryError = GetInternalPurchaseOrderShortReadout401 | GetInternalPurchaseOrderShortReadout403 | GetInternalPurchaseOrderShortReadout404
+
+
+/**
+ * @summary Return uncovered SKUs and affected customers for a purchase order
+ */
+
+export function useGetInternalPurchaseOrderShortReadout<TData = Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>, TError = GetInternalPurchaseOrderShortReadout401 | GetInternalPurchaseOrderShortReadout403 | GetInternalPurchaseOrderShortReadout404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalPurchaseOrderShortReadoutQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

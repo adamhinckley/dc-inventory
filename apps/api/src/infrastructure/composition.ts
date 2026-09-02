@@ -104,6 +104,7 @@ import {
   ExportPurchaseOrderUseCase,
   ExcelJsWorkbookWriter,
   GetPurchaseOrderFactorySendUseCase,
+  GetPurchaseOrderShortReadoutUseCase,
   GetPurchaseOrderUseCase,
   GetSupplierUseCase,
   InMemoryPurchaseOrderRepository,
@@ -123,6 +124,8 @@ import {
   type ISupplierProductQtyReadPort,
   type ISupplierProductRepository,
   type ISupplierRepository,
+  type ICommittedCustomerNamesPort,
+  type IInventoryUncoveredReadPort,
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
@@ -150,6 +153,10 @@ import {
 import { GetStockSnapshotUseCase, ListPurchaseOrderGoodsReceivedUseCase } from "@dc-inventory/inventory";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
+import {
+  committedCustomerNamesPort,
+  inventoryUncoveredReadPort,
+} from "../adapters/purchasing-short-readout-ports.js";
 import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { readFeaturesAllCoreOn } from "./features-all-core-on.js";
@@ -222,6 +229,7 @@ export type PurchasingHttpServices = {
   replacePurchaseOrderLines: ReplacePurchaseOrderLinesUseCase;
   exportPurchaseOrder: ExportPurchaseOrderUseCase;
   getPurchaseOrderFactorySend: GetPurchaseOrderFactorySendUseCase;
+  getPurchaseOrderShortReadout: GetPurchaseOrderShortReadoutUseCase;
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
   cancelRemainingPurchaseOrder: CancelRemainingPurchaseOrderUseCase;
   listSuppliers: ListSuppliersUseCase;
@@ -382,6 +390,8 @@ function purchasingServices(
   catalogSkuLookup: ICatalogSkuLookupPort,
   supplierProductQty: ISupplierProductQtyReadPort,
   factorySendCatalog: IFactorySendCatalogPort,
+  inventoryUncovered: IInventoryUncoveredReadPort,
+  committedCustomerNames: ICommittedCustomerNamesPort,
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
@@ -414,6 +424,11 @@ function purchasingServices(
       purchaseOrderRepo,
       supplierProductRepo,
       factorySendCatalog,
+    ),
+    getPurchaseOrderShortReadout: new GetPurchaseOrderShortReadoutUseCase(
+      purchaseOrderRepo,
+      inventoryUncovered,
+      committedCustomerNames,
     ),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
     cancelRemainingPurchaseOrder: new CancelRemainingPurchaseOrderUseCase(unitOfWork.purchasing),
@@ -724,6 +739,8 @@ export function composeAppServices(
       catalogSkuLookup,
       supplierProductQty,
       factorySendCatalog,
+      inventoryUncoveredReadPort(unitOfWork.inventory.readModel),
+      committedCustomerNamesPort(salesOrderRepo, customerRepo),
       unitOfWork,
       clock,
     ),
