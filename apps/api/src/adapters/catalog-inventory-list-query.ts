@@ -101,10 +101,12 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     const stickyLocked = sql<boolean>`coalesce(${stockSnapshots.stickyLocked}, false)`;
     const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
     const now = this.clock ? this.clock.now() : new Date();
+    // postgres.js cannot bind a Date in drizzle `sql` fragments (TypeError).
+    const nowIso = now.toISOString();
     const isLockedForSell = sql<boolean>`(
       ${stickyLocked}
-      OR (${stockSnapshots.windowOpensAt} IS NOT NULL AND ${stockSnapshots.windowOpensAt} > ${now})
-      OR (${stockSnapshots.windowClosesAt} IS NOT NULL AND ${stockSnapshots.windowClosesAt} <= ${now})
+      OR (${stockSnapshots.windowOpensAt} IS NOT NULL AND ${stockSnapshots.windowOpensAt} > ${nowIso})
+      OR (${stockSnapshots.windowClosesAt} IS NOT NULL AND ${stockSnapshots.windowClosesAt} <= ${nowIso})
     )`;
     const availableToSellSort = sql<number | null>`CASE
       WHEN ${isLockedForSell} THEN ${onHand} + ${onOrder} - ${committed}
