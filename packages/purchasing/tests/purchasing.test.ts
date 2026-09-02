@@ -14,8 +14,10 @@ import {
 import { describe, expect, it } from "vitest";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
 import { newUuid, PurchaseOrderLineId } from "../src/domain/ids.js";
+import type { IPurchasingUnitOfWork } from "../src/domain/ports/purchase-order-repository.js";
 import {
   CancelPurchaseOrderUseCase,
+  CancelRemainingPurchaseOrderUseCase,
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
   InMemoryCatalogSkuLookupPort,
@@ -52,6 +54,7 @@ async function harness() {
     confirm: new ConfirmPurchaseOrderUseCase(uow, catalog),
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
+    cancelRemaining: new CancelRemainingPurchaseOrderUseCase(uow),
     replaceLines: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders, catalog),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
   };
@@ -441,6 +444,293 @@ describe("Purchasing (in-memory)", () => {
     });
     expect(snapshot.onOrder).toBe(0);
     expect((await h.uow.purchaseOrders.findById(DEFAULT_ORG, purchaseOrderId))?.status).toBe("draft");
+  });
+
+  it("closes partial receive as received with InboundCancelled for leftover qty", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 100 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-cancel-remaining",
+    });
+
+    const lineId = created.purchaseOrder.lines[0]!.id;
+    await h.receive.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "receive-partial-cancel-remaining",
+      lines: [{ lineId, quantity: 90 }],
+    });
+
+    const closed = await h.cancelRemaining.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-remaining",
+    });
+    expect(closed.ok).toBe(true);
+    if (!closed.ok) {
+      return;
+    }
+    expect(closed.purchaseOrder.status).toBe("received");
+    expect(closed.purchaseOrder.lines[0]?.receivedQty).toBe(90);
+
+    const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
+    expect(snap.onHand).toBe(90);
+    expect(snap.onOrder).toBe(0);
+
+    const movements = await h.uow.inventoryReadModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: SKU,
+      locationId: DEFAULT,
+    });
+    const inboundCancelled = movements.filter((movement) => movement.movementType === "InboundCancelled");
+    expect(inboundCancelled).toHaveLength(1);
+    expect(inboundCancelled[0]?.quantity).toBe(10);
+  });
+
+  it("replays cancel remaining idempotently without a second movement", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 100 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-idempotent-cancel-remaining",
+    });
+
+    const lineId = created.purchaseOrder.lines[0]!.id;
+    await h.receive.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "receive-idempotent-cancel-remaining",
+      lines: [{ lineId, quantity: 90 }],
+    });
+
+    const first = await h.cancelRemaining.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "same-cancel-remaining-key",
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+
+    const second = await h.cancelRemaining.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "same-cancel-remaining-key",
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) {
+      return;
+    }
+    expect(second.purchaseOrder.status).toBe("received");
+
+    const movements = await h.uow.inventoryReadModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: SKU,
+      locationId: DEFAULT,
+    });
+    expect(movements.filter((movement) => movement.movementType === "InboundCancelled")).toHaveLength(1);
+  });
+
+  it("rejects cancel remaining on zero-receive confirmed PO while cancel still works", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 100 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-zero-receive",
+    });
+
+    const blocked = await h.cancelRemaining.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-remaining-zero-receive",
+    });
+    expect(blocked.ok).toBe(false);
+    if (blocked.ok) {
+      return;
+    }
+    expect(blocked.reason).toBe("illegal_transition");
+
+    const cancelled = await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-zero-receive",
+    });
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) {
+      return;
+    }
+    expect(cancelled.purchaseOrder.status).toBe("cancelled");
+  });
+
+  it("rejects cancel remaining on draft and already received purchase orders", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 5 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const draftBlocked = await h.cancelRemaining.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-remaining-draft",
+    });
+    expect(draftBlocked).toEqual({ ok: false, reason: "illegal_transition" });
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-received-block",
+    });
+
+    const lineId = created.purchaseOrder.lines[0]!.id;
+    await h.receive.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "receive-full",
+      lines: [{ lineId, quantity: 5 }],
+    });
+
+    const receivedBlocked = await h.cancelRemaining.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-remaining-received",
+    });
+    expect(receivedBlocked).toEqual({ ok: false, reason: "illegal_transition" });
+  });
+
+  it("rolls back purchase order status when cancel remaining inventory write fails", async () => {
+    const base = new InMemoryPurchasingUnitOfWork();
+    const catalog = new InMemoryCatalogSkuLookupPort();
+    catalog.set(DEFAULT_ORG, SKU.value, "Catalog bolt");
+    catalog.set(DEFAULT_ORG, "PO-OTHER-SKU", "Catalog washer");
+    const supplierId = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    await base.suppliers.save({
+      id: supplierId,
+      organizationId: DEFAULT_ORG,
+      vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
+      name: PHASE2_SUPPLIER_NAME,
+    });
+
+    let cancelCalls = 0;
+    const failingInventory: IPurchasingUnitOfWork["inventory"] = {
+      lockSnapshots: (snapshots) => base.inventory.lockSnapshots(snapshots),
+      recordInboundFromPo: (command) => base.inventory.recordInboundFromPo(command),
+      recordGoodsReceived: (command) => base.inventory.recordGoodsReceived(command),
+      recordInboundCancelled: async (command) => {
+        cancelCalls += 1;
+        if (cancelCalls === 2) {
+          return { ok: false, reason: "provenance_conflict" };
+        }
+        return base.inventory.recordInboundCancelled(command);
+      },
+    };
+    const failingUow: IPurchasingUnitOfWork = {
+      purchaseOrders: base.purchaseOrders,
+      suppliers: base.suppliers,
+      inventory: failingInventory,
+      run: (work) => base.run(() => work(failingUow)),
+    };
+
+    const create = new CreatePurchaseOrderUseCase(base.purchaseOrders, base.suppliers, catalog);
+    const confirm = new ConfirmPurchaseOrderUseCase(failingUow, catalog);
+    const receive = new ReceivePurchaseOrderUseCase(failingUow);
+    const cancelRemaining = new CancelRemainingPurchaseOrderUseCase(failingUow);
+
+    const created = await create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId,
+      lines: [
+        { sku: SKU.value, name: "Bolt", qty: 10 },
+        { sku: "PO-OTHER-SKU", name: "Washer", qty: 10 },
+      ],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-rollback",
+    });
+
+    const lineIds = created.purchaseOrder.lines.map((line) => line.id);
+    await receive.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "receive-rollback",
+      lines: lineIds.map((lineId) => ({ lineId, quantity: 5 })),
+    });
+
+    const failed = await cancelRemaining.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-remaining-rollback",
+    });
+    expect(failed).toEqual({ ok: false, reason: "inventory_conflict" });
+
+    const saved = await base.purchaseOrders.findById(DEFAULT_ORG, created.purchaseOrder.id);
+    expect(saved?.status).toBe("confirmed");
   });
 
   it("cancels confirmed remainder with InboundCancelled", async () => {

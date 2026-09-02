@@ -11,7 +11,9 @@ import type {
 } from "fastify";
 import { forbiddenResponseSchema } from "../../schemas.js";
 
-const ACTION_BY_OPERATION = {
+const ACTION_BY_OPERATION: Readonly<
+  Record<string, StaffAction | readonly StaffAction[]>
+> = {
   importInternalProducts: "master_data_manage",
   createInternalProduct: "master_data_manage",
   updateInternalProduct: "master_data_manage",
@@ -28,6 +30,7 @@ const ACTION_BY_OPERATION = {
   replaceInternalPurchaseOrderLines: "purchase_orders_manage",
   confirmInternalPurchaseOrder: "purchase_orders_manage",
   cancelInternalPurchaseOrder: "purchase_orders_manage",
+  cancelRemainingInternalPurchaseOrder: ["stock_manage", "purchase_orders_manage"],
   createInternalSupplier: "purchase_orders_manage",
   updateInternalSupplier: "purchase_orders_manage",
   assignInternalSupplierProduct: "purchase_orders_manage",
@@ -39,7 +42,7 @@ const ACTION_BY_OPERATION = {
   confirmInternalSalesOrder: "sales_orders_manage",
   cancelInternalSalesOrder: "sales_orders_manage",
   recordInternalInvoicePayment: "payments_apply",
-} as const satisfies Readonly<Record<string, StaffAction>>;
+};
 
 type OperationSchema = FastifySchema & {
   operationId?: string;
@@ -52,11 +55,28 @@ function operationId(schema: FastifySchema | undefined): string | undefined {
   return (schema as OperationSchema | undefined)?.operationId;
 }
 
-function actionFor(schema: FastifySchema | undefined): StaffAction | undefined {
+function asActions(mapped: StaffAction | readonly StaffAction[]): readonly StaffAction[] {
+  if (Array.isArray(mapped)) {
+    return mapped;
+  }
+  return [mapped as StaffAction];
+}
+
+function actionsFor(schema: FastifySchema | undefined): readonly StaffAction[] | undefined {
   const id = operationId(schema);
-  return id === undefined
-    ? undefined
-    : ACTION_BY_OPERATION[id as keyof typeof ACTION_BY_OPERATION];
+  if (id === undefined) {
+    return undefined;
+  }
+  const mapped = ACTION_BY_OPERATION[id];
+  if (mapped === undefined) {
+    return undefined;
+  }
+  return asActions(mapped);
+}
+
+function actionFor(schema: FastifySchema | undefined): StaffAction | undefined {
+  const actions = actionsFor(schema);
+  return actions === undefined ? undefined : actions[0];
 }
 
 function sendForbidden(reply: FastifyReply) {
@@ -83,12 +103,15 @@ export function registerStaffActionGuard(app: FastifyInstance): void {
   });
 
   app.addHook("preHandler", async (request: FastifyRequest, reply) => {
-    const action = actionFor(request.routeOptions.schema);
-    if (action === undefined) {
+    const actions = actionsFor(request.routeOptions.schema);
+    if (actions === undefined) {
       return;
     }
     const roles = request.staffAuth?.roles as readonly StaffRole[] | undefined;
-    if (roles === undefined || !canStaffPerform(roles, action)) {
+    if (
+      roles === undefined ||
+      !actions.every((action) => canStaffPerform(roles, action))
+    ) {
       return sendForbidden(reply);
     }
   });

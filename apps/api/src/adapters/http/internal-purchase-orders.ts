@@ -389,6 +389,47 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
   );
 
   routes.post(
+    "/purchase-orders/:id/cancel-remaining",
+    {
+      schema: {
+        operationId: "cancelRemainingInternalPurchaseOrder",
+        tags: ["internal"],
+        summary: "Close leftover inbound on a partially received purchase order",
+        params: purchaseOrderIdParamsSchema,
+        body: purchaseOrderCommandBodySchema,
+        response: {
+          200: purchaseOrderItemSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.cancelRemainingPurchaseOrder.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+        idempotencyKey: request.body.idempotencyKey,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return sendNotFound(reply);
+        }
+        if (
+          result.reason === "illegal_transition" ||
+          result.reason === "idempotency_conflict" ||
+          result.reason === "inventory_conflict"
+        ) {
+          return sendConflict(reply);
+        }
+        return sendNotFound(reply);
+      }
+      return mapPurchaseOrder(result.purchaseOrder);
+    },
+  );
+
+  routes.post(
     "/purchase-orders/:id/cancel",
     {
       schema: {
