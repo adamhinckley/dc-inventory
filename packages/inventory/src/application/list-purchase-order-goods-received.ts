@@ -43,7 +43,7 @@ export class ListPurchaseOrderGoodsReceivedUseCase {
       refId: input.purchaseOrderId,
     });
 
-    const items = movements
+    const items = [...movements]
       .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())
       .map((movement) => ({
         createdAt: movement.createdAt,
