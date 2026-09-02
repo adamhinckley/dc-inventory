@@ -147,8 +147,9 @@ import {
   type ISalesOrderRepository,
   type SalesDrizzle,
 } from "@dc-inventory/sales";
-import { GetStockSnapshotUseCase } from "@dc-inventory/inventory";
+import { GetStockSnapshotUseCase, ListPurchaseOrderGoodsReceivedUseCase } from "@dc-inventory/inventory";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
+import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
 import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { readFeaturesAllCoreOn } from "./features-all-core-on.js";
@@ -254,6 +255,7 @@ export type LicensingHttpServices = {
 
 export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
+  listPurchaseOrderGoodsReceived: ListPurchaseOrderGoodsReceivedUseCase;
 };
 
 /**
@@ -485,9 +487,16 @@ function licensingServices(repository: ILicensingReadRepository): LicensingHttpS
   };
 }
 
-function inventoryServices(unitOfWork: IUnitOfWork): InventoryHttpServices {
+function inventoryServices(
+  unitOfWork: IUnitOfWork,
+  purchaseOrderRepo: IPurchaseOrderRepository,
+): InventoryHttpServices {
   return {
     getStockSnapshot: new GetStockSnapshotUseCase(unitOfWork.inventory.readModel),
+    listPurchaseOrderGoodsReceived: new ListPurchaseOrderGoodsReceivedUseCase(
+      unitOfWork.inventory.readModel,
+      new PurchaseOrderLookupAdapter(purchaseOrderRepo),
+    ),
   };
 }
 
@@ -727,7 +736,7 @@ export function composeAppServices(
     ),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     licensing: licensingServices(licensingRepository),
-    inventory: inventoryServices(unitOfWork),
+    inventory: inventoryServices(unitOfWork, purchaseOrderRepo),
     unitOfWork,
   };
 }

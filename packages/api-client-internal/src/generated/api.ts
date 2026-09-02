@@ -186,6 +186,10 @@ import type {
   ListInternalProducts401,
   ListInternalProducts403,
   ListInternalProductsParams,
+  ListInternalPurchaseOrderGoodsReceived200,
+  ListInternalPurchaseOrderGoodsReceived401,
+  ListInternalPurchaseOrderGoodsReceived403,
+  ListInternalPurchaseOrderGoodsReceived404,
   ListInternalPurchaseOrders200,
   ListInternalPurchaseOrders400,
   ListInternalPurchaseOrders401,
@@ -3410,6 +3414,112 @@ export function useGetInternalPurchaseOrder<TData = Awaited<ReturnType<typeof ge
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetInternalPurchaseOrderQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listInternalPurchaseOrderGoodsReceivedResponse200 = {
+  data: ListInternalPurchaseOrderGoodsReceived200
+  status: 200
+}
+
+export type listInternalPurchaseOrderGoodsReceivedResponse401 = {
+  data: ListInternalPurchaseOrderGoodsReceived401
+  status: 401
+}
+
+export type listInternalPurchaseOrderGoodsReceivedResponse403 = {
+  data: ListInternalPurchaseOrderGoodsReceived403
+  status: 403
+}
+
+export type listInternalPurchaseOrderGoodsReceivedResponse404 = {
+  data: ListInternalPurchaseOrderGoodsReceived404
+  status: 404
+}
+
+export type listInternalPurchaseOrderGoodsReceivedResponseSuccess = (listInternalPurchaseOrderGoodsReceivedResponse200) & {
+  headers: Headers;
+};
+export type listInternalPurchaseOrderGoodsReceivedResponseError = (listInternalPurchaseOrderGoodsReceivedResponse401 | listInternalPurchaseOrderGoodsReceivedResponse403 | listInternalPurchaseOrderGoodsReceivedResponse404) & {
+  headers: Headers;
+};
+
+export type listInternalPurchaseOrderGoodsReceivedResponse = (listInternalPurchaseOrderGoodsReceivedResponseSuccess | listInternalPurchaseOrderGoodsReceivedResponseError)
+
+export const getListInternalPurchaseOrderGoodsReceivedUrl = (id: string,) => {
+
+
+
+
+  return `/internal/purchase-orders/${id}/goods-received`
+}
+
+/**
+ * @summary List GoodsReceived movements for a purchase order
+ */
+export const listInternalPurchaseOrderGoodsReceived = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<listInternalPurchaseOrderGoodsReceivedResponse> => {
+
+  return customFetch<listInternalPurchaseOrderGoodsReceivedResponse>(getListInternalPurchaseOrderGoodsReceivedUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalPurchaseOrderGoodsReceivedQueryKey = (id: string,) => {
+    return [
+    `/internal/purchase-orders/${id}/goods-received`
+    ] as const;
+    }
+
+
+export const getListInternalPurchaseOrderGoodsReceivedQueryOptions = <TData = Awaited<ReturnType<typeof listInternalPurchaseOrderGoodsReceived>>, TError = ListInternalPurchaseOrderGoodsReceived401 | ListInternalPurchaseOrderGoodsReceived403 | ListInternalPurchaseOrderGoodsReceived404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalPurchaseOrderGoodsReceived>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalPurchaseOrderGoodsReceivedQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalPurchaseOrderGoodsReceived>>> = ({ signal }) => listInternalPurchaseOrderGoodsReceived(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalPurchaseOrderGoodsReceived>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalPurchaseOrderGoodsReceivedQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalPurchaseOrderGoodsReceived>>>
+export type ListInternalPurchaseOrderGoodsReceivedQueryError = ListInternalPurchaseOrderGoodsReceived401 | ListInternalPurchaseOrderGoodsReceived403 | ListInternalPurchaseOrderGoodsReceived404
+
+
+/**
+ * @summary List GoodsReceived movements for a purchase order
+ */
+
+export function useListInternalPurchaseOrderGoodsReceived<TData = Awaited<ReturnType<typeof listInternalPurchaseOrderGoodsReceived>>, TError = ListInternalPurchaseOrderGoodsReceived401 | ListInternalPurchaseOrderGoodsReceived403 | ListInternalPurchaseOrderGoodsReceived404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalPurchaseOrderGoodsReceived>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalPurchaseOrderGoodsReceivedQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
