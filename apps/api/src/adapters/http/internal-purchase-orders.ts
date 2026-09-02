@@ -18,6 +18,7 @@ import {
   purchaseOrderListResponseSchema,
   purchaseOrderReceiveBodySchema,
   purchaseOrderGoodsReceivedListResponseSchema,
+  purchaseOrderShortReadoutResponseSchema,
   purchaseOrderReplaceLinesBodySchema,
   purchaseOrderWriteBodySchema,
   purchaseOrdersListTable,
@@ -327,6 +328,37 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
       return purchaseOrderFactorySendResponseSchema.parse({
         columns: [...result.columns],
         rows: [...result.rows],
+      });
+    },
+  );
+
+  routes.get(
+    "/purchase-orders/:id/short-readout",
+    {
+      schema: {
+        operationId: "getInternalPurchaseOrderShortReadout",
+        tags: ["internal"],
+        summary: "Return uncovered SKUs and affected customers for a purchase order",
+        params: purchaseOrderIdParamsSchema,
+        response: {
+          200: purchaseOrderShortReadoutResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.getPurchaseOrderShortReadout.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return purchaseOrderShortReadoutResponseSchema.parse({
+        uncovered: [...result.uncovered],
+        affectedCustomers: [...result.affectedCustomers],
       });
     },
   );

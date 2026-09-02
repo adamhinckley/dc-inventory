@@ -6,7 +6,18 @@ import {
   InMemoryStaffUserRepository,
   type StaffRole,
 } from "@dc-inventory/identity";
-import { OrganizationId, SupplierId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { InMemoryProductRepository } from "@dc-inventory/catalog";
+import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { RecordAdjustmentIncreaseUseCase } from "@dc-inventory/inventory";
+import {
+  CustomerId,
+  Money,
+  OrganizationId,
+  ProductId,
+  Sku,
+  StaffUserId,
+  SupplierId,
+} from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { buildApp } from "../../app.js";
@@ -21,6 +32,11 @@ import { InMemoryCatalogSkuLookupPort } from "@dc-inventory/purchasing";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SUPPLIER_ID = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+const SKU_A = Sku.parse("SHORT-A");
+const SKU_B = Sku.parse("SHORT-B");
+const PRODUCT_A_ID = ProductId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+const PRODUCT_B_ID = ProductId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
@@ -598,5 +614,175 @@ describe("internal purchase orders HTTP", () => {
     });
     expect(illegal.statusCode).toBe(409);
     expect(illegal.json()).toEqual({ error: "conflict" });
+  });
+
+  it("returns short readout with uncovered rows and affected customers", async () => {
+    const passwords = new InMemoryPasswordHasher();
+    const organizations = new InMemoryOrganizationRepository();
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+    const staffUsers = new InMemoryStaffUserRepository();
+    const sessions = new InMemorySessionStore();
+    const customerRepo = new InMemoryCustomerRepository();
+    const productRepo = new InMemoryProductRepository();
+    const unitOfWork = new InMemoryUnitOfWork();
+    const catalog = new InMemoryCatalogSkuLookupPort();
+    catalog.set(OrganizationId.DEFAULT, SKU_A.value, "Short A");
+    catalog.set(OrganizationId.DEFAULT, SKU_B.value, "Short B");
+    await unitOfWork.suppliers.save({
+      id: SUPPLIER_ID,
+      organizationId: OrganizationId.DEFAULT,
+      vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
+      name: PHASE2_SUPPLIER_NAME,
+    });
+    await customerRepo.save({
+      id: CUSTOMER_ID,
+      organizationId: OrganizationId.DEFAULT,
+      name: "Acme Wholesale",
+      creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+      terms: "NET30",
+      createdAt: new Date("2026-09-02T00:00:00.000Z"),
+    });
+    await productRepo.save({
+      id: PRODUCT_A_ID,
+      organizationId: OrganizationId.DEFAULT,
+      sku: SKU_A,
+      name: "Short A product",
+      description: null,
+      uom: "EA",
+      memberPrice: Money.fromMinorUnits(100, "USD"),
+      inactive: false,
+      discontinued: false,
+      webWholesale: true,
+      taxCategoryCode: "TANGIBLE",
+    });
+    await productRepo.save({
+      id: PRODUCT_B_ID,
+      organizationId: OrganizationId.DEFAULT,
+      sku: SKU_B,
+      name: "Short B product",
+      description: null,
+      uom: "EA",
+      memberPrice: Money.fromMinorUnits(100, "USD"),
+      inactive: false,
+      discontinued: false,
+      webWholesale: true,
+      taxCategoryCode: "TANGIBLE",
+    });
+    await staffUsers.save({
+      id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "staff@local.test",
+      passwordHash: await passwords.hash("staff-secret"),
+      roles: ["admin"],
+    });
+
+    const app = await buildApp({
+      logger: false,
+      database: new InMemoryDatabase(),
+      clock: new InMemoryClock(new Date("2026-09-02T00:00:00.000Z")),
+      staffUsers,
+      sessions,
+      passwords,
+      organizationRepo: organizations,
+      unitOfWork,
+      purchaseOrderRepo: unitOfWork.purchaseOrders,
+      supplierRepo: unitOfWork.suppliers,
+      catalogSkuLookup: catalog,
+      customerRepo,
+      productRepo,
+      salesOrderRepo: unitOfWork.salesOrders,
+    });
+    apps.push(app);
+    const cookie = await staffCookie(app);
+
+    const unauthorized = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders/99999999-9999-4999-8999-999999999999/short-readout",
+    });
+    expect(unauthorized.statusCode).toBe(401);
+    expect(unauthorized.json()).toEqual({ error: "unauthorized" });
+
+    const missing = await app.inject({
+      method: "GET",
+      url: "/internal/purchase-orders/99999999-9999-4999-8999-999999999999/short-readout",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toEqual({ error: "not_found" });
+
+    const salesOrder = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_A_ID, qty: 10 }],
+      },
+    });
+    expect(salesOrder.statusCode).toBe(201);
+    const order = salesOrder.json() as { id: string };
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${order.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "short-readout-confirm-so" },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [
+          { sku: SKU_A.value, name: "Short A", qty: 5 },
+          { sku: SKU_B.value, name: "Short B", qty: 3 },
+        ],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string };
+
+    const readout = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/short-readout`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(readout.statusCode).toBe(200);
+    expect(readout.json()).toEqual({
+      uncovered: [
+        { sku: SKU_A.value, uncovered: 10 },
+        { sku: SKU_B.value, uncovered: 0 },
+      ],
+      affectedCustomers: [{ customerId: CUSTOMER_ID, name: "Acme Wholesale" }],
+    });
+
+    await unitOfWork.run(async (scope) => {
+      const stocked = await new RecordAdjustmentIncreaseUseCase(scope.inventory.ledger).execute({
+        organizationId: OrganizationId.DEFAULT,
+        idempotencyKey: "short-readout-stock-a",
+        sku: SKU_A,
+        quantity: 10,
+        refType: "adjustment",
+        refId: "short-readout",
+      });
+      expect(stocked.ok).toBe(true);
+    });
+
+    const cleared = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${po.id}/short-readout`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).toEqual({
+      uncovered: [
+        { sku: SKU_A.value, uncovered: 0 },
+        { sku: SKU_B.value, uncovered: 0 },
+      ],
+      affectedCustomers: [],
+    });
   });
 });

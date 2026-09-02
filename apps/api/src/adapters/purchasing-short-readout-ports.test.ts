@@ -1,0 +1,126 @@
+import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import {
+  CustomerId,
+  Money,
+  OrderId,
+  OrganizationId,
+  Sku,
+} from "@dc-inventory/shared-kernel";
+import { InMemorySalesOrderRepository } from "@dc-inventory/sales";
+import { SalesOrderLineId } from "@dc-inventory/sales";
+import { describe, expect, it } from "vitest";
+import { committedCustomerNamesPort } from "./purchasing-short-readout-ports.js";
+
+const DEFAULT_ORG = OrganizationId.DEFAULT;
+const SKU_A = Sku.parse("SHORT-A");
+const SKU_B = Sku.parse("SHORT-B");
+const CUSTOMER_A = CustomerId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+const CUSTOMER_B = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+
+async function seedCustomer(
+  repo: InMemoryCustomerRepository,
+  id: CustomerId,
+  name: string,
+): Promise<void> {
+  await repo.save({
+    id,
+    organizationId: DEFAULT_ORG,
+    name,
+    creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+    terms: "NET30",
+    createdAt: new Date("2026-09-02T00:00:00.000Z"),
+  });
+}
+
+async function seedSalesOrder(
+  repo: InMemorySalesOrderRepository,
+  options: {
+    id: OrderId;
+    customerId: CustomerId;
+    status: "draft" | "confirmed" | "shipped" | "cancelled";
+    sku: Sku;
+    decommitted?: boolean;
+  },
+): Promise<void> {
+  await repo.save({
+    id: options.id,
+    organizationId: DEFAULT_ORG,
+    customerId: options.customerId,
+    documentNumber: `SO-${String(options.id).slice(0, 8)}`,
+    status: options.status,
+    createdAt: new Date("2026-09-02T00:00:00.000Z"),
+    lines: [
+      {
+        id: SalesOrderLineId.parse("11111111-1111-4111-8111-111111111111"),
+        sku: options.sku,
+        name: "Line",
+        qty: 5,
+        unitPrice: Money.fromMinorUnits(100, "USD"),
+        ...(options.decommitted ? { decommitted: true as const } : {}),
+      },
+    ],
+  });
+}
+
+describe("committedCustomerNamesPort", () => {
+  it("includes confirmed orders with live lines on requested SKUs and resolves customer names", async () => {
+    const salesOrders = new InMemorySalesOrderRepository();
+    const customers = new InMemoryCustomerRepository();
+    await seedCustomer(customers, CUSTOMER_A, "Alpha Co");
+    await seedCustomer(customers, CUSTOMER_B, "Beta Co");
+    await seedSalesOrder(salesOrders, {
+      id: OrderId.parse("22222222-2222-4222-8222-222222222222"),
+      customerId: CUSTOMER_A,
+      status: "confirmed",
+      sku: SKU_A,
+    });
+    await seedSalesOrder(salesOrders, {
+      id: OrderId.parse("33333333-3333-4333-8333-333333333333"),
+      customerId: CUSTOMER_B,
+      status: "confirmed",
+      sku: SKU_B,
+    });
+
+    const port = committedCustomerNamesPort(salesOrders, customers);
+    const result = await port.listCommittedCustomerNames(DEFAULT_ORG, [SKU_A]);
+
+    expect(result).toEqual([{ customerId: CUSTOMER_A, name: "Alpha Co" }]);
+  });
+
+  it("ignores decommitted lines and non-confirmed orders", async () => {
+    const salesOrders = new InMemorySalesOrderRepository();
+    const customers = new InMemoryCustomerRepository();
+    await seedCustomer(customers, CUSTOMER_A, "Alpha Co");
+    await seedCustomer(customers, CUSTOMER_B, "Beta Co");
+    await seedSalesOrder(salesOrders, {
+      id: OrderId.parse("44444444-4444-4444-8444-444444444444"),
+      customerId: CUSTOMER_A,
+      status: "confirmed",
+      sku: SKU_A,
+      decommitted: true,
+    });
+    await seedSalesOrder(salesOrders, {
+      id: OrderId.parse("55555555-5555-4555-8555-555555555555"),
+      customerId: CUSTOMER_B,
+      status: "draft",
+      sku: SKU_A,
+    });
+    await seedSalesOrder(salesOrders, {
+      id: OrderId.parse("66666666-6666-4666-8666-666666666666"),
+      customerId: CUSTOMER_B,
+      status: "shipped",
+      sku: SKU_A,
+    });
+    await seedSalesOrder(salesOrders, {
+      id: OrderId.parse("77777777-7777-4777-8777-777777777777"),
+      customerId: CUSTOMER_B,
+      status: "cancelled",
+      sku: SKU_A,
+    });
+
+    const port = committedCustomerNamesPort(salesOrders, customers);
+    const result = await port.listCommittedCustomerNames(DEFAULT_ORG, [SKU_A]);
+
+    expect(result).toEqual([]);
+  });
+});
