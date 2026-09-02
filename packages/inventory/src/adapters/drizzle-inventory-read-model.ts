@@ -1,4 +1,11 @@
-import { LocationId, OrganizationId, requireOrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import {
+  InvalidIdError,
+  InvalidSkuError,
+  LocationId,
+  OrganizationId,
+  requireOrganizationId,
+  Sku,
+} from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { IClock } from "../domain/clock.js";
@@ -120,10 +127,23 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
 
   async listMovements(filter: MovementListFilter): Promise<readonly Movement[]> {
     const organizationId = resolveOrganizationId(filter.organizationId);
+    const conditions = [eq(stockMovements.organizationId, organizationId)];
+    if (filter.sku) {
+      conditions.push(eq(stockMovements.sku, filter.sku.value));
+    }
+    if (filter.movementType) {
+      conditions.push(eq(stockMovements.movementType, filter.movementType));
+    }
+    if (filter.refType) {
+      conditions.push(eq(stockMovements.refType, filter.refType));
+    }
+    if (filter.refId) {
+      conditions.push(eq(stockMovements.refId, filter.refId));
+    }
     const rows = await this.db
       .select()
       .from(stockMovements)
-      .where(eq(stockMovements.organizationId, organizationId));
+      .where(and(...conditions));
     const movements: Movement[] = [];
     for (const row of rows) {
       if (filter.sku && row.sku !== filter.sku.value) {
@@ -148,7 +168,14 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
           continue;
         }
       }
-      movements.push(this.toMovement(row, rowLocationId, rowOrganizationId));
+      try {
+        movements.push(this.toMovement(row, rowLocationId, rowOrganizationId));
+      } catch (error) {
+        if (error instanceof InvalidSkuError || error instanceof InvalidIdError) {
+          continue;
+        }
+        throw error;
+      }
     }
     return movements;
   }

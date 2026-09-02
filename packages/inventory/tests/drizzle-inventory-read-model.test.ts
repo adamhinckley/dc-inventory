@@ -47,4 +47,29 @@ describe("DrizzleInventoryReadModel listMovements", () => {
     expect(movements).toHaveLength(1);
     expect(movements[0]?.organizationId).toBe(DEFAULT_ORG);
   });
+
+  it("skips rows whose sku is not a valid Sku so one bad ledger row cannot fail the list", async () => {
+    const rows = [
+      movementRow(DEFAULT_ORG, DEFAULT_LOCATION_UUID),
+      {
+        ...movementRow(DEFAULT_ORG, DEFAULT_LOCATION_UUID),
+        id: "550e8400-e29b-41d4-a716-446655440012",
+        sku: "BABY ROSE / BUSH",
+        idempotencyKey: "key-2",
+      },
+    ];
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: async () => rows,
+        }),
+      }),
+    };
+
+    const readModel = new DrizzleInventoryReadModel(db as never, async () => DEFAULT_LOCATION_UUID);
+
+    const movements = await readModel.listMovements({ organizationId: DEFAULT_ORG });
+    expect(movements).toHaveLength(1);
+    expect(movements[0]?.sku.value).toBe("WIDGET-1");
+  });
 });
