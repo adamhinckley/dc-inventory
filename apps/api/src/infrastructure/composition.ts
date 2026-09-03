@@ -141,8 +141,10 @@ import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
+  DrizzleCommittedCustomerNamesListQuery,
   DrizzleSalesOrderRepository,
   GetSalesOrderUseCase,
+  InMemoryCommittedCustomerNamesListQuery,
   InMemorySalesOrderRepository,
   ListSalesOrdersUseCase,
   ShipSalesOrderUseCase,
@@ -671,6 +673,14 @@ export function composeAppServices(
     overrides.salesOrderRepo ??
     (salesDb ? new DrizzleSalesOrderRepository(salesDb) : unitOfWork.sales.salesOrders);
 
+  const committedCustomerNamesListQuery =
+    salesDb !== undefined
+      ? new DrizzleCommittedCustomerNamesListQuery(salesDb)
+      : new InMemoryCommittedCustomerNamesListQuery(
+          salesOrderRepo as InMemorySalesOrderRepository,
+          customerRepo,
+        );
+
   const defaultInMemoryAccountingUow = new InMemoryAccountingUnitOfWork();
 
   const accountingUnitOfWork =
@@ -745,7 +755,7 @@ export function composeAppServices(
       supplierProductQty,
       factorySendCatalog,
       inventoryUncoveredReadPort(unitOfWork.inventory.readModel),
-      committedCustomerNamesPort(salesOrderRepo, customerRepo),
+      committedCustomerNamesPort(committedCustomerNamesListQuery),
       unitOfWork,
       clock,
     ),

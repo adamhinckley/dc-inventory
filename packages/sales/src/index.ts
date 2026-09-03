@@ -2,7 +2,9 @@ export { AccountingCommandAdapter } from "./adapters/accounting-command-adapter.
 export { netOrderCoverQuantity, computeLineDeallocateQuantity } from "./adapters/order-cover.js";
 export { InMemoryCatalogProductPort } from "./adapters/in-memory-catalog-product-port.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
+export { DrizzleCommittedCustomerNamesListQuery } from "./adapters/drizzle-committed-customer-names-list-query.js";
 export { DrizzleSalesOrderRepository, type SalesDrizzle } from "./adapters/drizzle-sales-orders.js";
+export { InMemoryCommittedCustomerNamesListQuery } from "./adapters/in-memory-committed-customer-names-list-query.js";
 export { InMemorySalesOrderRepository } from "./adapters/in-memory-sales-order-repository.js";
 export { InMemorySalesUnitOfWork } from "./adapters/in-memory-sales-unit-of-work.js";
 export { CancelSalesOrderUseCase } from "./application/cancel-sales-order.js";
@@ -13,6 +15,11 @@ export { GetSalesOrderUseCase } from "./application/get-sales-order.js";
 export { ListSalesOrdersUseCase } from "./application/list-sales-orders.js";
 export { ShipSalesOrderUseCase } from "./application/ship-sales-order.js";
 export { formatDocumentNumber } from "./domain/document-number.js";
+export type {
+  CommittedCustomerName,
+  CommittedCustomerNamesQuery,
+  ICommittedCustomerNamesListQuery,
+} from "./domain/ports/committed-customer-names-list-query.js";
 export type { IClock } from "./domain/clock.js";
 export { SalesOrderLineId } from "./domain/ids.js";
 export type {

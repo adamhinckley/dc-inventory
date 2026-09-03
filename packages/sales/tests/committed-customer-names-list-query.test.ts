@@ -1,18 +1,15 @@
 import { InMemoryCustomerRepository } from "@dc-inventory/customers";
 import {
-  InMemoryCommittedCustomerNamesListQuery,
-  InMemorySalesOrderRepository,
-} from "@dc-inventory/sales";
-import {
   CustomerId,
   Money,
   OrderId,
   OrganizationId,
   Sku,
 } from "@dc-inventory/shared-kernel";
-import { SalesOrderLineId } from "@dc-inventory/sales";
 import { describe, expect, it } from "vitest";
-import { committedCustomerNamesPort } from "./purchasing-short-readout-ports.js";
+import { InMemoryCommittedCustomerNamesListQuery } from "../src/adapters/in-memory-committed-customer-names-list-query.js";
+import { InMemorySalesOrderRepository } from "../src/adapters/in-memory-sales-order-repository.js";
+import { SalesOrderLineId } from "../src/domain/ids.js";
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
 const SKU_A = Sku.parse("SHORT-A");
@@ -65,7 +62,7 @@ async function seedSalesOrder(
   });
 }
 
-describe("committedCustomerNamesPort", () => {
+describe("InMemoryCommittedCustomerNamesListQuery", () => {
   it("includes confirmed orders with live lines on requested SKUs and resolves customer names", async () => {
     const salesOrders = new InMemorySalesOrderRepository();
     const customers = new InMemoryCustomerRepository();
@@ -84,10 +81,8 @@ describe("committedCustomerNamesPort", () => {
       sku: SKU_B,
     });
 
-    const port = committedCustomerNamesPort(
-      new InMemoryCommittedCustomerNamesListQuery(salesOrders, customers),
-    );
-    const result = await port.listCommittedCustomerNames(DEFAULT_ORG, [SKU_A]);
+    const query = new InMemoryCommittedCustomerNamesListQuery(salesOrders, customers);
+    const result = await query.list({ organizationId: DEFAULT_ORG, skus: [SKU_A] });
 
     expect(result).toEqual([{ customerId: CUSTOMER_A, name: "Alpha Co" }]);
   });
@@ -123,11 +118,17 @@ describe("committedCustomerNamesPort", () => {
       sku: SKU_A,
     });
 
-    const port = committedCustomerNamesPort(
-      new InMemoryCommittedCustomerNamesListQuery(salesOrders, customers),
-    );
-    const result = await port.listCommittedCustomerNames(DEFAULT_ORG, [SKU_A]);
+    const query = new InMemoryCommittedCustomerNamesListQuery(salesOrders, customers);
+    const result = await query.list({ organizationId: DEFAULT_ORG, skus: [SKU_A] });
 
+    expect(result).toEqual([]);
+  });
+
+  it("returns empty when no SKUs are requested", async () => {
+    const salesOrders = new InMemorySalesOrderRepository();
+    const customers = new InMemoryCustomerRepository();
+    const query = new InMemoryCommittedCustomerNamesListQuery(salesOrders, customers);
+    const result = await query.list({ organizationId: DEFAULT_ORG, skus: [] });
     expect(result).toEqual([]);
   });
 });
