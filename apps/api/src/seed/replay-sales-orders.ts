@@ -111,6 +111,12 @@ export function permissiveDemoBillToSnapshotPort(): ICustomerBillToSnapshotReadP
   };
 }
 
+export function permissiveDemoCustomerTermsPort(): import("@dc-inventory/accounting").ICustomerTermsReadPort {
+  return {
+    getTerms: async () => "Net 30",
+  };
+}
+
 export async function runReplaySalesOrders(
   ports: ReplaySalesOrdersPorts,
   input: ReplaySalesOrdersInput,

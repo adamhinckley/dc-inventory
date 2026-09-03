@@ -38,7 +38,6 @@ const inventedLeftovers = [
   "role",
   "rbac",
   "ship_to_id",
-  "due_date",
   "stripe_customer",
   "stripe_payment",
   "pan",
@@ -185,7 +184,8 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     expect(sql).toMatch(/total_cents/);
     expect(sql).toMatch(/payments/);
     expect(sql).toMatch(/payment_applications/);
-    expect(sql).not.toMatch(/due_date/);
+    expect(sql).toMatch(/bill_line_1/);
+    expect(sql).toMatch(/due_date/);
     const accountingTables = [
       ...sql.matchAll(/CREATE TABLE "accounting"\."[^"]+" \([\s\S]*?\);/g),
     ]

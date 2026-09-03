@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabaseConnection, type DatabaseConnection } from "../infrastructure/db.js";
 import { PostgresAccountingUnitOfWork } from "./postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "./postgres-inventory-unit-of-work.js";
+import { testShipAccountingReadPorts } from "./test-ship-accounting-readports.js";
 
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
 const integrationEnabled = process.env.IDEMPOTENCY_RACE_INTEGRATION === "1";
@@ -164,8 +165,19 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
     });
 
     it("replays an inventory retry and maps a provenance race to conflict", async () => {
-      const firstUnitOfWork = new PostgresInventoryUnitOfWork(first.db, clock);
-      const secondUnitOfWork = new PostgresInventoryUnitOfWork(second.db, clock);
+      const shipPorts = testShipAccountingReadPorts();
+      const firstUnitOfWork = new PostgresInventoryUnitOfWork(
+        first.db,
+        clock,
+        shipPorts.billToSnapshot,
+        shipPorts.customerTerms,
+      );
+      const secondUnitOfWork = new PostgresInventoryUnitOfWork(
+        second.db,
+        clock,
+        shipPorts.billToSnapshot,
+        shipPorts.customerTerms,
+      );
       const sku = Sku.parse(`ADA-200-${randomUUID()}`);
       const refId = randomUUID();
       const command = {

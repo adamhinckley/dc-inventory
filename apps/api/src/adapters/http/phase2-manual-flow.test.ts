@@ -25,6 +25,8 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
+import { CustomerBillToSnapshotReadAdapter } from "@dc-inventory/customers";
+import { CustomerTermsReadAdapter } from "@dc-inventory/accounting";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import {
@@ -58,7 +60,9 @@ async function startPhase2ManualFlowApp() {
   const customerRepo = new InMemoryCustomerRepository();
   const billToRepo = new InMemoryBillToRepository();
   const productRepo = new InMemoryProductRepository();
-  const unitOfWork = new InMemoryUnitOfWork();
+  const billToSnapshot = new CustomerBillToSnapshotReadAdapter(customerRepo, billToRepo);
+  const customerTerms = new CustomerTermsReadAdapter(customerRepo);
+  const unitOfWork = new InMemoryUnitOfWork(billToSnapshot, customerTerms);
 
   await unitOfWork.suppliers.save({
     id: SUPPLIER_ID,
@@ -72,7 +76,7 @@ async function startPhase2ManualFlowApp() {
     organizationId: OrganizationId.DEFAULT,
     name: "Acme Wholesale",
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
-    terms: "NET30",
+    terms: "Net 30",
     createdAt: new Date("2026-08-24T03:30:00.000Z"),
   });
   await billToRepo.save({

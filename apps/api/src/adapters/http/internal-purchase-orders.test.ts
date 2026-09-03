@@ -20,6 +20,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
+import { testShipAccountingReadPorts } from "../../adapters/test-ship-accounting-readports.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
@@ -50,7 +51,8 @@ async function startPurchasingApp() {
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
-  const unitOfWork = new InMemoryUnitOfWork();
+  const shipPorts = testShipAccountingReadPorts();
+  const unitOfWork = new InMemoryUnitOfWork(shipPorts.billToSnapshot, shipPorts.customerTerms);
   const catalog = new InMemoryCatalogSkuLookupPort();
   catalog.set(OrganizationId.DEFAULT, "HEX-BOLT-GALV", "Hex bolt from Catalog");
   catalog.set(OrganizationId.DEFAULT, "WASHER-SS", "Washer from Catalog");
@@ -510,7 +512,8 @@ describe("internal purchase orders HTTP", () => {
     await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
     const staffUsers = new InMemoryStaffUserRepository();
     const sessions = new InMemorySessionStore();
-    const unitOfWork = new InMemoryUnitOfWork();
+    const shipPorts = testShipAccountingReadPorts();
+  const unitOfWork = new InMemoryUnitOfWork(shipPorts.billToSnapshot, shipPorts.customerTerms);
     const catalog = new InMemoryCatalogSkuLookupPort();
     catalog.set(OrganizationId.DEFAULT, "HEX-BOLT-GALV", "Hex bolt from Catalog");
     await unitOfWork.suppliers.save({
@@ -661,7 +664,8 @@ describe("internal purchase orders HTTP", () => {
     const sessions = new InMemorySessionStore();
     const customerRepo = new InMemoryCustomerRepository();
     const productRepo = new InMemoryProductRepository();
-    const unitOfWork = new InMemoryUnitOfWork();
+    const shipPorts = testShipAccountingReadPorts();
+  const unitOfWork = new InMemoryUnitOfWork(shipPorts.billToSnapshot, shipPorts.customerTerms);
     const catalog = new InMemoryCatalogSkuLookupPort();
     catalog.set(OrganizationId.DEFAULT, SKU_A.value, "Short A");
     catalog.set(OrganizationId.DEFAULT, SKU_B.value, "Short B");

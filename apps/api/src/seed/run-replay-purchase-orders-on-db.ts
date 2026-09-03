@@ -6,6 +6,7 @@ import {
 import type { StaffUserId } from "@dc-inventory/shared-kernel";
 import { SeedPlaybackClock } from "../adapters/seed-playback-clock.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
+import { testShipAccountingReadPorts } from "../adapters/test-ship-accounting-readports.js";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import {
@@ -26,7 +27,13 @@ export async function runReplayPurchaseOrdersOnDb(
 ): Promise<ReplayPurchaseOrdersResult> {
   const firstInstant = plan.purchaseOrders[0]?.plannedInstant ?? plan.seedToday;
   const clock = new SeedPlaybackClock(firstInstant);
-  const postgresUow = new PostgresInventoryUnitOfWork(db, clock);
+  const shipPorts = testShipAccountingReadPorts();
+  const postgresUow = new PostgresInventoryUnitOfWork(
+    db,
+    clock,
+    shipPorts.billToSnapshot,
+    shipPorts.customerTerms,
+  );
   const purchaseOrders = new DrizzlePurchaseOrderRepository(db as never);
   const suppliers = new DrizzleSupplierRepository(db as never);
 

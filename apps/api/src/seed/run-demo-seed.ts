@@ -1,4 +1,5 @@
 import {
+  CustomerTermsReadAdapter,
   InMemoryAccountingUnitOfWork,
 } from "@dc-inventory/accounting";
 import { InMemoryClock, InMemorySupplierRepository, type ISupplierRepository } from "@dc-inventory/purchasing";
@@ -149,7 +150,11 @@ export async function runDemoSeedInMemory(
   const staticResult = await runWriteStaticDemoBook(staticPorts, input.plan, input.secrets);
 
   const clock = new InMemoryClock(input.plan.purchaseOrders[0]!.plannedInstant);
-  const uow = new InMemoryUnitOfWork(clock);
+  const uow = new InMemoryUnitOfWork(
+    permissiveDemoBillToSnapshotPort(),
+    new CustomerTermsReadAdapter(staticPorts.customers),
+    clock,
+  );
   const accountingUow = new InMemoryAccountingUnitOfWork(uow.invoices);
   await copySuppliers(input.plan, staticPorts.suppliers, uow.suppliers);
 

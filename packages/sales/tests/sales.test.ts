@@ -25,6 +25,10 @@ import {
 } from "../src/index.js";
 import { newUuid, SalesOrderLineId } from "../src/domain/ids.js";
 import type { ISalesUnitOfWork } from "../src/domain/ports/sales-order-repository.js";
+import {
+  testShipBillToSnapshot,
+  testShipCustomerTerms,
+} from "./support/ship-invoice-readports.js";
 
 const SKU = Sku.parse("SO-TEST-SKU");
 const SKU_B = Sku.parse("SO-TEST-SKU-B");
@@ -51,7 +55,7 @@ const billToSnapshot: ICustomerBillToSnapshotReadPort = {
 };
 
 async function harness() {
-  const uow = new InMemorySalesUnitOfWork();
+  const uow = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms);
   const customers = {
     findById: async (organizationId: OrganizationId, id: CustomerId) => {
       if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
@@ -546,7 +550,7 @@ describe("Sales (in-memory)", () => {
   });
 
   it("rolls back ship when invoice creation fails", async () => {
-    const base = new InMemorySalesUnitOfWork();
+    const base = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms);
     const failingAccounting: ISalesUnitOfWork["accounting"] = {
       createInvoiceForOrder: async () => ({ ok: false, reason: "invalid" }),
     };

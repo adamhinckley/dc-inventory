@@ -142,6 +142,7 @@ import {
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
+  CustomerTermsReadAdapter,
   DrizzleInvoiceRepository,
   GetInvoiceUseCase,
   InMemoryAccountingUnitOfWork,
@@ -673,6 +674,9 @@ export function composeAppServices(
       ? new DrizzleBillToRepository(customersDb)
       : new InMemoryBillToRepository());
 
+  const readPorts = customerReadPorts(customerRepo, billToRepo);
+  const customerTermsRead = new CustomerTermsReadAdapter(customerRepo);
+
   const productRepo =
     overrides.productRepo ??
     (catalogDb
@@ -685,7 +689,14 @@ export function composeAppServices(
       : new InMemoryProductPackagingRepository());
   const unitOfWork =
     overrides.unitOfWork ??
-    (appDb ? new PostgresInventoryUnitOfWork(appDb, clock) : new InMemoryUnitOfWork(clock));
+    (appDb
+      ? new PostgresInventoryUnitOfWork(
+          appDb,
+          clock,
+          readPorts.billToSnapshot,
+          customerTermsRead,
+        )
+      : new InMemoryUnitOfWork(readPorts.billToSnapshot, customerTermsRead, clock));
 
   const inMemoryUow = unitOfWork instanceof InMemoryUnitOfWork ? unitOfWork : null;
 
@@ -751,8 +762,6 @@ export function composeAppServices(
       : inMemoryUow
         ? inMemoryUow.invoices
         : defaultInMemoryAccountingUow.invoices);
-
-  const readPorts = customerReadPorts(customerRepo, billToRepo);
 
   return {
     features,

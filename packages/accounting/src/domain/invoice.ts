@@ -20,6 +20,14 @@ export type Invoice = {
   readonly documentNumber: string;
   readonly status: InvoiceStatus;
   readonly postedAt: Date | null;
+  readonly billLine1: string | null;
+  readonly billLine2: string | null;
+  readonly billCity: string | null;
+  readonly billRegion: string | null;
+  readonly billPostal: string | null;
+  readonly billCountry: string | null;
+  readonly dueDate: Date | null;
+  readonly terms: string | null;
   readonly subtotal: Money;
   readonly taxTotal: Money;
   readonly total: Money;

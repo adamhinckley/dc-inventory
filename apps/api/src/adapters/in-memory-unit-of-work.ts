@@ -1,6 +1,10 @@
 import type { IClock } from "@dc-inventory/inventory";
 import { InMemoryInventoryUnitOfWork } from "@dc-inventory/inventory";
-import { InMemoryInvoiceRepository } from "@dc-inventory/accounting";
+import {
+  InMemoryInvoiceRepository,
+  type ICustomerBillToSnapshotReadPort,
+  type ICustomerTermsReadPort,
+} from "@dc-inventory/accounting";
 import {
   InMemoryPurchaseOrderRepository,
   InMemorySupplierRepository,
@@ -30,7 +34,11 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
   private readonly purchasingScope: IPurchasingUnitOfWork;
   private readonly salesScope: ISalesUnitOfWork;
 
-  constructor(clock?: IClock) {
+  constructor(
+    billToSnapshot: ICustomerBillToSnapshotReadPort,
+    customerTerms: ICustomerTermsReadPort,
+    clock?: IClock,
+  ) {
     this.inventoryUow = new InMemoryInventoryUnitOfWork(clock);
     this.inventory = {
       ledger: this.inventoryUow.ledger,
@@ -49,7 +57,12 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
     this.salesScope = {
       salesOrders: this.salesOrders,
       inventory: inventoryCommands,
-      accounting: new SalesInvoiceAccountingCommandAdapter(this.invoices, clock),
+      accounting: new SalesInvoiceAccountingCommandAdapter(
+        this.invoices,
+        billToSnapshot,
+        customerTerms,
+        clock,
+      ),
       run: (work) => this.run((scope) => work(scope.sales)),
     };
   }

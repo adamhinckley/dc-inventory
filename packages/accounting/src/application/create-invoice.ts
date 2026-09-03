@@ -6,9 +6,11 @@ import {
   OrganizationId,
 } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
-import { newUuid } from "../domain/ids.js";
+import type { ICustomerBillToSnapshotReadPort } from "../domain/ports/customer-bill-to-snapshot-read.js";
+import type { ICustomerTermsReadPort } from "../domain/ports/customer-terms-read.js";
 import type { IAccountingUnitOfWork } from "../domain/ports/invoice-repository.js";
 import type { Invoice } from "../domain/invoice.js";
+import { createPostedInvoice } from "./create-posted-invoice.js";
 
 export type CreateInvoiceRequest = {
   staffUserId: import("@dc-inventory/shared-kernel").StaffUserId;
@@ -26,44 +28,29 @@ export type CreateInvoiceResult =
 export class CreateInvoiceUseCase {
   constructor(
     private readonly unitOfWork: IAccountingUnitOfWork,
+    private readonly billToSnapshot: ICustomerBillToSnapshotReadPort,
+    private readonly customerTerms: ICustomerTermsReadPort,
     private readonly clock?: IClock,
   ) {}
 
   async execute(input: CreateInvoiceRequest): Promise<CreateInvoiceResult> {
     void input.staffUserId;
-    if (
-      !Number.isInteger(input.subtotalCents) ||
-      input.subtotalCents < 0 ||
-      input.currency.trim().length !== 3
-    ) {
-      return { ok: false, reason: "invalid" };
-    }
-
-    const postedAt = this.clock?.now() ?? new Date();
-    return this.unitOfWork.run(async (uow) => {
-      const existing = await uow.invoices.findByOrderId(
-        input.organizationId,
-        input.orderId,
-      );
-      if (existing !== null) {
-        return { ok: true, invoice: existing, created: false };
-      }
-
-      const currency = input.currency.trim().toUpperCase();
-      const subtotal = Money.fromMinorUnits(input.subtotalCents, currency);
-      const zero = Money.fromMinorUnits(0, currency);
-      const invoice = await uow.invoices.insertWithNextDocumentNumber({
-        id: InvoiceId.parse(newUuid()),
-        organizationId: input.organizationId,
-        orderId: input.orderId,
-        customerId: input.customerId,
-        status: "posted",
-        postedAt,
-        subtotal,
-        taxTotal: zero,
-        total: subtotal,
-      });
-      return { ok: true, invoice, created: true };
-    });
+    return this.unitOfWork.run((uow) =>
+      createPostedInvoice(
+        {
+          organizationId: input.organizationId,
+          orderId: input.orderId,
+          customerId: input.customerId,
+          subtotalCents: input.subtotalCents,
+          currency: input.currency,
+        },
+        {
+          invoices: uow.invoices,
+          billToSnapshot: this.billToSnapshot,
+          customerTerms: this.customerTerms,
+          clock: this.clock,
+        },
+      ),
+    );
   }
 }

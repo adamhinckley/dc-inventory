@@ -11,6 +11,8 @@ import {
 import { CustomerId, LocationId, Money, OrderId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
+import { CustomerBillToSnapshotReadAdapter } from "@dc-inventory/customers";
+import { CustomerTermsReadAdapter } from "@dc-inventory/accounting";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
@@ -39,14 +41,16 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
   const customerRepo = new InMemoryCustomerRepository();
   const billToRepo = new InMemoryBillToRepository();
   const productRepo = new InMemoryProductRepository();
-  const unitOfWork = new InMemoryUnitOfWork();
+  const billToSnapshot = new CustomerBillToSnapshotReadAdapter(customerRepo, billToRepo);
+  const customerTerms = new CustomerTermsReadAdapter(customerRepo);
+  const unitOfWork = new InMemoryUnitOfWork(billToSnapshot, customerTerms);
 
   await customerRepo.save({
     id: CUSTOMER_ID,
     organizationId: OrganizationId.DEFAULT,
     name: "Acme Wholesale",
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
-    terms: "NET30",
+    terms: "Net 30",
     createdAt: new Date("2026-08-24T03:30:00.000Z"),
   });
   await billToRepo.save({
