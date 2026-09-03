@@ -13,7 +13,6 @@ import {
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
-import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-command-port.js";
 
 /**
  * In-memory composition-root unit of work for purchasing, sales, and inventory tests.
@@ -37,18 +36,19 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
       ledger: this.inventoryUow.ledger,
       readModel: this.inventoryUow.readModel,
     };
+    const inventoryCommands = new StockLedgerInventoryCommandAdapter(
+      this.inventoryUow.ledger,
+      this.inventoryUow.readModel,
+    );
     this.purchasingScope = {
       purchaseOrders: this.purchaseOrders,
       suppliers: this.suppliers,
-      inventory: new StockLedgerInventoryCommandAdapter(this.inventoryUow.ledger),
+      inventory: inventoryCommands,
       run: (work) => this.run((scope) => work(scope.purchasing)),
     };
     this.salesScope = {
       salesOrders: this.salesOrders,
-      inventory: new SalesStockLedgerInventoryCommandAdapter(
-        this.inventoryUow.ledger,
-        this.inventoryUow.readModel,
-      ),
+      inventory: inventoryCommands,
       accounting: new SalesInvoiceAccountingCommandAdapter(this.invoices, clock),
       run: (work) => this.run((scope) => work(scope.sales)),
     };

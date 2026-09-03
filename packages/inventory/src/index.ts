@@ -1,6 +1,7 @@
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { InMemoryInventoryReadModel } from "./adapters/in-memory-inventory-read-model.js";
 export { InMemoryInventoryUnitOfWork } from "./adapters/in-memory-inventory-unit-of-work.js";
+export { StockLedgerInventoryCommandAdapter } from "./adapters/stock-ledger-inventory-command-adapter.js";
 export type { InventoryUnitOfWorkScope } from "./adapters/in-memory-inventory-unit-of-work.js";
 export { InMemoryStockLedger } from "./adapters/in-memory-stock-ledger.js";
 export { InMemoryUncoveredListQuery } from "./adapters/in-memory-uncovered-list-query.js";
@@ -67,6 +68,22 @@ export {
   type MovementRefType,
   type MovementType,
 } from "./domain/movement.js";
+export { netOrderCoverQuantity } from "./domain/order-cover.js";
+export type {
+  AllocatedCommand,
+  CommittedCommand,
+  DeallocatedCommand,
+  DecommittedCommand,
+  GoodsReceivedCommand,
+  IInventoryCommandPort,
+  InboundCancelledCommand,
+  InboundFromPoCommand,
+  InventoryCommandFailureReason,
+  InventoryCommandResult,
+  InventorySnapshotLock,
+  OrderCoverQuery,
+  ShippedCommand,
+} from "./domain/ports/inventory-command-port.js";
 export type { IPurchaseOrderLookup } from "./domain/ports/purchase-order-lookup.js";
 export type {
   IInventoryReadModel,
