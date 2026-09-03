@@ -301,13 +301,15 @@ One height. Readable actions. Agents copy this; they do not invent `h-*` on a si
     <Label htmlFor="vendor">Vendor</Label>
     <Combobox id="vendor" ... />
   </LabeledField>
-  <Button type="submit" variant="primary">Add line</Button>
+  <Button type="submit" variant="primary">Add Line</Button>
 </FieldRow>
 ```
 
 `FieldRow` is `flex flex-wrap items-end gap-field-group`. `LabeledField` is `flex flex-col gap-field`. The row action is `variant="primary"` at default `md` size. `sm` / `ghost` belong in toolbars and tables, not this row.
 
 **Buttons.** `primary` is the form-row action (blue, `text-primary-content`). `secondary` is Gray 70 fill + white text. `default` is bordered Gray 10 + `text-fg`. Do not use `ghost` or `secondary`+`size="sm"` as the only action next to inputs. If a size is wrong, change `packages/ui/src/ui/Button/Button.tsx`, not the page.
+
+Labels are always **Title Case** and **bold** (`text-button` is 12px / 700; `Button` locks `font-bold`). Do not pass `font-medium` or sentence-case copy (`Save draft` is wrong; `Save Draft` is right). On a page that hosts a table with actions (row, toolbar, or page-level), every `Button` includes a leading lucide icon that matches the verb. Icon-only controls stay on `IconButton`.
 
 **Done when** every control in the row shares `--space-input-height`, the trailing button reads as an action at rest, labels sit `gap-field` above controls, and the next block uses `gap-form-section` or `gap-field-group` rather than sitting on the controls.
 

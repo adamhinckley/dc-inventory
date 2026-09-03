@@ -312,6 +312,9 @@ export interface DetailViewEditButtonProps
  * when a DetailView.EditDialog is present. Place inside PageHeader.Actions or
  * similar action containers.
  *
+ * Always includes a leading `Pencil` icon. Pass a Title Case label as children
+ * (`Edit Supplier`). Defaults to `Edit` when children are omitted.
+ *
  * Defaults to `variant="primary"` and `size="sm"`. Consumers can override
  * either by passing a different value — e.g., `<DetailView.EditButton
  * variant="ghost" />` for a quieter affordance.
@@ -324,6 +327,7 @@ export function DetailViewEditButton({
   variant = 'primary',
   size = 'sm',
   'data-testid': testid,
+  children,
   ...rest
 }: DetailViewEditButtonProps) {
   const ctx = use(DetailViewContext)
@@ -339,8 +343,8 @@ export function DetailViewEditButton({
       tabIndex={0}
       {...rest}
     >
-      <Pencil className="size-icon-lg" />
-      Edit
+      <Pencil className="size-icon-lg" aria-hidden />
+      {children ?? 'Edit'}
     </Button>
   )
 }

@@ -23,7 +23,7 @@ export function CatalogProductRowMenu({
         align="end"
         data-testid={`catalog-row-menu-${sku}-popup`}
       >
-        <Menu.Item onClick={onEdit}>Edit product</Menu.Item>
+        <Menu.Item onClick={onEdit}>Edit Product</Menu.Item>
       </Menu.Content>
     </Menu>
   );

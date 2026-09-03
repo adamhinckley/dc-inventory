@@ -5,6 +5,7 @@ import {
   useAssignInternalSupplierProduct,
 } from "@dc-inventory/api-client-internal";
 import { Form, useExplorerView, useFormSubmit } from "@dc-inventory/ui";
+import { Plus } from "lucide-react";
 import { z } from "zod";
 
 const assignProductSchema = z.object({
@@ -77,7 +78,10 @@ export function SupplierProductAssignForm({ supplierId }: { supplierId: string }
       <Form.Field name="currency" label="Currency" form={{ kind: "text" }} />
       <Form.RootError />
       <Form.Actions>
-        <Form.Submit>Assign SKU</Form.Submit>
+        <Form.Submit>
+          <Plus className="size-icon-lg" aria-hidden />
+          Assign SKU
+        </Form.Submit>
       </Form.Actions>
     </Form>
   );

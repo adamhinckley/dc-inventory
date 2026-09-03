@@ -23,7 +23,7 @@ import "@dc-inventory/ui/globals.css";
 
 Write token classes (`bg-surface-base`, `text-fg`, `page-title`, `dark:`). Dark is class-based: put `.dark` on `<html>` or a shell. Light stays the default.
 
-Form rows: [`docs/work-dashboard-design-spec.md`](../../docs/work-dashboard-design-spec.md) §12. Use `FieldRow` / `LabeledField`. Input, Select, Combobox, and Button `md` share `--space-input-height`. The row action is `variant="primary"`.
+Form rows: [`docs/work-dashboard-design-spec.md`](../../docs/work-dashboard-design-spec.md) §12. Use `FieldRow` / `LabeledField`. Input, Select, Combobox, and Button `md` share `--space-input-height`. The row action is `variant="primary"`. Button labels are Title Case and bold. Table-page action buttons include a leading icon.
 
 Floating chrome: §13. `.overlay` / `bg-surface-overlay` is the opaque card. `bg-backdrop` is the modal scrim (Carbon `$overlay`).
 

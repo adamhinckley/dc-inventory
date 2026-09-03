@@ -7,6 +7,7 @@ import {
   useUpdateInternalProduct,
 } from "@dc-inventory/api-client-internal";
 import { Dialog, Form, FormDialog } from "@dc-inventory/ui";
+import { Save } from "lucide-react";
 import { z } from "zod";
 
 const emptyToNull = (value: unknown) =>
@@ -113,7 +114,12 @@ export function CatalogProductEditDialog({
         getListInternalProductsQueryKey(),
         getGetInternalProductQueryKey(product.id),
       ]}
-      submitLabel="Save changes"
+      submitLabel={
+        <>
+          <Save className="size-icon-lg" aria-hidden />
+          Save Changes
+        </>
+      }
       data-testid="catalog-product-edit-dialog"
     >
       <Form.Field name="name" label="Name" required form={{ kind: "text" }} />

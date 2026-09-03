@@ -19,6 +19,7 @@ describe("cn / tailwind-merge", () => {
   it("keeps 12px button type on a primary md Button", () => {
     const merged = cn(buttonVariants({ variant: "primary", size: "md" }));
     expect(merged).toContain("text-button");
+    expect(merged).toContain("font-bold");
     expect(merged).toContain("text-primary-content");
   });
 });

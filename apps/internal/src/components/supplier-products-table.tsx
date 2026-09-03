@@ -5,6 +5,7 @@ import {
   useListInternalSupplierProducts,
 } from "@dc-inventory/api-client-internal";
 import { Button } from "@dc-inventory/ui";
+import { Pencil } from "lucide-react";
 import {
   DataTable,
   type ListQueryHook,
@@ -58,6 +59,7 @@ export function SupplierProductsTable({
             size="sm"
             onClick={() => setEditingProduct(product)}
           >
+            <Pencil className="size-icon" aria-hidden />
             Edit
           </Button>
           <SupplierProductUnlinkButton supplierId={supplierId} product={product} />

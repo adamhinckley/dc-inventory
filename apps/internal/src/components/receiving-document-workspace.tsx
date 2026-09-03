@@ -363,7 +363,7 @@ export function ReceivingDocumentLines() {
               onClick={openCancelRemaining}
             >
               <PackageX className="size-icon-lg" aria-hidden />
-              Cancel remaining
+              Cancel Remaining
             </Button>
             <div className="relative">
               <Button
@@ -864,9 +864,10 @@ function ReceivingDocumentBody({
                   disabled={cancelRemainingMutation.isPending}
                   onClick={() => void submitCancelRemaining()}
                 >
+                  <PackageX className="size-icon" aria-hidden />
                   {cancelRemainingMutation.isPending
                     ? "Cancelling…"
-                    : "Cancel remaining"}
+                    : "Cancel Remaining"}
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>

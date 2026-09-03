@@ -3,6 +3,9 @@
  * auto-disables, sets `aria-busy`, and swaps content for a spinner (or a
  * custom `loadingContent` node).
  *
+ * Labels follow `Button`: Title Case and bold. On a page that hosts a table
+ * with actions, include a leading lucide icon.
+ *
  * @when Any clickable action that kicks off async work — form submits, save
  *   buttons, async row actions, mutations. Use whenever a click triggers a
  *   request that needs in-flight feedback.

@@ -5,6 +5,7 @@ import {
   useUpdateInternalProductBySku,
 } from "@dc-inventory/api-client-internal";
 import { Form, FormDialog } from "@dc-inventory/ui";
+import { Save } from "lucide-react";
 import { z } from "zod";
 
 const caseQtySchema = z.object({
@@ -44,7 +45,12 @@ export function ProductCaseQtyDialog({
           ? getGetInternalPurchaseOrderFactorySendQueryKey(purchaseOrderId)
           : undefined
       }
-      submitLabel="Save"
+      submitLabel={
+        <>
+          <Save className="size-icon-lg" aria-hidden />
+          Save
+        </>
+      }
     >
       <Form.Field
         name="caseQty"

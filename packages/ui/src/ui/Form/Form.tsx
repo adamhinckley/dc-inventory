@@ -1604,7 +1604,7 @@ export function FormRootError({ className, ...rest }: ComponentPropsWithRef<'div
  * compose `<Form.Submit>` / `<Button>` / `<Dialog.Close>` etc. directly.
  *
  * @when The bottom of a form, holding cancel + submit (and any tertiary
- *   actions like "Save draft").
+ *   actions like "Save Draft").
  */
 export function FormActions({ ref, className, children, ...rest }: ComponentPropsWithRef<'div'>) {
   return (

@@ -36,7 +36,7 @@ export function SupplierDetailPage({
                   Vendor #{loaded.vendorNumber}
                 </p>
               </div>
-              <DetailView.EditButton>Edit supplier</DetailView.EditButton>
+              <DetailView.EditButton>Edit Supplier</DetailView.EditButton>
             </header>
           </DetailView.Header>
           <DetailView.Summary>

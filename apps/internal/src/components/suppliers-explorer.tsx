@@ -22,7 +22,7 @@ export function SuppliersExplorer({
             </p>
           </div>
           <div className="shrink-0">
-            <ExplorerView.CreateButton>New supplier</ExplorerView.CreateButton>
+            <ExplorerView.CreateButton>New Supplier</ExplorerView.CreateButton>
           </div>
         </header>
       </ExplorerView.Header>

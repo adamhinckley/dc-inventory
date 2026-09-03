@@ -68,7 +68,7 @@ export function StaffSignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
         </p>
       ) : null}
       <Button type="submit" className="mt-2" disabled={login.isPending}>
-        {login.isPending ? "Signing in…" : "Continue"}
+        {login.isPending ? "Signing In…" : "Continue"}
       </Button>
     </form>
   );

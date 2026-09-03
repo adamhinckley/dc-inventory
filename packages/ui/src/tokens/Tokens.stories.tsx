@@ -220,7 +220,7 @@ const typeComposites = [
   { name: 'text-body-emphasis', className: 'text-body-emphasis', sample: 'Body Emphasis 14px/500' },
   { name: 'text-body-sm', className: 'text-body-sm', sample: 'Body Small 12px/400' },
   { name: 'text-label', className: 'text-label', sample: 'Label 12px/500' },
-  { name: 'text-button', className: 'text-button', sample: 'Button 12px/500' },
+  { name: 'text-button', className: 'text-button', sample: 'Button 12px/700' },
   { name: 'text-input', className: 'text-input', sample: 'Input 14px/400' },
   { name: 'text-caption', className: 'text-caption', sample: 'Caption 11px/400' },
   { name: 'text-overline', className: 'text-overline', sample: 'Overline 10px/500' },

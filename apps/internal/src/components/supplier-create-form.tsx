@@ -6,6 +6,7 @@ import {
   type createInternalSupplier,
 } from "@dc-inventory/api-client-internal";
 import { Form, useExplorerView, useFormSubmit } from "@dc-inventory/ui";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 
@@ -48,7 +49,10 @@ export function SupplierCreateForm() {
       <Form.Field name="name" label="Name" required form={{ kind: "text" }} />
       <Form.RootError />
       <Form.Actions>
-        <Form.Submit>Create supplier</Form.Submit>
+        <Form.Submit>
+          <Plus className="size-icon-lg" aria-hidden />
+          Create Supplier
+        </Form.Submit>
       </Form.Actions>
     </Form>
   );

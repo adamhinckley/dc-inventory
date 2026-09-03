@@ -5,6 +5,7 @@ import {
   useUnlinkInternalSupplierProduct,
 } from "@dc-inventory/api-client-internal";
 import { Button, FormDialog } from "@dc-inventory/ui";
+import { Unlink } from "lucide-react";
 import { z } from "zod";
 import type { SupplierProductRow } from "../lib/supplier-product-types";
 
@@ -23,6 +24,7 @@ export function SupplierProductUnlinkButton({
     <FormDialog
       trigger={
         <Button type="button" variant="ghost" size="sm">
+          <Unlink className="size-icon" aria-hidden />
           Unlink
         </Button>
       }
@@ -33,7 +35,12 @@ export function SupplierProductUnlinkButton({
       mutate={() => mutateAsync({ id: supplierId, productId: product.id })}
       successMessage="Vendor SKU unlinked"
       invalidate={getListInternalSupplierProductsQueryKey(supplierId)}
-      submitLabel="Unlink"
+      submitLabel={
+        <>
+          <Unlink className="size-icon-lg" aria-hidden />
+          Unlink
+        </>
+      }
       submitVariant="destructive"
       confirm={() => ({
         title: `Unlink ${product.sku}?`,

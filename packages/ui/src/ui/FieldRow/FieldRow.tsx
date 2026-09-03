@@ -10,7 +10,7 @@ export type FieldRowProps = ComponentPropsWithRef<'div'>
  * Put each label+control in `LabeledField`. Put the row action in a `primary`
  * Button at default `md` size (same height as Input).
  *
- * @when Vendor + product + "Add line". Filter rows with a submit.
+ * @when Vendor + product + "Add Line". Filter rows with a submit.
  * @avoid `items-center` (aligns to labels). `size="sm"` on the row button.
  */
 export function FieldRow({ ref, className, ...rest }: FieldRowProps) {

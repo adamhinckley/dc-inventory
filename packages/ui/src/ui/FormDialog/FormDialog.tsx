@@ -165,14 +165,14 @@ export interface FormDialogProps<TSchema extends ZodTypeAny, TResult = unknown> 
  *   directly. FormDialog is the fast path, not the only path.
  * @example
  * <FormDialog
- *   trigger={<Button variant="primary"><Plus /> New user</Button>}
+ *   trigger={<Button variant="primary"><Plus /> New User</Button>}
  *   title="New user"
  *   schema={createUserSchema}
  *   defaultValues={{...}}
  *   mutate={(data) => mutateAsync({ data })}
  *   successMessage="User created"
  *   invalidate={getListUsersQueryKey()}
- *   submitLabel="Create user"
+ *   submitLabel="Create User"
  *   pendingLabel="Creating…"
  * >
  *   <Form.Field field={userFields.email} />

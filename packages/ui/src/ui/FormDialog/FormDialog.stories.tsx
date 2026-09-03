@@ -34,7 +34,7 @@ export const Create: Story = {
         defaultValues={{ sku: '', name: '' }}
         mutate={async (data) => data}
         successMessage="Product created"
-        submitLabel="Create product"
+        submitLabel="Create Product"
         data-testid="story-form-dialog"
       >
         <Form.Field name="sku" label="SKU" required form={{ kind: 'text' }} />

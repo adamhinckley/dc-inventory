@@ -40,7 +40,7 @@ export const CreateProduct: Story = {
       </Form.Fieldset>
       <Form.RootError />
       <Form.Actions>
-        <Form.Submit data-testid="story-form-submit">Create product</Form.Submit>
+        <Form.Submit data-testid="story-form-submit">Create Product</Form.Submit>
       </Form.Actions>
     </Form>
   ),

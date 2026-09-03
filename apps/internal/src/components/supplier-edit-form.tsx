@@ -6,6 +6,7 @@ import {
   useUpdateInternalSupplier,
 } from "@dc-inventory/api-client-internal";
 import { Form, useDetailView, useFormSubmit } from "@dc-inventory/ui";
+import { Save } from "lucide-react";
 import { z } from "zod";
 import type { SupplierDetail } from "../lib/supplier-types";
 
@@ -48,7 +49,10 @@ export function SupplierEditForm({ supplier }: { supplier: SupplierDetail }) {
       <Form.Field name="name" label="Name" required form={{ kind: "text" }} />
       <Form.RootError />
       <Form.Actions>
-        <Form.Submit>Save changes</Form.Submit>
+        <Form.Submit>
+          <Save className="size-icon-lg" aria-hidden />
+          Save Changes
+        </Form.Submit>
       </Form.Actions>
     </Form>
   );

@@ -119,6 +119,10 @@ describe("internal dashboard tokens (Carbon hex, semantic names)", () => {
     const input = readFileSync(join(root, "primitives/input.tsx"), "utf8");
     expect(button).toContain("md: 'min-h-(--space-input-height) px-button-x'");
     expect(button).toContain(
+      "interactable disableable inline-flex items-center justify-center gap-icon text-button font-bold",
+    );
+    expect(css).toMatch(/@utility text-button \{[\s\S]*?font-weight: 700/);
+    expect(button).toContain(
       "bg-interactive text-fg border border-border-field",
     );
     expect(combobox).toContain("min-h-(--space-input-height)");

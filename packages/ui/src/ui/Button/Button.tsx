@@ -8,7 +8,7 @@ import { cn } from '#cn'
 // ---------------------------------------------------------------------------
 
 export const buttonVariants = cva(
-  'interactable disableable inline-flex items-center justify-center gap-icon text-button font-medium',
+  'interactable disableable inline-flex items-center justify-center gap-icon text-button font-bold',
   {
     variants: {
       variant: {
@@ -23,7 +23,7 @@ export const buttonVariants = cva(
         xs: 'h-6 px-2 text-xs',
         sm: 'h-7 px-2.5 text-button',
         md: 'min-h-(--space-input-height) px-button-x',
-        lg: 'min-h-(--space-input-height) px-5 text-body',
+        lg: 'min-h-(--space-input-height) px-5 text-body font-bold',
       },
     },
     defaultVariants: {
@@ -68,6 +68,15 @@ export interface ButtonProps
  * `md` (default) and `lg` share `--space-input-height` with Input / Select /
  * Combobox. Use `md` next to form controls. `sm` / `xs` are toolbar and table
  * actions only; never in a labeled field row.
+ *
+ * Labels are always Title Case and bold (`font-bold` / `text-button`). Do not
+ * pass `font-medium`, `font-normal`, or sentence-case copy (`Save draft` is
+ * wrong; `Save Draft` is right).
+ *
+ * On a page that hosts a table with actions (row actions, toolbar, or
+ * page-level table actions), every Button includes a leading lucide icon.
+ * Pick the icon that matches the verb (`Pencil` for Edit, `Unlink` for
+ * Unlink, `Plus` for create). Icon-only controls stay on `IconButton`.
  *
  * @when Any clickable action — primary CTAs, cancel buttons, toolbar
  *   actions, submit/cancel pairs in dialogs.

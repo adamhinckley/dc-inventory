@@ -15,7 +15,7 @@ import {
   Progress,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Upload } from "lucide-react";
+import { FileSearch, Upload } from "lucide-react";
 import { useId, useState } from "react";
 
 type ImportSummary = {
@@ -120,7 +120,8 @@ export function CatalogImportDialog() {
               onClick={() => void run(true)}
               data-testid="catalog-import-dry-run"
             >
-              Check file
+              <FileSearch className="size-icon-lg" aria-hidden />
+              Check File
             </Button>
             <Button
               type="button"
@@ -129,6 +130,7 @@ export function CatalogImportDialog() {
               onClick={() => void run(false)}
               data-testid="catalog-import-commit"
             >
+              <Upload className="size-icon-lg" aria-hidden />
               Import
             </Button>
           </FieldRow>
