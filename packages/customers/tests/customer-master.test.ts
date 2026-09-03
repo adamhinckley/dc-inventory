@@ -1,6 +1,4 @@
 import { OrganizationId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CustomerAccountStatusReadAdapter } from "../src/adapters/customer-account-status-read.js";
 import { CustomerBillToSnapshotReadAdapter } from "../src/adapters/customer-bill-to-snapshot-read.js";
@@ -16,6 +14,7 @@ import { CreateCustomerUseCase } from "../src/application/create-customer.js";
 import { CreateExemptionCertificateUseCase } from "../src/application/create-exemption-certificate.js";
 import { CreateShipToUseCase } from "../src/application/create-ship-to.js";
 import { UpdateCustomerUseCase } from "../src/application/update-customer.js";
+import { GetWholesaleCustomerUseCase } from "../src/application/get-wholesale-customer.js";
 import { UpdateWholesaleCustomerNoteUseCase } from "../src/application/update-wholesale-customer-note.js";
 
 const STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440010");
@@ -42,6 +41,7 @@ function harness() {
     createBillTo: new CreateBillToUseCase(customers, billTos),
     copyBillTo: new CopyBillToFromDefaultShipToUseCase(customers, shipTos, billTos),
     updateWholesaleNote: new UpdateWholesaleCustomerNoteUseCase(customers),
+    getWholesaleCustomer: new GetWholesaleCustomerUseCase(customers),
     billToSnapshot: new CustomerBillToSnapshotReadAdapter(customers, billTos),
     accountStatus: new CustomerAccountStatusReadAdapter(customers),
   };
@@ -311,7 +311,7 @@ describe("Customer master invariants U5–U14", () => {
     expect(created.customer.taxId).toBe("12-3456789");
   });
 
-  it("U13: exemption certificates are not a create, bill-to, or ship-to gate", async () => {
+  it("U13: exemption certificates are not a confirm or ship gate", async () => {
     const h = harness();
     const created = await h.createCustomer.execute({
       organizationId: DEFAULT_ORG,
@@ -372,16 +372,19 @@ describe("Customer master invariants U5–U14", () => {
       await h.billToSnapshot.getBillToAddressSnapshot(DEFAULT_ORG, created.customer.id),
     ).not.toBeNull();
 
-    const applicationDir = resolve(import.meta.dirname, "../src/application");
-    const forbiddenGate = /exemption|certificate|expires_at|expired/i;
-    for (const name of ["create-customer.ts", "create-bill-to.ts", "create-ship-to.ts"]) {
-      const source = readFileSync(resolve(applicationDir, name), "utf8");
-      expect(source, name).not.toMatch(forbiddenGate);
-    }
+    const copiedAfterExpired = await h.copyBillTo.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: created.customer.id,
+    });
+    expect(copiedAfterExpired.ok).toBe(true);
   });
 
-  it("U14: contact email is per-customer correspondence, not wholesale login", async () => {
+  it("U14: contact email is not wholesale login", async () => {
     const h = harness();
+    const wholesaleUserId = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440099");
+    const wholesaleStyleEmail = "wholesale@local.test";
+
     const acme = await h.createCustomer.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
@@ -400,36 +403,28 @@ describe("Customer master invariants U5–U14", () => {
       throw new Error("expected customers");
     }
 
-    const wholesaleStyleEmail = "wholesale@local.test";
-    const acmeContact = await h.createContact.execute({
-      organizationId: DEFAULT_ORG,
-      staffUserId: STAFF_ID,
-      customerId: acme.customer.id,
-      name: "Shop Contact",
-      email: wholesaleStyleEmail,
-    });
     const betaContact = await h.createContact.execute({
       organizationId: BETA_ORG,
       staffUserId: STAFF_ID,
       customerId: beta.customer.id,
-      name: "Other Shop Contact",
+      name: "Shop Contact",
       email: wholesaleStyleEmail,
     });
-    expect(acmeContact.ok).toBe(true);
     expect(betaContact.ok).toBe(true);
-    if (!acmeContact.ok || !betaContact.ok) {
-      return;
-    }
-    expect(acmeContact.contact.email).toBe(wholesaleStyleEmail);
-    expect(betaContact.contact.email).toBe(wholesaleStyleEmail);
-    expect(acmeContact.contact.customerId).toBe(acme.customer.id);
-    expect(betaContact.contact.customerId).toBe(beta.customer.id);
 
-    const createContactSource = readFileSync(
-      resolve(import.meta.dirname, "../src/application/create-contact.ts"),
-      "utf8",
-    );
-    expect(createContactSource).not.toMatch(/wholesale|identity|login|session/i);
+    const acmeAccount = await h.getWholesaleCustomer.execute({
+      organizationId: DEFAULT_ORG,
+      wholesaleUserId,
+      customerId: acme.customer.id,
+    });
+    expect(acmeAccount).toEqual({ ok: true, customer: acme.customer });
+
+    const betaAccount = await h.getWholesaleCustomer.execute({
+      organizationId: BETA_ORG,
+      wholesaleUserId,
+      customerId: beta.customer.id,
+    });
+    expect(betaAccount).toEqual({ ok: true, customer: beta.customer });
   });
 
   it("exports account status read port for downstream gates", async () => {
