@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { Figtree } from "next/font/google";
 import type { ReactNode } from "react";
-import { Source_Sans_3 } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const sourceSans = Source_Sans_3({
+const figtree = Figtree({
   subsets: ["latin"],
-  variable: "--font-source-sans",
+  weight: ["400", "500", "600"],
+  variable: "--font-figtree",
   display: "swap",
 });
 
@@ -17,8 +18,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={sourceSans.variable}>
-      <body className={`${sourceSans.className} min-h-screen antialiased`}>
+    <html lang="en" className={`${figtree.variable} ${figtree.className}`}>
+      <body className="min-h-screen antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>
