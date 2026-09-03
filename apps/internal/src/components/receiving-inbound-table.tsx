@@ -10,7 +10,7 @@ import {
 } from "@dc-inventory/ui-internal";
 import Link from "next/link";
 import { useCallback, useMemo, type ReactNode } from "react";
-import { purchaseOrderRemainingQty } from "../lib/purchase-order-remaining-qty";
+import { purchaseOrderRemainingQty } from "../lib/purchase-order-line-math";
 import { receivingListTable } from "../lib/receiving-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 

@@ -41,8 +41,15 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { purchaseOrderLineRemainingQty } from "../lib/purchase-order-line-remaining-qty";
-import { purchaseOrderRemainingQty } from "../lib/purchase-order-remaining-qty";
+import {
+  filterReceiveLines,
+  purchaseOrderLineRemainingQty,
+  purchaseOrderRemainingQty,
+  receiveLinesPayload,
+  receivingCanCancelRemaining,
+  receivingCanReceive,
+  receivingShowShortPanel,
+} from "../lib/purchase-order-line-math";
 
 type PurchaseOrderLine = {
   id: string;
@@ -166,38 +173,6 @@ function ReceivingLineQtyInput({
       aria-label={`Receive quantity for ${sku}`}
     />
   );
-}
-
-function filterReceiveLines(
-  lines: readonly ReceiveLineRow[],
-  find: string,
-  remainingOnly: boolean,
-): ReceiveLineRow[] {
-  const needle = find.trim().toLowerCase();
-  return lines.filter((line) => {
-    if (remainingOnly && line.remaining <= 0) {
-      return false;
-    }
-    if (needle.length === 0) {
-      return true;
-    }
-    return (
-      line.sku.toLowerCase().includes(needle) ||
-      line.name.toLowerCase().includes(needle)
-    );
-  });
-}
-
-function purchaseOrderWasShortReceived(
-  lines: readonly PurchaseOrderLine[],
-): boolean {
-  return lines.some((line) => line.receivedQty < line.qty);
-}
-
-function purchaseOrderHasReceivedQty(
-  lines: readonly PurchaseOrderLine[],
-): boolean {
-  return lines.some((line) => line.receivedQty > 0);
 }
 
 type GoodsReceivedRow = {
@@ -531,13 +506,13 @@ function ReceivingDocumentBody({
     [po.lines],
   );
 
-  const canReceive = po.status === "confirmed" && totalRemaining > 0;
-  const canCancelRemaining =
-    po.status === "confirmed" &&
-    totalRemaining > 0 &&
-    purchaseOrderHasReceivedQty(po.lines);
-  const showShortPanel =
-    po.status === "received" && purchaseOrderWasShortReceived(po.lines);
+  const canReceive = receivingCanReceive(po.status, totalRemaining);
+  const canCancelRemaining = receivingCanCancelRemaining(
+    po.status,
+    totalRemaining,
+    po.lines,
+  );
+  const showShortPanel = receivingShowShortPanel(po.status, po.lines);
 
   const updateReceiveQty = useCallback((lineId: string, qty: number) => {
     setReceiveQtyByLineId((current) => ({ ...current, [lineId]: qty }));
@@ -550,12 +525,7 @@ function ReceivingDocumentBody({
         return;
       }
 
-      const lines = rows
-        .map((line) => ({
-          lineId: line.id,
-          quantity: receiveQtyByLineId[line.id] ?? 0,
-        }))
-        .filter((line) => line.quantity > 0);
+      const lines = receiveLinesPayload(rows, receiveQtyByLineId);
 
       if (lines.length === 0) {
         setActionError("Enter a receive quantity on at least one line.");
