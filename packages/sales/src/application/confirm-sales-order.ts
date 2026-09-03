@@ -1,7 +1,11 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
-import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
+import type {
+  ICustomerLookupPort,
+  ISalesUnitOfWork,
+} from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder } from "../domain/sales-order.js";
+import { confirmAccountStatusGate } from "./account-status-gate.js";
 
 export type ConfirmSalesOrderRequest = {
   organizationId: OrganizationId;
@@ -20,11 +24,17 @@ export type ConfirmSalesOrderResult =
         | "empty_order"
         | "insufficient_atp"
         | "inventory_conflict"
-        | "idempotency_conflict";
+        | "idempotency_conflict"
+        | "customer_on_hold"
+        | "customer_inactive"
+        | "customer_not_found";
     };
 
 export class ConfirmSalesOrderUseCase {
-  constructor(private readonly uow: ISalesUnitOfWork) {}
+  constructor(
+    private readonly uow: ISalesUnitOfWork,
+    private readonly customers: ICustomerLookupPort,
+  ) {}
 
   async execute(input: ConfirmSalesOrderRequest): Promise<ConfirmSalesOrderResult> {
     void input.staffUserId;
@@ -57,6 +67,18 @@ export class ConfirmSalesOrderUseCase {
         }
         if (existing.lines.length === 0) {
           return { ok: false, reason: "empty_order" };
+        }
+
+        const customer = await this.customers.findById(
+          input.organizationId,
+          existing.customerId,
+        );
+        if (customer === null) {
+          return { ok: false, reason: "customer_not_found" };
+        }
+        const accountStatusGate = confirmAccountStatusGate(customer.accountStatus);
+        if (accountStatusGate !== null) {
+          return { ok: false, reason: accountStatusGate };
         }
 
         await scope.inventory.lockSnapshots(

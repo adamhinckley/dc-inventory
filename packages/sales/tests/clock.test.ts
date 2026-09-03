@@ -51,7 +51,9 @@ async function harness() {
   const uow = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms, clock);
   const customers = {
     findById: async (organizationId: OrganizationId, id: CustomerId) =>
-      organizationId === DEFAULT_ORG && id === CUSTOMER_ID ? { id } : null,
+      organizationId === DEFAULT_ORG && id === CUSTOMER_ID
+        ? { id, accountStatus: "active" as const }
+        : null,
   };
   const catalog = new InMemoryCatalogProductPort([
     {
@@ -69,7 +71,7 @@ async function harness() {
     uow,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog, clock),
     get: new GetSalesOrderUseCase(uow.salesOrders),
-    confirm: new ConfirmSalesOrderUseCase(uow),
+    confirm: new ConfirmSalesOrderUseCase(uow, customers),
     ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),

@@ -105,6 +105,9 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         if (result.reason === "product_inactive") {
           return reply.code(409).send({ error: "conflict" as const });
         }
+        if (result.reason === "customer_inactive") {
+          return reply.code(409).send({ error: "conflict" as const });
+        }
         return reply.code(400).send({ error: "invalid" as const });
       }
       return reply.code(201).send(mapSalesOrder(result.salesOrder));

@@ -1,3 +1,5 @@
+import type { AccountStatus } from "@dc-inventory/customers";
+import type { ICustomerAccountStatusReadPort } from "@dc-inventory/customers";
 import {
   GetStockSnapshotUseCase,
   RecordAdjustmentIncreaseUseCase,
@@ -17,10 +19,12 @@ import {
   PurchaseOrderId,
   Sku,
   StaffUserId,
+  WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { InMemoryCatalogProductPort } from "../../src/adapters/in-memory-catalog-product-port.js";
 import { InMemorySalesUnitOfWork } from "../../src/adapters/in-memory-sales-unit-of-work.js";
 import type { IClock } from "../../src/domain/clock.js";
+import type { ICustomerLookupPort } from "../../src/domain/ports/sales-order-repository.js";
 import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
@@ -38,6 +42,7 @@ import {
 export const DEFAULT_ORG = OrganizationId.DEFAULT;
 export const DEFAULT_LOCATION = LocationId.DEFAULT;
 export const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
+export const WHOLESALE_USER_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
 export const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 
 export const OPEN_SKU = Sku.parse("SALES-OPEN-1");
@@ -62,11 +67,23 @@ export const DEFAULT_BILL_TO: BillToAddressSnapshot = {
 
 export type SalesDemandHarnessOptions = {
   billTo?: BillToAddressSnapshot | null;
+  /** Read at operation time so tests can flip status after confirm. Defaults to active. */
+  getAccountStatus?: () => AccountStatus;
 };
 
 export type SalesDemandHarness = ReturnType<typeof salesDemandHarness>;
 
 export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOptions = {}) {
+  const resolveAccountStatus = options.getAccountStatus ?? (() => "active" as AccountStatus);
+  const accountStatus: ICustomerAccountStatusReadPort = {
+    getAccountStatus: async (organizationId, customerId) => {
+      if (organizationId !== DEFAULT_ORG || customerId !== CUSTOMER_ID) {
+        return null;
+      }
+      return resolveAccountStatus();
+    },
+  };
+
   const billToSnapshot: ICustomerBillToSnapshotReadPort = {
     getBillToAddressSnapshot: async (organizationId, customerId) => {
       if (organizationId !== DEFAULT_ORG || customerId !== CUSTOMER_ID) {
@@ -83,12 +100,16 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
   const ledger = uow.ledger;
   const readModel = uow.inventoryReadModel;
 
-  const customers = {
-    findById: async (organizationId: OrganizationId, id: CustomerId) => {
-      if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
-        return { id };
+  const customers: ICustomerLookupPort = {
+    findById: async (organizationId, id) => {
+      if (organizationId !== DEFAULT_ORG || id !== CUSTOMER_ID) {
+        return null;
       }
-      return null;
+      const status = await accountStatus.getAccountStatus(organizationId, id);
+      if (status === null) {
+        return null;
+      }
+      return { id, accountStatus: status };
     },
   };
 
@@ -123,7 +144,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
   ]);
 
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
-  const confirm = new ConfirmSalesOrderUseCase(uow);
+  const confirm = new ConfirmSalesOrderUseCase(uow, customers);
   const cancel = new CancelSalesOrderUseCase(uow);
   const decommitLine = new DecommitSalesOrderLineUseCase(uow);
   const ship = new ShipSalesOrderUseCase(uow, billToSnapshot);
@@ -143,7 +164,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     return snapshot.execute({ organizationId, sku, locationId });
   }
 
-  async function createDraft(
+  async function createStaffDraft(
     productId: ProductId,
     qty: number,
   ): Promise<{ ok: true; salesOrderId: OrderId } | { ok: false; reason: string }> {
@@ -159,10 +180,30 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     return { ok: true, salesOrderId: result.salesOrder.id };
   }
 
+  async function createWholesaleDraft(
+    productId: ProductId,
+    qty: number,
+  ): Promise<{ ok: true; salesOrderId: OrderId } | { ok: false; reason: string }> {
+    const result = await create.execute({
+      organizationId: DEFAULT_ORG,
+      wholesaleUserId: WHOLESALE_USER_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId, qty }],
+    });
+    if (!result.ok) {
+      return result;
+    }
+    return { ok: true, salesOrderId: result.salesOrder.id };
+  }
+
+  /** Staff place-on-behalf — same as createStaffDraft. */
+  const createDraft = createStaffDraft;
+
   return {
     uow,
     ledger,
     readModel,
+    accountStatus,
     create,
     confirm,
     cancel,
@@ -176,6 +217,8 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     committed,
     demandSnapshot,
     createDraft,
+    createStaffDraft,
+    createWholesaleDraft,
   };
 }
 

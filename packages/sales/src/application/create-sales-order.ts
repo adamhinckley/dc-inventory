@@ -14,6 +14,7 @@ import type {
   ISalesOrderRepository,
 } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
+import { createDraftAccountStatusGate } from "./account-status-gate.js";
 
 export type CreateSalesOrderLineInput = {
   productId: string;
@@ -48,7 +49,9 @@ export type CreateSalesOrderResult =
         | "empty_order"
         | "product_not_found"
         | "product_inactive"
-        | "product_organization_mismatch";
+        | "product_organization_mismatch"
+        | "customer_on_hold"
+        | "customer_inactive";
     };
 
 export class CreateSalesOrderUseCase {
@@ -69,6 +72,12 @@ export class CreateSalesOrderUseCase {
     const customer = await this.customers.findById(input.organizationId, input.customerId);
     if (customer === null) {
       return { ok: false, reason: "customer_not_found" };
+    }
+
+    const actor = input.staffUserId !== undefined ? "staff" : "wholesale";
+    const accountStatusGate = createDraftAccountStatusGate(customer.accountStatus, actor);
+    if (accountStatusGate !== null) {
+      return { ok: false, reason: accountStatusGate };
     }
 
     const requestedQuantities = new Map<ProductId, number>();

@@ -166,6 +166,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         if (result.reason === "product_inactive") {
           return sendConflict(reply);
         }
+        if (result.reason === "customer_on_hold" || result.reason === "customer_inactive") {
+          return sendConflict(reply);
+        }
         if (result.reason === "empty_order") {
           return sendInvalid(reply);
         }
@@ -228,7 +231,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         idempotencyKey: request.body.idempotencyKey,
       });
       if (!result.ok) {
-        if (result.reason === "not_found") {
+        if (result.reason === "not_found" || result.reason === "customer_not_found") {
           return sendNotFound(reply);
         }
         if (result.reason === "insufficient_atp") {
@@ -237,7 +240,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         if (
           result.reason === "illegal_transition" ||
           result.reason === "idempotency_conflict" ||
-          result.reason === "inventory_conflict"
+          result.reason === "inventory_conflict" ||
+          result.reason === "customer_on_hold" ||
+          result.reason === "customer_inactive"
         ) {
           return sendConflict(reply);
         }

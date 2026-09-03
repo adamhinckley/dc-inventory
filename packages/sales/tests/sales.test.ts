@@ -59,10 +59,10 @@ async function harness() {
   const customers = {
     findById: async (organizationId: OrganizationId, id: CustomerId) => {
       if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
-        return { id };
+        return { id, accountStatus: "active" as const };
       }
       if (organizationId === BETA_ORG && id === BETA_CUSTOMER_ID) {
-        return { id };
+        return { id, accountStatus: "active" as const };
       }
       return null;
     },
@@ -108,7 +108,7 @@ async function harness() {
     customers,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog),
     list: new ListSalesOrdersUseCase(uow.salesOrders),
-    confirm: new ConfirmSalesOrderUseCase(uow),
+    confirm: new ConfirmSalesOrderUseCase(uow, customers),
     cancel: new CancelSalesOrderUseCase(uow),
     ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
@@ -564,7 +564,7 @@ describe("Sales (in-memory)", () => {
     const customers = {
       findById: async (organizationId: OrganizationId, id: CustomerId) => {
         if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
-          return { id };
+          return { id, accountStatus: "active" as const };
         }
         return null;
       },
@@ -584,7 +584,7 @@ describe("Sales (in-memory)", () => {
       customers,
       catalog,
     );
-    const confirm = new ConfirmSalesOrderUseCase(failingUow);
+    const confirm = new ConfirmSalesOrderUseCase(failingUow, customers);
     const ship = new ShipSalesOrderUseCase(failingUow, billToSnapshot);
     const snapshot = new GetStockSnapshotUseCase(base.inventoryReadModel);
     const adjustmentIncrease = new RecordAdjustmentIncreaseUseCase(base.ledger);
