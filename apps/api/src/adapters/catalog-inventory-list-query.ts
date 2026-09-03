@@ -4,7 +4,11 @@ import {
   type Product,
   type ProductQty,
 } from "@dc-inventory/catalog";
-import type { IClock } from "@dc-inventory/inventory";
+import {
+  availableToSellProjectionSql,
+  isLockedForSellSql,
+  type IClock,
+} from "@dc-inventory/inventory";
 import {
   categories,
   productCategories,
@@ -94,24 +98,25 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     const allocated = sql<number>`coalesce(${stockSnapshots.allocated}, 0)`;
     const available = sql<number>`coalesce(${stockSnapshots.available}, 0)`;
     const committed = sql<number>`coalesce(${stockSnapshots.committed}, 0)`;
+    const stickyLocked = sql<boolean>`coalesce(${stockSnapshots.stickyLocked}, false)`;
     if (query.hideZeroInventory === true) {
       clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
     }
     const where = and(...clauses);
-    const stickyLocked = sql<boolean>`coalesce(${stockSnapshots.stickyLocked}, false)`;
     const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
     const now = this.clock ? this.clock.now() : new Date();
+    const demandProjectionColumns = {
+      onHand: stockSnapshots.onHand,
+      onOrder: stockSnapshots.onOrder,
+      committed: stockSnapshots.committed,
+      stickyLocked: stockSnapshots.stickyLocked,
+      windowOpensAt: stockSnapshots.windowOpensAt,
+      windowClosesAt: stockSnapshots.windowClosesAt,
+    };
     // postgres.js cannot bind a Date in drizzle `sql` fragments (TypeError).
     const nowIso = now.toISOString();
-    const isLockedForSell = sql<boolean>`(
-      ${stickyLocked}
-      OR (${stockSnapshots.windowOpensAt} IS NOT NULL AND ${stockSnapshots.windowOpensAt} > ${nowIso})
-      OR (${stockSnapshots.windowClosesAt} IS NOT NULL AND ${stockSnapshots.windowClosesAt} <= ${nowIso})
-    )`;
-    const availableToSellSort = sql<number | null>`CASE
-      WHEN ${isLockedForSell} THEN ${onHand} + ${onOrder} - ${committed}
-      ELSE NULL
-    END`;
+    const isLockedForSell = isLockedForSellSql(demandProjectionColumns, nowIso);
+    const availableToSellSort = availableToSellProjectionSql(demandProjectionColumns, nowIso);
     const direction = query.sortOrder === "desc" ? desc : asc;
     const tieBreak = asc(products.id);
     const orderBy =
