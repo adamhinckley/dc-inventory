@@ -9,6 +9,7 @@ import { normalizeEmail } from "../domain/email.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { ISessionStore } from "../domain/ports/session-store.js";
 import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
+import type { IWholesaleLoginAccountStatusReadPort } from "../domain/ports/wholesale-login-account-status-read.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
 import { resolveLoginOrganizationId } from "./resolve-login-organization.js";
 
@@ -36,6 +37,7 @@ export class LoginWholesaleUseCase {
     private readonly sessions: ISessionStore,
     private readonly passwords: IPasswordHasher,
     private readonly clock: IClock,
+    private readonly accountStatus: IWholesaleLoginAccountStatusReadPort,
   ) {}
 
   async execute(input: LoginWholesaleRequest): Promise<LoginWholesaleResult> {
@@ -55,6 +57,13 @@ export class LoginWholesaleUseCase {
     }
     const matches = await this.passwords.verify(input.password, user.passwordHash);
     if (!matches) {
+      return { ok: false };
+    }
+    const accountStatus = await this.accountStatus.getAccountStatus(
+      organizationId,
+      user.customerId,
+    );
+    if (accountStatus === "inactive") {
       return { ok: false };
     }
     const now = this.clock.now();

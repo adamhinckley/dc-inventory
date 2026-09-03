@@ -89,6 +89,7 @@ import {
   type IOrganizationRepository,
   type ISessionStore,
   type IStaffUserRepository,
+  type IWholesaleLoginAccountStatusReadPort,
   type IWholesaleUserRepository,
   type IdentityDrizzle,
 } from "@dc-inventory/identity";
@@ -432,6 +433,15 @@ function customerReadPorts(
   return {
     billToSnapshot: new CustomerBillToSnapshotReadAdapter(customerRepo, billToRepo),
     accountStatus: new CustomerAccountStatusReadAdapter(customerRepo),
+  };
+}
+
+function wholesaleLoginAccountStatusReadPort(
+  accountStatus: ICustomerAccountStatusReadPort,
+): IWholesaleLoginAccountStatusReadPort {
+  return {
+    getAccountStatus: (organizationId, linkedPartyId) =>
+      accountStatus.getAccountStatus(organizationId, linkedPartyId),
   };
 }
 
@@ -805,6 +815,7 @@ export function composeAppServices(
         sessions,
         passwords,
         clock,
+        wholesaleLoginAccountStatusReadPort(readPorts.accountStatus),
       ),
       logoutStaff: new LogoutUseCase(sessions, clock, "staff"),
       logoutWholesale: new LogoutUseCase(sessions, clock, "wholesale"),

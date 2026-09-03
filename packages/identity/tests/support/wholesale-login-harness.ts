@@ -1,4 +1,3 @@
-import type { AccountStatus, ICustomerAccountStatusReadPort } from "@dc-inventory/customers";
 import {
   CustomerId,
   OrganizationId,
@@ -11,6 +10,8 @@ import { InMemorySessionStore } from "../../src/adapters/in-memory-session-store
 import { InMemoryWholesaleUserRepository } from "../../src/adapters/in-memory-wholesale-user-repository.js";
 import { LoginWholesaleUseCase } from "../../src/application/login-wholesale.js";
 import { ResolveWholesaleSessionUseCase } from "../../src/application/resolve-session.js";
+import type { WholesaleLoginAccountStatus } from "../../src/domain/account-status.js";
+import type { IWholesaleLoginAccountStatusReadPort } from "../../src/domain/ports/wholesale-login-account-status-read.js";
 
 export const DEFAULT_ORG = OrganizationId.DEFAULT;
 export const ACME_SLUG = "acme";
@@ -19,34 +20,34 @@ export const CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-44665544000
 
 export type WholesaleLoginHarnessOptions = {
   /** Read at login time so tests can flip status between attempts. Defaults to active. */
-  getAccountStatus?: () => AccountStatus;
+  getAccountStatus?: () => WholesaleLoginAccountStatus;
   at?: Date;
 };
 
 export function wholesaleLoginHarness(options: WholesaleLoginHarnessOptions = {}) {
-  const resolveAccountStatus = options.getAccountStatus ?? (() => "active" as AccountStatus);
+  const resolveAccountStatus = options.getAccountStatus ?? (() => "active" as WholesaleLoginAccountStatus);
   const clock = new InMemoryClock(options.at ?? new Date("2026-08-23T02:00:00.000Z"));
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
 
-  const accountStatus: ICustomerAccountStatusReadPort = {
-    getAccountStatus: async (organizationId, customerId) => {
-      if (organizationId !== DEFAULT_ORG || customerId !== CUSTOMER_ID) {
+  const wholesaleLoginAccountStatus: IWholesaleLoginAccountStatusReadPort = {
+    getAccountStatus: async (organizationId, linkedPartyId) => {
+      if (organizationId !== DEFAULT_ORG || linkedPartyId !== CUSTOMER_ID) {
         return null;
       }
       return resolveAccountStatus();
     },
   };
 
-  // ADA-264 implement packet: inject accountStatus into LoginWholesaleUseCase and gate inactive.
   const loginWholesale = new LoginWholesaleUseCase(
     organizations,
     wholesaleUsers,
     sessions,
     passwords,
     clock,
+    wholesaleLoginAccountStatus,
   );
 
   return {
@@ -55,7 +56,7 @@ export function wholesaleLoginHarness(options: WholesaleLoginHarnessOptions = {}
     organizations,
     wholesaleUsers,
     sessions,
-    accountStatus,
+    wholesaleLoginAccountStatus,
     loginWholesale,
     resolveWholesale: new ResolveWholesaleSessionUseCase(sessions, wholesaleUsers, clock),
   };

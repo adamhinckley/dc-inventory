@@ -12,6 +12,7 @@ import {
   InMemoryWholesaleUserRepository,
   LoginStaffUseCase,
   LoginWholesaleUseCase,
+  ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS,
 } from "@dc-inventory/identity";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
@@ -91,6 +92,7 @@ describe("Phase 1 seed (in-memory)", () => {
       sessions,
       ports.passwords,
       clock,
+      ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS,
     ).execute({
       organizationSlug: PHASE1_ORGANIZATION_SLUG,
       email: PHASE1_WHOLESALE_EMAIL,
