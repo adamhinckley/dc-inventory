@@ -3,6 +3,7 @@ import {
   InMemoryQtyReadPort,
   type ProductListMatch,
 } from "@dc-inventory/catalog";
+import { InMemoryCustomerRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
@@ -11,7 +12,7 @@ import {
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
 } from "@dc-inventory/identity";
-import { CustomerId, OrganizationId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, Money, OrganizationId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { catalogQuerySchema } from "../../schemas.js";
@@ -48,6 +49,15 @@ async function startCatalogApp(
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
   const qtyRead = new InMemoryQtyReadPort();
+  const customerRepo = new InMemoryCustomerRepository();
+  await customerRepo.save({
+    id: CUSTOMER_ID,
+    organizationId: OrganizationId.DEFAULT,
+    name: "Acme Wholesale",
+    creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+    terms: "NET30",
+    createdAt: new Date("2026-08-24T03:30:00.000Z"),
+  });
   await staffUsers.save({
     id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -71,6 +81,7 @@ async function startCatalogApp(
     sessions,
     passwords,
     organizationRepo: organizations,
+    customerRepo,
     productRepo,
     qtyRead,
   });

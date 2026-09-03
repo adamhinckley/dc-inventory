@@ -1,3 +1,4 @@
+export { ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS } from "./adapters/active-wholesale-login-account-status.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { InMemoryLoginThrottle } from "./adapters/in-memory-login-throttle.js";
 export { InMemoryIdentityUnitOfWork } from "./adapters/in-memory-identity-unit-of-work.js";
@@ -61,6 +62,11 @@ export type { IPasswordHasher } from "./domain/ports/password-hasher.js";
 export type { ISessionStore } from "./domain/ports/session-store.js";
 export type { IStaffUserRepository } from "./domain/ports/staff-user-repository.js";
 export type { IWholesaleUserRepository } from "./domain/ports/wholesale-user-repository.js";
+export type { IWholesaleLoginAccountStatusReadPort } from "./domain/ports/wholesale-login-account-status-read.js";
+export {
+  WHOLESALE_LOGIN_ACCOUNT_STATUSES,
+  type WholesaleLoginAccountStatus,
+} from "./domain/account-status.js";
 export {
   SESSION_ABSOLUTE_MS,
   SESSION_IDLE_MS,

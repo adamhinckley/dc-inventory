@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
+import { ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS } from "../src/adapters/active-wholesale-login-account-status.js";
 import { InMemoryOrganizationRepository } from "../src/adapters/in-memory-organization-repository.js";
 import { InMemoryOpsUserRepository } from "../src/adapters/in-memory-ops-user-repository.js";
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
@@ -72,6 +73,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
       sessions,
       passwords,
       clock,
+      ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS,
     ),
     resolveStaff: new ResolveStaffSessionUseCase(sessions, staffUsers, clock),
     resolveWholesale: new ResolveWholesaleSessionUseCase(

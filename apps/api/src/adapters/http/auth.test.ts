@@ -1,9 +1,11 @@
 import {
   CustomerId,
+  Money,
   OrganizationId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import { InMemoryCustomerRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
@@ -51,6 +53,15 @@ async function startAuthApp(
   const opsUsers = new InMemoryOpsUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
+  const customerRepo = new InMemoryCustomerRepository();
+  await customerRepo.save({
+    id: CUSTOMER_ID,
+    organizationId: OrganizationId.DEFAULT,
+    name: "Acme Wholesale",
+    creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+    terms: "NET30",
+    createdAt: new Date("2026-08-24T03:30:00.000Z"),
+  });
   await staffUsers.save({
     id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -89,6 +100,7 @@ async function startAuthApp(
     sessions,
     passwords,
     organizationRepo: organizations,
+    customerRepo,
     trustProxy: options.trustProxy,
   });
   apps.push(app);
