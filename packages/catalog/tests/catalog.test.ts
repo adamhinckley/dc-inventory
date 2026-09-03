@@ -333,6 +333,66 @@ describe("Catalog use cases (in-memory)", () => {
     ]);
   });
 
+  it("sorts the staff list by availableToSell and sellState from qty snapshots", async () => {
+    const h = harness();
+    const openSku = await createProduct(h, { sku: "OPEN-SKU", name: "Open" });
+    const lockedLow = await createProduct(h, { sku: "LOCKED-LOW", name: "Locked low" });
+    const lockedHigh = await createProduct(h, { sku: "LOCKED-HIGH", name: "Locked high" });
+    h.qty.set(DEFAULT_ORG, openSku.sku.value, {
+      onHand: 10,
+      onOrder: 0,
+      allocated: 0,
+      available: 10,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    h.qty.set(DEFAULT_ORG, lockedLow.sku.value, {
+      onHand: 5,
+      onOrder: 2,
+      allocated: 0,
+      available: 5,
+      committed: 4,
+      sellState: "locked",
+      availableToSell: 3,
+    });
+    h.qty.set(DEFAULT_ORG, lockedHigh.sku.value, {
+      onHand: 20,
+      onOrder: 5,
+      allocated: 0,
+      available: 20,
+      committed: 2,
+      sellState: "locked",
+      availableToSell: 23,
+    });
+
+    const byAvailableToSell = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "availableToSell",
+      sortOrder: "desc",
+    });
+    expect(byAvailableToSell.items.map((row) => row.qty.availableToSell)).toEqual([23, 3, null]);
+    expect(byAvailableToSell.items.map((row) => row.product.sku.value)).toEqual([
+      "LOCKED-HIGH",
+      "LOCKED-LOW",
+      "OPEN-SKU",
+    ]);
+
+    const bySellState = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sellState",
+      sortOrder: "asc",
+    });
+    expect(bySellState.items.map((row) => row.qty.sellState)).toEqual(["open", "locked", "locked"]);
+    expect(bySellState.items[0]?.product.sku.value).toBe("OPEN-SKU");
+  });
+
   it("can hide catalog rows whose inventory snapshot is all zero", async () => {
     const h = harness();
     const stocked = await createProduct(h, { sku: "STOCKED", name: "Stocked" });

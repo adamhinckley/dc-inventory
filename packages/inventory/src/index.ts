@@ -102,3 +102,8 @@ export {
   ZERO_STOCK_FIGURES,
   type StockFigures,
 } from "./domain/snapshot.js";
+export {
+  availableToSellProjectionSql,
+  isLockedForSellSql,
+  type DemandProjectionSnapshotColumns,
+} from "./persistence/demand-projection-sql.js";
