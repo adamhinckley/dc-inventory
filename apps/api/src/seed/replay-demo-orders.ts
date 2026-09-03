@@ -232,7 +232,10 @@ export async function runReplayDemoOrders(
     catalogProductPort(ports.products),
     ports.clock,
   );
-  const confirmSo = new ConfirmSalesOrderUseCase(ports.sales);
+  const confirmSo = new ConfirmSalesOrderUseCase(
+    ports.sales,
+    demoCustomerLookup(ports.customers),
+  );
   const shipSo = new ShipSalesOrderUseCase(ports.sales, ports.billToSnapshot);
 
   const purchaseOrdersByKey = new Map<string, PurchaseOrder>();

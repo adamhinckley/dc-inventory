@@ -508,11 +508,21 @@ function purchasingServices(
   };
 }
 
-function customerLookupPort(customerRepo: ICustomerRepository): ICustomerLookupPort {
+function customerLookupPort(
+  customerRepo: ICustomerRepository,
+  accountStatus: ICustomerAccountStatusReadPort,
+): ICustomerLookupPort {
   return {
     findById: async (organizationId, id) => {
       const customer = await customerRepo.findById(organizationId, id);
-      return customer === null ? null : { id: customer.id };
+      if (customer === null) {
+        return null;
+      }
+      const status = await accountStatus.getAccountStatus(organizationId, id);
+      return {
+        id: customer.id,
+        accountStatus: status ?? customer.accountStatus,
+      };
     },
   };
 }
@@ -524,17 +534,19 @@ function salesServices(
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/sales").IClock,
   billToSnapshot: ICustomerBillToSnapshotReadPort,
+  accountStatus: ICustomerAccountStatusReadPort,
 ): SalesHttpServices {
+  const customers = customerLookupPort(customerRepo, accountStatus);
   return {
     listSalesOrders: new ListSalesOrdersUseCase(salesOrderRepo),
     createSalesOrder: new CreateSalesOrderUseCase(
       salesOrderRepo,
-      customerLookupPort(customerRepo),
+      customers,
       catalogProduct,
       clock,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
-    confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales),
+    confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales, customers),
     cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
     shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot),
   };
@@ -837,6 +849,7 @@ export function composeAppServices(
       unitOfWork,
       clock,
       readPorts.billToSnapshot,
+      readPorts.accountStatus,
     ),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     licensing: licensingServices(licensingRepository),

@@ -24,6 +24,7 @@ import {
 import { InMemoryCatalogProductPort } from "../../src/adapters/in-memory-catalog-product-port.js";
 import { InMemorySalesUnitOfWork } from "../../src/adapters/in-memory-sales-unit-of-work.js";
 import type { IClock } from "../../src/domain/clock.js";
+import type { ICustomerLookupPort } from "../../src/domain/ports/sales-order-repository.js";
 import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
@@ -99,12 +100,16 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
   const ledger = uow.ledger;
   const readModel = uow.inventoryReadModel;
 
-  const customers = {
-    findById: async (organizationId: OrganizationId, id: CustomerId) => {
-      if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
-        return { id };
+  const customers: ICustomerLookupPort = {
+    findById: async (organizationId, id) => {
+      if (organizationId !== DEFAULT_ORG || id !== CUSTOMER_ID) {
+        return null;
       }
-      return null;
+      const status = await accountStatus.getAccountStatus(organizationId, id);
+      if (status === null) {
+        return null;
+      }
+      return { id, accountStatus: status };
     },
   };
 
@@ -139,7 +144,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
   ]);
 
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
-  const confirm = new ConfirmSalesOrderUseCase(uow);
+  const confirm = new ConfirmSalesOrderUseCase(uow, customers);
   const cancel = new CancelSalesOrderUseCase(uow);
   const decommitLine = new DecommitSalesOrderLineUseCase(uow);
   const ship = new ShipSalesOrderUseCase(uow, billToSnapshot);

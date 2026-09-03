@@ -1,3 +1,4 @@
+import type { AccountStatus } from "@dc-inventory/customers";
 import type { IInventoryCommandPort } from "@dc-inventory/inventory";
 import type {
   CustomerId,
@@ -52,7 +53,7 @@ export interface ICustomerLookupPort {
   findById(
     organizationId: OrganizationId,
     id: CustomerId,
-  ): Promise<{ id: CustomerId } | null>;
+  ): Promise<{ id: CustomerId; accountStatus: AccountStatus } | null>;
 }
 
 export type CreateInvoiceForOrderCommand = {

@@ -92,7 +92,9 @@ export function demoCustomerLookup(
   return {
     findById: async (organizationId, id) => {
       const customer = await customers.findById(organizationId, id);
-      return customer === null ? null : { id: customer.id };
+      return customer === null
+        ? null
+        : { id: customer.id, accountStatus: customer.accountStatus };
     },
   };
 }
@@ -127,7 +129,10 @@ export async function runReplaySalesOrders(
     catalogProductPort(ports.products),
     ports.clock,
   );
-  const confirm = new ConfirmSalesOrderUseCase(ports.uow);
+  const confirm = new ConfirmSalesOrderUseCase(
+    ports.uow,
+    demoCustomerLookup(ports.customers),
+  );
   const ship = new ShipSalesOrderUseCase(ports.uow, ports.billToSnapshot);
   const shipInstantBySalesOrderKey = new Map(
     input.plan.shippedInvoices.map((row) => [row.salesOrderKey, row.plannedInstant]),

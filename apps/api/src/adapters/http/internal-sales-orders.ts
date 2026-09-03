@@ -166,6 +166,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         if (result.reason === "product_inactive") {
           return sendConflict(reply);
         }
+        if (result.reason === "customer_on_hold" || result.reason === "customer_inactive") {
+          return sendConflict(reply);
+        }
         if (result.reason === "empty_order") {
           return sendInvalid(reply);
         }
@@ -237,7 +240,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         if (
           result.reason === "illegal_transition" ||
           result.reason === "idempotency_conflict" ||
-          result.reason === "inventory_conflict"
+          result.reason === "inventory_conflict" ||
+          result.reason === "customer_on_hold" ||
+          result.reason === "customer_inactive"
         ) {
           return sendConflict(reply);
         }
