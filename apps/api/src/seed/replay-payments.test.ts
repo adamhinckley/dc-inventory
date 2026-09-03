@@ -23,6 +23,7 @@ import {
 import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
+import { CustomerTermsReadAdapter } from "@dc-inventory/accounting";
 import {
   DEMO_COUNTS,
   DEFAULT_DEMO_SEED,
@@ -131,7 +132,11 @@ describe("replay payments (in-memory)", () => {
     });
 
     const clock = new InMemoryClock(plan.purchaseOrders[0]!.plannedInstant);
-    const uow = new InMemoryUnitOfWork(clock);
+    const uow = new InMemoryUnitOfWork(
+      permissiveDemoBillToSnapshotPort(),
+      new CustomerTermsReadAdapter(staticPorts.customers),
+      clock,
+    );
     const accountingUow = new InMemoryAccountingUnitOfWork(uow.invoices);
     await copySuppliers(plan, staticPorts.suppliers, uow.suppliers);
 

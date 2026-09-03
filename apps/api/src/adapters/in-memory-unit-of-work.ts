@@ -17,7 +17,6 @@ import {
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
-import { testShipAccountingReadPorts } from "./test-ship-accounting-readports.js";
 
 /**
  * In-memory composition-root unit of work for purchasing, sales, and inventory tests.
@@ -36,13 +35,10 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
   private readonly salesScope: ISalesUnitOfWork;
 
   constructor(
+    billToSnapshot: ICustomerBillToSnapshotReadPort,
+    customerTerms: ICustomerTermsReadPort,
     clock?: IClock,
-    billToSnapshot?: ICustomerBillToSnapshotReadPort,
-    customerTerms?: ICustomerTermsReadPort,
   ) {
-    const shipPorts = testShipAccountingReadPorts();
-    const resolvedBillToSnapshot = billToSnapshot ?? shipPorts.billToSnapshot;
-    const resolvedCustomerTerms = customerTerms ?? shipPorts.customerTerms;
     this.inventoryUow = new InMemoryInventoryUnitOfWork(clock);
     this.inventory = {
       ledger: this.inventoryUow.ledger,
@@ -63,8 +59,8 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
       inventory: inventoryCommands,
       accounting: new SalesInvoiceAccountingCommandAdapter(
         this.invoices,
-        resolvedBillToSnapshot,
-        resolvedCustomerTerms,
+        billToSnapshot,
+        customerTerms,
         clock,
       ),
       run: (work) => this.run((scope) => work(scope.sales)),

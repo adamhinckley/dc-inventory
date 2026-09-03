@@ -1,11 +1,16 @@
 import {
+  CreateInvoiceForOrderAdapter,
+  InMemoryInvoiceRepository,
+  type ICustomerBillToSnapshotReadPort,
+  type ICustomerTermsReadPort,
+} from "@dc-inventory/accounting";
+import {
   InMemoryInventoryUnitOfWork,
   StockLedgerInventoryCommandAdapter,
 } from "@dc-inventory/inventory";
-import { InMemoryInvoiceRepository } from "@dc-inventory/accounting";
 import type { IClock } from "../domain/clock.js";
+import type { IAccountingCommandPort } from "../domain/ports/sales-order-repository.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
-import { AccountingCommandAdapter } from "./accounting-command-adapter.js";
 import { InMemorySalesOrderRepository } from "./in-memory-sales-order-repository.js";
 
 export class InMemorySalesUnitOfWork implements ISalesUnitOfWork {
@@ -13,15 +18,24 @@ export class InMemorySalesUnitOfWork implements ISalesUnitOfWork {
   readonly invoices = new InMemoryInvoiceRepository();
   private readonly inventoryUow: InMemoryInventoryUnitOfWork;
   readonly inventory: StockLedgerInventoryCommandAdapter;
-  readonly accounting: AccountingCommandAdapter;
+  readonly accounting: IAccountingCommandPort;
 
-  constructor(clock?: IClock) {
+  constructor(
+    billToSnapshot: ICustomerBillToSnapshotReadPort,
+    customerTerms: ICustomerTermsReadPort,
+    clock?: IClock,
+  ) {
     this.inventoryUow = new InMemoryInventoryUnitOfWork(clock);
     this.inventory = new StockLedgerInventoryCommandAdapter(
       this.inventoryUow.ledger,
       this.inventoryUow.readModel,
     );
-    this.accounting = new AccountingCommandAdapter(this.invoices, clock);
+    this.accounting = new CreateInvoiceForOrderAdapter(
+      this.invoices,
+      billToSnapshot,
+      customerTerms,
+      clock,
+    );
   }
 
   run<T>(work: (uow: ISalesUnitOfWork) => Promise<T>): Promise<T> {

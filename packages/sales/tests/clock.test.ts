@@ -22,6 +22,10 @@ import {
   ShipSalesOrderUseCase,
   type ICustomerBillToSnapshotReadPort,
 } from "../src/index.js";
+import {
+  testShipBillToSnapshot,
+  testShipCustomerTerms,
+} from "./support/ship-invoice-readports.js";
 
 const billToSnapshot: ICustomerBillToSnapshotReadPort = {
   getBillToAddressSnapshot: async () => ({
@@ -44,7 +48,7 @@ const FIXED = new Date("2021-06-15T12:00:00.000Z");
 
 async function harness() {
   const clock = new InMemoryClock(FIXED);
-  const uow = new InMemorySalesUnitOfWork(clock);
+  const uow = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms, clock);
   const customers = {
     findById: async (organizationId: OrganizationId, id: CustomerId) =>
       organizationId === DEFAULT_ORG && id === CUSTOMER_ID ? { id } : null,

@@ -27,6 +27,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
+import { testShipAccountingReadPorts } from "../../adapters/test-ship-accounting-readports.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import {
@@ -63,7 +64,8 @@ async function startTwoOrgIsolationApp() {
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
   const productRepo = new InMemoryProductRepository();
-  const unitOfWork = new InMemoryUnitOfWork();
+  const shipPorts = testShipAccountingReadPorts();
+  const unitOfWork = new InMemoryUnitOfWork(shipPorts.billToSnapshot, shipPorts.customerTerms);
   const licensingStore = new InMemoryLicensingStore();
   const clock = new InMemoryClock(new Date("2026-08-27T00:00:00.000Z"));
 

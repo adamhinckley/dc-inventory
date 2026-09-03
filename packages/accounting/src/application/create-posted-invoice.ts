@@ -27,8 +27,8 @@ export type CreatePostedInvoiceResult =
 
 type CreatePostedInvoiceDeps = {
   invoices: IInvoiceRepository;
-  billToSnapshot?: ICustomerBillToSnapshotReadPort;
-  customerTerms?: ICustomerTermsReadPort;
+  billToSnapshot: ICustomerBillToSnapshotReadPort;
+  customerTerms: ICustomerTermsReadPort;
   clock?: IClock;
 };
 
@@ -49,44 +49,31 @@ export async function createPostedInvoice(
     return { ok: true, invoice: existing, created: false };
   }
 
+  const billTo = await deps.billToSnapshot.getBillToAddressSnapshot(
+    input.organizationId,
+    input.customerId,
+  );
+  if (billTo === null) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const customerTerms = await deps.customerTerms.getTerms(
+    input.organizationId,
+    input.customerId,
+  );
+  if (customerTerms === null || customerTerms.trim().length === 0) {
+    return { ok: false, reason: "invalid" };
+  }
+
   const postedAt = deps.clock?.now() ?? new Date();
+  const dueDate = computeDueDateFromTerms(postedAt, customerTerms);
+  if (dueDate === null) {
+    return { ok: false, reason: "invalid" };
+  }
+
   const currency = input.currency.trim().toUpperCase();
   const subtotal = Money.fromMinorUnits(input.subtotalCents, currency);
   const zero = Money.fromMinorUnits(0, currency);
-
-  let billLine1: string | null = null;
-  let billLine2: string | null = null;
-  let billCity: string | null = null;
-  let billRegion: string | null = null;
-  let billPostal: string | null = null;
-  let billCountry: string | null = null;
-  let dueDate: Date | null = null;
-  let terms: string | null = null;
-
-  if (deps.billToSnapshot !== undefined && deps.customerTerms !== undefined) {
-    const billTo = await deps.billToSnapshot.getBillToAddressSnapshot(
-      input.organizationId,
-      input.customerId,
-    );
-    if (billTo === null) {
-      return { ok: false, reason: "invalid" };
-    }
-    const customerTerms = await deps.customerTerms.getTerms(
-      input.organizationId,
-      input.customerId,
-    );
-    if (customerTerms === null || customerTerms.trim().length === 0) {
-      return { ok: false, reason: "invalid" };
-    }
-    terms = customerTerms;
-    dueDate = computeDueDateFromTerms(postedAt, terms);
-    billLine1 = billTo.line1;
-    billLine2 = billTo.line2;
-    billCity = billTo.city;
-    billRegion = billTo.region;
-    billPostal = billTo.postal;
-    billCountry = billTo.country;
-  }
 
   const invoice = await deps.invoices.insertWithNextDocumentNumber({
     id: InvoiceId.parse(newUuid()),
@@ -95,14 +82,14 @@ export async function createPostedInvoice(
     customerId: input.customerId,
     status: "posted",
     postedAt,
-    billLine1,
-    billLine2,
-    billCity,
-    billRegion,
-    billPostal,
-    billCountry,
+    billLine1: billTo.line1,
+    billLine2: billTo.line2,
+    billCity: billTo.city,
+    billRegion: billTo.region,
+    billPostal: billTo.postal,
+    billCountry: billTo.country,
     dueDate,
-    terms,
+    terms: customerTerms,
     subtotal,
     taxTotal: zero,
     total: subtotal,

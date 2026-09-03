@@ -696,7 +696,7 @@ export function composeAppServices(
           readPorts.billToSnapshot,
           customerTermsRead,
         )
-      : new InMemoryUnitOfWork(clock, readPorts.billToSnapshot, customerTermsRead));
+      : new InMemoryUnitOfWork(readPorts.billToSnapshot, customerTermsRead, clock));
 
   const inMemoryUow = unitOfWork instanceof InMemoryUnitOfWork ? unitOfWork : null;
 

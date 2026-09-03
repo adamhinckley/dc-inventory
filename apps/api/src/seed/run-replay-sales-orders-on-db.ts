@@ -3,7 +3,10 @@ import {
   type ISalesUnitOfWork,
 } from "@dc-inventory/sales";
 import { DrizzleCustomerRepository } from "@dc-inventory/customers";
-import { DrizzleInvoiceRepository } from "@dc-inventory/accounting";
+import {
+  CustomerTermsReadAdapter,
+  DrizzleInvoiceRepository,
+} from "@dc-inventory/accounting";
 import { DrizzleProductRepository } from "@dc-inventory/catalog";
 import type { CustomerId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { SeedPlaybackClock } from "../adapters/seed-playback-clock.js";
@@ -14,6 +17,7 @@ import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
   permissiveDemoBillToSnapshotPort,
+  permissiveDemoCustomerTermsPort,
   productNameBySkuFromPlan,
   runReplaySalesOrders,
   taxCategoryBySkuFromPlan,
@@ -35,9 +39,14 @@ export async function runReplaySalesOrdersOnDb(
 ): Promise<ReplaySalesOrdersResult> {
   const firstInstant = plan.salesOrders[0]?.plannedInstant ?? plan.seedToday;
   const clock = new SeedPlaybackClock(firstInstant);
-  const postgresUow = new PostgresInventoryUnitOfWork(db, clock);
-  const salesOrders = new DrizzleSalesOrderRepository(db as never);
   const customers = new DrizzleCustomerRepository(db as never);
+  const postgresUow = new PostgresInventoryUnitOfWork(
+    db,
+    clock,
+    permissiveDemoBillToSnapshotPort(),
+    new CustomerTermsReadAdapter(customers),
+  );
+  const salesOrders = new DrizzleSalesOrderRepository(db as never);
   const invoices = new DrizzleInvoiceRepository(db as never);
   const products = new DrizzleProductRepository(db as never);
 

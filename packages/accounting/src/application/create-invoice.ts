@@ -28,9 +28,9 @@ export type CreateInvoiceResult =
 export class CreateInvoiceUseCase {
   constructor(
     private readonly unitOfWork: IAccountingUnitOfWork,
+    private readonly billToSnapshot: ICustomerBillToSnapshotReadPort,
+    private readonly customerTerms: ICustomerTermsReadPort,
     private readonly clock?: IClock,
-    private readonly billToSnapshot?: ICustomerBillToSnapshotReadPort,
-    private readonly customerTerms?: ICustomerTermsReadPort,
   ) {}
 
   async execute(input: CreateInvoiceRequest): Promise<CreateInvoiceResult> {

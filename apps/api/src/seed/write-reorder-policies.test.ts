@@ -22,6 +22,7 @@ import {
 import { LocationId, OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
+import { CustomerTermsReadAdapter } from "@dc-inventory/accounting";
 import { DEMO_COUNTS, DEFAULT_DEMO_SEED } from "./planner/constants.js";
 import { planDemoBook } from "./planner/plan-demo-book.js";
 import { InMemoryProductImageSeedRepository } from "./ports/in-memory-product-image-seed.js";
@@ -126,7 +127,11 @@ describe("write reorder policies (in-memory)", () => {
     });
 
     const clock = new InMemoryClock(plan.purchaseOrders[0]!.plannedInstant);
-    const uow = new InMemoryUnitOfWork(clock);
+    const uow = new InMemoryUnitOfWork(
+      permissiveDemoBillToSnapshotPort(),
+      new CustomerTermsReadAdapter(staticPorts.customers),
+      clock,
+    );
     const accountingUow = new InMemoryAccountingUnitOfWork(uow.invoices);
     await copySuppliers(plan, staticPorts.suppliers, uow.suppliers);
 

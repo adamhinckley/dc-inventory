@@ -18,6 +18,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
+import { testShipAccountingReadPorts } from "../../adapters/test-ship-accounting-readports.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE, WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
@@ -39,7 +40,8 @@ async function startAccountingApp() {
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
-  const unitOfWork = new InMemoryUnitOfWork();
+  const shipPorts = testShipAccountingReadPorts();
+  const unitOfWork = new InMemoryUnitOfWork(shipPorts.billToSnapshot, shipPorts.customerTerms);
   const accountingUow = new InMemoryAccountingUnitOfWork();
 
   await staffUsers.save({
@@ -50,7 +52,11 @@ async function startAccountingApp() {
     roles: ["admin"],
   });
 
-  const createInvoice = new CreateInvoiceUseCase(accountingUow);
+  const createInvoice = new CreateInvoiceUseCase(
+    accountingUow,
+    shipPorts.billToSnapshot,
+    shipPorts.customerTerms,
+  );
   const created = await createInvoice.execute({
     staffUserId: STAFF_ID,
     organizationId: OrganizationId.DEFAULT,

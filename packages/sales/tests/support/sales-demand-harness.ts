@@ -30,6 +30,10 @@ import {
   type BillToAddressSnapshot,
   type ICustomerBillToSnapshotReadPort,
 } from "../../src/index.js";
+import {
+  testShipBillToSnapshot,
+  testShipCustomerTerms,
+} from "./ship-invoice-readports.js";
 
 export const DEFAULT_ORG = OrganizationId.DEFAULT;
 export const DEFAULT_LOCATION = LocationId.DEFAULT;
@@ -63,7 +67,19 @@ export type SalesDemandHarnessOptions = {
 export type SalesDemandHarness = ReturnType<typeof salesDemandHarness>;
 
 export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOptions = {}) {
-  const uow = new InMemorySalesUnitOfWork(clock);
+  const billToSnapshot: ICustomerBillToSnapshotReadPort = {
+    getBillToAddressSnapshot: async (organizationId, customerId) => {
+      if (organizationId !== DEFAULT_ORG || customerId !== CUSTOMER_ID) {
+        return null;
+      }
+      if (options.billTo === null) {
+        return null;
+      }
+      return options.billTo ?? DEFAULT_BILL_TO;
+    },
+  };
+
+  const uow = new InMemorySalesUnitOfWork(billToSnapshot, testShipCustomerTerms, clock);
   const ledger = uow.ledger;
   const readModel = uow.inventoryReadModel;
 
@@ -105,18 +121,6 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
       active: true,
     },
   ]);
-
-  const billToSnapshot: ICustomerBillToSnapshotReadPort = {
-    getBillToAddressSnapshot: async (organizationId, customerId) => {
-      if (organizationId !== DEFAULT_ORG || customerId !== CUSTOMER_ID) {
-        return null;
-      }
-      if (options.billTo === null) {
-        return null;
-      }
-      return options.billTo ?? DEFAULT_BILL_TO;
-    },
-  };
 
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
   const confirm = new ConfirmSalesOrderUseCase(uow);

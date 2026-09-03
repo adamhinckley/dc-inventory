@@ -8,7 +8,10 @@ import {
   type ISalesUnitOfWork,
 } from "@dc-inventory/sales";
 import { DrizzleCustomerRepository } from "@dc-inventory/customers";
-import { DrizzleInvoiceRepository } from "@dc-inventory/accounting";
+import {
+  CustomerTermsReadAdapter,
+  DrizzleInvoiceRepository,
+} from "@dc-inventory/accounting";
 import { DrizzleProductRepository } from "@dc-inventory/catalog";
 import type { StaffUserId } from "@dc-inventory/shared-kernel";
 import { SeedPlaybackClock } from "../adapters/seed-playback-clock.js";
@@ -41,11 +44,16 @@ export async function runReplayDemoOrdersOnDb(
     plan.salesOrders[0]?.plannedInstant ??
     plan.seedToday;
   const clock = new SeedPlaybackClock(firstInstant);
-  const postgresUow = new PostgresInventoryUnitOfWork(db, clock);
+  const customers = new DrizzleCustomerRepository(db as never);
+  const postgresUow = new PostgresInventoryUnitOfWork(
+    db,
+    clock,
+    permissiveDemoBillToSnapshotPort(),
+    new CustomerTermsReadAdapter(customers),
+  );
   const purchaseOrders = new DrizzlePurchaseOrderRepository(db as never);
   const suppliers = new DrizzleSupplierRepository(db as never);
   const salesOrders = new DrizzleSalesOrderRepository(db as never);
-  const customers = new DrizzleCustomerRepository(db as never);
   const invoices = new DrizzleInvoiceRepository(db as never);
   const products = new DrizzleProductRepository(db as never);
 

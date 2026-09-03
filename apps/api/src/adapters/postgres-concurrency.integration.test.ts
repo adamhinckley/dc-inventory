@@ -9,6 +9,7 @@ import { RecordPaymentUseCase } from "@dc-inventory/accounting";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PostgresAccountingUnitOfWork } from "./postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "./postgres-inventory-unit-of-work.js";
+import { testShipAccountingReadPorts } from "./test-ship-accounting-readports.js";
 import {
   createDatabaseConnection,
   type DatabaseConnection,
@@ -182,9 +183,15 @@ describeWithPostgres("Postgres concurrency control", () => {
 });
 
 function inventoryUnitOfWork(connection: DatabaseConnection) {
-  return new PostgresInventoryUnitOfWork(connection.db, {
-    now: () => new Date(TEST_INSTANT),
-  });
+  const shipPorts = testShipAccountingReadPorts();
+  return new PostgresInventoryUnitOfWork(
+    connection.db,
+    {
+      now: () => new Date(TEST_INSTANT),
+    },
+    shipPorts.billToSnapshot,
+    shipPorts.customerTerms,
+  );
 }
 
 function recordAdjustment(

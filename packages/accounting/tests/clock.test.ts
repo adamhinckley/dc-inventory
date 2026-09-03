@@ -8,6 +8,7 @@ import {
   GetInvoiceUseCase,
   RecordPaymentUseCase,
 } from "../src/index.js";
+import { testInvoiceSnapshotPorts } from "./support/invoice-snapshot-port-fixtures.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
@@ -18,10 +19,11 @@ const FIXED = new Date("2021-06-15T12:00:00.000Z");
 function harness() {
   const clock = new InMemoryClock(FIXED);
   const uow = new InMemoryAccountingUnitOfWork();
+  const ports = testInvoiceSnapshotPorts();
   return {
     clock,
     uow,
-    create: new CreateInvoiceUseCase(uow, clock),
+    create: new CreateInvoiceUseCase(uow, ports.billToSnapshot, ports.customerTerms, clock),
     get: new GetInvoiceUseCase(uow.invoices),
     record: new RecordPaymentUseCase(uow, clock),
     correct: new CorrectPaymentUseCase(uow, clock),

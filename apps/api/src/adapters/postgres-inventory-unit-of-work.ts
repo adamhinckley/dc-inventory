@@ -26,7 +26,6 @@ import {
 } from "@dc-inventory/sales";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
-import { testShipAccountingReadPorts } from "./test-ship-accounting-readports.js";
 import {
   INVENTORY_IDEMPOTENCY_CONSTRAINTS,
   retryAfterIdempotencyRace,
@@ -46,12 +45,11 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   constructor(
     private readonly db: AppDrizzle,
     private readonly clock: IClock,
-    billToSnapshot?: ICustomerBillToSnapshotReadPort,
-    customerTerms?: ICustomerTermsReadPort,
+    billToSnapshot: ICustomerBillToSnapshotReadPort,
+    customerTerms: ICustomerTermsReadPort,
   ) {
-    const shipPorts = testShipAccountingReadPorts();
-    this.billToSnapshot = billToSnapshot ?? shipPorts.billToSnapshot;
-    this.customerTerms = customerTerms ?? shipPorts.customerTerms;
+    this.billToSnapshot = billToSnapshot;
+    this.customerTerms = customerTerms;
     this.inventory = {
       ledger: null as unknown as DrizzleStockLedger,
       readModel: new DrizzleInventoryReadModel(
