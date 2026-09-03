@@ -1,27 +1,16 @@
 import {
+  compareStaffCatalogQtyAvailableToSell,
+  compareStaffCatalogQtySellState,
   projectStaffCatalogQtyFromSnapshot,
+  staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
 } from "@dc-inventory/inventory";
-import {
-  createDemandProjectionSqlEvaluator,
-  type DemandProjectionFixtureRow,
-  type DemandProjectionSqlEvaluation,
-} from "../../../../packages/inventory/tests/support/evaluate-demand-projection-sql.js";
+import { createDemandProjectionSqlEvaluator } from "../../../../packages/inventory/tests/support/evaluate-demand-projection-sql.js";
+import type { DemandProjectionFixtureRow } from "../../../../packages/inventory/tests/support/evaluate-demand-projection-sql.js";
 import { stockSnapshots } from "@dc-inventory/inventory/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
-
-function compareAvailableToSell(
-  a: number | null,
-  b: number | null,
-  sortOrder: "asc" | "desc",
-): number {
-  if (a === null && b === null) return 0;
-  if (a === null) return sortOrder === "desc" ? -1 : 1;
-  if (b === null) return sortOrder === "desc" ? 1 : -1;
-  return a - b;
-}
 
 const NOW = new Date("2026-09-03T12:00:00.000Z");
 
@@ -65,15 +54,22 @@ const ROWS: readonly DemandProjectionFixtureRow[] = [
 ];
 
 describe("CatalogInventoryListQuery demand projection sort keys", () => {
-  let evaluateSql: (
-    row: DemandProjectionFixtureRow,
+  let orderByAvailableToSell: (
+    rows: readonly DemandProjectionFixtureRow[],
     now: Date,
-  ) => Promise<DemandProjectionSqlEvaluation>;
+    sortOrder: "asc" | "desc",
+  ) => Promise<readonly (number | null)[]>;
+  let orderBySellState: (
+    rows: readonly DemandProjectionFixtureRow[],
+    now: Date,
+    sortOrder: "asc" | "desc",
+  ) => Promise<readonly boolean[]>;
   let closeEvaluator: () => Promise<void>;
 
   beforeAll(async () => {
     const evaluator = await createDemandProjectionSqlEvaluator();
-    evaluateSql = evaluator.evaluate.bind(evaluator);
+    orderByAvailableToSell = evaluator.orderByAvailableToSell.bind(evaluator);
+    orderBySellState = evaluator.orderBySellState.bind(evaluator);
     closeEvaluator = evaluator.close.bind(evaluator);
   });
 
@@ -81,7 +77,7 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
     await closeEvaluator();
   });
 
-  it("uses exported Inventory staff catalog projection SQL for catalog sort keys", () => {
+  it("uses bundled staff catalog projection SQL with ORDER BY fragments for catalog sort keys", () => {
     const db = drizzle.mock({ schema: { stockSnapshots } });
     const nowIso = NOW.toISOString();
     const columns = {
@@ -99,50 +95,48 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
         availableToSell: projection.availableToSell.as("available_to_sell"),
       })
       .from(stockSnapshots)
+      .orderBy(staffCatalogAvailableToSellOrderBySql(projection.availableToSell, "desc"))
       .toSQL();
     expect(selectSql).toContain('"inventory"."stock_snapshots"');
     expect(selectSql).toContain("CASE");
+    expect(selectSql).toContain("DESC NULLS FIRST");
   });
 
   it("matches cell values from the Inventory staff catalog projection for open and locked SKUs", async () => {
-    for (const row of ROWS) {
-      const cell = productQtyFromSnapshotRow(row, NOW);
-      const projected = projectStaffCatalogQtyFromSnapshot(row, NOW);
-      expect(cell).toEqual(projected);
-      const sortKeys = await evaluateSql(row, NOW);
-      expect(sortKeys.isLocked).toBe(cell.sellState === "locked");
-      expect(sortKeys.availableToSell).toBe(cell.availableToSell);
+    const evaluator = await createDemandProjectionSqlEvaluator();
+    try {
+      for (const row of ROWS) {
+        const cell = productQtyFromSnapshotRow(row, NOW);
+        const projected = projectStaffCatalogQtyFromSnapshot(row, NOW);
+        expect(cell).toEqual(projected);
+        const sortKeys = await evaluator.evaluate(row, NOW);
+        expect(sortKeys.isLocked).toBe(cell.sellState === "locked");
+        expect(sortKeys.availableToSell).toBe(cell.availableToSell);
+      }
+    } finally {
+      await evaluator.close();
     }
   });
 
-  it("orders availableToSell the same as displayed cell values", async () => {
+  it("orders availableToSell the same as displayed cell values via bundled ORDER BY", async () => {
     const cellValues = ROWS.map((row) => productQtyFromSnapshotRow(row, NOW));
-    const sqlValues = [];
-    for (const row of ROWS) {
-      sqlValues.push(await evaluateSql(row, NOW));
-    }
     const byCellAsc = [...cellValues].sort((a, b) =>
-      compareAvailableToSell(a.availableToSell, b.availableToSell, "asc"),
+      compareStaffCatalogQtyAvailableToSell(a, b, "asc"),
     );
-    const bySqlAsc = [...sqlValues].sort((a, b) =>
-      compareAvailableToSell(a.availableToSell, b.availableToSell, "asc"),
+    const byCellDesc = [...cellValues].sort((a, b) =>
+      compareStaffCatalogQtyAvailableToSell(a, b, "desc"),
     );
-    expect(bySqlAsc.map((row) => row.availableToSell)).toEqual(
-      byCellAsc.map((row) => row.availableToSell),
-    );
+    const bySqlAsc = await orderByAvailableToSell(ROWS, NOW, "asc");
+    const bySqlDesc = await orderByAvailableToSell(ROWS, NOW, "desc");
+    expect(bySqlAsc).toEqual(byCellAsc.map((row) => row.availableToSell));
+    expect(bySqlDesc).toEqual(byCellDesc.map((row) => row.availableToSell));
+    expect(bySqlDesc[0]).toBeNull();
   });
 
-  it("orders sellState the same as displayed cell values", async () => {
+  it("orders sellState the same as displayed cell values via bundled ORDER BY", async () => {
     const cellValues = ROWS.map((row) => productQtyFromSnapshotRow(row, NOW));
-    const sqlValues = [];
-    for (const row of ROWS) {
-      sqlValues.push(await evaluateSql(row, NOW));
-    }
-    const rank = (sellState: "open" | "locked") => (sellState === "open" ? 0 : 1);
-    const byCellAsc = [...cellValues].sort((a, b) => rank(a.sellState) - rank(b.sellState));
-    const bySqlAsc = [...sqlValues].sort((a, b) => Number(a.isLocked) - Number(b.isLocked));
-    expect(bySqlAsc.map((row) => row.isLocked)).toEqual(
-      byCellAsc.map((row) => row.sellState === "locked"),
-    );
+    const byCellAsc = [...cellValues].sort(compareStaffCatalogQtySellState);
+    const bySqlAsc = await orderBySellState(ROWS, NOW, "asc");
+    expect(bySqlAsc).toEqual(byCellAsc.map((row) => row.sellState === "locked"));
   });
 });

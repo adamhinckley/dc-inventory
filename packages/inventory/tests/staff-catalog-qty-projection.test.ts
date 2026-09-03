@@ -6,16 +6,12 @@ import {
   type StaffCatalogQtySnapshotRow,
 } from "../src/domain/demand-model.js";
 import {
-  availableToSellProjectionSql,
-  isLockedForSellSql,
+  staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
 } from "../src/persistence/demand-projection-sql.js";
 import { stockSnapshots } from "../src/persistence/schema.js";
 import { drizzle } from "drizzle-orm/postgres-js";
-import {
-  createDemandProjectionSqlEvaluator,
-  type DemandProjectionSqlEvaluation,
-} from "./support/evaluate-demand-projection-sql.js";
+import { createDemandProjectionSqlEvaluator } from "./support/evaluate-demand-projection-sql.js";
 
 const NOW = new Date("2026-09-03T12:00:00.000Z");
 
@@ -59,7 +55,7 @@ const CASES: readonly StaffCatalogQtySnapshotRow[] = [
 ];
 
 describe("staff catalog qty projection surface", () => {
-  it("bundles SQL sort fragments for catalog list demand projection", () => {
+  it("builds executable ORDER BY from bundled staff catalog projection SQL", () => {
     const db = drizzle.mock({ schema: { stockSnapshots } });
     const nowIso = NOW.toISOString();
     const columns = {
@@ -70,33 +66,25 @@ describe("staff catalog qty projection surface", () => {
       windowOpensAt: stockSnapshots.windowOpensAt,
       windowClosesAt: stockSnapshots.windowClosesAt,
     };
-    const bundled = staffCatalogDemandProjectionSql(columns, nowIso);
-    const directLocked = isLockedForSellSql(columns, nowIso);
-    const directAvailableToSell = availableToSellProjectionSql(columns, nowIso);
-    const { sql: bundledSql } = db
+    const projection = staffCatalogDemandProjectionSql(columns, nowIso);
+    const { sql: selectSql } = db
       .select({
-        isLocked: bundled.isLockedForSell.as("is_locked"),
-        availableToSell: bundled.availableToSell.as("available_to_sell"),
+        availableToSell: projection.availableToSell.as("available_to_sell"),
       })
       .from(stockSnapshots)
+      .orderBy(staffCatalogAvailableToSellOrderBySql(projection.availableToSell, "desc"))
       .toSQL();
-    const { sql: directSql } = db
-      .select({
-        isLocked: directLocked.as("is_locked"),
-        availableToSell: directAvailableToSell.as("available_to_sell"),
-      })
-      .from(stockSnapshots)
-      .toSQL();
-    expect(bundledSql).toBe(directSql);
+    expect(selectSql).toContain("CASE");
+    expect(selectSql).toContain("DESC NULLS FIRST");
   });
 
   it.each(CASES.map((row, index) => [index, row] as const))(
-    "projects catalog qty cells in lockstep with SQL sort keys for case %i",
+    "projects catalog qty cells in lockstep with bundled SQL sort keys for case %i",
     async (_index, row) => {
       const evaluator = await createDemandProjectionSqlEvaluator();
       try {
         const cell = projectStaffCatalogQtyFromSnapshot(row, NOW);
-        const sql: DemandProjectionSqlEvaluation = await evaluator.evaluate(row, NOW);
+        const sql = await evaluator.evaluate(row, NOW);
         expect(sql.isLocked).toBe(cell.sellState === "locked");
         expect(sql.availableToSell).toBe(cell.availableToSell);
       } finally {
@@ -105,46 +93,43 @@ describe("staff catalog qty projection surface", () => {
     },
   );
 
-  it("sorts availableToSell with the same null placement as SQL ascending", async () => {
+  it("orders availableToSell ascending via bundled ORDER BY on PGLite", async () => {
     const evaluator = await createDemandProjectionSqlEvaluator();
     try {
       const cells = CASES.map((row) => projectStaffCatalogQtyFromSnapshot(row, NOW));
-      const sqlValues = [];
-      for (const row of CASES) {
-        sqlValues.push(await evaluator.evaluate(row, NOW));
-      }
       const byCellAsc = [...cells].sort((a, b) =>
         compareStaffCatalogQtyAvailableToSell(a, b, "asc"),
       );
-      const bySqlAsc = [...sqlValues].sort((a, b) => {
-        const aValue = a.availableToSell;
-        const bValue = b.availableToSell;
-        if (aValue === null && bValue === null) return 0;
-        if (aValue === null) return 1;
-        if (bValue === null) return -1;
-        return aValue - bValue;
-      });
-      expect(bySqlAsc.map((row) => row.availableToSell)).toEqual(
-        byCellAsc.map((row) => row.availableToSell),
-      );
+      const bySqlAsc = await evaluator.orderByAvailableToSell(CASES, NOW, "asc");
+      expect(bySqlAsc).toEqual(byCellAsc.map((row) => row.availableToSell));
+      expect(bySqlAsc.at(-1)).toBeNull();
     } finally {
       await evaluator.close();
     }
   });
 
-  it("sorts sellState with the same open-before-locked order as SQL ascending", async () => {
+  it("orders availableToSell descending with NULLS FIRST via bundled ORDER BY on PGLite", async () => {
     const evaluator = await createDemandProjectionSqlEvaluator();
     try {
       const cells = CASES.map((row) => projectStaffCatalogQtyFromSnapshot(row, NOW));
-      const sqlValues = [];
-      for (const row of CASES) {
-        sqlValues.push(await evaluator.evaluate(row, NOW));
-      }
-      const byCellAsc = [...cells].sort(compareStaffCatalogQtySellState);
-      const bySqlAsc = [...sqlValues].sort((a, b) => Number(a.isLocked) - Number(b.isLocked));
-      expect(bySqlAsc.map((row) => row.isLocked)).toEqual(
-        byCellAsc.map((row) => row.sellState === "locked"),
+      const byCellDesc = [...cells].sort((a, b) =>
+        compareStaffCatalogQtyAvailableToSell(a, b, "desc"),
       );
+      const bySqlDesc = await evaluator.orderByAvailableToSell(CASES, NOW, "desc");
+      expect(bySqlDesc).toEqual(byCellDesc.map((row) => row.availableToSell));
+      expect(bySqlDesc[0]).toBeNull();
+    } finally {
+      await evaluator.close();
+    }
+  });
+
+  it("orders sellState via bundled projection ORDER BY on PGLite", async () => {
+    const evaluator = await createDemandProjectionSqlEvaluator();
+    try {
+      const cells = CASES.map((row) => projectStaffCatalogQtyFromSnapshot(row, NOW));
+      const byCellAsc = [...cells].sort(compareStaffCatalogQtySellState);
+      const bySqlAsc = await evaluator.orderBySellState(CASES, NOW, "asc");
+      expect(bySqlAsc).toEqual(byCellAsc.map((row) => row.sellState === "locked"));
     } finally {
       await evaluator.close();
     }

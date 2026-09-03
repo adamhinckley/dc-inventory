@@ -1,9 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { boolean, integer, pgTable, timestamp } from "drizzle-orm/pg-core";
 import {
-  availableToSellProjectionSql,
-  isLockedForSellSql,
+  staffCatalogAvailableToSellOrderBySql,
+  staffCatalogDemandProjectionSql,
   type DemandProjectionSnapshotColumns,
 } from "../../src/persistence/demand-projection-sql.js";
 
@@ -44,20 +45,85 @@ const projectionColumns = {
 type DemandProjectionSqlDb = {
   select: (fields: Record<string, unknown>) => {
     from: (table: unknown) => {
+      orderBy: (...order: unknown[]) => {
+        toSQL: () => { sql: string; params: unknown[] };
+      };
       toSQL: () => { sql: string; params: unknown[] };
     };
   };
 };
 
+function staffCatalogProjection(nowIso: string) {
+  return staffCatalogDemandProjectionSql(projectionColumns, nowIso);
+}
+
 function buildProjectionQuery(db: DemandProjectionSqlDb, nowIso: string) {
+  const projection = staffCatalogProjection(nowIso);
   return db
     .select({
-      isLocked: isLockedForSellSql(projectionColumns, nowIso).as("is_locked"),
-      availableToSell: availableToSellProjectionSql(projectionColumns, nowIso).as(
-        "available_to_sell",
-      ),
+      isLocked: projection.isLockedForSell.as("is_locked"),
+      availableToSell: projection.availableToSell.as("available_to_sell"),
     })
     .from(demandProjectionFixture);
+}
+
+function buildAvailableToSellOrderByQuery(
+  db: DemandProjectionSqlDb,
+  nowIso: string,
+  sortOrder: "asc" | "desc",
+) {
+  const projection = staffCatalogProjection(nowIso);
+  return db
+    .select({
+      id: demandProjectionFixture.id,
+      availableToSell: projection.availableToSell.as("available_to_sell"),
+    })
+    .from(demandProjectionFixture)
+    .orderBy(staffCatalogAvailableToSellOrderBySql(projection.availableToSell, sortOrder));
+}
+
+function buildSellStateOrderByQuery(
+  db: DemandProjectionSqlDb,
+  nowIso: string,
+  sortOrder: "asc" | "desc",
+) {
+  const projection = staffCatalogProjection(nowIso);
+  const orderBy =
+    sortOrder === "desc"
+      ? sql`${projection.isLockedForSell} DESC`
+      : sql`${projection.isLockedForSell} ASC`;
+  return db
+    .select({
+      id: demandProjectionFixture.id,
+      isLocked: projection.isLockedForSell.as("is_locked"),
+    })
+    .from(demandProjectionFixture)
+    .orderBy(orderBy);
+}
+
+async function seedFixtureRows(
+  client: PGlite,
+  rows: readonly DemandProjectionFixtureRow[],
+): Promise<void> {
+  await client.exec("DELETE FROM demand_projection_fixture");
+  for (const [index, row] of rows.entries()) {
+    await client.query(
+      `
+        INSERT INTO demand_projection_fixture
+          (id, on_hand, on_order, committed, sticky_locked, window_opens_at, window_closes_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `,
+      [
+        index + 1,
+        row.onHand,
+        row.onOrder,
+        row.committed,
+        row.stickyLocked,
+        row.windowOpensAt,
+        row.windowClosesAt,
+      ],
+    );
+  }
 }
 
 export async function createDemandProjectionSqlEvaluator() {
@@ -82,29 +148,7 @@ export async function createDemandProjectionSqlEvaluator() {
       row: DemandProjectionFixtureRow,
       now: Date,
     ): Promise<DemandProjectionSqlEvaluation> {
-      await client.query(
-        `
-          INSERT INTO demand_projection_fixture
-            (id, on_hand, on_order, committed, sticky_locked, window_opens_at, window_closes_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (id) DO UPDATE SET
-            on_hand = EXCLUDED.on_hand,
-            on_order = EXCLUDED.on_order,
-            committed = EXCLUDED.committed,
-            sticky_locked = EXCLUDED.sticky_locked,
-            window_opens_at = EXCLUDED.window_opens_at,
-            window_closes_at = EXCLUDED.window_closes_at
-        `,
-        [
-          1,
-          row.onHand,
-          row.onOrder,
-          row.committed,
-          row.stickyLocked,
-          row.windowOpensAt,
-          row.windowClosesAt,
-        ],
-      );
+      await seedFixtureRows(client, [row]);
       const nowIso = now.toISOString();
       const { sql: selectSql, params } = buildProjectionQuery(db, nowIso).toSQL();
       const result = await client.query<{
@@ -119,6 +163,36 @@ export async function createDemandProjectionSqlEvaluator() {
         isLocked: evaluated.is_locked,
         availableToSell: evaluated.available_to_sell,
       };
+    },
+    async orderByAvailableToSell(
+      rows: readonly DemandProjectionFixtureRow[],
+      now: Date,
+      sortOrder: "asc" | "desc",
+    ): Promise<readonly (number | null)[]> {
+      await seedFixtureRows(client, rows);
+      const nowIso = now.toISOString();
+      const { sql: selectSql, params } = buildAvailableToSellOrderByQuery(
+        db,
+        nowIso,
+        sortOrder,
+      ).toSQL();
+      const result = await client.query<{
+        available_to_sell: number | null;
+      }>(selectSql, params);
+      return result.rows.map((row) => row.available_to_sell);
+    },
+    async orderBySellState(
+      rows: readonly DemandProjectionFixtureRow[],
+      now: Date,
+      sortOrder: "asc" | "desc",
+    ): Promise<readonly boolean[]> {
+      await seedFixtureRows(client, rows);
+      const nowIso = now.toISOString();
+      const { sql: selectSql, params } = buildSellStateOrderByQuery(db, nowIso, sortOrder).toSQL();
+      const result = await client.query<{
+        is_locked: boolean;
+      }>(selectSql, params);
+      return result.rows.map((row) => row.is_locked);
     },
     async close(): Promise<void> {
       await client.close();

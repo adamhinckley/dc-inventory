@@ -201,7 +201,7 @@ export function compareStaffCatalogQtyAvailableToSell(
   if (bValue === null) {
     return sortOrder === "desc" ? 1 : -1;
   }
-  return aValue - bValue;
+  return sortOrder === "desc" ? bValue - aValue : aValue - bValue;
 }
 
 export function compareStaffCatalogQtySellState(

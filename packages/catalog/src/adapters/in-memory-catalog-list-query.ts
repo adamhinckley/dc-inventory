@@ -42,6 +42,9 @@ function compareRows(a: CatalogListRow, b: CatalogListRow, query: CatalogListQue
     comparison = a.createdAt.getTime() - b.createdAt.getTime();
   }
   if (comparison !== 0) {
+    if (query.sortBy === "availableToSell") {
+      return comparison;
+    }
     return query.sortOrder === "desc" ? -comparison : comparison;
   }
   return a.product.id.localeCompare(b.product.id);
