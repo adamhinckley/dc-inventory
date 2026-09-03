@@ -32,10 +32,10 @@ Implement invoicing from orders and payment application / AR **only against owne
 ## Forbidden
 
 - General ledger / AP / inventory asset valuation (deferred)
-- Tax engine SDKs or `price * rate` (Tax context only)
+- Tax engine SDKs, tax lines, or `price * rate`
 - Changing Sales confirm/allocate semantics
 - Softening money tests
 
 ## Done when
 
-Ticketed tests green; Money stays integer/minor-units as specified; invoice tax is frozen from a Tax **commit**; PR cites tests and risks for owner review.
+Ticketed tests green; Money stays integer/minor-units as specified; invoice totals are merchandise only (no tax lines); PR cites tests and risks for owner review.

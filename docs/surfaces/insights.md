@@ -193,7 +193,7 @@ Shop **browse → cart → checkout** conversion, PDP views, and heatmaps need p
 | True inventory asset / P&L / EBITDA | No general ledger, no inventory valuation policy |
 | Lot/serial aging, expiry, FIFO layers | Ledger is qty + type, not lots |
 | Pick accuracy, lines per labor hour | No picker identity or mispick event |
-| Tax collected vs exempt share | Tax engine later |
+| Tax collected vs exempt share | No sales tax in v1 (reseller-only; exemption is paperwork, not a calculator) |
 | Return rate, refunds, credit-memo leakage | RMA / credit memo not v1 unless the business requires them |
 | Multi-location ATP and transfer lag | One warehouse in v1 |
 | Forecast vs actual, safety-stock optimization | No demand-planning model (min/max is the policy) |

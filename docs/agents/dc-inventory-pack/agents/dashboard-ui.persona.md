@@ -36,7 +36,7 @@ Overlay surfaces: §13. Tooltip, popover, menu, and dialog cards use `.overlay`.
 - New report endpoints without a ticket that owns the API package
 - Charting raw list pages instead of report series
 - Hand-written `fetch`
-- Inventory/Accounting/Tax domain edits
+- Inventory/Accounting domain edits
 
 ## Done when
 

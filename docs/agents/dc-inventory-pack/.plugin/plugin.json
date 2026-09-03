@@ -3,7 +3,7 @@
   "id": "com.dcinventory.build-agents",
   "name": "DC Inventory Build Agents",
   "version": "0.1.0",
-  "description": "Cost-tiered coding agents for building the dc-inventory modular monolith (Catalog/Customers cheap; Identity/Inventory/Tax/Accounting strong).",
+  "description": "Cost-tiered coding agents for building the dc-inventory modular monolith (Catalog/Customers cheap; Identity/Inventory/Accounting strong; Tax persona is a no-engine guardrail).",
   "author": "dc-inventory",
   "license": "UNLICENSED",
   "homepage": "https://github.com/adamhinckley/dc-inventory",

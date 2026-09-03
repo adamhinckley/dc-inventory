@@ -20,10 +20,10 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 3. **Never** store or mutate `available` qty as source of truth — Inventory movements only.
 4. Controllers parse, call one use case, map response — no business logic in HTTP.
 5. Frontends use Orval hooks only — no hand-written API `fetch`.
-6. Do not add Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, extra observability vendors, LaunchDarkly as a required SDK, or a tax SDK outside `packages/tax/adapters`.
+6. Do not add Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, extra observability vendors, LaunchDarkly as a required SDK, or a tax SDK.
 7. Do not mix software subscription payments into Accounting. Do not invent `FeatureName`s. Flags never skip ATP or `customerId` binding.
 8. Do not implement the operator platform in this repo. `IOperatorPlatform` is fail-soft; do not invent message kinds or require that URL at boot.
-9. Tax: never `price * rate`. Read `docs/tax.md`. Fail closed if the engine is down.
+9. **Tax:** this company does not collect sales tax. Read `docs/tax.md`. Do not add `ITaxCalculator`, quote/commit, tax lines, or `price * rate`.
 10. **Linear:** all projects, issues, and sub-initiatives created from Cursor belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview). Attach new projects to that initiative; nest new sub-initiatives under it; put issues in a project already on it. See [`docs/linear.md`](../../linear.md).
 11. Stop when the ticket's unit tests are green. Do not expand scope.
 

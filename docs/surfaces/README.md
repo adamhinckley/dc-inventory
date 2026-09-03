@@ -49,7 +49,7 @@ What a staff user and a wholesale client can both see (different sessions; the c
 | PO workspace UI, cube/container fill, CSV export screens |
 | Product variants as a separate model |
 | General ledger, AP, inventory valuation |
-| Tax quotes (need ship-to, origin, exemption first) |
+| Sales tax engine or invoice tax lines (v1 does not collect sales tax) |
 | Credit memos, RMAs, blanket POs unless the business requires them day one |
 | Parsing supplier PDFs into PO lines |
 | Second wholesale company signup on the same site |

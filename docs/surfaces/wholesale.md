@@ -52,4 +52,4 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`dashboard.md`](.
 | Stock adjustments |
 | Line commission |
 | Consumer storefront flag (not a v1 shop) |
-| Sales tax engine (later; shop must not compute tax in the browser) |
+| Sales tax lines or engine (v1 does not collect sales tax; reseller Tax ID and exemption files are customer paperwork only) |
