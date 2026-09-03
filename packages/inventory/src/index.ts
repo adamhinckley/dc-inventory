@@ -68,6 +68,16 @@ export {
   type MovementRefType,
   type MovementType,
 } from "./domain/movement.js";
+export {
+  allocateReceiveCover,
+  gateCommittedQuantity,
+  planConfirmCoverAllocation,
+  planReceiveCoverAllocation,
+  recordCommittedWithCover,
+  type CoverAllocatedCommand,
+  type CoverPolicyReadState,
+  type CoverPolicyRecorder,
+} from "./domain/cover-policy.js";
 export { netOrderCoverQuantity } from "./domain/order-cover.js";
 export type {
   AllocatedCommand,

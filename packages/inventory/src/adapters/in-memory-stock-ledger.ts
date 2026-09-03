@@ -2,11 +2,10 @@ import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory
 import type { Sku } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import {
-  computeConfirmCoverQuantity,
-  computeEffectiveSellState,
-  computeLockedAvailableToSell,
-  computeReceiveCoverQuantity,
-  coverIdempotencyKey,
+  allocateReceiveCover,
+  recordCommittedWithCover,
+} from "../domain/cover-policy.js";
+import {
   applySetSellWindow,
   isSellWindowInvalid,
   observeWindowClose,
@@ -60,7 +59,7 @@ export class InMemoryStockLedger implements IStockLedger {
   }
 
   recordGoodsReceived(command: RecordGoodsReceivedCommand): Promise<StockCommandResult> {
-    return this.recordGoodsReceivedWithCover(command);
+    return this.runGoodsReceivedWithCover(command);
   }
 
   recordInboundCancelled(command: RecordInboundCancelledCommand): Promise<StockCommandResult> {
@@ -92,7 +91,7 @@ export class InMemoryStockLedger implements IStockLedger {
   }
 
   recordCommitted(command: RecordCommittedCommand): Promise<StockCommandResult> {
-    return this.recordCommittedWithCover(command);
+    return this.runCommittedWithCover(command);
   }
 
   recordDecommitted(command: RecordDecommittedCommand): Promise<StockCommandResult> {
@@ -139,88 +138,51 @@ export class InMemoryStockLedger implements IStockLedger {
     return { ok: true };
   }
 
-  private async recordCommittedWithCover(
+  private async runCommittedWithCover(
     command: RecordCommittedCommand,
   ): Promise<StockCommandResult> {
     const organizationId = requireOrganizationId(command.organizationId);
     const locationId = command.locationId ?? LocationId.DEFAULT;
-
-    if (!isPositiveIntegerQuantity(command.quantity)) {
-      return { ok: false, reason: "invalid_quantity" };
-    }
-
     const now = this.clock ? this.clock.now() : new Date();
+
     const demandBefore = this.readModel.getDemandStateSync(command.sku, locationId, organizationId);
     const observedDemand = observeWindowClose(demandBefore, now);
     if (observedDemand.stickyLocked !== demandBefore.stickyLocked) {
       this.readModel.setDemandState(command.sku, locationId, observedDemand, organizationId);
     }
 
-    const figures = this.readModel.getSnapshotSync(command.sku, locationId, organizationId);
-    const sellState = computeEffectiveSellState(observedDemand, now);
-    if (sellState === "locked") {
-      const availableToSell = computeLockedAvailableToSell(
-        figures.onHand,
-        figures.onOrder,
-        observedDemand.committed,
-      );
-      if (command.quantity > availableToSell) {
-        return { ok: false, reason: "insufficient_available_to_sell" };
-      }
-    }
-
-    const committedResult = await this.record("Committed", command);
-    if (!committedResult.ok) {
-      return committedResult;
-    }
-
-    const afterCommit = this.readModel.getSnapshotSync(command.sku, locationId, organizationId);
-    const coverQty = computeConfirmCoverQuantity(command.quantity, afterCommit);
-    if (coverQty > 0) {
-      const coverResult = await this.record("Allocated", {
-        organizationId,
-        idempotencyKey: coverIdempotencyKey(command.idempotencyKey),
-        sku: command.sku,
-        quantity: coverQty,
-        locationId,
-        refType: "sales_order",
-        refId: command.refId,
-      });
-      if (!coverResult.ok) {
-        return coverResult;
-      }
-    }
-
-    return committedResult;
+    return recordCommittedWithCover(command, {
+      readState: () => ({
+        figures: this.readModel.getSnapshotSync(command.sku, locationId, organizationId),
+        demand: this.readModel.getDemandStateSync(command.sku, locationId, organizationId),
+        now,
+      }),
+      record: (movementType, coverCommand) => this.record(movementType, coverCommand),
+    });
   }
 
-  private async recordGoodsReceivedWithCover(
+  private async runGoodsReceivedWithCover(
     command: RecordGoodsReceivedCommand,
   ): Promise<StockCommandResult> {
     const organizationId = requireOrganizationId(command.organizationId);
     const locationId = command.locationId ?? LocationId.DEFAULT;
+    const now = this.clock ? this.clock.now() : new Date();
 
     const receiveResult = await this.recordWithDemandObservation("GoodsReceived", command);
     if (!receiveResult.ok) {
       return receiveResult;
     }
 
-    const afterReceive = this.readModel.getSnapshotSync(command.sku, locationId, organizationId);
-    const demand = this.readModel.getDemandStateSync(command.sku, locationId, organizationId);
-    const coverQty = computeReceiveCoverQuantity(command.quantity, afterReceive, demand.committed);
-    if (coverQty > 0) {
-      const coverResult = await this.record("Allocated", {
-        organizationId,
-        idempotencyKey: coverIdempotencyKey(command.idempotencyKey),
-        sku: command.sku,
-        quantity: coverQty,
-        locationId,
-        refType: "sales_order",
-        refId: command.refId,
-      });
-      if (!coverResult.ok) {
-        return coverResult;
-      }
+    const coverResult = await allocateReceiveCover(command, command.quantity, {
+      readState: () => ({
+        figures: this.readModel.getSnapshotSync(command.sku, locationId, organizationId),
+        demand: this.readModel.getDemandStateSync(command.sku, locationId, organizationId),
+        now,
+      }),
+      record: (movementType, coverCommand) => this.record(movementType, coverCommand),
+    });
+    if (coverResult !== null && !coverResult.ok) {
+      return coverResult;
     }
 
     return receiveResult;
