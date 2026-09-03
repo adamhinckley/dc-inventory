@@ -48,6 +48,7 @@ import {
 import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
+  permissiveDemoBillToSnapshotPort,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
 import { runReplayDemoOrders } from "./replay-demo-orders.js";
@@ -143,6 +144,7 @@ describe("replay sales orders (in-memory)", () => {
         customers: staticPorts.customers,
         products: staticPorts.products,
         invoices: uow.invoices,
+        billToSnapshot: permissiveDemoBillToSnapshotPort(),
       },
       {
         plan,

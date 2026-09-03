@@ -16,6 +16,10 @@ export { ListSalesOrdersUseCase } from "./application/list-sales-orders.js";
 export { ShipSalesOrderUseCase } from "./application/ship-sales-order.js";
 export { formatDocumentNumber } from "./domain/document-number.js";
 export type {
+  BillToAddressSnapshot,
+  ICustomerBillToSnapshotReadPort,
+} from "./domain/ports/customer-bill-to-snapshot-read.js";
+export type {
   CommittedCustomerName,
   CommittedCustomerNamesQuery,
   ICommittedCustomerNamesListQuery,

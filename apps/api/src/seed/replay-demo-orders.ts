@@ -13,6 +13,7 @@ import {
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
   ShipSalesOrderUseCase,
+  type ICustomerBillToSnapshotReadPort,
   type ISalesUnitOfWork,
 } from "@dc-inventory/sales";
 import type { SalesOrder } from "@dc-inventory/sales";
@@ -65,6 +66,7 @@ export type ReplayDemoOrdersPorts = {
   customers: Pick<ICustomerRepository, "findById">;
   products: Pick<IProductRepository, "findBySku" | "findById">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
+  billToSnapshot: ICustomerBillToSnapshotReadPort;
 };
 
 export type ReplayDemoOrdersInput = {
@@ -231,7 +233,7 @@ export async function runReplayDemoOrders(
     ports.clock,
   );
   const confirmSo = new ConfirmSalesOrderUseCase(ports.sales);
-  const shipSo = new ShipSalesOrderUseCase(ports.sales);
+  const shipSo = new ShipSalesOrderUseCase(ports.sales, ports.billToSnapshot);
 
   const purchaseOrdersByKey = new Map<string, PurchaseOrder>();
   const salesOrdersByKey = new Map<string, SalesOrder>();

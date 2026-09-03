@@ -15,7 +15,7 @@ import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
-import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { InMemoryCustomerRepository, InMemoryBillToRepository } from "@dc-inventory/customers";
 import { InMemoryProductRepository } from "@dc-inventory/catalog";
 import { ProductId } from "@dc-inventory/shared-kernel";
 
@@ -37,6 +37,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
+  const billToRepo = new InMemoryBillToRepository();
   const productRepo = new InMemoryProductRepository();
   const unitOfWork = new InMemoryUnitOfWork();
 
@@ -47,6 +48,15 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
     createdAt: new Date("2026-08-24T03:30:00.000Z"),
+  });
+  await billToRepo.save({
+    customerId: CUSTOMER_ID,
+    line1: "100 Main St",
+    line2: null,
+    city: "Portland",
+    region: "OR",
+    postal: "97201",
+    country: "US",
   });
   await productRepo.save({
     id: PRODUCT_ID,
@@ -80,6 +90,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
     organizationRepo: organizations,
     unitOfWork,
     customerRepo,
+    billToRepo,
     productRepo,
     salesOrderRepo: unitOfWork.salesOrders,
   });

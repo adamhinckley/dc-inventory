@@ -1,5 +1,5 @@
 import { CreateProductUseCase, InMemoryProductRepository } from "@dc-inventory/catalog";
-import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { InMemoryBillToRepository, InMemoryCustomerRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
@@ -56,6 +56,7 @@ async function startPhase2ManualFlowApp() {
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
+  const billToRepo = new InMemoryBillToRepository();
   const productRepo = new InMemoryProductRepository();
   const unitOfWork = new InMemoryUnitOfWork();
 
@@ -73,6 +74,15 @@ async function startPhase2ManualFlowApp() {
     creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
     terms: "NET30",
     createdAt: new Date("2026-08-24T03:30:00.000Z"),
+  });
+  await billToRepo.save({
+    customerId: CUSTOMER_ID,
+    line1: "100 Main St",
+    line2: null,
+    city: "Portland",
+    region: "OR",
+    postal: "97201",
+    country: "US",
   });
 
   await staffUsers.save({
@@ -119,6 +129,7 @@ async function startPhase2ManualFlowApp() {
     organizationRepo: organizations,
     unitOfWork,
     customerRepo,
+    billToRepo,
     productRepo,
     purchaseOrderRepo: unitOfWork.purchaseOrders,
     supplierRepo: unitOfWork.suppliers,

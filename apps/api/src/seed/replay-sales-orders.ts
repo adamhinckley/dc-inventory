@@ -5,6 +5,7 @@ import {
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
   ShipSalesOrderUseCase,
+  type ICustomerBillToSnapshotReadPort,
   type IClock,
   type ICustomerLookupPort,
   type ISalesUnitOfWork,
@@ -36,6 +37,7 @@ export type ReplaySalesOrdersPorts = {
   customers: Pick<ICustomerRepository, "findById">;
   products: Pick<IProductRepository, "findBySku" | "findById">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
+  billToSnapshot: ICustomerBillToSnapshotReadPort;
 };
 
 export type ReplaySalesOrdersInput = {
@@ -95,6 +97,20 @@ export function demoCustomerLookup(
   };
 }
 
+/** Until demo seed writes bill_tos rows, replay assumes a bill-to exists for every customer. */
+export function permissiveDemoBillToSnapshotPort(): ICustomerBillToSnapshotReadPort {
+  return {
+    getBillToAddressSnapshot: async () => ({
+      line1: "1 Demo Way",
+      line2: null,
+      city: "Portland",
+      region: "OR",
+      postal: "97201",
+      country: "US",
+    }),
+  };
+}
+
 export async function runReplaySalesOrders(
   ports: ReplaySalesOrdersPorts,
   input: ReplaySalesOrdersInput,
@@ -106,7 +122,7 @@ export async function runReplaySalesOrders(
     ports.clock,
   );
   const confirm = new ConfirmSalesOrderUseCase(ports.uow);
-  const ship = new ShipSalesOrderUseCase(ports.uow);
+  const ship = new ShipSalesOrderUseCase(ports.uow, ports.billToSnapshot);
   const shipInstantBySalesOrderKey = new Map(
     input.plan.shippedInvoices.map((row) => [row.salesOrderKey, row.plannedInstant]),
   );

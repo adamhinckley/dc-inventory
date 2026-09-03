@@ -20,7 +20,19 @@ import {
   CreateSalesOrderUseCase,
   GetSalesOrderUseCase,
   ShipSalesOrderUseCase,
+  type ICustomerBillToSnapshotReadPort,
 } from "../src/index.js";
+
+const billToSnapshot: ICustomerBillToSnapshotReadPort = {
+  getBillToAddressSnapshot: async () => ({
+    line1: "100 Main St",
+    line2: null,
+    city: "Portland",
+    region: "OR",
+    postal: "97201",
+    country: "US",
+  }),
+};
 
 const SKU = Sku.parse("SO-CLOCK-SKU");
 const PRODUCT_ID = ProductId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
@@ -54,7 +66,7 @@ async function harness() {
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog, clock),
     get: new GetSalesOrderUseCase(uow.salesOrders),
     confirm: new ConfirmSalesOrderUseCase(uow),
-    ship: new ShipSalesOrderUseCase(uow),
+    ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
   };

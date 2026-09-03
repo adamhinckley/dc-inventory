@@ -321,7 +321,8 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           result.reason === "illegal_transition" ||
           result.reason === "idempotency_conflict" ||
           result.reason === "inventory_conflict" ||
-          result.reason === "accounting_invalid"
+          result.reason === "accounting_invalid" ||
+          result.reason === "bill_to_missing"
         ) {
           return sendConflict(reply);
         }
