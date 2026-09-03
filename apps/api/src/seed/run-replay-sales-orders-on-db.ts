@@ -13,6 +13,7 @@ import type { DemoBookPlan } from "./planner/types.js";
 import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
+  permissiveDemoBillToSnapshotPort,
   productNameBySkuFromPlan,
   runReplaySalesOrders,
   taxCategoryBySkuFromPlan,
@@ -52,7 +53,14 @@ export async function runReplaySalesOrdersOnDb(
   };
 
   return runReplaySalesOrders(
-    { uow: salesUow, clock, customers, products, invoices },
+    {
+      uow: salesUow,
+      clock,
+      customers,
+      products,
+      invoices,
+      billToSnapshot: permissiveDemoBillToSnapshotPort(),
+    },
     {
       plan,
       customerIdByKey: input.customerIdByKey,

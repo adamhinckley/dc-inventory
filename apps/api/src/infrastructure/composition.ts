@@ -56,7 +56,6 @@ import {
   type CustomersDrizzle,
   type IContactRepository,
   type ICustomerAccountStatusReadPort,
-  type ICustomerBillToSnapshotReadPort,
   type ICustomerRepository,
   type IBillToRepository,
   type IExemptionCertificateRepository,
@@ -162,6 +161,7 @@ import {
   ListSalesOrdersUseCase,
   ShipSalesOrderUseCase,
   type ICatalogProductPort,
+  type ICustomerBillToSnapshotReadPort,
   type ICustomerLookupPort,
   type ISalesOrderRepository,
   type SalesDrizzle,
@@ -522,6 +522,7 @@ function salesServices(
   catalogProduct: ICatalogProductPort,
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/sales").IClock,
+  billToSnapshot: ICustomerBillToSnapshotReadPort,
 ): SalesHttpServices {
   return {
     listSalesOrders: new ListSalesOrdersUseCase(salesOrderRepo),
@@ -534,7 +535,7 @@ function salesServices(
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
     confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales),
     cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
-    shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales),
+    shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot),
   };
 }
 
@@ -751,6 +752,8 @@ export function composeAppServices(
         ? inMemoryUow.invoices
         : defaultInMemoryAccountingUow.invoices);
 
+  const readPorts = customerReadPorts(customerRepo, billToRepo);
+
   return {
     features,
     clock,
@@ -798,7 +801,7 @@ export function composeAppServices(
       billToRepo,
       exemptionRepo,
     ),
-    customerReadPorts: customerReadPorts(customerRepo, billToRepo),
+    customerReadPorts: readPorts,
     catalog: catalogServices(
       productRepo,
       qtyRead,
@@ -824,6 +827,7 @@ export function composeAppServices(
       overrides.catalogProduct ?? catalogProductPort(productRepo),
       unitOfWork,
       clock,
+      readPorts.billToSnapshot,
     ),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     licensing: licensingServices(licensingRepository),

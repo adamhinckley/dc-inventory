@@ -27,6 +27,8 @@ import {
   CreateSalesOrderUseCase,
   DecommitSalesOrderLineUseCase,
   ShipSalesOrderUseCase,
+  type BillToAddressSnapshot,
+  type ICustomerBillToSnapshotReadPort,
 } from "../../src/index.js";
 
 export const DEFAULT_ORG = OrganizationId.DEFAULT;
@@ -45,9 +47,22 @@ export const COVER_PRODUCT_ID = ProductId.parse("cccccccc-cccc-4ccc-8ccc-ccccccc
 export const PO_LOCK = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440050");
 export const PO_COVER = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440051");
 
+export const DEFAULT_BILL_TO: BillToAddressSnapshot = {
+  line1: "100 Main St",
+  line2: null,
+  city: "Portland",
+  region: "OR",
+  postal: "97201",
+  country: "US",
+};
+
+export type SalesDemandHarnessOptions = {
+  billTo?: BillToAddressSnapshot | null;
+};
+
 export type SalesDemandHarness = ReturnType<typeof salesDemandHarness>;
 
-export function salesDemandHarness(clock?: IClock) {
+export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOptions = {}) {
   const uow = new InMemorySalesUnitOfWork(clock);
   const ledger = uow.ledger;
   const readModel = uow.inventoryReadModel;
@@ -91,11 +106,23 @@ export function salesDemandHarness(clock?: IClock) {
     },
   ]);
 
+  const billToSnapshot: ICustomerBillToSnapshotReadPort = {
+    getBillToAddressSnapshot: async (organizationId, customerId) => {
+      if (organizationId !== DEFAULT_ORG || customerId !== CUSTOMER_ID) {
+        return null;
+      }
+      if (options.billTo === null) {
+        return null;
+      }
+      return options.billTo ?? DEFAULT_BILL_TO;
+    },
+  };
+
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
   const confirm = new ConfirmSalesOrderUseCase(uow);
   const cancel = new CancelSalesOrderUseCase(uow);
   const decommitLine = new DecommitSalesOrderLineUseCase(uow);
-  const ship = new ShipSalesOrderUseCase(uow);
+  const ship = new ShipSalesOrderUseCase(uow, billToSnapshot);
   const snapshot = new GetStockSnapshotUseCase(readModel);
 
   const inboundFromPo = new RecordInboundFromPoUseCase(ledger);

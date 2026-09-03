@@ -21,6 +21,7 @@ import {
   CreateSalesOrderUseCase,
   ListSalesOrdersUseCase,
   ShipSalesOrderUseCase,
+  type ICustomerBillToSnapshotReadPort,
 } from "../src/index.js";
 import { newUuid, SalesOrderLineId } from "../src/domain/ids.js";
 import type { ISalesUnitOfWork } from "../src/domain/ports/sales-order-repository.js";
@@ -37,6 +38,17 @@ const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const BETA_CUSTOMER_ID = CustomerId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+
+const billToSnapshot: ICustomerBillToSnapshotReadPort = {
+  getBillToAddressSnapshot: async () => ({
+    line1: "100 Main St",
+    line2: null,
+    city: "Portland",
+    region: "OR",
+    postal: "97201",
+    country: "US",
+  }),
+};
 
 async function harness() {
   const uow = new InMemorySalesUnitOfWork();
@@ -94,7 +106,7 @@ async function harness() {
     list: new ListSalesOrdersUseCase(uow.salesOrders),
     confirm: new ConfirmSalesOrderUseCase(uow),
     cancel: new CancelSalesOrderUseCase(uow),
-    ship: new ShipSalesOrderUseCase(uow),
+    ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
   };
@@ -569,7 +581,7 @@ describe("Sales (in-memory)", () => {
       catalog,
     );
     const confirm = new ConfirmSalesOrderUseCase(failingUow);
-    const ship = new ShipSalesOrderUseCase(failingUow);
+    const ship = new ShipSalesOrderUseCase(failingUow, billToSnapshot);
     const snapshot = new GetStockSnapshotUseCase(base.inventoryReadModel);
     const adjustmentIncrease = new RecordAdjustmentIncreaseUseCase(base.ledger);
 

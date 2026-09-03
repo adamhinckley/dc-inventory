@@ -1,5 +1,6 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
+import type { ICustomerBillToSnapshotReadPort } from "../domain/ports/customer-bill-to-snapshot-read.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
 import { liveSalesOrderLines, type SalesOrder } from "../domain/sales-order.js";
 
@@ -19,7 +20,8 @@ export type ShipSalesOrderResult =
         | "illegal_transition"
         | "inventory_conflict"
         | "idempotency_conflict"
-        | "accounting_invalid";
+        | "accounting_invalid"
+        | "bill_to_missing";
     };
 
 function computeSubtotalCents(lines: readonly SalesOrder["lines"][number][]): number {
@@ -27,7 +29,10 @@ function computeSubtotalCents(lines: readonly SalesOrder["lines"][number][]): nu
 }
 
 export class ShipSalesOrderUseCase {
-  constructor(private readonly uow: ISalesUnitOfWork) {}
+  constructor(
+    private readonly uow: ISalesUnitOfWork,
+    private readonly billToSnapshot: ICustomerBillToSnapshotReadPort,
+  ) {}
 
   async execute(input: ShipSalesOrderRequest): Promise<ShipSalesOrderResult> {
     void input.staffUserId;
@@ -49,6 +54,14 @@ export class ShipSalesOrderUseCase {
         const liveLines = liveSalesOrderLines(existing.lines);
         if (liveLines.length === 0) {
           return { ok: false, reason: "illegal_transition" };
+        }
+
+        const billTo = await this.billToSnapshot.getBillToAddressSnapshot(
+          existing.organizationId,
+          existing.customerId,
+        );
+        if (billTo === null) {
+          return { ok: false, reason: "bill_to_missing" };
         }
 
         await scope.inventory.lockSnapshots(

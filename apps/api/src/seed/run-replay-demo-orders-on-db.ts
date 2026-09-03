@@ -22,6 +22,7 @@ import {
 import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
+  permissiveDemoBillToSnapshotPort,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
 import { runReplayDemoOrders, type ReplayDemoOrdersResult } from "./replay-demo-orders.js";
@@ -69,7 +70,15 @@ export async function runReplayDemoOrdersOnDb(
   };
 
   return runReplayDemoOrders(
-    { purchasing: purchasingUow, sales: salesUow, clock, customers, products, invoices },
+    {
+      purchasing: purchasingUow,
+      sales: salesUow,
+      clock,
+      customers,
+      products,
+      invoices,
+      billToSnapshot: permissiveDemoBillToSnapshotPort(),
+    },
     {
       plan,
       supplierIdByKey: await supplierIdByKeyFromPlan(plan, suppliers),
