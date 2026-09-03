@@ -1,8 +1,14 @@
 import {
+  availableToSellProjectionSql,
+  isLockedForSellSql,
+} from "@dc-inventory/inventory";
+import {
   createDemandProjectionSqlEvaluator,
   type DemandProjectionFixtureRow,
   type DemandProjectionSqlEvaluation,
 } from "../../../../packages/inventory/tests/support/evaluate-demand-projection-sql.js";
+import { stockSnapshots } from "@dc-inventory/inventory/schema";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
@@ -73,6 +79,28 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
 
   afterAll(async () => {
     await closeEvaluator();
+  });
+
+  it("uses exported Inventory SQL fragments for catalog sort keys", () => {
+    const db = drizzle.mock({ schema: { stockSnapshots } });
+    const nowIso = NOW.toISOString();
+    const columns = {
+      onHand: stockSnapshots.onHand,
+      onOrder: stockSnapshots.onOrder,
+      committed: stockSnapshots.committed,
+      stickyLocked: stockSnapshots.stickyLocked,
+      windowOpensAt: stockSnapshots.windowOpensAt,
+      windowClosesAt: stockSnapshots.windowClosesAt,
+    };
+    const { sql: selectSql } = db
+      .select({
+        isLocked: isLockedForSellSql(columns, nowIso).as("is_locked"),
+        availableToSell: availableToSellProjectionSql(columns, nowIso).as("available_to_sell"),
+      })
+      .from(stockSnapshots)
+      .toSQL();
+    expect(selectSql).toContain('"inventory"."stock_snapshots"');
+    expect(selectSql).toContain("CASE");
   });
 
   it("matches cell values from productQtyFromSnapshotRow for open and locked SKUs", async () => {

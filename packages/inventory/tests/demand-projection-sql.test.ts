@@ -1,5 +1,11 @@
+import { drizzle } from "drizzle-orm/postgres-js";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { projectDemandFigures } from "../src/domain/demand-model.js";
+import {
+  availableToSellProjectionSql,
+  isLockedForSellSql,
+} from "../src/persistence/demand-projection-sql.js";
+import { stockSnapshots } from "../src/persistence/schema.js";
 import { freezeStockFigures } from "../src/domain/snapshot.js";
 import {
   createDemandProjectionSqlEvaluator,
@@ -85,6 +91,31 @@ describe("demand projection SQL lockstep", () => {
 
   afterAll(async () => {
     await closeEvaluator();
+  });
+
+  it("builds executable SQL from the exported projection fragments", () => {
+    const db = drizzle.mock({ schema: { stockSnapshots } });
+    const nowIso = NOW.toISOString();
+    const columns = {
+      onHand: stockSnapshots.onHand,
+      onOrder: stockSnapshots.onOrder,
+      committed: stockSnapshots.committed,
+      stickyLocked: stockSnapshots.stickyLocked,
+      windowOpensAt: stockSnapshots.windowOpensAt,
+      windowClosesAt: stockSnapshots.windowClosesAt,
+    };
+    const { sql: selectSql, params } = db
+      .select({
+        isLocked: isLockedForSellSql(columns, nowIso).as("is_locked"),
+        availableToSell: availableToSellProjectionSql(columns, nowIso).as("available_to_sell"),
+      })
+      .from(stockSnapshots)
+      .toSQL();
+    expect(selectSql).toContain("sticky_locked");
+    expect(selectSql).toContain("window_opens_at");
+    expect(selectSql).toContain("window_closes_at");
+    expect(selectSql).toContain("CASE");
+    expect(params).toContain(nowIso);
   });
 
   it.each(CASES.map((row, index) => [index, row] as const))(
