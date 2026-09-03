@@ -59,10 +59,10 @@ async function harness() {
   const customers = {
     findById: async (organizationId: OrganizationId, id: CustomerId) => {
       if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
-        return { id, accountStatus: "active" };
+        return { id, accountStatus: "active" as const };
       }
       if (organizationId === BETA_ORG && id === BETA_CUSTOMER_ID) {
-        return { id, accountStatus: "active" };
+        return { id, accountStatus: "active" as const };
       }
       return null;
     },
@@ -564,7 +564,7 @@ describe("Sales (in-memory)", () => {
     const customers = {
       findById: async (organizationId: OrganizationId, id: CustomerId) => {
         if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
-          return { id, accountStatus: "active" };
+          return { id, accountStatus: "active" as const };
         }
         return null;
       },

@@ -231,7 +231,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         idempotencyKey: request.body.idempotencyKey,
       });
       if (!result.ok) {
-        if (result.reason === "not_found") {
+        if (result.reason === "not_found" || result.reason === "customer_not_found") {
           return sendNotFound(reply);
         }
         if (result.reason === "insufficient_atp") {

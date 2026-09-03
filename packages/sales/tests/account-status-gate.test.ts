@@ -56,7 +56,7 @@ describe("Sales account status gates (ADA-263, U10)", () => {
       expect(movements.some((movement) => movement.movementType === "Committed")).toBe(false);
     });
 
-    it("allows wholesale cart/draft create (edit draft/cart)", async () => {
+    it("allows wholesale draft create while on hold", async () => {
       const h = harnessForStatus(() => "on_hold");
 
       const draft = await h.createWholesaleDraft(OPEN_PRODUCT_ID, 2);

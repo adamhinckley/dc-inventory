@@ -26,7 +26,8 @@ export type ConfirmSalesOrderResult =
         | "inventory_conflict"
         | "idempotency_conflict"
         | "customer_on_hold"
-        | "customer_inactive";
+        | "customer_inactive"
+        | "customer_not_found";
     };
 
 export class ConfirmSalesOrderUseCase {
@@ -72,11 +73,12 @@ export class ConfirmSalesOrderUseCase {
           input.organizationId,
           existing.customerId,
         );
-        if (customer !== null) {
-          const accountStatusGate = confirmAccountStatusGate(customer.accountStatus);
-          if (accountStatusGate !== null) {
-            return { ok: false, reason: accountStatusGate };
-          }
+        if (customer === null) {
+          return { ok: false, reason: "customer_not_found" };
+        }
+        const accountStatusGate = confirmAccountStatusGate(customer.accountStatus);
+        if (accountStatusGate !== null) {
+          return { ok: false, reason: accountStatusGate };
         }
 
         await scope.inventory.lockSnapshots(
