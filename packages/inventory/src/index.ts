@@ -47,6 +47,8 @@ export { MovementId } from "./domain/ids.js";
 export type { IClock } from "./domain/clock.js";
 export {
   applySetSellWindow,
+  compareStaffCatalogQtyAvailableToSell,
+  compareStaffCatalogQtySellState,
   computeAvailableToSell,
   computeEffectiveSellState,
   computeLockedAvailableToSell,
@@ -54,10 +56,16 @@ export {
   isSellWindowInvalid,
   observeWindowClose,
   projectDemandFigures,
+  projectStaffCatalogQtyFromSnapshot,
+  staffCatalogQtyDemandState,
   ZERO_DEMAND_STATE,
+  ZERO_STAFF_CATALOG_QTY_CELL,
   type DemandPersistedState,
   type DemandStockFigures,
   type SellState,
+  type StaffCatalogQtyCell,
+  type StaffCatalogQtySnapshotRow,
+  type StaffCatalogQtySortOrder,
 } from "./domain/demand-model.js";
 export {
   MOVEMENT_REF_TYPES,
@@ -138,5 +146,8 @@ export {
 export {
   availableToSellProjectionSql,
   isLockedForSellSql,
+  staffCatalogAvailableToSellOrderBySql,
+  staffCatalogDemandProjectionSql,
   type DemandProjectionSnapshotColumns,
+  type StaffCatalogDemandProjectionSql,
 } from "./persistence/demand-projection-sql.js";

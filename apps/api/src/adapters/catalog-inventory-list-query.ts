@@ -5,8 +5,8 @@ import {
   type ProductQty,
 } from "@dc-inventory/catalog";
 import {
-  availableToSellProjectionSql,
-  isLockedForSellSql,
+  staffCatalogAvailableToSellOrderBySql,
+  staffCatalogDemandProjectionSql,
   type IClock,
 } from "@dc-inventory/inventory";
 import {
@@ -115,8 +115,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     };
     // postgres.js cannot bind a Date in drizzle `sql` fragments (TypeError).
     const nowIso = now.toISOString();
-    const isLockedForSell = isLockedForSellSql(demandProjectionColumns, nowIso);
-    const availableToSellSort = availableToSellProjectionSql(demandProjectionColumns, nowIso);
+    const demandProjection = staffCatalogDemandProjectionSql(demandProjectionColumns, nowIso);
     const direction = query.sortOrder === "desc" ? desc : asc;
     const tieBreak = asc(products.id);
     const orderBy =
@@ -135,11 +134,15 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
                   : query.sortBy === "committed"
                     ? [direction(committed), tieBreak]
                     : query.sortBy === "sellState"
-                      ? [direction(isLockedForSell), tieBreak]
+                      ? [direction(demandProjection.isLockedForSell), tieBreak]
                       : query.sortBy === "availableToSell"
-                        ? query.sortOrder === "desc"
-                          ? [sql`${availableToSellSort} DESC NULLS FIRST`, tieBreak]
-                          : [sql`${availableToSellSort} ASC NULLS LAST`, tieBreak]
+                        ? [
+                            staffCatalogAvailableToSellOrderBySql(
+                              demandProjection.availableToSell,
+                              query.sortOrder,
+                            ),
+                            tieBreak,
+                          ]
                         : query.sortBy === "caseQty"
                           ? [direction(caseQty), tieBreak]
                           : [direction(products.createdAt), tieBreak];

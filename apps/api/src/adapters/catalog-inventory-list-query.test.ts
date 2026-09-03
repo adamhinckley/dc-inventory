@@ -1,6 +1,6 @@
 import {
-  availableToSellProjectionSql,
-  isLockedForSellSql,
+  projectStaffCatalogQtyFromSnapshot,
+  staffCatalogDemandProjectionSql,
 } from "@dc-inventory/inventory";
 import {
   createDemandProjectionSqlEvaluator,
@@ -81,7 +81,7 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
     await closeEvaluator();
   });
 
-  it("uses exported Inventory SQL fragments for catalog sort keys", () => {
+  it("uses exported Inventory staff catalog projection SQL for catalog sort keys", () => {
     const db = drizzle.mock({ schema: { stockSnapshots } });
     const nowIso = NOW.toISOString();
     const columns = {
@@ -92,10 +92,11 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
       windowOpensAt: stockSnapshots.windowOpensAt,
       windowClosesAt: stockSnapshots.windowClosesAt,
     };
+    const projection = staffCatalogDemandProjectionSql(columns, nowIso);
     const { sql: selectSql } = db
       .select({
-        isLocked: isLockedForSellSql(columns, nowIso).as("is_locked"),
-        availableToSell: availableToSellProjectionSql(columns, nowIso).as("available_to_sell"),
+        isLocked: projection.isLockedForSell.as("is_locked"),
+        availableToSell: projection.availableToSell.as("available_to_sell"),
       })
       .from(stockSnapshots)
       .toSQL();
@@ -103,9 +104,11 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
     expect(selectSql).toContain("CASE");
   });
 
-  it("matches cell values from productQtyFromSnapshotRow for open and locked SKUs", async () => {
+  it("matches cell values from the Inventory staff catalog projection for open and locked SKUs", async () => {
     for (const row of ROWS) {
       const cell = productQtyFromSnapshotRow(row, NOW);
+      const projected = projectStaffCatalogQtyFromSnapshot(row, NOW);
+      expect(cell).toEqual(projected);
       const sortKeys = await evaluateSql(row, NOW);
       expect(sortKeys.isLocked).toBe(cell.sellState === "locked");
       expect(sortKeys.availableToSell).toBe(cell.availableToSell);
