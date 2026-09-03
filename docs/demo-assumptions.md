@@ -12,7 +12,7 @@ Do not edit `invariants.md` §18 or tick `open-questions.md` because of this fil
 | Cart = draft sales order | There is no separate carts table. A wholesale cart is a sales order in `draft`. | Not G5 product law. |
 | Block oversell | Confirm fails when a **locked** line exceeds `availableToSell`. Open SKUs have no numeric cap. Warehouse `available` is not the confirm gate. | Does not invent a company-wide season or a second ledger. |
 | MP is shop price | Wholesale shop and order snapshots use `member_price_cents` only. | List price is a nullable stub; the shop must not read it. |
-| In-memory tax for later demo **behavior** | When a later ticket wires checkout, tests and the demo calculator stay in-memory. | Tax **tables** exist empty. Hosted engine stays behind `ITaxCalculator`. Never `price * rate`. |
+| In-memory tax for later demo **behavior** | **Removed.** No sales tax in the demo. | Do not quote/commit tax or fill tax tables. |
 
 ## Explicitly out of this demo phase
 

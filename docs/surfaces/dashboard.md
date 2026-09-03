@@ -119,6 +119,6 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`wholesale.md`](.
 | Credit limit | Enforced at order time (gated) |
 | Customer balance | Invoices minus payments |
 | All customers’ orders | |
-| Invoice (merchandise; tax slot later) | |
+| Invoice | Merchandise totals; no sales-tax slot |
 | Payments and partial applications | |
 | Month-to-date / year-to-date / last year / lifetime sales | Reports, not product columns (mtd_sales, ytd_sales, last_yr_sales, all_sales) |

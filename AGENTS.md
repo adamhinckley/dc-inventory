@@ -43,10 +43,10 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/customers.md`](./docs/customer
 2. **Controllers** parse the request, call **one** use case, map the response. No business logic, no SQL.
 3. **Inventory** is the only writer of quantities. Never store or mutate `available` or `availableToSell` as source of truth — movements only. Do not conflate warehouse leftover (`available`) with sellability (`availableToSell`).
 4. **Frontends** use Orval hooks only — no hand-written API `fetch`.
-5. **Tax:** never `price * rate`. Quote/commit via `ITaxCalculator`. Fail closed if the engine is down.
+5. **Tax:** this company does not collect sales tax. Do not add `ITaxCalculator`, quote/commit, or tax lines on invoices.
 6. **Licensing** owns software subscription money and `IFeatures`. Do not mix into Accounting AR.
 7. **Do not implement** the operator platform in this repo. `IOperatorPlatform` is fail-soft.
-8. **Do not add** Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, LaunchDarkly-as-required-SDK, or a tax SDK outside `packages/tax/adapters`.
+8. **Do not add** Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, LaunchDarkly-as-required-SDK, or a tax SDK.
 9. **Linear:** all projects, issues, and sub-initiatives belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview).
 10. **One agent, one context, one branch.** Stop when the ticket’s tests are green. Do not expand scope.
 11. **Do not start long-running servers.** Never run `pnpm dev:api`, `pnpm dev:internal`, `pnpm dev:wholesale`, `next dev`, `next start`, or equivalent (foreground or background). Do not `docker compose up` as a watch. If a server is required, tell the owner the exact commands and ports; they start it. One-shot `pnpm test`, `pnpm lint`, `pnpm db:migrate`, and `pnpm gen:api` are allowed.
@@ -64,4 +64,4 @@ Given: port + use case + failing unit tests
 Do: adapters / HTTP / UI wiring; keep application/ importing only domain/; tests green
 ```
 
-If asked to invent ledger math, authz matrices, AR rules, tax rates, software-billing/flag catalogs, or operator-platform message kinds without failing tests already in the repo — **stop and ask the owner**.
+If asked to invent ledger math, authz matrices, AR rules, sales tax, software-billing/flag catalogs, or operator-platform message kinds without failing tests already in the repo — **stop and ask the owner**.

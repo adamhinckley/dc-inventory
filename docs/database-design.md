@@ -7,7 +7,7 @@ One Postgres database · schema per context · inventory is the only place quant
 
 Source dump: product browser CSV (`product_id` … `disc_over_sold_percent`). Field meanings in [`product-browser-schema-glossary.md`](./product-browser-schema-glossary.md) are **unverified**. Do not copy that spreadsheet 1:1 into Postgres.
 
-Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) · [`customers.md`](./customers.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md)
+Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) (no sales tax in v1) · [`customers.md`](./customers.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md)
 
 ---
 
@@ -38,11 +38,6 @@ flowchart LR
     exemption_certificates
   end
 
-  subgraph tax["tax"]
-    tax_commits
-    tax_commit_lines
-  end
-
   subgraph inventory["inventory · core"]
     locations
     stock_movements
@@ -64,7 +59,6 @@ flowchart LR
 
   subgraph accounting["accounting"]
     invoices
-    invoice_tax_lines
     payments
     payment_applications
   end
@@ -91,8 +85,7 @@ flowchart LR
   products --> product_categories
   categories --> product_categories
   products -.->|sku snapshot| purchase_order_lines
-  products -.->|sku + price + taxCategory snapshot| order_lines
-  products -.->|taxCategoryCode| tax_commits
+  products -.->|sku + price snapshot| order_lines
   products -.->|sku| supplier_products
 
   suppliers --> purchase_orders
@@ -112,17 +105,11 @@ flowchart LR
   customers_t --> orders
   ship_tos -.->|address snapshot| orders
   bill_tos -.->|address snapshot| invoices
-  exemption_certificates -.->|exemption snapshot| tax_commits
   orders --> order_lines
   orders -->|allocate / ship| stock_movements
-  orders -->|quote| tax_commits
   stock_movements --> stock_snapshots
 
   orders --> invoices
-  invoices -->|commit| tax_commits
-  tax_commits --> tax_commit_lines
-  tax_commit_lines -.->|frozen copy| invoice_tax_lines
-  invoices --> invoice_tax_lines
   customers_t --> invoices
   customers_t --> payments
   payments --> payment_applications
@@ -135,7 +122,7 @@ flowchart LR
   issue_reports --> operator_outbox
 ```
 
-**Happy path (wholesale):** product → purchase order received → client order (tax **quoted**) → stock allocates → invoice (tax **committed**) & payment.
+**Happy path (wholesale):** product → purchase order received → client order → stock allocates → invoice & payment. No sales tax.
 
 **Happy path (software):** tenant subscribes → payment to the developer recorded → add-on grant → `IFeatures` flips. Not the same tables as customer AR.
 
@@ -178,13 +165,9 @@ erDiagram
   orders ||--|{ order_lines : "contains"
   orders ||--o{ stock_movements : "ref"
   orders ||--o| invoices : "may create"
-  orders ||--o{ tax_commits : "quoted on"
 
   stock_movements }o--|| stock_snapshots : "updates"
 
-  invoices ||--o| tax_commits : "commits"
-  tax_commits ||--|{ tax_commit_lines : "contains"
-  invoices ||--|{ invoice_tax_lines : "frozen copy"
   invoices ||--o{ payment_applications : "receives"
   payments ||--o{ payment_applications : "applies to"
 
@@ -204,7 +187,6 @@ erDiagram
 | `wholesale_users` | `customers` | `customer_id` | Bound at login |
 | `sessions` | staff or wholesale user | `actor_type` + `actor_id` | Opaque cookie session |
 | `product_images` | `products` | `product_id` | Bytes in object storage |
-| `products` | — | `tax_category_code` | Engine tax code, **not** a percent |
 | `product_identifiers` | `products` | `product_id` | UPC, mfg, alt codes — typed, not ten columns |
 | `product_packaging` | `products` | `product_id` | Inner pack / case / ship carton |
 | `product_categories` | `products` + `categories` | both FKs | Source dump used `category_1`…`category_10` as tags |
@@ -216,17 +198,14 @@ erDiagram
 | `contacts` | `customers` | `customer_id` | |
 | `ship_tos` | `customers` | `customer_id` | Default and extra ship-to addresses |
 | `bill_tos` | `customers` | `customer_id` | One row per customer; same six fields as ship-to |
-| `exemption_certificates` | `customers` | `customer_id` | File in object storage; metadata + expiry |
+| `exemption_certificates` | `customers` | `customer_id` | Resale paperwork; not a tax engine |
 | `orders` | `customers` | `customer_id` | ID only — not a nested aggregate |
 | `orders` | — | ship snapshot columns | Copy address at confirm — no live `ship_to_id` |
 | `invoices` | — | bill snapshot columns | Copy bill-to six fields at ship — see [`customers.md`](./customers.md) |
-| `order_lines` | `orders` | `order_id` | Lines freeze sku/name/price/`tax_category_code` |
+| `order_lines` | `orders` | `order_id` | Lines freeze sku/name/price |
 | `stock_movements` | PO or order | `ref_type` + `ref_id` | Ledger provenance |
 | `stock_snapshots` | — | `sku` + `location_id` | Read model; updated with each movement |
-| `tax_commits` | order and/or invoice | `order_id`, `invoice_id` | Engine transaction id; quoted vs committed vs voided |
-| `tax_commit_lines` | `tax_commits` | `tax_commit_id` | Jurisdiction, `rate_bps`, taxable base, tax `Money` |
-| `invoices` | `orders` | `order_id` | `subtotal` / `tax_total` / `total` as integer minor units + currency |
-| `invoice_tax_lines` | `invoices` | `invoice_id` | Frozen copy of committed tax lines; never recomputed |
+| `invoices` | `orders` | `order_id` | Merchandise `subtotal` / `total` as integer minor units + currency; no tax lines |
 | `invoices` | `customers` | `customer_id` | Denormalized for AR lists |
 | `payments` | `customers` | `customer_id` | |
 | `payment_applications` | `payments` + `invoices` | both FKs | Supports partial pay |
@@ -241,10 +220,9 @@ erDiagram
 | From | Toward catalog | Instead |
 | --- | --- | --- |
 | `purchase_order_lines` | `products` | Copy **sku / name** at write time |
-| `order_lines` | `products` | Copy **sku / name / unit_price / tax_category_code** at write time |
-| `invoice_tax_lines` | engine / tax tables | Copy committed amounts; do not re-quote a posted invoice |
+| `order_lines` | `products` | Copy **sku / name / unit_price** at write time |
 
-History must not change when the catalog, a rate, or the engine changes later.
+History must not change when the catalog changes later.
 
 ---
 
@@ -495,17 +473,9 @@ No live FK from orders or invoices to `ship_tos` / `bill_tos` after snapshot.
 
 ## Tax
 
-Checkout **quotes**; invoice post **commits**. Stock allocate and tax HTTP are not one database transaction. See [`tax.md`](./tax.md).
+**None in v1.** No `tax` schema, no `invoice_tax_lines`, no `tax_category_code`. See [`tax.md`](./tax.md).
 
-```mermaid
-flowchart LR
-  cart["cart / checkout"] -->|quote| engine
-  invoice["invoice post"] -->|commit| engine
-  engine["ITaxCalculator"] --> commits["tax_commits + lines"]
-  commits -.->|frozen copy| invoice_lines["invoice_tax_lines"]
-```
-
-`products.tax_category_code` is a code, not a percent. Rates live in the engine.
+Customer `tax_id` and `exemption_certificates` are reseller paperwork on the customer master, not sales-tax calculation.
 
 ---
 
@@ -513,16 +483,15 @@ flowchart LR
 
 Canonical checklist (kept in sync with Slack): [`open-questions.md`](./open-questions.md). UI surfaces: [`surfaces/`](./surfaces/). [`invariants.md`](./invariants.md) §18 restates the order/ATP/credit gaps with recommended v1 defaults.
 
-1. Invoice on **confirm** or on **ship**? (Tax **commits** at that same moment.)
+1. Invoice on **confirm** or on **ship**?
 2. Separate **cart** table, or draft **orders**?
 3. Any missing documents for day one (credit memo, RMA, blanket PO)?
-4. Hosted engine: **Avalara AvaTax** (default for wholesale resale) vs cheaper Stripe Tax if few-nexus?
-5. Confirm **LP vs MP vs original wholesale** — which one is the shop price?
-6. What is **`c_to_c`**? Keep, drop, or rename once someone who uses the current system says.
-7. Is **`pickbin`** a boolean, or should we model named slots later?
-8. Are **`category_*`** merchandising tags (proposed) or a real hierarchy?
-9. Keep **`web_retail`** for a future storefront, or drop it in v1?
-10. **`line_comm` / oversold discount** — in catalog, or a later pricing/commission context?
-11. When importing the dump, treat **`onhand_qty` vs `loc_onhand`** mismatches as errors or as “use location qty”?
+4. Confirm **LP vs MP vs original wholesale** — which one is the shop price?
+5. What is **`c_to_c`**? Keep, drop, or rename once someone who uses the current system says.
+6. Is **`pickbin`** a boolean, or should we model named slots later?
+7. Are **`category_*`** merchandising tags (proposed) or a real hierarchy?
+8. Keep **`web_retail`** for a future storefront, or drop it in v1?
+9. **`line_comm` / oversold discount** — in catalog, or a later pricing/commission context?
+10. When importing the dump, treat **`onhand_qty` vs `loc_onhand`** mismatches as errors or as “use location qty”?
 
 Software subscription tables above are **operator-facing** (the developer billing this tenant). They are not part of the wholesale glossary call. See [`licensing.md`](./licensing.md). `issue_reports` / `operator_outbox` are the door to a **separate** developer monorepo — [`operator-bridge.md`](./operator-bridge.md).

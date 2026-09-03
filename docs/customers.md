@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is **how the wholesale buyer account is stored, created, and gated** so staff can onboard a customer and Sales / Accounting can snapshot the right addresses without re-grilling.
 
-Related: [`invariants.md`](./invariants.md) (§9 U1–U14) · [`database-design.md`](./database-design.md) (tables) · [`api-contract.md`](./api-contract.md) (internal vs wholesale DTOs) · [`tax.md`](./tax.md) (exemption snapshots) · [`CONTEXT.md`](../CONTEXT.md) § Customers (glossary only).
+Related: [`invariants.md`](./invariants.md) (§9 U1–U14) · [`database-design.md`](./database-design.md) (tables) · [`api-contract.md`](./api-contract.md) (internal vs wholesale DTOs) · [`tax.md`](./tax.md) (no sales tax) · [`CONTEXT.md`](../CONTEXT.md) § Customers (glossary only).
 
 Wayfinding map: [Customer master data model map](https://linear.app/adamhinckley/issue/ADA-243/customer-master-data-model-map) (decisions closed; this doc is the handoff).
 
@@ -24,7 +24,6 @@ flowchart LR
   subgraph callers [Callers hold IDs or snapshots]
     Sales[Sales orders]
     Acct[Invoices]
-    Tax[Tax quote / commit]
     Identity[Wholesale users]
   end
   Header --> Contacts
@@ -33,8 +32,6 @@ flowchart LR
   Header --> Certs
   ShipTos -.->|snapshot at confirm| Sales
   BillTo -.->|snapshot at ship| Acct
-  ShipTos -.->|address on tax doc| Tax
-  Certs -.->|exemption snapshot| Tax
   Header -->|CustomerId| Sales
   Header -->|CustomerId| Acct
   Identity -->|customer_id| Header
@@ -42,11 +39,10 @@ flowchart LR
 
 | Piece | Owns | Does not own |
 |---|---|---|
-| **Customers** | Account header, contacts, ship-to, bill-to, exemption files + metadata, terms field, credit-limit field, notes, account status | Invoices, tax math, shop login, order history |
+| **Customers** | Account header, contacts, ship-to, bill-to, exemption files + metadata, terms field, credit-limit field, notes, account status | Invoices, sales-tax math, shop login, order history |
 | **Sales** | `CustomerId`, ship-to snapshot on the order at confirm | Live ship-to FK after confirm; bill-to |
 | **Accounting** | Invoice AR; bill-to snapshot on the invoice at ship; due date from terms | Customer CRUD |
 | **Identity** | Wholesale user ↔ `CustomerId` binding at login | Contact rows (contact email ≠ shop user) |
-| **Tax** | Quote/commit from address + exemption snapshots | Customer master |
 
 Sales and Accounting hold `CustomerId`, not a Customer aggregate (C4–C5). Credit enforcement at confirm uses `ICreditCheckPort`, not a cross-schema join in Sales (U2).
 
@@ -111,7 +107,7 @@ Staff may **copy default ship-to into bill-to** as a stored duplicate; rows dive
 | Moment | Rule |
 |---|---|
 | Create | May be absent |
-| Confirm | Does **not** require bill-to (tax still uses ship-to) |
+| Confirm | Does **not** require bill-to |
 | Ship | **Refuses** if no bill-to — no shipment, no invoice; staff add bill-to and retry |
 | Invoice post | Copies the six bill-to fields onto the invoice (frozen snapshot) |
 
@@ -149,7 +145,7 @@ Hold is a staff override, not an AR projection. Credit-limit formula (G6) is sep
 
 ## 9. Exemption certificates
 
-Child records on the customer. **No tax status** on the header — every customer is treated as a reseller; this app does not calculate tax in the Customers context ([`tax.md`](./tax.md) owns math).
+Child records on the customer. **No tax status** on the header — every customer is a reseller; this app does not calculate sales tax ([`tax.md`](./tax.md)).
 
 | Field | Required on the row |
 |---|---|
@@ -174,7 +170,7 @@ Wholesale customer or staff may upload the file. Metadata-only rows (no file) ar
 | Add contact / ship-to / bill-to / cert | Customer exists |
 | Confirm order | Ship-to chosen/snapshot; account status allows; credit check (G6); ATP — not bill-to, not cert |
 | Ship order | Bill-to exists on customer |
-| Post invoice | Ship succeeded; tax commit per [`tax.md`](./tax.md) |
+| Post invoice | Ship succeeded |
 
 ---
 

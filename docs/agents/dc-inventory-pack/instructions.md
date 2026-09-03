@@ -5,7 +5,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 - `docs/architecture.md` (module seams, autonomy map, work packets)
 - `docs/stack.md` (TypeScript, Fastify, Drizzle, Postgres, Better Auth, Next.js apps)
 - `docs/api-contract.md` (OpenAPI, Orval, tables vs shop)
-- `docs/tax.md` (quote/commit engine, exemptions, fail-closed)
+- `docs/tax.md` (no sales tax in v1)
 - `docs/observability.md` (cheap alerts → work packets)
 - `docs/invariants.md` (locked rules; do not invent defaults for §18 gaps)
 - `docs/licensing.md` (software subscription vs customer AR; `IFeatures`; ops only for flag admin)
