@@ -87,18 +87,11 @@ describe("InMemoryCommittedCustomerNamesListQuery", () => {
     expect(result).toEqual([{ customerId: CUSTOMER_A, name: "Alpha Co" }]);
   });
 
-  it("ignores decommitted lines and non-confirmed orders", async () => {
+  it("ignores non-confirmed orders", async () => {
     const salesOrders = new InMemorySalesOrderRepository();
     const customers = new InMemoryCustomerRepository();
     await seedCustomer(customers, CUSTOMER_A, "Alpha Co");
     await seedCustomer(customers, CUSTOMER_B, "Beta Co");
-    await seedSalesOrder(salesOrders, {
-      id: OrderId.parse("44444444-4444-4444-8444-444444444444"),
-      customerId: CUSTOMER_A,
-      status: "confirmed",
-      sku: SKU_A,
-      decommitted: true,
-    });
     await seedSalesOrder(salesOrders, {
       id: OrderId.parse("55555555-5555-4555-8555-555555555555"),
       customerId: CUSTOMER_B,
@@ -122,6 +115,24 @@ describe("InMemoryCommittedCustomerNamesListQuery", () => {
     const result = await query.list({ organizationId: DEFAULT_ORG, skus: [SKU_A] });
 
     expect(result).toEqual([]);
+  });
+
+  it("matches confirmed lines even when the in-memory model marks them decommitted", async () => {
+    const salesOrders = new InMemorySalesOrderRepository();
+    const customers = new InMemoryCustomerRepository();
+    await seedCustomer(customers, CUSTOMER_A, "Alpha Co");
+    await seedSalesOrder(salesOrders, {
+      id: OrderId.parse("44444444-4444-4444-8444-444444444444"),
+      customerId: CUSTOMER_A,
+      status: "confirmed",
+      sku: SKU_A,
+      decommitted: true,
+    });
+
+    const query = new InMemoryCommittedCustomerNamesListQuery(salesOrders, customers);
+    const result = await query.list({ organizationId: DEFAULT_ORG, skus: [SKU_A] });
+
+    expect(result).toEqual([{ customerId: CUSTOMER_A, name: "Alpha Co" }]);
   });
 
   it("returns empty when no SKUs are requested", async () => {

@@ -415,6 +415,9 @@ importers:
         specifier: ^0.45.2
         version: 0.45.2(@electric-sql/pglite@0.5.8)(postgres@3.4.9)
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.8
+        version: 0.5.8
       '@types/node':
         specifier: ^26.2.0
         version: 26.2.0

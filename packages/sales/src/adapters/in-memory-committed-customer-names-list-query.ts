@@ -29,8 +29,7 @@ export class InMemoryCommittedCustomerNamesListQuery implements ICommittedCustom
       if (order.status !== "confirmed") {
         continue;
       }
-      const liveLines = order.lines.filter((line) => !line.decommitted);
-      if (liveLines.some((line) => skuSet.has(line.sku.value))) {
+      if (order.lines.some((line) => skuSet.has(line.sku.value))) {
         customerIds.add(order.customerId);
       }
     }

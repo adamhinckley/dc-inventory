@@ -11,8 +11,12 @@ export type CommittedCustomerNamesQuery = Readonly<{
 }>;
 
 /**
- * Customers with live committed lines on the requested SKUs.
- * Confirmed orders only; decommitted lines are excluded when the adapter can see them.
+ * Customers on confirmed sales orders that have order lines on the requested SKUs.
+ *
+ * Line-level decommit (`SalesOrderLine.decommitted`) is not persisted on
+ * `sales.order_lines` yet, so neither adapter can exclude decommitted lines at
+ * this read boundary. Both adapters therefore apply the same rule: confirmed
+ * order + matching line SKU.
  */
 export interface ICommittedCustomerNamesListQuery {
   list(query: CommittedCustomerNamesQuery): Promise<readonly CommittedCustomerName[]>;
