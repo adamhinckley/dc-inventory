@@ -267,6 +267,9 @@ importers:
 
   packages/catalog:
     dependencies:
+      '@dc-inventory/inventory':
+        specifier: workspace:*
+        version: link:../inventory
       '@dc-inventory/shared-kernel':
         specifier: workspace:*
         version: link:../shared-kernel

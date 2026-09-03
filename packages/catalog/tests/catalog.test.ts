@@ -374,11 +374,11 @@ describe("Catalog use cases (in-memory)", () => {
       sortBy: "availableToSell",
       sortOrder: "desc",
     });
-    expect(byAvailableToSell.items.map((row) => row.qty.availableToSell)).toEqual([23, 3, null]);
+    expect(byAvailableToSell.items.map((row) => row.qty.availableToSell)).toEqual([null, 23, 3]);
     expect(byAvailableToSell.items.map((row) => row.product.sku.value)).toEqual([
+      "OPEN-SKU",
       "LOCKED-HIGH",
       "LOCKED-LOW",
-      "OPEN-SKU",
     ]);
 
     const bySellState = await h.listStaff.execute({

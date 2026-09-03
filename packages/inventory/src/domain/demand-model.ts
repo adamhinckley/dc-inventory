@@ -1,4 +1,4 @@
-import { computeAvailable, type StockFigures } from "./snapshot.js";
+import { computeAvailable, freezeStockFigures, type StockFigures } from "./snapshot.js";
 
 export type SellState = "open" | "locked";
 
@@ -113,6 +113,103 @@ export function computeAvailableToSell(
     return null;
   }
   return computeLockedAvailableToSell(onHand, onOrder, committed);
+}
+
+/** Cell qty shape staff/shop catalog lists consume (anti-corruption target for Catalog ProductQty). */
+export type StaffCatalogQtyCell = Readonly<{
+  onHand: number;
+  onOrder: number;
+  allocated: number;
+  available: number;
+  committed: number;
+  sellState: SellState;
+  /** `null` means no numeric cap while effectively open. */
+  availableToSell: number | null;
+}>;
+
+export const ZERO_STAFF_CATALOG_QTY_CELL: StaffCatalogQtyCell = Object.freeze({
+  onHand: 0,
+  onOrder: 0,
+  allocated: 0,
+  available: 0,
+  committed: 0,
+  sellState: "open",
+  availableToSell: null,
+});
+
+/** Persisted inventory snapshot columns joined for staff/shop catalog qty cells. */
+export type StaffCatalogQtySnapshotRow = Readonly<{
+  onHand: number;
+  onOrder: number;
+  allocated: number;
+  committed: number;
+  stickyLocked: boolean;
+  windowOpensAt: Date | null;
+  windowClosesAt: Date | null;
+}>;
+
+export function staffCatalogQtyDemandState(
+  row: Pick<
+    StaffCatalogQtySnapshotRow,
+    "committed" | "stickyLocked" | "windowOpensAt" | "windowClosesAt"
+  >,
+): DemandPersistedState {
+  return Object.freeze({
+    committed: row.committed,
+    stickyLocked: row.stickyLocked,
+    windowOpensAt: row.windowOpensAt,
+    windowClosesAt: row.windowClosesAt,
+  });
+}
+
+/** Projects one staff/shop catalog qty cell from persisted snapshot columns. */
+export function projectStaffCatalogQtyFromSnapshot(
+  row: StaffCatalogQtySnapshotRow,
+  now: Date,
+): StaffCatalogQtyCell {
+  const projected = projectDemandFigures(
+    freezeStockFigures(row.onHand, row.onOrder, row.allocated),
+    staffCatalogQtyDemandState(row),
+    now,
+  );
+  return Object.freeze({
+    onHand: projected.onHand,
+    onOrder: projected.onOrder,
+    allocated: projected.allocated,
+    available: projected.available,
+    committed: projected.committed,
+    sellState: projected.sellState,
+    availableToSell: projected.availableToSell,
+  });
+}
+
+export type StaffCatalogQtySortOrder = "asc" | "desc";
+
+export function compareStaffCatalogQtyAvailableToSell(
+  a: StaffCatalogQtyCell,
+  b: StaffCatalogQtyCell,
+  sortOrder: StaffCatalogQtySortOrder,
+): number {
+  const aValue = a.availableToSell;
+  const bValue = b.availableToSell;
+  if (aValue === null && bValue === null) {
+    return 0;
+  }
+  if (aValue === null) {
+    return sortOrder === "desc" ? -1 : 1;
+  }
+  if (bValue === null) {
+    return sortOrder === "desc" ? 1 : -1;
+  }
+  return sortOrder === "desc" ? bValue - aValue : aValue - bValue;
+}
+
+export function compareStaffCatalogQtySellState(
+  a: StaffCatalogQtyCell,
+  b: StaffCatalogQtyCell,
+): number {
+  const rank = (sellState: SellState) => (sellState === "open" ? 0 : 1);
+  return rank(a.sellState) - rank(b.sellState);
 }
 
 export function projectDemandFigures(

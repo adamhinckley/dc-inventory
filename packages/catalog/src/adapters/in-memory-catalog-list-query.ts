@@ -1,3 +1,7 @@
+import {
+  compareStaffCatalogQtyAvailableToSell,
+  compareStaffCatalogQtySellState,
+} from "@dc-inventory/inventory";
 import type {
   CatalogListQuery,
   CatalogListRow,
@@ -29,26 +33,18 @@ function compareRows(a: CatalogListRow, b: CatalogListRow, query: CatalogListQue
   } else if (query.sortBy === "committed") {
     comparison = a.qty.committed - b.qty.committed;
   } else if (query.sortBy === "availableToSell") {
-    const aValue = a.qty.availableToSell;
-    const bValue = b.qty.availableToSell;
-    if (aValue === null && bValue === null) {
-      comparison = 0;
-    } else if (aValue === null) {
-      comparison = query.sortOrder === "desc" ? -1 : 1;
-    } else if (bValue === null) {
-      comparison = query.sortOrder === "desc" ? 1 : -1;
-    } else {
-      comparison = aValue - bValue;
-    }
+    comparison = compareStaffCatalogQtyAvailableToSell(a.qty, b.qty, query.sortOrder);
   } else if (query.sortBy === "sellState") {
-    const rank = (sellState: typeof a.qty.sellState) => (sellState === "open" ? 0 : 1);
-    comparison = rank(a.qty.sellState) - rank(b.qty.sellState);
+    comparison = compareStaffCatalogQtySellState(a.qty, b.qty);
   } else if (query.sortBy === "caseQty") {
     comparison = (a.caseQty ?? 0) - (b.caseQty ?? 0);
   } else {
     comparison = a.createdAt.getTime() - b.createdAt.getTime();
   }
   if (comparison !== 0) {
+    if (query.sortBy === "availableToSell") {
+      return comparison;
+    }
     return query.sortOrder === "desc" ? -comparison : comparison;
   }
   return a.product.id.localeCompare(b.product.id);

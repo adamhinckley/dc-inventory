@@ -43,3 +43,29 @@ export function availableToSellProjectionSql(
     ELSE NULL
   END`;
 }
+
+export type StaffCatalogDemandProjectionSql = Readonly<{
+  isLockedForSell: SQL<boolean>;
+  availableToSell: SQL<number | null>;
+}>;
+
+/** SQL sort/filter fragments for staff/shop catalog list demand projection. */
+export function staffCatalogDemandProjectionSql(
+  columns: DemandProjectionSnapshotColumns,
+  nowIso: string,
+): StaffCatalogDemandProjectionSql {
+  return Object.freeze({
+    isLockedForSell: isLockedForSellSql(columns, nowIso),
+    availableToSell: availableToSellProjectionSql(columns, nowIso),
+  });
+}
+
+/** ORDER BY fragment for availableToSell matching in-memory null placement. */
+export function staffCatalogAvailableToSellOrderBySql(
+  availableToSell: SQL<number | null>,
+  sortOrder: "asc" | "desc",
+): SQL {
+  return sortOrder === "desc"
+    ? sql`${availableToSell} DESC NULLS FIRST`
+    : sql`${availableToSell} ASC NULLS LAST`;
+}
