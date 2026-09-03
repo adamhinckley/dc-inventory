@@ -14,6 +14,8 @@ import {
 import {
   DrizzleInvoiceRepository,
   type AccountingDrizzle,
+  type ICustomerBillToSnapshotReadPort,
+  type ICustomerTermsReadPort,
 } from "@dc-inventory/accounting";
 import { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
@@ -24,6 +26,7 @@ import {
 } from "@dc-inventory/sales";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
+import { testShipAccountingReadPorts } from "./test-ship-accounting-readports.js";
 import {
   INVENTORY_IDEMPOTENCY_CONSTRAINTS,
   retryAfterIdempotencyRace,
@@ -37,11 +40,18 @@ import {
 export class PostgresInventoryUnitOfWork implements IUnitOfWork {
   private readonly defaultLocationUuidByOrg = new Map<string, Promise<string>>();
   readonly inventory: IUnitOfWork["inventory"];
+  private readonly billToSnapshot: ICustomerBillToSnapshotReadPort;
+  private readonly customerTerms: ICustomerTermsReadPort;
 
   constructor(
     private readonly db: AppDrizzle,
     private readonly clock: IClock,
+    billToSnapshot?: ICustomerBillToSnapshotReadPort,
+    customerTerms?: ICustomerTermsReadPort,
   ) {
+    const shipPorts = testShipAccountingReadPorts();
+    this.billToSnapshot = billToSnapshot ?? shipPorts.billToSnapshot;
+    this.customerTerms = customerTerms ?? shipPorts.customerTerms;
     this.inventory = {
       ledger: null as unknown as DrizzleStockLedger,
       readModel: new DrizzleInventoryReadModel(
@@ -119,6 +129,8 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const inventoryCommands = new StockLedgerInventoryCommandAdapter(ledger, readModel);
     const salesAccountingCommands = new SalesInvoiceAccountingCommandAdapter(
       invoices,
+      this.billToSnapshot,
+      this.customerTerms,
       this.clock,
     );
 
