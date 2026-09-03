@@ -1,14 +1,19 @@
-import { CustomerId, OrganizationId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CustomerAccountStatusReadAdapter } from "../src/adapters/customer-account-status-read.js";
 import { CustomerBillToSnapshotReadAdapter } from "../src/adapters/customer-bill-to-snapshot-read.js";
 import { InMemoryBillToRepository } from "../src/adapters/in-memory-bill-to-repository.js";
 import { InMemoryContactRepository } from "../src/adapters/in-memory-contact-repository.js";
 import { InMemoryCustomerRepository } from "../src/adapters/in-memory-customer-repository.js";
+import { InMemoryExemptionCertificateRepository } from "../src/adapters/in-memory-exemption-certificate-repository.js";
 import { InMemoryShipToRepository } from "../src/adapters/in-memory-ship-to-repository.js";
 import { CopyBillToFromDefaultShipToUseCase } from "../src/application/copy-bill-to-from-default-ship-to.js";
 import { CreateBillToUseCase } from "../src/application/create-bill-to.js";
+import { CreateContactUseCase } from "../src/application/create-contact.js";
 import { CreateCustomerUseCase } from "../src/application/create-customer.js";
+import { CreateExemptionCertificateUseCase } from "../src/application/create-exemption-certificate.js";
 import { CreateShipToUseCase } from "../src/application/create-ship-to.js";
 import { UpdateCustomerUseCase } from "../src/application/update-customer.js";
 import { UpdateWholesaleCustomerNoteUseCase } from "../src/application/update-wholesale-customer-note.js";
@@ -22,13 +27,17 @@ function harness() {
   const shipTos = new InMemoryShipToRepository();
   const billTos = new InMemoryBillToRepository();
   const contacts = new InMemoryContactRepository();
+  const exemptions = new InMemoryExemptionCertificateRepository();
   return {
     customers,
     shipTos,
     billTos,
     contacts,
+    exemptions,
     createCustomer: new CreateCustomerUseCase(customers),
     updateCustomer: new UpdateCustomerUseCase(customers),
+    createContact: new CreateContactUseCase(customers, contacts),
+    createExemption: new CreateExemptionCertificateUseCase(customers, exemptions),
     createShipTo: new CreateShipToUseCase(customers, shipTos),
     createBillTo: new CreateBillToUseCase(customers, billTos),
     copyBillTo: new CopyBillToFromDefaultShipToUseCase(customers, shipTos, billTos),
@@ -302,8 +311,125 @@ describe("Customer master invariants U5–U14", () => {
     expect(created.customer.taxId).toBe("12-3456789");
   });
 
-  it("U13/U14 are covered by existing exemption and contact tests", () => {
-    expect(true).toBe(true);
+  it("U13: exemption certificates are not a create, bill-to, or ship-to gate", async () => {
+    const h = harness();
+    const created = await h.createCustomer.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "No Cert Gate",
+      creditLimitCents: 100,
+      terms: "Net 30",
+    });
+    if (!created.ok) {
+      throw new Error("expected create");
+    }
+
+    const shipToWithoutCert = await h.createShipTo.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: created.customer.id,
+      line1: "1 Ship Ln",
+      city: "Ogden",
+      region: "UT",
+      postal: "84401",
+      country: "US",
+      isDefault: true,
+    });
+    expect(shipToWithoutCert.ok).toBe(true);
+
+    const billToWithoutCert = await h.createBillTo.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: created.customer.id,
+      line1: "2 Bill Ln",
+      city: "Ogden",
+      region: "UT",
+      postal: "84401",
+      country: "US",
+    });
+    expect(billToWithoutCert.ok).toBe(true);
+
+    const expired = await h.createExemption.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: created.customer.id,
+      jurisdiction: "UT",
+      status: "expired",
+      entityUseCode: null,
+      expiresAt: new Date("2020-01-01T00:00:00.000Z"),
+      objectKey: null,
+    });
+    expect(expired.ok).toBe(true);
+
+    const billToAfterExpired = await h.updateCustomer.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: created.customer.id,
+      customerNote: "Still operable",
+    });
+    expect(billToAfterExpired.ok).toBe(true);
+    expect(
+      await h.billToSnapshot.getBillToAddressSnapshot(DEFAULT_ORG, created.customer.id),
+    ).not.toBeNull();
+
+    const applicationDir = resolve(import.meta.dirname, "../src/application");
+    const forbiddenGate = /exemption|certificate|expires_at|expired/i;
+    for (const name of ["create-customer.ts", "create-bill-to.ts", "create-ship-to.ts"]) {
+      const source = readFileSync(resolve(applicationDir, name), "utf8");
+      expect(source, name).not.toMatch(forbiddenGate);
+    }
+  });
+
+  it("U14: contact email is per-customer correspondence, not wholesale login", async () => {
+    const h = harness();
+    const acme = await h.createCustomer.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Acme Wholesale",
+      creditLimitCents: 100,
+      terms: "Net 30",
+    });
+    const beta = await h.createCustomer.execute({
+      organizationId: BETA_ORG,
+      staffUserId: STAFF_ID,
+      name: "Beta Wholesale",
+      creditLimitCents: 100,
+      terms: "Net 30",
+    });
+    if (!acme.ok || !beta.ok) {
+      throw new Error("expected customers");
+    }
+
+    const wholesaleStyleEmail = "wholesale@local.test";
+    const acmeContact = await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: acme.customer.id,
+      name: "Shop Contact",
+      email: wholesaleStyleEmail,
+    });
+    const betaContact = await h.createContact.execute({
+      organizationId: BETA_ORG,
+      staffUserId: STAFF_ID,
+      customerId: beta.customer.id,
+      name: "Other Shop Contact",
+      email: wholesaleStyleEmail,
+    });
+    expect(acmeContact.ok).toBe(true);
+    expect(betaContact.ok).toBe(true);
+    if (!acmeContact.ok || !betaContact.ok) {
+      return;
+    }
+    expect(acmeContact.contact.email).toBe(wholesaleStyleEmail);
+    expect(betaContact.contact.email).toBe(wholesaleStyleEmail);
+    expect(acmeContact.contact.customerId).toBe(acme.customer.id);
+    expect(betaContact.contact.customerId).toBe(beta.customer.id);
+
+    const createContactSource = readFileSync(
+      resolve(import.meta.dirname, "../src/application/create-contact.ts"),
+      "utf8",
+    );
+    expect(createContactSource).not.toMatch(/wholesale|identity|login|session/i);
   });
 
   it("exports account status read port for downstream gates", async () => {

@@ -51,9 +51,9 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       `;
       await first.sql`
         insert into customers.customers
-          (id, organization_id, name, credit_limit_cents, currency, terms)
+          (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
         values
-          (${customerId}, ${organizationId}, 'ADA-200 customer', 100000, 'USD', 'NET30')
+          (${customerId}, ${organizationId}, 'ADA-200 customer', ${`CUST-ADA200-${organizationId}`}, 100000, 'USD', 'NET30')
       `;
       await first.sql`
         insert into sales.orders

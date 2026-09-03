@@ -54,8 +54,8 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
 
     await sql`
       insert into customers.customers
-        (id, organization_id, name, credit_limit_cents, currency, terms)
-      values (${CUSTOMER_ID}, ${ORG}, 'ADA-209 customer', 100000, 'USD', 'NET30')
+        (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
+      values (${CUSTOMER_ID}, ${ORG}, 'ADA-209 customer', 'CUST-ADA209', 100000, 'USD', 'NET30')
     `;
     await sql`
       insert into purchasing.suppliers (id, organization_id, vendor_number, name)

@@ -32,10 +32,10 @@ describe.skipIf(!acceptanceEnabled)(
     beforeAll(async () => {
       await sql!`
         INSERT INTO customers.customers
-          (id, organization_id, name, credit_limit_cents, currency, terms)
+          (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
         VALUES
-          (${customerA}, ${organizationA}, 'Constraint customer A', 0, 'USD', 'Net 30'),
-          (${customerB}, ${organizationB}, 'Constraint customer B', 0, 'USD', 'Net 30')
+          (${customerA}, ${organizationA}, 'Constraint customer A', ${`CUST-CONSTRAINT-A-${customerA}`}, 0, 'USD', 'Net 30'),
+          (${customerB}, ${organizationB}, 'Constraint customer B', ${`CUST-CONSTRAINT-B-${customerB}`}, 0, 'USD', 'Net 30')
       `;
     });
 
