@@ -726,6 +726,16 @@ describe("Purchasing (in-memory)", () => {
         }
         return base.inventory.recordInboundCancelled(command);
       },
+      recordCommitted: (command) => base.inventory.recordCommitted(command),
+      matchesCommittedIdempotency: (command) =>
+        base.inventory.matchesCommittedIdempotency(command),
+      recordDecommitted: (command) => base.inventory.recordDecommitted(command),
+      matchesDecommittedIdempotency: (command) =>
+        base.inventory.matchesDecommittedIdempotency(command),
+      recordAllocated: (command) => base.inventory.recordAllocated(command),
+      recordDeallocated: (command) => base.inventory.recordDeallocated(command),
+      recordShipped: (command) => base.inventory.recordShipped(command),
+      getOrderCoverQuantity: (query) => base.inventory.getOrderCoverQuantity(query),
     };
     const failingUow: IPurchasingUnitOfWork = {
       purchaseOrders: base.purchaseOrders,

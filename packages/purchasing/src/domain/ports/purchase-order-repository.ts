@@ -1,3 +1,4 @@
+import type { IInventoryCommandPort } from "@dc-inventory/inventory";
 import type {
   OrganizationId,
   PurchaseOrderId,
@@ -5,6 +6,15 @@ import type {
   SupplierId,
 } from "@dc-inventory/shared-kernel";
 import type { PurchaseOrder, PurchaseOrderStatus } from "../purchase-order.js";
+
+export type {
+  GoodsReceivedCommand,
+  IInventoryCommandPort,
+  InboundCancelledCommand,
+  InboundFromPoCommand,
+  InventoryCommandResult,
+  InventorySnapshotLock,
+} from "@dc-inventory/inventory";
 
 export type UnnumberedPurchaseOrder = Omit<PurchaseOrder, "documentNumber">;
 
@@ -68,53 +78,6 @@ export interface ISupplierRepository {
     organizationId: OrganizationId,
     vendorNumber: string,
   ): Promise<import("../supplier.js").Supplier | null>;
-}
-
-export type InventoryCommandFailureReason =
-  | "invalid_quantity"
-  | "insufficient_on_hand"
-  | "insufficient_available"
-  | "idempotency_conflict"
-  | "provenance_conflict";
-
-export type InventoryCommandResult =
-  | { ok: true }
-  | { ok: false; reason: InventoryCommandFailureReason };
-
-export type InboundFromPoCommand = {
-  organizationId: OrganizationId;
-  idempotencyKey: string;
-  sku: Sku;
-  quantity: number;
-  purchaseOrderId: PurchaseOrderId;
-};
-
-export type GoodsReceivedCommand = {
-  organizationId: OrganizationId;
-  idempotencyKey: string;
-  sku: Sku;
-  quantity: number;
-  purchaseOrderId: PurchaseOrderId;
-};
-
-export type InboundCancelledCommand = {
-  organizationId: OrganizationId;
-  idempotencyKey: string;
-  sku: Sku;
-  quantity: number;
-  purchaseOrderId: PurchaseOrderId;
-};
-
-export type InventorySnapshotLock = {
-  organizationId: OrganizationId;
-  sku: Sku;
-};
-
-export interface IInventoryCommandPort {
-  lockSnapshots(snapshots: readonly InventorySnapshotLock[]): Promise<void>;
-  recordInboundFromPo(command: InboundFromPoCommand): Promise<InventoryCommandResult>;
-  recordGoodsReceived(command: GoodsReceivedCommand): Promise<InventoryCommandResult>;
-  recordInboundCancelled(command: InboundCancelledCommand): Promise<InventoryCommandResult>;
 }
 
 export interface IPurchasingUnitOfWork {

@@ -24,7 +24,6 @@ import {
 } from "@dc-inventory/sales";
 import { StockLedgerInventoryCommandAdapter } from "./inventory-command-port.js";
 import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command-port.js";
-import { SalesStockLedgerInventoryCommandAdapter } from "./sales-inventory-command-port.js";
 import {
   INVENTORY_IDEMPOTENCY_CONSTRAINTS,
   retryAfterIdempotencyRace,
@@ -117,8 +116,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const suppliers = new DrizzleSupplierRepository(tx);
     const salesOrders = new DrizzleSalesOrderRepository(tx);
     const invoices = new DrizzleInvoiceRepository(tx);
-    const purchasingInventoryCommands = new StockLedgerInventoryCommandAdapter(ledger);
-    const salesInventoryCommands = new SalesStockLedgerInventoryCommandAdapter(ledger, readModel);
+    const inventoryCommands = new StockLedgerInventoryCommandAdapter(ledger, readModel);
     const salesAccountingCommands = new SalesInvoiceAccountingCommandAdapter(
       invoices,
       this.clock,
@@ -127,13 +125,13 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     const purchasingScope: IUnitOfWork["purchasing"] = {
       purchaseOrders,
       suppliers,
-      inventory: purchasingInventoryCommands,
+      inventory: inventoryCommands,
       run: (innerWork) => this.runOnTransaction(tx, (scope) => innerWork(scope.purchasing)),
     };
 
     const salesScope: IUnitOfWork["sales"] = {
       salesOrders,
-      inventory: salesInventoryCommands,
+      inventory: inventoryCommands,
       accounting: salesAccountingCommands,
       run: (innerWork) => this.runOnTransaction(tx, (scope) => innerWork(scope.sales)),
     };
