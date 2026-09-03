@@ -51,10 +51,10 @@ export async function runWriteStaticDemoBookOnDb(
   const ports: StaticDemoSeedPorts = {
     products: new DrizzleProductRepository(db as CatalogDrizzle),
     productImages: new DrizzleProductImageSeedRepository(db as never),
-    customers: new DrizzleCustomerRepository(db as CustomersDrizzle),
-    shipTos: new DrizzleShipToRepository(db as CustomersDrizzle),
+    customers: new DrizzleCustomerRepository(db as unknown as CustomersDrizzle),
+    shipTos: new DrizzleShipToRepository(db as unknown as CustomersDrizzle),
     exemptionCertificates: new DrizzleExemptionCertificateRepository(
-      db as CustomersDrizzle,
+      db as unknown as CustomersDrizzle,
     ),
     organizations: new DrizzleOrganizationRepository(db as unknown as IdentityDrizzle),
     staffUsers: new DrizzleStaffUserRepository(db as unknown as IdentityDrizzle),

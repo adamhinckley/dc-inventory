@@ -22,15 +22,23 @@ import {
   type ISupplierLinkPort,
 } from "@dc-inventory/catalog";
 import {
+  CopyBillToFromDefaultShipToUseCase,
+  CreateBillToUseCase,
   CreateContactUseCase,
   CreateCustomerUseCase,
   CreateExemptionCertificateUseCase,
   CreateShipToUseCase,
+  CustomerAccountStatusReadAdapter,
+  CustomerBillToSnapshotReadAdapter,
+  DrizzleBillToRepository,
   DrizzleContactRepository,
   DrizzleCustomerRepository,
   DrizzleExemptionCertificateRepository,
   DrizzleShipToRepository,
+  GetBillToUseCase,
   GetCustomerUseCase,
+  GetWholesaleCustomerUseCase,
+  InMemoryBillToRepository,
   InMemoryContactRepository,
   InMemoryCustomerRepository,
   InMemoryExemptionCertificateRepository,
@@ -39,13 +47,18 @@ import {
   ListCustomersUseCase,
   ListExemptionCertificatesUseCase,
   ListShipTosUseCase,
+  UpdateBillToUseCase,
   UpdateContactUseCase,
   UpdateCustomerUseCase,
   UpdateExemptionCertificateUseCase,
   UpdateShipToUseCase,
+  UpdateWholesaleCustomerNoteUseCase,
   type CustomersDrizzle,
   type IContactRepository,
+  type ICustomerAccountStatusReadPort,
+  type ICustomerBillToSnapshotReadPort,
   type ICustomerRepository,
+  type IBillToRepository,
   type IExemptionCertificateRepository,
   type IShipToRepository,
 } from "@dc-inventory/customers";
@@ -221,6 +234,17 @@ export type CustomersHttpServices = {
   listExemptionCertificates: ListExemptionCertificatesUseCase;
   createExemptionCertificate: CreateExemptionCertificateUseCase;
   updateExemptionCertificate: UpdateExemptionCertificateUseCase;
+  getBillTo: GetBillToUseCase;
+  createBillTo: CreateBillToUseCase;
+  updateBillTo: UpdateBillToUseCase;
+  copyBillToFromDefaultShipTo: CopyBillToFromDefaultShipToUseCase;
+  getWholesaleCustomer: GetWholesaleCustomerUseCase;
+  updateWholesaleCustomerNote: UpdateWholesaleCustomerNoteUseCase;
+};
+
+export type CustomerReadPorts = {
+  billToSnapshot: ICustomerBillToSnapshotReadPort;
+  accountStatus: ICustomerAccountStatusReadPort;
 };
 
 export type PurchasingHttpServices = {
@@ -282,6 +306,7 @@ export type AppServices = {
   ready: ReadyCheckUseCase;
   identity: IdentityHttpServices;
   customers: CustomersHttpServices;
+  customerReadPorts: CustomerReadPorts;
   catalog: CatalogHttpServices;
   purchasing: PurchasingHttpServices;
   sales: SalesHttpServices;
@@ -305,6 +330,7 @@ export type AppServiceOverrides = {
   customerRepo?: ICustomerRepository;
   contactRepo?: IContactRepository;
   shipToRepo?: IShipToRepository;
+  billToRepo?: IBillToRepository;
   exemptionRepo?: IExemptionCertificateRepository;
   productRepo?: IProductRepository;
   productPackagingRepo?: IProductPackagingRepository;
@@ -359,6 +385,7 @@ function customersServices(
   customerRepo: ICustomerRepository,
   contactRepo: IContactRepository,
   shipToRepo: IShipToRepository,
+  billToRepo: IBillToRepository,
   exemptionRepo: IExemptionCertificateRepository,
 ): CustomersHttpServices {
   return {
@@ -384,6 +411,26 @@ function customersServices(
       customerRepo,
       exemptionRepo,
     ),
+    getBillTo: new GetBillToUseCase(customerRepo, billToRepo),
+    createBillTo: new CreateBillToUseCase(customerRepo, billToRepo),
+    updateBillTo: new UpdateBillToUseCase(customerRepo, billToRepo),
+    copyBillToFromDefaultShipTo: new CopyBillToFromDefaultShipToUseCase(
+      customerRepo,
+      shipToRepo,
+      billToRepo,
+    ),
+    getWholesaleCustomer: new GetWholesaleCustomerUseCase(customerRepo),
+    updateWholesaleCustomerNote: new UpdateWholesaleCustomerNoteUseCase(customerRepo),
+  };
+}
+
+function customerReadPorts(
+  customerRepo: ICustomerRepository,
+  billToRepo: IBillToRepository,
+): CustomerReadPorts {
+  return {
+    billToSnapshot: new CustomerBillToSnapshotReadAdapter(customerRepo, billToRepo),
+    accountStatus: new CustomerAccountStatusReadAdapter(customerRepo),
   };
 }
 
@@ -619,6 +666,11 @@ export function composeAppServices(
     (customersDb
       ? new DrizzleExemptionCertificateRepository(customersDb)
       : new InMemoryExemptionCertificateRepository());
+  const billToRepo =
+    overrides.billToRepo ??
+    (customersDb
+      ? new DrizzleBillToRepository(customersDb)
+      : new InMemoryBillToRepository());
 
   const productRepo =
     overrides.productRepo ??
@@ -739,7 +791,14 @@ export function composeAppServices(
         clock,
       ),
     },
-    customers: customersServices(customerRepo, contactRepo, shipToRepo, exemptionRepo),
+    customers: customersServices(
+      customerRepo,
+      contactRepo,
+      shipToRepo,
+      billToRepo,
+      exemptionRepo,
+    ),
+    customerReadPorts: customerReadPorts(customerRepo, billToRepo),
     catalog: catalogServices(
       productRepo,
       qtyRead,

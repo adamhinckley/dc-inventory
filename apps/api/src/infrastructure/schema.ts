@@ -43,9 +43,11 @@ export {
   wholesaleUsers,
 } from "@dc-inventory/identity/schema";
 export {
+  billTos,
   contacts,
   customers,
   customersSchema,
+  documentNumberCounters as customersDocumentNumberCounters,
   exemptionCertificates,
   shipTos,
 } from "@dc-inventory/customers/schema";
@@ -124,8 +126,10 @@ import {
   wholesaleUsers,
 } from "@dc-inventory/identity/schema";
 import {
+  billTos,
   contacts,
   customers,
+  documentNumberCounters as customersDocumentNumberCounters,
   exemptionCertificates,
   shipTos,
 } from "@dc-inventory/customers/schema";
@@ -175,6 +179,8 @@ export const schema = {
   customers,
   contacts,
   shipTos,
+  billTos,
+  customersDocumentNumberCounters,
   exemptionCertificates,
   orders,
   orderLines,

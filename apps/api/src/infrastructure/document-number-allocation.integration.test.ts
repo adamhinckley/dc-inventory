@@ -147,8 +147,8 @@ describeWithDatabase("atomic document-number allocation", () => {
     await cleanFixtures(first);
     await first.sql`
       INSERT INTO customers.customers
-        (id, organization_id, name, credit_limit_cents, currency, terms)
-      VALUES (${CUSTOMER_ID}, ${ORGANIZATION_ID}, 'ADA-208 customer', 100000, 'USD', 'NET30')
+        (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
+      VALUES (${CUSTOMER_ID}, ${ORGANIZATION_ID}, 'ADA-208 customer', 'CUST-ADA208', 100000, 'USD', 'NET30')
     `;
     await first.sql`
       INSERT INTO purchasing.suppliers

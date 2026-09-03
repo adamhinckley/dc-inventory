@@ -12,4 +12,5 @@ export const ListInternalCustomersSortBy = {
   name: 'name',
   createdAt: 'createdAt',
   creditLimitCents: 'creditLimitCents',
+  customerNumber: 'customerNumber',
 } as const;

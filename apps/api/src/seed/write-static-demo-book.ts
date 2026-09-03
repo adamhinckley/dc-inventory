@@ -15,6 +15,7 @@ import {
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import type { DemoBookPlan } from "./planner/types.js";
+import { DEMO_NAMED_CUSTOMERS } from "./reconciliation/expectations.js";
 import { Phase1SeedError, type Phase1SeedSecrets } from "./run-phase1-seed.js";
 import type { StaticDemoSeedPorts } from "./ports/static-seed-types.js";
 import { upsertDefaultOrganization } from "./upsert-default-organization.js";
@@ -100,12 +101,22 @@ async function upsertCustomer(
   planned: DemoBookPlan["master"]["customers"][number],
 ): Promise<Customer> {
   const existing = await ports.customers.findByName(OrganizationId.DEFAULT, planned.name);
+  const namedPin = Object.values(DEMO_NAMED_CUSTOMERS).find((pin) => pin.name === planned.name);
+  const customerNumber =
+    existing?.customerNumber ??
+    namedPin?.customerNumber ??
+    (await ports.customers.allocateNextCustomerNumber(OrganizationId.DEFAULT));
   const customer: Customer = {
     id: existing?.id ?? CustomerId.parse(newId()),
     organizationId: OrganizationId.DEFAULT,
     name: planned.name,
+    customerNumber,
     creditLimit: Money.fromMinorUnits(planned.creditLimitCents, planned.currency),
     terms: planned.terms,
+    taxId: existing?.taxId ?? null,
+    accountStatus: existing?.accountStatus ?? "active",
+    customerNote: existing?.customerNote ?? null,
+    staffNote: existing?.staffNote ?? null,
     createdAt: existing?.createdAt ?? new Date(),
   };
   await ports.customers.save(customer);

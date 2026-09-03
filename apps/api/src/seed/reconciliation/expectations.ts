@@ -16,6 +16,7 @@ export const DEMO_AR_BUCKETS: readonly DemoArBucket[] = [
 
 export type DemoNamedCustomerPin = {
   name: string;
+  customerNumber: string;
   creditLimitCents: number;
   ship: {
     line1: string;
@@ -28,6 +29,7 @@ export type DemoNamedCustomerPin = {
 export const DEMO_NAMED_CUSTOMERS = {
   acme: {
     name: PHASE1_CUSTOMER_NAME,
+    customerNumber: "CUST-00001",
     creditLimitCents: PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS,
     ship: {
       line1: "100 Warehouse Rd",
@@ -38,6 +40,7 @@ export const DEMO_NAMED_CUSTOMERS = {
   },
   northstar: {
     name: "Northstar Big Box",
+    customerNumber: "CUST-00002",
     creditLimitCents: 10_000_000,
     ship: {
       line1: "5000 Retail Pkwy",
@@ -48,6 +51,7 @@ export const DEMO_NAMED_CUSTOMERS = {
   },
   harvest: {
     name: "Harvest Seasonal Co.",
+    customerNumber: "CUST-00003",
     creditLimitCents: 2_000_000,
     ship: {
       line1: "80 Orchard Ln",
@@ -58,6 +62,7 @@ export const DEMO_NAMED_CUSTOMERS = {
   },
   idlePark: {
     name: "Idle Park Distributors",
+    customerNumber: "CUST-00004",
     creditLimitCents: 250_000,
     ship: {
       line1: "12 Quiet Ct",

@@ -240,8 +240,8 @@ async function insertInvoiceFixture(
   const invoiceId = InvoiceId.parse(randomUUID());
   await sql`
     insert into customers.customers
-      (id, organization_id, name, credit_limit_cents, currency, terms)
-    values (${customerId}, ${organizationId}, 'ADA-197 customer', 100000, 'USD', 'Net 30')
+      (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
+    values (${customerId}, ${organizationId}, 'ADA-197 customer', ${`CUST-ADA197-${customerId}`}, 100000, 'USD', 'Net 30')
   `;
   await sql`
     insert into sales.orders

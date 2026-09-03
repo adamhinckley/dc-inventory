@@ -25,6 +25,9 @@ import type {
   CreateWholesaleSalesOrder404,
   CreateWholesaleSalesOrder409,
   CreateWholesaleSalesOrderBody,
+  GetWholesaleAccount200,
+  GetWholesaleAccount401,
+  GetWholesaleAccount404,
   GetWholesaleCatalogProduct200,
   GetWholesaleCatalogProduct401,
   GetWholesaleCatalogProduct403,
@@ -40,7 +43,12 @@ import type {
   LoginWholesale429,
   LoginWholesaleBody,
   LogoutWholesale200,
-  LogoutWholesale401
+  LogoutWholesale401,
+  UpdateWholesaleAccountCustomerNote200,
+  UpdateWholesaleAccountCustomerNote400,
+  UpdateWholesaleAccountCustomerNote401,
+  UpdateWholesaleAccountCustomerNote404,
+  UpdateWholesaleAccountCustomerNoteBody
 } from './model';
 
 import { customFetch } from '../custom-fetch';
@@ -563,6 +571,213 @@ export function useGetWholesaleCatalogProduct<TData = Awaited<ReturnType<typeof 
 
 
 
+
+export type getWholesaleAccountResponse200 = {
+  data: GetWholesaleAccount200
+  status: 200
+}
+
+export type getWholesaleAccountResponse401 = {
+  data: GetWholesaleAccount401
+  status: 401
+}
+
+export type getWholesaleAccountResponse404 = {
+  data: GetWholesaleAccount404
+  status: 404
+}
+
+export type getWholesaleAccountResponseSuccess = (getWholesaleAccountResponse200) & {
+  headers: Headers;
+};
+export type getWholesaleAccountResponseError = (getWholesaleAccountResponse401 | getWholesaleAccountResponse404) & {
+  headers: Headers;
+};
+
+export type getWholesaleAccountResponse = (getWholesaleAccountResponseSuccess | getWholesaleAccountResponseError)
+
+export const getGetWholesaleAccountUrl = () => {
+
+
+
+
+  return `/wholesale/account`
+}
+
+/**
+ * @summary Read own customer account
+ */
+export const getWholesaleAccount = async ( options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleAccountResponse> => {
+
+  return customFetch<getWholesaleAccountResponse>(getGetWholesaleAccountUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWholesaleAccountQueryKey = () => {
+    return [
+    `/wholesale/account`
+    ] as const;
+    }
+
+
+export const getGetWholesaleAccountQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleAccount>>, TError = GetWholesaleAccount401 | GetWholesaleAccount404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWholesaleAccountQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWholesaleAccount>>> = ({ signal }) => getWholesaleAccount({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWholesaleAccountQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleAccount>>>
+export type GetWholesaleAccountQueryError = GetWholesaleAccount401 | GetWholesaleAccount404
+
+
+/**
+ * @summary Read own customer account
+ */
+
+export function useGetWholesaleAccount<TData = Awaited<ReturnType<typeof getWholesaleAccount>>, TError = GetWholesaleAccount401 | GetWholesaleAccount404>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWholesaleAccountQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type updateWholesaleAccountCustomerNoteResponse200 = {
+  data: UpdateWholesaleAccountCustomerNote200
+  status: 200
+}
+
+export type updateWholesaleAccountCustomerNoteResponse400 = {
+  data: UpdateWholesaleAccountCustomerNote400
+  status: 400
+}
+
+export type updateWholesaleAccountCustomerNoteResponse401 = {
+  data: UpdateWholesaleAccountCustomerNote401
+  status: 401
+}
+
+export type updateWholesaleAccountCustomerNoteResponse404 = {
+  data: UpdateWholesaleAccountCustomerNote404
+  status: 404
+}
+
+export type updateWholesaleAccountCustomerNoteResponseSuccess = (updateWholesaleAccountCustomerNoteResponse200) & {
+  headers: Headers;
+};
+export type updateWholesaleAccountCustomerNoteResponseError = (updateWholesaleAccountCustomerNoteResponse400 | updateWholesaleAccountCustomerNoteResponse401 | updateWholesaleAccountCustomerNoteResponse404) & {
+  headers: Headers;
+};
+
+export type updateWholesaleAccountCustomerNoteResponse = (updateWholesaleAccountCustomerNoteResponseSuccess | updateWholesaleAccountCustomerNoteResponseError)
+
+export const getUpdateWholesaleAccountCustomerNoteUrl = () => {
+
+
+
+
+  return `/wholesale/account`
+}
+
+/**
+ * @summary Edit own customer note
+ */
+export const updateWholesaleAccountCustomerNote = async (updateWholesaleAccountCustomerNoteBody: UpdateWholesaleAccountCustomerNoteBody, options?: Parameters<typeof customFetch>[1]): Promise<updateWholesaleAccountCustomerNoteResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateWholesaleAccountCustomerNoteResponse>(getUpdateWholesaleAccountCustomerNoteUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateWholesaleAccountCustomerNoteBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateWholesaleAccountCustomerNoteMutationOptions = <TError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>, TError,{data: UpdateWholesaleAccountCustomerNoteBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>, TError,{data: UpdateWholesaleAccountCustomerNoteBody}, TContext> => {
+
+const mutationKey = ['updateWholesaleAccountCustomerNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>, {data: UpdateWholesaleAccountCustomerNoteBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateWholesaleAccountCustomerNote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWholesaleAccountCustomerNoteMutationResult = NonNullable<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>>
+    export type UpdateWholesaleAccountCustomerNoteMutationBody = UpdateWholesaleAccountCustomerNoteBody
+    export type UpdateWholesaleAccountCustomerNoteMutationError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote404
+
+    /**
+ * @summary Edit own customer note
+ */
+export const useUpdateWholesaleAccountCustomerNote = <TError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>, TError,{data: UpdateWholesaleAccountCustomerNoteBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>,
+        TError,
+        {data: UpdateWholesaleAccountCustomerNoteBody},
+        TContext
+      > => {
+      return useMutation(getUpdateWholesaleAccountCustomerNoteMutationOptions(options));
+    }
 
 export type createWholesaleSalesOrderResponse201 = {
   data: CreateWholesaleSalesOrder201
