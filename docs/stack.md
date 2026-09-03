@@ -125,7 +125,7 @@ This product is a **transactional ledger**. Allocation must not oversell: confir
 
 | Data | Storage |
 |---|---|
-| Money | `BIGINT` integer **minor units** + ISO `currency` (CHAR(3)). Scale is the currency’s exponent (USD=2, JPY=0) — not a hardcoded `/100`. Never `FLOAT`/`REAL`/`DOUBLE`. Tax amounts from the engine are converted to `Money` in the Tax adapter. |
+| Money | `BIGINT` integer **minor units** + ISO `currency` (CHAR(3)). Scale is the currency’s exponent (USD=2, JPY=0) — not a hardcoded `/100`. Never `FLOAT`/`REAL`/`DOUBLE`. v1 invoice and line totals are merchandise `Money` only — no sales-tax lines or Tax adapter. |
 | Quantities | `INTEGER` (or `BIGINT`). Never float. |
 | IDs | `UUID` (`gen_random_uuid()`). |
 | SKU | `TEXT` with a unique constraint. |

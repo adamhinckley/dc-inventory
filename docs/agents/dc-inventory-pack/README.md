@@ -18,7 +18,7 @@ All Cursor/Linear **projects**, **issues**, and **sub-initiatives** for this wor
 | `dashboard-ui` | Internal tables/charts on existing reports | Cheap | pack default | Composer 2.5 |
 | `purchasing-sales` | PO create/receive, sales drafts (no allocation math) | Mid | `anthropic:claude-sonnet-5` | Sonnet 5 / Composer 2.5 |
 | `inventory` | Ledger/ATP **only after owner tests** | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
-| `tax` | v1 has no sales tax — **do not implement an engine** | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
+| `tax` | v1 has no sales tax — **do not implement an engine** (guardrail) | — | — | Reject tax-engine tickets |
 | `accounting` | Invoice/payment **only after owner tests** | Strong | `anthropic:claude-opus-5` | Opus 5 / GPT-5.6 Sol |
 | `fixit` | CI red / Sentry work packets in high-autonomy areas | Cheap | pack default | Composer 2.5 |
 

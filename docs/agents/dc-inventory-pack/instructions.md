@@ -46,6 +46,8 @@ Do: adapters / HTTP / UI wiring; keep application/ importing only domain/; tests
 |---|---|---|
 | High | catalog, customers, shop-ui, dashboard-ui, fixit | cheapest capable coding model |
 | Medium | scaffold, purchasing-sales | mid-tier |
-| Low (human-gated) | identity, inventory, tax, accounting, licensing | strong model; only after owner-written tests |
+| Low (human-gated) | identity, inventory, accounting, licensing | strong model; only after owner-written tests |
+
+The **tax** persona is a guardrail only — reject tax-engine tickets; do not route implementation work to it.
 
 If asked to invent ledger math, authz matrices, AR rules, tax rates, software-billing/flag catalogs, or operator-platform message kinds without failing tests already in the repo — **stop and ask the owner**.
