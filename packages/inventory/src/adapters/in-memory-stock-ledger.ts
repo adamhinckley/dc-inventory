@@ -179,6 +179,18 @@ export class InMemoryStockLedger implements IStockLedger {
         demand: this.readModel.getDemandStateSync(command.sku, locationId, organizationId),
         now,
       }),
+      listMovements: async () =>
+        (await this.readModel.listMovements({
+          organizationId,
+          sku: command.sku,
+          locationId,
+        })).map((movement) => ({
+          movementType: movement.movementType,
+          quantity: movement.quantity,
+          refType: movement.refType,
+          refId: movement.refId,
+          createdAt: movement.createdAt,
+        })),
       record: (movementType, coverCommand) => this.record(movementType, coverCommand),
     });
     if (coverResult !== null && !coverResult.ok) {

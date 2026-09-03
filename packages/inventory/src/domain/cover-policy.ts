@@ -6,9 +6,14 @@ import {
   computeLockedAvailableToSell,
   computeReceiveCoverQuantity,
   coverIdempotencyKey,
+  receiveCoverIdempotencyKey,
   type DemandPersistedState,
 } from "./demand-model.js";
 import { isPositiveIntegerQuantity } from "./ledger-rules.js";
+import {
+  listFifoUncoveredCommittedOrders,
+  type OrderCoverMovement,
+} from "./order-cover.js";
 import type {
   RecordCommittedCommand,
   RecordGoodsReceivedCommand,
@@ -66,27 +71,45 @@ export function planConfirmCoverAllocation(
   if (coverQty <= 0) {
     return null;
   }
-  return buildCoverAllocation(command, coverQty);
+  return buildConfirmCoverAllocation(command, coverQty);
 }
 
-export function planReceiveCoverAllocation(
+export function planReceiveCoverAllocations(
   command: Pick<
     RecordGoodsReceivedCommand,
-    "idempotencyKey" | "organizationId" | "sku" | "locationId" | "refId"
+    "idempotencyKey" | "organizationId" | "sku" | "locationId"
   >,
   receivedQuantity: number,
   figuresAfterReceive: StockFigures,
   committed: number,
-): CoverAllocatedCommand | null {
-  const coverQty = computeReceiveCoverQuantity(
+  movements: readonly OrderCoverMovement[],
+): readonly CoverAllocatedCommand[] {
+  const totalCoverQty = computeReceiveCoverQuantity(
     receivedQuantity,
     figuresAfterReceive,
     committed,
   );
-  if (coverQty <= 0) {
-    return null;
+  if (totalCoverQty <= 0) {
+    return [];
   }
-  return buildCoverAllocation(command, coverQty);
+
+  let remaining = totalCoverQty;
+  const allocations: CoverAllocatedCommand[] = [];
+  for (const uncoveredOrder of listFifoUncoveredCommittedOrders(movements)) {
+    if (remaining <= 0) {
+      break;
+    }
+    const coverQty = Math.min(uncoveredOrder.uncoveredQty, remaining);
+    if (coverQty <= 0) {
+      continue;
+    }
+    allocations.push(
+      buildReceiveCoverAllocation(command, uncoveredOrder.orderId, coverQty),
+    );
+    remaining -= coverQty;
+  }
+
+  return Object.freeze(allocations);
 }
 
 /**
@@ -133,7 +156,7 @@ export async function recordCommittedWithCover(
 }
 
 /**
- * Receive cover sequence: after GoodsReceived, allocate remaining committed demand.
+ * Receive cover sequence: after GoodsReceived, FIFO-allocate uncovered committed demand.
  * Caller records GoodsReceived (with demand observation) before invoking.
  */
 export async function allocateReceiveCover(
@@ -141,25 +164,37 @@ export async function allocateReceiveCover(
   receivedQuantity: number,
   deps: {
     readState: () => CoverPolicyReadState | Promise<CoverPolicyReadState>;
+    listMovements: () => readonly OrderCoverMovement[] | Promise<readonly OrderCoverMovement[]>;
     record: CoverPolicyRecorder;
   },
 ): Promise<StockCommandResult | null> {
   const state = await deps.readState();
-  const allocation = planReceiveCoverAllocation(
+  const movements = await deps.listMovements();
+  const allocations = planReceiveCoverAllocations(
     command,
     receivedQuantity,
     state.figures,
     state.demand.committed,
+    movements,
   );
-  if (allocation === null) {
+  if (allocations.length === 0) {
     return null;
   }
-  return deps.record("Allocated", allocation);
+
+  let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
+  for (const allocation of allocations) {
+    const coverResult = await deps.record("Allocated", allocation);
+    if (!coverResult.ok) {
+      return coverResult;
+    }
+    lastSuccess = coverResult;
+  }
+  return lastSuccess ?? null;
 }
 
-function buildCoverAllocation(
+function buildConfirmCoverAllocation(
   command: Pick<
-    RecordCommittedCommand | RecordGoodsReceivedCommand,
+    RecordCommittedCommand,
     "idempotencyKey" | "organizationId" | "sku" | "locationId" | "refId"
   >,
   coverQty: number,
@@ -172,5 +207,24 @@ function buildCoverAllocation(
     locationId: command.locationId,
     refType: "sales_order",
     refId: command.refId,
+  });
+}
+
+function buildReceiveCoverAllocation(
+  command: Pick<
+    RecordGoodsReceivedCommand,
+    "idempotencyKey" | "organizationId" | "sku" | "locationId"
+  >,
+  orderId: string,
+  coverQty: number,
+): CoverAllocatedCommand {
+  return Object.freeze({
+    organizationId: command.organizationId,
+    idempotencyKey: receiveCoverIdempotencyKey(command.idempotencyKey, orderId),
+    sku: command.sku,
+    quantity: coverQty,
+    locationId: command.locationId,
+    refType: "sales_order",
+    refId: orderId,
   });
 }

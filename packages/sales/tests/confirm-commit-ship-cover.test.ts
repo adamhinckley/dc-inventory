@@ -335,6 +335,74 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
     });
   });
 
+  describe("receive cover attribution (ADA-256)", () => {
+    ownerIt("includes receive-time Allocated in order cover quantity", async () => {
+      const h = salesDemandHarness();
+      await seedOnHand(h, COVER_SKU, 500, "receive-cover-floor");
+
+      const draft = await h.createDraft(COVER_PRODUCT_ID, 1_200);
+      expect(draft.ok).toBe(true);
+      if (!draft.ok) {
+        return;
+      }
+
+      const confirmed = await h.confirm.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        salesOrderId: draft.salesOrderId,
+        idempotencyKey: "receive-cover-confirm",
+      });
+      expect(confirmed.ok).toBe(true);
+
+      const coverAfterConfirm = await h.uow.inventory.getOrderCoverQuantity({
+        organizationId: DEFAULT_ORG,
+        sku: COVER_SKU,
+        orderId: draft.salesOrderId,
+      });
+      expect(coverAfterConfirm).toBe(500);
+
+      await h.inboundFromPo.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "receive-cover-po",
+        sku: COVER_SKU,
+        quantity: 1_900,
+        refType: "purchase_order",
+        refId: PO_COVER,
+      });
+      const receive = await h.goodsReceived.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "receive-cover-receive",
+        sku: COVER_SKU,
+        quantity: 1_900,
+        refType: "purchase_order",
+        refId: PO_COVER,
+      });
+      expect(receive.ok).toBe(true);
+
+      const coverAfterReceive = await h.uow.inventory.getOrderCoverQuantity({
+        organizationId: DEFAULT_ORG,
+        sku: COVER_SKU,
+        orderId: draft.salesOrderId,
+      });
+      expect(coverAfterReceive).toBe(1_200);
+
+      const movements = await h.readModel.listMovements({
+        organizationId: DEFAULT_ORG,
+        sku: COVER_SKU,
+        locationId: DEFAULT_LOCATION,
+      });
+      const receiveAllocated = movements.filter(
+        (movement) =>
+          movement.movementType === "Allocated" &&
+          movement.refType === "sales_order" &&
+          movement.refId === draft.salesOrderId &&
+          movement.idempotencyKey === `receive-cover-receive:cover:${draft.salesOrderId}`,
+      );
+      expect(receiveAllocated).toHaveLength(1);
+      expect(receiveAllocated[0]?.quantity).toBe(700);
+    });
+  });
+
   describe("confirm idempotency", () => {
     ownerIt("does not double-commit when confirm is retried with the same idempotency key", async () => {
       const h = salesDemandHarness();

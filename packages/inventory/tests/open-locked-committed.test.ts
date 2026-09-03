@@ -338,6 +338,77 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
         500,
         700,
       ]);
+      expect(allocatedMovements.every((movement) => movement.refType === "sales_order")).toBe(true);
+      expect(allocatedMovements.every((movement) => movement.refId === SO_COVER)).toBe(true);
+    });
+
+    ownerIt("FIFO-attributes receive cover across two uncovered committed orders", async () => {
+      const h = demandModelHarness();
+      const SO_FIRST = "550e8400-e29b-41d4-a716-446655440080";
+      const SO_SECOND = "550e8400-e29b-41d4-a716-446655440081";
+
+      await h.committed({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "fifo-first-commit",
+        sku: COVER_SKU,
+        quantity: 400,
+        refType: "sales_order",
+        refId: SO_FIRST,
+      });
+      await h.committed({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "fifo-second-commit",
+        sku: COVER_SKU,
+        quantity: 500,
+        refType: "sales_order",
+        refId: SO_SECOND,
+      });
+      await h.inboundFromPo.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "fifo-two-po",
+        sku: COVER_SKU,
+        quantity: 600,
+        refType: "purchase_order",
+        refId: PO_COVER,
+      });
+
+      const receive = await h.goodsReceived.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "fifo-two-receive",
+        sku: COVER_SKU,
+        quantity: 600,
+        refType: "purchase_order",
+        refId: PO_COVER,
+      });
+      expect(receive.ok).toBe(true);
+
+      const afterReceive = await h.demandSnapshot(COVER_SKU);
+      expect(afterReceive.onHand).toBe(600);
+      expect(afterReceive.committed).toBe(900);
+      expect(afterReceive.allocated).toBe(600);
+
+      const movements = await h.readModel.listMovements({
+        organizationId: DEFAULT_ORG,
+        sku: COVER_SKU,
+        locationId: DEFAULT,
+      });
+      const receiveCover = movements.filter(
+        (movement) =>
+          movement.movementType === "Allocated" &&
+          movement.idempotencyKey.startsWith("fifo-two-receive:cover:"),
+      );
+      expect(receiveCover).toEqual([
+        expect.objectContaining({
+          quantity: 400,
+          refType: "sales_order",
+          refId: SO_FIRST,
+        }),
+        expect.objectContaining({
+          quantity: 200,
+          refType: "sales_order",
+          refId: SO_SECOND,
+        }),
+      ]);
     });
   });
 
