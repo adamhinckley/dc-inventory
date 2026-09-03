@@ -20,7 +20,7 @@ export const CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-44665544000
 
 export type WholesaleLoginHarnessOptions = {
   /** Read at login time so tests can flip status between attempts. Defaults to active. */
-  getAccountStatus?: () => WholesaleLoginAccountStatus;
+  getAccountStatus?: () => WholesaleLoginAccountStatus | null;
   at?: Date;
 };
 

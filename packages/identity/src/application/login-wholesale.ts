@@ -63,7 +63,7 @@ export class LoginWholesaleUseCase {
       organizationId,
       user.customerId,
     );
-    if (accountStatus === "inactive") {
+    if (accountStatus !== "active" && accountStatus !== "on_hold") {
       return { ok: false };
     }
     const now = this.clock.now();

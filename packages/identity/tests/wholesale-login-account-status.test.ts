@@ -59,6 +59,28 @@ describe("Wholesale login vs account status (ADA-264, U10 login rows)", () => {
     });
   });
 
+  describe("missing status", () => {
+    ownerIt("blocks wholesale login when account status is null vs wrong password", async () => {
+      const h = wholesaleLoginHarness({ getAccountStatus: () => null });
+      await seedWholesaleLoginFixture(h);
+
+      const missingStatus = await h.loginWholesale.execute({
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      });
+      const wrongPassword = await h.loginWholesale.execute({
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "nope",
+      });
+
+      expect(missingStatus.ok).toBe(false);
+      expect(wrongPassword).toEqual({ ok: false });
+      expect(missingStatus).toEqual({ ok: false });
+    });
+  });
+
   describe("active", () => {
     ownerIt("allows wholesale login", async () => {
       const h = wholesaleLoginHarness({ getAccountStatus: () => "active" });
