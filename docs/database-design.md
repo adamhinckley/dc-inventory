@@ -7,7 +7,7 @@ One Postgres database · schema per context · inventory is the only place quant
 
 Source dump: product browser CSV (`product_id` … `disc_over_sold_percent`). Field meanings in [`product-browser-schema-glossary.md`](./product-browser-schema-glossary.md) are **unverified**. Do not copy that spreadsheet 1:1 into Postgres.
 
-Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md)
+Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) · [`customers.md`](./customers.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md)
 
 ---
 
@@ -34,6 +34,7 @@ flowchart LR
     customers_t["customers"]
     contacts
     ship_tos["ship_tos"]
+    bill_tos["bill_tos"]
     exemption_certificates
   end
 
@@ -106,9 +107,11 @@ flowchart LR
 
   customers_t --> contacts
   customers_t --> ship_tos
+  customers_t --> bill_tos
   customers_t --> exemption_certificates
   customers_t --> orders
   ship_tos -.->|address snapshot| orders
+  bill_tos -.->|address snapshot| invoices
   exemption_certificates -.->|exemption snapshot| tax_commits
   orders --> order_lines
   orders -->|allocate / ship| stock_movements
@@ -145,6 +148,7 @@ erDiagram
   customers ||--o{ wholesale_users : "has logins"
   customers ||--o{ contacts : "has"
   customers ||--o{ ship_tos : "ships to"
+  customers ||--o| bill_tos : "invoiced at"
   customers ||--o{ exemption_certificates : "holds"
   customers ||--o{ orders : "places"
   customers ||--o{ invoices : "billed on"
@@ -169,6 +173,7 @@ erDiagram
   locations ||--o{ reorder_policies : "policy at"
   products ||--o{ reorder_policies : "min / max"
   ship_tos ||--o{ orders : "snapshot"
+  bill_tos ||--o{ invoices : "snapshot"
 
   orders ||--|{ order_lines : "contains"
   orders ||--o{ stock_movements : "ref"
@@ -210,9 +215,11 @@ erDiagram
 | `reorder_policies` | `locations` | `location_id` | Plus `sku`; min/max on-hand |
 | `contacts` | `customers` | `customer_id` | |
 | `ship_tos` | `customers` | `customer_id` | Default and extra ship-to addresses |
+| `bill_tos` | `customers` | `customer_id` | One row per customer; same six fields as ship-to |
 | `exemption_certificates` | `customers` | `customer_id` | File in object storage; metadata + expiry |
 | `orders` | `customers` | `customer_id` | ID only — not a nested aggregate |
-| `orders` | `ship_tos` | snapshot columns | Copy address at order time |
+| `orders` | — | ship snapshot columns | Copy address at confirm — no live `ship_to_id` |
+| `invoices` | — | bill snapshot columns | Copy bill-to six fields at ship — see [`customers.md`](./customers.md) |
 | `order_lines` | `orders` | `order_id` | Lines freeze sku/name/price/`tax_category_code` |
 | `stock_movements` | PO or order | `ref_type` + `ref_id` | Ledger provenance |
 | `stock_snapshots` | — | `sku` + `location_id` | Read model; updated with each movement |
@@ -402,6 +409,87 @@ flowchart LR
 ```
 
 `available` = `on_hand − allocated` (warehouse leftover). `availableToSell` is the shop/staff sellable number ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)). `uncovered = max(0, committed − on_hand − on_order)` is the factory to-order list.
+
+---
+
+## Customers
+
+Behavior and gates: [`customers.md`](./customers.md). Locked rules: [`invariants.md`](./invariants.md) §9 U5–U14.
+
+Schema `customers`. Money is integer cents + `currency` (USD in v1).
+
+### `customers.customers`
+
+| Column | Notes |
+| --- | --- |
+| `id` | UUID PK |
+| `organization_id` | Composite uniqueness with child FKs |
+| `name` | Business name; required at create |
+| `customer_number` | Unique per org; system `CUST-#####` or staff legacy string; immutable |
+| `terms` | Free text in v1; copied to invoice due date at ship |
+| `credit_limit_cents` | Required at create; `$0` valid |
+| `currency` | `char(3)`, default `USD` |
+| `tax_id` | Optional |
+| `account_status` | `active` \| `on_hold` \| `inactive`; default `active` |
+| `customer_note` | Nullable text |
+| `staff_note` | Nullable text; wholesale API omits |
+| `created_at` / `updated_at` | |
+
+Unique: `(organization_id, customer_number)`.
+
+### `customers.contacts`
+
+| Column | Notes |
+| --- | --- |
+| `id` | UUID PK |
+| `customer_id` | FK |
+| `name` | |
+| `email` | Unique per `(customer_id, email)` |
+| `phone` | Optional |
+
+### `customers.ship_tos`
+
+| Column | Notes |
+| --- | --- |
+| `id` | UUID PK |
+| `customer_id` | FK |
+| `line_1` … `country` | Six address fields |
+| `is_default` | One default per customer (app-enforced) |
+
+### `customers.bill_tos`
+
+| Column | Notes |
+| --- | --- |
+| `customer_id` | FK; **unique** — one bill-to per customer |
+| `line_1` … `country` | Same six fields as ship-to; no `is_default` |
+
+### `customers.exemption_certificates`
+
+| Column | Notes |
+| --- | --- |
+| `id` | UUID PK |
+| `customer_id` | FK |
+| `jurisdiction` | Required |
+| `entity_use_code` | Optional |
+| `expires_at` | Optional |
+| `object_key` | Optional; file in object storage |
+| `status` | Metadata |
+
+### `customers.document_number_counters`
+
+| Column | Notes |
+| --- | --- |
+| `organization_id` | PK |
+| `last_value` | Issues `CUST-#####` when create leaves number blank |
+
+### Snapshots on other schemas
+
+| Table | Columns | When |
+| --- | --- | --- |
+| `sales.orders` | `ship_line_1` … `ship_country` | Confirm (existing) |
+| `accounting.invoices` | `bill_line_1` … `bill_country`, `due_date`, `terms` (copy) | Ship / post |
+
+No live FK from orders or invoices to `ship_tos` / `bill_tos` after snapshot.
 
 ---
 

@@ -190,8 +190,22 @@ uncovered         = max(0, committed − on_hand − on_order)
 | U2 | Credit **enforcement** at order time is a business rule in the Sales use case via `ICreditCheckPort`. Not `if (role)` in a domain entity. Not a Customers CRUD ticket. |
 | U3 | Customer balance (AR) is a projection of invoices minus payments (optionally a snapshot via events). It is not a hand-edited field that bypasses Accounting. |
 | U4 | Permission matrices and credit/stock gates are owner-reviewed. |
+| U5 | Create-customer **first save** is header-only and requires business name, terms, and credit limit. Customer number is optional on the form: blank → system issues `CUST-#####`; filled → legacy string unique per organization. Account status defaults `active`. |
+| U6 | Customer number is immutable after first save. Unique per organization. Visible on internal and wholesale apps. |
+| U7 | A customer may have zero bill-tos at create and afterward until ship. **Ship refuses** if no bill-to exists. |
+| U8 | Invoice copies the six bill-to address fields at ship. Sales order does not carry bill-to. |
+| U9 | Sales order copies ship-to address at confirm (typed snapshot; no live `ship_to_id` on the order). |
+| U10 | **On hold** blocks new confirm and staff place-on-behalf; allows draft edit, wholesale login, and payment. **Inactive** also blocks wholesale login and new drafts; allows internal payment recording. Both allow ship of already-confirmed orders. |
+| U11 | **Customer note** and **staff note** are separate header fields; empty allowed. Customer note: both apps read; only the wholesale customer edits (v1). Staff note: internal read/edit only; omit from wholesale OpenAPI. |
+| U12 | No tax status on the customer header. Every customer is a reseller for this company's purposes. |
+| U13 | Exemption certificates are child records. Jurisdiction required; entity-use, expiry, and file optional. Customer may exist, confirm, and ship with zero or expired certificates — not a create/confirm/ship gate. |
+| U14 | Contact email is unique per customer. Contact email is not the wholesale login (Identity owns shop users). |
 
 The credit-limit **formula** (what counts against the limit) is not closed — see [G6](#g6-credit-limit-formula).
+
+## 9a. Customers (master narrative)
+
+Full narrative: [`customers.md`](./customers.md).
 
 ---
 
@@ -533,19 +547,18 @@ Stakeholder language uses **item number** and has not locked it as SKU. Architec
 
 ### G13. Customers: ship-to, terms, statements, confirmation email
 
-The architecture Customers context is accounts, contacts, terms, credit. Stakeholder tables also have **`customer_ship_to`**, **invoice due-from-terms**, **statements**, and **confirm = page + matching email**.
+**Closed (2026-09).** Customer master shape, create gates, bill-to, notes, status, and exemption rules are locked in [`customers.md`](./customers.md) and §9 U5–U14.
 
-**Close for the initial plan:**
+Still open elsewhere (do not invent defaults):
 
-| Topic | Why it belongs in v1 | Suggested default |
-|---|---|---|
-| Ship-to | Sales order “includes ship-to”; otherwise every order is a blob | `Customer` has one-or-more ship-to addresses; order snapshots address at confirm |
-| Terms enum | Net 30/60/90 is the AR clock | Enum on customer; copied to invoice |
-| Confirmation email | Stated as part of what a confirmed sales order *is* | `IEmailSender` port; confirm use case sends after commit; in-memory fake in tests |
-| Statement | Distinct from invoice; due-date notice | **Defer** the send-job if needed, but name `Statement` as later — do not overload Invoice to mean statement |
-| Tracking | “later” | Explicitly deferred |
-
-Without `IEmailSender`, agents will either skip a business-visible invariant or put nodemailer in a controller.
+| Topic | Status |
+|---|---|
+| Terms enum (Net 30/60/90) vs free text | Product call — [`customers.md`](./customers.md) §12 |
+| Default terms / credit limit at create | Ask David — [`customers.md`](./customers.md) §12 |
+| Which contact receives confirmation / invoice email | Product call — [`customers.md`](./customers.md) §12 |
+| Confirmation email (`IEmailSender`) | Deferred send-job; port on confirm use case when built |
+| Statement | Deferred — do not overload Invoice |
+| Tracking | Explicitly deferred |
 
 ### G14. Tenancy, currency, clock
 

@@ -12,7 +12,7 @@ This file orients agents. The contracts live in `docs/`.
 4. [`docs/stack.md`](./docs/stack.md) — TypeScript, Fastify, Drizzle, Postgres, Better Auth, Next.js
 5. [`docs/api-contract.md`](./docs/api-contract.md) — OpenAPI, Orval, tables vs shop
 
-Also: [`docs/tax.md`](./docs/tax.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md).
+Also: [`docs/tax.md`](./docs/tax.md), [`docs/customers.md`](./docs/customers.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md).
 
 ## Current scaffold
 
@@ -71,6 +71,40 @@ _Avoid_: closed season, sold out as a company flag
 **Uncovered**:
 `max(0, committed − on_hand − on_order)`. The factory to-order list. Not a shop number.
 _Avoid_: available to sell, backorder document, purchase request
+
+### Customers
+
+**Customer**:
+Wholesale buyer account of this company. Every customer is a reseller; this company does not sell to taxable end-users. Commercial identity only — not the shop login and not the order history.
+_Avoid_: Client, account (when you mean the buyer), wholesale user, tax status, taxable customer
+
+**Customer number**:
+Human-readable identifier unique per organization. Not the UUID `CustomerId`. Visible on the internal app and the wholesale app. On create: blank → system issues `CUST-#####`; staff may instead enter a legacy number from a prior system (any unique string). Immutable after first save.
+_Avoid_: Customer ID, account code, ClientId
+
+**Ship-to**:
+Destination address on the customer. Copied onto the sales order at confirm.
+_Avoid_: Shipping address (as the record name), sleeping address, billing address
+
+**Bill-to**:
+The single address used to invoice the customer. Separate from ship-to. A customer may exist without one; ship refuses until it exists. Copied onto the invoice at ship.
+_Avoid_: Billing address (as the record name), shipping address, ship-to
+
+**Customer note**:
+Free text the wholesale customer writes on their account. Staff and the customer can read it. Only the customer can edit it.
+_Avoid_: Staff note, comment, shared memo (as if there is one note)
+
+**Staff note**:
+Free text staff write on the customer. Only the internal app can read or edit it. The wholesale app never sees it.
+_Avoid_: Customer note, internal-only as the only note, comment
+
+**Account status**:
+Whether staff will take new business from this customer: active, on hold, or inactive. Hold freezes confirm and staff-on-behalf; login and payment stay. Inactive closes the shop login and new drafts; staff still record payments. Already-confirmed orders may still ship.
+_Avoid_: Credit limit (that is money), unpaid, archived
+
+**Exemption certificate**:
+A resale document on a Customer. Jurisdiction is required; entity-use, expiry, and file are optional. The wholesale customer or staff may attach the file. Evidence only — not a sales gate, not tax math.
+_Avoid_: Tax status, tax-exempt certificate (as the record name), certificate as the customer header
 
 ### Building blocks
 
