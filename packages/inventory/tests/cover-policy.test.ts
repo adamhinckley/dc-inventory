@@ -4,13 +4,14 @@ import {
   allocateReceiveCover,
   gateCommittedQuantity,
   planConfirmCoverAllocation,
-  planReceiveCoverAllocation,
+  planReceiveCoverAllocations,
   recordCommittedWithCover,
   type CoverPolicyReadState,
   type CoverPolicyRecorder,
 } from "../src/domain/cover-policy.js";
 import { ZERO_DEMAND_STATE } from "../src/domain/demand-model.js";
 import type { RecordCommittedCommand, StockCommandResult } from "../src/domain/ports/stock-ledger.js";
+import type { OrderCoverMovement } from "../src/domain/order-cover.js";
 import { freezeStockFigures } from "../src/domain/snapshot.js";
 
 const ORG = OrganizationId.DEFAULT;
@@ -59,15 +60,30 @@ function committedCommand(quantity: number): RecordCommittedCommand {
   };
 }
 
+function movement(
+  movementType: OrderCoverMovement["movementType"],
+  quantity: number,
+  refId: string,
+  createdAt: Date,
+): OrderCoverMovement {
+  return {
+    movementType,
+    quantity,
+    refType: "sales_order",
+    refId,
+    createdAt,
+  };
+}
+
 function recordingStub(
   onRecord?: (movementType: "Committed" | "Allocated", quantity: number) => void,
 ): {
-  calls: Array<{ movementType: "Committed" | "Allocated"; quantity: number }>;
+  calls: Array<{ movementType: "Committed" | "Allocated"; quantity: number; refId: string }>;
   record: CoverPolicyRecorder;
 } {
-  const calls: Array<{ movementType: "Committed" | "Allocated"; quantity: number }> = [];
+  const calls: Array<{ movementType: "Committed" | "Allocated"; quantity: number; refId: string }> = [];
   const record: CoverPolicyRecorder = async (movementType, command) => {
-    calls.push({ movementType, quantity: command.quantity });
+    calls.push({ movementType, quantity: command.quantity, refId: command.refId });
     onRecord?.(movementType, command.quantity);
     return {
       ok: true,
@@ -117,24 +133,29 @@ describe("cover-policy (ADA-255)", () => {
   });
 
   it("plans receive cover for committed demand not yet allocated", () => {
-    const allocation = planReceiveCoverAllocation(
+    const allocations = planReceiveCoverAllocations(
       {
         organizationId: ORG,
         idempotencyKey: "receive-key",
         sku: SKU,
         locationId: LOCATION,
-        refId: "PO-255",
       },
       1_900,
       freezeStockFigures(500, 0, 30),
       1_200,
+      [
+        movement("Committed", 1_200, "SO-255", new Date("2026-06-15T10:00:00.000Z")),
+        movement("Allocated", 30, "SO-255", new Date("2026-06-15T11:00:00.000Z")),
+      ],
     );
-    expect(allocation).toMatchObject({
-      quantity: 1_170,
-      idempotencyKey: "receive-key:cover",
-      refType: "sales_order",
-      refId: "PO-255",
-    });
+    expect(allocations).toEqual([
+      expect.objectContaining({
+        quantity: 1_170,
+        idempotencyKey: "receive-key:cover:SO-255",
+        refType: "sales_order",
+        refId: "SO-255",
+      }),
+    ]);
   });
 
   it("records Committed then leftover Allocated through one policy sequence", async () => {
@@ -164,8 +185,8 @@ describe("cover-policy (ADA-255)", () => {
 
     expect(result.ok).toBe(true);
     expect(calls).toEqual([
-      { movementType: "Committed", quantity: 100 },
-      { movementType: "Allocated", quantity: 30 },
+      { movementType: "Committed", quantity: 100, refId: "SO-255" },
+      { movementType: "Allocated", quantity: 30, refId: "SO-255" },
     ]);
   });
 
@@ -190,12 +211,18 @@ describe("cover-policy (ADA-255)", () => {
       1_900,
       {
         readState: () => state,
+        listMovements: (): OrderCoverMovement[] => [
+          movement("Committed", 1_200, "SO-255", new Date("2026-06-15T10:00:00.000Z")),
+          movement("Allocated", 30, "SO-255", new Date("2026-06-15T11:00:00.000Z")),
+        ],
         record,
       },
     );
 
     expect(coverResult?.ok).toBe(true);
-    expect(calls).toEqual([{ movementType: "Allocated", quantity: 1_170 }]);
+    expect(calls).toEqual([
+      { movementType: "Allocated", quantity: 1_170, refId: "SO-255" },
+    ]);
   });
 
   it("surfaces recorder failures from confirm cover allocation", async () => {
@@ -236,5 +263,76 @@ describe("cover-policy (ADA-255)", () => {
     });
 
     expect(result).toEqual({ ok: false, reason: "insufficient_available" });
+  });
+});
+
+describe("cover-policy FIFO receive attribution (ADA-256)", () => {
+  it("plans receive cover FIFO across two uncovered committed orders", () => {
+    const allocations = planReceiveCoverAllocations(
+      {
+        organizationId: ORG,
+        idempotencyKey: "receive-key",
+        sku: SKU,
+        locationId: LOCATION,
+      },
+      600,
+      freezeStockFigures(600, 0, 0),
+      900,
+      [
+        movement("Committed", 400, "SO-FIRST", new Date("2026-06-15T09:00:00.000Z")),
+        movement("Committed", 500, "SO-SECOND", new Date("2026-06-15T10:00:00.000Z")),
+      ],
+    );
+
+    expect(allocations).toEqual([
+      expect.objectContaining({
+        quantity: 400,
+        refType: "sales_order",
+        refId: "SO-FIRST",
+        idempotencyKey: "receive-key:cover:SO-FIRST",
+      }),
+      expect.objectContaining({
+        quantity: 200,
+        refType: "sales_order",
+        refId: "SO-SECOND",
+        idempotencyKey: "receive-key:cover:SO-SECOND",
+      }),
+    ]);
+  });
+
+  it("allocates receive cover FIFO across sales order refs in memory", async () => {
+    const { calls, record } = recordingStub();
+    const state: CoverPolicyReadState = {
+      figures: freezeStockFigures(600, 0, 0),
+      demand: { ...ZERO_DEMAND_STATE, committed: 900 },
+      now: new Date("2026-06-15T12:00:00.000Z"),
+    };
+
+    const coverResult = await allocateReceiveCover(
+      {
+        organizationId: ORG,
+        idempotencyKey: "fifo-receive",
+        sku: SKU,
+        quantity: 600,
+        locationId: LOCATION,
+        refType: "purchase_order",
+        refId: "PO-256",
+      },
+      600,
+      {
+        readState: () => state,
+        listMovements: (): OrderCoverMovement[] => [
+          movement("Committed", 400, "SO-FIRST", new Date("2026-06-15T09:00:00.000Z")),
+          movement("Committed", 500, "SO-SECOND", new Date("2026-06-15T10:00:00.000Z")),
+        ],
+        record,
+      },
+    );
+
+    expect(coverResult?.ok).toBe(true);
+    expect(calls).toEqual([
+      { movementType: "Allocated", quantity: 400, refId: "SO-FIRST" },
+      { movementType: "Allocated", quantity: 200, refId: "SO-SECOND" },
+    ]);
   });
 });

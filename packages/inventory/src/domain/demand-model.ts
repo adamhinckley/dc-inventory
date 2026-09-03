@@ -159,3 +159,7 @@ export function computeReceiveCoverQuantity(
 export function coverIdempotencyKey(baseKey: string): string {
   return `${baseKey}:cover`;
 }
+
+export function receiveCoverIdempotencyKey(baseKey: string, orderId: string): string {
+  return `${baseKey}:cover:${orderId}`;
+}

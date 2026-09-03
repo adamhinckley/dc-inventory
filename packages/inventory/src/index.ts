@@ -72,13 +72,19 @@ export {
   allocateReceiveCover,
   gateCommittedQuantity,
   planConfirmCoverAllocation,
-  planReceiveCoverAllocation,
+  planReceiveCoverAllocations,
   recordCommittedWithCover,
   type CoverAllocatedCommand,
   type CoverPolicyReadState,
   type CoverPolicyRecorder,
 } from "./domain/cover-policy.js";
-export { netOrderCoverQuantity } from "./domain/order-cover.js";
+export {
+  listFifoUncoveredCommittedOrders,
+  netOrderCommittedQuantity,
+  netOrderCoverQuantity,
+  type FifoUncoveredOrder,
+  type OrderCoverMovement,
+} from "./domain/order-cover.js";
 export type {
   AllocatedCommand,
   CommittedCommand,
