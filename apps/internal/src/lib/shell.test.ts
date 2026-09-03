@@ -24,6 +24,13 @@ describe("internal dashboard shell", () => {
     ).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchase-orders-table.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchase-order-workspace.tsx"))).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "components/purchase-order-draft-workspace.tsx")),
+    ).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "components/purchase-order-factory-send-workspace.tsx")),
+    ).toBe(true);
+    expect(existsSync(join(srcRoot, "lib/purchase-order-line-math.ts"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/product-case-qty-dialog.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchasing-orders-explorer.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/receiving-inbound-explorer.tsx"))).toBe(true);
