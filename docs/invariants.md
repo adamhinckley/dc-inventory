@@ -43,7 +43,7 @@ Sources: [`architecture.md`](./architecture.md), [`stack.md`](./stack.md), [`dat
 | C12 | A PO is a purchasing document, not a journal entry. Accounting v1 is AR only — not GL, not AP from POs, not inventory valuation, **not software subscription**. |
 | C13 | Licensing is the only writer of software entitlements and **software payment history** (money to the developer). Other contexts read `IFeatures` / `FeatureName` only. |
 | C14 | Paid add-ons are Licensing `AddOnId`s, not Catalog products and not Inventory SKUs. |
-| C15 | Sales and Accounting **never** compute tax. They pass address, line, and exemption snapshots into `ITaxCalculator`. Catalog stores `taxCategoryCode`, not a rate. |
+| C15 | v1 does not collect sales tax. There is no Tax context, no `ITaxCalculator`, no `tax_commits` / `invoice_tax_lines`, and no `taxCategoryCode`. Sales and Accounting never multiply a rate. Reseller Tax ID and exemption files live on the customer master only. |
 
 ### Shared kernel (tiny)
 
@@ -213,9 +213,9 @@ Full narrative: [`customers.md`](./customers.md).
 
 | ID | Invariant |
 |---|---|
-| A1 | Accounting v1: invoices, payments, AR **owed by wholesale customers**. Out of scope: GL, inventory asset valuation, AP, tax **return filing**, **software subscription**. Tax **calculation** is Tax context (`ITaxCalculator`), not Accounting math. |
-| A2 | Invoice is created when the sales order **ships**. One invoice per sales order in v1. Tax **commits when that invoice posts**. Confirmed-but-unshipped orders are not invoiced. Due date = invoice date + customer terms, copied onto the invoice. |
-| A3 | Payments are applied to invoices (`payment_applications` supports partial pay) against the invoice **total**, which includes committed tax. |
+| A1 | Accounting v1: invoices, payments, AR **owed by wholesale customers**. Out of scope: GL, inventory asset valuation, AP, **sales tax**, **software subscription**. |
+| A2 | Invoice is created when the sales order **ships**. One invoice per sales order in v1. Confirmed-but-unshipped orders are not invoiced. Due date = invoice date + customer terms, copied onto the invoice. |
+| A3 | Payments are applied to invoices (`payment_applications` supports partial pay) against the invoice **total** (merchandise). |
 | A4 | Payment application and AR balance are owner-gated. Agents do not invent AR rules or use float cash. |
 | A5 | Invoice PDF is a projection of our aggregates, same as PO PDF. |
 | A6 | Wholesale may download **their** invoices/order PDFs only if the wholesale spec includes the operation. |
@@ -224,20 +224,15 @@ A `SoftwarePayment` is not an Accounting payment.
 
 ---
 
-## 10a. Tax (quote / commit)
+## 10a. Tax (none)
 
 Full narrative: [`tax.md`](./tax.md).
 
 | ID | Invariant |
 |---|---|
-| TX1 | Tax calculation is `ITaxCalculator` (quote / commit / void). Sales, Accounting, Catalog, and UIs never `price * rate`. |
-| TX2 | Checkout **quotes**. Invoice **post** **commits**. The committed `Money` (and tax lines) are frozen on the invoice and never recomputed from today’s engine. |
-| TX3 | Fail closed: engine down or garbage → do not confirm an order or post an invoice with `tax = 0`. |
-| TX4 | Tax HTTP is **not** inside the Inventory `FOR UPDATE` transaction. Allocate stock, then quote/commit as a separate I/O. Commit is idempotent; void if invoice post fails after a successful commit. |
-| TX5 | Catalog stores `taxCategoryCode`, not a percent. Customers store ship-to + exemption **files and metadata**; enforcement is owner-gated. |
-| TX6 | Convert engine floats to `Money` in the Tax adapter. Domain never sees `0.0875`. |
-| TX7 | Production adapter is a hosted engine (default AvaTax). In-memory adapter is required in unit tests. SDK lives only in `packages/tax/adapters`. |
-| TX8 | Return filing, remittance, use tax on POs, and CertCapture-class certificate campaigns are **not** v1. |
+| TX1 | v1 does not quote, commit, or store sales tax. No Tax context. No `ITaxCalculator`. |
+| TX2 | Do not add `tax_commits`, `tax_commit_lines`, `invoice_tax_lines`, invoice `tax_total`, or `taxCategoryCode`. |
+| TX3 | Reseller Tax ID and exemption certificates stay on the customer master. They are not a tax engine and not a confirm/ship gate. |
 
 ---
 
@@ -404,7 +399,7 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - Native Faire API
 - Product variants as a separate aggregate
 - General ledger, AP, inventory asset valuation
-- Tax **return filing**, remittance, nexus dashboards, use tax on POs, full certificate-lifecycle CMS (calculation + commit **is** v1 — [`tax.md`](./tax.md))
+- Tax **return filing**, remittance, nexus dashboards, use tax on POs, certificate CMS, **and sales-tax calculation** (none of these are v1 — [`tax.md`](./tax.md))
 - Message broker, outbox, CQRS with a separate read DB
 - Microservices / separate deployables per context (ops **UI hosting** may split later; inventory does not)
 - OCR / extracting line items from arbitrary supplier PDFs or emails
@@ -489,7 +484,7 @@ Credit is named as a use-case invariant but not specified.
 
 ### G7. Invoice on confirm vs on ship
 
-**Closed (2026-08-27 call + demo):** invoice when the sales order **ships**. One invoice per sales order. Confirmed-but-unshipped orders are not invoiced. Due date = invoice date + customer terms (Net 30/60/90), copied onto the invoice. Tax **commits at the same moment the invoice posts**. Statements are not invoices ([G13](#g13-customers-ship-to-terms-statements-confirmation-email)). Auto-dunning can stay weak; the AR ledger cannot.
+**Closed (2026-08-27 call + demo):** invoice when the sales order **ships**. One invoice per sales order. Confirmed-but-unshipped orders are not invoiced. Due date = invoice date + customer terms (Net 30/60/90), copied onto the invoice. No sales tax on the invoice ([`tax.md`](./tax.md)). Statements are not invoices ([G13](#g13-customers-ship-to-terms-statements-confirmation-email)). Auto-dunning can stay weak; the AR ledger cannot.
 
 ### G8. Staff RBAC matrix
 
@@ -630,14 +625,9 @@ The **door** is locked ([§10c](#10c-operator-platform-bridge), [`operator-bridg
 
 Until then, no-op is the correct v1 adapter.
 
-### G21. Hosted tax engine (AvaTax vs cheaper)
+### G21. Sales tax
 
-Calculation + commit is locked ([§10a](#10a-tax-quote--commit), [`tax.md`](./tax.md)). The **vendor** is not:
-
-- Default: Avalara AvaTax (wholesale resale certificates).
-- Acceptable cheaper: Stripe Tax only if few-nexus and staff will store certificates themselves.
-
-**Close before the production adapter is wired:** which engine, sandbox credentials, and the entity-use / resale codes for this company’s customers. In-memory tests do not wait on that pick.
+**Closed (2026-09).** This company does not collect sales tax. No hosted engine. Scaffold leftovers (`packages/tax`, empty tax tables) must not be extended — [`tax.md`](./tax.md).
 
 ### Suggested owner-test packets once P0 items close
 
@@ -646,8 +636,8 @@ These are the failing tests the architecture already says the owner writes; they
 1. **Inventory:** movement effects, `available = on_hand − allocated`, locked `availableToSell = on_hand + on_order − committed`, open SKU has no sellability cap, first `InboundFromPo` locks, sell window can lock with no PO (injected clock), reject locked oversell under concurrent confirms (in-memory lock/serial), cover FIFO on receive, adjustment sign, compensating decommit/deallocate.
 2. **Sales confirm:** all-or-nothing `availableToSell` on locked lines, credit formula, session `customerId` overwrite, snapshot price frozen, draft not commitable twice. Ship only against `Allocated`.
 3. **Purchasing receive:** `GoodsReceived` vs remaining `on_order`, cancel-compensates inbound (does not reopen), over-receive rejected, FIFO cover of committed qty.
-4. **Accounting:** invoice on ship, partial payment, cannot over-apply, `Money` integer-only; invoice total includes committed tax.
-5. **Tax:** quote ≠ commit; fail-closed on engine error; commit idempotent; posted invoice tax lines do not change when a later quote would; no tax HTTP inside inventory lock.
+4. **Accounting:** invoice on ship, partial payment, cannot over-apply, `Money` integer-only; invoice total is merchandise (no sales tax).
+5. **Tax:** none — reject any slice that adds quote/commit, tax lines, or `price * rate`.
 6. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
 7. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.
 8. **Operator bridge:** software payment still commits if publish throws; issue submit succeeds on local save; closed message kinds only.
@@ -664,6 +654,6 @@ When reviewing an agent PR, the architecture checklist still applies ([architect
 - [ ] Did money or qty become float anywhere on the path (DB, DTO, CSV, chart)?
 - [ ] Did wholesale trust a body `customerId` or return another customer’s row as `403`?
 - [ ] Did software billing land in Accounting or Catalog, or did a flag skip ATP/authz?
-- [ ] Did a slice multiply a tax rate, post an invoice without `ITaxCalculator.commit`, or treat a quote as the legal amount?
+- [ ] Did a slice add sales tax (quote/commit, tax lines, `taxCategoryCode`, or `price * rate`)?
 - [ ] Did a slice require the operator platform to be online for inventory or checkout?
 - [ ] Did the change close a [§18](#18-what-the-initial-plan-still-needs) gap **in code** without updating this file and owner tests?

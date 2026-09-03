@@ -30,7 +30,7 @@ pnpm dev:wholesale
 | `/products` | Product-card grid from `useListWholesaleCatalog` (Orval) |
 | `/products/[sku]` | PDP placeholder |
 | `/cart` | Cart placeholder — no client-invented availability |
-| `/checkout` | Checkout placeholder — tax display only, later |
+| `/checkout` | Checkout placeholder — merchandise totals only (no sales tax in v1) |
 | `/orders` | Order history placeholder |
 
 Catalog data comes from the generated wholesale client only. There is no hand-written API `fetch` and no `DataTable` import.

@@ -36,8 +36,8 @@ Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./data
 
 - [ ] What **staff roles** exist (purchasing, warehouse, sales support, admin), and who may create POs, adjust stock, or issue invoices?
 - [ ] Do wholesale clients see **available quantity** on the shop, or only “in stock / not”?
-- [ ] Do you collect a **ship-to address** on every order today (needed for tax quote)?
-- [ ] Are most accounts **resale-exempt** (certificate on file), **taxable**, or mixed? (v1 quotes/commits tax via [`tax.md`](./tax.md); this sets engine and exemption expectations.)
+- [ ] Do you collect a **ship-to address** on every order today?
+- [x] Exemption certificates stay reseller paperwork only — not a tax engine, not a confirm/ship gate ([TX3](./invariants.md#10a-tax-none); closed with [G21](./invariants.md#g21-sales-tax)).
 
 ## Later — not v1, confirm we should not build it now
 
