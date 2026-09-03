@@ -1,55 +1,15 @@
-import { describe, expect, it } from "vitest";
-import {
-  computeAvailableToSell,
-  computeEffectiveSellState,
-  projectDemandFigures,
-} from "../src/domain/demand-model.js";
+import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { projectDemandFigures } from "../src/domain/demand-model.js";
 import { freezeStockFigures } from "../src/domain/snapshot.js";
-
-type SnapshotRow = Readonly<{
-  onHand: number;
-  onOrder: number;
-  allocated: number;
-  committed: number;
-  stickyLocked: boolean;
-  windowOpensAt: Date | null;
-  windowClosesAt: Date | null;
-}>;
-
-function evaluateSqlMirror(row: SnapshotRow, now: Date) {
-  const demand = {
-    committed: row.committed,
-    stickyLocked: row.stickyLocked,
-    windowOpensAt: row.windowOpensAt,
-    windowClosesAt: row.windowClosesAt,
-  };
-  const sellState = computeEffectiveSellState(demand, now);
-  const locked = sellState === "locked";
-  const availableToSell = computeAvailableToSell(
-    sellState,
-    row.onHand,
-    row.onOrder,
-    row.committed,
-  );
-  return { locked, sellState, availableToSell };
-}
-
-function projectRow(row: SnapshotRow, now: Date) {
-  return projectDemandFigures(
-    freezeStockFigures(row.onHand, row.onOrder, row.allocated),
-    {
-      committed: row.committed,
-      stickyLocked: row.stickyLocked,
-      windowOpensAt: row.windowOpensAt,
-      windowClosesAt: row.windowClosesAt,
-    },
-    now,
-  );
-}
+import {
+  createDemandProjectionSqlEvaluator,
+  type DemandProjectionFixtureRow,
+  type DemandProjectionSqlEvaluation,
+} from "./support/evaluate-demand-projection-sql.js";
 
 const NOW = new Date("2026-09-03T12:00:00.000Z");
 
-const CASES: readonly SnapshotRow[] = [
+const CASES: readonly DemandProjectionFixtureRow[] = [
   {
     onHand: 10,
     onOrder: 0,
@@ -97,25 +57,55 @@ const CASES: readonly SnapshotRow[] = [
   },
 ];
 
-describe("demand projection SQL mirror", () => {
+function projectRow(row: DemandProjectionFixtureRow, now: Date) {
+  return projectDemandFigures(
+    freezeStockFigures(row.onHand, row.onOrder, row.allocated),
+    {
+      committed: row.committed,
+      stickyLocked: row.stickyLocked,
+      windowOpensAt: row.windowOpensAt,
+      windowClosesAt: row.windowClosesAt,
+    },
+    now,
+  );
+}
+
+describe("demand projection SQL lockstep", () => {
+  let evaluateSql: (
+    row: DemandProjectionFixtureRow,
+    now: Date,
+  ) => Promise<DemandProjectionSqlEvaluation>;
+  let closeEvaluator: () => Promise<void>;
+
+  beforeAll(async () => {
+    const evaluator = await createDemandProjectionSqlEvaluator();
+    evaluateSql = evaluator.evaluate.bind(evaluator);
+    closeEvaluator = evaluator.close.bind(evaluator);
+  });
+
+  afterAll(async () => {
+    await closeEvaluator();
+  });
+
   it.each(CASES.map((row, index) => [index, row] as const))(
-    "matches projectDemandFigures for case %i",
-    (_index, row) => {
+    "evaluates exported SQL fragments in lockstep with projectDemandFigures for case %i",
+    async (_index, row) => {
       const projected = projectRow(row, NOW);
-      const mirrored = evaluateSqlMirror(row, NOW);
-      expect(mirrored.sellState).toBe(projected.sellState);
-      expect(mirrored.availableToSell).toBe(projected.availableToSell);
-      expect(mirrored.locked).toBe(projected.sellState === "locked");
+      const sql = await evaluateSql(row, NOW);
+      expect(sql.isLocked).toBe(projected.sellState === "locked");
+      expect(sql.availableToSell).toBe(projected.availableToSell);
     },
   );
 
-  it("sorts open before locked and null availableToSell after numeric values ascending", () => {
-    const projected = CASES.map((row) => projectRow(row, NOW));
-    const ascBySellState = [...projected].sort((a, b) => {
-      const rank = (sellState: typeof a.sellState) => (sellState === "open" ? 0 : 1);
-      return rank(a.sellState) - rank(b.sellState);
-    });
-    expect(ascBySellState[0]?.sellState).toBe("open");
+  it("sorts open before locked and null availableToSell after numeric values ascending", async () => {
+    const projected = [];
+    for (const row of CASES) {
+      projected.push(await evaluateSql(row, NOW));
+    }
+    const ascBySellState = [...projected].sort(
+      (a, b) => Number(a.isLocked) - Number(b.isLocked),
+    );
+    expect(ascBySellState[0]?.isLocked).toBe(false);
 
     const ascByAts = [...projected].sort((a, b) => {
       const aValue = a.availableToSell;

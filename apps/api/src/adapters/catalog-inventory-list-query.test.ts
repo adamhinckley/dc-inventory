@@ -1,39 +1,10 @@
-import { describe, expect, it } from "vitest";
 import {
-  computeAvailableToSell,
-  computeEffectiveSellState,
-} from "@dc-inventory/inventory";
+  createDemandProjectionSqlEvaluator,
+  type DemandProjectionFixtureRow,
+  type DemandProjectionSqlEvaluation,
+} from "../../../../packages/inventory/tests/support/evaluate-demand-projection-sql.js";
+import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
-
-type SnapshotRow = Readonly<{
-  onHand: number;
-  onOrder: number;
-  allocated: number;
-  committed: number;
-  stickyLocked: boolean;
-  windowOpensAt: Date | null;
-  windowClosesAt: Date | null;
-}>;
-
-function sqlMirrorSortKeys(row: SnapshotRow, now: Date) {
-  const demand = {
-    committed: row.committed,
-    stickyLocked: row.stickyLocked,
-    windowOpensAt: row.windowOpensAt,
-    windowClosesAt: row.windowClosesAt,
-  };
-  const sellState = computeEffectiveSellState(demand, now);
-  return {
-    sellState,
-    isLocked: sellState === "locked",
-    availableToSell: computeAvailableToSell(
-      sellState,
-      row.onHand,
-      row.onOrder,
-      row.committed,
-    ),
-  };
-}
 
 function compareAvailableToSell(
   a: number | null,
@@ -48,7 +19,7 @@ function compareAvailableToSell(
 
 const NOW = new Date("2026-09-03T12:00:00.000Z");
 
-const ROWS: readonly SnapshotRow[] = [
+const ROWS: readonly DemandProjectionFixtureRow[] = [
   {
     onHand: 10,
     onOrder: 0,
@@ -88,39 +59,59 @@ const ROWS: readonly SnapshotRow[] = [
 ];
 
 describe("CatalogInventoryListQuery demand projection sort keys", () => {
-  it("matches cell values from productQtyFromSnapshotRow for open and locked SKUs", () => {
+  let evaluateSql: (
+    row: DemandProjectionFixtureRow,
+    now: Date,
+  ) => Promise<DemandProjectionSqlEvaluation>;
+  let closeEvaluator: () => Promise<void>;
+
+  beforeAll(async () => {
+    const evaluator = await createDemandProjectionSqlEvaluator();
+    evaluateSql = evaluator.evaluate.bind(evaluator);
+    closeEvaluator = evaluator.close.bind(evaluator);
+  });
+
+  afterAll(async () => {
+    await closeEvaluator();
+  });
+
+  it("matches cell values from productQtyFromSnapshotRow for open and locked SKUs", async () => {
     for (const row of ROWS) {
       const cell = productQtyFromSnapshotRow(row, NOW);
-      const sortKeys = sqlMirrorSortKeys(row, NOW);
-      expect(sortKeys.sellState).toBe(cell.sellState);
-      expect(sortKeys.availableToSell).toBe(cell.availableToSell);
+      const sortKeys = await evaluateSql(row, NOW);
       expect(sortKeys.isLocked).toBe(cell.sellState === "locked");
+      expect(sortKeys.availableToSell).toBe(cell.availableToSell);
     }
   });
 
-  it("orders availableToSell the same as displayed cell values", () => {
+  it("orders availableToSell the same as displayed cell values", async () => {
     const cellValues = ROWS.map((row) => productQtyFromSnapshotRow(row, NOW));
+    const sqlValues = [];
+    for (const row of ROWS) {
+      sqlValues.push(await evaluateSql(row, NOW));
+    }
     const byCellAsc = [...cellValues].sort((a, b) =>
       compareAvailableToSell(a.availableToSell, b.availableToSell, "asc"),
     );
-    const bySqlMirrorAsc = [...ROWS]
-      .map((row) => sqlMirrorSortKeys(row, NOW))
-      .sort((a, b) => compareAvailableToSell(a.availableToSell, b.availableToSell, "asc"));
-    expect(bySqlMirrorAsc.map((row) => row.availableToSell)).toEqual(
+    const bySqlAsc = [...sqlValues].sort((a, b) =>
+      compareAvailableToSell(a.availableToSell, b.availableToSell, "asc"),
+    );
+    expect(bySqlAsc.map((row) => row.availableToSell)).toEqual(
       byCellAsc.map((row) => row.availableToSell),
     );
   });
 
-  it("orders sellState the same as displayed cell values", () => {
+  it("orders sellState the same as displayed cell values", async () => {
+    const cellValues = ROWS.map((row) => productQtyFromSnapshotRow(row, NOW));
+    const sqlValues = [];
+    for (const row of ROWS) {
+      sqlValues.push(await evaluateSql(row, NOW));
+    }
     const rank = (sellState: "open" | "locked") => (sellState === "open" ? 0 : 1);
-    const byCellAsc = [...ROWS]
-      .map((row) => productQtyFromSnapshotRow(row, NOW))
-      .sort((a, b) => rank(a.sellState) - rank(b.sellState));
-    const bySqlMirrorAsc = [...ROWS]
-      .map((row) => sqlMirrorSortKeys(row, NOW))
-      .sort((a, b) => Number(a.isLocked) - Number(b.isLocked));
-    expect(bySqlMirrorAsc.map((row) => row.sellState)).toEqual(
-      byCellAsc.map((row) => row.sellState),
+    const byCellAsc = [...cellValues].sort((a, b) => rank(a.sellState) - rank(b.sellState));
+    const bySqlAsc = [...sqlValues].sort((a, b) => Number(a.isLocked) - Number(b.isLocked));
+    expect(bySqlAsc.map((row) => row.isLocked)).toEqual(
+      byCellAsc.map((row) => row.sellState === "locked"),
     );
   });
 });
