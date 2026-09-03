@@ -343,7 +343,7 @@ export function DetailViewEditButton({
       tabIndex={0}
       {...rest}
     >
-      <Pencil className="size-icon-lg" />
+      <Pencil className="size-icon-lg" aria-hidden />
       {children ?? 'Edit'}
     </Button>
   )

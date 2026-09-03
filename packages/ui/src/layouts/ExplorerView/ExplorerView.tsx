@@ -236,7 +236,7 @@ export function ExplorerViewCreateButton({
       data-testid={testid}
       {...rest}
     >
-      <Plus className="size-icon-lg" />
+      <Plus className="size-icon-lg" aria-hidden />
       {children ?? 'Create'}
     </Button>
   )

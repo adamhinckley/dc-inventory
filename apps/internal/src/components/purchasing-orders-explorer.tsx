@@ -39,7 +39,7 @@ export function PurchasingOrdersExplorer({
               href="/purchasing/new"
               className={buttonVariants({ variant: "primary", size: "sm" })}
             >
-              <Plus className="size-icon-lg" />
+              <Plus className="size-icon-lg" aria-hidden />
               New Draft PO
             </Link>
           </div>
