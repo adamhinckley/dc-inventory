@@ -1,5 +1,5 @@
 import { CustomerId, Money, OrganizationId } from "@dc-inventory/shared-kernel";
-import { and, asc, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Contact } from "../domain/contact.js";
 import type { Customer } from "../domain/customer.js";
@@ -10,6 +10,12 @@ import {
   ExemptionCertificateId,
   ShipToId,
 } from "../domain/ids.js";
+import type { BillTo } from "../domain/bill-to.js";
+import type { AccountStatus } from "../domain/account-status.js";
+import {
+  formatCustomerNumber,
+  parseCustomerNumberSequence,
+} from "../domain/document-number.js";
 import type {
   CustomerListPage,
   ICustomerRepository,
@@ -17,11 +23,14 @@ import type {
 } from "../domain/ports/customer-repository.js";
 import type { IContactRepository } from "../domain/ports/contact-repository.js";
 import type { IExemptionCertificateRepository } from "../domain/ports/exemption-certificate-repository.js";
+import type { IBillToRepository } from "../domain/ports/bill-to-repository.js";
 import type { IShipToRepository } from "../domain/ports/ship-to-repository.js";
 import type { ShipTo } from "../domain/ship-to.js";
 import {
+  billTos,
   contacts,
   customers,
+  documentNumberCounters,
   exemptionCertificates,
   shipTos,
 } from "../persistence/schema.js";
@@ -30,16 +39,30 @@ export type CustomersDrizzle = PostgresJsDatabase<{
   customers: typeof customers;
   contacts: typeof contacts;
   shipTos: typeof shipTos;
+  billTos: typeof billTos;
   exemptionCertificates: typeof exemptionCertificates;
+  documentNumberCounters: typeof documentNumberCounters;
 }>;
+
+function toAccountStatus(value: string): AccountStatus {
+  if (value === "active" || value === "on_hold" || value === "inactive") {
+    return value;
+  }
+  return "active";
+}
 
 function toCustomer(row: typeof customers.$inferSelect): Customer {
   return {
     id: CustomerId.parse(row.id),
     organizationId: OrganizationId.parse(row.organizationId),
     name: row.name,
+    customerNumber: row.customerNumber,
     creditLimit: Money.fromMinorUnits(row.creditLimitCents, row.currency),
     terms: row.terms,
+    taxId: row.taxId,
+    accountStatus: toAccountStatus(row.accountStatus),
+    customerNote: row.customerNote,
+    staffNote: row.staffNote,
     createdAt: row.createdAt,
   };
 }
@@ -68,6 +91,18 @@ function toShipTo(row: typeof shipTos.$inferSelect): ShipTo {
   };
 }
 
+function toBillTo(row: typeof billTos.$inferSelect): BillTo {
+  return {
+    customerId: CustomerId.parse(row.customerId),
+    line1: row.line1,
+    line2: row.line2,
+    city: row.city,
+    region: row.region,
+    postal: row.postal,
+    country: row.country,
+  };
+}
+
 function toExemption(
   row: typeof exemptionCertificates.$inferSelect,
 ): ExemptionCertificate {
@@ -82,6 +117,45 @@ function toExemption(
   };
 }
 
+async function allocateCustomerNumber(
+  db: CustomersDrizzle,
+  organizationId: OrganizationId,
+): Promise<string> {
+  const rows = await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: 1 })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: { lastValue: sql`${documentNumberCounters.lastValue} + 1` },
+    })
+    .returning({ sequence: documentNumberCounters.lastValue });
+  const sequence = rows[0]?.sequence;
+  if (sequence === undefined) {
+    throw new Error("Failed to allocate customer number");
+  }
+  return formatCustomerNumber(sequence);
+}
+
+async function advanceCustomerCounter(
+  db: CustomersDrizzle,
+  organizationId: OrganizationId,
+  customerNumber: string,
+): Promise<void> {
+  const sequence = parseCustomerNumberSequence(customerNumber);
+  if (sequence === null || sequence < 1) {
+    return;
+  }
+  await db
+    .insert(documentNumberCounters)
+    .values({ organizationId, lastValue: sequence })
+    .onConflictDoUpdate({
+      target: documentNumberCounters.organizationId,
+      set: {
+        lastValue: sql`greatest(${documentNumberCounters.lastValue}, ${sequence})`,
+      },
+    });
+}
+
 export class DrizzleCustomerRepository implements ICustomerRepository {
   constructor(private readonly db: CustomersDrizzle) {}
 
@@ -91,11 +165,14 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
         ? customers.creditLimitCents
         : query.sortBy === "createdAt"
           ? customers.createdAt
-          : customers.name;
+          : query.sortBy === "customerNumber"
+            ? customers.customerNumber
+            : customers.name;
     const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
     const clauses = [eq(customers.organizationId, query.organizationId)];
     if (query.q !== undefined && query.q.trim().length > 0) {
-      clauses.push(ilike(customers.name, `%${query.q.trim()}%`));
+      const needle = `%${query.q.trim()}%`;
+      clauses.push(or(ilike(customers.name, needle), ilike(customers.customerNumber, needle))!);
     }
     const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
@@ -140,6 +217,31 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
     return rows[0] === undefined ? null : toCustomer(rows[0]);
   }
 
+  async findByCustomerNumber(
+    organizationId: OrganizationId,
+    customerNumber: string,
+  ): Promise<Customer | null> {
+    const needle = customerNumber.trim();
+    if (needle.length === 0) {
+      return null;
+    }
+    const rows = await this.db
+      .select()
+      .from(customers)
+      .where(
+        and(
+          eq(customers.organizationId, organizationId),
+          eq(customers.customerNumber, needle),
+        ),
+      )
+      .limit(1);
+    return rows[0] === undefined ? null : toCustomer(rows[0]);
+  }
+
+  async allocateNextCustomerNumber(organizationId: OrganizationId): Promise<string> {
+    return allocateCustomerNumber(this.db, organizationId);
+  }
+
   async save(customer: Customer): Promise<void> {
     await this.db
       .insert(customers)
@@ -147,9 +249,14 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
         id: customer.id,
         organizationId: customer.organizationId,
         name: customer.name,
+        customerNumber: customer.customerNumber,
         creditLimitCents: customer.creditLimit.amountMinor,
         currency: customer.creditLimit.currency,
         terms: customer.terms,
+        taxId: customer.taxId,
+        accountStatus: customer.accountStatus,
+        customerNote: customer.customerNote,
+        staffNote: customer.staffNote,
         createdAt: customer.createdAt,
       })
       .onConflictDoUpdate({
@@ -159,9 +266,57 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
           creditLimitCents: customer.creditLimit.amountMinor,
           currency: customer.creditLimit.currency,
           terms: customer.terms,
+          taxId: customer.taxId,
+          accountStatus: customer.accountStatus,
+          customerNote: customer.customerNote,
+          staffNote: customer.staffNote,
           updatedAt: new Date(),
         },
       });
+    await advanceCustomerCounter(this.db, customer.organizationId, customer.customerNumber);
+  }
+}
+
+export class DrizzleBillToRepository implements IBillToRepository {
+  constructor(private readonly db: CustomersDrizzle) {}
+
+  async findByCustomerId(customerId: CustomerId): Promise<BillTo | null> {
+    const rows = await this.db
+      .select()
+      .from(billTos)
+      .where(eq(billTos.customerId, customerId))
+      .limit(1);
+    return rows[0] === undefined ? null : toBillTo(rows[0]);
+  }
+
+  async save(billTo: BillTo): Promise<void> {
+    await this.db
+      .insert(billTos)
+      .values({
+        customerId: billTo.customerId,
+        line1: billTo.line1,
+        line2: billTo.line2,
+        city: billTo.city,
+        region: billTo.region,
+        postal: billTo.postal,
+        country: billTo.country,
+      })
+      .onConflictDoUpdate({
+        target: billTos.customerId,
+        set: {
+          line1: billTo.line1,
+          line2: billTo.line2,
+          city: billTo.city,
+          region: billTo.region,
+          postal: billTo.postal,
+          country: billTo.country,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    await this.db.delete(billTos).where(eq(billTos.customerId, customerId));
   }
 }
 

@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   char,
+  integer,
   pgSchema,
   text,
   timestamp,
@@ -33,15 +34,24 @@ export const customers = customersSchema.table(
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: text("organization_id").notNull().default("DEFAULT"),
     name: text("name").notNull(),
+    customerNumber: text("customer_number").notNull(),
     creditLimitCents: bigint("credit_limit_cents", { mode: "number" }).notNull(),
     currency: char("currency", { length: 3 }).notNull().default("USD"),
     terms: text("terms").notNull(),
+    taxId: text("tax_id"),
+    accountStatus: text("account_status").notNull().default("active"),
+    customerNote: text("customer_note"),
+    staffNote: text("staff_note"),
     ...timestamps(),
   },
   (table) => [
     unique("customers_organization_id_id_unique").on(
       table.organizationId,
       table.id,
+    ),
+    unique("customers_organization_id_customer_number_unique").on(
+      table.organizationId,
+      table.customerNumber,
     ),
   ],
 );
@@ -76,6 +86,19 @@ export const shipTos = customersSchema.table("ship_tos", {
   ...timestamps(),
 });
 
+export const billTos = customersSchema.table("bill_tos", {
+  customerId: uuid("customer_id")
+    .primaryKey()
+    .references(() => customers.id),
+  line1: text("line_1").notNull(),
+  line2: text("line_2"),
+  city: text("city").notNull(),
+  region: text("region").notNull(),
+  postal: text("postal").notNull(),
+  country: text("country").notNull(),
+  ...timestamps(),
+});
+
 export const exemptionCertificates = customersSchema.table(
   "exemption_certificates",
   {
@@ -89,5 +112,13 @@ export const exemptionCertificates = customersSchema.table(
     expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }),
     status: text("status").notNull(),
     ...timestamps(),
+  },
+);
+
+export const documentNumberCounters = customersSchema.table(
+  "document_number_counters",
+  {
+    organizationId: text("organization_id").primaryKey(),
+    lastValue: integer("last_value").notNull(),
   },
 );

@@ -9,9 +9,11 @@ describe("PostgresDatabase", () => {
       [
         "addOnGrants",
         "accountingDocumentNumberCounters",
+        "billTos",
         "categories",
         "contacts",
         "customers",
+        "customersDocumentNumberCounters",
         "exemptionCertificates",
         "flagOverrides",
         "invoiceTaxLines",

@@ -1,4 +1,5 @@
 import { Money, type CustomerId, type OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { isAccountStatus } from "../domain/account-status.js";
 import type { Customer } from "../domain/customer.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 
@@ -10,11 +11,26 @@ export type UpdateCustomerRequest = {
   creditLimitCents?: number;
   currency?: string;
   terms?: string;
+  taxId?: string | null;
+  accountStatus?: string;
+  customerNote?: string | null;
+  staffNote?: string | null;
 };
 
 export type UpdateCustomerResult =
   | { ok: true; customer: Customer }
   | { ok: false; reason: "not_found" | "invalid" };
+
+function optionalText(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
+}
 
 export class UpdateCustomerUseCase {
   constructor(private readonly customers: ICustomerRepository) {}
@@ -30,6 +46,9 @@ export class UpdateCustomerUseCase {
     if (name.length === 0 || terms.length === 0) {
       return { ok: false, reason: "invalid" };
     }
+    if (input.accountStatus !== undefined && !isAccountStatus(input.accountStatus)) {
+      return { ok: false, reason: "invalid" };
+    }
     try {
       const currency = input.currency ?? existing.creditLimit.currency;
       const cents = input.creditLimitCents ?? existing.creditLimit.amountMinor;
@@ -37,8 +56,20 @@ export class UpdateCustomerUseCase {
         id: existing.id,
         organizationId: existing.organizationId,
         name,
+        customerNumber: existing.customerNumber,
         creditLimit: Money.fromMinorUnits(cents, currency),
         terms,
+        taxId: input.taxId === undefined ? existing.taxId : optionalText(input.taxId) ?? null,
+        accountStatus:
+          input.accountStatus === undefined
+            ? existing.accountStatus
+            : input.accountStatus,
+        customerNote:
+          input.customerNote === undefined
+            ? existing.customerNote
+            : optionalText(input.customerNote) ?? null,
+        staffNote:
+          input.staffNote === undefined ? existing.staffNote : optionalText(input.staffNote) ?? null,
         createdAt: existing.createdAt,
       };
       await this.customers.save(customer);

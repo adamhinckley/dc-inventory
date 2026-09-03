@@ -58,10 +58,23 @@ import type {
   ConfirmInternalSalesOrder404,
   ConfirmInternalSalesOrder409,
   ConfirmInternalSalesOrderBody,
+  CopyInternalCustomerBillToFromDefaultShipTo200,
+  CopyInternalCustomerBillToFromDefaultShipTo400,
+  CopyInternalCustomerBillToFromDefaultShipTo401,
+  CopyInternalCustomerBillToFromDefaultShipTo403,
+  CopyInternalCustomerBillToFromDefaultShipTo404,
   CreateInternalCustomer201,
   CreateInternalCustomer400,
   CreateInternalCustomer401,
   CreateInternalCustomer403,
+  CreateInternalCustomer409,
+  CreateInternalCustomerBillTo201,
+  CreateInternalCustomerBillTo400,
+  CreateInternalCustomerBillTo401,
+  CreateInternalCustomerBillTo403,
+  CreateInternalCustomerBillTo404,
+  CreateInternalCustomerBillTo409,
+  CreateInternalCustomerBillToBody,
   CreateInternalCustomerBody,
   CreateInternalCustomerContact201,
   CreateInternalCustomerContact400,
@@ -121,6 +134,11 @@ import type {
   GetInternalCustomer401,
   GetInternalCustomer403,
   GetInternalCustomer404,
+  GetInternalCustomerBillTo200,
+  GetInternalCustomerBillTo400,
+  GetInternalCustomerBillTo401,
+  GetInternalCustomerBillTo403,
+  GetInternalCustomerBillTo404,
   GetInternalInventoryStock200,
   GetInternalInventoryStock401,
   GetInternalInventoryStock403,
@@ -263,6 +281,12 @@ import type {
   UpdateInternalCustomer401,
   UpdateInternalCustomer403,
   UpdateInternalCustomer404,
+  UpdateInternalCustomerBillTo200,
+  UpdateInternalCustomerBillTo400,
+  UpdateInternalCustomerBillTo401,
+  UpdateInternalCustomerBillTo403,
+  UpdateInternalCustomerBillTo404,
+  UpdateInternalCustomerBillToBody,
   UpdateInternalCustomerBody,
   UpdateInternalCustomerContact200,
   UpdateInternalCustomerContact400,
@@ -754,10 +778,15 @@ export type createInternalCustomerResponse403 = {
   status: 403
 }
 
+export type createInternalCustomerResponse409 = {
+  data: CreateInternalCustomer409
+  status: 409
+}
+
 export type createInternalCustomerResponseSuccess = (createInternalCustomerResponse201) & {
   headers: Headers;
 };
-export type createInternalCustomerResponseError = (createInternalCustomerResponse400 | createInternalCustomerResponse401 | createInternalCustomerResponse403) & {
+export type createInternalCustomerResponseError = (createInternalCustomerResponse400 | createInternalCustomerResponse401 | createInternalCustomerResponse403 | createInternalCustomerResponse409) & {
   headers: Headers;
 };
 
@@ -795,7 +824,7 @@ return customFetch<createInternalCustomerResponse>(getCreateInternalCustomerUrl(
 
 
 
-export const getCreateInternalCustomerMutationOptions = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403,
+export const getCreateInternalCustomerMutationOptions = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext> => {
 
@@ -824,12 +853,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateInternalCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalCustomer>>>
     export type CreateInternalCustomerMutationBody = CreateInternalCustomerBody
-    export type CreateInternalCustomerMutationError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403
+    export type CreateInternalCustomerMutationError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409
 
     /**
  * @summary Create customer
  */
-export const useCreateInternalCustomer = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403,
+export const useCreateInternalCustomer = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createInternalCustomer>>,
@@ -2082,6 +2111,451 @@ export const useUpdateInternalCustomerExemptionCertificate = <TError = UpdateInt
         TContext
       > => {
       return useMutation(getUpdateInternalCustomerExemptionCertificateMutationOptions(options));
+    }
+
+export type getInternalCustomerBillToResponse200 = {
+  data: GetInternalCustomerBillTo200
+  status: 200
+}
+
+export type getInternalCustomerBillToResponse400 = {
+  data: GetInternalCustomerBillTo400
+  status: 400
+}
+
+export type getInternalCustomerBillToResponse401 = {
+  data: GetInternalCustomerBillTo401
+  status: 401
+}
+
+export type getInternalCustomerBillToResponse403 = {
+  data: GetInternalCustomerBillTo403
+  status: 403
+}
+
+export type getInternalCustomerBillToResponse404 = {
+  data: GetInternalCustomerBillTo404
+  status: 404
+}
+
+export type getInternalCustomerBillToResponseSuccess = (getInternalCustomerBillToResponse200) & {
+  headers: Headers;
+};
+export type getInternalCustomerBillToResponseError = (getInternalCustomerBillToResponse400 | getInternalCustomerBillToResponse401 | getInternalCustomerBillToResponse403 | getInternalCustomerBillToResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalCustomerBillToResponse = (getInternalCustomerBillToResponseSuccess | getInternalCustomerBillToResponseError)
+
+export const getGetInternalCustomerBillToUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/bill-to`
+}
+
+/**
+ * @summary Get bill-to for a customer
+ */
+export const getInternalCustomerBillTo = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalCustomerBillToResponse> => {
+
+  return customFetch<getInternalCustomerBillToResponse>(getGetInternalCustomerBillToUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalCustomerBillToQueryKey = (id: string,) => {
+    return [
+    `/internal/customers/${id}/bill-to`
+    ] as const;
+    }
+
+
+export const getGetInternalCustomerBillToQueryOptions = <TData = Awaited<ReturnType<typeof getInternalCustomerBillTo>>, TError = GetInternalCustomerBillTo400 | GetInternalCustomerBillTo401 | GetInternalCustomerBillTo403 | GetInternalCustomerBillTo404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerBillTo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalCustomerBillToQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalCustomerBillTo>>> = ({ signal }) => getInternalCustomerBillTo(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerBillTo>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalCustomerBillToQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalCustomerBillTo>>>
+export type GetInternalCustomerBillToQueryError = GetInternalCustomerBillTo400 | GetInternalCustomerBillTo401 | GetInternalCustomerBillTo403 | GetInternalCustomerBillTo404
+
+
+/**
+ * @summary Get bill-to for a customer
+ */
+
+export function useGetInternalCustomerBillTo<TData = Awaited<ReturnType<typeof getInternalCustomerBillTo>>, TError = GetInternalCustomerBillTo400 | GetInternalCustomerBillTo401 | GetInternalCustomerBillTo403 | GetInternalCustomerBillTo404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerBillTo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalCustomerBillToQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createInternalCustomerBillToResponse201 = {
+  data: CreateInternalCustomerBillTo201
+  status: 201
+}
+
+export type createInternalCustomerBillToResponse400 = {
+  data: CreateInternalCustomerBillTo400
+  status: 400
+}
+
+export type createInternalCustomerBillToResponse401 = {
+  data: CreateInternalCustomerBillTo401
+  status: 401
+}
+
+export type createInternalCustomerBillToResponse403 = {
+  data: CreateInternalCustomerBillTo403
+  status: 403
+}
+
+export type createInternalCustomerBillToResponse404 = {
+  data: CreateInternalCustomerBillTo404
+  status: 404
+}
+
+export type createInternalCustomerBillToResponse409 = {
+  data: CreateInternalCustomerBillTo409
+  status: 409
+}
+
+export type createInternalCustomerBillToResponseSuccess = (createInternalCustomerBillToResponse201) & {
+  headers: Headers;
+};
+export type createInternalCustomerBillToResponseError = (createInternalCustomerBillToResponse400 | createInternalCustomerBillToResponse401 | createInternalCustomerBillToResponse403 | createInternalCustomerBillToResponse404 | createInternalCustomerBillToResponse409) & {
+  headers: Headers;
+};
+
+export type createInternalCustomerBillToResponse = (createInternalCustomerBillToResponseSuccess | createInternalCustomerBillToResponseError)
+
+export const getCreateInternalCustomerBillToUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/bill-to`
+}
+
+/**
+ * @summary Create bill-to
+ */
+export const createInternalCustomerBillTo = async (id: string,
+    createInternalCustomerBillToBody: CreateInternalCustomerBillToBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalCustomerBillToResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalCustomerBillToResponse>(getCreateInternalCustomerBillToUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalCustomerBillToBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalCustomerBillToMutationOptions = <TError = CreateInternalCustomerBillTo400 | CreateInternalCustomerBillTo401 | CreateInternalCustomerBillTo403 | CreateInternalCustomerBillTo404 | CreateInternalCustomerBillTo409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerBillTo>>, TError,{id: string;data: CreateInternalCustomerBillToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerBillTo>>, TError,{id: string;data: CreateInternalCustomerBillToBody}, TContext> => {
+
+const mutationKey = ['createInternalCustomerBillTo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalCustomerBillTo>>, {id: string;data: CreateInternalCustomerBillToBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInternalCustomerBillTo(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalCustomerBillToMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalCustomerBillTo>>>
+    export type CreateInternalCustomerBillToMutationBody = CreateInternalCustomerBillToBody
+    export type CreateInternalCustomerBillToMutationError = CreateInternalCustomerBillTo400 | CreateInternalCustomerBillTo401 | CreateInternalCustomerBillTo403 | CreateInternalCustomerBillTo404 | CreateInternalCustomerBillTo409
+
+    /**
+ * @summary Create bill-to
+ */
+export const useCreateInternalCustomerBillTo = <TError = CreateInternalCustomerBillTo400 | CreateInternalCustomerBillTo401 | CreateInternalCustomerBillTo403 | CreateInternalCustomerBillTo404 | CreateInternalCustomerBillTo409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomerBillTo>>, TError,{id: string;data: CreateInternalCustomerBillToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalCustomerBillTo>>,
+        TError,
+        {id: string;data: CreateInternalCustomerBillToBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalCustomerBillToMutationOptions(options));
+    }
+
+export type updateInternalCustomerBillToResponse200 = {
+  data: UpdateInternalCustomerBillTo200
+  status: 200
+}
+
+export type updateInternalCustomerBillToResponse400 = {
+  data: UpdateInternalCustomerBillTo400
+  status: 400
+}
+
+export type updateInternalCustomerBillToResponse401 = {
+  data: UpdateInternalCustomerBillTo401
+  status: 401
+}
+
+export type updateInternalCustomerBillToResponse403 = {
+  data: UpdateInternalCustomerBillTo403
+  status: 403
+}
+
+export type updateInternalCustomerBillToResponse404 = {
+  data: UpdateInternalCustomerBillTo404
+  status: 404
+}
+
+export type updateInternalCustomerBillToResponseSuccess = (updateInternalCustomerBillToResponse200) & {
+  headers: Headers;
+};
+export type updateInternalCustomerBillToResponseError = (updateInternalCustomerBillToResponse400 | updateInternalCustomerBillToResponse401 | updateInternalCustomerBillToResponse403 | updateInternalCustomerBillToResponse404) & {
+  headers: Headers;
+};
+
+export type updateInternalCustomerBillToResponse = (updateInternalCustomerBillToResponseSuccess | updateInternalCustomerBillToResponseError)
+
+export const getUpdateInternalCustomerBillToUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/bill-to`
+}
+
+/**
+ * @summary Update bill-to
+ */
+export const updateInternalCustomerBillTo = async (id: string,
+    updateInternalCustomerBillToBody: UpdateInternalCustomerBillToBody, options?: Parameters<typeof customFetch>[1]): Promise<updateInternalCustomerBillToResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateInternalCustomerBillToResponse>(getUpdateInternalCustomerBillToUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateInternalCustomerBillToBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInternalCustomerBillToMutationOptions = <TError = UpdateInternalCustomerBillTo400 | UpdateInternalCustomerBillTo401 | UpdateInternalCustomerBillTo403 | UpdateInternalCustomerBillTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerBillTo>>, TError,{id: string;data: UpdateInternalCustomerBillToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerBillTo>>, TError,{id: string;data: UpdateInternalCustomerBillToBody}, TContext> => {
+
+const mutationKey = ['updateInternalCustomerBillTo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInternalCustomerBillTo>>, {id: string;data: UpdateInternalCustomerBillToBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInternalCustomerBillTo(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInternalCustomerBillToMutationResult = NonNullable<Awaited<ReturnType<typeof updateInternalCustomerBillTo>>>
+    export type UpdateInternalCustomerBillToMutationBody = UpdateInternalCustomerBillToBody
+    export type UpdateInternalCustomerBillToMutationError = UpdateInternalCustomerBillTo400 | UpdateInternalCustomerBillTo401 | UpdateInternalCustomerBillTo403 | UpdateInternalCustomerBillTo404
+
+    /**
+ * @summary Update bill-to
+ */
+export const useUpdateInternalCustomerBillTo = <TError = UpdateInternalCustomerBillTo400 | UpdateInternalCustomerBillTo401 | UpdateInternalCustomerBillTo403 | UpdateInternalCustomerBillTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInternalCustomerBillTo>>, TError,{id: string;data: UpdateInternalCustomerBillToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInternalCustomerBillTo>>,
+        TError,
+        {id: string;data: UpdateInternalCustomerBillToBody},
+        TContext
+      > => {
+      return useMutation(getUpdateInternalCustomerBillToMutationOptions(options));
+    }
+
+export type copyInternalCustomerBillToFromDefaultShipToResponse200 = {
+  data: CopyInternalCustomerBillToFromDefaultShipTo200
+  status: 200
+}
+
+export type copyInternalCustomerBillToFromDefaultShipToResponse400 = {
+  data: CopyInternalCustomerBillToFromDefaultShipTo400
+  status: 400
+}
+
+export type copyInternalCustomerBillToFromDefaultShipToResponse401 = {
+  data: CopyInternalCustomerBillToFromDefaultShipTo401
+  status: 401
+}
+
+export type copyInternalCustomerBillToFromDefaultShipToResponse403 = {
+  data: CopyInternalCustomerBillToFromDefaultShipTo403
+  status: 403
+}
+
+export type copyInternalCustomerBillToFromDefaultShipToResponse404 = {
+  data: CopyInternalCustomerBillToFromDefaultShipTo404
+  status: 404
+}
+
+export type copyInternalCustomerBillToFromDefaultShipToResponseSuccess = (copyInternalCustomerBillToFromDefaultShipToResponse200) & {
+  headers: Headers;
+};
+export type copyInternalCustomerBillToFromDefaultShipToResponseError = (copyInternalCustomerBillToFromDefaultShipToResponse400 | copyInternalCustomerBillToFromDefaultShipToResponse401 | copyInternalCustomerBillToFromDefaultShipToResponse403 | copyInternalCustomerBillToFromDefaultShipToResponse404) & {
+  headers: Headers;
+};
+
+export type copyInternalCustomerBillToFromDefaultShipToResponse = (copyInternalCustomerBillToFromDefaultShipToResponseSuccess | copyInternalCustomerBillToFromDefaultShipToResponseError)
+
+export const getCopyInternalCustomerBillToFromDefaultShipToUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/bill-to/copy-from-default-ship-to`
+}
+
+/**
+ * @summary Copy default ship-to address into bill-to
+ */
+export const copyInternalCustomerBillToFromDefaultShipTo = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<copyInternalCustomerBillToFromDefaultShipToResponse> => {
+
+  return customFetch<copyInternalCustomerBillToFromDefaultShipToResponse>(getCopyInternalCustomerBillToFromDefaultShipToUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCopyInternalCustomerBillToFromDefaultShipToMutationOptions = <TError = CopyInternalCustomerBillToFromDefaultShipTo400 | CopyInternalCustomerBillToFromDefaultShipTo401 | CopyInternalCustomerBillToFromDefaultShipTo403 | CopyInternalCustomerBillToFromDefaultShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof copyInternalCustomerBillToFromDefaultShipTo>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof copyInternalCustomerBillToFromDefaultShipTo>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['copyInternalCustomerBillToFromDefaultShipTo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof copyInternalCustomerBillToFromDefaultShipTo>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  copyInternalCustomerBillToFromDefaultShipTo(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CopyInternalCustomerBillToFromDefaultShipToMutationResult = NonNullable<Awaited<ReturnType<typeof copyInternalCustomerBillToFromDefaultShipTo>>>
+
+    export type CopyInternalCustomerBillToFromDefaultShipToMutationError = CopyInternalCustomerBillToFromDefaultShipTo400 | CopyInternalCustomerBillToFromDefaultShipTo401 | CopyInternalCustomerBillToFromDefaultShipTo403 | CopyInternalCustomerBillToFromDefaultShipTo404
+
+    /**
+ * @summary Copy default ship-to address into bill-to
+ */
+export const useCopyInternalCustomerBillToFromDefaultShipTo = <TError = CopyInternalCustomerBillToFromDefaultShipTo400 | CopyInternalCustomerBillToFromDefaultShipTo401 | CopyInternalCustomerBillToFromDefaultShipTo403 | CopyInternalCustomerBillToFromDefaultShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof copyInternalCustomerBillToFromDefaultShipTo>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof copyInternalCustomerBillToFromDefaultShipTo>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getCopyInternalCustomerBillToFromDefaultShipToMutationOptions(options));
     }
 
 export type importInternalProductsResponse200 = {

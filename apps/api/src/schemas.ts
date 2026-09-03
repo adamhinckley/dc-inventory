@@ -286,18 +286,29 @@ export const customerListQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  sortBy: z.enum(["name", "createdAt", "creditLimitCents"]).default("name"),
+  sortBy: z
+    .enum(["name", "createdAt", "creditLimitCents", "customerNumber"])
+    .default("name"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
+
+export const accountStatusSchema = z.enum(["active", "on_hold", "inactive"]);
 
 export const customerItemSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  customerNumber: z.string(),
   creditLimitCents: z.number().int(),
   currency: z.string(),
   terms: z.string(),
+  taxId: z.string().nullable(),
+  accountStatus: accountStatusSchema,
+  customerNote: z.string().nullable(),
+  staffNote: z.string().nullable(),
   createdAt: z.string().datetime(),
 });
+
+export const wholesaleCustomerItemSchema = customerItemSchema.omit({ staffNote: true });
 
 export const customerListResponseSchema = z.object({
   items: z.array(customerItemSchema),
@@ -310,9 +321,11 @@ export const customersListTable = {
   rowId: "id",
   columns: [
     { field: "name", label: "Name" },
+    { field: "customerNumber", label: "Customer #" },
     { field: "creditLimitCents", label: "Credit limit (¢)" },
     { field: "currency", label: "Currency" },
     { field: "terms", label: "Terms" },
+    { field: "accountStatus", label: "Status" },
   ],
   search: {
     param: "q",
@@ -323,7 +336,7 @@ export const customersListTable = {
   sort: {
     defaultBy: "name",
     defaultOrder: "asc",
-    fields: ["name", "createdAt", "creditLimitCents"],
+    fields: ["name", "createdAt", "creditLimitCents", "customerNumber"],
   },
 };
 
@@ -332,6 +345,11 @@ export const customerWriteBodySchema = z.object({
   creditLimitCents: z.number().int(),
   currency: z.string().length(3).optional(),
   terms: z.string().min(1),
+  customerNumber: z.string().min(1).optional().nullable(),
+  taxId: z.string().optional().nullable(),
+  accountStatus: accountStatusSchema.optional(),
+  customerNote: z.string().optional().nullable(),
+  staffNote: z.string().optional().nullable(),
 });
 
 export const customerPatchBodySchema = z.object({
@@ -339,6 +357,18 @@ export const customerPatchBodySchema = z.object({
   creditLimitCents: z.number().int().optional(),
   currency: z.string().length(3).optional(),
   terms: z.string().min(1).optional(),
+  taxId: z.string().optional().nullable(),
+  accountStatus: accountStatusSchema.optional(),
+  customerNote: z.string().optional().nullable(),
+  staffNote: z.string().optional().nullable(),
+});
+
+export const duplicateCustomerNumberResponseSchema = z.object({
+  error: z.literal("duplicate_customer_number"),
+});
+
+export const wholesaleCustomerNotePatchBodySchema = z.object({
+  customerNote: z.string().nullable(),
 });
 
 export const customerIdParamsSchema = z.object({
@@ -413,6 +443,42 @@ export const shipToListResponseSchema = z.object({
 export const shipToParamsSchema = z.object({
   id: z.string().uuid(),
   shipToId: z.string().uuid(),
+});
+
+export const billToWriteBodySchema = z.object({
+  line1: z.string().min(1),
+  line2: z.string().optional().nullable(),
+  city: z.string().min(1),
+  region: z.string().min(1),
+  postal: z.string().min(1),
+  country: z.string().min(1),
+});
+
+export const billToPatchBodySchema = z.object({
+  line1: z.string().min(1).optional(),
+  line2: z.string().optional().nullable(),
+  city: z.string().min(1).optional(),
+  region: z.string().min(1).optional(),
+  postal: z.string().min(1).optional(),
+  country: z.string().min(1).optional(),
+});
+
+export const billToItemSchema = z.object({
+  customerId: z.string().uuid(),
+  line1: z.string(),
+  line2: z.string().nullable(),
+  city: z.string(),
+  region: z.string(),
+  postal: z.string(),
+  country: z.string(),
+});
+
+export const billToAlreadyExistsResponseSchema = z.object({
+  error: z.literal("already_exists"),
+});
+
+export const noDefaultShipToResponseSchema = z.object({
+  error: z.literal("no_default_ship_to"),
 });
 
 export const exemptionWriteBodySchema = z.object({

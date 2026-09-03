@@ -5,15 +5,22 @@ import {
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import {
-  ContactId,
-  ExemptionCertificateId,
-  ShipToId,
   type Contact,
   type Customer,
   type ExemptionCertificate,
+  type BillTo,
   type ShipTo,
 } from "@dc-inventory/customers";
 import {
+  ContactId,
+  ExemptionCertificateId,
+  ShipToId,
+} from "@dc-inventory/customers";
+import {
+  billToAlreadyExistsResponseSchema,
+  billToItemSchema,
+  billToPatchBodySchema,
+  billToWriteBodySchema,
   contactItemSchema,
   contactListResponseSchema,
   contactParamsSchema,
@@ -27,12 +34,14 @@ import {
   customerWriteBodySchema,
   customersListTable,
   duplicateEmailResponseSchema,
+  duplicateCustomerNumberResponseSchema,
   exemptionItemSchema,
   exemptionListResponseSchema,
   exemptionParamsSchema,
   exemptionPatchBodySchema,
   exemptionWriteBodySchema,
   invalidResponseSchema,
+  noDefaultShipToResponseSchema,
   notFoundResponseSchema,
   shipToItemSchema,
   shipToListResponseSchema,
@@ -43,6 +52,7 @@ import {
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import type { FastifySchema } from "fastify";
+import { z } from "zod";
 import { staffOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
@@ -57,10 +67,27 @@ function mapCustomer(customer: Customer) {
   return {
     id: customer.id,
     name: customer.name,
+    customerNumber: customer.customerNumber,
     creditLimitCents: customer.creditLimit.amountMinor,
     currency: customer.creditLimit.currency,
     terms: customer.terms,
+    taxId: customer.taxId,
+    accountStatus: customer.accountStatus,
+    customerNote: customer.customerNote,
+    staffNote: customer.staffNote,
     createdAt: customer.createdAt.toISOString(),
+  };
+}
+
+function mapBillTo(billTo: BillTo) {
+  return {
+    customerId: billTo.customerId,
+    line1: billTo.line1,
+    line2: billTo.line2,
+    city: billTo.city,
+    region: billTo.region,
+    postal: billTo.postal,
+    country: billTo.country,
   };
 }
 
@@ -112,6 +139,18 @@ function sendDuplicate(reply: FastifyReply) {
   return reply.code(409).send({ error: "duplicate_email" as const });
 }
 
+function sendDuplicateCustomerNumber(reply: FastifyReply) {
+  return reply.code(409).send({ error: "duplicate_customer_number" as const });
+}
+
+function sendBillToExists(reply: FastifyReply) {
+  return reply.code(409).send({ error: "already_exists" as const });
+}
+
+function sendNoDefaultShipTo(reply: FastifyReply) {
+  return reply.code(400).send({ error: "no_default_ship_to" as const });
+}
+
 function parseOptionalDate(value: string | null | undefined): Date | null | undefined {
   if (value === undefined) {
     return undefined;
@@ -152,7 +191,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
         q?: string;
         page: number;
         pageSize: number;
-        sortBy: "name" | "createdAt" | "creditLimitCents";
+        sortBy: "name" | "createdAt" | "creditLimitCents" | "customerNumber";
         sortOrder: "asc" | "desc";
       };
       const result = await request.server.customers.listCustomers.execute({
@@ -185,6 +224,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
           201: customerItemSchema,
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
+          409: duplicateCustomerNumberResponseSchema,
         },
       },
     },
@@ -195,7 +235,9 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
         ...request.body,
       });
       if (!result.ok) {
-        return sendInvalid(reply);
+        return result.reason === "duplicate_customer_number"
+          ? sendDuplicateCustomerNumber(reply)
+          : sendInvalid(reply);
       }
       return reply.code(201).send(mapCustomer(result.customer));
     },
@@ -501,6 +543,121 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
         return result.reason === "not_found" ? sendNotFound(reply) : sendInvalid(reply);
       }
       return mapExemption(result.certificate);
+    },
+  );
+
+  routes.get(
+    "/customers/:id/bill-to",
+    {
+      schema: {
+        operationId: "getInternalCustomerBillTo",
+        tags: ["internal-customers"],
+        summary: "Get bill-to for a customer",
+        params: customerIdParamsSchema,
+        response: { 200: billToItemSchema, ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.customers.getBillTo.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        customerId: CustomerId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return mapBillTo(result.billTo);
+    },
+  );
+
+  routes.post(
+    "/customers/:id/bill-to",
+    {
+      schema: {
+        operationId: "createInternalCustomerBillTo",
+        tags: ["internal-customers"],
+        summary: "Create bill-to",
+        params: customerIdParamsSchema,
+        body: billToWriteBodySchema,
+        response: {
+          201: billToItemSchema,
+          409: billToAlreadyExistsResponseSchema,
+          ...errorResponses,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.customers.createBillTo.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        customerId: CustomerId.parse(request.params.id),
+        ...request.body,
+      });
+      if (!result.ok) {
+        if (result.reason === "already_exists") {
+          return sendBillToExists(reply);
+        }
+        return result.reason === "not_found" ? sendNotFound(reply) : sendInvalid(reply);
+      }
+      return reply.code(201).send(mapBillTo(result.billTo));
+    },
+  );
+
+  routes.patch(
+    "/customers/:id/bill-to",
+    {
+      schema: {
+        operationId: "updateInternalCustomerBillTo",
+        tags: ["internal-customers"],
+        summary: "Update bill-to",
+        params: customerIdParamsSchema,
+        body: billToPatchBodySchema,
+        response: { 200: billToItemSchema, ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.customers.updateBillTo.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        customerId: CustomerId.parse(request.params.id),
+        ...request.body,
+      });
+      if (!result.ok) {
+        return result.reason === "not_found" ? sendNotFound(reply) : sendInvalid(reply);
+      }
+      return mapBillTo(result.billTo);
+    },
+  );
+
+  routes.post(
+    "/customers/:id/bill-to/copy-from-default-ship-to",
+    {
+      schema: {
+        operationId: "copyInternalCustomerBillToFromDefaultShipTo",
+        tags: ["internal-customers"],
+        summary: "Copy default ship-to address into bill-to",
+        params: customerIdParamsSchema,
+        response: {
+          200: billToItemSchema,
+          400: z.union([invalidResponseSchema, noDefaultShipToResponseSchema]),
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.customers.copyBillToFromDefaultShipTo.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        customerId: CustomerId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        if (result.reason === "no_default_ship_to") {
+          return sendNoDefaultShipTo(reply);
+        }
+        return sendNotFound(reply);
+      }
+      return mapBillTo(result.billTo);
     },
   );
 }

@@ -29,6 +29,10 @@ export const listInternalCustomersTable = {
       "label": "Name"
     },
     {
+      "field": "customerNumber",
+      "label": "Customer #"
+    },
+    {
       "field": "creditLimitCents",
       "label": "Credit limit (¢)"
     },
@@ -39,6 +43,10 @@ export const listInternalCustomersTable = {
     {
       "field": "terms",
       "label": "Terms"
+    },
+    {
+      "field": "accountStatus",
+      "label": "Status"
     }
   ],
   "search": {
@@ -55,7 +63,8 @@ export const listInternalCustomersTable = {
     "fields": [
       "name",
       "createdAt",
-      "creditLimitCents"
+      "creditLimitCents",
+      "customerNumber"
     ]
   }
 } as const satisfies InternalTableMetadata;

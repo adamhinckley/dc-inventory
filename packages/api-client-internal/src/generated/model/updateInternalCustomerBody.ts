@@ -4,6 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { UpdateInternalCustomerBodyAccountStatus } from './updateInternalCustomerBodyAccountStatus';
 
 export type UpdateInternalCustomerBody = {
   /** @minLength 1 */
@@ -20,4 +21,11 @@ export type UpdateInternalCustomerBody = {
   currency?: string;
   /** @minLength 1 */
   terms?: string;
+  /** @nullable */
+  taxId?: string | null;
+  accountStatus?: UpdateInternalCustomerBodyAccountStatus;
+  /** @nullable */
+  customerNote?: string | null;
+  /** @nullable */
+  staffNote?: string | null;
 };

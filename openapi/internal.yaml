@@ -217,6 +217,7 @@ paths:
               - name
               - createdAt
               - creditLimitCents
+              - customerNumber
           in: query
           name: sortBy
           required: false
@@ -234,12 +235,16 @@ paths:
         columns:
           - field: name
             label: Name
+          - field: customerNumber
+            label: "Customer #"
           - field: creditLimitCents
             label: Credit limit (¢)
           - field: currency
             label: Currency
           - field: terms
             label: Terms
+          - field: accountStatus
+            label: Status
         search:
           param: q
           fields:
@@ -253,6 +258,7 @@ paths:
             - name
             - createdAt
             - creditLimitCents
+            - customerNumber
       responses:
         "200":
           description: Default Response
@@ -272,6 +278,8 @@ paths:
                           pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                         name:
                           type: string
+                        customerNumber:
+                          type: string
                         creditLimitCents:
                           type: integer
                           minimum: -9007199254740991
@@ -280,6 +288,21 @@ paths:
                           type: string
                         terms:
                           type: string
+                        taxId:
+                          nullable: true
+                          type: string
+                        accountStatus:
+                          type: string
+                          enum:
+                            - active
+                            - on_hold
+                            - inactive
+                        customerNote:
+                          nullable: true
+                          type: string
+                        staffNote:
+                          nullable: true
+                          type: string
                         createdAt:
                           type: string
                           format: date-time
@@ -287,9 +310,14 @@ paths:
                       required:
                         - id
                         - name
+                        - customerNumber
                         - creditLimitCents
                         - currency
                         - terms
+                        - taxId
+                        - accountStatus
+                        - customerNote
+                        - staffNote
                         - createdAt
                       additionalProperties: false
                   page:
@@ -386,6 +414,25 @@ paths:
                 terms:
                   type: string
                   minLength: 1
+                customerNumber:
+                  nullable: true
+                  type: string
+                  minLength: 1
+                taxId:
+                  nullable: true
+                  type: string
+                accountStatus:
+                  type: string
+                  enum:
+                    - active
+                    - on_hold
+                    - inactive
+                customerNote:
+                  nullable: true
+                  type: string
+                staffNote:
+                  nullable: true
+                  type: string
               required:
                 - name
                 - creditLimitCents
@@ -404,6 +451,8 @@ paths:
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   name:
                     type: string
+                  customerNumber:
+                    type: string
                   creditLimitCents:
                     type: integer
                     minimum: -9007199254740991
@@ -412,6 +461,21 @@ paths:
                     type: string
                   terms:
                     type: string
+                  taxId:
+                    nullable: true
+                    type: string
+                  accountStatus:
+                    type: string
+                    enum:
+                      - active
+                      - on_hold
+                      - inactive
+                  customerNote:
+                    nullable: true
+                    type: string
+                  staffNote:
+                    nullable: true
+                    type: string
                   createdAt:
                     type: string
                     format: date-time
@@ -419,9 +483,14 @@ paths:
                 required:
                   - id
                   - name
+                  - customerNumber
                   - creditLimitCents
                   - currency
                   - terms
+                  - taxId
+                  - accountStatus
+                  - customerNote
+                  - staffNote
                   - createdAt
                 additionalProperties: false
         "400":
@@ -476,6 +545,20 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - duplicate_customer_number
+                required:
+                  - error
+                additionalProperties: false
   /internal/customers/{id}:
     get:
       operationId: getInternalCustomer
@@ -504,6 +587,8 @@ paths:
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   name:
                     type: string
+                  customerNumber:
+                    type: string
                   creditLimitCents:
                     type: integer
                     minimum: -9007199254740991
@@ -512,6 +597,21 @@ paths:
                     type: string
                   terms:
                     type: string
+                  taxId:
+                    nullable: true
+                    type: string
+                  accountStatus:
+                    type: string
+                    enum:
+                      - active
+                      - on_hold
+                      - inactive
+                  customerNote:
+                    nullable: true
+                    type: string
+                  staffNote:
+                    nullable: true
+                    type: string
                   createdAt:
                     type: string
                     format: date-time
@@ -519,9 +619,14 @@ paths:
                 required:
                   - id
                   - name
+                  - customerNumber
                   - creditLimitCents
                   - currency
                   - terms
+                  - taxId
+                  - accountStatus
+                  - customerNote
+                  - staffNote
                   - createdAt
                 additionalProperties: false
         "400":
@@ -606,6 +711,21 @@ paths:
                 terms:
                   type: string
                   minLength: 1
+                taxId:
+                  nullable: true
+                  type: string
+                accountStatus:
+                  type: string
+                  enum:
+                    - active
+                    - on_hold
+                    - inactive
+                customerNote:
+                  nullable: true
+                  type: string
+                staffNote:
+                  nullable: true
+                  type: string
       parameters:
         - schema:
             type: string
@@ -628,6 +748,8 @@ paths:
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   name:
                     type: string
+                  customerNumber:
+                    type: string
                   creditLimitCents:
                     type: integer
                     minimum: -9007199254740991
@@ -636,6 +758,21 @@ paths:
                     type: string
                   terms:
                     type: string
+                  taxId:
+                    nullable: true
+                    type: string
+                  accountStatus:
+                    type: string
+                    enum:
+                      - active
+                      - on_hold
+                      - inactive
+                  customerNote:
+                    nullable: true
+                    type: string
+                  staffNote:
+                    nullable: true
+                    type: string
                   createdAt:
                     type: string
                     format: date-time
@@ -643,9 +780,14 @@ paths:
                 required:
                   - id
                   - name
+                  - customerNumber
                   - creditLimitCents
                   - currency
                   - terms
+                  - taxId
+                  - accountStatus
+                  - customerNote
+                  - staffNote
                   - createdAt
                 additionalProperties: false
         "400":
@@ -1904,6 +2046,530 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/customers/{id}/bill-to:
+    get:
+      operationId: getInternalCustomerBillTo
+      summary: Get bill-to for a customer
+      tags:
+        - internal-customers
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customerId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  line1:
+                    type: string
+                  line2:
+                    nullable: true
+                    type: string
+                  city:
+                    type: string
+                  region:
+                    type: string
+                  postal:
+                    type: string
+                  country:
+                    type: string
+                required:
+                  - customerId
+                  - line1
+                  - line2
+                  - city
+                  - region
+                  - postal
+                  - country
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+    post:
+      operationId: createInternalCustomerBillTo
+      summary: Create bill-to
+      tags:
+        - internal-customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                line1:
+                  type: string
+                  minLength: 1
+                line2:
+                  nullable: true
+                  type: string
+                city:
+                  type: string
+                  minLength: 1
+                region:
+                  type: string
+                  minLength: 1
+                postal:
+                  type: string
+                  minLength: 1
+                country:
+                  type: string
+                  minLength: 1
+              required:
+                - line1
+                - city
+                - region
+                - postal
+                - country
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customerId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  line1:
+                    type: string
+                  line2:
+                    nullable: true
+                    type: string
+                  city:
+                    type: string
+                  region:
+                    type: string
+                  postal:
+                    type: string
+                  country:
+                    type: string
+                required:
+                  - customerId
+                  - line1
+                  - line2
+                  - city
+                  - region
+                  - postal
+                  - country
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - already_exists
+                required:
+                  - error
+                additionalProperties: false
+    patch:
+      operationId: updateInternalCustomerBillTo
+      summary: Update bill-to
+      tags:
+        - internal-customers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                line1:
+                  type: string
+                  minLength: 1
+                line2:
+                  nullable: true
+                  type: string
+                city:
+                  type: string
+                  minLength: 1
+                region:
+                  type: string
+                  minLength: 1
+                postal:
+                  type: string
+                  minLength: 1
+                country:
+                  type: string
+                  minLength: 1
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customerId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  line1:
+                    type: string
+                  line2:
+                    nullable: true
+                    type: string
+                  city:
+                    type: string
+                  region:
+                    type: string
+                  postal:
+                    type: string
+                  country:
+                    type: string
+                required:
+                  - customerId
+                  - line1
+                  - line2
+                  - city
+                  - region
+                  - postal
+                  - country
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/customers/{id}/bill-to/copy-from-default-ship-to:
+    post:
+      operationId: copyInternalCustomerBillToFromDefaultShipTo
+      summary: Copy default ship-to address into bill-to
+      tags:
+        - internal-customers
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customerId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  line1:
+                    type: string
+                  line2:
+                    nullable: true
+                    type: string
+                  city:
+                    type: string
+                  region:
+                    type: string
+                  postal:
+                    type: string
+                  country:
+                    type: string
+                required:
+                  - customerId
+                  - line1
+                  - line2
+                  - city
+                  - region
+                  - postal
+                  - country
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - no_default_ship_to
+                    required:
+                      - error
+                    additionalProperties: false
         "401":
           description: Default Response
           content:

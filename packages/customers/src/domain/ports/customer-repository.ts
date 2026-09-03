@@ -1,7 +1,7 @@
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../customer.js";
 
-export type CustomerListSortBy = "name" | "createdAt" | "creditLimitCents";
+export type CustomerListSortBy = "name" | "createdAt" | "creditLimitCents" | "customerNumber";
 export type SortOrder = "asc" | "desc";
 
 export type ListCustomersQuery = {
@@ -22,5 +22,10 @@ export interface ICustomerRepository {
   list(query: ListCustomersQuery): Promise<CustomerListPage>;
   findById(organizationId: OrganizationId, id: CustomerId): Promise<Customer | null>;
   findByName(organizationId: OrganizationId, name: string): Promise<Customer | null>;
+  findByCustomerNumber(
+    organizationId: OrganizationId,
+    customerNumber: string,
+  ): Promise<Customer | null>;
+  allocateNextCustomerNumber(organizationId: OrganizationId): Promise<string>;
   save(customer: Customer): Promise<void>;
 }

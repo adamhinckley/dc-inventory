@@ -22,6 +22,7 @@ import {
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
 } from "./phase1-fixture.js";
+import { DEMO_NAMED_CUSTOMERS } from "./reconciliation/expectations.js";
 import { upsertDefaultOrganization } from "./upsert-default-organization.js";
 
 export type Phase1SeedPorts = {
@@ -61,15 +62,23 @@ function newId(): string {
 
 async function upsertCustomer(ports: Phase1SeedPorts): Promise<Customer> {
   const existing = await ports.customers.findByName(OrganizationId.DEFAULT, PHASE1_CUSTOMER_NAME);
+  const customerNumber =
+    existing?.customerNumber ??
+    DEMO_NAMED_CUSTOMERS.acme.customerNumber;
   const customer: Customer = {
     id: existing?.id ?? CustomerId.parse(newId()),
     organizationId: OrganizationId.DEFAULT,
     name: PHASE1_CUSTOMER_NAME,
+    customerNumber,
     creditLimit: Money.fromMinorUnits(
       PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS,
       PHASE1_CUSTOMER_CURRENCY,
     ),
     terms: PHASE1_CUSTOMER_TERMS,
+    taxId: existing?.taxId ?? null,
+    accountStatus: existing?.accountStatus ?? "active",
+    customerNote: existing?.customerNote ?? null,
+    staffNote: existing?.staffNote ?? null,
     createdAt: existing?.createdAt ?? new Date(),
   };
   await ports.customers.save(customer);
