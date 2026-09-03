@@ -56,6 +56,7 @@ describe("Sales account status gates (ADA-263, U10)", () => {
       expect(movements.some((movement) => movement.movementType === "Committed")).toBe(false);
     });
 
+    // Create-only until Sales exposes a draft line-edit use case (U10 also allows edit).
     it("allows wholesale draft create while on hold", async () => {
       const h = harnessForStatus(() => "on_hold");
 
