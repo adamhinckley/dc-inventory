@@ -7,7 +7,7 @@ export type PlannedProduct = {
   uom: string;
   memberPriceCents: number;
   description: null;
-  listPriceCents: null;
+  listPriceCents: number | null;
   currency: "USD";
   webWholesale: true;
   taxCategoryCode: "TANGIBLE";

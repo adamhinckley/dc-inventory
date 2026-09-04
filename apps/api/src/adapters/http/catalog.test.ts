@@ -144,7 +144,8 @@ describe("catalog HTTP", () => {
         sku: "HEX-BOLT-GALV",
         name: "Galvanized hex bolt",
         uom: "EA",
-        memberPriceCents: 1250,
+        memberPriceCents: 12_000,
+        listPriceCents: 1250,
         currency: "USD",
         webWholesale: true,
       },
@@ -168,7 +169,8 @@ describe("catalog HTTP", () => {
         {
           sku: "HEX-BOLT-GALV",
           name: "Galvanized hex bolt",
-          memberPrice: 1250,
+          memberPrice: 12_000,
+          listPrice: 1250,
           currency: "USD",
           inactive: false,
           discontinued: false,
@@ -251,7 +253,8 @@ describe("catalog HTTP", () => {
         sku: "HEX-BOLT-GALV",
         name: "Galvanized hex bolt",
         uom: "EA",
-        memberPriceCents: 1250,
+        memberPriceCents: 12_000,
+        listPriceCents: 1250,
         currency: "USD",
         webWholesale: true,
       },
@@ -285,7 +288,7 @@ describe("catalog HTTP", () => {
     expect(exported.statusCode).toBe(200);
     expect(exported.headers["content-type"]).toMatch(/text\/csv/);
     expect(exported.headers["content-disposition"]).toContain("products.csv");
-    expect(exported.body).toContain("SKU,Name,Member price");
+    expect(exported.body).toContain("SKU,Name,List price,Unit cost");
     expect(exported.body).toContain("HEX-BOLT-GALV");
     expect(exported.body).not.toContain("WASHER");
   });
@@ -305,7 +308,8 @@ describe("catalog HTTP", () => {
         sku: "HEX-BOLT-GALV",
         name: "Galvanized hex bolt",
         uom: "EA",
-        memberPriceCents: 1250,
+        memberPriceCents: 10_200,
+        listPriceCents: 1250,
         webWholesale: true,
       },
     });
@@ -318,6 +322,7 @@ describe("catalog HTTP", () => {
         name: "Internal washer",
         uom: "EA",
         memberPriceCents: 100,
+        listPriceCents: 100,
         webWholesale: false,
       },
     });
@@ -361,6 +366,7 @@ describe("catalog HTTP", () => {
         name: "Shop stocked",
         uom: "EA",
         memberPriceCents: 500,
+        listPriceCents: 500,
         webWholesale: true,
       },
     });
@@ -374,6 +380,7 @@ describe("catalog HTTP", () => {
         name: "Shop empty",
         uom: "EA",
         memberPriceCents: 100,
+        listPriceCents: 100,
         webWholesale: true,
       },
     });
@@ -507,8 +514,8 @@ describe("catalog HTTP", () => {
     expect(notMultipart.json()).toEqual({ error: "invalid" });
 
     const csv = [
-      "product_id,item,vendor_num,vendor,mp_price,uom,mfg_code,onhand_qty,webwholesale",
-      "DC-IMPORT-1,Crystal Drop,1075,REGXJ,10.20,EA,JA149015,99,TRUE",
+      "product_id,item,vendor_num,vendor,mp_price,lp_price,uom,mfg_code,onhand_qty,webwholesale",
+      "DC-IMPORT-1,Crystal Drop,1075,REGXJ,10.20,12.75,EA,JA149015,99,TRUE",
     ].join("\n");
     const multipart = productBrowserCsvMultipart(csv);
 
@@ -566,6 +573,7 @@ describe("catalog HTTP", () => {
           sku: "DC-IMPORT-1",
           name: "Crystal Drop",
           memberPrice: 1020,
+          listPrice: 1275,
           available: 0,
           onHand: 0,
         },

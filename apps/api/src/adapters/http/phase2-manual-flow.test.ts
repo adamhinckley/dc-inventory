@@ -113,6 +113,7 @@ async function startPhase2ManualFlowApp() {
     name: "Galvanized hex bolt",
     uom: "EA",
     memberPriceCents: UNIT_PRICE_CENTS,
+    listPriceCents: UNIT_PRICE_CENTS,
     currency: "USD",
     inactive: false,
     discontinued: false,

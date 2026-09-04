@@ -77,6 +77,7 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
       qty: snapshots.get(row.product.sku.value) ?? ZERO_QTY,
       createdAt: row.createdAt,
       caseQty: packs[index]?.caseQty ?? null,
+      lastPoCostCents: null,
     }));
     const visibleRows = rows.filter((row) => {
       if (query.hideZeroInventory === true && !hasNonZeroInventoryQty(row.qty)) {

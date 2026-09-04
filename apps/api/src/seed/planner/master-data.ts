@@ -58,7 +58,7 @@ export function planProducts(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS
     uom: row.uom,
     memberPriceCents: row.memberPriceCents,
     description: null,
-    listPriceCents: null,
+    listPriceCents: row.listPriceCents,
     currency: "USD",
     webWholesale: true,
     taxCategoryCode: "TANGIBLE",
@@ -84,14 +84,15 @@ export function planProducts(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS
     if (name.length === 0) {
       throw new Error("fastener word lists cannot produce enough unique product names");
     }
+    const listPriceCents = rng.int(MEMBER_PRICE_MIN_CENTS, MEMBER_PRICE_MAX_CENTS);
     products.push({
       key: sku,
       sku,
       name,
       uom: "EA",
-      memberPriceCents: rng.int(MEMBER_PRICE_MIN_CENTS, MEMBER_PRICE_MAX_CENTS),
+      memberPriceCents: listPriceCents * 10,
       description: null,
-      listPriceCents: null,
+      listPriceCents,
       currency: "USD",
       webWholesale: true,
       taxCategoryCode: "TANGIBLE",

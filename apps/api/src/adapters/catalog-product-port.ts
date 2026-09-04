@@ -1,4 +1,5 @@
 import type { IProductRepository } from "@dc-inventory/catalog";
+import { wholesaleUnitPrice } from "@dc-inventory/catalog";
 import type {
   ICatalogProductPort,
   ProductSnapshot,
@@ -18,7 +19,7 @@ export function catalogProductPort(
         organizationId: product.organizationId,
         sku: product.sku,
         name: product.name,
-        unitPrice: product.memberPrice,
+        unitPrice: wholesaleUnitPrice(product),
         taxCategoryCode: product.taxCategoryCode ?? undefined,
         active: !product.inactive && !product.discontinued,
       };

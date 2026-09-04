@@ -11,8 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * Catalog persistence models. Shop price is MP (`member_price_cents`).
- * `list_price_cents` is a dump stub — shop / cart / snapshots must not read it.
+ * Catalog persistence models. Shop unit price is LP (`list_price_cents`).
+ * `member_price_cents` is master pack price from dump `mp_price` (case/carton).
  * Wholesale visibility is `web_wholesale` only.
  */
 export const catalog = pgSchema("catalog");

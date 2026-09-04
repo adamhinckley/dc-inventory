@@ -12,25 +12,24 @@ describe("generated x-table meta shape", () => {
     expect(meta.columns.map((column) => column.field)).toEqual([
       "sku",
       "name",
-      "memberPrice",
-      "currency",
+      "listPrice",
+      "lastPoCostCents",
       "inactive",
       "discontinued",
       "webWholesale",
-      "onHand",
-      "onOrder",
-      "allocated",
-      "available",
-      "createdAt",
     ]);
     expect(meta.search?.param).toBe("q");
     expect(meta.search?.fields).toEqual(["sku", "name"]);
-    expect(meta.filters).toEqual([{ param: "inactive", control: "boolean" }]);
+    expect(meta.filters).toEqual([
+      { param: "inactive", control: "boolean" },
+      { param: "hideZeroInventory", control: "boolean" },
+    ]);
     expect(meta.sort?.fields).toEqual([
       "sku",
       "name",
       "onHand",
       "available",
+      "caseQty",
       "createdAt",
     ]);
   });
@@ -56,7 +55,7 @@ function staffListMeta(columns: readonly string[]): TableMeta {
 describe("tableControlIdBase", () => {
   it("is deterministic from meta so SSR and hydration share form-control ids", () => {
     expect(tableControlIdBase(productsListTableFixture)).toBe(
-      "dt-q-inactive-sku-id-sku-name-memberPrice-currency-inactive-discontinued-webWholesale-onHand-onOrder-allocated-available-createdAt",
+      "dt-q-inactive-hideZeroInventory-sku-id-sku-name-listPrice-lastPoCostCents-inactive-discontinued-webWholesale",
     );
     expect(tableControlIdBase(productsListTableFixture)).toBe(
       tableControlIdBase(productsListTableFixture),

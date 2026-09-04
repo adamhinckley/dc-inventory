@@ -441,6 +441,8 @@ export function DataTableFilters() {
  */
 const FILL_COLUMN_PREFERENCE = ["name", "supplierName", "productName"] as const;
 const NUMERIC_FIELDS = new Set([
+  "listPrice",
+  "lastPoCostCents",
   "memberPrice",
   "onHand",
   "onOrder",

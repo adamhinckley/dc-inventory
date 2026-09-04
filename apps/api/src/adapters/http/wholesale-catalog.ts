@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import type { Product, ProductQty } from "@dc-inventory/catalog";
+import { wholesaleUnitPrice, ZERO_QTY, type Product, type ProductQty } from "@dc-inventory/catalog";
 import { CustomerId, ProductId } from "@dc-inventory/shared-kernel";
 import {
   catalogListResponseSchema,
@@ -21,12 +21,13 @@ function customerId(request: { wholesaleAuth?: { customerId: string } }): Custom
 }
 
 function mapCatalogItem(product: Product, qty: ProductQty) {
+  const price = wholesaleUnitPrice(product);
   return {
     id: product.id,
     name: product.name,
     imageUrl: null,
-    wholesalePrice: product.memberPrice.amountMinor,
-    currency: product.memberPrice.currency,
+    wholesalePrice: price.amountMinor,
+    currency: price.currency,
     available: qty.available,
     committed: qty.committed,
     sellState: qty.sellState,

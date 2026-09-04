@@ -37,6 +37,8 @@ export type CatalogListRow = {
   qty: ProductQty;
   createdAt: Date;
   caseQty: number | null;
+  /** Latest PO unit cost from supplier × SKU (`po_cost` on import). */
+  lastPoCostCents: number | null;
 };
 
 export type CatalogListPage = {

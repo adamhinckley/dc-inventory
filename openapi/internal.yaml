@@ -2782,7 +2782,12 @@ paths:
                   minLength: 1
                 memberPriceCents:
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
+                  maximum: 9007199254740991
+                listPriceCents:
+                  nullable: true
+                  type: integer
+                  minimum: 0
                   maximum: 9007199254740991
                 currency:
                   type: string
@@ -2828,7 +2833,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
+                    maximum: 9007199254740991
+                  listPriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string
@@ -2884,6 +2894,7 @@ paths:
                   - description
                   - uom
                   - memberPriceCents
+                  - listPriceCents
                   - currency
                   - inactive
                   - discontinued
@@ -3063,28 +3074,16 @@ paths:
             label: SKU
           - field: name
             label: Name
-          - field: memberPrice
-            label: Member price
-          - field: currency
-            label: Currency
+          - field: listPrice
+            label: List price
+          - field: lastPoCostCents
+            label: Unit cost
           - field: inactive
             label: Inactive
           - field: discontinued
             label: Discontinued
           - field: webWholesale
             label: Web wholesale
-          - field: onHand
-            label: On hand
-          - field: onOrder
-            label: On order
-          - field: allocated
-            label: Allocated
-          - field: available
-            label: Available
-          - field: caseQty
-            label: Case qty
-          - field: createdAt
-            label: Created
         search:
           param: q
           fields:
@@ -3136,6 +3135,16 @@ paths:
                         name:
                           type: string
                         memberPrice:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        listPrice:
+                          nullable: true
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        lastPoCostCents:
+                          nullable: true
                           type: integer
                           minimum: -9007199254740991
                           maximum: 9007199254740991
@@ -3192,6 +3201,8 @@ paths:
                         - sku
                         - name
                         - memberPrice
+                        - listPrice
+                        - lastPoCostCents
                         - currency
                         - inactive
                         - discontinued
@@ -3305,7 +3316,12 @@ paths:
                   minLength: 1
                 memberPriceCents:
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
+                  maximum: 9007199254740991
+                listPriceCents:
+                  nullable: true
+                  type: integer
+                  minimum: 0
                   maximum: 9007199254740991
                 currency:
                   type: string
@@ -3359,7 +3375,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
+                    maximum: 9007199254740991
+                  listPriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string
@@ -3415,6 +3436,7 @@ paths:
                   - description
                   - uom
                   - memberPriceCents
+                  - listPriceCents
                   - currency
                   - inactive
                   - discontinued
@@ -3544,7 +3566,12 @@ paths:
                   minLength: 1
                 memberPriceCents:
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
+                  maximum: 9007199254740991
+                listPriceCents:
+                  nullable: true
+                  type: integer
+                  minimum: 0
                   maximum: 9007199254740991
                 currency:
                   type: string
@@ -3599,7 +3626,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
+                    maximum: 9007199254740991
+                  listPriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string
@@ -3655,6 +3687,7 @@ paths:
                   - description
                   - uom
                   - memberPriceCents
+                  - listPriceCents
                   - currency
                   - inactive
                   - discontinued
@@ -3799,7 +3832,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
+                    maximum: 9007199254740991
+                  listPriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string
@@ -3855,6 +3893,7 @@ paths:
                   - description
                   - uom
                   - memberPriceCents
+                  - listPriceCents
                   - currency
                   - inactive
                   - discontinued

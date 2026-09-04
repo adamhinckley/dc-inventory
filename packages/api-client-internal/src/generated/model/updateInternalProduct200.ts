@@ -15,10 +15,16 @@ export type UpdateInternalProduct200 = {
   description: string | null;
   uom: string;
   /**
-     * @minimum -9007199254740991
+     * @minimum 0
      * @maximum 9007199254740991
      */
   memberPriceCents: number;
+  /**
+     * @minimum 0
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  listPriceCents: number | null;
   currency: string;
   inactive: boolean;
   discontinued: boolean;

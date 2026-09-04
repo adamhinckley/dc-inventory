@@ -81,12 +81,12 @@ export const listInternalProductsTable = {
       "label": "Name"
     },
     {
-      "field": "memberPrice",
-      "label": "Member price"
+      "field": "listPrice",
+      "label": "List price"
     },
     {
-      "field": "currency",
-      "label": "Currency"
+      "field": "lastPoCostCents",
+      "label": "Unit cost"
     },
     {
       "field": "inactive",
@@ -99,30 +99,6 @@ export const listInternalProductsTable = {
     {
       "field": "webWholesale",
       "label": "Web wholesale"
-    },
-    {
-      "field": "onHand",
-      "label": "On hand"
-    },
-    {
-      "field": "onOrder",
-      "label": "On order"
-    },
-    {
-      "field": "allocated",
-      "label": "Allocated"
-    },
-    {
-      "field": "available",
-      "label": "Available"
-    },
-    {
-      "field": "caseQty",
-      "label": "Case qty"
-    },
-    {
-      "field": "createdAt",
-      "label": "Created"
     }
   ],
   "search": {

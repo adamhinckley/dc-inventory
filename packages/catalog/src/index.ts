@@ -31,7 +31,7 @@ export type {
 export type { ImportProductBrowserResult } from "./application/import-product-browser.js";
 export { UpdateProductUseCase } from "./application/update-product.js";
 export { buildProductImageObjectKey } from "./domain/product-image-object-key.js";
-export { isShopVisible, type Product } from "./domain/product.js";
+export { isShopVisible, wholesaleUnitPrice, type Product } from "./domain/product.js";
 export type {
   CatalogCsvColumn,
   CatalogCsvWriteInput,

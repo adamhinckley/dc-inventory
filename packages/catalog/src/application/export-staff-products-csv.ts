@@ -12,17 +12,11 @@ export const STAFF_PRODUCTS_EXPORT_ROW_CAP = 10_000;
 export const STAFF_PRODUCTS_CSV_COLUMNS = [
   { key: "sku", header: "SKU" },
   { key: "name", header: "Name" },
-  { key: "memberPrice", header: "Member price" },
-  { key: "currency", header: "Currency" },
+  { key: "listPrice", header: "List price" },
+  { key: "lastPoCostCents", header: "Unit cost" },
   { key: "inactive", header: "Inactive" },
   { key: "discontinued", header: "Discontinued" },
   { key: "webWholesale", header: "Web wholesale" },
-  { key: "onHand", header: "On hand" },
-  { key: "onOrder", header: "On order" },
-  { key: "allocated", header: "Allocated" },
-  { key: "available", header: "Available" },
-  { key: "caseQty", header: "Case qty" },
-  { key: "createdAt", header: "Created" },
 ] as const;
 
 export type ExportStaffProductsCsvRequest = {
@@ -49,17 +43,13 @@ function csvRow(row: CatalogListRow): Record<string, string> {
   return {
     sku: row.product.sku.value,
     name: row.product.name,
-    memberPrice: String(row.product.memberPrice.amountMinor),
-    currency: row.product.memberPrice.currency,
+    listPrice:
+      row.product.listPrice === null ? "" : String(row.product.listPrice.amountMinor),
+    lastPoCostCents:
+      row.lastPoCostCents === null ? "" : String(row.lastPoCostCents),
     inactive: String(row.product.inactive),
     discontinued: String(row.product.discontinued),
     webWholesale: String(row.product.webWholesale),
-    onHand: String(row.qty.onHand),
-    onOrder: String(row.qty.onOrder),
-    allocated: String(row.qty.allocated),
-    available: String(row.qty.available),
-    caseQty: row.caseQty === null ? "" : String(row.caseQty),
-    createdAt: row.createdAt.toISOString(),
   };
 }
 

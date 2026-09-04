@@ -12,7 +12,8 @@ export type ProductBrowserMappedRow = {
   name: string;
   description: string | null;
   uom: string;
-  memberPriceCents: number;
+  masterPackPriceCents: number;
+  listPriceCents: number | null;
   inactive: boolean;
   discontinued: boolean;
   webWholesale: boolean;
@@ -124,6 +125,7 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
   const item2 = cell(row, "item2");
   const uomRaw = cell(row, "uom");
   const mpRaw = cell(row, "mp_price");
+  const lpRaw = cell(row, "lp_price");
   const vendorNumber = optionalText(cell(row, "vendor_num"));
   const vendorName = optionalText(cell(row, "vendor"));
   const supplierSku = optionalText(cell(row, "mfg_code"));
@@ -153,9 +155,22 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
     errors.push({ row: rowNumber, field: "item", message: "Name is required" });
   }
 
-  const memberPrice = dollarsToCents(mpRaw);
-  if (!memberPrice.ok) {
-    errors.push({ row: rowNumber, field: "mp_price", message: "Member price must be a non-negative dollar amount" });
+  const masterPackPrice = dollarsToCents(mpRaw);
+  if (!masterPackPrice.ok) {
+    errors.push({
+      row: rowNumber,
+      field: "mp_price",
+      message: "Master pack price must be a non-negative dollar amount",
+    });
+  }
+
+  const listPrice = dollarsToCents(lpRaw);
+  if (!listPrice.ok) {
+    errors.push({
+      row: rowNumber,
+      field: "lp_price",
+      message: "List price must be a non-negative dollar amount",
+    });
   }
 
   const minOrderQty = optionalPositiveInt(minOrderRaw);
@@ -225,7 +240,9 @@ export function mapProductBrowserRow(row: WorkbookRow, rowNumber: number): MapPr
       name,
       description,
       uom,
-      memberPriceCents: memberPrice.ok ? memberPrice.cents : 0,
+      masterPackPriceCents: masterPackPrice.ok ? masterPackPrice.cents : 0,
+      listPriceCents:
+        listPrice.ok && listPrice.cents > 0 ? listPrice.cents : null,
       inactive: parseWorkbookBoolean(cell(row, "inactive")),
       discontinued: parseWorkbookBoolean(cell(row, "discontin")),
       webWholesale: parseWorkbookBoolean(cell(row, "webwholesale")),
