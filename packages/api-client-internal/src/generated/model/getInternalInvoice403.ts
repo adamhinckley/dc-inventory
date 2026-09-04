@@ -4,9 +4,8 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { GetInternalInvoice403Error } from './getInternalInvoice403Error';
 
 export type GetInternalInvoice403 = {
-  error: 'feature_disabled';
-} | {
-  error: 'needs_customer';
+  error: GetInternalInvoice403Error;
 };

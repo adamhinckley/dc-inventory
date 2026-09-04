@@ -9,6 +9,4 @@ export type UpdateInternalCustomer403 = {
   error: 'forbidden';
 } | {
   error: 'feature_disabled';
-} | {
-  error: 'needs_customer';
 };

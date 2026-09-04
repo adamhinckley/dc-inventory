@@ -4,9 +4,8 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalCustomerShipTos403Error } from './listInternalCustomerShipTos403Error';
 
 export type ListInternalCustomerShipTos403 = {
-  error: 'feature_disabled';
-} | {
-  error: 'needs_customer';
+  error: ListInternalCustomerShipTos403Error;
 };

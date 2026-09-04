@@ -7,6 +7,4 @@
 
 export type GetInternalInventoryStock403 = {
   error: 'feature_disabled';
-} | {
-  error: 'needs_customer';
 };

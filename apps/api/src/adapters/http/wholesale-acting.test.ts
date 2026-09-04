@@ -205,6 +205,17 @@ describe("wholesale staff acting data route isolation", () => {
       expect(response.statusCode).toBe(401);
       expect(response.json()).toEqual({ error: "unauthorized" });
     }
+
+    const postOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        lines: [{ productId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", qty: 1 }],
+      },
+    });
+    expect(postOrder.statusCode).toBe(401);
+    expect(postOrder.json()).toEqual({ error: "unauthorized" });
   });
 
   it("scopes account reads to the session customer after selection", async () => {
@@ -262,9 +273,26 @@ describe("wholesale staff acting data route isolation", () => {
     });
   });
 
-  it("uses session customerId only and ignores a mismatched select attempt for account reads", async () => {
+  it("ignores body customerId on POST sales-orders and uses session customer", async () => {
     const app = await startActingApp();
+    const staffInternal = await loginStaffInternal(app);
     const cookie = await loginStaffActing(app);
+
+    const product = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staffInternal },
+      payload: {
+        sku: "ACTING-SKU",
+        name: "Acting product",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+        webWholesale: true,
+      },
+    });
+    expect(product.statusCode).toBe(201);
+    const productId = product.json().id as string;
 
     await app.inject({
       method: "POST",
@@ -273,29 +301,16 @@ describe("wholesale staff acting data route isolation", () => {
       payload: { customerId: CUSTOMER_A_ID },
     });
 
-    const account = await app.inject({
-      method: "GET",
-      url: "/wholesale/account",
-      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
-    });
-    expect(account.statusCode).toBe(200);
-    expect(account.json()).toMatchObject({ id: CUSTOMER_A_ID });
-
-    const wrongSelect = await app.inject({
+    const order = await app.inject({
       method: "POST",
-      url: "/wholesale/auth/select-customer",
+      url: "/wholesale/sales-orders",
       cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
-      payload: { customerId: CUSTOMER_B_ID },
+      payload: {
+        customerId: CUSTOMER_B_ID,
+        lines: [{ productId, qty: 1 }],
+      },
     });
-    expect(wrongSelect.statusCode).toBe(200);
-
-    const accountAfterSwitch = await app.inject({
-      method: "GET",
-      url: "/wholesale/account",
-      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
-    });
-    expect(accountAfterSwitch.statusCode).toBe(200);
-    expect(accountAfterSwitch.json()).toMatchObject({ id: CUSTOMER_B_ID });
-    expect(accountAfterSwitch.json()).not.toMatchObject({ id: CUSTOMER_A_ID });
+    expect(order.statusCode).toBe(201);
+    expect(order.json()).toMatchObject({ customerId: CUSTOMER_A_ID });
   });
 });

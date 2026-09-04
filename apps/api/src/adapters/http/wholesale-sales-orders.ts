@@ -3,7 +3,6 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { SalesOrder } from "@dc-inventory/sales";
 import { z } from "zod";
 import {
-  StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import {
@@ -22,24 +21,24 @@ function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
 }
 
+const WHOLESALE_USER_ID_SENTINEL = WholesaleUserId.parse(
+  "00000000-0000-4000-8000-000000000000",
+);
+
 function wholesaleSalesOrderActor(request: {
   wholesaleAuth?: {
     mode: "buyer" | "staff_acting";
-    staffUserId: string | null;
     wholesaleUserId: string | null;
     customerId: string | null;
   };
 }) {
   const customerId = wholesaleCustomerId(request);
-  if (request.wholesaleAuth?.mode === "staff_acting") {
-    return {
-      customerId,
-      staffUserId: StaffUserId.parse(request.wholesaleAuth.staffUserId ?? ""),
-    };
-  }
   return {
     customerId,
-    wholesaleUserId: WholesaleUserId.parse(request.wholesaleAuth?.wholesaleUserId ?? ""),
+    wholesaleUserId:
+      request.wholesaleAuth?.mode === "staff_acting"
+        ? WHOLESALE_USER_ID_SENTINEL
+        : WholesaleUserId.parse(request.wholesaleAuth?.wholesaleUserId ?? ""),
   };
 }
 

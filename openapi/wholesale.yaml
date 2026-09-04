@@ -624,30 +624,12 @@ paths:
                         required:
                           - error
                         additionalProperties: false
-                      - type: object
-                        properties:
-                          error:
-                            type: string
-                            enum:
-                              - needs_customer
-                        required:
-                          - error
-                        additionalProperties: false
                   - type: object
                     properties:
                       error:
                         type: string
                         enum:
                           - feature_disabled
-                    required:
-                      - error
-                    additionalProperties: false
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        enum:
-                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -756,30 +738,12 @@ paths:
                         required:
                           - error
                         additionalProperties: false
-                      - type: object
-                        properties:
-                          error:
-                            type: string
-                            enum:
-                              - needs_customer
-                        required:
-                          - error
-                        additionalProperties: false
                   - type: object
                     properties:
                       error:
                         type: string
                         enum:
                           - feature_disabled
-                    required:
-                      - error
-                    additionalProperties: false
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        enum:
-                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
