@@ -1,0 +1,41 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@theme",
+      "description": "Tailwind CSS v4: register design tokens as utilities (`--color-*`, `--font-*`, …)."
+    },
+    {
+      "name": "@source",
+      "description": "Tailwind CSS v4: extra scan paths for class detection."
+    },
+    {
+      "name": "@apply",
+      "description": "Tailwind CSS: inline a set of utility classes into the current rule."
+    },
+    {
+      "name": "@utility",
+      "description": "Tailwind CSS v4: define a custom utility."
+    },
+    {
+      "name": "@custom-variant",
+      "description": "Tailwind CSS v4: define a custom variant (for example dark)."
+    },
+    {
+      "name": "@plugin",
+      "description": "Tailwind CSS v4: load a JS plugin from CSS."
+    },
+    {
+      "name": "@config",
+      "description": "Tailwind CSS v4: load a JavaScript/TypeScript config file."
+    },
+    {
+      "name": "@reference",
+      "description": "Tailwind CSS v4: import theme/utilities without emitting CSS."
+    },
+    {
+      "name": "@variant",
+      "description": "Tailwind CSS v4: apply a variant in CSS."
+    }
+  ]
+}

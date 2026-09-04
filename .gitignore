@@ -30,6 +30,9 @@ storybook-static/
 # OS and editors
 .DS_Store
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/css-custom-data.json
 *.swp
 .neon
