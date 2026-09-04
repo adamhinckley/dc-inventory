@@ -86,21 +86,24 @@ export function ShopHeader() {
         </nav>
         <button
           type="button"
-          className="shop-nav-link cursor-pointer rounded-lg border border-line px-3 py-2 md:hidden"
+          className="shop-menu-toggle md:hidden"
           aria-expanded={menuOpen}
           aria-controls="shop-mobile-nav"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
           onClick={() => setMenuOpen((open) => !open)}
         >
-          Menu
+          <span className="shop-menu-toggle-bar" />
+          <span className="shop-menu-toggle-bar" />
+          <span className="shop-menu-toggle-bar" />
         </button>
       </div>
       {menuOpen ? (
         <nav
           id="shop-mobile-nav"
           aria-label="Shop"
-          className="border-t border-line bg-overlay px-6 py-4 md:hidden"
+          className="absolute inset-x-0 top-full z-30 border-b border-line bg-overlay px-6 py-4 md:hidden"
         >
-          <ul className="flex flex-col gap-4">
+          <ul className="flex flex-col items-end gap-4 text-right">
             {links.map((item) => (
               <li key={item.href}>
                 <Link
@@ -117,7 +120,12 @@ export function ShopHeader() {
             ))}
             {signedIn ? (
               <li>
-                <button type="button" className="shop-nav-link" onClick={signOut}>
+                <button
+                  type="button"
+                  className="shop-nav-link"
+                  onClick={signOut}
+                  disabled={logout.isPending}
+                >
                   Sign out
                 </button>
               </li>
