@@ -1,20 +1,40 @@
 @import "tailwindcss";
 
 /*
-  Shop tokens — not the internal dashboard Carbon White / g100 spec.
-  Wholesale is e-commerce chrome (browse, cards, cart), not DataTable.
+  Wholesale shop tokens — not Carbon / packages/ui.
+  Keep this cream/terracotta set. Do not invent a third palette.
+
+  Surfaces: canvas (page), canvas-muted (bands), card (raised), overlay (opaque menus).
+  Ink: ink, ink-muted, ink-subtle. Lines: line, line-strong.
+  Accent: terracotta for primary actions. sold-out for unavailable.
+  Spacing is an 8px grid. Type: Figtree (--font-sans) + Cormorant (--font-display).
 */
 @theme {
   --font-sans: var(--font-figtree, "Figtree"), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-cormorant, "Cormorant Garamond"), ui-serif, Georgia, serif;
+
   --color-canvas: #f6f1e8;
+  --color-canvas-muted: #ebe3d6;
+  --color-card: #fffdf8;
+  --color-overlay: #fffdf8;
   --color-ink: #1f1b16;
   --color-ink-muted: #5c5348;
-  --color-card: #fffdf8;
+  --color-ink-subtle: #4a433c;
   --color-line: #e4d9c8;
+  --color-line-strong: #c9b89e;
   --color-accent: #8a3d14;
   --color-accent-hover: #6d2f0e;
   --color-on-accent: #fffdf8;
   --color-sold-out: #7a2e2e;
+
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-section: 64px;
+  --space-nav-height: 72px;
+  --space-input-height: 48px;
+  --max-width-content: 72rem;
 }
 
 html,
@@ -24,5 +44,148 @@ body {
 
 body {
   background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+.shop-nav-link {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink-subtle);
+}
+
+.shop-nav-link:hover,
+.shop-nav-link[aria-current="page"] {
+  color: var(--color-ink);
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--color-ink);
+}
+
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.shop-social-band {
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+.shop-social-band-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+
+.shop-social-band-link {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+}
+
+.shop-social-band-link:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.shop-input {
+  min-height: var(--space-input-height);
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-canvas);
+  padding: 0 0.75rem;
+  color: var(--color-ink);
+}
+
+.shop-input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.shop-button-primary {
+  min-height: var(--space-input-height);
+  border-radius: 9999px;
+  background: var(--color-accent);
+  padding: 0 1.5rem;
+  font-weight: 600;
+  color: var(--color-on-accent);
+}
+
+.shop-button-primary:hover {
+  background: var(--color-accent-hover);
+}
+
+.shop-button-primary:disabled {
+  opacity: 0.6;
+}
+
+.shop-button-secondary {
+  min-height: var(--space-input-height);
+  border-radius: 9999px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-card);
+  padding: 0 1.5rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.shop-button-secondary:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.legal-copy {
+  line-height: 1.65;
+}
+
+.legal-copy h2 {
+  margin-top: 2rem;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.legal-copy h3 {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.legal-copy p,
+.legal-copy dd {
+  margin-top: 0.75rem;
+  color: var(--color-ink-muted);
+}
+
+.legal-copy a {
+  color: var(--color-accent);
+}
+
+.legal-copy a:hover {
+  color: var(--color-accent-hover);
+}
+
+.legal-copy dt {
+  margin-top: 1.25rem;
+  font-weight: 600;
   color: var(--color-ink);
 }

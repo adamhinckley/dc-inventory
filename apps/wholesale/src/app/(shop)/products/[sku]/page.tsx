@@ -1,3 +1,4 @@
+import { ShopPage } from "../../../../components/shop-page";
 import { ShopPlaceholder } from "../../../../components/shop-placeholder";
 
 export default async function ProductDetailPage({
@@ -8,9 +9,11 @@ export default async function ProductDetailPage({
   const { sku: productId } = await params;
 
   return (
-    <ShopPlaceholder
-      title="Product"
-      body={`Placeholder product detail for ${productId}. A catalog-by-id Orval hook is not on the stub yet.`}
-    />
+    <ShopPage>
+      <ShopPlaceholder
+        title="Product"
+        body={`Placeholder product detail for ${productId}. A catalog-by-id Orval hook is not on the stub yet.`}
+      />
+    </ShopPage>
   );
 }

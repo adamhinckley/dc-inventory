@@ -13,6 +13,9 @@ function apiProxyOrigin(): string {
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@dc-inventory/api-client-wholesale"],
+  // Cursor/simple-browser preview throws on Next's indicator SVG when the
+  // viewport changes (Permission denied: correspondingUseElement).
+  devIndicators: false,
   // Empty string = same-origin `/wholesale/*` via the rewrite below.
   // Override with NEXT_PUBLIC_API_URL when the shop talks to the API directly.
   env: {
