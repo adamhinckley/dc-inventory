@@ -23,5 +23,6 @@ export interface ISessionStore {
   create(input: NewSession): Promise<Session>;
   findById(id: SessionId): Promise<Session | null>;
   touch(id: SessionId, lastSeenAt: Date): Promise<void>;
+  updateCustomerId(id: SessionId, customerId: CustomerId | null): Promise<void>;
   delete(id: SessionId): Promise<void>;
 }

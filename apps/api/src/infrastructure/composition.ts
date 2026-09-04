@@ -62,9 +62,11 @@ import {
   type IShipToRepository,
 } from "@dc-inventory/customers";
 import {
+  ClearActingCustomerUseCase,
   DrizzleOpsUserRepository,
   DrizzleSessionStore,
   InMemoryOpsUserRepository,
+  ListActingCustomersUseCase,
   LoginOpsUseCase,
   ResolveOpsSessionUseCase,
   type IOpsUserRepository,
@@ -82,6 +84,7 @@ import {
   LogoutUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
+  SelectActingCustomerUseCase,
   ScryptPasswordHasher,
   DrizzleOrganizationRepository,
   type IPasswordHasher,
@@ -92,6 +95,7 @@ import {
   type IWholesaleLoginAccountStatusReadPort,
   type IWholesaleUserRepository,
   type IdentityDrizzle,
+  type IActingCustomerHeaderReadPort,
 } from "@dc-inventory/identity";
 import {
   DrizzleLicensingReadRepository,
@@ -209,6 +213,9 @@ export type IdentityHttpServices = {
   logoutWholesale: LogoutUseCase;
   resolveStaff: ResolveStaffSessionUseCase;
   resolveWholesale: ResolveWholesaleSessionUseCase;
+  listActingCustomers: ListActingCustomersUseCase;
+  selectActingCustomer: SelectActingCustomerUseCase;
+  clearActingCustomer: ClearActingCustomerUseCase;
 };
 
 export type CatalogHttpServices = {
@@ -442,6 +449,51 @@ function wholesaleLoginAccountStatusReadPort(
   return {
     getAccountStatus: (organizationId, linkedPartyId) =>
       accountStatus.getAccountStatus(organizationId, linkedPartyId),
+  };
+}
+
+function actingCustomerHeaderReadPort(
+  customerRepo: ICustomerRepository,
+): IActingCustomerHeaderReadPort {
+  return {
+    async list(organizationId) {
+      const pageSize = 100;
+      let page = 1;
+      const headers = [];
+      while (true) {
+        const result = await customerRepo.list({
+          organizationId,
+          page,
+          pageSize,
+          sortBy: "name",
+          sortOrder: "asc",
+        });
+        headers.push(
+          ...result.items.map((customer) => ({
+            customerId: customer.id,
+            businessName: customer.name,
+            customerNumber: customer.customerNumber,
+          })),
+        );
+        const offset = (page - 1) * pageSize + result.items.length;
+        if (offset >= result.total || result.items.length < pageSize) {
+          break;
+        }
+        page += 1;
+      }
+      return headers;
+    },
+    async findById(organizationId, customerId) {
+      const customer = await customerRepo.findById(organizationId, customerId);
+      if (customer === null) {
+        return null;
+      }
+      return {
+        customerId: customer.id,
+        businessName: customer.name,
+        customerNumber: customer.customerNumber,
+      };
+    },
   };
 }
 
@@ -785,6 +837,9 @@ export function composeAppServices(
         ? inMemoryUow.invoices
         : defaultInMemoryAccountingUow.invoices);
 
+  const wholesaleAccountStatus = wholesaleLoginAccountStatusReadPort(readPorts.accountStatus);
+  const actingCustomerHeaders = actingCustomerHeaderReadPort(customerRepo);
+
   return {
     features,
     clock,
@@ -816,7 +871,7 @@ export function composeAppServices(
         sessions,
         passwords,
         clock,
-        wholesaleLoginAccountStatusReadPort(readPorts.accountStatus),
+        wholesaleAccountStatus,
       ),
       logoutStaff: new LogoutUseCase(sessions, clock, "staff"),
       logoutWholesale: new LogoutUseCase(sessions, clock, "wholesale"),
@@ -827,6 +882,23 @@ export function composeAppServices(
         staffUsers,
         clock,
       ),
+      listActingCustomers: new ListActingCustomersUseCase(
+        sessions,
+        staffUsers,
+        wholesaleUsers,
+        actingCustomerHeaders,
+        wholesaleAccountStatus,
+        clock,
+      ),
+      selectActingCustomer: new SelectActingCustomerUseCase(
+        sessions,
+        staffUsers,
+        wholesaleUsers,
+        actingCustomerHeaders,
+        wholesaleAccountStatus,
+        clock,
+      ),
+      clearActingCustomer: new ClearActingCustomerUseCase(sessions, staffUsers, clock),
     },
     customers: customersServices(
       customerRepo,

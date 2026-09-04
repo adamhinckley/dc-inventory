@@ -2,8 +2,12 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import {
+  conflictResponseSchema,
+  listActingCustomersResponseSchema,
   loginBodySchema,
   logoutResponseSchema,
+  notFoundResponseSchema,
+  selectActingCustomerBodySchema,
   tooManyLoginAttemptsResponseSchema,
   unauthorizedResponseSchema,
   wholesaleSessionResponseSchema,
@@ -29,6 +33,22 @@ function unauthorized(reply: FastifyReply, request: FastifyRequest, token: strin
   return reply.code(401).send({ error: "unauthorized" as const });
 }
 
+function notFound(reply: FastifyReply) {
+  return reply.code(404).send({ error: "not_found" as const });
+}
+
+function actingRouteUnauthorized(
+  reply: FastifyReply,
+  request: FastifyRequest,
+  token: string | undefined,
+  reason: string,
+) {
+  if (reason === "buyer_session") {
+    return notFound(reply);
+  }
+  return unauthorized(reply, request, token);
+}
+
 type WholesaleSessionBody = z.infer<typeof wholesaleSessionResponseSchema>;
 
 function toWholesaleSessionBody(
@@ -36,6 +56,7 @@ function toWholesaleSessionBody(
     | {
         mode: "staff_acting";
         staffUserId: string;
+        customerId: string | null;
         email: string;
         organizationId: string;
       }
@@ -52,7 +73,7 @@ function toWholesaleSessionBody(
       mode: "staff_acting",
       staffUserId: result.staffUserId,
       wholesaleUserId: null,
-      customerId: null,
+      customerId: result.customerId,
       email: result.email,
       organizationId: result.organizationId,
     };
@@ -141,6 +162,97 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         return unauthorized(reply, request, token);
       }
       return toWholesaleSessionBody(result);
+    },
+  );
+
+  routes.get(
+    "/auth/customers",
+    {
+      schema: {
+        operationId: "listActingCustomers",
+        tags: ["wholesale-auth"],
+        summary: "List customers available for staff acting selection",
+        response: {
+          200: listActingCustomersResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies[WHOLESALE_SESSION_COOKIE];
+      const result = await request.server.identity.listActingCustomers.execute(token);
+      if (!result.ok) {
+        return actingRouteUnauthorized(reply, request, token, result.reason);
+      }
+      return { items: [...result.items] };
+    },
+  );
+
+  routes.post(
+    "/auth/select-customer",
+    {
+      schema: {
+        operationId: "selectActingCustomer",
+        tags: ["wholesale-auth"],
+        summary: "Bind a customer to a staff-acting wholesale session",
+        body: selectActingCustomerBodySchema,
+        response: {
+          200: wholesaleSessionResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies[WHOLESALE_SESSION_COOKIE];
+      const result = await request.server.identity.selectActingCustomer.execute(
+        token,
+        request.body,
+      );
+      if (!result.ok) {
+        if (result.reason === "inactive") {
+          return reply.code(409).send({ error: "conflict" as const });
+        }
+        if (result.reason === "not_found" || result.reason === "buyer_session") {
+          return notFound(reply);
+        }
+        return actingRouteUnauthorized(reply, request, token, result.reason);
+      }
+      const session = await request.server.identity.resolveWholesale.execute(token);
+      if (!session.ok) {
+        return unauthorized(reply, request, token);
+      }
+      return toWholesaleSessionBody(session);
+    },
+  );
+
+  routes.post(
+    "/auth/clear-customer",
+    {
+      schema: {
+        operationId: "clearActingCustomer",
+        tags: ["wholesale-auth"],
+        summary: "Clear the customer binding from a staff-acting wholesale session",
+        response: {
+          200: wholesaleSessionResponseSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const token = request.cookies[WHOLESALE_SESSION_COOKIE];
+      const result = await request.server.identity.clearActingCustomer.execute(token);
+      if (!result.ok) {
+        return actingRouteUnauthorized(reply, request, token, result.reason);
+      }
+      const session = await request.server.identity.resolveWholesale.execute(token);
+      if (!session.ok) {
+        return unauthorized(reply, request, token);
+      }
+      return toWholesaleSessionBody(session);
     },
   );
 }

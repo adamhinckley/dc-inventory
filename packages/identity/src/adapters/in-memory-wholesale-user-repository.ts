@@ -1,4 +1,8 @@
-import type { OrganizationId, WholesaleUserId } from "@dc-inventory/shared-kernel";
+import type {
+  CustomerId,
+  OrganizationId,
+  WholesaleUserId,
+} from "@dc-inventory/shared-kernel";
 import { normalizeEmail } from "../domain/email.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
 import type { WholesaleUser } from "../domain/wholesale-user.js";
@@ -17,6 +21,18 @@ export class InMemoryWholesaleUserRepository implements IWholesaleUserRepository
 
   async findById(id: WholesaleUserId): Promise<WholesaleUser | null> {
     return this.byId.get(id) ?? null;
+  }
+
+  async listCustomerIdsWithWholesaleUsers(
+    organizationId: OrganizationId,
+  ): Promise<readonly CustomerId[]> {
+    const ids = new Set<CustomerId>();
+    for (const user of this.byId.values()) {
+      if (user.organizationId === organizationId) {
+        ids.add(user.customerId);
+      }
+    }
+    return [...ids];
   }
 
   async save(user: WholesaleUser): Promise<void> {
