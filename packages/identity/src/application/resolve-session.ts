@@ -37,7 +37,7 @@ export type ResolveWholesaleSessionResult =
       mode: "staff_acting";
       staffUserId: StaffUserId;
       wholesaleUserId: null;
-      customerId: null;
+      customerId: CustomerId | null;
       email: string;
       organizationId: OrganizationId;
     }
@@ -164,7 +164,7 @@ export class ResolveWholesaleSessionUseCase {
         mode: "staff_acting",
         staffUserId: session.staffUserId,
         wholesaleUserId: null,
-        customerId: null,
+        customerId: session.customerId,
         email: user.email,
         organizationId: session.organizationId,
       };

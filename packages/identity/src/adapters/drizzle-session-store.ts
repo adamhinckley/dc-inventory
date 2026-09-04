@@ -62,6 +62,14 @@ export class DrizzleSessionStore implements ISessionStore {
       .where(eq(sessions.id, id));
   }
 
+  async updateCustomerId(id: SessionId, customerId: CustomerId | null): Promise<void> {
+    const now = new Date();
+    await this.db
+      .update(sessions)
+      .set({ customerId, updatedAt: now })
+      .where(eq(sessions.id, id));
+  }
+
   async delete(id: SessionId): Promise<void> {
     await this.db.delete(sessions).where(eq(sessions.id, id));
   }

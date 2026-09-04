@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { SessionId } from "@dc-inventory/shared-kernel";
+import { CustomerId, SessionId } from "@dc-inventory/shared-kernel";
 import type { ISessionStore, NewSession } from "../domain/ports/session-store.js";
 import type { Session } from "../domain/session.js";
 
@@ -25,6 +25,14 @@ export class InMemorySessionStore implements ISessionStore {
       return;
     }
     this.byId.set(id, { ...existing, lastSeenAt });
+  }
+
+  async updateCustomerId(id: SessionId, customerId: CustomerId | null): Promise<void> {
+    const existing = this.byId.get(id);
+    if (existing === undefined) {
+      return;
+    }
+    this.byId.set(id, { ...existing, customerId });
   }
 
   async delete(id: SessionId): Promise<void> {

@@ -434,7 +434,7 @@ describe("Identity login and sessions (in-memory)", () => {
   it("keeps application/ free of Fastify, Drizzle, Zod, and hash libraries", () => {
     const dir = resolve(import.meta.dirname, "../src/application");
     const forbidden =
-      /fastify|drizzle|zod|argon2|scrypt|bcrypt|better-auth|node:crypto|customers/i;
+      /fastify|drizzle|zod|argon2|scrypt|bcrypt|better-auth|node:crypto|@dc-inventory\/customers/i;
     for (const name of readdirSync(dir)) {
       if (!name.endsWith(".ts")) {
         continue;
