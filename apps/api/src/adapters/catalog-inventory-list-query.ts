@@ -96,11 +96,14 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     const onHand = sql<number>`coalesce(${stockSnapshots.onHand}, 0)`;
     const onOrder = sql<number>`coalesce(${stockSnapshots.onOrder}, 0)`;
     const allocated = sql<number>`coalesce(${stockSnapshots.allocated}, 0)`;
-    const available = sql<number>`coalesce(${stockSnapshots.available}, 0)`;
+    const available = sql<number>`${onHand} - ${allocated}`;
     const committed = sql<number>`coalesce(${stockSnapshots.committed}, 0)`;
     const stickyLocked = sql<boolean>`coalesce(${stockSnapshots.stickyLocked}, false)`;
     if (query.hideZeroInventory === true) {
       clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
+    }
+    if (query.availableOnly === true) {
+      clauses.push(gt(available, 0));
     }
     const where = and(...clauses);
     const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
@@ -158,7 +161,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
       eq(stockSnapshots.locationId, locations.id),
     );
     const countFrom =
-      query.hideZeroInventory === true
+      query.hideZeroInventory === true || query.availableOnly === true
         ? this.db
             .select({ value: count() })
             .from(products)

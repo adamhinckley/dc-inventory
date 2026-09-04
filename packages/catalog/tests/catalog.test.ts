@@ -212,10 +212,53 @@ describe("Catalog use cases (in-memory)", () => {
       pageSize: 25,
       sortBy: "name",
       sortOrder: "asc",
+      availableOnly: false,
     });
     expect(listed.total).toBe(1);
     expect(listed.items[0]?.product.sku.value).toBe("SHOP-OK");
     expect(listed.items[0]?.product.memberPrice.amountMinor).toBe(1250);
+  });
+
+  it("defaults the wholesale list to available products only", async () => {
+    const h = harness();
+    const stocked = await createProduct(h, {
+      sku: "SHOP-STOCKED",
+      name: "Shop stocked",
+    });
+    const empty = await createProduct(h, {
+      sku: "SHOP-EMPTY",
+      name: "Shop empty",
+    });
+    h.qty.set(DEFAULT_ORG, stocked.sku.value, {
+      onHand: 4,
+      onOrder: 0,
+      allocated: 0,
+      available: 4,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    h.qty.set(DEFAULT_ORG, empty.sku.value, {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+
+    const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+    });
+
+    expect(listed.total).toBe(1);
+    expect(listed.items[0]?.product.sku.value).toBe("SHOP-STOCKED");
   });
 
   it("constrains the wholesale list to products in the requested category", async () => {
@@ -230,6 +273,15 @@ describe("Catalog use cases (in-memory)", () => {
     });
     h.products.setCategories(bolt.id, ["Hardware", "Fasteners"]);
     h.products.setCategories(ribbon.id, ["Textiles"]);
+    h.qty.set(DEFAULT_ORG, bolt.sku.value, {
+      onHand: 3,
+      onOrder: 0,
+      allocated: 0,
+      available: 3,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
 
     const listed = await h.listWholesale.execute({
       organizationId: DEFAULT_ORG,

@@ -327,7 +327,7 @@ describe("catalog HTTP", () => {
     const wholesale = await wholesaleCookie(app);
     const listed = await app.inject({
       method: "GET",
-      url: "/wholesale/catalog",
+      url: "/wholesale/catalog?availableOnly=false",
       cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
     });
     expect(listed.statusCode).toBe(200);
@@ -349,11 +349,66 @@ describe("catalog HTTP", () => {
     expect(hiddenGet.json()).toEqual({ error: "not_found" });
   });
 
+  it("defaults the wholesale catalog to available products only", async () => {
+    const app = await startCatalogApp();
+    const staff = await staffCookie(app);
+    const stocked = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staff },
+      payload: {
+        sku: "SHOP-STOCKED",
+        name: "Shop stocked",
+        uom: "EA",
+        memberPriceCents: 500,
+        webWholesale: true,
+      },
+    });
+    expect(stocked.statusCode).toBe(201);
+    const empty = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staff },
+      payload: {
+        sku: "SHOP-EMPTY",
+        name: "Shop empty",
+        uom: "EA",
+        memberPriceCents: 100,
+        webWholesale: true,
+      },
+    });
+    expect(empty.statusCode).toBe(201);
+
+    const wholesale = await wholesaleCookie(app);
+    const listed = await app.inject({
+      method: "GET",
+      url: "/wholesale/catalog",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().total).toBe(0);
+    expect(listed.json().items).toEqual([]);
+
+    const includeUnavailable = await app.inject({
+      method: "GET",
+      url: "/wholesale/catalog?availableOnly=false",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
+    });
+    expect(includeUnavailable.statusCode).toBe(200);
+    expect(includeUnavailable.json().total).toBe(2);
+  });
+
   it("passes every declared wholesale filter into the repository query", async () => {
     const productRepo = new RecordingProductRepository();
     const app = await startCatalogApp(productRepo);
     const wholesale = await wholesaleCookie(app);
-    const nonFilterParams = new Set(["page", "pageSize", "sortBy", "sortOrder"]);
+    const nonFilterParams = new Set([
+      "page",
+      "pageSize",
+      "sortBy",
+      "sortOrder",
+      "availableOnly",
+    ]);
     const declaredFilters = Object.keys(catalogQuerySchema.shape).filter(
       (name) => !nonFilterParams.has(name),
     );

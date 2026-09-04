@@ -115,6 +115,11 @@ export const productListResponseSchema = z.object({
   total: z.number().int(),
 });
 
+const catalogAvailableOnlyQuery = z
+  .union([z.literal("true"), z.literal("false"), z.boolean()])
+  .optional()
+  .transform((value) => (value === undefined ? true : value === true || value === "true"));
+
 export const catalogQuerySchema = z.object({
   q: z.string().optional(),
   category: z.string().trim().min(1).optional(),
@@ -122,6 +127,7 @@ export const catalogQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["name", "available"]).default("name"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
+  availableOnly: catalogAvailableOnlyQuery,
 });
 
 export const catalogItemSchema = z.object({
