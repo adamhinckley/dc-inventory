@@ -29,23 +29,20 @@ const OTHER_ORG_CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-44665544
 const OTHER_ORG_ID = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 
 class InMemoryActingCustomerHeaderReadPort implements IActingCustomerHeaderReadPort {
-  constructor(private readonly headers: readonly ActingCustomerHeader[]) {}
+  constructor(
+    private readonly headersByOrg: ReadonlyMap<OrganizationId, readonly ActingCustomerHeader[]>,
+  ) {}
 
   async list(organizationId: OrganizationId): Promise<readonly ActingCustomerHeader[]> {
-    if (organizationId !== OrganizationId.DEFAULT) {
-      return [];
-    }
-    return this.headers;
+    return this.headersByOrg.get(organizationId) ?? [];
   }
 
   async findById(
     organizationId: OrganizationId,
     customerId: CustomerId,
   ): Promise<ActingCustomerHeader | null> {
-    if (organizationId !== OrganizationId.DEFAULT) {
-      return null;
-    }
-    return this.headers.find((header) => header.customerId === customerId) ?? null;
+    const headers = this.headersByOrg.get(organizationId) ?? [];
+    return headers.find((header) => header.customerId === customerId) ?? null;
   }
 }
 
@@ -62,7 +59,7 @@ class ConfigurableAccountStatusReadPort implements IWholesaleLoginAccountStatusR
   }
 }
 
-const HEADERS: readonly ActingCustomerHeader[] = [
+const DEFAULT_HEADERS: readonly ActingCustomerHeader[] = [
   {
     customerId: ACTIVE_CUSTOMER_ID,
     businessName: "Active Wholesale",
@@ -83,12 +80,21 @@ const HEADERS: readonly ActingCustomerHeader[] = [
     businessName: "No Wholesale Login",
     customerNumber: "C-00004",
   },
-  {
-    customerId: OTHER_ORG_CUSTOMER_ID,
-    businessName: "Other Org Customer",
-    customerNumber: "C-00005",
-  },
 ];
+
+const HEADERS_BY_ORG = new Map<OrganizationId, readonly ActingCustomerHeader[]>([
+  [OrganizationId.DEFAULT, DEFAULT_HEADERS],
+  [
+    OTHER_ORG_ID,
+    [
+      {
+        customerId: OTHER_ORG_CUSTOMER_ID,
+        businessName: "Other Org Customer",
+        customerNumber: "C-00005",
+      },
+    ],
+  ],
+]);
 
 const ACCOUNT_STATUSES = new Map<CustomerId, WholesaleLoginAccountStatus | null>([
   [ACTIVE_CUSTOMER_ID, "active"],
@@ -103,7 +109,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
-  const customerHeaders = new InMemoryActingCustomerHeaderReadPort(HEADERS);
+  const customerHeaders = new InMemoryActingCustomerHeaderReadPort(HEADERS_BY_ORG);
   const accountStatus = new ConfigurableAccountStatusReadPort(ACCOUNT_STATUSES);
   return {
     clock,
@@ -260,6 +266,25 @@ describe("acting customer picker use cases", () => {
     expect(stored?.customerId).toBe(ON_HOLD_CUSTOMER_ID);
   });
 
+  it("overwrites a prior customer selection when selecting a different picker customer", async () => {
+    const h = harness();
+    const session = await seedStaffActingSession(h);
+
+    const selectActive = await h.selectActingCustomer.execute(session.id, {
+      customerId: ACTIVE_CUSTOMER_ID,
+    });
+    expect(selectActive).toEqual({ ok: true, customerId: ACTIVE_CUSTOMER_ID });
+    let stored = await h.sessions.findById(session.id);
+    expect(stored?.customerId).toBe(ACTIVE_CUSTOMER_ID);
+
+    const selectOnHold = await h.selectActingCustomer.execute(session.id, {
+      customerId: ON_HOLD_CUSTOMER_ID,
+    });
+    expect(selectOnHold).toEqual({ ok: true, customerId: ON_HOLD_CUSTOMER_ID });
+    stored = await h.sessions.findById(session.id);
+    expect(stored?.customerId).toBe(ON_HOLD_CUSTOMER_ID);
+  });
+
   it("rejects inactive customers with inactive reason", async () => {
     const h = harness();
     const session = await seedStaffActingSession(h);
@@ -274,6 +299,13 @@ describe("acting customer picker use cases", () => {
   it("rejects customers without wholesale users and other-org customers as not_found", async () => {
     const h = harness();
     const session = await seedStaffActingSession(h);
+    await h.wholesaleUsers.save({
+      id: WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440010"),
+      organizationId: OTHER_ORG_ID,
+      email: "other@local.test",
+      passwordHash: "hash",
+      customerId: OTHER_ORG_CUSTOMER_ID,
+    });
 
     const noWholesale = await h.selectActingCustomer.execute(session.id, {
       customerId: NO_WHOLESALE_CUSTOMER_ID,

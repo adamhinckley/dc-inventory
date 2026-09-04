@@ -25,6 +25,8 @@ const ACTIVE_CUSTOMER_ID = CustomerId.parse("33333333-3333-4333-8333-33333333333
 const ON_HOLD_CUSTOMER_ID = CustomerId.parse("44444444-4444-4444-8444-444444444444");
 const INACTIVE_CUSTOMER_ID = CustomerId.parse("55555555-5555-4555-8555-555555555555");
 const NO_WHOLESALE_CUSTOMER_ID = CustomerId.parse("66666666-6666-4666-8666-666666666666");
+const OTHER_ORG_CUSTOMER_ID = CustomerId.parse("99999999-9999-4999-8999-999999999999");
+const OTHER_ORG_ID = OrganizationId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 const ACME_SLUG = "acme";
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
@@ -125,7 +127,7 @@ async function startActingCustomersApp() {
     customerRepo,
   });
   apps.push(app);
-  return { app };
+  return { app, customerRepo, wholesaleUsers };
 }
 
 function cookieValue(
@@ -202,6 +204,19 @@ describe("wholesale acting customer picker HTTP", () => {
     const { app } = await startActingCustomersApp();
     const staffCookie = await loginStaffActing(app);
 
+    const selectActive = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/select-customer",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
+      payload: { customerId: ACTIVE_CUSTOMER_ID },
+    });
+    expect(selectActive.statusCode).toBe(200);
+    expect(selectActive.json()).toMatchObject({
+      mode: "staff_acting",
+      staffUserId: STAFF_ID,
+      customerId: ACTIVE_CUSTOMER_ID,
+    });
+
     const selectOnHold = await app.inject({
       method: "POST",
       url: "/wholesale/auth/select-customer",
@@ -212,6 +227,17 @@ describe("wholesale acting customer picker HTTP", () => {
     expect(selectOnHold.json()).toMatchObject({
       mode: "staff_acting",
       staffUserId: STAFF_ID,
+      customerId: ON_HOLD_CUSTOMER_ID,
+    });
+
+    const session = await app.inject({
+      method: "GET",
+      url: "/wholesale/auth/session",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
+    });
+    expect(session.statusCode).toBe(200);
+    expect(session.json()).toMatchObject({
+      mode: "staff_acting",
       customerId: ON_HOLD_CUSTOMER_ID,
     });
 
@@ -244,6 +270,39 @@ describe("wholesale acting customer picker HTTP", () => {
       staffUserId: STAFF_ID,
       customerId: null,
     });
+  });
+
+  it("returns 404 when selecting a customer from another organization", async () => {
+    const { app, customerRepo, wholesaleUsers } = await startActingCustomersApp();
+    const createdAt = new Date("2026-08-24T03:30:00.000Z");
+    await customerRepo.save({
+      id: OTHER_ORG_CUSTOMER_ID,
+      organizationId: OTHER_ORG_ID,
+      name: "Other Org Customer",
+      customerNumber: "C-00099",
+      creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+      terms: "NET30",
+      accountStatus: "active",
+      createdAt,
+    });
+    await wholesaleUsers.save({
+      id: WholesaleUserId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab"),
+      organizationId: OTHER_ORG_ID,
+      email: "other-org@local.test",
+      passwordHash: "hash",
+      customerId: OTHER_ORG_CUSTOMER_ID,
+    });
+    const staffCookie = await loginStaffActing(app);
+
+    const select = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/select-customer",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
+      payload: { customerId: OTHER_ORG_CUSTOMER_ID },
+    });
+
+    expect(select.statusCode).toBe(404);
+    expect(select.json()).toEqual({ error: "not_found" });
   });
 
   it("returns 404 for buyer select and clear", async () => {

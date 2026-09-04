@@ -457,18 +457,31 @@ function actingCustomerHeaderReadPort(
 ): IActingCustomerHeaderReadPort {
   return {
     async list(organizationId) {
-      const page = await customerRepo.list({
-        organizationId,
-        page: 1,
-        pageSize: 10_000,
-        sortBy: "name",
-        sortOrder: "asc",
-      });
-      return page.items.map((customer) => ({
-        customerId: customer.id,
-        businessName: customer.name,
-        customerNumber: customer.customerNumber,
-      }));
+      const pageSize = 100;
+      let page = 1;
+      const headers = [];
+      while (true) {
+        const result = await customerRepo.list({
+          organizationId,
+          page,
+          pageSize,
+          sortBy: "name",
+          sortOrder: "asc",
+        });
+        headers.push(
+          ...result.items.map((customer) => ({
+            customerId: customer.id,
+            businessName: customer.name,
+            customerNumber: customer.customerNumber,
+          })),
+        );
+        const offset = (page - 1) * pageSize + result.items.length;
+        if (offset >= result.total || result.items.length < pageSize) {
+          break;
+        }
+        page += 1;
+      }
+      return headers;
     },
     async findById(organizationId, customerId) {
       const customer = await customerRepo.findById(organizationId, customerId);
