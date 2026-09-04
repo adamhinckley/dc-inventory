@@ -53,8 +53,12 @@ What a customer may still buy. Locked SKU: `on_hand + on_order − committed`. O
 _Avoid_: available, ATP, on-hand
 
 **Committed (pre-sold)**:
-Confirmed sales-order quantity not yet shipped or decommitted. The demand side of available to sell.
-_Avoid_: allocated (that is warehouse cover), reserved, on pick list
+Confirmed sales-order quantity not yet shipped or decommitted. The demand side of available to sell. SoloView dump `on_order_qty` (“on order”) is this number.
+_Avoid_: allocated (that is warehouse cover), reserved, on pick list, inbound / Qty On PO
+
+**On order / Qty On PO**:
+Inbound factory PO quantity not yet received. Snapshot field `on_order`. David’s “Qty On PO.”
+_Avoid_: dump `on_order_qty` (that is committed)
 
 **Allocated**:
 Warehouse cover against `on_hand` for committed demand. Ship only against this. Never exceeds `on_hand`.

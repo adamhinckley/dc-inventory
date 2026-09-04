@@ -5,7 +5,7 @@
 
 One Postgres database · schema per context · inventory is the only place quantities are written.
 
-Source dump: product browser CSV (`product_id` … `disc_over_sold_percent`). Field meanings in [`product-browser-schema-glossary.md`](./product-browser-schema-glossary.md) are **unverified**. Do not copy that spreadsheet 1:1 into Postgres.
+Source dump: product browser CSV (`product_id` … `disc_over_sold_percent`). Field meanings in [`product-browser-schema-glossary.md`](./product-browser-schema-glossary.md) are unverified unless the Verified column is checked. Do not copy that spreadsheet 1:1 into Postgres.
 
 Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) (no sales tax in v1) · [`customers.md`](./customers.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md)
 
@@ -348,9 +348,9 @@ Written only by inventory, from `stock_movements`. **Never** a CRUD field on pro
 | Snapshot field | Source field | Meaning in v1 |
 | --- | --- | --- |
 | `on_hand` | `onhand_qty` / `loc_onhand` | Receipts − shipments − adjustments |
-| `committed` | — | Confirmed sales not yet shipped or decommitted (pre-sold) |
+| `committed` | `on_order_qty` | Confirmed sales not yet shipped or decommitted (pre-sold). SoloView “on order” is this, not inbound. |
 | `allocated` | `onpicklist_qty` | Warehouse cover against `on_hand` (not the confirm gate) |
-| `on_order` | `on_order_qty` | Open PO qty not yet received |
+| `on_order` | — | Open factory PO qty not yet received (David: Qty On PO). Dump column for this is not verified. |
 | `available` | — | `on_hand − allocated` (derived; warehouse leftover) |
 | `availableToSell` | — | Open: no cap. Locked: `on_hand + on_order − committed` ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)) |
 | `sell_state` | — | `open` \| `locked` per SKU per organization |
@@ -367,8 +367,8 @@ These are projections. Rebuild them from documents / the ledger / reports.
 | --- | --- |
 | `onhand_qty` `loc_onhand` | `stock_snapshots.on_hand` |
 | `onpicklist_qty` | `stock_snapshots.allocated` |
-| `on_order_qty` | `stock_snapshots.on_order` |
-| `v_on_order` | Unverified (qty vs $). If qty, same as `on_order`; if $, sum open PO lines |
+| `on_order_qty` | `stock_snapshots.committed` (name collides with our `on_order`) |
+| `v_on_order` | Unverified (qty vs $). If qty, candidate for `on_order` / Qty On PO; if $, sum open PO lines |
 | `open_po_cnt` | Count of open POs for the SKU |
 | `next_po` `next_qty` | Earliest open PO date + remaining qty |
 | `mtd_sales` `ytd_sales` `last_yr_sales` `all_sales` | Sales report queries |

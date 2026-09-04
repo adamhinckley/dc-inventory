@@ -138,6 +138,8 @@ availableToSell   = effectiveOpen ? (no cap) : on_hand + on_order − committed
 uncovered         = max(0, committed − on_hand − on_order)
 ```
 
+SoloView dump `on_order_qty` is `committed` (customers on order). Inbound is Qty On PO (`on_order`). Do not map that dump column onto `on_order`.
+
 `effectiveOpen` is persisted-open, inside the optional sell window, and not yet sticky-locked by a PO or by `windowClosesAt`. `uncovered` is the factory to-order list, not a shop number. The `on_hand` line assumes a **signed** adjustment convention that is not yet closed — see [G3](#g3-adjustment-sign-and-negative-stock).
 
 ---
