@@ -17,10 +17,10 @@ const editProductSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional().nullable(),
   uom: z.string().min(1),
-  memberPriceCents: z.coerce.number().int(),
+  memberPriceCents: z.coerce.number().int().min(0),
   listPriceCents: z.preprocess(
     emptyToNull,
-    z.union([z.coerce.number().int(), z.null()]),
+    z.union([z.coerce.number().int().min(0), z.null()]),
   ),
   currency: z.string().length(3),
   taxCategoryCode: z.string().optional().nullable(),

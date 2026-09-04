@@ -11,12 +11,12 @@ export type UpdateInternalProductBySkuBody = {
   /** @minLength 1 */
   uom?: string;
   /**
-     * @minimum -9007199254740991
+     * @minimum 0
      * @maximum 9007199254740991
      */
   memberPriceCents?: number;
   /**
-     * @minimum -9007199254740991
+     * @minimum 0
      * @maximum 9007199254740991
      * @nullable
      */

@@ -2782,12 +2782,12 @@ paths:
                   minLength: 1
                 memberPriceCents:
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
                   maximum: 9007199254740991
                 listPriceCents:
                   nullable: true
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
                   maximum: 9007199254740991
                 currency:
                   type: string
@@ -2833,12 +2833,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   listPriceCents:
                     nullable: true
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string
@@ -3316,12 +3316,12 @@ paths:
                   minLength: 1
                 memberPriceCents:
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
                   maximum: 9007199254740991
                 listPriceCents:
                   nullable: true
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
                   maximum: 9007199254740991
                 currency:
                   type: string
@@ -3375,12 +3375,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   listPriceCents:
                     nullable: true
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string
@@ -3566,12 +3566,12 @@ paths:
                   minLength: 1
                 memberPriceCents:
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
                   maximum: 9007199254740991
                 listPriceCents:
                   nullable: true
                   type: integer
-                  minimum: -9007199254740991
+                  minimum: 0
                   maximum: 9007199254740991
                 currency:
                   type: string
@@ -3626,12 +3626,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   listPriceCents:
                     nullable: true
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string
@@ -3832,12 +3832,12 @@ paths:
                     type: string
                   memberPriceCents:
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   listPriceCents:
                     nullable: true
                     type: integer
-                    minimum: -9007199254740991
+                    minimum: 0
                     maximum: 9007199254740991
                   currency:
                     type: string

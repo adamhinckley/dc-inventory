@@ -15,12 +15,12 @@ export type GetInternalProduct200 = {
   description: string | null;
   uom: string;
   /**
-     * @minimum -9007199254740991
+     * @minimum 0
      * @maximum 9007199254740991
      */
   memberPriceCents: number;
   /**
-     * @minimum -9007199254740991
+     * @minimum 0
      * @maximum 9007199254740991
      * @nullable
      */
