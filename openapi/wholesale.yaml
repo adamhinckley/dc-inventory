@@ -224,6 +224,19 @@ paths:
           in: query
           name: sortOrder
           required: false
+        - schema:
+            default: true
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: availableOnly
+          required: false
       responses:
         "200":
           description: Default Response

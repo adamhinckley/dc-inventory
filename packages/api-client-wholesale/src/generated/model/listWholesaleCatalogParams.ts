@@ -25,4 +25,5 @@ page?: number;
 pageSize?: number;
 sortBy?: ListWholesaleCatalogSortBy;
 sortOrder?: ListWholesaleCatalogSortOrder;
+availableOnly?: 'true' | 'false' | boolean;
 };

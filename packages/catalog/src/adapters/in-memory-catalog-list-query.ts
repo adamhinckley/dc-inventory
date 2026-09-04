@@ -78,10 +78,15 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
       createdAt: row.createdAt,
       caseQty: packs[index]?.caseQty ?? null,
     }));
-    const visibleRows =
-      query.hideZeroInventory === true
-        ? rows.filter((row) => hasNonZeroInventoryQty(row.qty))
-        : rows;
+    const visibleRows = rows.filter((row) => {
+      if (query.hideZeroInventory === true && !hasNonZeroInventoryQty(row.qty)) {
+        return false;
+      }
+      if (query.availableOnly === true && row.qty.available <= 0) {
+        return false;
+      }
+      return true;
+    });
     visibleRows.sort((a, b) => compareRows(a, b, query));
     const offset = (query.page - 1) * query.pageSize;
     return {

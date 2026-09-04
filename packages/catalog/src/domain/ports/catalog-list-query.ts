@@ -28,6 +28,8 @@ export type CatalogListQuery = {
   shopVisibleOnly?: boolean;
   /** When true, omit SKUs whose snapshot qty is all zero. */
   hideZeroInventory?: boolean;
+  /** When true, omit SKUs with available <= 0 (wholesale shop default). */
+  availableOnly?: boolean;
 };
 
 export type CatalogListRow = {

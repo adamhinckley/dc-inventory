@@ -15,6 +15,7 @@ export type ListWholesaleCatalogRequest = {
   pageSize: number;
   sortBy: WholesaleCatalogSortBy;
   sortOrder: SortOrder;
+  availableOnly?: boolean;
 };
 
 export type WholesaleCatalogListRow = {
@@ -45,6 +46,7 @@ export class ListWholesaleCatalogUseCase {
       sortBy: input.sortBy,
       sortOrder: input.sortOrder,
       shopVisibleOnly: true,
+      availableOnly: input.availableOnly ?? true,
     });
     return {
       items: page.items.map(({ product, qty }) => ({ product, qty })),
