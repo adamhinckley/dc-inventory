@@ -6,5 +6,7 @@
  */
 
 export type ListWholesaleCatalog403 = {
+  error: 'needs_customer';
+} | {
   error: 'feature_disabled';
 };

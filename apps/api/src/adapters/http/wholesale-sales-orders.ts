@@ -3,32 +3,42 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { SalesOrder } from "@dc-inventory/sales";
 import { z } from "zod";
 import {
-  CustomerId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
   invalidResponseSchema,
+  needsCustomerResponseSchema,
   notFoundResponseSchema,
   salesOrderItemSchema,
   unauthorizedResponseSchema,
   wholesaleSalesOrderWriteBodySchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
-import { wholesaleOrganizationId } from "./org-session.js";
+import { wholesaleCustomerId, wholesaleOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
 }
 
-function wholesaleIdentity(request: {
-  wholesaleAuth?: { customerId: string; wholesaleUserId: string };
+const WHOLESALE_USER_ID_SENTINEL = WholesaleUserId.parse(
+  "00000000-0000-4000-8000-000000000000",
+);
+
+function wholesaleSalesOrderActor(request: {
+  wholesaleAuth?: {
+    mode: "buyer" | "staff_acting";
+    wholesaleUserId: string | null;
+    customerId: string | null;
+  };
 }) {
+  const customerId = wholesaleCustomerId(request);
   return {
-    customerId: CustomerId.parse(request.wholesaleAuth?.customerId ?? ""),
-    wholesaleUserId: WholesaleUserId.parse(
-      request.wholesaleAuth?.wholesaleUserId ?? "",
-    ),
+    customerId,
+    wholesaleUserId:
+      request.wholesaleAuth?.mode === "staff_acting"
+        ? WHOLESALE_USER_ID_SENTINEL
+        : WholesaleUserId.parse(request.wholesaleAuth?.wholesaleUserId ?? ""),
   };
 }
 
@@ -75,17 +85,17 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           201: salesOrderItemSchema,
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
           404: notFoundResponseSchema,
           409: conflictResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const identity = wholesaleIdentity(request);
+      const actor = wholesaleSalesOrderActor(request);
       const result = await request.server.sales.createSalesOrder.execute({
         organizationId: wholesaleOrganizationId(request),
-        wholesaleUserId: identity.wholesaleUserId,
-        customerId: identity.customerId,
+        ...actor,
         lines: request.body.lines,
         shipLine1: request.body.shipLine1,
         shipLine2: request.body.shipLine2,

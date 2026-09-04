@@ -18,6 +18,10 @@ export const featureDisabledResponseSchema = z.object({
   error: z.literal("feature_disabled"),
 });
 
+export const needsCustomerResponseSchema = z.object({
+  error: z.literal("needs_customer"),
+});
+
 export const tooManyLoginAttemptsResponseSchema = z.object({
   error: z.literal("too_many_login_attempts"),
   retryAfterSeconds: z.number().int().positive(),

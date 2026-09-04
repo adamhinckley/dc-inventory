@@ -1,23 +1,20 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { wholesaleUnitPrice, ZERO_QTY, type Product, type ProductQty } from "@dc-inventory/catalog";
-import { CustomerId, ProductId } from "@dc-inventory/shared-kernel";
+import { ProductId } from "@dc-inventory/shared-kernel";
 import {
   catalogListResponseSchema,
   catalogQuerySchema,
   catalogItemSchema,
+  needsCustomerResponseSchema,
   notFoundResponseSchema,
   productIdParamsSchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
-import { wholesaleOrganizationId } from "./org-session.js";
+import { wholesaleCustomerId, wholesaleOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
-}
-
-function customerId(request: { wholesaleAuth?: { customerId: string } }): CustomerId {
-  return CustomerId.parse(request.wholesaleAuth?.customerId ?? "");
 }
 
 function mapCatalogItem(product: Product, qty: ProductQty) {
@@ -50,13 +47,17 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
         tags: ["wholesale"],
         summary: "List shop-visible catalog products",
         querystring: catalogQuerySchema,
-        response: { 200: catalogListResponseSchema, 401: unauthorizedResponseSchema },
+        response: {
+          200: catalogListResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+        },
       },
     },
     async (request) => {
       const result = await request.server.catalog.listWholesaleCatalog.execute({
         organizationId: wholesaleOrganizationId(request),
-        customerId: customerId(request),
+        customerId: wholesaleCustomerId(request),
         q: request.query.q,
         category: request.query.category,
         page: request.query.page,
@@ -85,6 +86,7 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
         response: {
           200: catalogItemSchema,
           401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
           404: notFoundResponseSchema,
         },
       },
@@ -92,7 +94,7 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
     async (request, reply) => {
       const result = await request.server.catalog.getWholesaleProduct.execute({
         organizationId: wholesaleOrganizationId(request),
-        customerId: customerId(request),
+        customerId: wholesaleCustomerId(request),
         productId: ProductId.parse(request.params.id),
       });
       if (!result.ok) {

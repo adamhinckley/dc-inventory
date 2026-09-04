@@ -25,11 +25,13 @@ import type {
   CreateWholesaleSalesOrder201,
   CreateWholesaleSalesOrder400,
   CreateWholesaleSalesOrder401,
+  CreateWholesaleSalesOrder403,
   CreateWholesaleSalesOrder404,
   CreateWholesaleSalesOrder409,
   CreateWholesaleSalesOrderBody,
   GetWholesaleAccount200,
   GetWholesaleAccount401,
+  GetWholesaleAccount403,
   GetWholesaleAccount404,
   GetWholesaleCatalogProduct200,
   GetWholesaleCatalogProduct401,
@@ -58,6 +60,7 @@ import type {
   UpdateWholesaleAccountCustomerNote200,
   UpdateWholesaleAccountCustomerNote400,
   UpdateWholesaleAccountCustomerNote401,
+  UpdateWholesaleAccountCustomerNote403,
   UpdateWholesaleAccountCustomerNote404,
   UpdateWholesaleAccountCustomerNoteBody
 } from './model';
@@ -895,6 +898,11 @@ export type getWholesaleAccountResponse401 = {
   status: 401
 }
 
+export type getWholesaleAccountResponse403 = {
+  data: GetWholesaleAccount403
+  status: 403
+}
+
 export type getWholesaleAccountResponse404 = {
   data: GetWholesaleAccount404
   status: 404
@@ -903,7 +911,7 @@ export type getWholesaleAccountResponse404 = {
 export type getWholesaleAccountResponseSuccess = (getWholesaleAccountResponse200) & {
   headers: Headers;
 };
-export type getWholesaleAccountResponseError = (getWholesaleAccountResponse401 | getWholesaleAccountResponse404) & {
+export type getWholesaleAccountResponseError = (getWholesaleAccountResponse401 | getWholesaleAccountResponse403 | getWholesaleAccountResponse404) & {
   headers: Headers;
 };
 
@@ -942,7 +950,7 @@ export const getGetWholesaleAccountQueryKey = () => {
     }
 
 
-export const getGetWholesaleAccountQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleAccount>>, TError = GetWholesaleAccount401 | GetWholesaleAccount404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetWholesaleAccountQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleAccount>>, TError = GetWholesaleAccount401 | GetWholesaleAccount403 | GetWholesaleAccount404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -961,14 +969,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetWholesaleAccountQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleAccount>>>
-export type GetWholesaleAccountQueryError = GetWholesaleAccount401 | GetWholesaleAccount404
+export type GetWholesaleAccountQueryError = GetWholesaleAccount401 | GetWholesaleAccount403 | GetWholesaleAccount404
 
 
 /**
  * @summary Read own customer account
  */
 
-export function useGetWholesaleAccount<TData = Awaited<ReturnType<typeof getWholesaleAccount>>, TError = GetWholesaleAccount401 | GetWholesaleAccount404>(
+export function useGetWholesaleAccount<TData = Awaited<ReturnType<typeof getWholesaleAccount>>, TError = GetWholesaleAccount401 | GetWholesaleAccount403 | GetWholesaleAccount404>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1001,6 +1009,11 @@ export type updateWholesaleAccountCustomerNoteResponse401 = {
   status: 401
 }
 
+export type updateWholesaleAccountCustomerNoteResponse403 = {
+  data: UpdateWholesaleAccountCustomerNote403
+  status: 403
+}
+
 export type updateWholesaleAccountCustomerNoteResponse404 = {
   data: UpdateWholesaleAccountCustomerNote404
   status: 404
@@ -1009,7 +1022,7 @@ export type updateWholesaleAccountCustomerNoteResponse404 = {
 export type updateWholesaleAccountCustomerNoteResponseSuccess = (updateWholesaleAccountCustomerNoteResponse200) & {
   headers: Headers;
 };
-export type updateWholesaleAccountCustomerNoteResponseError = (updateWholesaleAccountCustomerNoteResponse400 | updateWholesaleAccountCustomerNoteResponse401 | updateWholesaleAccountCustomerNoteResponse404) & {
+export type updateWholesaleAccountCustomerNoteResponseError = (updateWholesaleAccountCustomerNoteResponse400 | updateWholesaleAccountCustomerNoteResponse401 | updateWholesaleAccountCustomerNoteResponse403 | updateWholesaleAccountCustomerNoteResponse404) & {
   headers: Headers;
 };
 
@@ -1047,7 +1060,7 @@ return customFetch<updateWholesaleAccountCustomerNoteResponse>(getUpdateWholesal
 
 
 
-export const getUpdateWholesaleAccountCustomerNoteMutationOptions = <TError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote404,
+export const getUpdateWholesaleAccountCustomerNoteMutationOptions = <TError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote403 | UpdateWholesaleAccountCustomerNote404,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>, TError,{data: UpdateWholesaleAccountCustomerNoteBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>, TError,{data: UpdateWholesaleAccountCustomerNoteBody}, TContext> => {
 
@@ -1076,12 +1089,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateWholesaleAccountCustomerNoteMutationResult = NonNullable<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>>
     export type UpdateWholesaleAccountCustomerNoteMutationBody = UpdateWholesaleAccountCustomerNoteBody
-    export type UpdateWholesaleAccountCustomerNoteMutationError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote404
+    export type UpdateWholesaleAccountCustomerNoteMutationError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote403 | UpdateWholesaleAccountCustomerNote404
 
     /**
  * @summary Edit own customer note
  */
-export const useUpdateWholesaleAccountCustomerNote = <TError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote404,
+export const useUpdateWholesaleAccountCustomerNote = <TError = UpdateWholesaleAccountCustomerNote400 | UpdateWholesaleAccountCustomerNote401 | UpdateWholesaleAccountCustomerNote403 | UpdateWholesaleAccountCustomerNote404,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>, TError,{data: UpdateWholesaleAccountCustomerNoteBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateWholesaleAccountCustomerNote>>,
@@ -1107,6 +1120,11 @@ export type createWholesaleSalesOrderResponse401 = {
   status: 401
 }
 
+export type createWholesaleSalesOrderResponse403 = {
+  data: CreateWholesaleSalesOrder403
+  status: 403
+}
+
 export type createWholesaleSalesOrderResponse404 = {
   data: CreateWholesaleSalesOrder404
   status: 404
@@ -1120,7 +1138,7 @@ export type createWholesaleSalesOrderResponse409 = {
 export type createWholesaleSalesOrderResponseSuccess = (createWholesaleSalesOrderResponse201) & {
   headers: Headers;
 };
-export type createWholesaleSalesOrderResponseError = (createWholesaleSalesOrderResponse400 | createWholesaleSalesOrderResponse401 | createWholesaleSalesOrderResponse404 | createWholesaleSalesOrderResponse409) & {
+export type createWholesaleSalesOrderResponseError = (createWholesaleSalesOrderResponse400 | createWholesaleSalesOrderResponse401 | createWholesaleSalesOrderResponse403 | createWholesaleSalesOrderResponse404 | createWholesaleSalesOrderResponse409) & {
   headers: Headers;
 };
 
@@ -1158,7 +1176,7 @@ return customFetch<createWholesaleSalesOrderResponse>(getCreateWholesaleSalesOrd
 
 
 
-export const getCreateWholesaleSalesOrderMutationOptions = <TError = CreateWholesaleSalesOrder400 | CreateWholesaleSalesOrder401 | CreateWholesaleSalesOrder404 | CreateWholesaleSalesOrder409,
+export const getCreateWholesaleSalesOrderMutationOptions = <TError = CreateWholesaleSalesOrder400 | CreateWholesaleSalesOrder401 | CreateWholesaleSalesOrder403 | CreateWholesaleSalesOrder404 | CreateWholesaleSalesOrder409,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWholesaleSalesOrder>>, TError,{data: CreateWholesaleSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createWholesaleSalesOrder>>, TError,{data: CreateWholesaleSalesOrderBody}, TContext> => {
 
@@ -1187,12 +1205,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateWholesaleSalesOrderMutationResult = NonNullable<Awaited<ReturnType<typeof createWholesaleSalesOrder>>>
     export type CreateWholesaleSalesOrderMutationBody = CreateWholesaleSalesOrderBody
-    export type CreateWholesaleSalesOrderMutationError = CreateWholesaleSalesOrder400 | CreateWholesaleSalesOrder401 | CreateWholesaleSalesOrder404 | CreateWholesaleSalesOrder409
+    export type CreateWholesaleSalesOrderMutationError = CreateWholesaleSalesOrder400 | CreateWholesaleSalesOrder401 | CreateWholesaleSalesOrder403 | CreateWholesaleSalesOrder404 | CreateWholesaleSalesOrder409
 
     /**
  * @summary Create draft sales order
  */
-export const useCreateWholesaleSalesOrder = <TError = CreateWholesaleSalesOrder400 | CreateWholesaleSalesOrder401 | CreateWholesaleSalesOrder404 | CreateWholesaleSalesOrder409,
+export const useCreateWholesaleSalesOrder = <TError = CreateWholesaleSalesOrder400 | CreateWholesaleSalesOrder401 | CreateWholesaleSalesOrder403 | CreateWholesaleSalesOrder404 | CreateWholesaleSalesOrder409,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWholesaleSalesOrder>>, TError,{data: CreateWholesaleSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createWholesaleSalesOrder>>,

@@ -1,10 +1,21 @@
 import {
+  CustomerId,
   MissingOrganizationContextError,
   OrganizationId,
   requireOrganizationId,
 } from "@dc-inventory/shared-kernel";
 
 export { MissingOrganizationContextError };
+
+type WholesaleAuthRequest = {
+  wholesaleAuth?: {
+    customerId: string | null;
+  };
+};
+
+export function wholesaleCustomerId(request: WholesaleAuthRequest): CustomerId {
+  return CustomerId.parse(request.wholesaleAuth?.customerId ?? "");
+}
 
 export function staffOrganizationId(request: {
   staffAuth?: { organizationId: string };

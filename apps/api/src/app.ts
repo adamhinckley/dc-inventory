@@ -223,9 +223,11 @@ declare module "fastify" {
       roles: readonly StaffRole[];
     };
     wholesaleAuth?: {
-      wholesaleUserId: string;
+      mode: "buyer" | "staff_acting";
+      staffUserId: string | null;
+      wholesaleUserId: string | null;
       email: string;
-      customerId: string;
+      customerId: string | null;
       organizationId: string;
     };
     opsAuth?: {

@@ -20,6 +20,10 @@ function sendUnauthorized(reply: FastifyReply) {
   return reply.code(401).send({ error: "unauthorized" as const });
 }
 
+function sendNeedsCustomer(reply: FastifyReply) {
+  return reply.code(403).send({ error: "needs_customer" as const });
+}
+
 export function registerStaffAudienceGuard(app: FastifyInstance): void {
   app.addHook("preHandler", async (request, reply) => {
     if (isAuthRoute(request)) {
@@ -47,6 +51,10 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
     if (isAuthRoute(request)) {
       return;
     }
+    const staffToken = request.cookies[STAFF_SESSION_COOKIE];
+    if (staffToken !== undefined && staffToken.length > 0) {
+      return sendUnauthorized(reply);
+    }
     const token = request.cookies[WHOLESALE_SESSION_COOKIE];
     const result = await request.server.identity.resolveWholesale.execute(token);
     if (!result.ok) {
@@ -55,15 +63,28 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
       }
       return sendUnauthorized(reply);
     }
-    if ("mode" in result) {
-      return sendUnauthorized(reply);
+    if ("mode" in result && result.mode === "staff_acting") {
+      request.wholesaleAuth = {
+        mode: "staff_acting",
+        staffUserId: result.staffUserId,
+        wholesaleUserId: null,
+        email: result.email,
+        customerId: result.customerId,
+        organizationId: result.organizationId,
+      };
+    } else {
+      request.wholesaleAuth = {
+        mode: "buyer",
+        staffUserId: null,
+        wholesaleUserId: result.wholesaleUserId,
+        email: result.email,
+        customerId: result.customerId,
+        organizationId: result.organizationId,
+      };
     }
-    request.wholesaleAuth = {
-      wholesaleUserId: result.wholesaleUserId,
-      email: result.email,
-      customerId: result.customerId,
-      organizationId: result.organizationId,
-    };
+    if (request.wholesaleAuth.customerId === null) {
+      return sendNeedsCustomer(reply);
+    }
   });
 }
 
