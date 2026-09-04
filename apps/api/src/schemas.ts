@@ -117,8 +117,8 @@ export const productListResponseSchema = z.object({
 
 const catalogAvailableOnlyQuery = z
   .union([z.literal("true"), z.literal("false"), z.boolean()])
-  .optional()
-  .transform((value) => (value === undefined ? true : value === true || value === "true"));
+  .default(true)
+  .transform((value) => value === true || value === "true");
 
 export const catalogQuerySchema = z.object({
   q: z.string().optional(),
