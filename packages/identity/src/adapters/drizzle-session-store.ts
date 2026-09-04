@@ -20,16 +20,19 @@ export class DrizzleSessionStore implements ISessionStore {
       input.audience === "staff"
         ? input.staffUserId
         : input.audience === "wholesale"
-          ? input.wholesaleUserId
+          ? (input.wholesaleUserId ?? input.staffUserId)
           : input.opsUserId;
     if (actorId === null) {
       throw new Error("session actor is required");
     }
+    const staffUserId =
+      input.audience === "wholesale" && input.staffUserId !== null ? input.staffUserId : null;
     const [row] = await this.db
       .insert(sessions)
       .values({
         actorType: input.audience,
         actorId,
+        staffUserId,
         organizationId: input.organizationId,
         customerId: input.customerId,
         lastSeenAt: input.lastSeenAt,
@@ -66,6 +69,19 @@ export class DrizzleSessionStore implements ISessionStore {
 
 function toSession(row: typeof sessions.$inferSelect): Session {
   const audience = row.actorType as SessionAudience;
+  if (audience === "wholesale" && row.staffUserId !== null) {
+    return {
+      id: SessionId.parse(row.id),
+      audience,
+      organizationId: OrganizationId.parse(row.organizationId),
+      staffUserId: StaffUserId.parse(row.staffUserId),
+      wholesaleUserId: null,
+      opsUserId: null,
+      customerId: row.customerId === null ? null : CustomerId.parse(row.customerId),
+      createdAt: row.createdAt,
+      lastSeenAt: row.lastSeenAt,
+    };
+  }
   return {
     id: SessionId.parse(row.id),
     audience,

@@ -89,6 +89,7 @@ describe("Phase 1 seed (in-memory)", () => {
     const wholesaleLogin = await new LoginWholesaleUseCase(
       ports.organizations,
       ports.wholesaleUsers,
+      ports.staffUsers,
       sessions,
       ports.passwords,
       clock,

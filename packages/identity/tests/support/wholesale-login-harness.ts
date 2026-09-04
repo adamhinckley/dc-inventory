@@ -7,6 +7,7 @@ import { InMemoryClock } from "../../src/adapters/in-memory-clock.js";
 import { InMemoryOrganizationRepository } from "../../src/adapters/in-memory-organization-repository.js";
 import { InMemoryPasswordHasher } from "../../src/adapters/in-memory-password-hasher.js";
 import { InMemorySessionStore } from "../../src/adapters/in-memory-session-store.js";
+import { InMemoryStaffUserRepository } from "../../src/adapters/in-memory-staff-user-repository.js";
 import { InMemoryWholesaleUserRepository } from "../../src/adapters/in-memory-wholesale-user-repository.js";
 import { LoginWholesaleUseCase } from "../../src/application/login-wholesale.js";
 import { ResolveWholesaleSessionUseCase } from "../../src/application/resolve-session.js";
@@ -29,6 +30,7 @@ export function wholesaleLoginHarness(options: WholesaleLoginHarnessOptions = {}
   const clock = new InMemoryClock(options.at ?? new Date("2026-08-23T02:00:00.000Z"));
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
+  const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
 
@@ -44,6 +46,7 @@ export function wholesaleLoginHarness(options: WholesaleLoginHarnessOptions = {}
   const loginWholesale = new LoginWholesaleUseCase(
     organizations,
     wholesaleUsers,
+    staffUsers,
     sessions,
     passwords,
     clock,
@@ -54,11 +57,12 @@ export function wholesaleLoginHarness(options: WholesaleLoginHarnessOptions = {}
     clock,
     passwords,
     organizations,
+    staffUsers,
     wholesaleUsers,
     sessions,
     wholesaleLoginAccountStatus,
     loginWholesale,
-    resolveWholesale: new ResolveWholesaleSessionUseCase(sessions, wholesaleUsers, clock),
+    resolveWholesale: new ResolveWholesaleSessionUseCase(sessions, wholesaleUsers, staffUsers, clock),
   };
 }
 

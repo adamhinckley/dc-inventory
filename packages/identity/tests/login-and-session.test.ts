@@ -70,6 +70,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
     loginWholesale: new LoginWholesaleUseCase(
       organizations,
       wholesaleUsers,
+      staffUsers,
       sessions,
       passwords,
       clock,
@@ -79,6 +80,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
     resolveWholesale: new ResolveWholesaleSessionUseCase(
       sessions,
       wholesaleUsers,
+      staffUsers,
       clock,
     ),
     resolveOps: new ResolveOpsSessionUseCase(sessions, opsUsers, clock),
