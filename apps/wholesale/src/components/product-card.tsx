@@ -21,7 +21,7 @@ export function ProductCard({
   const inStock = available > 0;
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-shadow hover:shadow-md">
       <Link href={`/products/${id}`} className="flex h-full flex-col">
         <div className="flex aspect-[4/3] items-center justify-center bg-canvas text-sm text-ink-muted">
           {imageUrl ? (

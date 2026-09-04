@@ -6,6 +6,17 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`dashboard.md`](.
 
 ---
 
+## Chrome (v1)
+
+Lives in `apps/wholesale` (not `packages/ui` / AppShell). Tokens: cream canvas, terracotta accent, Figtree + Cormorant — listed in `apps/wholesale/src/app/globals.css`. Do not copy Carbon hex.
+
+| Surface | Notes |
+| --- | --- |
+| Header | Logged out: About, Contact, Register, Sign in. Logged in: Products, Orders, Cart, Sign out. Wordmark from `public/brand/logo.png`. |
+| Home | Hero carousel (`public/brand/carousel-{1,2,3}.jpg`), about excerpt |
+| Contact / register | UI only. Feedback uses mailto. Register asks customer service to enable web access. |
+| Legal | Privacy, payment terms, claims — HTML pages; wording taken from the live-site PDFs |
+
 ## Features
 
 | Feature | What it is |

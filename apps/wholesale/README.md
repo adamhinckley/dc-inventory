@@ -17,7 +17,7 @@ pnpm dev:api
 pnpm dev:wholesale
 ```
 
-- Shop: [http://localhost:3002](http://localhost:3002) (redirects to `/products`)
+- Shop: [http://localhost:3002](http://localhost:3002)
 - API: `http://localhost:3001` (proxied from this app as `/wholesale/*`)
 
 `pnpm --filter @dc-inventory/wholesale dev` is the same shop command.
@@ -26,7 +26,12 @@ pnpm dev:wholesale
 
 | Route | Purpose |
 |---|---|
-| `/login` | `(auth)/login` placeholder |
+| `/` | Home: three-slide hero from `public/brand/carousel-*.jpg`, about excerpt |
+| `/about` | Company copy |
+| `/contact` | Feedback (`mailto:`) + address/phone/fax |
+| `/register` | Brand-new vs existing account request (no Identity API) |
+| `/login` | Orval `useLoginWholesale` |
+| `/privacy`, `/payment-terms`, `/claim-information` | Legal pages (wording from the live-site PDFs) |
 | `/products` | Product-card grid from `useListWholesaleCatalog` (Orval) |
 | `/products/[sku]` | PDP placeholder |
 | `/cart` | Cart placeholder — no client-invented availability |
@@ -37,7 +42,7 @@ Catalog data comes from the generated wholesale client only. There is no hand-wr
 
 ## Layout
 
-Shop chrome is a storefront header (catalog + cart + orders), not AppShell. Do not import the internal dashboard kit. Match its *principles* (raised surfaces, type hierarchy, intent spacing) using shop tokens in `src/app/globals.css`.
+Shop chrome lives in this app (`ShopHeader` / `ShopFooter`), not AppShell and not `packages/ui`. Logged-out nav: About, Contact, Register, Sign in. Logged-in nav: Products, Orders, Cart, Sign out. Match dashboard *principles* (raised surfaces, type hierarchy, intent spacing) using shop tokens in `src/app/globals.css` — cream/terracotta canvas/ink/accent, not Carbon. Do not invent a third palette.
 
 ## Env
 
