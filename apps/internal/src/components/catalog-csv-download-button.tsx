@@ -22,12 +22,7 @@ export function CatalogCsvDownloadButton() {
       await downloadProductsCsv({
         q: typeof params.q === "string" ? params.q : undefined,
         sortBy:
-          params.sortBy === "sku" ||
-          params.sortBy === "name" ||
-          params.sortBy === "onHand" ||
-          params.sortBy === "available" ||
-          params.sortBy === "caseQty" ||
-          params.sortBy === "createdAt"
+          params.sortBy === "sku" || params.sortBy === "name"
             ? params.sortBy
             : undefined,
         sortOrder: params.sortOrder === "desc" ? "desc" : params.sortOrder === "asc" ? "asc" : undefined,

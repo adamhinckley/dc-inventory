@@ -30,6 +30,10 @@ function toProduct(row: typeof products.$inferSelect): Product {
     description: row.description,
     uom: row.uom,
     memberPrice: Money.fromMinorUnits(row.memberPriceCents, row.currency),
+    listPrice:
+      row.listPriceCents === null
+        ? null
+        : Money.fromMinorUnits(row.listPriceCents, row.currency),
     inactive: row.inactive,
     discontinued: row.discontinued,
     webWholesale: row.webWholesale,
@@ -112,6 +116,7 @@ export class DrizzleProductRepository implements IProductRepository {
         description: product.description,
         uom: product.uom,
         memberPriceCents: product.memberPrice.amountMinor,
+        listPriceCents: product.listPrice?.amountMinor ?? null,
         currency: product.memberPrice.currency,
         inactive: product.inactive,
         discontinued: product.discontinued,
@@ -125,6 +130,7 @@ export class DrizzleProductRepository implements IProductRepository {
           description: product.description,
           uom: product.uom,
           memberPriceCents: product.memberPrice.amountMinor,
+          listPriceCents: product.listPrice?.amountMinor ?? null,
           currency: product.memberPrice.currency,
           inactive: product.inactive,
           discontinued: product.discontinued,

@@ -16,6 +16,18 @@ export type ListInternalProducts200ItemsItem = {
      * @maximum 9007199254740991
      */
   memberPrice: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  listPrice: number | null;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  lastPoCostCents: number | null;
   currency: string;
   inactive: boolean;
   discontinued: boolean;

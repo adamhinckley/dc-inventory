@@ -104,7 +104,7 @@ describe("local demo boot (ADA-51)", () => {
     expect(doc).toMatch(/invoice on ship/i);
     expect(doc).toMatch(/cart = draft sales order/i);
     expect(doc).toMatch(/block oversell/i);
-    expect(doc).toMatch(/MP is shop price/i);
+    expect(doc).toMatch(/LP is shop price/i);
     expect(doc).toMatch(/in-memory tax/i);
     expect(doc).toMatch(/not.*invariants\.md.*§18/i);
     expect(doc).toMatch(/Better Auth/i);

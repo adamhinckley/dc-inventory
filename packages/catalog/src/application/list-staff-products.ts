@@ -27,6 +27,7 @@ export type StaffProductListRow = {
   qty: ProductQty;
   createdAt: Date;
   caseQty: number | null;
+  lastPoCostCents: number | null;
 };
 
 export type ListStaffProductsResult = {

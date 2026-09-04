@@ -72,6 +72,10 @@ async function upsertProduct(
     description: planned.description,
     uom: planned.uom,
     memberPrice: Money.fromMinorUnits(planned.memberPriceCents, planned.currency),
+    listPrice:
+      planned.listPriceCents === null
+        ? null
+        : Money.fromMinorUnits(planned.listPriceCents, planned.currency),
     inactive: false,
     discontinued: false,
     webWholesale: planned.webWholesale,

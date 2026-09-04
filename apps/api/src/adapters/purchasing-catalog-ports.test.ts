@@ -17,6 +17,7 @@ describe("Purchasing Catalog anti-corruption adapter", () => {
       description: null,
       uom: "EA",
       memberPrice: Money.fromMinorUnits(100, "USD"),
+      listPrice: null,
       inactive: true,
       discontinued: false,
       webWholesale: false,

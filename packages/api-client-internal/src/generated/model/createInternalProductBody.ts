@@ -18,6 +18,12 @@ export type CreateInternalProductBody = {
      */
   memberPriceCents: number;
   /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  listPriceCents?: number | null;
+  /**
      * @minLength 3
      * @maxLength 3
      */

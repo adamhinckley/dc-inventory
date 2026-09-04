@@ -53,12 +53,15 @@ function mapListItem(
   qty: ProductQty,
   createdAt: Date,
   caseQty: number | null,
+  lastPoCostCents: number | null,
 ) {
   return {
     id: product.id,
     sku: product.sku.value,
     name: product.name,
     memberPrice: product.memberPrice.amountMinor,
+    listPrice: product.listPrice?.amountMinor ?? null,
+    lastPoCostCents,
     currency: product.memberPrice.currency,
     inactive: product.inactive,
     discontinued: product.discontinued,
@@ -77,6 +80,7 @@ function mapDetail(product: Product, qty: ProductQty, caseQty: number | null = n
     description: product.description,
     uom: product.uom,
     memberPriceCents: product.memberPrice.amountMinor,
+    listPriceCents: product.listPrice?.amountMinor ?? null,
     currency: product.memberPrice.currency,
     inactive: product.inactive,
     discontinued: product.discontinued,
@@ -384,7 +388,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
       });
       return {
         items: result.items.map((row) =>
-          mapListItem(row.product, row.qty, row.createdAt, row.caseQty),
+          mapListItem(row.product, row.qty, row.createdAt, row.caseQty, row.lastPoCostCents),
         ),
         page: result.page,
         pageSize: result.pageSize,

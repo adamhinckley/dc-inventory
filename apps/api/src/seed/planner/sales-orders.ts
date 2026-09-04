@@ -270,7 +270,9 @@ export function planSalesOrders(input: {
   const orders: PlannedSalesOrder[] = [];
   let orderSequence = 0;
   const allSkus = input.products.map((row) => row.sku);
-  const priceBySku = new Map(input.products.map((row) => [row.sku, row.memberPriceCents]));
+  const priceBySku = new Map(
+    input.products.map((row) => [row.sku, row.listPriceCents ?? row.memberPriceCents]),
+  );
   const phase1Coverage = new Set<string>();
   const lineCountQueues = new Map<string, number[]>(
     input.customers.map((customer) => {

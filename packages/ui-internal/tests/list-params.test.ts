@@ -153,7 +153,7 @@ describe("nextTableSort", () => {
       nextTableSort(
         productsListTable,
         { sortBy: "sku", sortOrder: "asc" },
-        "memberPrice",
+        "listPrice",
       ),
     ).toEqual({ sortBy: "sku", sortOrder: "asc" });
   });

@@ -16,12 +16,24 @@ import {
   products,
 } from "@dc-inventory/catalog/schema";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
+import { supplierProducts, suppliers } from "@dc-inventory/purchasing/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
+
+const lastPoCostCents = sql<number | null>`(
+  select ${supplierProducts.lastPoCostCents}
+  from ${supplierProducts}
+  inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
+  where ${supplierProducts.sku} = ${products.sku}
+    and ${suppliers.organizationId} = ${products.organizationId}
+    and ${supplierProducts.lastPoCostCents} is not null
+  order by ${supplierProducts.updatedAt} desc
+  limit 1
+)`;
 
 function productFromRow(row: {
   id: string;
@@ -36,6 +48,7 @@ function productFromRow(row: {
   discontinued: boolean;
   webWholesale: boolean;
   taxCategoryCode: string | null;
+  listPriceCents: number | null;
 }): Product {
   return {
     id: ProductId.parse(row.id),
@@ -45,6 +58,10 @@ function productFromRow(row: {
     description: row.description,
     uom: row.uom,
     memberPrice: Money.fromMinorUnits(row.memberPriceCents, row.currency),
+    listPrice:
+      row.listPriceCents === null
+        ? null
+        : Money.fromMinorUnits(row.listPriceCents, row.currency),
     inactive: row.inactive,
     discontinued: row.discontinued,
     webWholesale: row.webWholesale,
@@ -180,6 +197,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           description: products.description,
           uom: products.uom,
           memberPriceCents: products.memberPriceCents,
+          listPriceCents: products.listPriceCents,
           currency: products.currency,
           inactive: products.inactive,
           discontinued: products.discontinued,
@@ -195,6 +213,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           windowOpensAt: stockSnapshots.windowOpensAt,
           windowClosesAt: stockSnapshots.windowClosesAt,
           caseQty: productPackaging.caseQty,
+          lastPoCostCents,
         })
         .from(products)
         .leftJoin(locations, locationJoin)
@@ -223,6 +242,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
         ) satisfies ProductQty,
         createdAt: row.createdAt,
         caseQty: row.caseQty ?? null,
+        lastPoCostCents: row.lastPoCostCents ?? null,
       })),
       total: totalRows[0]?.value ?? 0,
     };

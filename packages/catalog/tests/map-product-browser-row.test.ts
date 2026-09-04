@@ -8,6 +8,7 @@ function row(overrides: Record<string, string> = {}) {
     detail: "",
     item2: "",
     mp_price: "10.2",
+    lp_price: "12.75",
     uom: "IN",
     inactive: "FALSE",
     discontin: "FALSE",
@@ -31,7 +32,8 @@ describe("mapProductBrowserRow", () => {
     if (!mapped.ok) {
       return;
     }
-    expect(mapped.value.memberPriceCents).toBe(1020);
+    expect(mapped.value.masterPackPriceCents).toBe(1020);
+    expect(mapped.value.listPriceCents).toBe(1275);
     expect(mapped.value.lastPoCostCents).toBe(357);
     expect(mapped.value.webWholesale).toBe(true);
     expect(mapped.value.minOrderQty).toBeNull();

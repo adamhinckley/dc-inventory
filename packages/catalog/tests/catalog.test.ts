@@ -54,6 +54,7 @@ async function createProduct(
     name: string;
     uom: string;
     memberPriceCents: number;
+    listPriceCents?: number | null;
     inactive: boolean;
     discontinued: boolean;
     webWholesale: boolean;
@@ -65,7 +66,8 @@ async function createProduct(
     sku: overrides.sku ?? "HEX-BOLT-GALV",
     name: overrides.name ?? "Galvanized hex bolt",
     uom: overrides.uom ?? "EA",
-    memberPriceCents: overrides.memberPriceCents ?? 1250,
+    memberPriceCents: overrides.memberPriceCents ?? 12_000,
+    listPriceCents: overrides.listPriceCents ?? 1250,
     currency: "USD",
     inactive: overrides.inactive ?? false,
     discontinued: overrides.discontinued ?? false,
@@ -160,7 +162,8 @@ describe("Catalog use cases (in-memory)", () => {
     await createProduct(h, {
       sku: "ALPHA",
       name: 'Bolt, "hex"',
-      memberPriceCents: 1250,
+      listPriceCents: 1250,
+      memberPriceCents: 12_000,
     });
     await createProduct(h, { sku: "BETA", name: "Washer" });
 
@@ -177,7 +180,7 @@ describe("Catalog use cases (in-memory)", () => {
     expect(exported.file.contentType).toBe("text/csv; charset=utf-8");
     expect(exported.rowCount).toBe(1);
     expect(exported.truncated).toBe(false);
-    expect(csv).toContain("SKU,Name,Member price");
+    expect(csv).toContain("SKU,Name,List price,Unit cost");
     expect(csv).toContain("ALPHA");
     expect(csv).toContain('"Bolt, ""hex"""');
     expect(csv).toContain("1250");
@@ -216,7 +219,7 @@ describe("Catalog use cases (in-memory)", () => {
     });
     expect(listed.total).toBe(1);
     expect(listed.items[0]?.product.sku.value).toBe("SHOP-OK");
-    expect(listed.items[0]?.product.memberPrice.amountMinor).toBe(1250);
+    expect(listed.items[0]?.product.listPrice?.amountMinor).toBe(1250);
   });
 
   it("defaults the wholesale list to available products only", async () => {

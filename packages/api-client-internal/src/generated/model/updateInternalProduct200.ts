@@ -19,6 +19,12 @@ export type UpdateInternalProduct200 = {
      * @maximum 9007199254740991
      */
   memberPriceCents: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  listPriceCents: number | null;
   currency: string;
   inactive: boolean;
   discontinued: boolean;

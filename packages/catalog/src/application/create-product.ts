@@ -17,6 +17,7 @@ export type CreateProductRequest = {
   name: string;
   uom: string;
   memberPriceCents: number;
+  listPriceCents?: number | null;
   currency?: string;
   inactive?: boolean;
   discontinued?: boolean;
@@ -67,6 +68,10 @@ export class CreateProductUseCase {
           input.memberPriceCents,
           input.currency ?? "USD",
         ),
+        listPrice:
+          input.listPriceCents === undefined || input.listPriceCents === null
+            ? null
+            : Money.fromMinorUnits(input.listPriceCents, input.currency ?? "USD"),
         inactive: input.inactive ?? false,
         discontinued: input.discontinued ?? false,
         webWholesale: input.webWholesale ?? false,
