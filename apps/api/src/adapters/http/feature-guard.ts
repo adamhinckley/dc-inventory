@@ -1,7 +1,10 @@
 import type { FeatureName } from "@dc-inventory/licensing";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { z } from "zod";
-import { featureDisabledResponseSchema } from "../../schemas.js";
+import {
+  featureDisabledResponseSchema,
+  needsCustomerResponseSchema,
+} from "../../schemas.js";
 import { staffOrganizationId, wholesaleOrganizationId } from "./org-session.js";
 
 type FeatureAudience = "staff" | "wholesale";
@@ -25,8 +28,12 @@ export function registerFeatureGuard(
       "403" in response ? response[403] : undefined;
     const merged403 =
       existing403 === undefined
-        ? featureDisabledResponseSchema
-        : z.union([existing403 as z.ZodTypeAny, featureDisabledResponseSchema]);
+        ? z.union([featureDisabledResponseSchema, needsCustomerResponseSchema])
+        : z.union([
+            existing403 as z.ZodTypeAny,
+            featureDisabledResponseSchema,
+            needsCustomerResponseSchema,
+          ]);
     routeOptions.schema = {
       ...routeOptions.schema,
       response: {

@@ -2,29 +2,39 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import type { Customer } from "@dc-inventory/customers";
-import { CustomerId, WholesaleUserId } from "@dc-inventory/shared-kernel";
+import { WholesaleUserId } from "@dc-inventory/shared-kernel";
 import {
   invalidResponseSchema,
+  needsCustomerResponseSchema,
   notFoundResponseSchema,
   unauthorizedResponseSchema,
   wholesaleCustomerItemSchema,
   wholesaleCustomerNotePatchBodySchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
-import { wholesaleOrganizationId } from "./org-session.js";
+import { wholesaleCustomerId, wholesaleOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
 }
 
+const WHOLESALE_USER_ID_SENTINEL = WholesaleUserId.parse(
+  "00000000-0000-4000-8000-000000000000",
+);
+
 function wholesaleIdentity(request: {
-  wholesaleAuth?: { customerId: string; wholesaleUserId: string };
+  wholesaleAuth?: {
+    mode: "buyer" | "staff_acting";
+    customerId: string | null;
+    wholesaleUserId: string | null;
+  };
 }) {
   return {
-    customerId: CustomerId.parse(request.wholesaleAuth?.customerId ?? ""),
-    wholesaleUserId: WholesaleUserId.parse(
-      request.wholesaleAuth?.wholesaleUserId ?? "",
-    ),
+    customerId: wholesaleCustomerId(request),
+    wholesaleUserId:
+      request.wholesaleAuth?.mode === "staff_acting"
+        ? WHOLESALE_USER_ID_SENTINEL
+        : WholesaleUserId.parse(request.wholesaleAuth?.wholesaleUserId ?? ""),
   };
 }
 
@@ -60,6 +70,7 @@ export function registerWholesaleCustomerRoutes(app: FastifyInstance): void {
         response: {
           200: wholesaleCustomerItemSchema,
           401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
           404: notFoundResponseSchema,
         },
       },
@@ -90,6 +101,7 @@ export function registerWholesaleCustomerRoutes(app: FastifyInstance): void {
           200: wholesaleCustomerItemSchema,
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
           404: notFoundResponseSchema,
         },
       },

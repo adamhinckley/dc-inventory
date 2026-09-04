@@ -379,15 +379,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
     post:
       operationId: createInternalCustomer
       summary: Create customer
@@ -545,6 +555,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "409":
           description: Default Response
           content:
@@ -662,15 +681,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -842,6 +871,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -941,15 +979,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1075,6 +1123,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -1225,6 +1282,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1350,15 +1416,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1510,6 +1586,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -1669,6 +1754,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1778,15 +1872,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -1930,6 +2034,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -2084,6 +2197,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -2179,15 +2301,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -2329,6 +2461,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -2484,6 +2625,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -2605,6 +2755,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -2755,6 +2914,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -2958,6 +3126,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -3277,6 +3454,25 @@ paths:
             application/json:
               schema:
                 anyOf:
+                  - anyOf:
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - feature_disabled
+                        required:
+                          - error
+                        additionalProperties: false
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - needs_customer
+                        required:
+                          - error
+                        additionalProperties: false
                   - type: object
                     properties:
                       error:
@@ -3291,7 +3487,7 @@ paths:
                       error:
                         type: string
                         enum:
-                          - feature_disabled
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -3500,6 +3696,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -3754,6 +3959,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -3928,6 +4142,25 @@ paths:
             application/json:
               schema:
                 anyOf:
+                  - anyOf:
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - feature_disabled
+                        required:
+                          - error
+                        additionalProperties: false
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - needs_customer
+                        required:
+                          - error
+                        additionalProperties: false
                   - type: object
                     properties:
                       error:
@@ -3942,7 +4175,7 @@ paths:
                       error:
                         type: string
                         enum:
-                          - feature_disabled
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -4082,6 +4315,25 @@ paths:
             application/json:
               schema:
                 anyOf:
+                  - anyOf:
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - feature_disabled
+                        required:
+                          - error
+                        additionalProperties: false
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - needs_customer
+                        required:
+                          - error
+                        additionalProperties: false
                   - type: object
                     properties:
                       error:
@@ -4096,7 +4348,7 @@ paths:
                       error:
                         type: string
                         enum:
-                          - feature_disabled
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -4185,12 +4437,30 @@ paths:
                         required:
                           - error
                         additionalProperties: false
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - needs_customer
+                        required:
+                          - error
+                        additionalProperties: false
                   - type: object
                     properties:
                       error:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -4430,15 +4700,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
     post:
       operationId: createInternalPurchaseOrder
       summary: Create draft purchase order
@@ -4625,6 +4905,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -4739,15 +5028,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -4952,6 +5251,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5080,15 +5388,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5168,15 +5486,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5245,15 +5573,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5390,15 +5728,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5488,15 +5836,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -5654,6 +6012,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -5868,6 +6235,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -6028,6 +6404,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -6185,6 +6570,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -6367,15 +6761,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
     post:
       operationId: createInternalSupplier
       summary: Create supplier
@@ -6470,6 +6874,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "409":
           description: Default Response
           content:
@@ -6552,15 +6965,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -6671,6 +7094,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -6948,15 +7380,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -7122,6 +7564,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -7300,6 +7751,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -7393,6 +7853,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -7642,15 +8111,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
     post:
       operationId: createInternalSalesOrder
       summary: Create draft sales order
@@ -7851,6 +8330,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -7992,15 +8480,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -8170,6 +8668,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -8352,6 +8859,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false
@@ -8541,6 +9057,15 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -8666,15 +9191,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - feature_disabled
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
+                    required:
+                      - error
+                    additionalProperties: false
         "404":
           description: Default Response
           content:
@@ -8813,6 +9348,15 @@ paths:
                         type: string
                         enum:
                           - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - needs_customer
                     required:
                       - error
                     additionalProperties: false

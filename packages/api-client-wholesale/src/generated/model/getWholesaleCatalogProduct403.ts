@@ -6,5 +6,7 @@
  */
 
 export type GetWholesaleCatalogProduct403 = {
+  error: 'needs_customer';
+} | {
   error: 'feature_disabled';
 };

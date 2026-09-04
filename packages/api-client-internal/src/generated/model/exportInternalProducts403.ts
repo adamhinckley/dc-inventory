@@ -7,4 +7,6 @@
 
 export type ExportInternalProducts403 = {
   error: 'feature_disabled';
+} | {
+  error: 'needs_customer';
 };
