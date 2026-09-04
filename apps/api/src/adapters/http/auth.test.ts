@@ -114,6 +114,30 @@ function cookieValue(
   return res.cookies.find((cookie) => cookie.name === name);
 }
 
+function setCookieHeaders(
+  res: Awaited<ReturnType<Awaited<ReturnType<typeof buildApp>>["inject"]>>,
+): string[] {
+  const raw = res.headers["set-cookie"];
+  if (raw === undefined) {
+    return [];
+  }
+  return Array.isArray(raw) ? raw : [raw];
+}
+
+function pathFromSetCookie(header: string): string | undefined {
+  const match = /Path=([^;]+)/i.exec(header);
+  return match?.[1];
+}
+
+function clearedCookieHeaders(headers: string[], name: string): string[] {
+  return headers.filter((header) => {
+    if (!header.startsWith(`${name}=`)) {
+      return false;
+    }
+    return /Max-Age=0|Expires=/i.test(header);
+  });
+}
+
 describe("opaque session HTTP", () => {
   it("sets HttpOnly staff_session on login and returns the session", async () => {
     const { app } = await startAuthApp();
@@ -136,7 +160,7 @@ describe("opaque session HTTP", () => {
     const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
     expect(cookie?.name).toBe(STAFF_SESSION_COOKIE);
     expect(cookie?.httpOnly).toBe(true);
-    expect(cookie?.path).toBe("/");
+    expect(cookie?.path).toBe("/internal");
     expect(cookie?.sameSite).toBe("Lax");
     expect(cookie?.secure).toBeFalsy();
     expect(cookie?.domain == null || cookie.domain === "").toBe(true);
@@ -208,6 +232,7 @@ describe("opaque session HTTP", () => {
     const cookie = cookieValue(login, WHOLESALE_SESSION_COOKIE);
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.name).toBe(WHOLESALE_SESSION_COOKIE);
+    expect(cookie?.path).toBe("/wholesale");
 
     const session = await app.inject({
       method: "GET",
@@ -393,6 +418,12 @@ describe("opaque session HTTP", () => {
     });
     expect(logout.statusCode).toBe(200);
     expect(logout.json()).toEqual({ ok: true });
+    const staffClears = clearedCookieHeaders(
+      setCookieHeaders(logout),
+      STAFF_SESSION_COOKIE,
+    );
+    expect(staffClears).toHaveLength(2);
+    expect(staffClears.map(pathFromSetCookie).sort()).toEqual(["/", "/internal"]);
     const after = await app.inject({
       method: "GET",
       url: "/internal/auth/session",
@@ -404,6 +435,96 @@ describe("opaque session HTTP", () => {
     const ready = await app.inject({ method: "GET", url: "/ready" });
     expect(health.statusCode).toBe(200);
     expect(ready.statusCode).toBe(200);
+  });
+
+  it("clears both scoped and legacy paths on wholesale logout", async () => {
+    const { app } = await startAuthApp();
+    const login = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
+    });
+    const cookie = cookieValue(login, WHOLESALE_SESSION_COOKIE);
+    const logout = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/logout",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie?.value ?? "" },
+    });
+    expect(logout.statusCode).toBe(200);
+    const wholesaleClears = clearedCookieHeaders(
+      setCookieHeaders(logout),
+      WHOLESALE_SESSION_COOKIE,
+    );
+    expect(wholesaleClears).toHaveLength(2);
+    expect(wholesaleClears.map(pathFromSetCookie).sort()).toEqual(["/", "/wholesale"]);
+  });
+
+  it("clears only legacy Path=/ for the opposite audience on login", async () => {
+    const { app } = await startAuthApp();
+    const staffLogin = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
+    });
+    expect(staffLogin.statusCode).toBe(200);
+    const staffCookie = cookieValue(staffLogin, STAFF_SESSION_COOKIE);
+
+    const wholesaleLogin = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
+    });
+    expect(wholesaleLogin.statusCode).toBe(200);
+    const staffClearsOnWholesaleLogin = clearedCookieHeaders(
+      setCookieHeaders(wholesaleLogin),
+      STAFF_SESSION_COOKIE,
+    );
+    expect(staffClearsOnWholesaleLogin).toHaveLength(1);
+    expect(pathFromSetCookie(staffClearsOnWholesaleLogin[0] ?? "")).toBe("/");
+
+    const staffSession = await app.inject({
+      method: "GET",
+      url: "/internal/auth/session",
+      cookies: { [STAFF_SESSION_COOKIE]: staffCookie?.value ?? "" },
+    });
+    expect(staffSession.statusCode).toBe(200);
+
+    const internalLogin = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
+    });
+    expect(internalLogin.statusCode).toBe(200);
+    const wholesaleCookie = cookieValue(wholesaleLogin, WHOLESALE_SESSION_COOKIE);
+    const wholesaleClearsOnStaffLogin = clearedCookieHeaders(
+      setCookieHeaders(internalLogin),
+      WHOLESALE_SESSION_COOKIE,
+    );
+    expect(wholesaleClearsOnStaffLogin).toHaveLength(1);
+    expect(pathFromSetCookie(wholesaleClearsOnStaffLogin[0] ?? "")).toBe("/");
+
+    const wholesaleSession = await app.inject({
+      method: "GET",
+      url: "/wholesale/auth/session",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: wholesaleCookie?.value ?? "" },
+    });
+    expect(wholesaleSession.statusCode).toBe(200);
   });
 
   it("returns a stable 429 with Retry-After after repeated login failures", async () => {
@@ -632,6 +753,7 @@ describe("opaque session HTTP", () => {
       const cookie = cookieValue(login, OPS_SESSION_COOKIE);
       expect(cookie?.name).toBe(OPS_SESSION_COOKIE);
       expect(cookie?.httpOnly).toBe(true);
+      expect(cookie?.path).toBe("/ops");
 
       const session = await app.inject({
         method: "GET",

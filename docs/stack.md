@@ -221,7 +221,7 @@ Staff must not administer feature flags. That is ops only ([`licensing.md`](./li
 | Decision | Detail |
 |---|---|
 | Mechanism | **Server-side session** (opaque id in cookie, row in Postgres). Revocable (logout, disable user, password change). |
-| Cookie flags | `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, short idle timeout + absolute lifetime. |
+| Cookie flags | `HttpOnly`, `Secure`, `SameSite=Lax`, `Path` scoped to audience prefix (`/internal`, `/wholesale`, `/ops`), short idle timeout + absolute lifetime. |
 | Where not to put tokens | `localStorage`, query strings, logs. |
 | CSRF | Distinct sites + `SameSite=Lax` covers the v1 browser apps. If a cookie is ever shared cross-site, add anti-CSRF tokens. |
 | Passwords | Hash via the auth adapter. Never log passwords. |

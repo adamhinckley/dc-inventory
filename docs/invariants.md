@@ -287,7 +287,7 @@ Full narrative: [`operator-bridge.md`](./operator-bridge.md).
 | X2 | Staff session is valid only on `/internal/*`. Wholesale session is valid only on `/wholesale/*`. Ops session is valid only on `/ops/*`. Separate cookie names, separate origins. |
 | X3 | CORS allowlists **exactly** those three origins. |
 | X4 | Mechanism is a **server-side session** (opaque id in cookie, row in Postgres). Not JWT in `localStorage`, not tokens in query strings or logs. |
-| X5 | Cookies: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`. HTTPS only in production. |
+| X5 | Cookies: `HttpOnly`, `Secure`, `SameSite=Lax`, `Path` scoped to audience prefix (`/internal`, `/wholesale`, `/ops`). HTTPS only in production. |
 | X6 | Wholesale user is bound at login to `wholesaleUserId` + **`customerId`**. Handlers **overwrite** `customerId` from the session after Zod parse. If the body contains a customer id, ignore it. |
 | X7 | Staff role elevation cannot be trusted from the client body. |
 | X8 | Authz layers: (1) edge — valid session for that route tree; (2) staff RBAC — small **static** matrix; (3) **IFeatures** for paid packs; (4) business rules in use cases (credit, allocation, submitted-order); (5) resource scoping by `customerId`. |

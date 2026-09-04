@@ -51,10 +51,6 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
     if (isAuthRoute(request)) {
       return;
     }
-    const staffToken = request.cookies[STAFF_SESSION_COOKIE];
-    if (staffToken !== undefined && staffToken.length > 0) {
-      return sendUnauthorized(reply);
-    }
     const token = request.cookies[WHOLESALE_SESSION_COOKIE];
     const result = await request.server.identity.resolveWholesale.execute(token);
     if (!result.ok) {
