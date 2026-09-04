@@ -3,6 +3,7 @@ import {
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
   PHASE1_PRODUCTS,
+  PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
 } from "../phase1-fixture.js";
@@ -314,11 +315,15 @@ export function planIdentityEmails(): {
   staffEmail: string;
   wholesaleEmail: string;
   wholesaleCustomerKey: "acme";
+  secondaryWholesaleEmail: string;
+  secondaryWholesaleCustomerKey: "northstar";
 } {
   return {
     staffEmail: PHASE1_STAFF_EMAIL,
     wholesaleEmail: PHASE1_WHOLESALE_EMAIL,
     wholesaleCustomerKey: "acme",
+    secondaryWholesaleEmail: PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
+    secondaryWholesaleCustomerKey: "northstar",
   };
 }
 

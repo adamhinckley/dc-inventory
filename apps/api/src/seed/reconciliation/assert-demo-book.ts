@@ -2,6 +2,7 @@ import { ZERO_STOCK_FIGURES } from "@dc-inventory/inventory/snapshot";
 import {
   PHASE1_PRODUCTS,
   PHASE1_PRODUCT_SKUS,
+  PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
 } from "../phase1-fixture.js";
@@ -315,20 +316,46 @@ function checkPhase1Fixtures(ctx: Ctx): DemoReconciliationResult | undefined {
 }
 
 function checkIdentityRows(ctx: Ctx): DemoReconciliationResult | undefined {
-  if (ctx.book.staffUsers.length !== 1 || ctx.book.wholesaleUsers.length !== 1) {
+  if (ctx.book.staffUsers.length !== 1) {
     return failContract(
       "identity_rows",
-      `staff ${String(ctx.book.staffUsers.length)}, wholesale ${String(ctx.book.wholesaleUsers.length)}`,
+      `staff count is ${String(ctx.book.staffUsers.length)}, expected 1`,
+    );
+  }
+  if (ctx.book.wholesaleUsers.length < 2) {
+    return failContract(
+      "identity_rows",
+      `wholesale count is ${String(ctx.book.wholesaleUsers.length)}, expected at least 2`,
     );
   }
   const staff = ctx.book.staffUsers[0];
-  const wholesale = ctx.book.wholesaleUsers[0];
   const acmeId = customerIdByName(ctx.book, DEMO_NAMED_CUSTOMERS.acme.name);
-  if (!staff || !wholesale || staff.email !== PHASE1_STAFF_EMAIL) {
+  const northstarId = customerIdByName(ctx.book, DEMO_NAMED_CUSTOMERS.northstar.name);
+  if (!staff || staff.email !== PHASE1_STAFF_EMAIL) {
     return failContract("identity_rows", "staff login is not staff@local.test");
   }
-  if (wholesale.email !== PHASE1_WHOLESALE_EMAIL || wholesale.customerId !== acmeId) {
+  const acmeWholesale = ctx.book.wholesaleUsers.find((row) => row.email === PHASE1_WHOLESALE_EMAIL);
+  if (!acmeWholesale || acmeWholesale.customerId !== acmeId) {
     return failContract("identity_rows", "wholesale login is not wholesale@local.test on Acme");
+  }
+  const northstarWholesale = ctx.book.wholesaleUsers.find(
+    (row) => row.email === PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
+  );
+  if (!northstarWholesale || northstarWholesale.customerId !== northstarId) {
+    return failContract(
+      "identity_rows",
+      "northstar wholesale login is not northstar@local.test on Northstar Big Box",
+    );
+  }
+  const customerIdsWithWholesale = new Set(ctx.book.wholesaleUsers.map((row) => row.customerId));
+  if (!acmeId || !northstarId) {
+    return failContract("identity_rows", "Acme or Northstar customer row is missing");
+  }
+  if (!customerIdsWithWholesale.has(acmeId) || !customerIdsWithWholesale.has(northstarId)) {
+    return failContract(
+      "identity_rows",
+      "Acme and Northstar must each have at least one wholesale user",
+    );
   }
   return undefined;
 }

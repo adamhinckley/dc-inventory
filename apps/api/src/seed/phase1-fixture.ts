@@ -11,6 +11,8 @@ export const PHASE1_CUSTOMER_CURRENCY = "USD";
 
 export const PHASE1_STAFF_EMAIL = "staff@local.test";
 export const PHASE1_WHOLESALE_EMAIL = "wholesale@local.test";
+/** Second demo shop login for Northstar Big Box (staff-acting picker smoke). */
+export const PHASE1_NORTHSTAR_WHOLESALE_EMAIL = "northstar@local.test";
 
 export const PHASE1_PRODUCT_SKUS = [
   "HEX-BOLT-GALV",

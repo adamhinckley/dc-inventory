@@ -94,6 +94,8 @@ describe("planDemoBook", () => {
     expect(plan.master.staffEmail).toBe("staff@local.test");
     expect(plan.master.wholesaleEmail).toBe("wholesale@local.test");
     expect(plan.master.wholesaleCustomerKey).toBe("acme");
+    expect(plan.master.secondaryWholesaleEmail).toBe("northstar@local.test");
+    expect(plan.master.secondaryWholesaleCustomerKey).toBe("northstar");
 
     const counts = new Map<string, number>();
     for (const order of plan.salesOrders) {

@@ -298,6 +298,25 @@ export async function runWriteStaticDemoBook(
   };
   await ports.wholesaleUsers.save(wholesale);
 
+  const northstar = customerByKey.get(plan.master.secondaryWholesaleCustomerKey);
+  if (northstar === undefined) {
+    throw new Phase1SeedError(
+      `missing secondary wholesale customer key ${plan.master.secondaryWholesaleCustomerKey}`,
+    );
+  }
+  const existingSecondaryWholesale = await ports.wholesaleUsers.findByEmail(
+    OrganizationId.DEFAULT,
+    plan.master.secondaryWholesaleEmail,
+  );
+  const secondaryWholesale: WholesaleUser = {
+    id: existingSecondaryWholesale?.id ?? WholesaleUserId.parse(newId()),
+    organizationId: OrganizationId.DEFAULT,
+    email: plan.master.secondaryWholesaleEmail,
+    passwordHash: await ports.passwords.hash(wholesalePassword),
+    customerId: northstar.id,
+  };
+  await ports.wholesaleUsers.save(secondaryWholesale);
+
   return {
     bootstrap,
     products,
