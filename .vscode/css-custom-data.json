@@ -10,6 +10,10 @@
       "description": "Tailwind CSS v4: extra scan paths for class detection."
     },
     {
+      "name": "@apply",
+      "description": "Tailwind CSS: inline a set of utility classes into the current rule."
+    },
+    {
       "name": "@utility",
       "description": "Tailwind CSS v4: define a custom utility."
     },
