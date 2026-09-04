@@ -32,3 +32,4 @@ Frontend depends on Backend. Decisions: `CONTEXT.md`, `docs/adr/0001`–`0007`. 
 |---|---|
 | [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) | `OrganizationId` seam. Isolation, not sellability math. |
 | [Demand model — backend](https://linear.app/adamhinckley/project/demand-model-backend-c0810f4afefe) | David's available-to-sell formula. Open vs locked per SKU. Ledger + sales confirm. No frontend. Map: [ADA-173](https://linear.app/adamhinckley/issue/ADA-173/demand-model-backend-implementation-map). ADR 0008. |
+| [Shopify channel](https://linear.app/adamhinckley/project/shopify-channel-86c419ea2311) | External hub: push `availableToSell` to Shopify; ingest retail vs Faire orders. Native Faire API stays deferred. Map: [ADA-265](https://linear.app/adamhinckley/issue/ADA-265/shopify-channel-implementation-map). ADR 0009. After Demand model + Sales confirm. |

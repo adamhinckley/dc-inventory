@@ -7,7 +7,7 @@ One Postgres database · schema per context · inventory is the only place quant
 
 Source dump: product browser CSV (`product_id` … `disc_over_sold_percent`). Field meanings in [`product-browser-schema-glossary.md`](./product-browser-schema-glossary.md) are **unverified**. Do not copy that spreadsheet 1:1 into Postgres.
 
-Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) (no sales tax in v1) · [`customers.md`](./customers.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md)
+Related: [`architecture.md`](./architecture.md) · [`stack.md`](./stack.md) · [`tax.md`](./tax.md) (no sales tax in v1) · [`customers.md`](./customers.md) · [`invariants.md`](./invariants.md) (locked rules; open call items expanded there) · [`licensing.md`](./licensing.md) (software subscription tables are operator-facing) · [`open-questions.md`](./open-questions.md) · [`future-concepts/shopify-channel.md`](./future-concepts/shopify-channel.md) (planned Shopify mapping tables — not in this draft schema)
 
 ---
 

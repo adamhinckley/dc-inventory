@@ -4,7 +4,7 @@ Needs answers before we lock catalog, orders, and invoicing.
 
 Copy of the stakeholder canvas in Slack ([Open questions for the business](https://shoalssoftware.slack.com/docs/T0BQVF37DMG/F0BRPSD0LH1)). Check an item when the business has decided it. Technical follow-up stays in the architecture and schema docs.
 
-Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./database-design.md) · [`surfaces/`](./surfaces/) · [`future-concepts/multi-organization.md`](./future-concepts/multi-organization.md)
+Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./database-design.md) · [`surfaces/`](./surfaces/) · [`future-concepts/multi-organization.md`](./future-concepts/multi-organization.md) · [`future-concepts/shopify-channel.md`](./future-concepts/shopify-channel.md)
 
 ---
 
@@ -21,7 +21,7 @@ Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./data
 - [ ] Which price is the **wholesale shop price**: LP, MP, or original wholesale?
 - [ ] What does **`c_to_c`** mean in the current system? Keep, drop, or rename?
 - [ ] Are **`category_1` … `category_10`** merchandising **tags** (a SKU can be in several), or a real **hierarchy**?
-- [ ] The dump has two product flags: whether the SKU shows on the wholesale shop (`web_wholesale`, v1) and whether it shows on a consumer storefront (`web_retail`). Keep the consumer storefront flag for a later retail site, or drop it in v1?
+- [ ] The dump has two product flags: whether the SKU shows on the wholesale shop (`web_wholesale`, v1) and whether it shows on a consumer storefront (`web_retail`). Keep the consumer storefront flag for a later retail site, or drop it in v1? (Retail checkout is Shopify when the channel lands — [ADR 0009](./adr/0009-shopify-channel-hub.md); still decide the catalog flag.)
 - [ ] **`line_comm`** (line commission) and **oversold discount**: needed in the catalog now, or a later pricing / commission conversation?
 - [ ] Do product **variants** (size/color as one product) exist in how you sell, or is **SKU** the only identity that matters on day one?
 
@@ -42,4 +42,5 @@ Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./data
 ## Later — not v1, confirm we should not build it now
 
 - [ ] Confirm the v1 **demo** targets one wholesale company (`OrganizationId.DEFAULT`). A second company on the **same deploy** is in progress — [ADR 0007](./adr/0007-organization-id-current-not-deferred.md), [Multi-organization project](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) — not a separate Postgres per tenant.
+- [x] Marketplace path: **Shopify is the hub** (retail + Faire via Faire: Sell Wholesale). Native Faire API is not v1. See [ADR 0009](./adr/0009-shopify-channel-hub.md). Not in the first demo; after `availableToSell`.
 - [ ] Confirm we should **not** merge the same real-world buyer across two sellers into one customer record if that ever happens.

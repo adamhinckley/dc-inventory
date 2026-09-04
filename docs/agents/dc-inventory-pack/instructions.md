@@ -10,6 +10,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 - `docs/invariants.md` (locked rules; do not invent defaults for §18 gaps)
 - `docs/licensing.md` (software subscription vs customer AR; `IFeatures`; ops only for flag admin)
 - `docs/operator-bridge.md` (fail-soft door to the developer’s other repo; do not implement that platform here)
+- `docs/adr/0009-shopify-channel-hub.md` (Shopify hub after ATP; do not implement `packages/shopify-bridge` until ADA-265 children open; native Faire API stays deferred)
 - `docs/linear.md` (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative)
 - Root `AGENTS.md` when it exists
 
@@ -20,7 +21,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 3. **Never** store or mutate `available` qty as source of truth — Inventory movements only.
 4. Controllers parse, call one use case, map response — no business logic in HTTP.
 5. Frontends use Orval hooks only — no hand-written API `fetch`.
-6. Do not add Redis, Prisma, Mongo, GraphQL, tRPC, Nest, Kafka, Datadog, extra observability vendors, LaunchDarkly as a required SDK, or a tax SDK.
+6. Do not add Redis, Prisma, Mongo, GraphQL (as this product’s API), tRPC, Nest, Kafka, Datadog, extra observability vendors, LaunchDarkly as a required SDK, or a tax SDK. Shopify Admin GraphQL is outbound-only when Shopify-channel packets open ([ADR 0009](../../adr/0009-shopify-channel-hub.md)).
 7. Do not mix software subscription payments into Accounting. Do not invent `FeatureName`s. Flags never skip ATP or `customerId` binding.
 8. Do not implement the operator platform in this repo. `IOperatorPlatform` is fail-soft; do not invent message kinds or require that URL at boot.
 9. **Tax:** this company does not collect sales tax. Read `docs/tax.md`. Do not add `ITaxCalculator`, quote/commit, tax lines, or `price * rate`.

@@ -396,15 +396,14 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - Zoho-style purchase-request document (demand-to-PO is `uncovered`, not a request queue)
 - First-class factory-to-customer drop-ship (keep fake receive-then-invoice; SKU+X workaround is operational)
 - Season forecast from prior-year sales
-- Native Faire API
+- Native Faire Partner API (Faire stays on Shopify’s sales channel — [ADR 0009](./adr/0009-shopify-channel-hub.md))
 - Product variants as a separate aggregate
 - General ledger, AP, inventory asset valuation
 - Tax **return filing**, remittance, nexus dashboards, use tax on POs, certificate CMS, **and sales-tax calculation** (none of these are v1 — [`tax.md`](./tax.md))
-- Message broker, outbox, CQRS with a separate read DB
+- Message broker, outbox, CQRS with a separate read DB (operator-bridge / later Shopify-bridge may use a **local inbox table**)
 - Microservices / separate deployables per context (ops **UI hosting** may split later; inventory does not)
 - OCR / extracting line items from arbitrary supplier PDFs or emails
 - Embedded BI; full APM; runtime AI that auto-remediates production
-- Retail / Shopify as a channel in these contexts (stakeholder language; make the deferral explicit — [G17](#g17-ubiquitous-language-mismatches-to-resolve-in-the-plan))
 - SSO / SAML; API keys for third parties; fine-grained per-SKU permissions
 - JWT access tokens for mobile (optional later; still bind `customerId` server-side)
 - In-app feature-request control plane ([`ideas/in-app-feature-requests-to-coding-agents.md`](./ideas/in-app-feature-requests-to-coding-agents.md))
@@ -414,7 +413,7 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 - Self-serve **signup UI** before the Signup milestone packets open — see [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) ([ADA-157](https://linear.app/adamhinckley/issue/ADA-157/multi-organization-implementation-map))
 - Building the operator platform **in this repo**; bidirectional tickets; streaming inventory/AR to that platform
 
-`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive. `InstallationId` exists so the operator platform can tell deploys apart. **`OrganizationId` is current** ([ADR 0007](./adr/0007-organization-id-current-not-deferred.md)): one implicit org in the v1 demo (`DEFAULT`), composite uniqueness and session overwrite in progress — not database-per-company.
+`LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive. `InstallationId` exists so the operator platform can tell deploys apart. **`OrganizationId` is current** ([ADR 0007](./adr/0007-organization-id-current-not-deferred.md)): one implicit org in the v1 demo (`DEFAULT`), composite uniqueness and session overwrite in progress — not database-per-company. **Shopify channel** is planned after ATP ([ADR 0009](./adr/0009-shopify-channel-hub.md)); do not implement until [ADA-265](https://linear.app/adamhinckley/issue/ADA-265/shopify-channel-implementation-map) children open.
 
 ---
 
@@ -588,7 +587,7 @@ Keep one word per concept in architecture + code + UI labels:
 | Wholesale user | Customer user / shop login | Identity entity name |
 | Client DTO / “clients” in intro | Customer | Agents generate `Client` and `Customer` side by side |
 | Statement (absent) | Statement ≠ invoice | Accounting invents a second invoice type |
-| (not in architecture) | Shopify is retail, not this product | A later ticket adds a retail channel into Catalog/Sales |
+| Shopify channel / Faire via Shopify ([ADR 0009](./adr/0009-shopify-channel-hub.md)) | Shopify retail vs Faire wholesale | Agents mix channels, push on-hand, or start a native Faire API |
 
 ### G18. Already listed as “open on the call”
 
@@ -629,6 +628,12 @@ Until then, no-op is the correct v1 adapter.
 
 **Closed (2026-09).** This company does not collect sales tax. No hosted engine. Scaffold leftovers (`packages/tax`, empty tax tables) must not be extended — [`tax.md`](./tax.md).
 
+### G22. Shopify channel (planned, not first demo)
+
+**Closed as a seam** ([ADR 0009](./adr/0009-shopify-channel-hub.md)): Shopify is the hub; native Faire API deferred; push `availableToSell`; split inbound orders retail vs Faire; ACL in `shopify-bridge`.
+
+**Still owner-gated before coding packets:** open-SKU qty sent to Shopify; Faire settlement vs Accounting AR; retail buyer vs `Customer`; Faire-only location vs one inventory pool. Do not invent those in a random ticket.
+
 ### Suggested owner-test packets once P0 items close
 
 These are the failing tests the architecture already says the owner writes; they cannot be honest until the gaps above have defaults:
@@ -641,6 +646,7 @@ These are the failing tests the architecture already says the owner writes; they
 6. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
 7. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.
 8. **Operator bridge:** software payment still commits if publish throws; issue submit succeeds on local save; closed message kinds only.
+9. **Shopify channel:** do not land until ADA-265 children; then in-memory ingest branches retail vs Faire, HMAC reject, duplicate Shopify order id is a no-op, inventory adapter writes `availableToSell` only.
 
 ---
 
@@ -656,4 +662,5 @@ When reviewing an agent PR, the architecture checklist still applies ([architect
 - [ ] Did software billing land in Accounting or Catalog, or did a flag skip ATP/authz?
 - [ ] Did a slice add sales tax (quote/commit, tax lines, `taxCategoryCode`, or `price * rate`)?
 - [ ] Did a slice require the operator platform to be online for inventory or checkout?
+- [ ] Did a slice add Shopify/Faire SDK types to Sales, Catalog, or Inventory domain, push warehouse `available` to Shopify, or start a native Faire API?
 - [ ] Did the change close a [§18](#18-what-the-initial-plan-still-needs) gap **in code** without updating this file and owner tests?

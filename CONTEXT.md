@@ -12,7 +12,7 @@ This file orients agents. The contracts live in `docs/`.
 4. [`docs/stack.md`](./docs/stack.md) — TypeScript, Fastify, Drizzle, Postgres, Better Auth, Next.js
 5. [`docs/api-contract.md`](./docs/api-contract.md) — OpenAPI, Orval, tables vs shop
 
-Also: [`docs/tax.md`](./docs/tax.md) (no sales tax), [`docs/customers.md`](./docs/customers.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md).
+Also: [`docs/tax.md`](./docs/tax.md) (no sales tax), [`docs/customers.md`](./docs/customers.md), [`docs/licensing.md`](./docs/licensing.md), [`docs/operator-bridge.md`](./docs/operator-bridge.md), [`docs/observability.md`](./docs/observability.md), [`docs/linear.md`](./docs/linear.md), [`docs/adr/0009-shopify-channel-hub.md`](./docs/adr/0009-shopify-channel-hub.md) (Shopify hub; Faire via Shopify).
 
 ## Current scaffold
 
