@@ -225,6 +225,7 @@ paths:
           name: sortOrder
           required: false
         - schema:
+            default: true
             anyOf:
               - type: string
                 enum:
