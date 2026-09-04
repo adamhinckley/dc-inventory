@@ -218,6 +218,44 @@ describe("wholesale staff acting data route isolation", () => {
     expect(postOrder.json()).toEqual({ error: "unauthorized" });
   });
 
+  it("uses wholesale_session when staff_session is also present (localhost cookie jar)", async () => {
+    const app = await startActingApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+
+    await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/select-customer",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { customerId: CUSTOMER_A_ID },
+    });
+
+    const product = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staffInternal },
+      payload: {
+        sku: "LOCALHOST-JAR-SKU",
+        name: "Localhost jar product",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+        webWholesale: true,
+      },
+    });
+    expect(product.statusCode).toBe(201);
+
+    const catalog = await app.inject({
+      method: "GET",
+      url: "/wholesale/catalog",
+      cookies: {
+        [STAFF_SESSION_COOKIE]: staffInternal,
+        [WHOLESALE_SESSION_COOKIE]: cookie,
+      },
+    });
+    expect(catalog.statusCode).toBe(200);
+  });
+
   it("scopes account reads to the session customer after selection", async () => {
     const app = await startActingApp();
     const cookie = await loginStaffActing(app);

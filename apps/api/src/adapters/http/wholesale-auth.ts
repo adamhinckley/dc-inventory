@@ -15,6 +15,7 @@ import {
 import {
   clearSessionCookie,
   setSessionCookie,
+  STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
 import {
@@ -113,6 +114,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
       await resetLoginThrottle(request, "wholesale");
+      clearSessionCookie(reply, STAFF_SESSION_COOKIE, request);
       setSessionCookie(reply, WHOLESALE_SESSION_COOKIE, result.sessionId, request);
       return toWholesaleSessionBody(result);
     },

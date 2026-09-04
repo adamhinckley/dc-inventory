@@ -136,7 +136,7 @@ describe("opaque session HTTP", () => {
     const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
     expect(cookie?.name).toBe(STAFF_SESSION_COOKIE);
     expect(cookie?.httpOnly).toBe(true);
-    expect(cookie?.path).toBe("/");
+    expect(cookie?.path).toBe("/internal");
     expect(cookie?.sameSite).toBe("Lax");
     expect(cookie?.secure).toBeFalsy();
     expect(cookie?.domain == null || cookie.domain === "").toBe(true);
@@ -208,6 +208,7 @@ describe("opaque session HTTP", () => {
     const cookie = cookieValue(login, WHOLESALE_SESSION_COOKIE);
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.name).toBe(WHOLESALE_SESSION_COOKIE);
+    expect(cookie?.path).toBe("/wholesale");
 
     const session = await app.inject({
       method: "GET",
@@ -632,6 +633,7 @@ describe("opaque session HTTP", () => {
       const cookie = cookieValue(login, OPS_SESSION_COOKIE);
       expect(cookie?.name).toBe(OPS_SESSION_COOKIE);
       expect(cookie?.httpOnly).toBe(true);
+      expect(cookie?.path).toBe("/ops");
 
       const session = await app.inject({
         method: "GET",
