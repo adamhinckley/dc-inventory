@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ShopPage } from "../../../components/shop-page";
 import { company } from "../../../lib/company";
+import { postLoginPath } from "../../../lib/post-login-path";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,11 +29,15 @@ export default function LoginPage() {
     login.mutate(
       { data: { organizationSlug: "acme", email, password } },
       {
-        onSuccess: async () => {
+        onSuccess: async (response) => {
           await queryClient.invalidateQueries({
             queryKey: getGetWholesaleSessionQueryKey(),
           });
-          router.push("/products");
+          if (response.status === 200) {
+            router.push(postLoginPath(response.data));
+          } else {
+            router.push("/products");
+          }
         },
         onError: () => {
           setError("Sign-in failed.");

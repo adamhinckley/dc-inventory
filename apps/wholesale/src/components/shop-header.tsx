@@ -52,7 +52,7 @@ export function ShopHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-card">
+    <header className="border-b border-line bg-card">
       <div className="mx-auto flex min-h-[var(--space-nav-height)] max-w-[var(--max-width-content)] items-center justify-between gap-4 px-6">
         <Link href={homeHref} className="flex min-w-0 items-center py-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
