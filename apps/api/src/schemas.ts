@@ -43,6 +43,21 @@ export const wholesaleSessionResponseSchema = z.object({
   organizationId: z.string(),
 });
 
+export const actingCustomerPickerItemSchema = z.object({
+  customerId: z.string().uuid(),
+  businessName: z.string(),
+  customerNumber: z.string(),
+  accountStatus: z.enum(["active", "on_hold", "inactive"]),
+});
+
+export const listActingCustomersResponseSchema = z.object({
+  items: z.array(actingCustomerPickerItemSchema),
+});
+
+export const selectActingCustomerBodySchema = z.object({
+  customerId: z.string().uuid(),
+});
+
 export const opsSessionResponseSchema = z.object({
   opsUserId: z.string().uuid(),
   email: z.string(),
