@@ -19,6 +19,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ClearActingCustomer200,
+  ClearActingCustomer401,
+  ClearActingCustomer404,
   CreateWholesaleSalesOrder201,
   CreateWholesaleSalesOrder400,
   CreateWholesaleSalesOrder401,
@@ -34,6 +37,9 @@ import type {
   GetWholesaleCatalogProduct404,
   GetWholesaleSession200,
   GetWholesaleSession401,
+  ListActingCustomers200,
+  ListActingCustomers401,
+  ListActingCustomers404,
   ListWholesaleCatalog200,
   ListWholesaleCatalog401,
   ListWholesaleCatalog403,
@@ -44,6 +50,11 @@ import type {
   LoginWholesaleBody,
   LogoutWholesale200,
   LogoutWholesale401,
+  SelectActingCustomer200,
+  SelectActingCustomer401,
+  SelectActingCustomer404,
+  SelectActingCustomer409,
+  SelectActingCustomerBody,
   UpdateWholesaleAccountCustomerNote200,
   UpdateWholesaleAccountCustomerNote400,
   UpdateWholesaleAccountCustomerNote401,
@@ -357,6 +368,308 @@ export function useGetWholesaleSession<TData = Awaited<ReturnType<typeof getWhol
 
 
 
+
+export type listActingCustomersResponse200 = {
+  data: ListActingCustomers200
+  status: 200
+}
+
+export type listActingCustomersResponse401 = {
+  data: ListActingCustomers401
+  status: 401
+}
+
+export type listActingCustomersResponse404 = {
+  data: ListActingCustomers404
+  status: 404
+}
+
+export type listActingCustomersResponseSuccess = (listActingCustomersResponse200) & {
+  headers: Headers;
+};
+export type listActingCustomersResponseError = (listActingCustomersResponse401 | listActingCustomersResponse404) & {
+  headers: Headers;
+};
+
+export type listActingCustomersResponse = (listActingCustomersResponseSuccess | listActingCustomersResponseError)
+
+export const getListActingCustomersUrl = () => {
+
+
+
+
+  return `/wholesale/auth/customers`
+}
+
+/**
+ * @summary List customers available for staff acting selection
+ */
+export const listActingCustomers = async ( options?: Parameters<typeof customFetch>[1]): Promise<listActingCustomersResponse> => {
+
+  return customFetch<listActingCustomersResponse>(getListActingCustomersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListActingCustomersQueryKey = () => {
+    return [
+    `/wholesale/auth/customers`
+    ] as const;
+    }
+
+
+export const getListActingCustomersQueryOptions = <TData = Awaited<ReturnType<typeof listActingCustomers>>, TError = ListActingCustomers401 | ListActingCustomers404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listActingCustomers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListActingCustomersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listActingCustomers>>> = ({ signal }) => listActingCustomers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listActingCustomers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListActingCustomersQueryResult = NonNullable<Awaited<ReturnType<typeof listActingCustomers>>>
+export type ListActingCustomersQueryError = ListActingCustomers401 | ListActingCustomers404
+
+
+/**
+ * @summary List customers available for staff acting selection
+ */
+
+export function useListActingCustomers<TData = Awaited<ReturnType<typeof listActingCustomers>>, TError = ListActingCustomers401 | ListActingCustomers404>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listActingCustomers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListActingCustomersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type selectActingCustomerResponse200 = {
+  data: SelectActingCustomer200
+  status: 200
+}
+
+export type selectActingCustomerResponse401 = {
+  data: SelectActingCustomer401
+  status: 401
+}
+
+export type selectActingCustomerResponse404 = {
+  data: SelectActingCustomer404
+  status: 404
+}
+
+export type selectActingCustomerResponse409 = {
+  data: SelectActingCustomer409
+  status: 409
+}
+
+export type selectActingCustomerResponseSuccess = (selectActingCustomerResponse200) & {
+  headers: Headers;
+};
+export type selectActingCustomerResponseError = (selectActingCustomerResponse401 | selectActingCustomerResponse404 | selectActingCustomerResponse409) & {
+  headers: Headers;
+};
+
+export type selectActingCustomerResponse = (selectActingCustomerResponseSuccess | selectActingCustomerResponseError)
+
+export const getSelectActingCustomerUrl = () => {
+
+
+
+
+  return `/wholesale/auth/select-customer`
+}
+
+/**
+ * @summary Bind a customer to a staff-acting wholesale session
+ */
+export const selectActingCustomer = async (selectActingCustomerBody: SelectActingCustomerBody, options?: Parameters<typeof customFetch>[1]): Promise<selectActingCustomerResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<selectActingCustomerResponse>(getSelectActingCustomerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(selectActingCustomerBody)
+  }
+);}
+
+
+
+
+
+export const getSelectActingCustomerMutationOptions = <TError = SelectActingCustomer401 | SelectActingCustomer404 | SelectActingCustomer409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectActingCustomer>>, TError,{data: SelectActingCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof selectActingCustomer>>, TError,{data: SelectActingCustomerBody}, TContext> => {
+
+const mutationKey = ['selectActingCustomer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof selectActingCustomer>>, {data: SelectActingCustomerBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  selectActingCustomer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SelectActingCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof selectActingCustomer>>>
+    export type SelectActingCustomerMutationBody = SelectActingCustomerBody
+    export type SelectActingCustomerMutationError = SelectActingCustomer401 | SelectActingCustomer404 | SelectActingCustomer409
+
+    /**
+ * @summary Bind a customer to a staff-acting wholesale session
+ */
+export const useSelectActingCustomer = <TError = SelectActingCustomer401 | SelectActingCustomer404 | SelectActingCustomer409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof selectActingCustomer>>, TError,{data: SelectActingCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof selectActingCustomer>>,
+        TError,
+        {data: SelectActingCustomerBody},
+        TContext
+      > => {
+      return useMutation(getSelectActingCustomerMutationOptions(options));
+    }
+
+export type clearActingCustomerResponse200 = {
+  data: ClearActingCustomer200
+  status: 200
+}
+
+export type clearActingCustomerResponse401 = {
+  data: ClearActingCustomer401
+  status: 401
+}
+
+export type clearActingCustomerResponse404 = {
+  data: ClearActingCustomer404
+  status: 404
+}
+
+export type clearActingCustomerResponseSuccess = (clearActingCustomerResponse200) & {
+  headers: Headers;
+};
+export type clearActingCustomerResponseError = (clearActingCustomerResponse401 | clearActingCustomerResponse404) & {
+  headers: Headers;
+};
+
+export type clearActingCustomerResponse = (clearActingCustomerResponseSuccess | clearActingCustomerResponseError)
+
+export const getClearActingCustomerUrl = () => {
+
+
+
+
+  return `/wholesale/auth/clear-customer`
+}
+
+/**
+ * @summary Clear the customer binding from a staff-acting wholesale session
+ */
+export const clearActingCustomer = async ( options?: Parameters<typeof customFetch>[1]): Promise<clearActingCustomerResponse> => {
+
+  return customFetch<clearActingCustomerResponse>(getClearActingCustomerUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getClearActingCustomerMutationOptions = <TError = ClearActingCustomer401 | ClearActingCustomer404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearActingCustomer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof clearActingCustomer>>, TError,void, TContext> => {
+
+const mutationKey = ['clearActingCustomer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof clearActingCustomer>>, void> = () => {
+
+
+          return  clearActingCustomer(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClearActingCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof clearActingCustomer>>>
+
+    export type ClearActingCustomerMutationError = ClearActingCustomer401 | ClearActingCustomer404
+
+    /**
+ * @summary Clear the customer binding from a staff-acting wholesale session
+ */
+export const useClearActingCustomer = <TError = ClearActingCustomer401 | ClearActingCustomer404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof clearActingCustomer>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof clearActingCustomer>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getClearActingCustomerMutationOptions(options));
+    }
 
 export type listWholesaleCatalogResponse200 = {
   data: ListWholesaleCatalog200
