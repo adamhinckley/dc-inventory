@@ -51,8 +51,8 @@ export function ProductCardList() {
   const { items, page, pageSize, total } = payload;
   const pageCount = catalogListPageCount(total, pageSize);
   const showAvailableOnly = params.availableOnly !== false;
-  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const rangeEnd = Math.min(page * pageSize, total);
+  const rangeStart = total === 0 || items.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = total === 0 || items.length === 0 ? 0 : Math.min(page * pageSize, total);
 
   return (
     <div className="flex flex-col gap-6">
