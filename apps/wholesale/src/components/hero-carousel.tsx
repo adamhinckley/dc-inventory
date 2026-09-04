@@ -27,7 +27,7 @@ export function HeroCarousel() {
         <button
           type="button"
           aria-label="Previous"
-          className="absolute top-1/2 left-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay/90 text-ink shadow-sm"
+          className="absolute top-1/2 left-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
           onClick={() => go(index - 1)}
         >
           <Chevron direction="left" />
@@ -35,7 +35,7 @@ export function HeroCarousel() {
         <button
           type="button"
           aria-label="Next"
-          className="absolute top-1/2 right-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay/90 text-ink shadow-sm"
+          className="absolute top-1/2 right-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
           onClick={() => go(index + 1)}
         >
           <Chevron direction="right" />

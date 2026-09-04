@@ -11,14 +11,28 @@ export function RegisterForm() {
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const companyName = String(form.get("company") ?? "");
+    const email = String(form.get("email") ?? "");
+    const phone = String(form.get("phone") ?? "");
+    const requestType =
+      path === "new" ? "Brand New Customer" : "Register Existing Account";
+    const subject = encodeURIComponent(
+      `Wholesale web access request — ${companyName}`,
+    );
+    const body = encodeURIComponent(
+      `Request type: ${requestType}\nCompany: ${companyName}\nEmail: ${email}\nPhone: ${phone}`,
+    );
+    window.location.href = `mailto:${company.email}?subject=${subject}&body=${body}`;
     setSubmitted(true);
   }
 
   if (submitted) {
     return (
       <p className="text-ink-muted" role="status">
-        Thank you. Customer service will enable web access. Call{" "}
-        {company.phoneDisplay} or email {company.email}.
+        Your email app should open with a request to {company.email}. If it
+        does not, write us at that address or call {company.phoneDisplay}.
+        Customer service will enable web access after reviewing your request.
       </p>
     );
   }
