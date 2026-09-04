@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
 import {
   loginBodySchema,
   logoutResponseSchema,
@@ -28,6 +29,44 @@ function unauthorized(reply: FastifyReply, request: FastifyRequest, token: strin
   return reply.code(401).send({ error: "unauthorized" as const });
 }
 
+type WholesaleSessionBody = z.infer<typeof wholesaleSessionResponseSchema>;
+
+function toWholesaleSessionBody(
+  result:
+    | {
+        mode: "staff_acting";
+        staffUserId: string;
+        email: string;
+        organizationId: string;
+      }
+    | {
+        mode?: "buyer";
+        wholesaleUserId: string;
+        customerId: string;
+        email: string;
+        organizationId: string;
+      },
+): WholesaleSessionBody {
+  if ("mode" in result && result.mode === "staff_acting") {
+    return {
+      mode: "staff_acting",
+      staffUserId: result.staffUserId,
+      wholesaleUserId: null,
+      customerId: null,
+      email: result.email,
+      organizationId: result.organizationId,
+    };
+  }
+  return {
+    mode: "buyer",
+    staffUserId: null,
+    wholesaleUserId: result.wholesaleUserId,
+    customerId: result.customerId,
+    email: result.email,
+    organizationId: result.organizationId,
+  };
+}
+
 export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
@@ -54,12 +93,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
       }
       await resetLoginThrottle(request, "wholesale");
       setSessionCookie(reply, WHOLESALE_SESSION_COOKIE, result.sessionId, request);
-      return {
-        wholesaleUserId: result.wholesaleUserId,
-        email: result.email,
-        customerId: result.customerId,
-        organizationId: result.organizationId,
-      };
+      return toWholesaleSessionBody(result);
     },
   );
 
@@ -106,12 +140,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
       if (!result.ok) {
         return unauthorized(reply, request, token);
       }
-      return {
-        wholesaleUserId: result.wholesaleUserId,
-        email: result.email,
-        customerId: result.customerId,
-        organizationId: result.organizationId,
-      };
+      return toWholesaleSessionBody(result);
     },
   );
 }

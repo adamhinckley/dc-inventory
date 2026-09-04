@@ -35,9 +35,11 @@ export const staffSessionResponseSchema = z.object({
 });
 
 export const wholesaleSessionResponseSchema = z.object({
-  wholesaleUserId: z.string().uuid(),
+  mode: z.enum(["buyer", "staff_acting"]),
+  staffUserId: z.string().uuid().nullable(),
+  wholesaleUserId: z.string().uuid().nullable(),
   email: z.string(),
-  customerId: z.string().uuid(),
+  customerId: z.string().uuid().nullable(),
   organizationId: z.string(),
 });
 

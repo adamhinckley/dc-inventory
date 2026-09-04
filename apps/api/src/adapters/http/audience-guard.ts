@@ -55,6 +55,9 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
       }
       return sendUnauthorized(reply);
     }
+    if ("mode" in result) {
+      return sendUnauthorized(reply);
+    }
     request.wholesaleAuth = {
       wholesaleUserId: result.wholesaleUserId,
       email: result.email,

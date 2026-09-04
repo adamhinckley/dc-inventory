@@ -124,6 +124,7 @@ export const sessions = identity.table("sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   actorType: actorType("actor_type").notNull(),
   actorId: uuid("actor_id").notNull(),
+  staffUserId: uuid("staff_user_id").references(() => staffUsers.id),
   organizationId: text("organization_id").notNull().default("DEFAULT"),
   customerId: uuid("customer_id").references(() => customers.id),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" })

@@ -812,6 +812,7 @@ export function composeAppServices(
       loginWholesale: new LoginWholesaleUseCase(
         organizationRepo,
         wholesaleUsers,
+        staffUsers,
         sessions,
         passwords,
         clock,
@@ -823,6 +824,7 @@ export function composeAppServices(
       resolveWholesale: new ResolveWholesaleSessionUseCase(
         sessions,
         wholesaleUsers,
+        staffUsers,
         clock,
       ),
     },

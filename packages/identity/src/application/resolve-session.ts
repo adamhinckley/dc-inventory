@@ -34,6 +34,15 @@ export type ResolveStaffSessionResult =
 export type ResolveWholesaleSessionResult =
   | {
       ok: true;
+      mode: "staff_acting";
+      staffUserId: StaffUserId;
+      wholesaleUserId: null;
+      customerId: null;
+      email: string;
+      organizationId: OrganizationId;
+    }
+  | {
+      ok: true;
       wholesaleUserId: WholesaleUserId;
       email: string;
       customerId: CustomerId;
@@ -113,6 +122,7 @@ export class ResolveWholesaleSessionUseCase {
   constructor(
     private readonly sessions: ISessionStore,
     private readonly wholesaleUsers: IWholesaleUserRepository,
+    private readonly staffUsers: IStaffUserRepository,
     private readonly clock: IClock,
   ) {}
 
@@ -130,17 +140,37 @@ export class ResolveWholesaleSessionUseCase {
     if (session === null) {
       return { ok: false, reason: "invalid" };
     }
-    if (
-      session.audience !== "wholesale" ||
-      session.wholesaleUserId === null ||
-      session.customerId === null
-    ) {
+    if (session.audience !== "wholesale") {
       return { ok: false, reason: "wrong_audience" };
     }
     const now = this.clock.now();
     if (isSessionExpired(session, now)) {
       await this.sessions.delete(session.id);
       return { ok: false, reason: "expired" };
+    }
+    if (session.staffUserId !== null && session.wholesaleUserId === null) {
+      const user = await this.staffUsers.findById(session.staffUserId);
+      if (user === null) {
+        await this.sessions.delete(session.id);
+        return { ok: false, reason: "invalid" };
+      }
+      if (user.organizationId !== session.organizationId) {
+        await this.sessions.delete(session.id);
+        return { ok: false, reason: "invalid" };
+      }
+      await this.sessions.touch(session.id, now);
+      return {
+        ok: true,
+        mode: "staff_acting",
+        staffUserId: session.staffUserId,
+        wholesaleUserId: null,
+        customerId: null,
+        email: user.email,
+        organizationId: session.organizationId,
+      };
+    }
+    if (session.wholesaleUserId === null || session.customerId === null) {
+      return { ok: false, reason: "wrong_audience" };
     }
     const user = await this.wholesaleUsers.findById(session.wholesaleUserId);
     if (user === null) {

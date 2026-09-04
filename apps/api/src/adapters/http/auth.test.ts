@@ -198,6 +198,8 @@ describe("opaque session HTTP", () => {
     });
     expect(login.statusCode).toBe(200);
     expect(login.json()).toEqual({
+      mode: "buyer",
+      staffUserId: null,
       wholesaleUserId: WHOLESALE_ID,
       email: "wholesale@local.test",
       customerId: CUSTOMER_ID,
@@ -213,9 +215,51 @@ describe("opaque session HTTP", () => {
       cookies: { [WHOLESALE_SESSION_COOKIE]: cookie?.value ?? "" },
     });
     expect(session.json()).toEqual({
+      mode: "buyer",
+      staffUserId: null,
       wholesaleUserId: WHOLESALE_ID,
       email: "wholesale@local.test",
       customerId: CUSTOMER_ID,
+      organizationId: OrganizationId.DEFAULT,
+    });
+  });
+
+  it("sets wholesale_session for staff acting with null customer binding", async () => {
+    const { app } = await startAuthApp();
+    const login = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "staff@local.test",
+        password: "staff-secret",
+      },
+    });
+    expect(login.statusCode).toBe(200);
+    expect(login.json()).toEqual({
+      mode: "staff_acting",
+      staffUserId: STAFF_ID,
+      wholesaleUserId: null,
+      email: "staff@local.test",
+      customerId: null,
+      organizationId: OrganizationId.DEFAULT,
+    });
+    const cookie = cookieValue(login, WHOLESALE_SESSION_COOKIE);
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.name).toBe(WHOLESALE_SESSION_COOKIE);
+
+    const session = await app.inject({
+      method: "GET",
+      url: "/wholesale/auth/session",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie?.value ?? "" },
+    });
+    expect(session.statusCode).toBe(200);
+    expect(session.json()).toEqual({
+      mode: "staff_acting",
+      staffUserId: STAFF_ID,
+      wholesaleUserId: null,
+      email: "staff@local.test",
+      customerId: null,
       organizationId: OrganizationId.DEFAULT,
     });
   });
