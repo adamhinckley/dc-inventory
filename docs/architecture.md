@@ -4,7 +4,7 @@ Source of truth for how this system is structured, what each module owns, and ho
 
 This document describes **architecture only**. Application code, CI, and `AGENTS.md` come after this contract is accepted.
 
-Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports, **API evolution**) · [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon White + opt-in g100 tokens, Tailwind v4) · [`tax.md`](./tax.md) (no sales tax in v1) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative) · [`open-questions.md`](./open-questions.md) (stakeholder questions) · [`surfaces/`](./surfaces/) (dashboard, shop, owner metrics) · [`future-concepts/`](./future-concepts/) (later capabilities that must stay additive).
+Related: [`stack.md`](./stack.md) (runtime, Postgres, auth) · [`database-design.md`](./database-design.md) (rough-draft schema + relations for stakeholder review) · [`api-contract.md`](./api-contract.md) (OpenAPI, Orval, tables, shop, reports, **API evolution**) · [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon White + opt-in g100 tokens, Tailwind v4) · [`tax.md`](./tax.md) (no sales tax in v1) · [`observability.md`](./observability.md) (logs, errors, uptime, agent-actionable alerts, low cost) · [`invariants.md`](./invariants.md) (locked rules + gaps the initial plan still needs to close) · [`licensing.md`](./licensing.md) (software subscription, paid add-ons, feature flags, ops dashboard) · [`operator-bridge.md`](./operator-bridge.md) (door to the developer’s other monorepo: income, licenses, issue reports) · [`linear.md`](./linear.md) (all Cursor/Linear projects, issues, and sub-initiatives on the DC Inventory initiative) · [`open-questions.md`](./open-questions.md) (stakeholder questions) · [`surfaces/`](./surfaces/) (dashboard, shop, owner metrics) · [`future-concepts/`](./future-concepts/) (later capabilities that must stay additive) · [ADR 0009](./adr/0009-shopify-channel-hub.md) / [`future-concepts/shopify-channel.md`](./future-concepts/shopify-channel.md) (Shopify hub; native Faire API deferred).
 
 ---
 
@@ -144,8 +144,9 @@ The module map and inventory model do not depend on Fastify vs another HTTP libr
 | Tax | **None** — reseller-only; no quote/commit engine | Filing, nexus, use tax, any sales-tax calculator |
 | Software billing | Licensing context + payment history + `IFeatures`; Stripe optional (manual record works) | Multi-tenant SaaS, LaunchDarkly as required runtime, Stripe Connect marketplace |
 | Operator platform | `IOperatorPlatform` no-op + local issue/outbox tables | HTTPS to the other monorepo; bidirectional tickets |
+| External marketplaces | Not in the first demo | **Shopify channel** after ATP + Sales confirm ([ADR 0009](./adr/0009-shopify-channel-hub.md)); native Faire API stays later |
 | Stock identity | SKU | Product variants as a first-class model |
-| Events | In-process (domain). Operator bridge: local queue, fail-soft | Kafka / inventory outbox / broker |
+| Events | In-process (domain). Operator bridge: local queue, fail-soft | Kafka / inventory outbox / broker; Shopify webhook inbox when channel packets open |
 | Deployables | One API process; `apps/ops` may live in this repo | Split ops UI; **operator platform stays a different repo** |
 
 ---
@@ -215,6 +216,7 @@ flowchart LR
 | **Customers** | Accounts, contacts, terms, credit limit, ship-to, exemption **files + metadata** | Invoices, sales-tax math | **High** |
 | **Accounting** | Invoices, payments, AR **owed by wholesale customers** | Full GL, inventory valuation, **software** subscription, sales tax | Low–medium — money paths gated |
 | **Operator bridge** | Envelope to the developer’s **other** repo: license snapshot, income, issue reports, heartbeat | Inventory, customer AR, flags, helpdesk UI | High for no-op; owner reviews HTTPS secrets |
+| **Shopify bridge** (planned) | SKU↔Shopify mapping, inventory push, order ingest (retail vs Faire), webhook inbox | Faire Partner API; Sales/Catalog/Inventory domain types | Medium once packets open — owner-gated money/ATP; [ADA-265](https://linear.app/adamhinckley/issue/ADA-265/shopify-channel-implementation-map) |
 
 ### Anti-corruption (required)
 
@@ -229,6 +231,8 @@ Inventory is the **only** writer of quantities. Catalog, Purchasing, and Sales c
 Licensing is the **only** writer of software entitlements and software payment history. Accounting does not store “they paid the developer.” Catalog does not store paid add-ons as products. Other contexts **read** `IFeatures` / `FeatureName` only — they do not import `Subscription` or Stripe types. See [`licensing.md`](./licensing.md).
 
 The developer’s multi-product business repo is **not** a context in this monolith. This app talks to it only through `IOperatorPlatform` after local commit. See [`operator-bridge.md`](./operator-bridge.md).
+
+Shopify and Faire are **not** contexts until [Shopify channel](https://linear.app/adamhinckley/project/shopify-channel-86c419ea2311) packets open. Sales does not import Shopify SDK types. Faire retailer checkout stays on Faire; this app talks to Shopify only through the planned bridge ([ADR 0009](./adr/0009-shopify-channel-hub.md)).
 
 ### Shared kernel (tiny)
 
@@ -290,6 +294,7 @@ A repository persists and reconstitutes an aggregate. It does not orchestrate ot
 | `IOperatorPlatform` | Operator bridge (outbound) | No-op, later HTTPS |
 | `IOperatorOutbox` | Operator bridge | In-memory, Postgres queue table |
 | `IIssueReportRepository` | Operator bridge | Postgres, in-memory |
+| Shopify GraphQL / webhook HMAC / mapping repo | Shopify bridge (when packets open) | HTTP client, Postgres inbox, in-memory fakes — **no network in unit tests** |
 
 In-memory adapters are not optional. They are how unit tests and coding agents verify a slice without Docker.
 
@@ -608,7 +613,7 @@ docs/
   work-dashboard-design-spec.md  # Carbon White + opt-in g100, Tailwind v4 tokens (internal UI)
   open-questions.md        # stakeholder questions (Slack copy)
   surfaces/                # dashboard, wholesale shop, owner insights
-  future-concepts/         # additive contracts (multi-organization seam, …)
+  future-concepts/         # additive contracts (multi-organization seam, Shopify channel, …)
 AGENTS.md                  # canonical agent contract (any vendor)
 # optional mirrors: .cursor/rules/, CLAUDE.md, .github/copilot-instructions.md
 
@@ -722,6 +727,7 @@ Order is chosen so each step is a valid agent work packet and Inventory stays ga
 9. Accounting: invoice from order + payment application (gated); invoice PDF is merchandise
 10. Spreadsheet import/export on Catalog/Customers first, then orders/POs; stock imports last and gated
 11. Internal dashboard reports/charts (summary KPIs, sales over time, inventory snapshot) — after the write models they read exist
+12. **Shopify channel** ([ADR 0009](./adr/0009-shopify-channel-hub.md)): mapping + `availableToSell` push + order ingest (retail vs Faire). After steps 6–8. Native Faire API is not this step.
 
 Do not start Sales confirm/commit before Inventory available-to-sell tests exist. Do not mix Licensing `SoftwarePayment` into Accounting. Do not start Stripe until `ISoftwareBillingGateway` + payment-history tests exist. Do not add a sales-tax engine.
 
@@ -735,11 +741,11 @@ Do not sneak these into v1 modules:
 - Company-wide selling season as the infinity switch (open/locked is per SKU; [ADR 0008](./adr/0008-available-to-sell-open-locked.md))
 - Zoho-style purchase-request document
 - First-class factory-to-customer drop-ship
-- Season forecast; native Faire API
+- Season forecast; **native Faire Partner API** (Faire stays on Shopify’s sales channel until a later packet — [ADR 0009](./adr/0009-shopify-channel-hub.md))
 - Product variants as a separate aggregate (SKU is the stock-keeping identity)
 - General ledger, AP, inventory asset valuation
 - Tax **return filing**, remittance, nexus dashboards, use tax on POs, certificate CMS, **and sales-tax calculation** — none of these are v1 ([`tax.md`](./tax.md))
-- Message broker, outbox, CQRS with a separate read DB **for inventory / wholesale AR**
+- Message broker, outbox, CQRS with a separate read DB **for inventory / wholesale AR** (operator-bridge and, later, Shopify-bridge may use a **small local inbox/outbox table** — not Kafka)
 - Implementing the **operator platform** inside this repo (it is a different monorepo; this app only has the bridge)
 - Bidirectional support tickets / helpdesk UI in this product
 - Streaming inventory or customer AR into the operator platform
@@ -755,6 +761,8 @@ Do not sneak these into v1 modules:
 - Self-serve **signup UI** and org-slug routing before the Signup milestone packets open — see [Multi-organization](https://linear.app/adamhinckley/project/multi-organization-c54d6b9bb02b) (implementation map [ADA-157](https://linear.app/adamhinckley/issue/ADA-157/multi-organization-implementation-map))
 
 `LocationId` exists so multi-warehouse is additive: new locations, same ledger, same movement types. `TenantId` exists so multi-tenant licensing is additive: same flags, same payment history grain. **`OrganizationId` is current** ([ADR 0007](./adr/0007-organization-id-current-not-deferred.md)): one implicit org in v1 demo (`DEFAULT`), composite uniqueness and session overwrite in progress so a second company is additive without a database-per-tenant. Language and isolation rules: [`future-concepts/multi-organization.md`](./future-concepts/multi-organization.md). Do not stand up a second Postgres “for tenants.”
+
+**Shopify channel** is planned after ATP + Sales confirm ([ADR 0009](./adr/0009-shopify-channel-hub.md), [`future-concepts/shopify-channel.md`](./future-concepts/shopify-channel.md)). Do not implement `packages/shopify-bridge` until [ADA-265](https://linear.app/adamhinckley/issue/ADA-265/shopify-channel-implementation-map) children open.
 
 ---
 

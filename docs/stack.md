@@ -2,7 +2,7 @@
 
 Companion to [`architecture.md`](./architecture.md). That document is the module map. This one is the **concrete technology** the solo software operator and coding agents (any vendor) should use, and how auth is enforced.
 
-UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Internal dashboard color, type, and dark opt-in tokens are in [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon hex, semantic names, AppShell). Wholesale shop tokens stay in `apps/wholesale` and follow the same layout principles ([ADR 0006](./adr/0006-vendor-design-system.md)). Sales tax is **out of v1** ([`tax.md`](./tax.md)). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md). Software subscription is [`licensing.md`](./licensing.md). The door to the developer’s other monorepo is [`operator-bridge.md`](./operator-bridge.md).
+UI tables, shop vs dashboard, OpenAPI, and Orval are specified in [`api-contract.md`](./api-contract.md). Internal dashboard color, type, and dark opt-in tokens are in [`work-dashboard-design-spec.md`](./work-dashboard-design-spec.md) (Carbon hex, semantic names, AppShell). Wholesale shop tokens stay in `apps/wholesale` and follow the same layout principles ([ADR 0006](./adr/0006-vendor-design-system.md)). Sales tax is **out of v1** ([`tax.md`](./tax.md)). Logs, errors, uptime, and cheap alerts that become agent work packets are in [`observability.md`](./observability.md). Locked domain and module rules are in [`invariants.md`](./invariants.md). Software subscription is [`licensing.md`](./licensing.md). The operator platform is [`operator-bridge.md`](./operator-bridge.md). Planned Shopify Admin GraphQL (outbound) is [`future-concepts/shopify-channel.md`](./future-concepts/shopify-channel.md).
 
 Choices optimize for four things, in order:
 
@@ -77,7 +77,7 @@ packages/
 | SQLite in production | Fine for unit tests only. |
 | Prisma as the only data layer | Poor fit for a movement ledger and row locks. |
 | NestJS | Too much framework in the center; agents violate the dependency rule. |
-| GraphQL / tRPC | Extra surface. REST + generated OpenAPI + Orval is the UI contract. |
+| GraphQL / tRPC | Extra surface **as this product’s API**. REST + generated OpenAPI + Orval is the UI contract. Shopify **Admin GraphQL** is an outbound adapter when [Shopify channel](./future-concepts/shopify-channel.md) packets open — not a reason to add GraphQL to Fastify. |
 | JSON `filters` blob / OData on query strings | Not self-describing in OpenAPI; tables would guess. Explicit query params only. |
 | Elasticsearch / Meilisearch (v1) | Table `q` is Postgres `ILIKE` / `pg_trgm`. |
 | Redis (v1) | Sessions and rate-limit counters live in Postgres until you have a reason. |
