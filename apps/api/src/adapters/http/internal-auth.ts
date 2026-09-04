@@ -8,6 +8,7 @@ import {
   unauthorizedResponseSchema,
 } from "../../schemas.js";
 import {
+  clearLegacySessionCookie,
   clearSessionCookie,
   setSessionCookie,
   STAFF_SESSION_COOKIE,
@@ -54,7 +55,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
       await resetLoginThrottle(request, "staff");
-      clearSessionCookie(reply, WHOLESALE_SESSION_COOKIE, request);
+      clearLegacySessionCookie(reply, WHOLESALE_SESSION_COOKIE, request);
       setSessionCookie(reply, STAFF_SESSION_COOKIE, result.sessionId, request);
       return {
         staffUserId: result.staffUserId,

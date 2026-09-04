@@ -13,6 +13,7 @@ import {
   wholesaleSessionResponseSchema,
 } from "../../schemas.js";
 import {
+  clearLegacySessionCookie,
   clearSessionCookie,
   setSessionCookie,
   STAFF_SESSION_COOKIE,
@@ -114,7 +115,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
       await resetLoginThrottle(request, "wholesale");
-      clearSessionCookie(reply, STAFF_SESSION_COOKIE, request);
+      clearLegacySessionCookie(reply, STAFF_SESSION_COOKIE, request);
       setSessionCookie(reply, WHOLESALE_SESSION_COOKIE, result.sessionId, request);
       return toWholesaleSessionBody(result);
     },

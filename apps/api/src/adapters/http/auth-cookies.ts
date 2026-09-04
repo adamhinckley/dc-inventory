@@ -55,6 +55,16 @@ export function setSessionCookie(
   });
 }
 
+/** Clears only Path=/ (legacy jar). Use on opposite-audience login so scoped sessions stay open on localhost. */
+export function clearLegacySessionCookie(
+  reply: FastifyReply,
+  name: string,
+  request: FastifyRequest,
+): void {
+  const options = sessionCookieOptions(request, name);
+  reply.clearCookie(name, { ...options, path: "/" });
+}
+
 export function clearSessionCookie(
   reply: FastifyReply,
   name: string,
