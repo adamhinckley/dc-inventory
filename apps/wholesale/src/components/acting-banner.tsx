@@ -9,6 +9,7 @@ import {
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export function ActingBanner() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function ActingBanner() {
     },
   });
   const clearCustomer = useClearActingCustomer();
+  const [clearError, setClearError] = useState<string | null>(null);
 
   const isStaffActingWithCustomer =
     session.data?.status === 200 &&
@@ -50,13 +52,34 @@ export function ActingBanner() {
           ?.businessName
       : undefined;
 
+  function renderCustomerName() {
+    if (customers.isLoading) {
+      return <span className="font-semibold text-ink-muted">Loading…</span>;
+    }
+    if (customers.isError) {
+      return (
+        <span className="font-semibold text-sold-out">Name unavailable</span>
+      );
+    }
+    if (businessName) {
+      return <span className="font-semibold">{businessName}</span>;
+    }
+    return (
+      <span className="font-semibold text-ink-muted">Account not found</span>
+    );
+  }
+
   function changeCustomer() {
+    setClearError(null);
     clearCustomer.mutate(undefined, {
       onSuccess: async () => {
         await queryClient.invalidateQueries({
           queryKey: getGetWholesaleSessionQueryKey(),
         });
         router.push("/select-customer");
+      },
+      onError: () => {
+        setClearError("Could not change customer.");
       },
     });
   }
@@ -68,10 +91,16 @@ export function ActingBanner() {
       aria-live="polite"
     >
       <div className="mx-auto flex max-w-[var(--max-width-content)] flex-wrap items-center justify-between gap-3 px-6 py-3 text-sm">
-        <p className="text-ink">
-          Ordering as{" "}
-          <span className="font-semibold">{businessName ?? "customer"}</span>
-        </p>
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-ink">
+            Ordering as {renderCustomerName()}
+          </p>
+          {clearError !== null ? (
+            <p className="text-sold-out" role="alert">
+              {clearError}
+            </p>
+          ) : null}
+        </div>
         <button
           type="button"
           className="font-medium text-accent hover:text-accent-hover"

@@ -9,7 +9,7 @@ import {
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ShopPage } from "../../../components/shop-page";
 
 export default function SelectCustomerPage() {
@@ -30,6 +30,7 @@ export default function SelectCustomerPage() {
     },
   });
   const selectCustomer = useSelectActingCustomer();
+  const [selectError, setSelectError] = useState<string | null>(null);
 
   useEffect(() => {
     if (session.isLoading) {
@@ -41,6 +42,7 @@ export default function SelectCustomerPage() {
   }, [router, session.data, session.isLoading]);
 
   function onSelect(customerId: string) {
+    setSelectError(null);
     selectCustomer.mutate(
       { data: { customerId } },
       {
@@ -49,6 +51,9 @@ export default function SelectCustomerPage() {
             queryKey: getGetWholesaleSessionQueryKey(),
           });
           router.push("/products");
+        },
+        onError: () => {
+          setSelectError("Could not select that customer.");
         },
       },
     );
@@ -83,26 +88,35 @@ export default function SelectCustomerPage() {
           <p className="mt-8 text-sold-out" role="alert">
             Could not load customers.
           </p>
+        ) : items === undefined || items.length === 0 ? (
+          <p className="mt-8 text-ink-muted">No customers available.</p>
         ) : (
-          <ul className="mt-8 flex flex-col gap-3">
-            {items?.map((customer) => (
-              <li key={customer.customerId}>
-                <button
-                  type="button"
-                  className="shop-button-secondary w-full text-left"
-                  disabled={selectCustomer.isPending}
-                  onClick={() => onSelect(customer.customerId)}
-                >
-                  <span className="block font-semibold text-ink">
-                    {customer.businessName}
-                  </span>
-                  <span className="mt-1 block text-sm font-normal text-ink-muted">
-                    {customer.customerNumber}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            {selectError !== null ? (
+              <p className="mt-8 text-sold-out" role="alert">
+                {selectError}
+              </p>
+            ) : null}
+            <ul className="mt-8 flex flex-col gap-3">
+              {items.map((customer) => (
+                <li key={customer.customerId}>
+                  <button
+                    type="button"
+                    className="shop-button-secondary w-full text-left"
+                    disabled={selectCustomer.isPending}
+                    onClick={() => onSelect(customer.customerId)}
+                  >
+                    <span className="block font-semibold text-ink">
+                      {customer.businessName}
+                    </span>
+                    <span className="mt-1 block text-sm font-normal text-ink-muted">
+                      {customer.customerNumber}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
     </ShopPage>
