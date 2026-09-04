@@ -183,11 +183,11 @@ export const paymentTermsCopy: LegalCopy = {
       </p>
       <h2>Warranties</h2>
       <p>
-        NO EXPRESS WARRANTIES OR IMPLIED WARRANTIES, WHETHER OF MERCHANTIABLITY
+        NO EXPRESS WARRANTIES OR IMPLIED WARRANTIES, WHETHER OF MERCHANTABILITY
         OR FITNESS FOR ANY PARTICULAR USE, OR OTHERWISE, OTHER THAN THOSE
-        EXPRESSLY SET FORTH BY SELLER WHICH ARE MADE EXPRESSLY INLIEU OF ALL
+        EXPRESSLY SET FORTH BY SELLER WHICH ARE MADE EXPRESSLY IN LIEU OF ALL
         OTHER WARRANTIES, SHALL APPLY TO PRODUCTS SOLD BY SELLER, AND NO WAIVER,
-        ALTERATIONS, OR MODIFICATIONS OF THE FOREGOING CONDITIONS SHAL BE VALID
+        ALTERATIONS, OR MODIFICATIONS OF THE FOREGOING CONDITIONS SHALL BE VALID
         UNLESS MADE IN WRITING AND SIGNED BY AN EXECUTIVE OFFICER OF SELLER’S
         CORPORATION.
       </p>
@@ -223,7 +223,7 @@ export const claimsCopy: LegalCopy = {
       <p>
         Contact our customer service team at{" "}
         <a href={`mailto:${company.email}`}>{company.email}</a> or by text at{" "}
-        {company.phoneDisplay}, and one of our wonderful staff memebers will
+        {company.phoneDisplay}, and one of our wonderful staff members will
         send a link in which the claim must be filed.
       </p>
       <h2>FAQ Regarding Claims</h2>
