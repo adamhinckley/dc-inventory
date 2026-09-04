@@ -38,6 +38,8 @@ export type SalesOrder = {
   readonly status: SalesOrderStatus;
   readonly createdAt: Date;
   readonly lines: readonly SalesOrderLine[];
+  /** Set when staff created the order while acting on the wholesale shop. */
+  readonly placedByStaffUserId?: import("@dc-inventory/shared-kernel").StaffUserId;
 } & SalesOrderShipSnapshot;
 
 /** Confirmed lines that still have live demand (not pulled via line-level decommit). */

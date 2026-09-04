@@ -1,4 +1,4 @@
-import { CustomerId, Money, OrderId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { CustomerId, Money, OrderId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
@@ -60,6 +60,9 @@ function toOrder(header: typeof orders.$inferSelect, lines: SalesOrderLine[]): S
     status: header.status,
     createdAt: header.createdAt,
     lines,
+    ...(header.placedByStaffUserId !== null
+      ? { placedByStaffUserId: StaffUserId.parse(header.placedByStaffUserId) }
+      : {}),
     shipLine1: header.shipLine1 ?? undefined,
     shipLine2: header.shipLine2,
     shipCity: header.shipCity ?? undefined,
@@ -220,6 +223,7 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         status: order.status,
         documentNumber: order.documentNumber,
         createdAt: order.createdAt,
+        placedByStaffUserId: order.placedByStaffUserId ?? null,
         shipLine1: order.shipLine1,
         shipLine2: order.shipLine2,
         shipCity: order.shipCity,
@@ -248,6 +252,7 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         customerId: order.customerId,
         status: order.status,
         documentNumber: order.documentNumber,
+        placedByStaffUserId: order.placedByStaffUserId ?? null,
         shipLine1: order.shipLine1,
         shipLine2: order.shipLine2,
         shipCity: order.shipCity,

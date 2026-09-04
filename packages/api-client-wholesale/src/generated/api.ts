@@ -37,6 +37,10 @@ import type {
   GetWholesaleCatalogProduct401,
   GetWholesaleCatalogProduct403,
   GetWholesaleCatalogProduct404,
+  GetWholesaleSalesOrder200,
+  GetWholesaleSalesOrder401,
+  GetWholesaleSalesOrder403,
+  GetWholesaleSalesOrder404,
   GetWholesaleSession200,
   GetWholesaleSession401,
   ListActingCustomers200,
@@ -46,6 +50,11 @@ import type {
   ListWholesaleCatalog401,
   ListWholesaleCatalog403,
   ListWholesaleCatalogParams,
+  ListWholesaleSalesOrders200,
+  ListWholesaleSalesOrders400,
+  ListWholesaleSalesOrders401,
+  ListWholesaleSalesOrders403,
+  ListWholesaleSalesOrdersParams,
   LoginWholesale200,
   LoginWholesale401,
   LoginWholesale429,
@@ -1105,6 +1114,119 @@ export const useUpdateWholesaleAccountCustomerNote = <TError = UpdateWholesaleAc
       return useMutation(getUpdateWholesaleAccountCustomerNoteMutationOptions(options));
     }
 
+export type listWholesaleSalesOrdersResponse200 = {
+  data: ListWholesaleSalesOrders200
+  status: 200
+}
+
+export type listWholesaleSalesOrdersResponse400 = {
+  data: ListWholesaleSalesOrders400
+  status: 400
+}
+
+export type listWholesaleSalesOrdersResponse401 = {
+  data: ListWholesaleSalesOrders401
+  status: 401
+}
+
+export type listWholesaleSalesOrdersResponse403 = {
+  data: ListWholesaleSalesOrders403
+  status: 403
+}
+
+export type listWholesaleSalesOrdersResponseSuccess = (listWholesaleSalesOrdersResponse200) & {
+  headers: Headers;
+};
+export type listWholesaleSalesOrdersResponseError = (listWholesaleSalesOrdersResponse400 | listWholesaleSalesOrdersResponse401 | listWholesaleSalesOrdersResponse403) & {
+  headers: Headers;
+};
+
+export type listWholesaleSalesOrdersResponse = (listWholesaleSalesOrdersResponseSuccess | listWholesaleSalesOrdersResponseError)
+
+export const getListWholesaleSalesOrdersUrl = (params?: ListWholesaleSalesOrdersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/wholesale/sales-orders?${stringifiedParams}` : `/wholesale/sales-orders`
+}
+
+/**
+ * @summary List sales orders for session customer
+ */
+export const listWholesaleSalesOrders = async (params?: ListWholesaleSalesOrdersParams, options?: Parameters<typeof customFetch>[1]): Promise<listWholesaleSalesOrdersResponse> => {
+
+  return customFetch<listWholesaleSalesOrdersResponse>(getListWholesaleSalesOrdersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWholesaleSalesOrdersQueryKey = (params?: ListWholesaleSalesOrdersParams,) => {
+    return [
+    `/wholesale/sales-orders`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWholesaleSalesOrdersQueryOptions = <TData = Awaited<ReturnType<typeof listWholesaleSalesOrders>>, TError = ListWholesaleSalesOrders400 | ListWholesaleSalesOrders401 | ListWholesaleSalesOrders403>(params?: ListWholesaleSalesOrdersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleSalesOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWholesaleSalesOrdersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWholesaleSalesOrders>>> = ({ signal }) => listWholesaleSalesOrders(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWholesaleSalesOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWholesaleSalesOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listWholesaleSalesOrders>>>
+export type ListWholesaleSalesOrdersQueryError = ListWholesaleSalesOrders400 | ListWholesaleSalesOrders401 | ListWholesaleSalesOrders403
+
+
+/**
+ * @summary List sales orders for session customer
+ */
+
+export function useListWholesaleSalesOrders<TData = Awaited<ReturnType<typeof listWholesaleSalesOrders>>, TError = ListWholesaleSalesOrders400 | ListWholesaleSalesOrders401 | ListWholesaleSalesOrders403>(
+ params?: ListWholesaleSalesOrdersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleSalesOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWholesaleSalesOrdersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export type createWholesaleSalesOrderResponse201 = {
   data: CreateWholesaleSalesOrder201
   status: 201
@@ -1220,3 +1342,103 @@ export const useCreateWholesaleSalesOrder = <TError = CreateWholesaleSalesOrder4
       > => {
       return useMutation(getCreateWholesaleSalesOrderMutationOptions(options));
     }
+
+export type getWholesaleSalesOrderResponse200 = {
+  data: GetWholesaleSalesOrder200
+  status: 200
+}
+
+export type getWholesaleSalesOrderResponse401 = {
+  data: GetWholesaleSalesOrder401
+  status: 401
+}
+
+export type getWholesaleSalesOrderResponse403 = {
+  data: GetWholesaleSalesOrder403
+  status: 403
+}
+
+export type getWholesaleSalesOrderResponse404 = {
+  data: GetWholesaleSalesOrder404
+  status: 404
+}
+
+export type getWholesaleSalesOrderResponseSuccess = (getWholesaleSalesOrderResponse200) & {
+  headers: Headers;
+};
+export type getWholesaleSalesOrderResponseError = (getWholesaleSalesOrderResponse401 | getWholesaleSalesOrderResponse403 | getWholesaleSalesOrderResponse404) & {
+  headers: Headers;
+};
+
+export type getWholesaleSalesOrderResponse = (getWholesaleSalesOrderResponseSuccess | getWholesaleSalesOrderResponseError)
+
+export const getGetWholesaleSalesOrderUrl = (id: string,) => {
+
+
+
+
+  return `/wholesale/sales-orders/${id}`
+}
+
+/**
+ * @summary Get sales order for session customer
+ */
+export const getWholesaleSalesOrder = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleSalesOrderResponse> => {
+
+  return customFetch<getWholesaleSalesOrderResponse>(getGetWholesaleSalesOrderUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWholesaleSalesOrderQueryKey = (id: string,) => {
+    return [
+    `/wholesale/sales-orders/${id}`
+    ] as const;
+    }
+
+
+export const getGetWholesaleSalesOrderQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleSalesOrder>>, TError = GetWholesaleSalesOrder401 | GetWholesaleSalesOrder403 | GetWholesaleSalesOrder404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSalesOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWholesaleSalesOrderQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWholesaleSalesOrder>>> = ({ signal }) => getWholesaleSalesOrder(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSalesOrder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWholesaleSalesOrderQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleSalesOrder>>>
+export type GetWholesaleSalesOrderQueryError = GetWholesaleSalesOrder401 | GetWholesaleSalesOrder403 | GetWholesaleSalesOrder404
+
+
+/**
+ * @summary Get sales order for session customer
+ */
+
+export function useGetWholesaleSalesOrder<TData = Awaited<ReturnType<typeof getWholesaleSalesOrder>>, TError = GetWholesaleSalesOrder401 | GetWholesaleSalesOrder403 | GetWholesaleSalesOrder404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSalesOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWholesaleSalesOrderQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

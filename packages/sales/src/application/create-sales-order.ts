@@ -35,8 +35,9 @@ type CreateSalesOrderRequestBase = {
 
 export type CreateSalesOrderRequest = CreateSalesOrderRequestBase &
   (
-    | { staffUserId: StaffUserId; wholesaleUserId?: never }
-    | { wholesaleUserId: WholesaleUserId; staffUserId?: never }
+    | { staffUserId: StaffUserId; wholesaleUserId?: never; placedByStaffUserId?: never }
+    | { wholesaleUserId: WholesaleUserId; staffUserId?: never; placedByStaffUserId?: never }
+    | { placedByStaffUserId: StaffUserId; staffUserId?: never; wholesaleUserId?: never }
   );
 
 export type CreateSalesOrderResult =
@@ -65,6 +66,7 @@ export class CreateSalesOrderUseCase {
   async execute(input: CreateSalesOrderRequest): Promise<CreateSalesOrderResult> {
     void input.staffUserId;
     void input.wholesaleUserId;
+    void input.placedByStaffUserId;
     if (input.lines.length === 0) {
       return { ok: false, reason: "empty_order" };
     }
@@ -126,6 +128,7 @@ export class CreateSalesOrderUseCase {
       status: "draft",
       createdAt,
       lines,
+      placedByStaffUserId: input.placedByStaffUserId,
       shipLine1: input.shipLine1,
       shipLine2: input.shipLine2,
       shipCity: input.shipCity,
