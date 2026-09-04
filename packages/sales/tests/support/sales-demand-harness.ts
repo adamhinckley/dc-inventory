@@ -196,6 +196,22 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     return { ok: true, salesOrderId: result.salesOrder.id };
   }
 
+  async function createStaffActingDraft(
+    productId: ProductId,
+    qty: number,
+  ): Promise<{ ok: true; salesOrderId: OrderId } | { ok: false; reason: string }> {
+    const result = await create.execute({
+      organizationId: DEFAULT_ORG,
+      placedByStaffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId, qty }],
+    });
+    if (!result.ok) {
+      return result;
+    }
+    return { ok: true, salesOrderId: result.salesOrder.id };
+  }
+
   /** Staff place-on-behalf — same as createStaffDraft. */
   const createDraft = createStaffDraft;
 
@@ -219,6 +235,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     createDraft,
     createStaffDraft,
     createWholesaleDraft,
+    createStaffActingDraft,
   };
 }
 

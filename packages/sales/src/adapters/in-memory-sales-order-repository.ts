@@ -4,6 +4,7 @@ import {
   OrderId,
   OrganizationId,
   Sku,
+  StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import { SalesOrderLineId } from "../domain/ids.js";
@@ -38,6 +39,9 @@ function toOrder(order: SalesOrder): SalesOrder {
     status: order.status,
     createdAt: new Date(order.createdAt.getTime()),
     lines: order.lines.map(toLine),
+    ...(order.placedByStaffUserId !== undefined
+      ? { placedByStaffUserId: StaffUserId.parse(order.placedByStaffUserId) }
+      : {}),
     shipLine1: order.shipLine1,
     shipLine2: order.shipLine2,
     shipCity: order.shipCity,

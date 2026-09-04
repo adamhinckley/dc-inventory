@@ -50,6 +50,7 @@ export const orders = sales.table(
     shipRegion: text("ship_region"),
     shipPostal: text("ship_postal"),
     shipCountry: text("ship_country"),
+    placedByStaffUserId: uuid("placed_by_staff_user_id"),
     ...timestamps(),
   },
   (table) => [

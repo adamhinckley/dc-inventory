@@ -225,6 +225,13 @@
       "when": 1789855600000,
       "tag": "0032_identity_sessions_staff_user_id",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1789955600000,
+      "tag": "0033_sales_orders_placed_by_staff_user_id",
+      "breakpoints": true
     }
   ]
 }
