@@ -1,8 +1,8 @@
 # Product browser field glossary
 
-Unverified meanings for columns in the source product browser dump (`product_id` through `disc_over_sold_percent`). Do not copy this 1:1 into Postgres. Mapping work lives in [`database-design.md`](./database-design.md).
+Meanings for columns in the source product browser dump (`product_id` through `disc_over_sold_percent`). Unchecked rows are guesses. Do not copy this 1:1 into Postgres. Mapping work lives in [`database-design.md`](./database-design.md).
 
-Use the Verified column when a description matches the source system.
+Use the Verified column when a description matches the source system. SoloView **On order** (`on_order_qty`) is customer demand. Inbound from vendors is **Qty On PO** — our snapshot `on_order`, not that dump column.
 
 | Field | Description | Verified |
 | --- | --- | --- |
@@ -12,12 +12,12 @@ Use the Verified column when a description matches the source system.
 | item2 | Secondary description line, alternate title, or additional item labeling. | - [ ] |
 | onhand_qty | Total quantity currently available in inventory (on hand). | - [ ] |
 | onpicklist_qty | Quantity already allocated to open pick lists or fulfillment orders. | - [ ] |
-| on_order_qty | Quantity on incoming purchase orders not yet received into stock. | - [ ] |
+| on_order_qty | Quantity customers have on order with us (confirmed unshipped demand). Not inbound from vendors. | - [x] |
 | onhand_min_qty | Minimum desired on-hand quantity; likely used as a reorder threshold. | - [ ] |
 | onhand_max_qty | Maximum desired on-hand quantity cap for stocking levels. | - [ ] |
 | standard_cost | Internal standard cost per unit used for valuation or margin calculations. | - [ ] |
 | po_cost | Cost from purchase orders, likely the most recent or default PO unit cost. | - [ ] |
-| v_on_order | Vendor-side on-order metric; may represent value or quantity tied to open POs. | - [ ] |
+| v_on_order | Unverified. Candidate for Qty On PO (inbound from vendors) if this is quantity; may be dollars. | - [ ] |
 | open_po_cnt | Count of open purchase orders referencing this product. | - [ ] |
 | next_po | Expected date or identifier for the next incoming purchase order. | - [ ] |
 | next_qty | Quantity expected on the next incoming purchase order. | - [ ] |

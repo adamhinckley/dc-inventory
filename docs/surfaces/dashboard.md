@@ -83,7 +83,8 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`wholesale.md`](.
 | --- | --- |
 | On hand | onhand_qty / loc_onhand |
 | Allocated to confirmed sales not yet shipped | onpicklist_qty |
-| On order (open PO not yet received) | on_order_qty |
+| Committed — what customers have on order with us | on_order_qty |
+| Qty On PO — inbound from vendors, not yet received | rebuild from open POs (dump column unverified) |
 | Available (on hand minus allocated) | derived |
 | Location code | location (XJB, TA, YT, …) |
 | Pick bin (dump is true/false, not a slot name) | pickbin |
