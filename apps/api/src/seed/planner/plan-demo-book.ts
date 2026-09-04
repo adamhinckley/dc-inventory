@@ -126,6 +126,8 @@ export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
       staffEmail: identity.staffEmail,
       wholesaleEmail: identity.wholesaleEmail,
       wholesaleCustomerKey: identity.wholesaleCustomerKey,
+      secondaryWholesaleEmail: identity.secondaryWholesaleEmail,
+      secondaryWholesaleCustomerKey: identity.secondaryWholesaleCustomerKey,
     },
     purchaseOrders,
     salesOrders,

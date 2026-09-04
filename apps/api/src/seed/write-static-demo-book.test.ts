@@ -32,6 +32,7 @@ import {
   PHASE1_ORGANIZATION_SLUG,
   PHASE1_PRODUCT_SKUS,
   PHASE1_PRODUCTS,
+  PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
 } from "./phase1-fixture.js";
@@ -269,8 +270,14 @@ describe("static demo book writer (in-memory)", () => {
     expect(first.staff.email).toBe(PHASE1_STAFF_EMAIL);
     expect(first.wholesale.email).toBe(PHASE1_WHOLESALE_EMAIL);
     expect(first.wholesale.customerId).toBe(acme?.id);
+    const northstar = first.customers.find((row) => row.name === DEMO_NAMED_CUSTOMERS.northstar.name);
+    const northstarWholesale = await ports.wholesaleUsers.findByEmail(
+      OrganizationId.DEFAULT,
+      PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
+    );
+    expect(northstarWholesale?.customerId).toBe(northstar?.id);
     expect(inMemoryUserCount(ports.staffUsers)).toBe(1);
-    expect(inMemoryUserCount(ports.wholesaleUsers)).toBe(1);
+    expect(inMemoryUserCount(ports.wholesaleUsers)).toBe(2);
     expect(await ports.staffUsers.findByEmail(OrganizationId.DEFAULT, "other@local.test")).toBeNull();
     expect(await ports.wholesaleUsers.findByEmail(OrganizationId.DEFAULT, "other@local.test")).toBeNull();
 
@@ -343,6 +350,25 @@ describe("static demo book writer (in-memory)", () => {
     expect(wholesaleLogin.ok).toBe(true);
     if (wholesaleLogin.ok) {
       expect(wholesaleLogin.customerId).toBe(acme?.id);
+    }
+
+    const staffActingLogin = await new LoginWholesaleUseCase(
+      ports.organizations,
+      ports.wholesaleUsers,
+      ports.staffUsers,
+      sessions,
+      ports.passwords,
+      clock,
+      ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS,
+    ).execute({
+      organizationSlug: PHASE1_ORGANIZATION_SLUG,
+      email: PHASE1_STAFF_EMAIL,
+      password: "staff-rotated",
+    });
+    expect(staffActingLogin.ok).toBe(true);
+    if (staffActingLogin.ok) {
+      expect(staffActingLogin.mode).toBe("staff_acting");
+      expect(staffActingLogin.customerId).toBeNull();
     }
   });
 

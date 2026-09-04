@@ -273,6 +273,138 @@ describe("wholesale staff acting data route isolation", () => {
     });
   });
 
+  it("runs staff acting flow through catalog and sales order create and fetch", async () => {
+    const app = await startActingApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+
+    const customers = await app.inject({
+      method: "GET",
+      url: "/wholesale/auth/customers",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(customers.statusCode).toBe(200);
+    expect(customers.json().items.length).toBeGreaterThanOrEqual(2);
+
+    const selectA = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/select-customer",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { customerId: CUSTOMER_A_ID },
+    });
+    expect(selectA.statusCode).toBe(200);
+
+    const product = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staffInternal },
+      payload: {
+        sku: "ACTING-FLOW-SKU",
+        name: "Acting flow product",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+        webWholesale: true,
+      },
+    });
+    expect(product.statusCode).toBe(201);
+    const productId = product.json().id as string;
+
+    const catalog = await app.inject({
+      method: "GET",
+      url: "/wholesale/catalog",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(catalog.statusCode).toBe(200);
+
+    const order = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: {
+        lines: [{ productId, qty: 1 }],
+      },
+    });
+    expect(order.statusCode).toBe(201);
+    const orderId = order.json().id as string;
+
+    const fetched = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/${orderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(fetched.statusCode).toBe(200);
+    expect(fetched.json()).toMatchObject({
+      id: orderId,
+      customerId: CUSTOMER_A_ID,
+      status: "draft",
+    });
+  });
+
+  it("returns 404 when wholesale buyer fetches another customer's order", async () => {
+    const app = await startActingApp();
+    const staffInternal = await loginStaffInternal(app);
+
+    const buyerA = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
+    });
+    expect(buyerA.statusCode).toBe(200);
+    const buyerACookie = wholesaleCookie(buyerA);
+
+    const buyerB = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "buyer-b@local.test",
+        password: "buyer-b-secret",
+      },
+    });
+    expect(buyerB.statusCode).toBe(200);
+    const buyerBCookie = wholesaleCookie(buyerB);
+
+    const product = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staffInternal },
+      payload: {
+        sku: "CROSS-CUSTOMER-SKU",
+        name: "Cross customer product",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+        webWholesale: true,
+      },
+    });
+    expect(product.statusCode).toBe(201);
+    const productId = product.json().id as string;
+
+    const buyerBOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+      payload: {
+        lines: [{ productId, qty: 1 }],
+      },
+    });
+    expect(buyerBOrder.statusCode).toBe(201);
+    const buyerBOrderId = buyerBOrder.json().id as string;
+
+    const forbidden = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/${buyerBOrderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerACookie },
+    });
+    expect(forbidden.statusCode).toBe(404);
+    expect(forbidden.json()).toEqual({ error: "not_found" });
+  });
+
   it("ignores body customerId on POST sales-orders and uses session customer", async () => {
     const app = await startActingApp();
     const staffInternal = await loginStaffInternal(app);

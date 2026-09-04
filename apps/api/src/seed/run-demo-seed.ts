@@ -217,7 +217,10 @@ export async function runDemoSeedInMemory(
     new InMemoryDemoBookLoader({
       defaultLocationId,
       staffEmail: input.plan.master.staffEmail,
-      wholesaleEmail: input.plan.master.wholesaleEmail,
+      wholesaleEmails: [
+        input.plan.master.wholesaleEmail,
+        input.plan.master.secondaryWholesaleEmail,
+      ],
       products: staticPorts.products,
       productImages: staticPorts.productImages,
       suppliers: staticPorts.suppliers as unknown as InMemoryDemoBookLoadPorts["suppliers"],

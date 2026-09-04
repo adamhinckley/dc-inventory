@@ -102,6 +102,8 @@ export type DemoBookPlan = {
     staffEmail: string;
     wholesaleEmail: string;
     wholesaleCustomerKey: "acme";
+    secondaryWholesaleEmail: string;
+    secondaryWholesaleCustomerKey: "northstar";
   };
   purchaseOrders: PlannedPurchaseOrder[];
   salesOrders: PlannedSalesOrder[];

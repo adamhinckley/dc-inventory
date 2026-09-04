@@ -4,6 +4,7 @@ import {
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
   PHASE1_PRODUCTS,
+  PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
 } from "../phase1-fixture.js";
@@ -447,6 +448,11 @@ export function buildValidReducedDemoBook(): DemoBook {
     staffUsers: [{ id: "staff-1", email: PHASE1_STAFF_EMAIL }],
     wholesaleUsers: [
       { id: "wholesale-1", email: PHASE1_WHOLESALE_EMAIL, customerId: "cust-acme" },
+      {
+        id: "wholesale-2",
+        email: PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
+        customerId: "cust-northstar",
+      },
     ],
     opsUsers: [],
     purchaseOrders,

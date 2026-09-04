@@ -22,7 +22,7 @@ import type { DemoBook, IDemoBookReader } from "./demo-book.js";
 export type InMemoryDemoBookLoadPorts = {
   defaultLocationId: string;
   staffEmail: string;
-  wholesaleEmail: string;
+  wholesaleEmails: readonly string[];
   products: Pick<IProductRepository, "listMatching">;
   productImages: IProductImageSeedRepository;
   suppliers: {
@@ -111,11 +111,18 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
       DEMO_SEED_ORGANIZATION_ID,
       this.ports.staffEmail,
     );
-    const wholesale = await this.ports.wholesaleUsers.findByEmail(
-      DEMO_SEED_ORGANIZATION_ID,
-      this.ports.wholesaleEmail,
-    );
-    if (staff === null || wholesale === null) {
+    const wholesaleRows = [];
+    for (const email of this.ports.wholesaleEmails) {
+      const wholesale = await this.ports.wholesaleUsers.findByEmail(
+        DEMO_SEED_ORGANIZATION_ID,
+        email,
+      );
+      if (wholesale === null) {
+        throw new Error(`demo wholesale row is missing for ${email}`);
+      }
+      wholesaleRows.push(wholesale);
+    }
+    if (staff === null) {
       throw new Error("demo identity rows are missing");
     }
 
@@ -241,9 +248,11 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
       contacts: [],
       exemptionCertificates,
       staffUsers: [{ id: staff.id, email: staff.email }],
-      wholesaleUsers: [
-        { id: wholesale.id, email: wholesale.email, customerId: wholesale.customerId },
-      ],
+      wholesaleUsers: wholesaleRows.map((row) => ({
+        id: row.id,
+        email: row.email,
+        customerId: row.customerId,
+      })),
       opsUsers: [],
       purchaseOrders: purchaseOrderPage.items.map((row) => ({
         id: row.id,
