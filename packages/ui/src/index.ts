@@ -41,6 +41,9 @@ export { DescriptionList } from "./ui/DescriptionList";
 export { Breadcrumb } from "./ui/Breadcrumb";
 export { DevComment, type DevCommentProps } from "./ui/DevComment";
 export { ExplorerView, useExplorerView } from "./layouts/ExplorerView";
+export { ResourceFilterBar } from "./resource/ResourceFilterBar";
+export type { FilterState } from "./shared/resource/filter-state";
+export type { FilterValue } from "./shared/resource/types";
 export { RouterTabs } from "./ui/RouterTabs";
 export {
   DetailView,

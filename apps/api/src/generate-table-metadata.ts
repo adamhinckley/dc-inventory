@@ -16,7 +16,7 @@ type TableSearch = {
 
 type TableFilter = {
   param: string;
-  control: "select" | "text" | "date" | "dateRange" | "boolean";
+  control: "select" | "multiselect" | "text" | "date" | "dateRange" | "boolean";
   rangePair?: string;
 };
 
@@ -209,8 +209,27 @@ function validateControl(
     return;
   }
   if (filter.control === "select") {
-    if (schemaEnum(document, schema, context) === undefined) {
-      fail(context, `select control requires an enum parameter "${filter.param}"`);
+    if (
+      schemaEnum(document, schema, context) === undefined &&
+      !schemaHasType(document, schema, "string", context)
+    ) {
+      fail(
+        context,
+        `select control requires an enum or string parameter "${filter.param}"`,
+      );
+    }
+    return;
+  }
+  if (filter.control === "multiselect") {
+    if (
+      !schemaHasType(document, schema, "array", context) &&
+      schemaEnum(document, schema, context) === undefined &&
+      !schemaHasType(document, schema, "string", context)
+    ) {
+      fail(
+        context,
+        `multiselect control requires an array or string parameter "${filter.param}"`,
+      );
     }
     return;
   }
@@ -303,7 +322,7 @@ function parseMetadata(
       const filter = object(value, itemContext);
       strictKeys(filter, ["param", "control", "rangePair"], itemContext);
       const control = string(filter.control, `${itemContext}.control`);
-      if (!["select", "text", "date", "dateRange", "boolean"].includes(control)) {
+      if (!["select", "multiselect", "text", "date", "dateRange", "boolean"].includes(control)) {
         fail(itemContext, `unsupported control "${control}"`);
       }
       const parsed: TableFilter = {
@@ -471,7 +490,7 @@ export type InternalTableMetadata = {
   };
   readonly filters?: readonly {
     readonly param: string;
-    readonly control: "select" | "text" | "date" | "dateRange" | "boolean";
+    readonly control: "select" | "multiselect" | "text" | "date" | "dateRange" | "boolean";
     readonly rangePair?: string;
   }[];
   readonly sort?: {

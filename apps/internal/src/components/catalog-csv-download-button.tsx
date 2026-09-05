@@ -5,7 +5,10 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 import { catalogListTable } from "../lib/catalog-list-table";
 import { downloadProductsCsv } from "../lib/download-products-csv";
-import { listParamsFromSearchParams } from "../lib/table-url-params";
+import {
+  listParamsFromSearchParams,
+  searchParamsToRecord,
+} from "../lib/table-url-params";
 
 export function CatalogCsvDownloadButton() {
   const [pending, setPending] = useState(false);
@@ -17,7 +20,7 @@ export function CatalogCsvDownloadButton() {
     try {
       const params = listParamsFromSearchParams(
         catalogListTable,
-        Object.fromEntries(new URLSearchParams(window.location.search)),
+        searchParamsToRecord(new URLSearchParams(window.location.search)),
       );
       await downloadProductsCsv({
         q: typeof params.q === "string" ? params.q : undefined,
@@ -27,6 +30,8 @@ export function CatalogCsvDownloadButton() {
             : undefined,
         sortOrder: params.sortOrder === "desc" ? "desc" : params.sortOrder === "asc" ? "asc" : undefined,
         inactive: typeof params.inactive === "boolean" ? params.inactive : undefined,
+        category: Array.isArray(params.category) ? [...params.category] : undefined,
+        supplierId: Array.isArray(params.supplierId) ? [...params.supplierId] : undefined,
       });
     } catch {
       setError("Download failed. Try again.");

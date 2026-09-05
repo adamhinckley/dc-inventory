@@ -52,6 +52,29 @@ function firstValue(
   return value;
 }
 
+function allValues(searchParams: SearchParamsRecord, key: string): string[] {
+  const value = searchParams[key];
+  if (value === undefined) {
+    return [];
+  }
+  return (Array.isArray(value) ? value : [value]).filter((item) => item !== "");
+}
+
+/** Next `searchParams` or `URLSearchParams` as a record that keeps repeated keys. */
+export function searchParamsToRecord(
+  search: URLSearchParams | SearchParamsRecord,
+): SearchParamsRecord {
+  if (!(search instanceof URLSearchParams)) {
+    return search;
+  }
+  const record: SearchParamsRecord = {};
+  for (const key of new Set(search.keys())) {
+    const values = search.getAll(key);
+    record[key] = values.length <= 1 ? values[0] : values;
+  }
+  return record;
+}
+
 /**
  * Maps App Router `searchParams` onto DataTable `initialParams`.
  * Ignores invented keys and `pageSize` (not a shareable v1 URL key).
@@ -88,6 +111,13 @@ export function listParamsFromSearchParams(
   for (const filter of meta.filters ?? []) {
     const apply = (key: string, control: (typeof filter)["control"]) => {
       if (!allowed.has(key)) {
+        return;
+      }
+      if (control === "multiselect") {
+        const items = allValues(searchParams, key);
+        if (items.length > 0) {
+          params[key] = items;
+        }
         return;
       }
       const raw = firstValue(searchParams, key);
@@ -171,10 +201,43 @@ export function tableSearchFromParams(
     if (value === undefined || value === "") {
       continue;
     }
+    if (Array.isArray(value)) {
+      search.delete(key);
+      for (const item of value) {
+        if (item !== "") {
+          search.append(key, item);
+        }
+      }
+      continue;
+    }
     search.set(key, String(value));
   }
   const query = search.toString();
   return query === "" ? "" : `?${query}`;
+}
+
+/**
+ * Inventory stock and reopen share one list query. Catalog, receiving, and
+ * purchasing keep their own path, so a leave still clears list keys.
+ */
+const SHARED_STAFF_TABLE_URL_PATHS: readonly (readonly string[])[] = [
+  ["/inventory", "/inventory/reopen"],
+];
+
+export function staffTableUrlFamily(pathname: string): string {
+  for (const paths of SHARED_STAFF_TABLE_URL_PATHS) {
+    if (paths.includes(pathname)) {
+      return paths[0] ?? pathname;
+    }
+  }
+  return pathname;
+}
+
+export function shouldStripStaffTableUrlOnNavigate(
+  previousPathname: string,
+  nextPathname: string,
+): boolean {
+  return staffTableUrlFamily(previousPathname) !== staffTableUrlFamily(nextPathname);
 }
 
 /**

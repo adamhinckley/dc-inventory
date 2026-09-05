@@ -62,6 +62,7 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
       organizationId: query.organizationId,
       q: query.q,
       category: query.category,
+      supplierId: query.supplierId,
       inactive: query.inactive,
       shopVisibleOnly: query.shopVisibleOnly,
     });
@@ -78,12 +79,16 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
       createdAt: row.createdAt,
       caseQty: packs[index]?.caseQty ?? null,
       lastPoCostCents: null,
+      supplierName: null,
     }));
     const visibleRows = rows.filter((row) => {
       if (query.hideZeroInventory === true && !hasNonZeroInventoryQty(row.qty)) {
         return false;
       }
       if (query.availableOnly === true && !isShopSellable(row.qty)) {
+        return false;
+      }
+      if (query.sellState !== undefined && row.qty.sellState !== query.sellState) {
         return false;
       }
       return true;

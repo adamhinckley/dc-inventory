@@ -8,10 +8,13 @@ import type { AppDrizzle } from "../../infrastructure/db.js";
 
 const ORG = OrganizationId.DEFAULT;
 const PRODUCT_ID = "da209000-0000-4000-8000-000000000101";
+const OTHER_PRODUCT_ID = "da209000-0000-4000-8000-000000000105";
 const SUPPLIER_ID = "da209000-0000-4000-8000-000000000102";
+const OTHER_SUPPLIER_ID = "da209000-0000-4000-8000-000000000106";
 const SUPPLIER_PRODUCT_ID = "da209000-0000-4000-8000-000000000103";
 const LOCATION_ID = "da209000-0000-4000-8000-000000000104";
 const SKU = "LAST-PO-COST-500";
+const OTHER_SKU = "OTHER-FACTORY-SKU";
 
 async function execCatalogListQuerySchema(client: PGlite): Promise<void> {
   await client.exec(`
@@ -130,6 +133,23 @@ export async function createCatalogListQueryPgliteHarness() {
      VALUES ($1, $2, $3, 'ACME-500', $4::bigint)`,
     [SUPPLIER_PRODUCT_ID, SUPPLIER_ID, SKU, 500],
   );
+  await client.query(
+    `INSERT INTO catalog.products
+      (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+     VALUES ($1, $2, $3, 'Other factory widget', 'EA', 800, 400, true)`,
+    [OTHER_PRODUCT_ID, ORG, OTHER_SKU],
+  );
+  await client.query(
+    `INSERT INTO purchasing.suppliers (id, organization_id, vendor_number, name)
+     VALUES ($1, $2, 'VEND-OTHER', 'Other Supply')`,
+    [OTHER_SUPPLIER_ID, ORG],
+  );
+  await client.query(
+    `INSERT INTO purchasing.supplier_products
+      (id, supplier_id, sku)
+     VALUES ($1, $2, $3)`,
+    ["da209000-0000-4000-8000-000000000107", OTHER_SUPPLIER_ID, OTHER_SKU],
+  );
 
   const db = drizzle(client, { schema }) as unknown as AppDrizzle;
   const clock = new InMemoryClock(new Date("2026-09-03T12:00:00.000Z"));
@@ -137,6 +157,11 @@ export async function createCatalogListQueryPgliteHarness() {
 
   return {
     catalogListQuery,
+    client,
+    locationId: LOCATION_ID,
+    supplierId: SUPPLIER_ID,
+    otherSupplierId: OTHER_SUPPLIER_ID,
+    sku: SKU,
     async close(): Promise<void> {
       await client.close();
     },

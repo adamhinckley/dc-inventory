@@ -240,6 +240,149 @@ describe("catalog HTTP", () => {
     expect(byCaseQty.statusCode).toBe(200);
   });
 
+  it("filters the staff product list by category and factory", async () => {
+    const productRepo = new InMemoryProductRepository();
+    const app = await startCatalogApp(productRepo);
+    const cookie = await staffCookie(app);
+    const factoryId = "550e8400-e29b-41d4-a716-446655440030";
+
+    const bolt = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        sku: "STAFF-BOLT",
+        name: "Staff bolt",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+      },
+    });
+    const ribbon = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        sku: "STAFF-RIBBON",
+        name: "Staff ribbon",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+      },
+    });
+    const boltId = (bolt.json() as { id: string }).id;
+    const ribbonId = (ribbon.json() as { id: string }).id;
+    productRepo.setCategories(boltId, ["Hardware"]);
+    productRepo.setCategories(ribbonId, ["Textiles"]);
+    productRepo.setSupplierIds(boltId, [factoryId]);
+
+    const byCategory = await app.inject({
+      method: "GET",
+      url: "/internal/products?category=Hardware",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(byCategory.statusCode).toBe(200);
+    expect(byCategory.json().items.map((item: { sku: string }) => item.sku)).toEqual([
+      "STAFF-BOLT",
+    ]);
+
+    const byFactory = await app.inject({
+      method: "GET",
+      url: `/internal/products?supplierId=${factoryId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(byFactory.statusCode).toBe(200);
+    expect(byFactory.json().items.map((item: { sku: string }) => item.sku)).toEqual([
+      "STAFF-BOLT",
+    ]);
+
+    const byCategories = await app.inject({
+      method: "GET",
+      url: "/internal/products?category=Hardware&category=Textiles",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(byCategories.statusCode).toBe(200);
+    expect(byCategories.json().items.map((item: { sku: string }) => item.sku)).toEqual([
+      "STAFF-BOLT",
+      "STAFF-RIBBON",
+    ]);
+
+    const categories = await app.inject({
+      method: "GET",
+      url: "/internal/categories",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(categories.statusCode).toBe(200);
+    expect(categories.json()).toEqual({
+      items: [{ name: "Hardware" }, { name: "Textiles" }],
+    });
+  });
+
+  it("filters the staff product list by effective sell state", async () => {
+    const qtyRead = new InMemoryQtyReadPort();
+    const app = await startCatalogApp(undefined, qtyRead);
+    const cookie = await staffCookie(app);
+    await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        sku: "OPEN-SKU",
+        name: "Open bolt",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+      },
+    });
+    await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        sku: "LOCKED-SKU",
+        name: "Locked bolt",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+      },
+    });
+    qtyRead.set(OrganizationId.DEFAULT, "LOCKED-SKU", {
+      onHand: 4,
+      onOrder: 2,
+      allocated: 0,
+      available: 4,
+      committed: 1,
+      sellState: "locked",
+      availableToSell: 5,
+    });
+
+    const locked = await app.inject({
+      method: "GET",
+      url: "/internal/products?sellState=locked",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(locked.statusCode).toBe(200);
+    expect(locked.json().items.map((item: { sku: string }) => item.sku)).toEqual([
+      "LOCKED-SKU",
+    ]);
+
+    const rejected = await app.inject({
+      method: "GET",
+      url: "/internal/products?sellState=closed",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(rejected.statusCode).toBe(400);
+
+    const exported = await app.inject({
+      method: "GET",
+      url: "/internal/products/export?format=csv&sellState=locked",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(exported.statusCode).toBe(200);
+    expect(exported.body).toContain("LOCKED-SKU");
+    expect(exported.body).not.toContain("OPEN-SKU");
+  });
+
   it("exports the staff product list as CSV with the same filters", async () => {
     const app = await startCatalogApp();
     const missing = await app.inject({ method: "GET", url: "/internal/products/export" });
@@ -505,7 +648,9 @@ describe("catalog HTTP", () => {
       });
 
       expect(response.statusCode).toBe(200);
-      expect(productRepo.listQueries.at(-1)).toMatchObject({ [filter]: value });
+      expect(productRepo.listQueries.at(-1)).toMatchObject({
+        [filter]: filter === "category" ? [value] : value,
+      });
     }
   });
 
@@ -734,10 +879,16 @@ describe("catalog HTTP", () => {
         cookies: { [STAFF_SESSION_COOKIE]: cookie },
       });
       expect(listed.statusCode).toBe(200);
-      expect(listed.json()).toMatchObject({
-        total: 1,
-        items: [{ sku: "LAST-PO-COST-500", lastPoCostCents: 500 }],
-      });
+      expect(listed.json().total).toBe(2);
+      expect(listed.json().items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            sku: "LAST-PO-COST-500",
+            lastPoCostCents: 500,
+            supplierName: "Acme Supply",
+          }),
+        ]),
+      );
     } finally {
       await harness.close();
     }

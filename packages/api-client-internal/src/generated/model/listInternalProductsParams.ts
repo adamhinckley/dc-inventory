@@ -4,6 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalProductsSellState } from './listInternalProductsSellState';
 import type { ListInternalProductsSortBy } from './listInternalProductsSortBy';
 import type { ListInternalProductsSortOrder } from './listInternalProductsSortOrder';
 
@@ -23,4 +24,7 @@ sortBy?: ListInternalProductsSortBy;
 sortOrder?: ListInternalProductsSortOrder;
 inactive?: 'true' | 'false' | boolean;
 hideZeroInventory?: 'true' | 'false' | boolean;
+category?: string | string[];
+supplierId?: string | string[];
+sellState?: ListInternalProductsSellState;
 };

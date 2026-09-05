@@ -40,7 +40,7 @@ export class ListWholesaleCatalogUseCase {
     const page = await this.catalogList.list({
       organizationId: input.organizationId,
       q: input.q,
-      category: input.category,
+      category: input.category === undefined ? undefined : [input.category],
       page: input.page,
       pageSize: input.pageSize,
       sortBy: input.sortBy,

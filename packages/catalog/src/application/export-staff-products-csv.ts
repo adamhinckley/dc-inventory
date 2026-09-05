@@ -23,10 +23,13 @@ export type ExportStaffProductsCsvRequest = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId;
   q?: string;
+  category?: readonly string[];
+  supplierId?: readonly string[];
   sortBy: CatalogListSortBy;
   sortOrder: CatalogListSortOrder;
   inactive?: boolean;
   hideZeroInventory?: boolean;
+  sellState?: "open" | "locked";
 };
 
 export type ExportStaffProductsCsvResult = {
@@ -66,12 +69,15 @@ export class ExportStaffProductsCsvUseCase {
     const page = await this.catalogList.list({
       organizationId: input.organizationId,
       q: input.q,
+      category: input.category,
+      supplierId: input.supplierId,
       page: 1,
       pageSize: STAFF_PRODUCTS_EXPORT_ROW_CAP,
       sortBy: input.sortBy,
       sortOrder: input.sortOrder,
       inactive: input.inactive,
       hideZeroInventory: input.hideZeroInventory,
+      sellState: input.sellState,
     });
     const file = await this.csvWriter.write({
       filename: "products.csv",

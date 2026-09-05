@@ -37,6 +37,14 @@ const lastPoCostCents = sql<number | null>`(
   limit 1
 )`;
 
+const supplierName = sql<string | null>`(
+  select string_agg(${suppliers.name}, ', ' order by ${suppliers.name})
+  from ${supplierProducts}
+  inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
+  where ${supplierProducts.sku} = ${products.sku}
+    and ${suppliers.organizationId} = ${products.organizationId}
+)`;
+
 function productFromRow(row: {
   id: string;
   organizationId: string;
@@ -98,8 +106,10 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
       const pattern = `%${needle}%`;
       clauses.push(or(ilike(products.sku, pattern), ilike(products.name, pattern))!);
     }
-    const category = query.category?.trim() ?? "";
-    if (category.length > 0) {
+    const categoryNames = (query.category ?? [])
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
+    if (categoryNames.length > 0) {
       const productIds = this.db
         .select({ productId: productCategories.productId })
         .from(productCategories)
@@ -107,10 +117,26 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
         .where(
           and(
             eq(categories.organizationId, query.organizationId),
-            eq(categories.name, category),
+            inArray(categories.name, categoryNames),
           ),
         );
       clauses.push(inArray(products.id, productIds));
+    }
+    const supplierIds = (query.supplierId ?? [])
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+    if (supplierIds.length > 0) {
+      const factorySkus = this.db
+        .select({ sku: supplierProducts.sku })
+        .from(supplierProducts)
+        .innerJoin(suppliers, eq(suppliers.id, supplierProducts.supplierId))
+        .where(
+          and(
+            eq(suppliers.organizationId, query.organizationId),
+            inArray(supplierProducts.supplierId, supplierIds),
+          ),
+        );
+      clauses.push(inArray(products.sku, factorySkus));
     }
     const onHand = sql<number>`coalesce(${stockSnapshots.onHand}, 0)`;
     const onOrder = sql<number>`coalesce(${stockSnapshots.onOrder}, 0)`;
@@ -134,6 +160,11 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     }
     if (query.availableOnly === true) {
       clauses.push(isShopSellableSql(available, demandProjectionColumns, nowIso));
+    }
+    if (query.sellState === "locked") {
+      clauses.push(sql`${demandProjection.isLockedForSell} = true`);
+    } else if (query.sellState === "open") {
+      clauses.push(sql`${demandProjection.isLockedForSell} = false`);
     }
     const where = and(...clauses);
     const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
@@ -179,7 +210,9 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
       eq(stockSnapshots.locationId, locations.id),
     );
     const countFrom =
-      query.hideZeroInventory === true || query.availableOnly === true
+      query.hideZeroInventory === true ||
+      query.availableOnly === true ||
+      query.sellState !== undefined
         ? this.db
             .select({ value: count() })
             .from(products)
@@ -215,6 +248,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           windowClosesAt: stockSnapshots.windowClosesAt,
           caseQty: productPackaging.caseQty,
           lastPoCostCents,
+          supplierName,
         })
         .from(products)
         .leftJoin(locations, locationJoin)
@@ -244,6 +278,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
         createdAt: row.createdAt,
         caseQty: row.caseQty ?? null,
         lastPoCostCents: normalizeCents(row.lastPoCostCents),
+        supplierName: row.supplierName,
       })),
       total: totalRows[0]?.value ?? 0,
     };

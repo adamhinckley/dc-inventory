@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { catalogListTable } from "./catalog-list-table";
 
 describe("catalogListTable", () => {
-  it("omits hideZeroInventory from catalog filter chrome", () => {
+  it("omits hideZeroInventory and sellState from catalog filter chrome", () => {
     expect(catalogListTable.filters?.map((filter) => filter.param)).toEqual([
       "inactive",
+      "category",
+      "supplierId",
     ]);
   });
 

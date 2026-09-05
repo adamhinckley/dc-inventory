@@ -1,4 +1,4 @@
-import { createContext, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 export type Option<T extends string | number | boolean = string> = {
   value: T;
@@ -35,9 +35,25 @@ export type FormFieldMeta = FormFieldSlot;
 
 export type FormRenderFn = (...args: never[]) => unknown;
 
+export type FilterValue =
+  | string
+  | boolean
+  | number
+  | readonly string[]
+  | { from?: string; to?: string }
+  | { min?: number; max?: number }
+  | null;
+
+export type FilterFieldSlot =
+  | { kind: "boolean" }
+  | { kind: "select"; options?: Option[] }
+  | { kind: "multiselect"; options?: Option[] }
+  | { kind: "text" };
+
 export type FieldConfig<T = unknown> = {
   label?: ReactNode;
   form?: FormFieldSlot;
+  filter?: FilterFieldSlot;
   name?: string;
   [key: string]: unknown;
 } & { __record?: T };
@@ -45,9 +61,6 @@ export type FieldConfig<T = unknown> = {
 export type Action = unknown;
 export type BulkAction = unknown;
 export type RecordAction = unknown;
-export type FilterValue = unknown;
-export type ActiveFilter = unknown;
-export type FilterFieldSlot = unknown;
 export type FilterChipLabel = unknown;
 export type FilterRenderFn = unknown;
 export type ConfirmConfig = unknown;

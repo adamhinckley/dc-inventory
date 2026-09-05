@@ -22,6 +22,7 @@ export const inventoryListTable = {
   columns: [
     { field: "sku", label: "SKU" },
     { field: "name", label: "Name" },
+    { field: "supplierName", label: "Factory" },
     { field: "onHand", label: "On hand" },
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
@@ -31,7 +32,7 @@ export const inventoryListTable = {
     { field: "sellState", label: "Sell state" },
   ],
   search: listInternalProductsTable.search,
-  filters: [{ param: "hideZeroInventory", control: "boolean" }],
+  filters: listInternalProductsTable.filters,
   sort: {
     defaultBy: listInternalProductsTable.sort.defaultBy,
     defaultOrder: listInternalProductsTable.sort.defaultOrder,
@@ -48,8 +49,8 @@ export function inventoryListInitialParams(
   parse: (
     meta: typeof inventoryListTable,
     params: Record<string, string | string[] | undefined>,
-  ) => Record<string, string | number | boolean | undefined>,
-): Record<string, string | number | boolean | undefined> {
+  ) => ListQueryParams,
+): ListQueryParams {
   return parse(inventoryListTable, searchParams);
 }
 

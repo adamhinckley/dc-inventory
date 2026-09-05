@@ -4,16 +4,21 @@ import {
   Checkbox,
   Input,
   Label,
+  ResourceFilterBar,
   Table,
   TextInput,
   useTable,
+  type FilterState,
+  type FilterValue,
   type TableColumnDef,
   type TableTooltip,
 } from "@dc-inventory/ui";
 import {
   createContext,
+  useCallback,
   useContext,
   useMemo,
+  useState,
   type Dispatch,
   type ReactNode,
   type SetStateAction,
@@ -28,6 +33,11 @@ import {
   type TableMeta,
 } from "./table-meta";
 import { formatStockField, readFieldValue } from "./cell-value";
+import {
+  appliedTableFilterValue,
+  isAppliedTableFilter,
+  tableFilterFields,
+} from "./table-filter-bar";
 import {
   useDataTable,
   type ListQueryHook,
@@ -434,6 +444,104 @@ export function DataTableFilters() {
 }
 
 /**
+ * Desktop `ResourceFilterBar` from `x-table` search + filters.
+ *
+ * When to use: staff list pages that should match the kit explorer chrome.
+ * When not to use: inventing filters that are not on `meta.filters`.
+ */
+export function DataTableFilterBar({ resource }: { resource?: string } = {}) {
+  const {
+    meta,
+    state,
+    setState,
+    filterOptions,
+    filterLabels,
+  } = useDataTableContext();
+  const [drafts, setDrafts] = useState<string[]>([]);
+  const fields = useMemo(
+    () => tableFilterFields(meta, filterOptions, filterLabels),
+    [meta, filterOptions, filterLabels],
+  );
+  const setSearch = useCallback(
+    (search: string) => {
+      setState((current) => ({ ...current, page: 1, search }));
+    },
+    [setState],
+  );
+  const onAdd = useCallback((field: string) => {
+    setDrafts((current) => (current.includes(field) ? current : [...current, field]));
+  }, []);
+  const onRemove = useCallback(
+    (field: string) => {
+      setDrafts((current) => current.filter((key) => key !== field));
+      setState((current) => ({
+        ...current,
+        page: 1,
+        filters: { ...current.filters, [field]: undefined },
+      }));
+    },
+    [setState],
+  );
+  const onUpdate = useCallback(
+    (field: string, value: FilterValue) => {
+      const appliedValue = appliedTableFilterValue(value);
+      setDrafts((current) =>
+        appliedValue === undefined
+          ? current.includes(field)
+            ? current
+            : [...current, field]
+          : current.filter((key) => key !== field),
+      );
+      setState((current) => ({
+        ...current,
+        page: 1,
+        filters: { ...current.filters, [field]: appliedValue },
+      }));
+    },
+    [setState],
+  );
+  const onClear = useCallback(() => {
+    setDrafts([]);
+    setState((current) => ({
+      ...current,
+      page: 1,
+      search: "",
+      filters: {},
+    }));
+  }, [setState]);
+
+  const filters = useMemo<FilterState>(() => {
+    const applied = Object.entries(state.filters)
+      .filter(([, value]) => isAppliedTableFilter(value))
+      .map(([field, value]) => ({
+        field,
+        value: value as string | boolean | readonly string[],
+      }));
+    const appliedKeys = new Set(applied.map((filter) => filter.field));
+    const draftChips = drafts
+      .filter((field) => field in fields && !appliedKeys.has(field))
+      .map((field) => ({ field, value: null }));
+
+    return {
+      active: [...applied, ...draftChips],
+      search: state.search,
+      setSearch,
+      onAdd,
+      onRemove,
+      onUpdate,
+      onClear,
+    };
+  }, [drafts, fields, onAdd, onClear, onRemove, onUpdate, setSearch, state.filters, state.search]);
+
+  return (
+    <ResourceFilterBar filters={filters} data-testid="data-table-filter-bar">
+      <ResourceFilterBar.Search placeholder={meta.search?.placeholder} />
+      <ResourceFilterBar.Chips fields={fields} resource={resource} />
+    </ResourceFilterBar>
+  );
+}
+
+/**
  * Row grid for the current `queryHook` page.
  *
  * When to use: as the body slot under `DataTable.Root`.
@@ -713,6 +821,7 @@ export const DataTable = {
   Toolbar: DataTableToolbar,
   Search: DataTableSearch,
   Filters: DataTableFilters,
+  FilterBar: DataTableFilterBar,
   Table: DataTableTable,
   Pagination: DataTablePagination,
 };

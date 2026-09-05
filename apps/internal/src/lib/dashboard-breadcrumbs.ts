@@ -17,6 +17,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   new: "New",
   suppliers: "Suppliers",
   uncovered: "Uncovered",
+  reopen: "Manage Pre-Sell",
 };
 
 export function crumbsFromPathname(

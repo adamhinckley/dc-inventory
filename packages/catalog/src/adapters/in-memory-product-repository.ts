@@ -12,10 +12,16 @@ type Stored = { product: Product; createdAt: Date };
 export class InMemoryProductRepository implements IProductRepository {
   private readonly byId = new Map<ProductId, Stored>();
   private readonly categoriesByProductId = new Map<ProductId, Set<string>>();
+  private readonly supplierIdsByProductId = new Map<ProductId, Set<string>>();
 
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
     const needle = query.q?.trim().toLowerCase() ?? "";
-    const category = query.category?.trim() ?? "";
+    const categories = (query.category ?? [])
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
+    const supplierIds = (query.supplierId ?? [])
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
     return [...this.byId.values()].filter((row) => {
       if (row.product.organizationId !== query.organizationId) {
         return false;
@@ -26,11 +32,17 @@ export class InMemoryProductRepository implements IProductRepository {
       if (query.shopVisibleOnly === true && !isShopVisible(row.product)) {
         return false;
       }
-      if (
-        category.length > 0 &&
-        !this.categoriesByProductId.get(row.product.id)?.has(category)
-      ) {
-        return false;
+      if (categories.length > 0) {
+        const assigned = this.categoriesByProductId.get(row.product.id);
+        if (!categories.some((name) => assigned?.has(name))) {
+          return false;
+        }
+      }
+      if (supplierIds.length > 0) {
+        const assigned = this.supplierIdsByProductId.get(row.product.id);
+        if (!supplierIds.some((id) => assigned?.has(id))) {
+          return false;
+        }
       }
       if (needle.length === 0) {
         return true;
@@ -44,6 +56,24 @@ export class InMemoryProductRepository implements IProductRepository {
 
   setCategories(productId: ProductId, categories: Iterable<string>): void {
     this.categoriesByProductId.set(productId, new Set(categories));
+  }
+
+  setSupplierIds(productId: ProductId, supplierIds: Iterable<string>): void {
+    this.supplierIdsByProductId.set(productId, new Set(supplierIds));
+  }
+
+  async listCategoryNames(organizationId: OrganizationId): Promise<string[]> {
+    const names = new Set<string>();
+    for (const [productId, categories] of this.categoriesByProductId) {
+      const row = this.byId.get(productId);
+      if (row === undefined || row.product.organizationId !== organizationId) {
+        continue;
+      }
+      for (const name of categories) {
+        names.add(name);
+      }
+    }
+    return [...names].sort((left, right) => left.localeCompare(right));
   }
 
   async findById(organizationId: OrganizationId, id: ProductId): Promise<Product | null> {

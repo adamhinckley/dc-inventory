@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.0.0
  */
 import type { ExportInternalProductsFormat } from './exportInternalProductsFormat';
+import type { ExportInternalProductsSellState } from './exportInternalProductsSellState';
 import type { ExportInternalProductsSortBy } from './exportInternalProductsSortBy';
 import type { ExportInternalProductsSortOrder } from './exportInternalProductsSortOrder';
 
@@ -15,4 +16,7 @@ sortBy?: ExportInternalProductsSortBy;
 sortOrder?: ExportInternalProductsSortOrder;
 inactive?: 'true' | 'false' | boolean;
 hideZeroInventory?: 'true' | 'false' | boolean;
+category?: string | string[];
+supplierId?: string | string[];
+sellState?: ExportInternalProductsSellState;
 };

@@ -188,6 +188,9 @@ import type {
   ImportInternalProducts403,
   ImportInternalProductsBody,
   ImportInternalProductsParams,
+  ListInternalCategories200,
+  ListInternalCategories401,
+  ListInternalCategories403,
   ListInternalCustomerContacts200,
   ListInternalCustomerContacts400,
   ListInternalCustomerContacts401,
@@ -2693,6 +2696,107 @@ export function useListInternalUncoveredSkus<TData = Awaited<ReturnType<typeof l
 
 
 
+export type listInternalCategoriesResponse200 = {
+  data: ListInternalCategories200
+  status: 200
+}
+
+export type listInternalCategoriesResponse401 = {
+  data: ListInternalCategories401
+  status: 401
+}
+
+export type listInternalCategoriesResponse403 = {
+  data: ListInternalCategories403
+  status: 403
+}
+
+export type listInternalCategoriesResponseSuccess = (listInternalCategoriesResponse200) & {
+  headers: Headers;
+};
+export type listInternalCategoriesResponseError = (listInternalCategoriesResponse401 | listInternalCategoriesResponse403) & {
+  headers: Headers;
+};
+
+export type listInternalCategoriesResponse = (listInternalCategoriesResponseSuccess | listInternalCategoriesResponseError)
+
+export const getListInternalCategoriesUrl = () => {
+
+
+
+
+  return `/internal/categories`
+}
+
+/**
+ * @summary List catalog category names for staff product filters
+ */
+export const listInternalCategories = async ( options?: Parameters<typeof customFetch>[1]): Promise<listInternalCategoriesResponse> => {
+
+  return customFetch<listInternalCategoriesResponse>(getListInternalCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalCategoriesQueryKey = () => {
+    return [
+    `/internal/categories`
+    ] as const;
+    }
+
+
+export const getListInternalCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listInternalCategories>>, TError = ListInternalCategories401 | ListInternalCategories403>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalCategories>>> = ({ signal }) => listInternalCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalCategories>>>
+export type ListInternalCategoriesQueryError = ListInternalCategories401 | ListInternalCategories403
+
+
+/**
+ * @summary List catalog category names for staff product filters
+ */
+
+export function useListInternalCategories<TData = Awaited<ReturnType<typeof listInternalCategories>>, TError = ListInternalCategories401 | ListInternalCategories403>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export type importInternalProductsResponse200 = {
   data: ImportInternalProducts200
   status: 200
@@ -2952,6 +3056,14 @@ export const getListInternalProductsUrl = (params?: ListInternalProductsParams,)
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["category","supplierId"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
 
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : String(value))
@@ -3415,6 +3527,14 @@ export const getExportInternalProductsUrl = (params?: ExportInternalProductsPara
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["category","supplierId"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
 
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : String(value))

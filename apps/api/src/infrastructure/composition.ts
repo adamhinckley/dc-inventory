@@ -11,6 +11,7 @@ import {
   InMemoryProductPackagingRepository,
   InMemoryProductRepository,
   InMemoryQtyReadPort,
+  ListStaffCategoriesUseCase,
   ListStaffProductsUseCase,
   ListWholesaleCatalogUseCase,
   UpdateProductUseCase,
@@ -188,6 +189,7 @@ import {
   RecordReopenSkusForPresellUseCase,
   type InMemoryInventoryReadModel,
   type IUncoveredListQuery,
+  type RecordReopenSkusForPresellRequest,
 } from "@dc-inventory/inventory";
 import { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
@@ -242,6 +244,7 @@ export type IdentityHttpServices = {
 
 export type CatalogHttpServices = {
   listStaffProducts: ListStaffProductsUseCase;
+  listStaffCategories: ListStaffCategoriesUseCase;
   exportStaffProductsCsv: ExportStaffProductsCsvUseCase;
   createProduct: CreateProductUseCase;
   getProduct: GetProductUseCase;
@@ -331,7 +334,7 @@ export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
   listPurchaseOrderGoodsReceived: ListPurchaseOrderGoodsReceivedUseCase;
   listUncoveredSkus: ListUncoveredSkusUseCase;
-  reopenSkusForPresell: RecordReopenSkusForPresellUseCase;
+  reopenSkusForPresell: Pick<RecordReopenSkusForPresellUseCase, "execute">;
 };
 
 /**
@@ -406,6 +409,7 @@ function catalogServices(
   const updateProduct = new UpdateProductUseCase(productRepo, qtyRead, packaging);
   return {
     listStaffProducts: new ListStaffProductsUseCase(catalogListQuery),
+    listStaffCategories: new ListStaffCategoriesUseCase(productRepo),
     exportStaffProductsCsv: new ExportStaffProductsCsvUseCase(
       catalogListQuery,
       new InMemoryCatalogCsvWriter(),
@@ -707,7 +711,12 @@ function inventoryServices(
       new PurchaseOrderLookupAdapter(purchaseOrderRepo),
     ),
     listUncoveredSkus,
-    reopenSkusForPresell: new RecordReopenSkusForPresellUseCase(unitOfWork.inventory.ledger),
+    reopenSkusForPresell: {
+      execute: (input: RecordReopenSkusForPresellRequest) =>
+        unitOfWork.run((scope) =>
+          new RecordReopenSkusForPresellUseCase(scope.inventory.ledger).execute(input),
+        ),
+    },
   };
 }
 

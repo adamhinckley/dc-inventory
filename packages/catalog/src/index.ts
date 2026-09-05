@@ -17,6 +17,7 @@ export { CreateProductUseCase } from "./application/create-product.js";
 export { GetProductUseCase } from "./application/get-product.js";
 export { GetWholesaleProductUseCase } from "./application/get-wholesale-product.js";
 export { ImportProductBrowserUseCase } from "./application/import-product-browser.js";
+export { ListStaffCategoriesUseCase } from "./application/list-staff-categories.js";
 export { ListStaffProductsUseCase } from "./application/list-staff-products.js";
 export { ListWholesaleCatalogUseCase } from "./application/list-wholesale-catalog.js";
 export {

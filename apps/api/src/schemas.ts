@@ -69,6 +69,21 @@ export const opsSessionResponseSchema = z.object({
   tenantId: z.string(),
 });
 
+function optionalRepeatedQuery<T extends z.ZodType<string>>(item: T) {
+  return z
+    .union([item, z.array(item)])
+    .optional()
+    .transform((value) => {
+      if (value === undefined) {
+        return undefined;
+      }
+      const items = (Array.isArray(value) ? value : [value]).filter(
+        (entry) => entry.length > 0,
+      );
+      return items.length === 0 ? undefined : items;
+    });
+}
+
 const optionalBooleanQuery = z
   .union([z.literal("true"), z.literal("false"), z.boolean()])
   .optional()
@@ -93,6 +108,8 @@ export const staffProductSortByValues = [
   "createdAt",
 ] as const;
 
+export const sellStateSchema = z.enum(["open", "locked"]);
+
 export const listQuerySchema = z.object({
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -101,9 +118,10 @@ export const listQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
   inactive: optionalBooleanQuery,
   hideZeroInventory: optionalBooleanQuery,
+  category: optionalRepeatedQuery(z.string().trim().min(1)),
+  supplierId: optionalRepeatedQuery(z.string().uuid()),
+  sellState: sellStateSchema.optional(),
 });
-
-export const sellStateSchema = z.enum(["open", "locked"]);
 
 export const productQtyFieldsSchema = z.object({
   onHand: z.number().int(),
@@ -122,6 +140,7 @@ export const productListItemSchema = z.object({
   memberPrice: z.number().int(),
   listPrice: z.number().int().nullable(),
   lastPoCostCents: z.number().int().nullable(),
+  supplierName: z.string().nullable(),
   currency: z.string(),
   inactive: z.boolean(),
   discontinued: z.boolean(),
@@ -136,6 +155,10 @@ export const productListResponseSchema = z.object({
   page: z.number().int(),
   pageSize: z.number().int(),
   total: z.number().int(),
+});
+
+export const categoryListResponseSchema = z.object({
+  items: z.array(z.object({ name: z.string() })),
 });
 
 const catalogAvailableOnlyQuery = z
@@ -604,6 +627,9 @@ export const productsListTable = {
   filters: [
     { param: "inactive", control: "boolean" },
     { param: "hideZeroInventory", control: "boolean" },
+    { param: "category", control: "multiselect" },
+    { param: "supplierId", control: "multiselect" },
+    { param: "sellState", control: "select" },
   ],
   sort: {
     defaultBy: "sku",
@@ -620,6 +646,9 @@ export const productsExportQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
   inactive: optionalBooleanQuery,
   hideZeroInventory: optionalBooleanQuery,
+  category: optionalRepeatedQuery(z.string().trim().min(1)),
+  supplierId: optionalRepeatedQuery(z.string().uuid()),
+  sellState: sellStateSchema.optional(),
 });
 
 export const purchaseOrderStatusSchema = z.enum([

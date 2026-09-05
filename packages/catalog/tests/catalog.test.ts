@@ -346,6 +346,74 @@ describe("Catalog use cases (in-memory)", () => {
     expect(listed.items[0]?.product.sku.value).toBe("SHOP-BOLT");
   });
 
+  it("constrains the staff list to products in the requested category", async () => {
+    const h = harness();
+    const bolt = await createProduct(h, { sku: "STAFF-BOLT", name: "Staff bolt" });
+    const ribbon = await createProduct(h, { sku: "STAFF-RIBBON", name: "Staff ribbon" });
+    h.products.setCategories(bolt.id, ["Hardware"]);
+    h.products.setCategories(ribbon.id, ["Textiles"]);
+
+    const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      category: ["Hardware"],
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    expect(listed.total).toBe(1);
+    expect(listed.items[0]?.product.sku.value).toBe("STAFF-BOLT");
+  });
+
+  it("constrains the staff list to products in any of the requested categories", async () => {
+    const h = harness();
+    const bolt = await createProduct(h, { sku: "STAFF-BOLT", name: "Staff bolt" });
+    const ribbon = await createProduct(h, { sku: "STAFF-RIBBON", name: "Staff ribbon" });
+    const wreath = await createProduct(h, { sku: "STAFF-WREATH", name: "Staff wreath" });
+    h.products.setCategories(bolt.id, ["Hardware"]);
+    h.products.setCategories(ribbon.id, ["Textiles"]);
+    h.products.setCategories(wreath.id, ["Seasonal"]);
+
+    const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      category: ["Hardware", "Textiles"],
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    expect(listed.items.map((row) => row.product.sku.value)).toEqual([
+      "STAFF-BOLT",
+      "STAFF-RIBBON",
+    ]);
+  });
+
+  it("constrains the staff list to products linked to the requested factory", async () => {
+    const h = harness();
+    const acme = await createProduct(h, { sku: "ACME-BOLT", name: "Acme bolt" });
+    const other = await createProduct(h, { sku: "OTHER-BOLT", name: "Other bolt" });
+    const factoryId = "550e8400-e29b-41d4-a716-446655440030";
+    h.products.setSupplierIds(acme.id, [factoryId]);
+    h.products.setSupplierIds(other.id, ["550e8400-e29b-41d4-a716-446655440031"]);
+
+    const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: [factoryId],
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    expect(listed.total).toBe(1);
+    expect(listed.items[0]?.product.sku.value).toBe("ACME-BOLT");
+  });
+
   it("treats missing qty snapshots as zero", async () => {
     const h = harness();
     const product = await createProduct(h);
@@ -528,6 +596,69 @@ describe("Catalog use cases (in-memory)", () => {
     });
     expect(filtered.items.map((row) => row.product.sku.value)).toEqual(["STOCKED"]);
     expect(filtered.total).toBe(1);
+  });
+
+  it("constrains the staff list to the requested effective sell state", async () => {
+    const h = harness();
+    const openSku = await createProduct(h, { sku: "OPEN-SKU", name: "Open" });
+    const lockedSku = await createProduct(h, { sku: "LOCKED-SKU", name: "Locked" });
+    await createProduct(h, { sku: "UNTOUCHED-SKU", name: "Untouched" });
+    h.qty.set(DEFAULT_ORG, openSku.sku.value, {
+      onHand: 10,
+      onOrder: 0,
+      allocated: 0,
+      available: 10,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    h.qty.set(DEFAULT_ORG, lockedSku.sku.value, {
+      onHand: 4,
+      onOrder: 2,
+      allocated: 0,
+      available: 4,
+      committed: 1,
+      sellState: "locked",
+      availableToSell: 5,
+    });
+
+    const openOnly = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+      sellState: "open",
+    });
+    expect(openOnly.items.map((row) => row.product.sku.value)).toEqual([
+      "OPEN-SKU",
+      "UNTOUCHED-SKU",
+    ]);
+
+    const lockedOnly = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+      sellState: "locked",
+    });
+    expect(lockedOnly.items.map((row) => row.product.sku.value)).toEqual(["LOCKED-SKU"]);
+    expect(lockedOnly.total).toBe(1);
+
+    const exported = await h.exportStaffCsv.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      sortBy: "sku",
+      sortOrder: "asc",
+      sellState: "locked",
+    });
+    const csv = new TextDecoder().decode(exported.file.bytes);
+    expect(csv).toContain("LOCKED-SKU");
+    expect(csv).not.toContain("OPEN-SKU");
+    expect(csv).not.toContain("UNTOUCHED-SKU");
   });
 
   it("includes createdAt on each staff list row", async () => {

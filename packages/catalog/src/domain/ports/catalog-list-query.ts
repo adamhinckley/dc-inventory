@@ -19,7 +19,8 @@ export type CatalogListSortOrder = "asc" | "desc";
 export type CatalogListQuery = {
   organizationId: OrganizationId;
   q?: string;
-  category?: string;
+  category?: readonly string[];
+  supplierId?: readonly string[];
   page: number;
   pageSize: number;
   sortBy: CatalogListSortBy;
@@ -30,6 +31,8 @@ export type CatalogListQuery = {
   hideZeroInventory?: boolean;
   /** When true, include every open SKU; omit locked SKUs with ATP ≤ 0. */
   availableOnly?: boolean;
+  /** Effective sell state (sticky lock or sell window vs now). */
+  sellState?: "open" | "locked";
 };
 
 export type CatalogListRow = {
@@ -39,6 +42,8 @@ export type CatalogListRow = {
   caseQty: number | null;
   /** Latest PO unit cost from supplier × SKU (`po_cost` on import). */
   lastPoCostCents: number | null;
+  /** Linked factory names, comma-separated when a SKU has more than one. */
+  supplierName: string | null;
 };
 
 export type CatalogListPage = {

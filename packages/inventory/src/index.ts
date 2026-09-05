@@ -38,7 +38,10 @@ export { RecordDecommittedUseCase } from "./application/record-decommitted.js";
 export { RecordGoodsReceivedUseCase } from "./application/record-goods-received.js";
 export { RecordInboundCancelledUseCase } from "./application/record-inbound-cancelled.js";
 export { RecordInboundFromPoUseCase } from "./application/record-inbound-from-po.js";
-export { RecordReopenSkusForPresellUseCase } from "./application/record-reopen-skus-for-presell.js";
+export {
+  RecordReopenSkusForPresellUseCase,
+  type RecordReopenSkusForPresellRequest,
+} from "./application/record-reopen-skus-for-presell.js";
 export { RecordShippedUseCase } from "./application/record-shipped.js";
 export { SetSellWindowUseCase } from "./application/set-sell-window.js";
 export {

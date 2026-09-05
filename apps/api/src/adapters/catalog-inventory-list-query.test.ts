@@ -155,8 +155,114 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
         sortBy: "sku",
         sortOrder: "asc",
       });
-      expect(listed.total).toBe(1);
-      expect(listed.items[0]?.lastPoCostCents).toBe(500);
+      expect(listed.total).toBe(2);
+      const withCost = listed.items.find(
+        (row) => row.product.sku.value === "LAST-PO-COST-500",
+      );
+      expect(withCost?.lastPoCostCents).toBe(500);
+      expect(withCost?.supplierName).toBe("Acme Supply");
+      expect(
+        listed.items.find((row) => row.product.sku.value === "OTHER-FACTORY-SKU")
+          ?.supplierName,
+      ).toBe("Other Supply");
+
+      await harness.client.query(
+        `INSERT INTO purchasing.supplier_products (id, supplier_id, sku)
+         VALUES ($1, $2, $3)`,
+        ["da209000-0000-4000-8000-000000000108", harness.otherSupplierId, harness.sku],
+      );
+      const bothFactories = await harness.catalogListQuery.list({
+        organizationId: OrganizationId.DEFAULT,
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(
+        bothFactories.items.find((row) => row.product.sku.value === harness.sku)
+          ?.supplierName,
+      ).toBe("Acme Supply, Other Supply");
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("keeps only SKUs linked to the requested factory", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const listed = await harness.catalogListQuery.list({
+        organizationId: OrganizationId.DEFAULT,
+        supplierId: [harness.supplierId],
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(listed.items.map((row) => row.product.sku.value)).toEqual([harness.sku]);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("filters by effective sell state including a future window lock", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const org = OrganizationId.DEFAULT;
+      const stickySku = "STICKY-LOCKED";
+      const windowSku = "WINDOW-LOCKED";
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, $3, 'Sticky locked', 'EA', 100, 50, true)`,
+        ["da209000-0000-4000-8000-000000000201", org, stickySku],
+      );
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, $3, 'Window locked', 'EA', 100, 50, true)`,
+        ["da209000-0000-4000-8000-000000000202", org, windowSku],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.stock_snapshots
+          (organization_id, sku, location_id, on_hand, sticky_locked)
+         VALUES ($1, $2, $3, 2, true)`,
+        [org, stickySku, harness.locationId],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.stock_snapshots
+          (organization_id, sku, location_id, on_hand, sticky_locked, window_opens_at)
+         VALUES ($1, $2, $3, 2, false, $4)`,
+        [org, windowSku, harness.locationId, "2026-09-03T13:00:00.000Z"],
+      );
+
+      const locked = await harness.catalogListQuery.list({
+        organizationId: org,
+        sellState: "locked",
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(locked.total).toBe(2);
+      expect(locked.items.map((row) => row.product.sku.value)).toEqual([
+        stickySku,
+        windowSku,
+      ]);
+      expect(locked.items.every((row) => row.qty.sellState === "locked")).toBe(true);
+
+      const open = await harness.catalogListQuery.list({
+        organizationId: org,
+        sellState: "open",
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(open.items.map((row) => row.product.sku.value)).toEqual([
+        harness.sku,
+        "OTHER-FACTORY-SKU",
+      ]);
+      expect(open.total).toBe(2);
     } finally {
       await harness.close();
     }

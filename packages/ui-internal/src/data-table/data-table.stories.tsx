@@ -104,8 +104,7 @@ const meta = {
   render: (args) => (
     <DataTable.Root {...args}>
       <DataTable.Toolbar>
-        <DataTable.Search />
-        <DataTable.Filters />
+        <DataTable.FilterBar resource="Product" />
       </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />

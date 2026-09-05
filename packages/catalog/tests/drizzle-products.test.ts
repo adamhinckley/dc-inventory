@@ -20,7 +20,7 @@ describe("DrizzleProductRepository queries", () => {
 
     const query = buildProductListQuery(db, {
       organizationId: OrganizationId.DEFAULT,
-      category: "Hardware",
+      category: ["Hardware"],
       shopVisibleOnly: true,
     }).toSQL();
 

@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   allStaffTableUrlKeys,
   listParamsFromSearchParams,
+  shouldStripStaffTableUrlOnNavigate,
   tableParamsForUrl,
   tableSearchFromParams,
   tableUrlKeys,
@@ -44,6 +45,19 @@ describe("listParamsFromSearchParams", () => {
       sortBy: "name",
       sortOrder: "desc",
       inactive: true,
+      category: ["hardware"],
+    });
+  });
+
+  it("keeps every selected factory and category", () => {
+    expect(
+      listParamsFromSearchParams(productsListTable, {
+        category: ["Hardware", "Textiles"],
+        supplierId: ["aaa", "bbb"],
+      }),
+    ).toEqual({
+      category: ["Hardware", "Textiles"],
+      supplierId: ["aaa", "bbb"],
     });
   });
 
@@ -138,6 +152,20 @@ describe("tableSearchFromParams", () => {
     expect(params.has("supplierId")).toBe(false);
     expect(params.has("q")).toBe(false);
   });
+
+  it("writes repeated query keys for multiselect filters", () => {
+    const next = tableSearchFromParams(
+      productsListTable,
+      {
+        category: ["Hardware", "Textiles"],
+        supplierId: ["aaa", "bbb"],
+      },
+      "",
+    );
+    const params = new URLSearchParams(next);
+    expect(params.getAll("category")).toEqual(["Hardware", "Textiles"]);
+    expect(params.getAll("supplierId")).toEqual(["aaa", "bbb"]);
+  });
 });
 
 describe("allStaffTableUrlKeys", () => {
@@ -159,6 +187,9 @@ describe("tableUrlKeys", () => {
       "q",
       "inactive",
       "hideZeroInventory",
+      "category",
+      "supplierId",
+      "sellState",
     ]);
   });
 
@@ -169,7 +200,27 @@ describe("tableUrlKeys", () => {
       "sortOrder",
       "q",
       "inactive",
+      "category",
+      "supplierId",
     ]);
+  });
+});
+
+describe("shouldStripStaffTableUrlOnNavigate", () => {
+  it("keeps inventory list keys when moving between stock and reopen", () => {
+    expect(shouldStripStaffTableUrlOnNavigate("/inventory", "/inventory/reopen")).toBe(
+      false,
+    );
+    expect(shouldStripStaffTableUrlOnNavigate("/inventory/reopen", "/inventory")).toBe(
+      false,
+    );
+  });
+
+  it("clears list keys when leaving inventory for catalog", () => {
+    expect(shouldStripStaffTableUrlOnNavigate("/inventory", "/catalog")).toBe(true);
+    expect(shouldStripStaffTableUrlOnNavigate("/inventory/reopen", "/catalog")).toBe(
+      true,
+    );
   });
 });
 

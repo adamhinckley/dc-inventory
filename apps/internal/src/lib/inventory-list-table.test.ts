@@ -12,6 +12,7 @@ describe("inventoryListTable", () => {
     expect(inventoryListTable.columns.map((column) => column.field)).toEqual([
       "sku",
       "name",
+      "supplierName",
       "onHand",
       "onOrder",
       "allocated",
@@ -48,10 +49,18 @@ describe("inventoryListTable", () => {
     )).toBe(true);
   });
 
-  it("keeps hide-empty off unless the URL opts in", () => {
-    expect(inventoryListTable.filters).toEqual([
-      { param: "hideZeroInventory", control: "boolean" },
+  it("exposes every staff product list filter", () => {
+    expect(inventoryListTable.filters).toEqual(listInternalProductsTable.filters);
+    expect(inventoryListTable.filters?.map((filter) => filter.param)).toEqual([
+      "inactive",
+      "hideZeroInventory",
+      "category",
+      "supplierId",
+      "sellState",
     ]);
+  });
+
+  it("keeps hide-empty off unless the URL opts in", () => {
     expect(inventoryListInitialParams({}, listParamsFromSearchParams)).toEqual({});
     expect(inventoryListQueryParams({})).toEqual({});
     expect(

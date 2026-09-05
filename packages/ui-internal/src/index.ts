@@ -1,5 +1,6 @@
 export {
   DataTable,
+  DataTableFilterBar,
   DataTableFilters,
   DataTablePagination,
   DataTableRoot,

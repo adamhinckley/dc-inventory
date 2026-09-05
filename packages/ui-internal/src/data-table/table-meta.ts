@@ -1,6 +1,7 @@
 /** Filter widgets declared on OpenAPI `x-table.filters[].control`. */
 export type TableFilterControl =
   | "select"
+  | "multiselect"
   | "text"
   | "date"
   | "dateRange"

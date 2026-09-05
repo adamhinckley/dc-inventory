@@ -14,12 +14,15 @@ export type ListStaffProductsRequest = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId;
   q?: string;
+  category?: readonly string[];
+  supplierId?: readonly string[];
   page: number;
   pageSize: number;
   sortBy: StaffProductSortBy;
   sortOrder: SortOrder;
   inactive?: boolean;
   hideZeroInventory?: boolean;
+  sellState?: "open" | "locked";
 };
 
 export type StaffProductListRow = {
@@ -28,6 +31,7 @@ export type StaffProductListRow = {
   createdAt: Date;
   caseQty: number | null;
   lastPoCostCents: number | null;
+  supplierName: string | null;
 };
 
 export type ListStaffProductsResult = {
@@ -45,12 +49,15 @@ export class ListStaffProductsUseCase {
     const page = await this.catalogList.list({
       organizationId: input.organizationId,
       q: input.q,
+      category: input.category,
+      supplierId: input.supplierId,
       page: input.page,
       pageSize: input.pageSize,
       sortBy: input.sortBy,
       sortOrder: input.sortOrder,
       inactive: input.inactive,
       hideZeroInventory: input.hideZeroInventory,
+      sellState: input.sellState,
     });
     return {
       items: [...page.items],

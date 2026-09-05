@@ -17,7 +17,9 @@ import {
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
+import type { IStockLedger } from "@dc-inventory/inventory";
 import { buildApp } from "../../app.js";
+import type { IUnitOfWork } from "../../domain/unit-of-work.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { InMemoryUnitOfWork } from "../in-memory-unit-of-work.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
@@ -99,6 +101,16 @@ async function startReopenApp() {
     }
   }
 
+  const postgresLikeUnitOfWork: IUnitOfWork = {
+    inventory: {
+      ledger: null as unknown as IStockLedger,
+      readModel: unitOfWork.inventory.readModel,
+    },
+    purchasing: unitOfWork.purchasing,
+    sales: unitOfWork.sales,
+    run: (work) => unitOfWork.run(work),
+  };
+
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),
@@ -109,7 +121,7 @@ async function startReopenApp() {
     organizationRepo: organizations,
     productRepo,
     productPackagingRepo: packagingRepo,
-    unitOfWork,
+    unitOfWork: postgresLikeUnitOfWork,
   });
   apps.push(app);
   return app;
