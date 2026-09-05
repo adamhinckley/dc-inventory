@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatMoneyMinorUnits } from "../lib/format-money";
 import { shopAvailabilityLabel, type ShopSellState } from "../lib/shop-availability";
+import { AddToCartButton } from "./add-to-cart-button";
 
 export type ProductCardProps = {
   id: string;
@@ -31,7 +32,7 @@ export function ProductCard({
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-shadow hover:shadow-md">
-      <Link href={`/products/${id}`} className="flex h-full flex-col">
+      <Link href={`/products/${id}`} className="flex flex-1 flex-col">
         <div className="flex aspect-[4/3] items-center justify-center bg-canvas text-sm text-ink-muted">
           {imageUrl ? (
             // Catalog image URLs come from the API; next/image host allowlist is later.
@@ -60,6 +61,9 @@ export function ProductCard({
           </p>
         </div>
       </Link>
+      <div className="border-t border-line p-4 pt-0">
+        <AddToCartButton productId={id} disabled={!inStock} />
+      </div>
     </article>
   );
 }
