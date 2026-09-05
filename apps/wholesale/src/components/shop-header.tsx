@@ -2,12 +2,14 @@
 
 import {
   getGetWholesaleSessionQueryKey,
+  useGetWholesaleSession,
   useLogoutWholesale,
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { signedInNavLinks } from "../lib/account-nav";
 import { company } from "../lib/company";
 import { useWholesaleSignedIn } from "../lib/use-wholesale-signed-in";
 
@@ -16,12 +18,6 @@ const publicNav = [
   { href: "/contact", label: "Contact" },
   { href: "/register", label: "Register" },
   { href: "/login", label: "Sign in" },
-] as const;
-
-const signedInNav = [
-  { href: "/products", label: "Products" },
-  { href: "/orders", label: "Orders" },
-  { href: "/cart", label: "Cart" },
 ] as const;
 
 function navIsCurrent(pathname: string, href: string) {
@@ -33,11 +29,20 @@ export function ShopHeader() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const signedIn = useWholesaleSignedIn();
+  const session = useGetWholesaleSession({
+    query: {
+      queryKey: getGetWholesaleSessionQueryKey(),
+      retry: false,
+      enabled: signedIn,
+    },
+  });
   const logout = useLogoutWholesale();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const homeHref = signedIn ? "/products" : "/";
-  const links = signedIn ? signedInNav : publicNav;
+  const sessionMode =
+    session.data?.status === 200 ? session.data.data.mode : "buyer";
+  const links = signedIn ? signedInNavLinks(sessionMode) : publicNav;
 
   function signOut() {
     logout.mutate(undefined, {

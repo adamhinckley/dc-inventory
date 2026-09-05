@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
   // Override with NEXT_PUBLIC_API_URL when the shop talks to the API directly.
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "",
+    NEXT_PUBLIC_INTERNAL_APP_URL:
+      process.env.NEXT_PUBLIC_INTERNAL_APP_URL ?? "http://localhost:3000",
   },
   async rewrites() {
     return [
