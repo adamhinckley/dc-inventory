@@ -15,16 +15,19 @@ import type {
 } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
 import { createDraftAccountStatusGate } from "./account-status-gate.js";
+import {
+  buildSalesOrderLines,
+  type SalesOrderLineInput,
+} from "./build-sales-order-lines.js";
 
-export type CreateSalesOrderLineInput = {
-  productId: string;
-  qty: number;
-};
+export type CreateSalesOrderLineInput = SalesOrderLineInput;
 
 type CreateSalesOrderRequestBase = {
   organizationId: OrganizationId;
   customerId: CustomerId;
   lines: readonly CreateSalesOrderLineInput[];
+  /** Default find-or-create for cart; seed replay passes always_new. */
+  mode?: "find_or_create" | "always_new";
   shipLine1?: string;
   shipLine2?: string | null;
   shipCity?: string;
@@ -55,6 +58,38 @@ export type CreateSalesOrderResult =
         | "customer_inactive";
     };
 
+function mergeDraftLines(
+  existingLines: readonly SalesOrderLine[],
+  incomingLines: readonly SalesOrderLine[],
+): SalesOrderLine[] {
+  const merged: SalesOrderLine[] = [];
+  const consumedIncoming = new Set<string>();
+
+  for (const existing of existingLines) {
+    const incoming = incomingLines.find((line) => line.sku.equals(existing.sku));
+    if (incoming === undefined) {
+      merged.push(existing);
+      continue;
+    }
+    consumedIncoming.add(incoming.sku.value);
+    merged.push({
+      ...existing,
+      qty: existing.qty + incoming.qty,
+      unitPrice: incoming.unitPrice,
+      name: incoming.name,
+      taxCategoryCode: incoming.taxCategoryCode,
+    });
+  }
+
+  for (const incoming of incomingLines) {
+    if (!consumedIncoming.has(incoming.sku.value)) {
+      merged.push(incoming);
+    }
+  }
+
+  return merged;
+}
+
 export class CreateSalesOrderUseCase {
   constructor(
     private readonly salesOrders: ISalesOrderRepository,
@@ -82,42 +117,35 @@ export class CreateSalesOrderUseCase {
       return { ok: false, reason: accountStatusGate };
     }
 
-    const requestedQuantities = new Map<ProductId, number>();
-    for (const line of input.lines) {
-      if (!Number.isInteger(line.qty) || line.qty <= 0) {
-        return { ok: false, reason: "invalid" };
-      }
-      try {
-        const productId = ProductId.parse(line.productId);
-        requestedQuantities.set(
-          productId,
-          (requestedQuantities.get(productId) ?? 0) + line.qty,
-        );
-      } catch {
-        return { ok: false, reason: "invalid" };
-      }
+    const builtIncoming = await buildSalesOrderLines(
+      input.organizationId,
+      this.catalogProducts,
+      input.lines,
+    );
+    if (!builtIncoming.ok) {
+      return builtIncoming;
     }
 
-    const lines: SalesOrderLine[] = [];
-    for (const [productId, qty] of requestedQuantities) {
-      const product = await this.catalogProducts.findById(input.organizationId, productId);
-      if (product === null) {
-        return { ok: false, reason: "product_not_found" };
-      }
-      if (product.organizationId !== input.organizationId) {
-        return { ok: false, reason: "product_organization_mismatch" };
-      }
-      if (!product.active) {
-        return { ok: false, reason: "product_inactive" };
-      }
-      lines.push({
-        id: SalesOrderLineId.parse(newUuid()),
-        sku: product.sku,
-        name: product.name,
-        qty,
-        unitPrice: product.unitPrice,
-        taxCategoryCode: product.taxCategoryCode,
-      });
+    const existingDraft =
+      input.mode === "always_new"
+        ? null
+        : await this.salesOrders.findDraftByCustomer(
+            input.organizationId,
+            input.customerId,
+          );
+    if (existingDraft !== null) {
+      const salesOrder: SalesOrder = {
+        ...existingDraft,
+        lines: mergeDraftLines(existingDraft.lines, builtIncoming.lines),
+        shipLine1: input.shipLine1 ?? existingDraft.shipLine1,
+        shipLine2: input.shipLine2 ?? existingDraft.shipLine2,
+        shipCity: input.shipCity ?? existingDraft.shipCity,
+        shipRegion: input.shipRegion ?? existingDraft.shipRegion,
+        shipPostal: input.shipPostal ?? existingDraft.shipPostal,
+        shipCountry: input.shipCountry ?? existingDraft.shipCountry,
+      };
+      await this.salesOrders.save(salesOrder);
+      return { ok: true, salesOrder };
     }
 
     const createdAt = this.clock?.now() ?? new Date();
@@ -127,7 +155,7 @@ export class CreateSalesOrderUseCase {
       customerId: input.customerId,
       status: "draft",
       createdAt,
-      lines,
+      lines: builtIncoming.lines,
       placedByStaffUserId: input.placedByStaffUserId,
       shipLine1: input.shipLine1,
       shipLine2: input.shipLine2,

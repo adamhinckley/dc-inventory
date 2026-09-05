@@ -102,6 +102,16 @@ _Avoid_: Staff note, comment, shared memo (as if there is one note)
 Free text staff write on the customer. Only the internal app can read or edit it. The wholesale app never sees it.
 _Avoid_: Customer note, internal-only as the only note, comment
 
+### Sales
+
+**Cart**:
+The wholesale buyer's in-progress order. One draft sales order per organization and customer — not a separate carts table or second HTTP resource. Add-to-cart creates or updates that draft; clearing the last line cancels it.
+_Avoid_: Shopping cart entity, client-only cart as source of truth, multiple active drafts per customer
+
+**Sales order**:
+The commercial document for a wholesale purchase. Draft while the buyer is still building the cart; confirmed after checkout; shipped when fulfilled. Lines freeze catalog price at write time.
+_Avoid_: Cart table, order header without lines, mixing wholesale shop login with the customer record
+
 **Account status**:
 Whether staff will take new business from this customer: active, on hold, or inactive. Hold freezes confirm and staff-on-behalf; login and payment stay. Inactive closes the shop login and new drafts; staff still record payments. Already-confirmed orders may still ship.
 _Avoid_: Credit limit (that is money), unpaid, archived

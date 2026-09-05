@@ -164,6 +164,30 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
     return toOrder(header, lines);
   }
 
+  async findDraftByCustomer(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null> {
+    const rows = await this.db
+      .select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.organizationId, organizationId),
+          eq(orders.customerId, customerId),
+          eq(orders.status, "draft"),
+        ),
+      )
+      .orderBy(asc(orders.createdAt), asc(orders.id))
+      .limit(1);
+    const header = rows[0];
+    if (header === undefined) {
+      return null;
+    }
+    const lines = await loadLines(this.db, header.id);
+    return toOrder(header, lines);
+  }
+
   async findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,
@@ -262,6 +286,23 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         updatedAt: new Date(),
       })
       .where(eq(orders.id, order.id));
+
+    const nextLineIds = order.lines.map((line) => line.id);
+    if (nextLineIds.length === 0) {
+      await this.db.delete(orderLines).where(eq(orderLines.orderId, order.id));
+    } else {
+      await this.db
+        .delete(orderLines)
+        .where(
+          and(
+            eq(orderLines.orderId, order.id),
+            sql`${orderLines.id} not in (${sql.join(
+              nextLineIds.map((id) => sql`${id}`),
+              sql`, `,
+            )})`,
+          ),
+        );
+    }
 
     for (const line of order.lines) {
       const lineRows = await this.db

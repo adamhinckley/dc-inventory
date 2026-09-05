@@ -115,6 +115,22 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
     return row.order;
   }
 
+  async findDraftByCustomer(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null> {
+    for (const row of this.byId.values()) {
+      if (
+        row.order.organizationId === organizationId &&
+        row.order.customerId === customerId &&
+        row.order.status === "draft"
+      ) {
+        return row.order;
+      }
+    }
+    return null;
+  }
+
   async findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,
