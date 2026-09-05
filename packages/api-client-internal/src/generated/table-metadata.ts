@@ -331,6 +331,44 @@ export const listInternalSuppliersTable = {
   }
 } as const satisfies InternalTableMetadata;
 
+export const listInternalUncoveredSkusTable = {
+  "rowId": "sku",
+  "columns": [
+    {
+      "field": "sku",
+      "label": "SKU"
+    },
+    {
+      "field": "uncovered",
+      "label": "Uncovered"
+    },
+    {
+      "field": "onHand",
+      "label": "On hand"
+    },
+    {
+      "field": "onOrder",
+      "label": "On order"
+    },
+    {
+      "field": "committed",
+      "label": "Committed (pre-sold)"
+    },
+    {
+      "field": "caseQty",
+      "label": "Master pack"
+    },
+    {
+      "field": "reorderMin",
+      "label": "Reorder min"
+    },
+    {
+      "field": "reorderMax",
+      "label": "Reorder max"
+    }
+  ]
+} as const satisfies InternalTableMetadata;
+
 export const internalTableMetadata = {
   listInternalCustomers: listInternalCustomersTable,
   listInternalProducts: listInternalProductsTable,
@@ -338,6 +376,7 @@ export const internalTableMetadata = {
   listInternalSalesOrders: listInternalSalesOrdersTable,
   listInternalSupplierProducts: listInternalSupplierProductsTable,
   listInternalSuppliers: listInternalSuppliersTable,
+  listInternalUncoveredSkus: listInternalUncoveredSkusTable,
 } as const;
 
 export type InternalTableOperationId = keyof typeof internalTableMetadata;

@@ -16,6 +16,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   history: "History",
   new: "New",
   suppliers: "Suppliers",
+  uncovered: "Uncovered",
 };
 
 export function crumbsFromPathname(

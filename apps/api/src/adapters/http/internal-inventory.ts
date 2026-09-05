@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { Sku } from "@dc-inventory/shared-kernel";
 import {
@@ -6,6 +6,10 @@ import {
   inventoryStockParamsSchema,
   inventoryStockSnapshotSchema,
   unauthorizedResponseSchema,
+  uncoveredSkusListQuerySchema,
+  uncoveredSkusListResponseSchema,
+  uncoveredSkusListTable,
+  zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
 
@@ -43,6 +47,52 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
         onOrder: figures.onOrder,
         allocated: figures.allocated,
         available: figures.available,
+      };
+    },
+  );
+}
+
+export function registerInternalUncoveredSkusRoutes(app: FastifyInstance): void {
+  const routes = typed(app);
+
+  routes.get(
+    "/uncovered-skus",
+    {
+      schema: {
+        operationId: "listInternalUncoveredSkus",
+        tags: ["internal"],
+        summary: "List SKUs with factory to-order need",
+        querystring: uncoveredSkusListQuerySchema,
+        response: {
+          200: uncoveredSkusListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+        },
+        "x-table": uncoveredSkusListTable,
+      } as FastifySchema & { "x-table": typeof uncoveredSkusListTable },
+    },
+    async (request) => {
+      const query = request.query as { page: number; pageSize: number };
+      const result = await request.server.inventory.listUncoveredSkus.execute({
+        organizationId: staffOrganizationId(request),
+        page: query.page,
+        pageSize: query.pageSize,
+      });
+      return {
+        items: result.items.map((row) => ({
+          sku: row.sku.value,
+          uncovered: row.uncovered,
+          onHand: row.onHand,
+          onOrder: row.onOrder,
+          committed: row.committed,
+          caseQty: row.caseQty,
+          reorderMin: row.reorderMin,
+          reorderMax: row.reorderMax,
+        })),
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
       };
     },
   );

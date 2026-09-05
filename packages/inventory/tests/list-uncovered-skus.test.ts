@@ -3,9 +3,14 @@ import {
   OrganizationId,
   PurchaseOrderId,
   Sku,
+  LocationId,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryUncoveredListQuery } from "../src/adapters/in-memory-uncovered-list-query.js";
+import {
+  InMemoryUncoveredCaseQtyReadPort,
+  InMemoryUncoveredReorderPolicyReadPort,
+} from "../src/adapters/in-memory-uncovered-stock-context.js";
 import { ListUncoveredSkusUseCase } from "../src/application/list-uncovered-skus.js";
 import { computeUncovered } from "../src/domain/demand-model.js";
 import { demandModelHarness } from "./support/demand-model-harness.js";
@@ -29,9 +34,13 @@ const PO_COVER = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440080");
 function harness() {
   const h = demandModelHarness();
   const uncoveredList = new InMemoryUncoveredListQuery(h.readModel);
+  const caseQty = new InMemoryUncoveredCaseQtyReadPort();
+  const reorderPolicies = new InMemoryUncoveredReorderPolicyReadPort();
   return {
     ...h,
-    listUncovered: new ListUncoveredSkusUseCase(uncoveredList),
+    caseQty,
+    reorderPolicies,
+    listUncovered: new ListUncoveredSkusUseCase(uncoveredList, caseQty, reorderPolicies),
   };
 }
 
@@ -62,6 +71,9 @@ describe("List uncovered SKUs — demand-to-PO query (ADA-180)", () => {
         onHand: 0,
         onOrder: 0,
         uncovered: computeUncovered(1_200, 0, 0),
+        caseQty: null,
+        reorderMin: null,
+        reorderMax: null,
       },
     ]);
   });
@@ -261,5 +273,38 @@ describe("List uncovered SKUs — demand-to-PO query (ADA-180)", () => {
         pageSize: 50,
       } as Parameters<typeof h.listUncovered.execute>[0]),
     ).rejects.toThrow(MissingOrganizationContextError);
+  });
+
+  it("joins catalog case qty and reorder min/max without changing uncovered math", async () => {
+    const h = harness();
+    const commit = await h.committed({
+      organizationId: DEFAULT_ORG,
+      idempotencyKey: "join-commit-500",
+      sku: OPEN_SKU,
+      quantity: 500,
+      refType: "sales_order",
+      refId: "join-so",
+    });
+    expect(commit.ok).toBe(true);
+    h.caseQty.set(DEFAULT_ORG, OPEN_SKU.value, 100);
+    h.reorderPolicies.set(DEFAULT_ORG, LocationId.DEFAULT, OPEN_SKU.value, 24, 120);
+
+    const result = await h.listUncovered.execute({
+      organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 50,
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toEqual({
+      sku: OPEN_SKU,
+      committed: 500,
+      onHand: 0,
+      onOrder: 0,
+      uncovered: computeUncovered(500, 0, 0),
+      caseQty: 100,
+      reorderMin: 24,
+      reorderMax: 120,
+    });
   });
 });

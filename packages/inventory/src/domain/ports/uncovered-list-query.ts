@@ -8,7 +8,7 @@ export type UncoveredListQuery = {
   pageSize: number;
 };
 
-export type UncoveredListRow = Readonly<{
+export type UncoveredListCoreRow = Readonly<{
   sku: Sku;
   committed: number;
   onHand: number;
@@ -16,8 +16,19 @@ export type UncoveredListRow = Readonly<{
   uncovered: number;
 }>;
 
+export type UncoveredListRow = Readonly<{
+  sku: Sku;
+  committed: number;
+  onHand: number;
+  onOrder: number;
+  uncovered: number;
+  caseQty: number | null;
+  reorderMin: number | null;
+  reorderMax: number | null;
+}>;
+
 export type UncoveredListPage = {
-  items: readonly UncoveredListRow[];
+  items: readonly UncoveredListCoreRow[];
   total: number;
 };
 

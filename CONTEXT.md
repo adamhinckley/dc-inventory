@@ -76,6 +76,14 @@ _Avoid_: closed season, sold out as a company flag
 `max(0, committed − on_hand − on_order)`. The factory to-order list. Not a shop number.
 _Avoid_: available to sell, backorder document, purchase request
 
+**Reorder minimum**:
+Target floor on warehouse on-hand for a SKU at a location. When on-hand is at or below this number, the SKU is low stock for replenishment planning. Not the factory uncovered formula.
+_Avoid_: uncovered, min order qty (vendor MOQ), committed
+
+**Reorder maximum**:
+Upper target on warehouse on-hand for a SKU at a location. Used with reorder minimum for replenishment band planning. Not a purchase-order line quantity by itself.
+_Avoid_: uncovered, max order qty, on order / Qty On PO
+
 ### Customers
 
 **Customer**:

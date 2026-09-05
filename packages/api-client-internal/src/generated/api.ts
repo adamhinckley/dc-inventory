@@ -237,6 +237,11 @@ import type {
   ListInternalSuppliers401,
   ListInternalSuppliers403,
   ListInternalSuppliersParams,
+  ListInternalUncoveredSkus200,
+  ListInternalUncoveredSkus400,
+  ListInternalUncoveredSkus401,
+  ListInternalUncoveredSkus403,
+  ListInternalUncoveredSkusParams,
   LoginInternal200,
   LoginInternal401,
   LoginInternal429,
@@ -2557,6 +2562,119 @@ export const useCopyInternalCustomerBillToFromDefaultShipTo = <TError = CopyInte
       > => {
       return useMutation(getCopyInternalCustomerBillToFromDefaultShipToMutationOptions(options));
     }
+
+export type listInternalUncoveredSkusResponse200 = {
+  data: ListInternalUncoveredSkus200
+  status: 200
+}
+
+export type listInternalUncoveredSkusResponse400 = {
+  data: ListInternalUncoveredSkus400
+  status: 400
+}
+
+export type listInternalUncoveredSkusResponse401 = {
+  data: ListInternalUncoveredSkus401
+  status: 401
+}
+
+export type listInternalUncoveredSkusResponse403 = {
+  data: ListInternalUncoveredSkus403
+  status: 403
+}
+
+export type listInternalUncoveredSkusResponseSuccess = (listInternalUncoveredSkusResponse200) & {
+  headers: Headers;
+};
+export type listInternalUncoveredSkusResponseError = (listInternalUncoveredSkusResponse400 | listInternalUncoveredSkusResponse401 | listInternalUncoveredSkusResponse403) & {
+  headers: Headers;
+};
+
+export type listInternalUncoveredSkusResponse = (listInternalUncoveredSkusResponseSuccess | listInternalUncoveredSkusResponseError)
+
+export const getListInternalUncoveredSkusUrl = (params?: ListInternalUncoveredSkusParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/uncovered-skus?${stringifiedParams}` : `/internal/uncovered-skus`
+}
+
+/**
+ * @summary List SKUs with factory to-order need
+ */
+export const listInternalUncoveredSkus = async (params?: ListInternalUncoveredSkusParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalUncoveredSkusResponse> => {
+
+  return customFetch<listInternalUncoveredSkusResponse>(getListInternalUncoveredSkusUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalUncoveredSkusQueryKey = (params?: ListInternalUncoveredSkusParams,) => {
+    return [
+    `/internal/uncovered-skus`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalUncoveredSkusQueryOptions = <TData = Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError = ListInternalUncoveredSkus400 | ListInternalUncoveredSkus401 | ListInternalUncoveredSkus403>(params?: ListInternalUncoveredSkusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalUncoveredSkusQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalUncoveredSkus>>> = ({ signal }) => listInternalUncoveredSkus(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalUncoveredSkusQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalUncoveredSkus>>>
+export type ListInternalUncoveredSkusQueryError = ListInternalUncoveredSkus400 | ListInternalUncoveredSkus401 | ListInternalUncoveredSkus403
+
+
+/**
+ * @summary List SKUs with factory to-order need
+ */
+
+export function useListInternalUncoveredSkus<TData = Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError = ListInternalUncoveredSkus400 | ListInternalUncoveredSkus401 | ListInternalUncoveredSkus403>(
+ params?: ListInternalUncoveredSkusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalUncoveredSkusQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type importInternalProductsResponse200 = {
   data: ImportInternalProducts200

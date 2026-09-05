@@ -173,7 +173,16 @@ import {
   type ISalesOrderRepository,
   type SalesDrizzle,
 } from "@dc-inventory/sales";
-import { GetStockSnapshotUseCase, ListPurchaseOrderGoodsReceivedUseCase } from "@dc-inventory/inventory";
+import {
+  GetStockSnapshotUseCase,
+  InMemoryUncoveredCaseQtyReadPort,
+  InMemoryUncoveredListQuery,
+  InMemoryUncoveredReorderPolicyReadPort,
+  ListPurchaseOrderGoodsReceivedUseCase,
+  ListUncoveredSkusUseCase,
+  type InMemoryInventoryReadModel,
+  type IUncoveredListQuery,
+} from "@dc-inventory/inventory";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
 import {
@@ -186,6 +195,11 @@ import { readFeaturesAllCoreOn } from "./features-all-core-on.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { CatalogInventoryListQuery } from "../adapters/catalog-inventory-list-query.js";
+import { UncoveredInventoryListQuery } from "../adapters/uncovered-inventory-list-query.js";
+import {
+  uncoveredCaseQtyReadPort,
+  uncoveredReorderPolicyReadPort,
+} from "../adapters/uncovered-stock-context-ports.js";
 import { InventoryReadModelQtyReadAdapter } from "../adapters/inventory-read-model-qty-read.js";
 import { PurchasingSupplierLinkAdapter } from "../adapters/purchasing-supplier-link.js";
 import {
@@ -303,6 +317,7 @@ export type LicensingHttpServices = {
 export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
   listPurchaseOrderGoodsReceived: ListPurchaseOrderGoodsReceivedUseCase;
+  listUncoveredSkus: ListUncoveredSkusUseCase;
 };
 
 /**
@@ -358,6 +373,9 @@ export type AppServiceOverrides = {
   invoiceRepo?: IInvoiceRepository;
   accountingUnitOfWork?: import("@dc-inventory/accounting").IAccountingUnitOfWork;
   unitOfWork?: IUnitOfWork;
+  uncoveredList?: IUncoveredListQuery;
+  uncoveredCaseQtyRead?: import("@dc-inventory/inventory").IUncoveredCaseQtyReadPort;
+  uncoveredReorderPolicyRead?: import("@dc-inventory/inventory").IUncoveredReorderPolicyReadPort;
   licensingStore?: InMemoryLicensingStore;
   licensingRepository?: ILicensingReadRepository;
 };
@@ -642,6 +660,8 @@ function licensingServices(repository: ILicensingReadRepository): LicensingHttpS
 function inventoryServices(
   unitOfWork: IUnitOfWork,
   purchaseOrderRepo: IPurchaseOrderRepository,
+  uncoveredList: IUncoveredListQuery,
+  listUncoveredSkus: ListUncoveredSkusUseCase,
 ): InventoryHttpServices {
   return {
     getStockSnapshot: new GetStockSnapshotUseCase(unitOfWork.inventory.readModel),
@@ -649,6 +669,7 @@ function inventoryServices(
       unitOfWork.inventory.readModel,
       new PurchaseOrderLookupAdapter(purchaseOrderRepo),
     ),
+    listUncoveredSkus,
   };
 }
 
@@ -847,6 +868,29 @@ export function composeAppServices(
   const wholesaleAccountStatus = wholesaleLoginAccountStatusReadPort(readPorts.accountStatus);
   const actingCustomerHeaders = actingCustomerHeaderReadPort(customerRepo);
 
+  const uncoveredList =
+    overrides.uncoveredList ??
+    (appDb
+      ? new UncoveredInventoryListQuery(appDb)
+      : new InMemoryUncoveredListQuery(
+          unitOfWork.inventory.readModel as InMemoryInventoryReadModel,
+        ));
+  const uncoveredCaseQty =
+    overrides.uncoveredCaseQtyRead ??
+    (productRepo && productPackagingRepo
+      ? uncoveredCaseQtyReadPort(productRepo, productPackagingRepo)
+      : new InMemoryUncoveredCaseQtyReadPort());
+  const uncoveredReorderPolicy =
+    overrides.uncoveredReorderPolicyRead ??
+    (appDb
+      ? uncoveredReorderPolicyReadPort(appDb)
+      : new InMemoryUncoveredReorderPolicyReadPort());
+  const listUncoveredSkus = new ListUncoveredSkusUseCase(
+    uncoveredList,
+    uncoveredCaseQty,
+    uncoveredReorderPolicy,
+  );
+
   return {
     features,
     clock,
@@ -945,7 +989,7 @@ export function composeAppServices(
     ),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     licensing: licensingServices(licensingRepository),
-    inventory: inventoryServices(unitOfWork, purchaseOrderRepo),
+    inventory: inventoryServices(unitOfWork, purchaseOrderRepo, uncoveredList, listUncoveredSkus),
     unitOfWork,
   };
 }

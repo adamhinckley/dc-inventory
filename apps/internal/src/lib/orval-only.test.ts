@@ -28,6 +28,7 @@ describe("internal dashboard HTTP", () => {
     const joined = sources.map((file) => readFileSync(file, "utf8")).join("\n");
     expect(joined).toMatch(/@dc-inventory\/api-client-internal/);
     expect(joined).toMatch(/useListInternalProducts/);
+    expect(joined).toMatch(/useListInternalUncoveredSkus/);
     expect(joined).toMatch(/useListInternalSuppliers/);
     expect(joined).toMatch(/useLoginInternal/);
     expect(joined).not.toMatch(/Placeholder staff login/);
