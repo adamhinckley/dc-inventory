@@ -88,7 +88,7 @@ describe.skipIf(databaseUrl === undefined)("PostgreSQL list pagination", () => {
           ${salesOrderId},
           ${ORG},
           ${CUSTOMER_ID},
-          'draft',
+          ${(["draft", "confirmed", "shipped", "cancelled", "confirmed"] as const)[index]!},
           ${`SO-ADA209-${index + 1}`}
         )
       `;

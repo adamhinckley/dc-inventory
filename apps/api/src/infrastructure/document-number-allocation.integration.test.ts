@@ -110,7 +110,7 @@ function salesOrder(index: number) {
     id: OrderId.parse(`20800000-0000-4000-8002-${String(index).padStart(12, "0")}`),
     organizationId: ORGANIZATION_ID,
     customerId: CUSTOMER_ID,
-    status: "draft" as const,
+    status: "confirmed" as const,
     createdAt: CREATED_AT,
     lines: [
       {
