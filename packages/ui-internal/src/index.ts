@@ -5,6 +5,8 @@ export {
   DataTableRoot,
   DataTableSearch,
   DataTableTable,
+  DataTableToolbar,
+  useDataTableContext,
   declaredFilterParams,
   defaultTableState,
   listParamsFromState,

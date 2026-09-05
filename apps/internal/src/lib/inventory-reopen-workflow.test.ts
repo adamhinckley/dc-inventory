@@ -7,7 +7,9 @@ import {
 describe("inventory reopen workflow", () => {
   it("maps blank window dates to null instants", () => {
     expect(parseOptionalWindowInstant("")).toBeNull();
-    expect(parseOptionalWindowInstant("2027-01-15")).toBe("2027-01-15T00:00:00.000Z");
+    expect(parseOptionalWindowInstant("2027-01-15")).toBe(
+      new Date(2027, 0, 15).toISOString(),
+    );
   });
 
   it("builds a reopen command for the full filtered match set", () => {
@@ -34,7 +36,7 @@ describe("inventory reopen workflow", () => {
       ),
     ).toEqual({
       skus: ["STYLE-A", "STYLE-B"],
-      windowOpensAt: "2027-01-15T00:00:00.000Z",
+      windowOpensAt: new Date(2027, 0, 15).toISOString(),
       windowClosesAt: null,
     });
   });

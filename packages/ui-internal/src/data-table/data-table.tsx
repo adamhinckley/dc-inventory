@@ -87,7 +87,7 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
 const DataTableContext = createContext<DataTableContextValue | null>(null);
 const DataTableToolbarContext = createContext(false);
 
-function useDataTableContext(): DataTableContextValue {
+export function useDataTableContext(): DataTableContextValue {
   const value = useContext(DataTableContext);
   if (!value) {
     throw new Error("DataTable slots must render inside DataTable.Root");

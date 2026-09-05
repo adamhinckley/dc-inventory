@@ -31,16 +31,16 @@ export async function fetchAllInventoryMatches(
     if (response.status !== 200) {
       throw new Error("Could not load inventory matches.");
     }
-    items.push(
-      ...response.data.items.map((row) => ({
-        sku: row.sku,
-        name: row.name,
-        sellState: row.sellState,
-        onHand: row.onHand,
-        onOrder: row.onOrder,
-      })),
-    );
-    if (items.length >= response.data.total) {
+    const pageItems = response.data.items.map((row) => ({
+      sku: row.sku,
+      name: row.name,
+      sellState: row.sellState,
+      onHand: row.onHand,
+      onOrder: row.onOrder,
+    }));
+    items.push(...pageItems);
+    const offset = (page - 1) * MATCH_PAGE_SIZE + pageItems.length;
+    if (offset >= response.data.total || pageItems.length < MATCH_PAGE_SIZE) {
       break;
     }
     page += 1;
@@ -53,7 +53,15 @@ export function parseOptionalWindowInstant(date: string): string | null {
   if (trimmed === "") {
     return null;
   }
-  return `${trimmed}T00:00:00.000Z`;
+  const parts = trimmed.split("-");
+  if (parts.length !== 3) {
+    return null;
+  }
+  const [year, month, day] = parts.map((part) => Number(part));
+  if (!year || !month || !day) {
+    return null;
+  }
+  return new Date(year, month - 1, day).toISOString();
 }
 
 export function buildInventoryReopenCommand(
