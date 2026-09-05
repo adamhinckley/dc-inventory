@@ -8,6 +8,7 @@ Slack copy: [Dashboard and wholesale surfaces (v1)](https://shoalssoftware.slack
 | --- | --- |
 | [`dashboard.md`](./dashboard.md) | Staff app (`apps/internal`) |
 | [`wholesale.md`](./wholesale.md) | Client shop (`apps/wholesale`) |
+| [`customer-account.md`](./customer-account.md) | Customer list, detail, wholesale `/account`, sales Customer link |
 | [`insights.md`](./insights.md) | Owner metrics on the dashboard only |
 
 Related: [`../architecture.md`](../architecture.md) · [`../api-contract.md`](../api-contract.md) · [`../database-design.md`](../database-design.md) · [`../open-questions.md`](../open-questions.md) · Shopify/Faire UIs stay on those products ([`../future-concepts/shopify-channel.md`](../future-concepts/shopify-channel.md))

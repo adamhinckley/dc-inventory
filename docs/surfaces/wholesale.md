@@ -2,7 +2,7 @@
 
 Client ordering site (`apps/wholesale`). Session binds `customerId`. Not a staff table UI.
 
-Related: [`README.md`](./README.md) (both apps + deferred) · [`dashboard.md`](./dashboard.md) · [`insights.md`](./insights.md)
+Related: [`README.md`](./README.md) (both apps + deferred) · [`customer-account.md`](./customer-account.md) · [`dashboard.md`](./dashboard.md) · [`insights.md`](./insights.md)
 
 ---
 
@@ -12,7 +12,7 @@ Lives in `apps/wholesale` (not `packages/ui` / AppShell). Tokens: cream canvas, 
 
 | Surface | Notes |
 | --- | --- |
-| Header | Logged out: About, Contact, Register, Sign in. Logged in: Products, Orders, Cart, Sign out. Wordmark from `public/brand/logo.png`. |
+| Header | Logged out: About, Contact, Register, Sign in. Logged in (buyer): Products, Orders, Cart, Account, Sign out. Staff acting: no Account link. Wordmark from `public/brand/logo.png`. See [`customer-account.md`](./customer-account.md). |
 | Home | Hero carousel (`public/brand/carousel-{1,2,3}.jpg`), about excerpt |
 | Contact / register | UI only today. Feedback uses mailto. Register asks customer service to enable web access. Live SoloView is a three-step **New Account Registration** modal (primary info, business credentials, main business address), then **staff approval**, then **PandaDoc** — see [`customers.md`](../customers.md) §15 and [Wholesale screenshots](https://app.notion.com/p/3d00df01ce2e803f9131d35c9666cc9e). Header **terms** are payment clock, not that document. |
 | Legal | Privacy, payment terms, claims — HTML pages; wording taken from the live-site PDFs |
@@ -28,7 +28,7 @@ Lives in `apps/wholesale` (not `packages/ui` / AppShell). Tokens: cream canvas, 
 | Order history | Paginated; scoped to this customer |
 | Order detail | |
 | Download own order / invoice PDF | Only if listed on the wholesale API |
-| Own account | Company they buy as — not other buyers |
+| Own account | Buyer `/account` — see [`customer-account.md`](./customer-account.md) |
 
 ## Information that may appear
 
