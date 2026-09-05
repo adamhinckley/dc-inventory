@@ -182,13 +182,13 @@ Wholesale customer or staff may upload the file. Metadata-only rows (no file) ar
 | Terms, credit limit | Read/write (staff) | Read own (typical shop) |
 | Staff note | Read/write | Hidden |
 | Customer note | Read | Read + edit own |
-| Contacts | CRUD | Read own (TBD on edit) |
+| Contacts | CRUD | Read own |
 | Ship-tos | CRUD | CRUD own |
 | Bill-to | CRUD | Read own |
 | Exemption certs | CRUD + upload | Read + upload own |
 | Account status | Read/write (staff) | Effect only (login/confirm gates) |
 
-Exact wholesale write scope for contacts/addresses follows [`api-contract.md`](./api-contract.md) when wired; gates above are domain truth.
+Exact wholesale write scope for contacts/addresses follows [`api-contract.md`](./api-contract.md) when wired; gates above are domain truth. UI/IA for list, detail, wholesale `/account`, and the `/sales` Customer link: [`surfaces/customer-account.md`](./surfaces/customer-account.md).
 
 ---
 

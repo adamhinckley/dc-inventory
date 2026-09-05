@@ -2,7 +2,7 @@
 
 Staff app (`apps/internal`). The shop cannot do these.
 
-Related: [`README.md`](./README.md) (both apps + deferred) · [`wholesale.md`](./wholesale.md) · [`insights.md`](./insights.md)
+Related: [`README.md`](./README.md) (both apps + deferred) · [`customer-account.md`](./customer-account.md) · [`wholesale.md`](./wholesale.md) · [`insights.md`](./insights.md)
 
 ---
 
@@ -31,7 +31,7 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`wholesale.md`](.
 | Attach a supplier PDF to a PO | Stored; not parsed into lines in v1 |
 | Stock adjustment | Shrink, count, damage |
 | Reorder min / max | Per SKU at the default location |
-| Customer create / edit | Account, contacts, terms, credit limit |
+| Customer create / edit | See [`customer-account.md`](./customer-account.md) — list, detail, G8 writes |
 | Sales order confirm / cancel / ship | Confirm allocates stock |
 | Invoice from order | On confirm **or** on ship — pick one |
 | Record payment and apply to invoices | Partial pay allowed |
