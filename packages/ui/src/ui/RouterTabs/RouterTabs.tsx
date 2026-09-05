@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { Children, type ComponentPropsWithRef } from 'react'
 import { Tooltip } from '#ds/ui/Tooltip'
 import { cn } from '#cn'
@@ -133,6 +133,37 @@ export function RouterTabsList({ ref, className, children, ...rest }: RouterTabs
  * @avoid Pointing two triggers at the same `href` — only one will ever be
  *   active. Disabling a tab the user's cohort shouldn't see — omit it instead.
  */
+function hrefMatchesCurrent(
+  href: string,
+  pathname: string,
+  searchParams: URLSearchParams,
+  exact?: boolean,
+): boolean {
+  const hashIndex = href.indexOf('#')
+  const withoutHash = hashIndex === -1 ? href : href.slice(0, hashIndex)
+  const queryIndex = withoutHash.indexOf('?')
+  const hrefPath = queryIndex === -1 ? withoutHash : withoutHash.slice(0, queryIndex)
+  const hrefQuery = queryIndex === -1 ? null : withoutHash.slice(queryIndex + 1)
+
+  if (hrefQuery != null) {
+    if (pathname !== hrefPath) {
+      return false
+    }
+    const expected = new URLSearchParams(hrefQuery)
+    for (const [key, value] of expected.entries()) {
+      if (searchParams.get(key) !== value) {
+        return false
+      }
+    }
+    return true
+  }
+
+  if (exact) {
+    return pathname === hrefPath
+  }
+  return pathname === hrefPath || pathname.startsWith(`${hrefPath}/`)
+}
+
 export function RouterTabsTrigger({
   ref,
   href,
@@ -144,6 +175,7 @@ export function RouterTabsTrigger({
   ...rest
 }: RouterTabsTriggerProps) {
   const pathname = usePathname() ?? ''
+  const searchParams = useSearchParams()
 
   if (disabled) {
     // Present-but-unavailable: a non-navigating `<a>` (no `href`, so no click /
@@ -172,14 +204,12 @@ export function RouterTabsTrigger({
     )
   }
 
-  // Default-tab route is the base path; non-defaults use prefix-match so
-  // nested routes keep the correct trigger active. Mark default tabs with
-  // `exact` so they don't stay active for sibling tabs. `usePathname()`
-  // carries no query string, so matching uses the href's path portion only.
-  const hrefPath = href.split(/[?#]/)[0] ?? href
-  const isActive = exact
-    ? pathname === hrefPath
-    : pathname === hrefPath || pathname.startsWith(hrefPath + '/')
+  const isActive = hrefMatchesCurrent(
+    href,
+    pathname,
+    new URLSearchParams(searchParams.toString()),
+    exact,
+  )
 
   return (
     <Link
