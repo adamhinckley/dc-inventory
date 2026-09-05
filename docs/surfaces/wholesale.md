@@ -14,7 +14,7 @@ Lives in `apps/wholesale` (not `packages/ui` / AppShell). Tokens: cream canvas, 
 | --- | --- |
 | Header | Logged out: About, Contact, Register, Sign in. Logged in: Products, Orders, Cart, Sign out. Wordmark from `public/brand/logo.png`. |
 | Home | Hero carousel (`public/brand/carousel-{1,2,3}.jpg`), about excerpt |
-| Contact / register | UI only. Feedback uses mailto. Register asks customer service to enable web access. |
+| Contact / register | UI only today. Feedback uses mailto. Register asks customer service to enable web access. Live SoloView is a three-step **New Account Registration** modal (primary info, business credentials, main business address), then **staff approval**, then **PandaDoc** — see [`customers.md`](../customers.md) §15 and [Wholesale screenshots](https://app.notion.com/p/3d00df01ce2e803f9131d35c9666cc9e). Header **terms** are payment clock, not that document. |
 | Legal | Privacy, payment terms, claims — HTML pages; wording taken from the live-site PDFs |
 
 ## Features

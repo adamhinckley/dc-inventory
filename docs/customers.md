@@ -204,6 +204,7 @@ Exact wholesale write scope for contacts/addresses follows [`api-contract.md`](.
 | Credit-limit **formula** (G6) | Owner tests — not this master spec |
 | Bulk customer import | Out of scope |
 | Implementation migration, OpenAPI, demo seed | Separate work packet after this spec |
+| **Account request + wholesale agreement** (observed on live SoloView, 2026-09) | Owner grill — see §15. Not U5–U14. Do not treat header **terms** (payment clock) as this document |
 
 ---
 
@@ -230,3 +231,44 @@ Fits [`architecture.md` §13](./architecture.md#13-implementation-order-when-cod
 4. HTTP + OpenAPI: internal full; wholesale own-account read + customer-note edit; omit staff note.
 5. Demo seed updates for named customers.
 6. Sales ship gate (261), Accounting invoice snapshot columns + copy at ship (262), Sales U10 (263), Identity wholesale login (264).
+
+---
+
+## 15. Account request and wholesale agreement (observed, not locked)
+
+Live SoloView (David Christopher wholesale) for a **new** shop signup:
+
+1. Buyer completes **New Account Registration** (three-step modal — screenshots in [Wholesale screenshots](https://app.notion.com/p/3d00df01ce2e803f9131d35c9666cc9e), 2026-09-03).
+2. Staff **approve** the request (internal).
+3. Buyer receives a **PandaDoc** email and must sign the legal terms and conditions.
+4. Only after that is the buyer a shop-ready wholesale user.
+
+This repo does **not** model that sequence yet. Wholesale `/register` is still mailto (company, email, phone; new vs existing).
+
+### Observed request form (SoloView)
+
+Modal title **New Account Registration**. Close (X). Stepper: 1 Primary Information → 2 Business Credentials → 3 Main Business Address. Previous / Next; step 3 **Submit**. Trade-only copy on step 1 (retailers should use the trade site; 24/7 order management). These screenshots are the **new** path only — existing-account “register for web access” is not shown.
+
+| Step | Fields on screen |
+|---|---|
+| **1 Primary Information** | Email; how did you hear about us (dropdown); your name; your title; business name; business website |
+| **2 Business Credentials** | Country; type of business (dropdown); official resale number certificate. Copy: after register, a copy of authorization for resale or importation of product for retail sales is required and will be verified |
+| **3 Main Business Address** | Business name (again); address; address continued; country; postal code; city; state; phone. Checkboxes: retail store front; residential address |
+
+**Clash with locked customer master — do not silently “fix” either side:**
+
+- U5 create is staff header-only (name, payment **terms**, credit limit). This form collects a contact, referral source, website, business type, resale number, and one address **before** any Customer exists.
+- U13: exemption certificates are **not** a create/confirm/ship gate. SoloView asks for an official resale number and says a copy of resale/import authorization will be verified.
+- One “main business address” is not labeled ship-to vs bill-to. Residential / retail-storefront flags do not exist on the v1 header.
+- Header **terms** (payment clock) never appear on this form. The later PandaDoc is the legal **wholesale agreement**.
+
+| What exists today | What does not |
+|---|---|
+| Staff create a Customer (U5); status defaults `active` | A pending **account request** distinct from a Customer |
+| `active` / `on hold` / `inactive` (U10) | A fourth status or “awaiting agreement” state |
+| Header **terms** = payment clock (Net 30-style; invoice due date) | A **wholesale agreement** (legal T&Cs). Not the same word as header terms |
+| Wholesale `/register` is mailto — customer service enables web access | Identity API for self-serve request; staff approve queue; signature provider |
+
+**Do not invent in packets:** whether the request is its own aggregate vs a Customer created `inactive`; whether unsigned agreement blocks login, confirm, or both; whether PandaDoc is a required vendor vs an `IAgreementPort`; whether existing-account “register for web access” also requires a new signature; which request fields become Customer / contact / ship-to / bill-to vs stay on the request only; whether the resale number (and the promised authorization copy) is required on the request despite U13.
+
+Grill David / product, then lock gates in this doc + `invariants.md` before an implementation packet.
