@@ -1,16 +1,32 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import type { Customer, ShipTo } from "@dc-inventory/customers";
+import {
+  type BillTo,
+  type Contact,
+  type Customer,
+  type ExemptionCertificate,
+  type ShipTo,
+  ShipToId,
+} from "@dc-inventory/customers";
 import { StaffUserId, WholesaleUserId } from "@dc-inventory/shared-kernel";
 import {
+  billToItemSchema,
+  contactListResponseSchema,
+  exemptionItemSchema,
+  exemptionListResponseSchema,
+  exemptionWriteBodySchema,
   invalidResponseSchema,
   needsCustomerResponseSchema,
   notFoundResponseSchema,
+  shipToItemSchema,
+  shipToListResponseSchema,
+  shipToPatchBodySchema,
+  shipToWriteBodySchema,
   unauthorizedResponseSchema,
   wholesaleCustomerItemSchema,
   wholesaleCustomerNotePatchBodySchema,
-  shipToListResponseSchema,
+  wholesaleShipToParamsSchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { wholesaleCustomerId, wholesaleOrganizationId } from "./org-session.js";
@@ -55,6 +71,40 @@ function mapShipTo(shipTo: ShipTo) {
   };
 }
 
+function mapBillTo(billTo: BillTo) {
+  return {
+    customerId: billTo.customerId,
+    line1: billTo.line1,
+    line2: billTo.line2,
+    city: billTo.city,
+    region: billTo.region,
+    postal: billTo.postal,
+    country: billTo.country,
+  };
+}
+
+function mapContact(contact: Contact) {
+  return {
+    id: contact.id,
+    customerId: contact.customerId,
+    name: contact.name,
+    email: contact.email,
+    phone: contact.phone,
+  };
+}
+
+function mapExemption(certificate: ExemptionCertificate) {
+  return {
+    id: certificate.id,
+    customerId: certificate.customerId,
+    objectKey: certificate.objectKey,
+    jurisdiction: certificate.jurisdiction,
+    entityUseCode: certificate.entityUseCode,
+    expiresAt: certificate.expiresAt?.toISOString() ?? null,
+    status: certificate.status,
+  };
+}
+
 function mapWholesaleCustomer(customer: Customer) {
   return {
     id: customer.id,
@@ -72,6 +122,20 @@ function mapWholesaleCustomer(customer: Customer) {
 
 function sendNotFound(reply: FastifyReply) {
   return reply.code(404).send({ error: "not_found" as const });
+}
+
+function sendInvalid(reply: FastifyReply) {
+  return reply.code(400).send({ error: "invalid" as const });
+}
+
+function parseOptionalDate(value: string | null | undefined): Date | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  return new Date(value);
 }
 
 export function registerWholesaleCustomerRoutes(app: FastifyInstance): void {
@@ -164,6 +228,195 @@ export function registerWholesaleCustomerRoutes(app: FastifyInstance): void {
         return sendNotFound(reply);
       }
       return { items: result.items.map(mapShipTo) };
+    },
+  );
+
+  routes.post(
+    "/ship-tos",
+    {
+      schema: {
+        operationId: "createWholesaleShipTo",
+        tags: ["wholesale"],
+        summary: "Create ship-to for session customer",
+        body: shipToWriteBodySchema,
+        response: {
+          201: shipToItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const identity = wholesaleIdentity(request);
+      const result = await request.server.customers.createShipTo.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: STAFF_USER_ID_SENTINEL,
+        customerId: identity.customerId,
+        ...request.body,
+      });
+      if (!result.ok) {
+        return result.reason === "not_found" ? sendNotFound(reply) : sendInvalid(reply);
+      }
+      return reply.code(201).send(mapShipTo(result.shipTo));
+    },
+  );
+
+  routes.patch(
+    "/ship-tos/:shipToId",
+    {
+      schema: {
+        operationId: "updateWholesaleShipTo",
+        tags: ["wholesale"],
+        summary: "Update ship-to for session customer",
+        params: wholesaleShipToParamsSchema,
+        body: shipToPatchBodySchema,
+        response: {
+          200: shipToItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const identity = wholesaleIdentity(request);
+      const result = await request.server.customers.updateShipTo.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: STAFF_USER_ID_SENTINEL,
+        customerId: identity.customerId,
+        shipToId: ShipToId.parse(request.params.shipToId),
+        ...request.body,
+      });
+      if (!result.ok) {
+        return result.reason === "not_found" ? sendNotFound(reply) : sendInvalid(reply);
+      }
+      return mapShipTo(result.shipTo);
+    },
+  );
+
+  routes.get(
+    "/contacts",
+    {
+      schema: {
+        operationId: "listWholesaleContacts",
+        tags: ["wholesale"],
+        summary: "List contacts for session customer",
+        response: {
+          200: contactListResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const identity = wholesaleIdentity(request);
+      const result = await request.server.customers.listContacts.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: STAFF_USER_ID_SENTINEL,
+        customerId: identity.customerId,
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return { items: result.items.map(mapContact) };
+    },
+  );
+
+  routes.get(
+    "/bill-to",
+    {
+      schema: {
+        operationId: "getWholesaleBillTo",
+        tags: ["wholesale"],
+        summary: "Get bill-to for session customer",
+        response: {
+          200: billToItemSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const identity = wholesaleIdentity(request);
+      const result = await request.server.customers.getBillTo.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: STAFF_USER_ID_SENTINEL,
+        customerId: identity.customerId,
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return mapBillTo(result.billTo);
+    },
+  );
+
+  routes.get(
+    "/exemption-certificates",
+    {
+      schema: {
+        operationId: "listWholesaleExemptionCertificates",
+        tags: ["wholesale"],
+        summary: "List exemption-certificate metadata for session customer",
+        response: {
+          200: exemptionListResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const identity = wholesaleIdentity(request);
+      const result = await request.server.customers.listExemptionCertificates.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: STAFF_USER_ID_SENTINEL,
+        customerId: identity.customerId,
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return { items: result.items.map(mapExemption) };
+    },
+  );
+
+  routes.post(
+    "/exemption-certificates",
+    {
+      schema: {
+        operationId: "createWholesaleExemptionCertificate",
+        tags: ["wholesale"],
+        summary: "Create exemption-certificate metadata for session customer",
+        body: exemptionWriteBodySchema,
+        response: {
+          201: exemptionItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const identity = wholesaleIdentity(request);
+      const result = await request.server.customers.createExemptionCertificate.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: STAFF_USER_ID_SENTINEL,
+        customerId: identity.customerId,
+        jurisdiction: request.body.jurisdiction,
+        status: request.body.status,
+        entityUseCode: request.body.entityUseCode,
+        objectKey: request.body.objectKey,
+        expiresAt: parseOptionalDate(request.body.expiresAt) ?? null,
+      });
+      if (!result.ok) {
+        return result.reason === "not_found" ? sendNotFound(reply) : sendInvalid(reply);
+      }
+      return reply.code(201).send(mapExemption(result.certificate));
     },
   );
 }

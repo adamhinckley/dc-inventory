@@ -537,6 +537,10 @@ export const shipToParamsSchema = z.object({
   shipToId: z.string().uuid(),
 });
 
+export const wholesaleShipToParamsSchema = z.object({
+  shipToId: z.string().uuid(),
+});
+
 export const billToWriteBodySchema = z.object({
   line1: z.string().min(1),
   line2: z.string().optional().nullable(),
