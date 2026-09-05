@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeColumnWidths,
   tableMinWidthPx,
+  tableRootClassName,
 } from "../src/ui/Table/Table";
 import type { TableColumnDef } from "../src/ui/Table/Table.hook";
 
@@ -67,5 +68,14 @@ describe("tableMinWidthPx", () => {
         "name",
       ),
     ).toBe(340);
+  });
+});
+
+describe("tableRootClassName", () => {
+  it("does not grow a sticky card when the caller passes flex-1", () => {
+    const classes = tableRootClassName(true, "min-h-0 flex-1").split(/\s+/);
+    expect(classes).toContain("flex");
+    expect(classes).toContain("flex-initial");
+    expect(classes).not.toContain("flex-1");
   });
 });
