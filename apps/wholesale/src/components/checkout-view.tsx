@@ -9,6 +9,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { wholesaleConfirmErrorMessage } from "../lib/confirm-shortage-message";
+import {
+  CHECKOUT_ACCOUNT_PATH,
+  CHECKOUT_EMPTY_SHIP_TOS_ACCOUNT_CTA,
+  CHECKOUT_EMPTY_SHIP_TOS_MESSAGE,
+} from "../lib/checkout-empty-copy";
 import { formatMoneyMinorUnits } from "../lib/format-money";
 import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
 
@@ -110,7 +115,13 @@ export function CheckoutView() {
         <p className="text-sm font-semibold text-ink">Ship To</p>
         {shipToItems.length === 0 ? (
           <p className="mt-3 text-sm text-sold-out" role="alert">
-            No ship-to addresses on file. Contact your account manager.
+            {CHECKOUT_EMPTY_SHIP_TOS_MESSAGE}{" "}
+            <Link
+              href={CHECKOUT_ACCOUNT_PATH}
+              className="font-semibold text-accent hover:opacity-90"
+            >
+              {CHECKOUT_EMPTY_SHIP_TOS_ACCOUNT_CTA}
+            </Link>
           </p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">

@@ -312,7 +312,6 @@ function BuyerAccountView() {
   const [certJurisdiction, setCertJurisdiction] = useState("");
   const [certEntityUseCode, setCertEntityUseCode] = useState("");
   const [certExpiresAt, setCertExpiresAt] = useState("");
-  const [certFilename, setCertFilename] = useState("");
   const [certError, setCertError] = useState<string | null>(null);
   const [certDialogOpen, setCertDialogOpen] = useState(false);
 
@@ -452,7 +451,6 @@ function BuyerAccountView() {
     setCertJurisdiction("");
     setCertEntityUseCode("");
     setCertExpiresAt("");
-    setCertFilename("");
     setCertError(null);
     setCertDialogOpen(true);
   }
@@ -462,7 +460,7 @@ function BuyerAccountView() {
     setCertError(null);
   }
 
-  function uploadCertificate(event: FormEvent<HTMLFormElement>) {
+  function submitCertificate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCertError(null);
     const jurisdiction = certJurisdiction.trim();
@@ -476,7 +474,6 @@ function BuyerAccountView() {
         : new Date(`${certExpiresAt.trim()}T12:00:00.000Z`).toISOString();
     const entityUseCode =
       certEntityUseCode.trim() === "" ? null : certEntityUseCode.trim();
-    const objectKey = certFilename.trim() === "" ? null : certFilename.trim();
 
     createCertificate.mutate(
       {
@@ -485,7 +482,6 @@ function BuyerAccountView() {
           status: "active",
           entityUseCode,
           expiresAt,
-          objectKey,
         },
       },
       {
@@ -496,7 +492,7 @@ function BuyerAccountView() {
           closeCertDialog();
         },
         onError: () => {
-          setCertError("Could not upload certificate metadata.");
+          setCertError("Could not add certificate.");
         },
       },
     );
@@ -795,12 +791,9 @@ function BuyerAccountView() {
         onClose={closeCertDialog}
       >
         {certDialogOpen ? (
-          <form className="flex flex-col gap-4" onSubmit={uploadCertificate}>
+          <form className="flex flex-col gap-4" onSubmit={submitCertificate}>
             <header>
-              <h2 className="text-lg font-semibold text-ink">Upload Certificate</h2>
-              <p className="mt-1 text-sm text-ink-muted">
-                Submit certificate metadata only. File contents are not uploaded.
-              </p>
+              <h2 className="text-lg font-semibold text-ink">Add Certificate</h2>
             </header>
             <label className="flex flex-col gap-1 text-sm">
               <span className="font-medium text-ink">Jurisdiction</span>
@@ -833,18 +826,6 @@ function BuyerAccountView() {
                 className="shop-input"
               />
             </label>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-ink">Certificate File</span>
-              <input
-                type="file"
-                disabled={createCertificate.isPending}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  setCertFilename(file?.name ?? "");
-                }}
-                className="shop-input font-normal file:mr-3 file:rounded-full file:border-0 file:bg-canvas-muted file:px-3 file:py-1 file:text-sm file:font-medium file:text-ink"
-              />
-            </label>
             {certError !== null ? (
               <p className="text-sm text-sold-out" role="alert">{certError}</p>
             ) : null}
@@ -862,7 +843,7 @@ function BuyerAccountView() {
                 className="shop-button-primary"
                 disabled={createCertificate.isPending}
               >
-                Upload
+                Add Certificate
               </button>
             </div>
           </form>

@@ -25,17 +25,16 @@ const emptyToNull = (value: unknown) =>
 
 const certificateSchema = z.object({
   jurisdiction: z.string().min(1),
-  status: z.string().min(1),
   entityUseCode: z.string().optional().nullable(),
   expiresAt: z.preprocess(emptyToNull, z.union([z.string(), z.null()])),
 });
 
 type CertificateFormInput = z.infer<typeof certificateSchema>;
 
-function toCertificateBody(data: CertificateFormInput) {
+function toCertificateBody(data: CertificateFormInput, status: string) {
   return {
     jurisdiction: data.jurisdiction.trim(),
-    status: data.status.trim(),
+    status,
     entityUseCode: data.entityUseCode?.trim() ? data.entityUseCode.trim() : null,
     expiresAt: data.expiresAt?.trim() ? data.expiresAt.trim() : null,
   };
@@ -50,17 +49,12 @@ function CertificateFormFields() {
         required
         form={{ kind: "text" }}
       />
-      <Form.Field name="status" label="Status" required form={{ kind: "text" }} />
       <Form.Field
         name="entityUseCode"
         label="Entity use code"
         form={{ kind: "text" }}
       />
       <Form.Field name="expiresAt" label="Expires at" form={{ kind: "text" }} />
-      <p className="text-body-sm text-fg-secondary">
-        Certificate files are informational metadata only (U13). Upload is not
-        available on this screen.
-      </p>
     </>
   );
 }
@@ -102,7 +96,6 @@ export function CustomerCertificatesPanel({
   const columns = useMemo<TableColumnDef<CustomerCertificateRow>[]>(
     () => [
       { id: "jurisdiction", label: "Jurisdiction", sort: false as const },
-      { id: "status", label: "Status", sort: false as const },
       {
         id: "entityUseCode",
         label: "Entity use code",
@@ -169,12 +162,14 @@ export function CustomerCertificatesPanel({
             schema={certificateSchema}
             defaultValues={{
               jurisdiction: "",
-              status: "",
               entityUseCode: "",
               expiresAt: "",
             }}
             mutate={(data) =>
-              createCertificate({ id: customerId, data: toCertificateBody(data) })
+              createCertificate({
+                id: customerId,
+                data: toCertificateBody(data, "active"),
+              })
             }
             successMessage="Certificate added"
             invalidate={[
@@ -198,7 +193,6 @@ export function CustomerCertificatesPanel({
               schema={certificateSchema}
               defaultValues={{
                 jurisdiction: editing.jurisdiction,
-                status: editing.status,
                 entityUseCode: editing.entityUseCode ?? "",
                 expiresAt: editing.expiresAt ?? "",
               }}
@@ -206,7 +200,7 @@ export function CustomerCertificatesPanel({
                 updateCertificate({
                   id: customerId,
                   certificateId: editing.id,
-                  data: toCertificateBody(data),
+                  data: toCertificateBody(data, editing.status),
                 })
               }
               successMessage="Certificate updated"

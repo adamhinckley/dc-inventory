@@ -2,9 +2,35 @@ import { describe, expect, it } from "vitest";
 import {
   exemptionCertificateFilename,
   isExemptionCertificateExpired,
+  showsAccountNav,
+  showsStaffActingAccountCard,
   signedInNavLinks,
   staffActingAccountDashboardHref,
 } from "./account-nav";
+
+describe("account chrome by session mode", () => {
+  it("buyer sessions show Account nav and not the staff dashboard card", () => {
+    expect(showsAccountNav("buyer")).toBe(true);
+    expect(showsStaffActingAccountCard("buyer")).toBe(false);
+    expect(signedInNavLinks("buyer").some((link) => link.href === "/account")).toBe(
+      true,
+    );
+  });
+
+  it("staff_acting sessions omit Account nav and use the staff dashboard card", () => {
+    expect(showsAccountNav("staff_acting")).toBe(false);
+    expect(showsStaffActingAccountCard("staff_acting")).toBe(true);
+    expect(
+      signedInNavLinks("staff_acting").some((link) => link.href === "/account"),
+    ).toBe(false);
+    expect(
+      staffActingAccountDashboardHref(
+        "http://localhost:3000",
+        "00000000-0000-0000-0000-000000000005",
+      ),
+    ).toBe("http://localhost:3000/customers/00000000-0000-0000-0000-000000000005");
+  });
+});
 
 describe("signedInNavLinks", () => {
   it("includes Account for buyers", () => {

@@ -13,8 +13,16 @@ const BASE_SIGNED_IN_NAV: ShopNavLink[] = [
 
 const ACCOUNT_NAV_LINK: ShopNavLink = { href: "/account", label: "Account" };
 
+export function showsAccountNav(mode: WholesaleSessionMode): boolean {
+  return mode === "buyer";
+}
+
+export function showsStaffActingAccountCard(mode: WholesaleSessionMode): boolean {
+  return mode === "staff_acting";
+}
+
 export function signedInNavLinks(mode: WholesaleSessionMode): ShopNavLink[] {
-  if (mode === "staff_acting") {
+  if (!showsAccountNav(mode)) {
     return BASE_SIGNED_IN_NAV;
   }
   return [...BASE_SIGNED_IN_NAV, ACCOUNT_NAV_LINK];
