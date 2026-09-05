@@ -1027,6 +1027,11 @@ export const wholesaleSalesOrderWriteBodySchema = z.object({
   ...salesOrderAddressSchema,
 });
 
+export const salesOrderReplaceLinesBodySchema = z.object({
+  lines: z.array(salesOrderLineInputSchema),
+  ...salesOrderAddressSchema,
+});
+
 export const salesOrderCommandBodySchema = z.object({
   idempotencyKey: z.string().min(1),
 });

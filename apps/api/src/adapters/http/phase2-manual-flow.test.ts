@@ -323,17 +323,18 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
     expect(wholesaleOrder.statusCode).toBe(201);
     expect(wholesaleOrder.json()).toMatchObject({
       customerId: CUSTOMER_ID,
-      documentNumber: "SO-00002",
+      documentNumber: "SO-00001",
       lines: [
         {
           sku: SKU.value,
           name: "Galvanized hex bolt",
-          qty: 2,
+          qty: 3,
           unitPriceCents: UNIT_PRICE_CENTS,
           currency: "USD",
         },
       ],
     });
+    expect(wholesaleOrder.json().id).toBe(internal.json().id);
   });
 
   it("drives PO receive, sales ship, invoice, and payment with reconciled quantities", async () => {
