@@ -354,7 +354,7 @@ describe("catalog HTTP", () => {
     expect(hiddenGet.json()).toEqual({ error: "not_found" });
   });
 
-  it("defaults the wholesale catalog to available products only", async () => {
+  it("defaults the wholesale catalog to sellable products only", async () => {
     const app = await startCatalogApp();
     const staff = await staffCookie(app);
     const stocked = await app.inject({
@@ -371,20 +371,20 @@ describe("catalog HTTP", () => {
       },
     });
     expect(stocked.statusCode).toBe(201);
-    const empty = await app.inject({
+    const openEmpty = await app.inject({
       method: "POST",
       url: "/internal/products",
       cookies: { [STAFF_SESSION_COOKIE]: staff },
       payload: {
-        sku: "SHOP-EMPTY",
-        name: "Shop empty",
+        sku: "SHOP-OPEN-EMPTY",
+        name: "Shop open empty",
         uom: "EA",
         memberPriceCents: 100,
         listPriceCents: 100,
         webWholesale: true,
       },
     });
-    expect(empty.statusCode).toBe(201);
+    expect(openEmpty.statusCode).toBe(201);
 
     const wholesale = await wholesaleCookie(app);
     const listed = await app.inject({

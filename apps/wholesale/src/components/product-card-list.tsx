@@ -95,6 +95,8 @@ export function ProductCardList() {
                 wholesalePrice={product.wholesalePrice}
                 currency={product.currency}
                 available={product.available}
+                availableToSell={product.availableToSell}
+                sellState={product.sellState}
               />
             </li>
           ))}

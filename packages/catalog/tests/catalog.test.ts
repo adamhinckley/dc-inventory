@@ -222,15 +222,23 @@ describe("Catalog use cases (in-memory)", () => {
     expect(listed.items[0]?.product.listPrice?.amountMinor).toBe(1250);
   });
 
-  it("defaults the wholesale list to available products only", async () => {
+  it("defaults the wholesale list to sellable products only", async () => {
     const h = harness();
     const stocked = await createProduct(h, {
       sku: "SHOP-STOCKED",
       name: "Shop stocked",
     });
-    const empty = await createProduct(h, {
-      sku: "SHOP-EMPTY",
-      name: "Shop empty",
+    const openEmpty = await createProduct(h, {
+      sku: "SHOP-OPEN-EMPTY",
+      name: "Shop open empty",
+    });
+    const onFactoryPo = await createProduct(h, {
+      sku: "SHOP-ON-PO",
+      name: "Shop on factory PO",
+    });
+    const soldOut = await createProduct(h, {
+      sku: "SHOP-SOLD-OUT",
+      name: "Shop sold out",
     });
     h.qty.set(DEFAULT_ORG, stocked.sku.value, {
       onHand: 4,
@@ -241,7 +249,7 @@ describe("Catalog use cases (in-memory)", () => {
       sellState: "open",
       availableToSell: null,
     });
-    h.qty.set(DEFAULT_ORG, empty.sku.value, {
+    h.qty.set(DEFAULT_ORG, openEmpty.sku.value, {
       onHand: 0,
       onOrder: 0,
       allocated: 0,
@@ -249,6 +257,24 @@ describe("Catalog use cases (in-memory)", () => {
       committed: 0,
       sellState: "open",
       availableToSell: null,
+    });
+    h.qty.set(DEFAULT_ORG, onFactoryPo.sku.value, {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "locked",
+      availableToSell: 100,
+    });
+    h.qty.set(DEFAULT_ORG, soldOut.sku.value, {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      available: 0,
+      committed: 100,
+      sellState: "locked",
+      availableToSell: 0,
     });
 
     const listed = await h.listWholesale.execute({
@@ -260,8 +286,11 @@ describe("Catalog use cases (in-memory)", () => {
       sortOrder: "asc",
     });
 
-    expect(listed.total).toBe(1);
-    expect(listed.items[0]?.product.sku.value).toBe("SHOP-STOCKED");
+    expect(listed.total).toBe(2);
+    expect(listed.items.map((row) => row.product.sku.value).sort()).toEqual([
+      "SHOP-ON-PO",
+      "SHOP-STOCKED",
+    ]);
   });
 
   it("constrains the wholesale list to products in the requested category", async () => {

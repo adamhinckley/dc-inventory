@@ -60,6 +60,16 @@ export function staffCatalogDemandProjectionSql(
   });
 }
 
+/** WHERE fragment: warehouse leftover or locked SKUs with availableToSell > 0. */
+export function isShopSellableSql(
+  warehouseAvailable: SQL<number>,
+  columns: DemandProjectionSnapshotColumns,
+  nowIso: string,
+): SQL<boolean> {
+  const projection = staffCatalogDemandProjectionSql(columns, nowIso);
+  return sql<boolean>`(${warehouseAvailable} > 0 OR (${projection.isLockedForSell} AND ${projection.availableToSell} > 0))`;
+}
+
 /** ORDER BY fragment for availableToSell matching in-memory null placement. */
 export function staffCatalogAvailableToSellOrderBySql(
   availableToSell: SQL<number | null>,

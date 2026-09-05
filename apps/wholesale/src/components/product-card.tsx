@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatMoneyMinorUnits } from "../lib/format-money";
+import { shopAvailabilityLabel, type ShopSellState } from "../lib/shop-availability";
 
 export type ProductCardProps = {
   id: string;
@@ -8,6 +9,8 @@ export type ProductCardProps = {
   wholesalePrice: number;
   currency: string;
   available: number;
+  availableToSell: number | null;
+  sellState: ShopSellState;
 };
 
 export function ProductCard({
@@ -17,8 +20,14 @@ export function ProductCard({
   wholesalePrice,
   currency,
   available,
+  availableToSell,
+  sellState,
 }: ProductCardProps) {
-  const inStock = available > 0;
+  const { inStock, label } = shopAvailabilityLabel({
+    available,
+    availableToSell,
+    sellState,
+  });
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-shadow hover:shadow-md">
@@ -47,7 +56,7 @@ export function ProductCard({
           <p
             className={`mt-auto text-sm ${inStock ? "text-ink-muted" : "text-sold-out"}`}
           >
-            {inStock ? `${available} available` : "Unavailable"}
+            {label}
           </p>
         </div>
       </Link>
