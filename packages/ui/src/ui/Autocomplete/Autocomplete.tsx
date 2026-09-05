@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef, useState, type ComponentPropsWithRef } from 'react'
 import { Autocomplete as BaseAutocomplete } from '@base-ui-components/react/autocomplete'
 import { ChevronDown, X } from 'lucide-react'

@@ -16,6 +16,14 @@ export { AppShell, useAppShellContext } from "./shells/AppShell";
 
 export { Combobox, type ComboboxProps } from "./ui/Combobox";
 export { Chip, type ChipProps } from "./ui/Chip";
+export { Menu } from "./ui/Menu";
+export { Popover, type PopoverChangeEventDetails } from "./ui/Popover";
+export { DateRangeInput, type DateRangeValue } from "./ui/DateRangeInput";
+export { NumberInput } from "./ui/NumberInput";
+export { NumberRangeInput, type NumberRangeValue } from "./ui/NumberRangeInput";
+export { Autocomplete } from "./ui/Autocomplete";
+export { Skeleton } from "./ui/Skeleton";
+export { Select } from "./ui/Select";
 export { Table, useTable, type TableColumnDef, type TableTooltip } from "./ui/Table";
 export {
   Form,
@@ -30,7 +38,6 @@ export { FormDialog, type FormDialogProps } from "./ui/FormDialog";
 export { Dialog } from "./ui/Dialog";
 export { TooltipHelp, type TooltipHelpProps } from "./ui/TooltipHelp";
 export { Progress, type ProgressProps } from "./ui/Progress";
-export { Menu } from "./ui/Menu";
 export { DateInput, type DateInputProps } from "./ui/DateInput";
 export { DescriptionList } from "./ui/DescriptionList";
 export { Breadcrumb } from "./ui/Breadcrumb";

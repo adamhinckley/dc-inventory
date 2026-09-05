@@ -1,3 +1,5 @@
+'use client'
+
 import type { ComponentPropsWithRef } from 'react'
 import { Popover as BasePopover } from '@base-ui-components/react/popover'
 import { cn } from '#cn'

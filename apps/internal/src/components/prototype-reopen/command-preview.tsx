@@ -13,7 +13,7 @@ export function CommandPreview({ command }: { command: StubReopenCommand | null 
       <p className="text-label font-semibold text-fg-secondary">Prototype State</p>
       <p className="mt-1 text-body-sm text-fg-secondary">
         In-memory only. No inventory write. ADA-219 never-open is still open — year-round
-        rows are flagged so you can judge select-all accidents.
+        rows are flagged so you can judge filter-set accidents.
       </p>
       <pre className="mt-3 max-h-48 overflow-auto rounded-interactable bg-surface-raised p-3 text-body-sm text-fg">
         {command === null
@@ -22,7 +22,10 @@ export function CommandPreview({ command }: { command: StubReopenCommand | null 
               {
                 command: "ReopenSkusForPresell",
                 skuCount: command.skus.length,
-                skus: command.skus,
+                skus:
+                  command.skus.length > 40
+                    ? [...command.skus.slice(0, 40), `… +${command.skus.length - 40} more`]
+                    : command.skus,
                 excludedNeverOpen: command.excludedNeverOpen,
                 windowOpensAt: command.windowOpensAt,
                 windowClosesAt: command.windowClosesAt,

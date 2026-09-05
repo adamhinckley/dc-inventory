@@ -1,4 +1,6 @@
 // @ts-nocheck
+'use client'
+
 import { useRef, useState, type ComponentPropsWithRef } from 'react'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { cva, type VariantProps } from 'class-variance-authority'

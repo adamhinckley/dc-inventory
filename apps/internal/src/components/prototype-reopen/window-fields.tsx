@@ -1,4 +1,4 @@
-import { DateInput, FieldRow, Label, LabeledField } from "@dc-inventory/ui";
+import { DateInput } from "@dc-inventory/ui";
 
 export function WindowFields({
   opensAt,
@@ -12,15 +12,25 @@ export function WindowFields({
   onClosesAt: (value: string) => void;
 }) {
   return (
-    <FieldRow>
-      <LabeledField className="min-w-56">
-        <Label>Window Opens</Label>
-        <DateInput value={opensAt} onChange={onOpensAt} yearNavigation />
-      </LabeledField>
-      <LabeledField className="min-w-56">
-        <Label>Window Closes</Label>
-        <DateInput value={closesAt} onChange={onClosesAt} yearNavigation />
-      </LabeledField>
-    </FieldRow>
+    <div className="flex shrink-0 items-center gap-tight">
+      <DateInput
+        density="compact"
+        className="w-40"
+        value={opensAt}
+        onChange={onOpensAt}
+        yearNavigation
+        placeholder="Window Opens"
+        aria-label="Window Opens"
+      />
+      <DateInput
+        density="compact"
+        className="w-40"
+        value={closesAt}
+        onChange={onClosesAt}
+        yearNavigation
+        placeholder="Window Closes"
+        aria-label="Window Closes"
+      />
+    </div>
   );
 }

@@ -1,3 +1,5 @@
+'use client'
+
 import { type ComponentPropsWithRef } from 'react'
 import { NumberField as BaseNumberField } from '@base-ui-components/react/number-field'
 import { cva, type VariantProps } from 'class-variance-authority'
