@@ -12,6 +12,7 @@ import {
 } from "@dc-inventory/ui-internal";
 import Link from "next/link";
 import { useCallback, type CSSProperties, type ReactNode } from "react";
+import { salesCustomerCell } from "../lib/sales-customer-cell";
 import { salesOrderStatusPresentation } from "../lib/sales-order-status-chip";
 import { salesOrderStatusFilterOptions } from "../lib/sales-order-status-filter";
 import { replaceTableUrlParams } from "../lib/table-url-params";
@@ -54,6 +55,17 @@ export function SalesOrdersTable({
       filterOptions={{ status: salesOrderStatusFilterOptions }}
       filterLabels={{ status: "Status", customerId: "Customer ID" }}
       renderColumns={{
+        customerName: (row) => {
+          const cell = salesCustomerCell(row);
+          if (cell.kind === "dash") {
+            return "—";
+          }
+          return (
+            <Link href={cell.href} className="text-link hover:text-link-hover">
+              {cell.label}
+            </Link>
+          );
+        },
         status: (row) => {
           const presentation = salesOrderStatusPresentation(row.status);
           if (presentation === null) {
