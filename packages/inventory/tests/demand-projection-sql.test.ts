@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import {
@@ -5,6 +6,7 @@ import {
   projectDemandFigures,
 } from "../src/domain/demand-model.js";
 import {
+  isShopSellableSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
 } from "../src/persistence/demand-projection-sql.js";
@@ -65,6 +67,65 @@ const CASES: readonly DemandProjectionFixtureRow[] = [
     windowClosesAt: new Date("2026-09-03T14:00:00.000Z"),
   },
 ];
+
+const SHOP_SELLABLE_CASES = [
+  {
+    label: "open leftover in",
+    row: {
+      onHand: 10,
+      onOrder: 0,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: false,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: true,
+  },
+  {
+    label: "open zero out",
+    row: {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: false,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: false,
+  },
+  {
+    label: "locked ATP > 0 in",
+    row: {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: true,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: true,
+  },
+  {
+    label: "locked ATP = 0 out",
+    row: {
+      onHand: 5,
+      onOrder: 0,
+      allocated: 0,
+      committed: 5,
+      stickyLocked: true,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: false,
+  },
+] as const satisfies ReadonlyArray<{
+  label: string;
+  row: DemandProjectionFixtureRow;
+  expected: boolean;
+}>;
 
 function projectRow(row: DemandProjectionFixtureRow, now: Date) {
   return projectDemandFigures(
@@ -130,6 +191,28 @@ describe("demand projection SQL lockstep", () => {
     expect(params).toContain(nowIso);
   });
 
+  it("builds executable isShopSellableSql WHERE fragments", () => {
+    const db = drizzle.mock({ schema: { stockSnapshots } });
+    const nowIso = NOW.toISOString();
+    const columns = {
+      onHand: stockSnapshots.onHand,
+      onOrder: stockSnapshots.onOrder,
+      committed: stockSnapshots.committed,
+      stickyLocked: stockSnapshots.stickyLocked,
+      windowOpensAt: stockSnapshots.windowOpensAt,
+      windowClosesAt: stockSnapshots.windowClosesAt,
+    };
+    const warehouseAvailable = sql<number>`coalesce(${columns.onHand}, 0) - coalesce(${stockSnapshots.allocated}, 0)`;
+    const { sql: selectSql } = db
+      .select({
+        shopSellable: isShopSellableSql(warehouseAvailable, columns, nowIso).as("shop_sellable"),
+      })
+      .from(stockSnapshots)
+      .toSQL();
+    expect(selectSql).toContain("CASE");
+    expect(selectSql).toContain("WHEN");
+  });
+
   it.each(CASES.map((row, index) => [index, row] as const))(
     "evaluates exported SQL fragments in lockstep with projectDemandFigures for case %i",
     async (_index, row) => {
@@ -156,65 +239,6 @@ describe("demand projection SQL lockstep", () => {
     expect(bySqlDesc[0]).toBeNull();
   });
 });
-
-const SHOP_SELLABLE_CASES = [
-  {
-    label: "open leftover in",
-    row: {
-      onHand: 10,
-      onOrder: 0,
-      allocated: 0,
-      committed: 0,
-      stickyLocked: false,
-      windowOpensAt: null,
-      windowClosesAt: null,
-    },
-    expected: true,
-  },
-  {
-    label: "open zero out",
-    row: {
-      onHand: 0,
-      onOrder: 0,
-      allocated: 0,
-      committed: 0,
-      stickyLocked: false,
-      windowOpensAt: null,
-      windowClosesAt: null,
-    },
-    expected: false,
-  },
-  {
-    label: "locked ATP > 0 in",
-    row: {
-      onHand: 0,
-      onOrder: 100,
-      allocated: 0,
-      committed: 0,
-      stickyLocked: true,
-      windowOpensAt: null,
-      windowClosesAt: null,
-    },
-    expected: true,
-  },
-  {
-    label: "locked ATP = 0 out",
-    row: {
-      onHand: 5,
-      onOrder: 0,
-      allocated: 0,
-      committed: 5,
-      stickyLocked: true,
-      windowOpensAt: null,
-      windowClosesAt: null,
-    },
-    expected: false,
-  },
-] as const satisfies ReadonlyArray<{
-  label: string;
-  row: DemandProjectionFixtureRow;
-  expected: boolean;
-}>;
 
 describe("isShopSellableSql", () => {
   let evaluateIsShopSellable: (

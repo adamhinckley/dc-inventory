@@ -236,13 +236,13 @@ describe("Catalog use cases (in-memory)", () => {
       sku: "SHOP-ON-PO",
       name: "Shop on factory PO",
     });
+    const lockedLeftoverOnly = await createProduct(h, {
+      sku: "SHOP-LOCKED-LEFTOVER",
+      name: "Shop locked leftover only",
+    });
     const soldOut = await createProduct(h, {
       sku: "SHOP-SOLD-OUT",
       name: "Shop sold out",
-    });
-    const lockedLeftover = await createProduct(h, {
-      sku: "SHOP-LOCKED-LEFTOVER",
-      name: "Shop locked leftover",
     });
     h.qty.set(DEFAULT_ORG, stocked.sku.value, {
       onHand: 4,
@@ -271,21 +271,21 @@ describe("Catalog use cases (in-memory)", () => {
       sellState: "locked",
       availableToSell: 100,
     });
+    h.qty.set(DEFAULT_ORG, lockedLeftoverOnly.sku.value, {
+      onHand: 5,
+      onOrder: 100,
+      allocated: 0,
+      available: 5,
+      committed: 100,
+      sellState: "locked",
+      availableToSell: 0,
+    });
     h.qty.set(DEFAULT_ORG, soldOut.sku.value, {
       onHand: 0,
       onOrder: 100,
       allocated: 0,
       available: 0,
       committed: 100,
-      sellState: "locked",
-      availableToSell: 0,
-    });
-    h.qty.set(DEFAULT_ORG, lockedLeftover.sku.value, {
-      onHand: 5,
-      onOrder: 0,
-      allocated: 0,
-      available: 5,
-      committed: 5,
       sellState: "locked",
       availableToSell: 0,
     });
@@ -304,6 +304,9 @@ describe("Catalog use cases (in-memory)", () => {
       "SHOP-ON-PO",
       "SHOP-STOCKED",
     ]);
+    expect(
+      listed.items.some((row) => row.product.sku.value === lockedLeftoverOnly.sku.value),
+    ).toBe(false);
   });
 
   it("constrains the wholesale list to products in the requested category", async () => {

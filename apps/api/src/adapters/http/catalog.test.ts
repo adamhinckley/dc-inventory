@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { catalogQuerySchema } from "../../schemas.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
+import { createCatalogListQueryPgliteHarness } from "../support/catalog-list-query-pglite.js";
 import { STAFF_SESSION_COOKIE, WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
 
@@ -698,5 +699,46 @@ describe("catalog HTTP", () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: "invalid" });
+  });
+
+  it("returns bigint supplier lastPoCostCents on the staff product list", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const passwords = new InMemoryPasswordHasher();
+      const organizations = new InMemoryOrganizationRepository();
+      await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+      const staffUsers = new InMemoryStaffUserRepository();
+      const sessions = new InMemorySessionStore();
+      await staffUsers.save({
+        id: STAFF_ID,
+        organizationId: OrganizationId.DEFAULT,
+        email: "staff@local.test",
+        passwordHash: await passwords.hash("staff-secret"),
+        roles: ["admin"],
+      });
+      const app = await buildApp({
+        logger: false,
+        database: new InMemoryDatabase(),
+        staffUsers,
+        sessions,
+        passwords,
+        organizationRepo: organizations,
+        catalogListQuery: harness.catalogListQuery,
+      });
+      apps.push(app);
+      const cookie = await staffCookie(app);
+      const listed = await app.inject({
+        method: "GET",
+        url: "/internal/products",
+        cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      });
+      expect(listed.statusCode).toBe(200);
+      expect(listed.json()).toMatchObject({
+        total: 1,
+        items: [{ sku: "LAST-PO-COST-500", lastPoCostCents: 500 }],
+      });
+    } finally {
+      await harness.close();
+    }
   });
 });
