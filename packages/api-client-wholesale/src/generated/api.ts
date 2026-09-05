@@ -29,6 +29,12 @@ import type {
   ConfirmWholesaleSalesOrder404,
   ConfirmWholesaleSalesOrder409,
   ConfirmWholesaleSalesOrderBody,
+  CreateWholesaleExemptionCertificate201,
+  CreateWholesaleExemptionCertificate400,
+  CreateWholesaleExemptionCertificate401,
+  CreateWholesaleExemptionCertificate403,
+  CreateWholesaleExemptionCertificate404,
+  CreateWholesaleExemptionCertificateBody,
   CreateWholesaleSalesOrder201,
   CreateWholesaleSalesOrder400,
   CreateWholesaleSalesOrder401,
@@ -36,10 +42,20 @@ import type {
   CreateWholesaleSalesOrder404,
   CreateWholesaleSalesOrder409,
   CreateWholesaleSalesOrderBody,
+  CreateWholesaleShipTo201,
+  CreateWholesaleShipTo400,
+  CreateWholesaleShipTo401,
+  CreateWholesaleShipTo403,
+  CreateWholesaleShipTo404,
+  CreateWholesaleShipToBody,
   GetWholesaleAccount200,
   GetWholesaleAccount401,
   GetWholesaleAccount403,
   GetWholesaleAccount404,
+  GetWholesaleBillTo200,
+  GetWholesaleBillTo401,
+  GetWholesaleBillTo403,
+  GetWholesaleBillTo404,
   GetWholesaleCatalogProduct200,
   GetWholesaleCatalogProduct401,
   GetWholesaleCatalogProduct403,
@@ -57,6 +73,14 @@ import type {
   ListWholesaleCatalog401,
   ListWholesaleCatalog403,
   ListWholesaleCatalogParams,
+  ListWholesaleContacts200,
+  ListWholesaleContacts401,
+  ListWholesaleContacts403,
+  ListWholesaleContacts404,
+  ListWholesaleExemptionCertificates200,
+  ListWholesaleExemptionCertificates401,
+  ListWholesaleExemptionCertificates403,
+  ListWholesaleExemptionCertificates404,
   ListWholesaleSalesOrders200,
   ListWholesaleSalesOrders400,
   ListWholesaleSalesOrders401,
@@ -89,7 +113,13 @@ import type {
   UpdateWholesaleAccountCustomerNote401,
   UpdateWholesaleAccountCustomerNote403,
   UpdateWholesaleAccountCustomerNote404,
-  UpdateWholesaleAccountCustomerNoteBody
+  UpdateWholesaleAccountCustomerNoteBody,
+  UpdateWholesaleShipTo200,
+  UpdateWholesaleShipTo400,
+  UpdateWholesaleShipTo401,
+  UpdateWholesaleShipTo403,
+  UpdateWholesaleShipTo404,
+  UpdateWholesaleShipToBody
 } from './model';
 
 import { customFetch } from '../custom-fetch';
@@ -1237,6 +1267,658 @@ export function useListWholesaleShipTos<TData = Awaited<ReturnType<typeof listWh
 
 
 
+
+export type createWholesaleShipToResponse201 = {
+  data: CreateWholesaleShipTo201
+  status: 201
+}
+
+export type createWholesaleShipToResponse400 = {
+  data: CreateWholesaleShipTo400
+  status: 400
+}
+
+export type createWholesaleShipToResponse401 = {
+  data: CreateWholesaleShipTo401
+  status: 401
+}
+
+export type createWholesaleShipToResponse403 = {
+  data: CreateWholesaleShipTo403
+  status: 403
+}
+
+export type createWholesaleShipToResponse404 = {
+  data: CreateWholesaleShipTo404
+  status: 404
+}
+
+export type createWholesaleShipToResponseSuccess = (createWholesaleShipToResponse201) & {
+  headers: Headers;
+};
+export type createWholesaleShipToResponseError = (createWholesaleShipToResponse400 | createWholesaleShipToResponse401 | createWholesaleShipToResponse403 | createWholesaleShipToResponse404) & {
+  headers: Headers;
+};
+
+export type createWholesaleShipToResponse = (createWholesaleShipToResponseSuccess | createWholesaleShipToResponseError)
+
+export const getCreateWholesaleShipToUrl = () => {
+
+
+
+
+  return `/wholesale/ship-tos`
+}
+
+/**
+ * @summary Create ship-to for session customer
+ */
+export const createWholesaleShipTo = async (createWholesaleShipToBody: CreateWholesaleShipToBody, options?: Parameters<typeof customFetch>[1]): Promise<createWholesaleShipToResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createWholesaleShipToResponse>(getCreateWholesaleShipToUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createWholesaleShipToBody)
+  }
+);}
+
+
+
+
+
+export const getCreateWholesaleShipToMutationOptions = <TError = CreateWholesaleShipTo400 | CreateWholesaleShipTo401 | CreateWholesaleShipTo403 | CreateWholesaleShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWholesaleShipTo>>, TError,{data: CreateWholesaleShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWholesaleShipTo>>, TError,{data: CreateWholesaleShipToBody}, TContext> => {
+
+const mutationKey = ['createWholesaleShipTo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWholesaleShipTo>>, {data: CreateWholesaleShipToBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWholesaleShipTo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWholesaleShipToMutationResult = NonNullable<Awaited<ReturnType<typeof createWholesaleShipTo>>>
+    export type CreateWholesaleShipToMutationBody = CreateWholesaleShipToBody
+    export type CreateWholesaleShipToMutationError = CreateWholesaleShipTo400 | CreateWholesaleShipTo401 | CreateWholesaleShipTo403 | CreateWholesaleShipTo404
+
+    /**
+ * @summary Create ship-to for session customer
+ */
+export const useCreateWholesaleShipTo = <TError = CreateWholesaleShipTo400 | CreateWholesaleShipTo401 | CreateWholesaleShipTo403 | CreateWholesaleShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWholesaleShipTo>>, TError,{data: CreateWholesaleShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWholesaleShipTo>>,
+        TError,
+        {data: CreateWholesaleShipToBody},
+        TContext
+      > => {
+      return useMutation(getCreateWholesaleShipToMutationOptions(options));
+    }
+
+export type updateWholesaleShipToResponse200 = {
+  data: UpdateWholesaleShipTo200
+  status: 200
+}
+
+export type updateWholesaleShipToResponse400 = {
+  data: UpdateWholesaleShipTo400
+  status: 400
+}
+
+export type updateWholesaleShipToResponse401 = {
+  data: UpdateWholesaleShipTo401
+  status: 401
+}
+
+export type updateWholesaleShipToResponse403 = {
+  data: UpdateWholesaleShipTo403
+  status: 403
+}
+
+export type updateWholesaleShipToResponse404 = {
+  data: UpdateWholesaleShipTo404
+  status: 404
+}
+
+export type updateWholesaleShipToResponseSuccess = (updateWholesaleShipToResponse200) & {
+  headers: Headers;
+};
+export type updateWholesaleShipToResponseError = (updateWholesaleShipToResponse400 | updateWholesaleShipToResponse401 | updateWholesaleShipToResponse403 | updateWholesaleShipToResponse404) & {
+  headers: Headers;
+};
+
+export type updateWholesaleShipToResponse = (updateWholesaleShipToResponseSuccess | updateWholesaleShipToResponseError)
+
+export const getUpdateWholesaleShipToUrl = (shipToId: string,) => {
+
+
+
+
+  return `/wholesale/ship-tos/${shipToId}`
+}
+
+/**
+ * @summary Update ship-to for session customer
+ */
+export const updateWholesaleShipTo = async (shipToId: string,
+    updateWholesaleShipToBody: UpdateWholesaleShipToBody, options?: Parameters<typeof customFetch>[1]): Promise<updateWholesaleShipToResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<updateWholesaleShipToResponse>(getUpdateWholesaleShipToUrl(shipToId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateWholesaleShipToBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateWholesaleShipToMutationOptions = <TError = UpdateWholesaleShipTo400 | UpdateWholesaleShipTo401 | UpdateWholesaleShipTo403 | UpdateWholesaleShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleShipTo>>, TError,{shipToId: string;data: UpdateWholesaleShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleShipTo>>, TError,{shipToId: string;data: UpdateWholesaleShipToBody}, TContext> => {
+
+const mutationKey = ['updateWholesaleShipTo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWholesaleShipTo>>, {shipToId: string;data: UpdateWholesaleShipToBody}> = (props) => {
+          const {shipToId,data} = props ?? {};
+
+          return  updateWholesaleShipTo(shipToId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWholesaleShipToMutationResult = NonNullable<Awaited<ReturnType<typeof updateWholesaleShipTo>>>
+    export type UpdateWholesaleShipToMutationBody = UpdateWholesaleShipToBody
+    export type UpdateWholesaleShipToMutationError = UpdateWholesaleShipTo400 | UpdateWholesaleShipTo401 | UpdateWholesaleShipTo403 | UpdateWholesaleShipTo404
+
+    /**
+ * @summary Update ship-to for session customer
+ */
+export const useUpdateWholesaleShipTo = <TError = UpdateWholesaleShipTo400 | UpdateWholesaleShipTo401 | UpdateWholesaleShipTo403 | UpdateWholesaleShipTo404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWholesaleShipTo>>, TError,{shipToId: string;data: UpdateWholesaleShipToBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWholesaleShipTo>>,
+        TError,
+        {shipToId: string;data: UpdateWholesaleShipToBody},
+        TContext
+      > => {
+      return useMutation(getUpdateWholesaleShipToMutationOptions(options));
+    }
+
+export type listWholesaleContactsResponse200 = {
+  data: ListWholesaleContacts200
+  status: 200
+}
+
+export type listWholesaleContactsResponse401 = {
+  data: ListWholesaleContacts401
+  status: 401
+}
+
+export type listWholesaleContactsResponse403 = {
+  data: ListWholesaleContacts403
+  status: 403
+}
+
+export type listWholesaleContactsResponse404 = {
+  data: ListWholesaleContacts404
+  status: 404
+}
+
+export type listWholesaleContactsResponseSuccess = (listWholesaleContactsResponse200) & {
+  headers: Headers;
+};
+export type listWholesaleContactsResponseError = (listWholesaleContactsResponse401 | listWholesaleContactsResponse403 | listWholesaleContactsResponse404) & {
+  headers: Headers;
+};
+
+export type listWholesaleContactsResponse = (listWholesaleContactsResponseSuccess | listWholesaleContactsResponseError)
+
+export const getListWholesaleContactsUrl = () => {
+
+
+
+
+  return `/wholesale/contacts`
+}
+
+/**
+ * @summary List contacts for session customer
+ */
+export const listWholesaleContacts = async ( options?: Parameters<typeof customFetch>[1]): Promise<listWholesaleContactsResponse> => {
+
+  return customFetch<listWholesaleContactsResponse>(getListWholesaleContactsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWholesaleContactsQueryKey = () => {
+    return [
+    `/wholesale/contacts`
+    ] as const;
+    }
+
+
+export const getListWholesaleContactsQueryOptions = <TData = Awaited<ReturnType<typeof listWholesaleContacts>>, TError = ListWholesaleContacts401 | ListWholesaleContacts403 | ListWholesaleContacts404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleContacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWholesaleContactsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWholesaleContacts>>> = ({ signal }) => listWholesaleContacts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWholesaleContacts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWholesaleContactsQueryResult = NonNullable<Awaited<ReturnType<typeof listWholesaleContacts>>>
+export type ListWholesaleContactsQueryError = ListWholesaleContacts401 | ListWholesaleContacts403 | ListWholesaleContacts404
+
+
+/**
+ * @summary List contacts for session customer
+ */
+
+export function useListWholesaleContacts<TData = Awaited<ReturnType<typeof listWholesaleContacts>>, TError = ListWholesaleContacts401 | ListWholesaleContacts403 | ListWholesaleContacts404>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleContacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWholesaleContactsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getWholesaleBillToResponse200 = {
+  data: GetWholesaleBillTo200
+  status: 200
+}
+
+export type getWholesaleBillToResponse401 = {
+  data: GetWholesaleBillTo401
+  status: 401
+}
+
+export type getWholesaleBillToResponse403 = {
+  data: GetWholesaleBillTo403
+  status: 403
+}
+
+export type getWholesaleBillToResponse404 = {
+  data: GetWholesaleBillTo404
+  status: 404
+}
+
+export type getWholesaleBillToResponseSuccess = (getWholesaleBillToResponse200) & {
+  headers: Headers;
+};
+export type getWholesaleBillToResponseError = (getWholesaleBillToResponse401 | getWholesaleBillToResponse403 | getWholesaleBillToResponse404) & {
+  headers: Headers;
+};
+
+export type getWholesaleBillToResponse = (getWholesaleBillToResponseSuccess | getWholesaleBillToResponseError)
+
+export const getGetWholesaleBillToUrl = () => {
+
+
+
+
+  return `/wholesale/bill-to`
+}
+
+/**
+ * @summary Get bill-to for session customer
+ */
+export const getWholesaleBillTo = async ( options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleBillToResponse> => {
+
+  return customFetch<getWholesaleBillToResponse>(getGetWholesaleBillToUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWholesaleBillToQueryKey = () => {
+    return [
+    `/wholesale/bill-to`
+    ] as const;
+    }
+
+
+export const getGetWholesaleBillToQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleBillTo>>, TError = GetWholesaleBillTo401 | GetWholesaleBillTo403 | GetWholesaleBillTo404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleBillTo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWholesaleBillToQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWholesaleBillTo>>> = ({ signal }) => getWholesaleBillTo({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWholesaleBillTo>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWholesaleBillToQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleBillTo>>>
+export type GetWholesaleBillToQueryError = GetWholesaleBillTo401 | GetWholesaleBillTo403 | GetWholesaleBillTo404
+
+
+/**
+ * @summary Get bill-to for session customer
+ */
+
+export function useGetWholesaleBillTo<TData = Awaited<ReturnType<typeof getWholesaleBillTo>>, TError = GetWholesaleBillTo401 | GetWholesaleBillTo403 | GetWholesaleBillTo404>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleBillTo>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWholesaleBillToQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listWholesaleExemptionCertificatesResponse200 = {
+  data: ListWholesaleExemptionCertificates200
+  status: 200
+}
+
+export type listWholesaleExemptionCertificatesResponse401 = {
+  data: ListWholesaleExemptionCertificates401
+  status: 401
+}
+
+export type listWholesaleExemptionCertificatesResponse403 = {
+  data: ListWholesaleExemptionCertificates403
+  status: 403
+}
+
+export type listWholesaleExemptionCertificatesResponse404 = {
+  data: ListWholesaleExemptionCertificates404
+  status: 404
+}
+
+export type listWholesaleExemptionCertificatesResponseSuccess = (listWholesaleExemptionCertificatesResponse200) & {
+  headers: Headers;
+};
+export type listWholesaleExemptionCertificatesResponseError = (listWholesaleExemptionCertificatesResponse401 | listWholesaleExemptionCertificatesResponse403 | listWholesaleExemptionCertificatesResponse404) & {
+  headers: Headers;
+};
+
+export type listWholesaleExemptionCertificatesResponse = (listWholesaleExemptionCertificatesResponseSuccess | listWholesaleExemptionCertificatesResponseError)
+
+export const getListWholesaleExemptionCertificatesUrl = () => {
+
+
+
+
+  return `/wholesale/exemption-certificates`
+}
+
+/**
+ * @summary List exemption-certificate metadata for session customer
+ */
+export const listWholesaleExemptionCertificates = async ( options?: Parameters<typeof customFetch>[1]): Promise<listWholesaleExemptionCertificatesResponse> => {
+
+  return customFetch<listWholesaleExemptionCertificatesResponse>(getListWholesaleExemptionCertificatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWholesaleExemptionCertificatesQueryKey = () => {
+    return [
+    `/wholesale/exemption-certificates`
+    ] as const;
+    }
+
+
+export const getListWholesaleExemptionCertificatesQueryOptions = <TData = Awaited<ReturnType<typeof listWholesaleExemptionCertificates>>, TError = ListWholesaleExemptionCertificates401 | ListWholesaleExemptionCertificates403 | ListWholesaleExemptionCertificates404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleExemptionCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWholesaleExemptionCertificatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWholesaleExemptionCertificates>>> = ({ signal }) => listWholesaleExemptionCertificates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWholesaleExemptionCertificates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWholesaleExemptionCertificatesQueryResult = NonNullable<Awaited<ReturnType<typeof listWholesaleExemptionCertificates>>>
+export type ListWholesaleExemptionCertificatesQueryError = ListWholesaleExemptionCertificates401 | ListWholesaleExemptionCertificates403 | ListWholesaleExemptionCertificates404
+
+
+/**
+ * @summary List exemption-certificate metadata for session customer
+ */
+
+export function useListWholesaleExemptionCertificates<TData = Awaited<ReturnType<typeof listWholesaleExemptionCertificates>>, TError = ListWholesaleExemptionCertificates401 | ListWholesaleExemptionCertificates403 | ListWholesaleExemptionCertificates404>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleExemptionCertificates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWholesaleExemptionCertificatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type createWholesaleExemptionCertificateResponse201 = {
+  data: CreateWholesaleExemptionCertificate201
+  status: 201
+}
+
+export type createWholesaleExemptionCertificateResponse400 = {
+  data: CreateWholesaleExemptionCertificate400
+  status: 400
+}
+
+export type createWholesaleExemptionCertificateResponse401 = {
+  data: CreateWholesaleExemptionCertificate401
+  status: 401
+}
+
+export type createWholesaleExemptionCertificateResponse403 = {
+  data: CreateWholesaleExemptionCertificate403
+  status: 403
+}
+
+export type createWholesaleExemptionCertificateResponse404 = {
+  data: CreateWholesaleExemptionCertificate404
+  status: 404
+}
+
+export type createWholesaleExemptionCertificateResponseSuccess = (createWholesaleExemptionCertificateResponse201) & {
+  headers: Headers;
+};
+export type createWholesaleExemptionCertificateResponseError = (createWholesaleExemptionCertificateResponse400 | createWholesaleExemptionCertificateResponse401 | createWholesaleExemptionCertificateResponse403 | createWholesaleExemptionCertificateResponse404) & {
+  headers: Headers;
+};
+
+export type createWholesaleExemptionCertificateResponse = (createWholesaleExemptionCertificateResponseSuccess | createWholesaleExemptionCertificateResponseError)
+
+export const getCreateWholesaleExemptionCertificateUrl = () => {
+
+
+
+
+  return `/wholesale/exemption-certificates`
+}
+
+/**
+ * @summary Create exemption-certificate metadata for session customer
+ */
+export const createWholesaleExemptionCertificate = async (createWholesaleExemptionCertificateBody: CreateWholesaleExemptionCertificateBody, options?: Parameters<typeof customFetch>[1]): Promise<createWholesaleExemptionCertificateResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createWholesaleExemptionCertificateResponse>(getCreateWholesaleExemptionCertificateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createWholesaleExemptionCertificateBody)
+  }
+);}
+
+
+
+
+
+export const getCreateWholesaleExemptionCertificateMutationOptions = <TError = CreateWholesaleExemptionCertificate400 | CreateWholesaleExemptionCertificate401 | CreateWholesaleExemptionCertificate403 | CreateWholesaleExemptionCertificate404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWholesaleExemptionCertificate>>, TError,{data: CreateWholesaleExemptionCertificateBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWholesaleExemptionCertificate>>, TError,{data: CreateWholesaleExemptionCertificateBody}, TContext> => {
+
+const mutationKey = ['createWholesaleExemptionCertificate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWholesaleExemptionCertificate>>, {data: CreateWholesaleExemptionCertificateBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWholesaleExemptionCertificate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWholesaleExemptionCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof createWholesaleExemptionCertificate>>>
+    export type CreateWholesaleExemptionCertificateMutationBody = CreateWholesaleExemptionCertificateBody
+    export type CreateWholesaleExemptionCertificateMutationError = CreateWholesaleExemptionCertificate400 | CreateWholesaleExemptionCertificate401 | CreateWholesaleExemptionCertificate403 | CreateWholesaleExemptionCertificate404
+
+    /**
+ * @summary Create exemption-certificate metadata for session customer
+ */
+export const useCreateWholesaleExemptionCertificate = <TError = CreateWholesaleExemptionCertificate400 | CreateWholesaleExemptionCertificate401 | CreateWholesaleExemptionCertificate403 | CreateWholesaleExemptionCertificate404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWholesaleExemptionCertificate>>, TError,{data: CreateWholesaleExemptionCertificateBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWholesaleExemptionCertificate>>,
+        TError,
+        {data: CreateWholesaleExemptionCertificateBody},
+        TContext
+      > => {
+      return useMutation(getCreateWholesaleExemptionCertificateMutationOptions(options));
+    }
 
 export type listWholesaleSalesOrdersResponse200 = {
   data: ListWholesaleSalesOrders200
