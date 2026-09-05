@@ -2,6 +2,8 @@ import { OrganizationId, ProductId } from "@dc-inventory/shared-kernel";
 import { newUuid, SalesOrderLineId } from "../domain/ids.js";
 import type { ICatalogProductPort } from "../domain/ports/catalog-product.js";
 import type { SalesOrderLine } from "../domain/sales-order.js";
+import type { ConfirmSalesOrderShortage } from "./confirm-sales-order.js";
+import { lockedDraftIncreaseShortage } from "./draft-line-sellable.js";
 
 export type SalesOrderLineInput = {
   productId: string;
@@ -16,7 +18,9 @@ export type BuildSalesOrderLinesResult =
         | "invalid"
         | "product_not_found"
         | "product_inactive"
-        | "product_organization_mismatch";
+        | "product_organization_mismatch"
+        | "insufficient_atp";
+      shortage?: ConfirmSalesOrderShortage;
     };
 
 export function mergeSalesOrderLineInputs(
@@ -44,6 +48,7 @@ export async function buildSalesOrderLines(
   organizationId: OrganizationId,
   catalogProducts: ICatalogProductPort,
   lines: readonly SalesOrderLineInput[],
+  existingQtyBySku: ReadonlyMap<string, number> = new Map(),
 ): Promise<BuildSalesOrderLinesResult> {
   const merged = mergeSalesOrderLineInputs(lines);
   if (merged === "invalid") {
@@ -61,6 +66,14 @@ export async function buildSalesOrderLines(
     }
     if (!product.active) {
       return { ok: false, reason: "product_inactive" };
+    }
+    const shortage = lockedDraftIncreaseShortage(
+      product,
+      qty,
+      existingQtyBySku.get(product.sku.value) ?? 0,
+    );
+    if (shortage !== null) {
+      return { ok: false, reason: "insufficient_atp", shortage };
     }
     built.push({
       id: SalesOrderLineId.parse(newUuid()),

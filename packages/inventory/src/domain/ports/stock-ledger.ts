@@ -16,7 +16,7 @@ export type StockCommandFailureReason =
 
 export type StockCommandResult =
   | { ok: true; movement: Movement }
-  | { ok: false; reason: StockCommandFailureReason };
+  | { ok: false; reason: StockCommandFailureReason; availableToSell?: number };
 
 export type StockCommandBase = {
   organizationId: OrganizationId;

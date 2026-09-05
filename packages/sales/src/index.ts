@@ -9,7 +9,11 @@ export { InMemoryCommittedCustomerNamesListQuery } from "./adapters/in-memory-co
 export { InMemorySalesOrderRepository } from "./adapters/in-memory-sales-order-repository.js";
 export { InMemorySalesUnitOfWork } from "./adapters/in-memory-sales-unit-of-work.js";
 export { CancelSalesOrderUseCase } from "./application/cancel-sales-order.js";
-export { ConfirmSalesOrderUseCase } from "./application/confirm-sales-order.js";
+export {
+  ConfirmSalesOrderUseCase,
+  type ConfirmSalesOrderResult,
+  type ConfirmSalesOrderShortage,
+} from "./application/confirm-sales-order.js";
 export { CreateSalesOrderUseCase } from "./application/create-sales-order.js";
 export { ReplaceSalesOrderLinesUseCase } from "./application/replace-sales-order-lines.js";
 export { DecommitSalesOrderLineUseCase } from "./application/decommit-sales-order-line.js";

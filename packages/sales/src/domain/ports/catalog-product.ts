@@ -13,11 +13,18 @@ export type ProductSnapshot = {
   unitPrice: Money;
   taxCategoryCode?: string;
   active: boolean;
+  /** Omitted on snapshots that do not carry inventory qty (open / no cap). */
+  sellState?: "open" | "locked";
+  availableToSell?: number | null;
 };
 
 export interface ICatalogProductPort {
   findById(
     organizationId: OrganizationId,
     productId: ProductId,
+  ): Promise<ProductSnapshot | null>;
+  findBySku(
+    organizationId: OrganizationId,
+    sku: Sku,
   ): Promise<ProductSnapshot | null>;
 }

@@ -4,8 +4,21 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ReplaceInternalSalesOrderLines409Error } from './replaceInternalSalesOrderLines409Error';
 
 export type ReplaceInternalSalesOrderLines409 = {
-  error: ReplaceInternalSalesOrderLines409Error;
+  error: 'conflict';
+} | {
+  error: 'insufficient_atp';
+  sku?: string;
+  name?: string;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  requestedQty?: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  availableQty?: number;
 };

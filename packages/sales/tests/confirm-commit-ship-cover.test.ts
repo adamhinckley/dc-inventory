@@ -139,6 +139,12 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         return;
       }
       expect(failed.reason).toBe("insufficient_atp");
+      expect(failed.shortage).toEqual({
+        sku: LOCK_SKU.value,
+        name: "Locked presell widget",
+        requestedQty: 401,
+        availableQty: 400,
+      });
 
       const reloaded = await h.uow.salesOrders.findById(DEFAULT_ORG, draft.salesOrderId);
       expect(reloaded?.status).toBe("draft");

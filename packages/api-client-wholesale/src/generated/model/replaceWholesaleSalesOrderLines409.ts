@@ -4,8 +4,21 @@
  * DC Inventory wholesale API
  * OpenAPI spec version: 0.0.0
  */
-import type { ReplaceWholesaleSalesOrderLines409Error } from './replaceWholesaleSalesOrderLines409Error';
 
 export type ReplaceWholesaleSalesOrderLines409 = {
-  error: ReplaceWholesaleSalesOrderLines409Error;
+  error: 'conflict';
+} | {
+  error: 'insufficient_atp';
+  sku?: string;
+  name?: string;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  requestedQty?: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  availableQty?: number;
 };

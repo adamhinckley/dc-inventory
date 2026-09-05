@@ -23,6 +23,13 @@ export type ConfirmSalesOrderRequest = {
   customerId?: CustomerId;
 };
 
+export type ConfirmSalesOrderShortage = {
+  sku: string;
+  name: string;
+  requestedQty: number;
+  availableQty: number;
+};
+
 export type ConfirmSalesOrderResult =
   | { ok: true; salesOrder: SalesOrder }
   | {
@@ -31,14 +38,14 @@ export type ConfirmSalesOrderResult =
         | "not_found"
         | "illegal_transition"
         | "empty_order"
-        | "insufficient_atp"
         | "inventory_conflict"
         | "idempotency_conflict"
         | "customer_on_hold"
         | "customer_inactive"
         | "customer_not_found"
         | "ship_to_not_found";
-    };
+    }
+  | { ok: false; reason: "insufficient_atp"; shortage?: ConfirmSalesOrderShortage };
 
 function applyShipToSnapshot(
   order: SalesOrder,
@@ -148,7 +155,12 @@ export class ConfirmSalesOrderUseCase {
               result.reason === "insufficient_available_to_sell" ||
               result.reason === "insufficient_available"
             ) {
-              throw new SalesTransactionError("insufficient_atp");
+              throw new SalesTransactionError("insufficient_atp", {
+                sku: line.sku.value,
+                name: line.name,
+                requestedQty: line.qty,
+                availableQty: result.availableToSell ?? 0,
+              });
             }
             throw new SalesTransactionError("inventory_conflict");
           }
@@ -163,11 +175,15 @@ export class ConfirmSalesOrderUseCase {
       });
     } catch (error) {
       if (error instanceof SalesTransactionError) {
+        if (error.reason === "insufficient_atp") {
+          return { ok: false, reason: "insufficient_atp", shortage: error.shortage };
+        }
         return {
           ok: false,
-          reason: error.reason as ConfirmSalesOrderResult extends { ok: false; reason: infer R }
-            ? R
-            : never,
+          reason: error.reason as Exclude<
+            ConfirmSalesOrderResult extends { ok: false; reason: infer R } ? R : never,
+            "insufficient_atp"
+          >,
         };
       }
       throw error;

@@ -8,7 +8,9 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { wholesaleConfirmErrorMessage } from "../lib/confirm-shortage-message";
 import { formatMoneyMinorUnits } from "../lib/format-money";
+import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
 
 function lineSubtotalCents(qty: number, unitPriceCents: number): number {
   return qty * unitPriceCents;
@@ -19,13 +21,7 @@ export function CheckoutView() {
   const [selectedShipToId, setSelectedShipToId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const cart = useListWholesaleSalesOrders({
-    status: "draft",
-    page: 1,
-    pageSize: 1,
-    sortBy: "documentNumber",
-    sortOrder: "desc",
-  });
+  const cart = useListWholesaleSalesOrders(wholesaleDraftCartParams);
   const shipTos = useListWholesaleShipTos();
   const confirmOrder = useConfirmWholesaleSalesOrder();
 
@@ -183,8 +179,8 @@ export function CheckoutView() {
                 onSuccess: () => {
                   router.push("/orders");
                 },
-                onError: () => {
-                  setErrorMessage("Could not confirm this order. Check availability and try again.");
+                onError: (error) => {
+                  setErrorMessage(wholesaleConfirmErrorMessage(error));
                 },
               },
             );

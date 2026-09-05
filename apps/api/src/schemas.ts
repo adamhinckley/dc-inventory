@@ -1003,6 +1003,7 @@ export const salesOrderStatusSchema = z.enum([
 
 export const salesOrderLineSchema = z.object({
   id: z.string().uuid(),
+  productId: z.string().uuid().optional(),
   sku: z.string(),
   name: z.string(),
   qty: z.number().int(),
@@ -1014,6 +1015,7 @@ export const salesOrderLineSchema = z.object({
 export const salesOrderItemSchema = z.object({
   id: z.string().uuid(),
   customerId: z.string().uuid(),
+  customerName: z.string().optional(),
   documentNumber: z.string(),
   status: salesOrderStatusSchema,
   shipLine1: z.string().optional(),
@@ -1088,6 +1090,10 @@ export const salesOrderConfirmBodySchema = salesOrderCommandBodySchema.extend({
 
 export const insufficientAtpResponseSchema = z.object({
   error: z.literal("insufficient_atp"),
+  sku: z.string().optional(),
+  name: z.string().optional(),
+  requestedQty: z.number().int().optional(),
+  availableQty: z.number().int().optional(),
 });
 
 export const salesOrdersListTable = {
@@ -1095,7 +1101,7 @@ export const salesOrdersListTable = {
   columns: [
     { field: "documentNumber", label: "SO #" },
     { field: "status", label: "Status" },
-    { field: "customerId", label: "Customer" },
+    { field: "customerName", label: "Customer" },
   ],
   search: {
     param: "q",

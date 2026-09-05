@@ -198,8 +198,13 @@ describe("internal sales orders HTTP", () => {
       }>;
     };
     expect(order.documentNumber).toBe("SO-00001");
+    expect(created.json()).toMatchObject({
+      customerId: CUSTOMER_ID,
+      customerName: "Acme Wholesale",
+    });
     expect(order.lines).toMatchObject([
       {
+        productId: PRODUCT_ID,
         sku: SKU.value,
         name: "Catalog hex bolt",
         unitPriceCents: 250,
@@ -254,6 +259,17 @@ describe("internal sales orders HTTP", () => {
       payload: { idempotencyKey: "http-cancel" },
     });
     expect(cancelled.statusCode).toBe(409);
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().items[0]).toMatchObject({
+      id: order.id,
+      customerName: "Acme Wholesale",
+    });
   });
 
   it("rejects ship without staff_session", async () => {

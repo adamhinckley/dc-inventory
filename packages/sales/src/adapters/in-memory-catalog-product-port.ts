@@ -1,6 +1,7 @@
 import type {
   OrganizationId,
   ProductId,
+  Sku,
 } from "@dc-inventory/shared-kernel";
 import type {
   ICatalogProductPort,
@@ -21,6 +22,18 @@ export class InMemoryCatalogProductPort implements ICatalogProductPort {
     productId: ProductId,
   ): Promise<ProductSnapshot | null> {
     return this.products.get(productId) ?? null;
+  }
+
+  async findBySku(
+    organizationId: OrganizationId,
+    sku: Sku,
+  ): Promise<ProductSnapshot | null> {
+    for (const product of this.products.values()) {
+      if (product.organizationId === organizationId && product.sku.equals(sku)) {
+        return product;
+      }
+    }
+    return null;
   }
 
   add(product: ProductSnapshot): void {

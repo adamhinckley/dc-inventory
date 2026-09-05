@@ -25,7 +25,7 @@ import type {
 import type { IInventoryReadModel, IStockLedger } from "../domain/ports/stock-ledger.js";
 
 function mapResult(
-  result: { ok: true } | { ok: false; reason: string },
+  result: { ok: true } | { ok: false; reason: string; availableToSell?: number },
 ): InventoryCommandResult {
   if (result.ok) {
     return { ok: true };
@@ -35,6 +35,9 @@ function mapResult(
     reason: result.reason as InventoryCommandResult extends { ok: false; reason: infer R }
       ? R
       : never,
+    ...(result.availableToSell !== undefined
+      ? { availableToSell: result.availableToSell }
+      : {}),
   };
 }
 

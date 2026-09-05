@@ -202,7 +202,7 @@ export const listInternalSalesOrdersTable = {
       "label": "Status"
     },
     {
-      "field": "customerId",
+      "field": "customerName",
       "label": "Customer"
     }
   ],

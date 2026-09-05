@@ -16,6 +16,7 @@ import {
   buildSalesOrderLines,
   type SalesOrderLineInput,
 } from "./build-sales-order-lines.js";
+import type { ConfirmSalesOrderShortage } from "./confirm-sales-order.js";
 
 export type ReplaceSalesOrderLinesRequest = {
   organizationId: OrganizationId;
@@ -57,7 +58,9 @@ export type ReplaceSalesOrderLinesResult =
         | "product_inactive"
         | "product_organization_mismatch"
         | "customer_on_hold"
-        | "customer_inactive";
+        | "customer_inactive"
+        | "insufficient_atp";
+      shortage?: ConfirmSalesOrderShortage;
     };
 
 export class ReplaceSalesOrderLinesUseCase {
@@ -102,10 +105,19 @@ export class ReplaceSalesOrderLinesUseCase {
       return { ok: true, salesOrder: cancelled };
     }
 
+    const existingQtyBySku = new Map<string, number>();
+    for (const line of existing.lines) {
+      existingQtyBySku.set(
+        line.sku.value,
+        (existingQtyBySku.get(line.sku.value) ?? 0) + line.qty,
+      );
+    }
+
     const built = await buildSalesOrderLines(
       input.organizationId,
       this.catalogProducts,
       input.lines,
+      existingQtyBySku,
     );
     if (!built.ok) {
       return built;

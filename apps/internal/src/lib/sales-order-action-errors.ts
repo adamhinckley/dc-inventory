@@ -1,6 +1,24 @@
 type ActionErrorBody = {
   error?: string;
+  name?: string;
+  sku?: string;
+  requestedQty?: number;
+  availableQty?: number;
 };
+
+function formatShortage(data: ActionErrorBody): string | null {
+  if (data.availableQty === undefined || data.requestedQty === undefined) {
+    return null;
+  }
+  const product = data.name?.trim() || data.sku?.trim();
+  if (product === undefined || product.length === 0) {
+    return null;
+  }
+  if (data.availableQty <= 0) {
+    return `${product} is sold out. You asked for ${data.requestedQty}.`;
+  }
+  return `${product} has ${data.availableQty} available. You asked for ${data.requestedQty}.`;
+}
 
 export function replaceSalesOrderLinesErrorMessage(result: {
   status: number;
@@ -23,7 +41,10 @@ export function confirmSalesOrderErrorMessage(result: {
   data?: ActionErrorBody;
 }): string {
   if (result.status === 409 && result.data?.error === "insufficient_atp") {
-    return "Insufficient available-to-sell inventory to confirm this order.";
+    return (
+      formatShortage(result.data) ??
+      "Insufficient available-to-sell inventory to confirm this order."
+    );
   }
   if (result.status === 409) {
     return "This order could not be confirmed due to a conflict.";

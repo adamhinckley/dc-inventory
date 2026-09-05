@@ -64,6 +64,8 @@ export type DataTableRootProps<
   renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode;
   /** Trailing actions column. Each `Button` includes a leading icon and a Title Case label. */
   rowActions?: (row: TRow) => ReactNode;
+  /** Per-field cell override. Feature owns domain chips and other custom cells. */
+  renderColumns?: Partial<Record<string, (row: TRow) => ReactNode>>;
   children: ReactNode;
 };
 
@@ -77,6 +79,9 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
   linkField?: string;
   renderRowLink?: (props: { href: string; children: ReactNode }) => ReactNode;
   rowActions?: (row: Record<string, unknown>) => ReactNode;
+  renderColumns?: Partial<
+    Record<string, (row: Record<string, unknown>) => ReactNode>
+  >;
 };
 
 const DataTableContext = createContext<DataTableContextValue | null>(null);
@@ -289,6 +294,7 @@ export function DataTableRoot<
   linkField,
   renderRowLink,
   rowActions,
+  renderColumns,
   children,
 }: DataTableRootProps<TParams, TRow>) {
   const idBase = tableControlIdBase(meta, idPrefix);
@@ -314,6 +320,9 @@ export function DataTableRoot<
         renderRowLink,
         rowActions: rowActions as
           | ((row: Record<string, unknown>) => ReactNode)
+          | undefined,
+        renderColumns: renderColumns as
+          | Partial<Record<string, (row: Record<string, unknown>) => ReactNode>>
           | undefined,
       }}
     >
@@ -439,7 +448,12 @@ export function DataTableFilters() {
  * </DataTable.Root>
  * ```
  */
-const FILL_COLUMN_PREFERENCE = ["name", "supplierName", "productName"] as const;
+const FILL_COLUMN_PREFERENCE = [
+  "name",
+  "supplierName",
+  "productName",
+  "customerName",
+] as const;
 const NUMERIC_FIELDS = new Set([
   "listPrice",
   "lastPoCostCents",
@@ -515,6 +529,9 @@ function columnWidth(field: string): number | undefined {
   if (field === "createdAt") {
     return 180;
   }
+  if (field === "status") {
+    return 148;
+  }
   if (field in INVENTORY_CYCLE_HEADER_HELP) {
     return 128;
   }
@@ -540,6 +557,7 @@ export function DataTableTable() {
     linkField,
     renderRowLink,
     rowActions,
+    renderColumns,
   } = useDataTableContext();
   const resolvedLinkField = linkField ?? meta.columns[0]?.field;
   const fillColumn = fillColumnId(meta);
@@ -557,6 +575,10 @@ export function DataTableTable() {
           truncate: column.field !== fillColumn,
           align: NUMERIC_FIELDS.has(column.field) ? "right" : "left",
           render: ({ record }: { record: Record<string, unknown> }) => {
+            const custom = renderColumns?.[column.field];
+            if (custom !== undefined) {
+              return custom(record);
+            }
             const href = getRowHref?.(record);
             const content = renderCell(
               record,
@@ -571,7 +593,15 @@ export function DataTableTable() {
           },
         };
       }),
-    [fillColumn, getRowHref, meta.columns, meta.sort, renderRowLink, resolvedLinkField],
+    [
+      fillColumn,
+      getRowHref,
+      meta.columns,
+      meta.sort,
+      renderColumns,
+      renderRowLink,
+      resolvedLinkField,
+    ],
   );
 
   const table = useTable({

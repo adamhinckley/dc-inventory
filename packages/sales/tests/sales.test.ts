@@ -21,6 +21,7 @@ import {
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
   ListSalesOrdersUseCase,
+  ReplaceSalesOrderLinesUseCase,
   ShipSalesOrderUseCase,
   type ICustomerBillToSnapshotReadPort,
 } from "../src/index.js";
@@ -736,5 +737,129 @@ describe("Sales (in-memory)", () => {
       return;
     }
     expect(crossOrgConfirm.reason).toBe("not_found");
+  });
+
+  it("rejects creating a locked draft line above availableToSell", async () => {
+    const lockedProductId = ProductId.parse("99999999-9999-4999-8999-999999999999");
+    const uow = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms);
+    const catalog = new InMemoryCatalogProductPort([
+      {
+        productId: lockedProductId,
+        organizationId: DEFAULT_ORG,
+        sku: Sku.parse("LOCKED-DRAFT-1"),
+        name: "Locked vase",
+        unitPrice: Money.fromMinorUnits(500, "USD"),
+        active: true,
+        sellState: "locked",
+        availableToSell: 5,
+      },
+    ]);
+    const customers = {
+      findById: async (organizationId: OrganizationId, id: CustomerId) => {
+        if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
+          return { id, accountStatus: "active" as const };
+        }
+        return null;
+      },
+    };
+    const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
+    const result = await create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: lockedProductId, qty: 7 }],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.reason).toBe("insufficient_atp");
+    expect(result.shortage).toEqual({
+      sku: "LOCKED-DRAFT-1",
+      name: "Locked vase",
+      requestedQty: 7,
+      availableQty: 5,
+    });
+  });
+
+  it("can remove one oversold draft line without re-checking leftover lines", async () => {
+    const keepId = ProductId.parse("12121212-1212-4121-8121-121212121212");
+    const dropId = ProductId.parse("34343434-3434-4343-8343-343434343434");
+    const uow = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms);
+    const keepSku = Sku.parse("KEEP-OVERSOLD");
+    const dropSku = Sku.parse("DROP-OVERSOLD");
+    const catalog = new InMemoryCatalogProductPort([
+      {
+        productId: keepId,
+        organizationId: DEFAULT_ORG,
+        sku: keepSku,
+        name: "Keep lantern",
+        unitPrice: Money.fromMinorUnits(1200, "USD"),
+        active: true,
+      },
+      {
+        productId: dropId,
+        organizationId: DEFAULT_ORG,
+        sku: dropSku,
+        name: "Drop ornament",
+        unitPrice: Money.fromMinorUnits(1930, "USD"),
+        active: true,
+      },
+    ]);
+    const customers = {
+      findById: async (organizationId: OrganizationId, id: CustomerId) => {
+        if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
+          return { id, accountStatus: "active" as const };
+        }
+        return null;
+      },
+    };
+    const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
+    const replace = new ReplaceSalesOrderLinesUseCase(uow.salesOrders, customers, catalog);
+    const created = await create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [
+        { productId: keepId, qty: 67 },
+        { productId: dropId, qty: 345_346 },
+      ],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    catalog.add({
+      productId: keepId,
+      organizationId: DEFAULT_ORG,
+      sku: keepSku,
+      name: "Keep lantern",
+      unitPrice: Money.fromMinorUnits(1200, "USD"),
+      active: true,
+      sellState: "locked",
+      availableToSell: 5,
+    });
+    catalog.add({
+      productId: dropId,
+      organizationId: DEFAULT_ORG,
+      sku: dropSku,
+      name: "Drop ornament",
+      unitPrice: Money.fromMinorUnits(1930, "USD"),
+      active: true,
+      sellState: "locked",
+      availableToSell: 5,
+    });
+    const removed = await replace.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      lines: [{ productId: keepId, qty: 67 }],
+    });
+    expect(removed.ok).toBe(true);
+    if (!removed.ok) {
+      return;
+    }
+    expect(removed.salesOrder.lines).toHaveLength(1);
+    expect(removed.salesOrder.lines[0]?.qty).toBe(67);
   });
 });
