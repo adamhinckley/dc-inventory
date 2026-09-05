@@ -3,6 +3,7 @@ import {
   buildInventoryReopenCommand,
   fetchInventoryMatchPages,
   INVENTORY_MATCH_PAGE_SIZE,
+  type InventoryMatchListFn,
   parseOptionalWindowInstant,
   shouldPrefetchInventoryMatches,
 } from "./inventory-reopen-workflow";
@@ -71,7 +72,7 @@ describe("inventory reopen workflow", () => {
   });
 
   it("loads only the requested page window and reports the next page", async () => {
-    const listProducts = vi.fn(async (params: { page?: number; pageSize?: number }) => {
+    const listProductsMock = vi.fn(async (params: { page?: number; pageSize?: number }) => {
       const page = params.page ?? 1;
       return {
         status: 200 as const,
@@ -92,9 +93,10 @@ describe("inventory reopen workflow", () => {
         },
       };
     });
+    const listProducts = listProductsMock as unknown as InventoryMatchListFn;
 
     const first = await fetchInventoryMatchPages({}, 1, 5, listProducts);
-    expect(listProducts.mock.calls.map((call) => call[0]?.page)).toEqual([1, 2, 3, 4, 5]);
+    expect(listProductsMock.mock.calls.map((call) => call[0]?.page)).toEqual([1, 2, 3, 4, 5]);
     expect(first.items.map((row) => row.sku)).toEqual([
       "SKU-1",
       "SKU-2",

@@ -27,20 +27,7 @@ export type InventoryMatchChunk = {
 
 export type InventoryMatchListFn = (
   params: ListInternalProductsParams,
-) => Promise<{
-  status: number;
-  data: {
-    items: readonly {
-      sku: string;
-      name: string;
-      supplierName: string | null;
-      sellState: string;
-      onHand: number;
-      onOrder: number;
-    }[];
-    total: number;
-  };
-}>;
+) => Promise<Awaited<ReturnType<typeof listInternalProducts>>>;
 
 export const INVENTORY_MATCH_PAGE_SIZE = 100;
 export const INVENTORY_MATCH_PREFETCH_PAGES = 5;
