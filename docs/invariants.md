@@ -555,6 +555,7 @@ Still open elsewhere (do not invent defaults):
 | Confirmation email (`IEmailSender`) | Deferred send-job; port on confirm use case when built |
 | Statement | Deferred — do not overload Invoice |
 | Tracking | Explicitly deferred |
+| Account request + wholesale agreement (SoloView: staff approve, then PandaDoc sign) | Observed 2026-09 — [`customers.md`](./customers.md) §15. Not header **terms**. Do not invent gates |
 
 ### G14. Tenancy, currency, clock
 
