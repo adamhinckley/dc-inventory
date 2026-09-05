@@ -299,9 +299,10 @@ describe("Catalog use cases (in-memory)", () => {
       sortOrder: "asc",
     });
 
-    expect(listed.total).toBe(2);
+    expect(listed.total).toBe(3);
     expect(listed.items.map((row) => row.product.sku.value).sort()).toEqual([
       "SHOP-ON-PO",
+      "SHOP-OPEN-EMPTY",
       "SHOP-STOCKED",
     ]);
     expect(

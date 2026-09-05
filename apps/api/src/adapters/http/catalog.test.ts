@@ -460,9 +460,10 @@ describe("catalog HTTP", () => {
       cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
     });
     expect(listed.statusCode).toBe(200);
-    expect(listed.json().total).toBe(2);
+    expect(listed.json().total).toBe(3);
     expect(listed.json().items.map((item: { name: string }) => item.name).sort()).toEqual([
       "Shop on factory PO",
+      "Shop open empty",
       "Shop stocked",
     ]);
 

@@ -28,7 +28,7 @@ export type CatalogListQuery = {
   shopVisibleOnly?: boolean;
   /** When true, omit SKUs whose snapshot qty is all zero. */
   hideZeroInventory?: boolean;
-  /** When true, omit SKUs with no warehouse leftover and no locked availableToSell. */
+  /** When true, include every open SKU; omit locked SKUs with ATP ≤ 0. */
   availableOnly?: boolean;
 };
 

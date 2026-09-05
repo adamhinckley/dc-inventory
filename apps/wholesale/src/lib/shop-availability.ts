@@ -18,7 +18,7 @@ export function shopDisplayAvailableQty(input: ShopAvailabilityInput): number | 
       ? input.availableToSell
       : null;
   }
-  return input.available > 0 ? input.available : null;
+  return null;
 }
 
 /** Label qty for wholesale cards; mirrors catalog isShopSellable / shopDisplayAvailableQty. */
@@ -26,6 +26,9 @@ export function shopAvailabilityLabel(input: ShopAvailabilityInput): {
   inStock: boolean;
   label: string;
 } {
+  if (input.sellState === "open") {
+    return { inStock: true, label: "Available to order" };
+  }
   const qty = shopDisplayAvailableQty(input);
   if (qty === null) {
     return { inStock: false, label: "Unavailable" };

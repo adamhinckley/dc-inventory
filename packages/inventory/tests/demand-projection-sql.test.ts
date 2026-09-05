@@ -83,7 +83,7 @@ const SHOP_SELLABLE_CASES = [
     expected: true,
   },
   {
-    label: "open zero out",
+    label: "open leftover = 0 in",
     row: {
       onHand: 0,
       onOrder: 0,
@@ -93,7 +93,7 @@ const SHOP_SELLABLE_CASES = [
       windowOpensAt: null,
       windowClosesAt: null,
     },
-    expected: false,
+    expected: true,
   },
   {
     label: "locked ATP > 0 in",
