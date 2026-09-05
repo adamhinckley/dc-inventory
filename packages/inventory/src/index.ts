@@ -5,6 +5,10 @@ export { StockLedgerInventoryCommandAdapter } from "./adapters/stock-ledger-inve
 export type { InventoryUnitOfWorkScope } from "./adapters/in-memory-inventory-unit-of-work.js";
 export { InMemoryStockLedger } from "./adapters/in-memory-stock-ledger.js";
 export { InMemoryUncoveredListQuery } from "./adapters/in-memory-uncovered-list-query.js";
+export {
+  InMemoryUncoveredCaseQtyReadPort,
+  InMemoryUncoveredReorderPolicyReadPort,
+} from "./adapters/in-memory-uncovered-stock-context.js";
 export { DrizzleInventoryReadModel } from "./adapters/drizzle-inventory-read-model.js";
 export type { InventoryReadDrizzle } from "./adapters/drizzle-inventory-read-model.js";
 export { DrizzleStockLedger } from "./adapters/drizzle-stock-ledger.js";
@@ -133,10 +137,17 @@ export type {
 } from "./domain/ports/stock-ledger.js";
 export type {
   IUncoveredListQuery,
+  UncoveredListCoreRow,
   UncoveredListPage,
   UncoveredListQuery,
   UncoveredListRow,
 } from "./domain/ports/uncovered-list-query.js";
+export type {
+  IUncoveredCaseQtyReadPort,
+  IUncoveredReorderPolicyReadPort,
+  UncoveredCaseQty,
+  UncoveredReorderPolicy,
+} from "./domain/ports/uncovered-stock-context.js";
 export {
   computeAvailable,
   freezeStockFigures,

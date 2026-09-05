@@ -2,7 +2,7 @@
 
 import { buttonVariants, ExplorerView } from "@dc-inventory/ui";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
-import { Building2, Plus } from "lucide-react";
+import { Building2, ClipboardList, Plus } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { OpenPurchaseOrderByDocumentNumber } from "./open-purchase-order-by-document-number";
@@ -28,6 +28,13 @@ export function PurchasingOrdersExplorer({
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-action">
+            <Link
+              href="/purchasing/uncovered"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
+              <ClipboardList className="size-icon-lg" aria-hidden />
+              Uncovered
+            </Link>
             <Link
               href="/purchasing/suppliers"
               className={buttonVariants({ variant: "secondary", size: "sm" })}

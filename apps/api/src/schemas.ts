@@ -197,6 +197,43 @@ export const inventoryStockSnapshotSchema = z.object({
   available: z.number().int(),
 });
 
+export const uncoveredSkusListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const uncoveredSkuListItemSchema = z.object({
+  sku: z.string(),
+  uncovered: z.number().int().nonnegative(),
+  onHand: z.number().int(),
+  onOrder: z.number().int(),
+  committed: z.number().int(),
+  caseQty: z.number().int().positive().nullable(),
+  reorderMin: z.number().int().nullable(),
+  reorderMax: z.number().int().nullable(),
+});
+
+export const uncoveredSkusListResponseSchema = z.object({
+  items: z.array(uncoveredSkuListItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const uncoveredSkusListTable = {
+  rowId: "sku",
+  columns: [
+    { field: "sku", label: "SKU" },
+    { field: "uncovered", label: "Uncovered" },
+    { field: "onHand", label: "On hand" },
+    { field: "onOrder", label: "On order" },
+    { field: "committed", label: "Committed (pre-sold)" },
+    { field: "caseQty", label: "Master pack" },
+    { field: "reorderMin", label: "Reorder min" },
+    { field: "reorderMax", label: "Reorder max" },
+  ],
+};
+
 export const productWriteBodySchema = z.object({
   sku: z.string().min(1),
   name: z.string().min(1),

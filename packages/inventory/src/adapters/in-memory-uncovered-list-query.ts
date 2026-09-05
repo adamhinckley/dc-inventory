@@ -1,12 +1,12 @@
 import { LocationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
 import type {
   IUncoveredListQuery,
+  UncoveredListCoreRow,
   UncoveredListQuery,
-  UncoveredListRow,
 } from "../domain/ports/uncovered-list-query.js";
 import type { InMemoryInventoryReadModel } from "./in-memory-inventory-read-model.js";
 
-function compareRowsBySku(a: UncoveredListRow, b: UncoveredListRow): number {
+function compareRowsBySku(a: UncoveredListCoreRow, b: UncoveredListCoreRow): number {
   return a.sku.value.localeCompare(b.sku.value);
 }
 
@@ -20,7 +20,7 @@ export class InMemoryUncoveredListQuery implements IUncoveredListQuery {
       .listOrganizationSnapshots(organizationId, locationId)
       .filter((row) => row.snapshot.uncovered > 0)
       .map(
-        (row): UncoveredListRow =>
+        (row): UncoveredListCoreRow =>
           Object.freeze({
             sku: row.sku,
             committed: row.snapshot.committed,

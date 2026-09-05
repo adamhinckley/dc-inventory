@@ -17,8 +17,8 @@ type TableOperation = {
   responses: Record<string, unknown>;
   "x-table": {
     search?: { param: string };
-    filters: Array<{ param: string; rangePair?: string }>;
-    sort: {
+    filters?: Array<{ param: string; rangePair?: string }>;
+    sort?: {
       defaultBy: string;
       defaultOrder: "asc" | "desc";
       fields: string[];
@@ -67,6 +67,7 @@ describe("OpenAPI stub export", () => {
       "listInternalSalesOrders",
       "listInternalSupplierProducts",
       "listInternalSuppliers",
+      "listInternalUncoveredSkus",
     ]);
 
     const sharedParams = ["q", "page", "pageSize", "sortBy", "sortOrder"];
@@ -75,11 +76,23 @@ describe("OpenAPI stub export", () => {
         (parameter) => parameter.in === "query",
       );
       const byName = new Map(queryParameters.map((parameter) => [parameter.name, parameter]));
+      const table = operation["x-table"];
+      const paginationOnly = table.sort === undefined;
+
+      if (paginationOnly) {
+        expect([...byName.keys()], operation.operationId).toEqual(
+          expect.arrayContaining(["page", "pageSize"]),
+        );
+        expect(byName.get("page")?.schema.default, operation.operationId).toBe(1);
+        expect(byName.get("pageSize")?.schema.default, operation.operationId).toBe(25);
+        expect(operation.responses["400"], operation.operationId).toBeDefined();
+        continue;
+      }
+
       expect([...byName.keys()], operation.operationId).toEqual(
         expect.arrayContaining(sharedParams),
       );
 
-      const table = operation["x-table"];
       expect(table.search?.param, operation.operationId).toBe("q");
       expect(byName.get("page")?.schema.default, operation.operationId).toBe(1);
       expect(byName.get("pageSize")?.schema.default, operation.operationId).toBe(25);
@@ -97,7 +110,7 @@ describe("OpenAPI stub export", () => {
         table.sort.defaultOrder,
       );
 
-      const declaredFilters = table.filters.flatMap((filter) =>
+      const declaredFilters = (table.filters ?? []).flatMap((filter) =>
         filter.rangePair === undefined
           ? [filter.param]
           : [filter.param, filter.rangePair],
