@@ -1,4 +1,3 @@
-import { shopAvailabilityLabel as catalogShopAvailabilityLabel } from "@dc-inventory/catalog";
 import type { listWholesaleCatalog } from "@dc-inventory/api-client-wholesale";
 
 export type ShopSellState = Extract<
@@ -12,9 +11,24 @@ type ShopAvailabilityInput = {
   sellState: ShopSellState;
 };
 
+/** Qty to show on wholesale cards; mirrors catalog shopDisplayAvailableQty / isShopSellable. */
+export function shopDisplayAvailableQty(input: ShopAvailabilityInput): number | null {
+  if (input.sellState === "locked") {
+    return input.availableToSell !== null && input.availableToSell > 0
+      ? input.availableToSell
+      : null;
+  }
+  return input.available > 0 ? input.available : null;
+}
+
+/** Label qty for wholesale cards; mirrors catalog isShopSellable / shopDisplayAvailableQty. */
 export function shopAvailabilityLabel(input: ShopAvailabilityInput): {
   inStock: boolean;
   label: string;
 } {
-  return catalogShopAvailabilityLabel(input);
+  const qty = shopDisplayAvailableQty(input);
+  if (qty === null) {
+    return { inStock: false, label: "Unavailable" };
+  }
+  return { inStock: true, label: `${qty.toLocaleString()} available` };
 }
