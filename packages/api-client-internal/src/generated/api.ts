@@ -274,6 +274,13 @@ import type {
   ReplaceInternalPurchaseOrderLines404,
   ReplaceInternalPurchaseOrderLines409,
   ReplaceInternalPurchaseOrderLinesBody,
+  ReplaceInternalSalesOrderLines200,
+  ReplaceInternalSalesOrderLines400,
+  ReplaceInternalSalesOrderLines401,
+  ReplaceInternalSalesOrderLines403,
+  ReplaceInternalSalesOrderLines404,
+  ReplaceInternalSalesOrderLines409,
+  ReplaceInternalSalesOrderLinesBody,
   ShipInternalSalesOrder200,
   ShipInternalSalesOrder400,
   ShipInternalSalesOrder401,
@@ -6227,6 +6234,123 @@ export const useCreateInternalSalesOrder = <TError = CreateInternalSalesOrder400
         TContext
       > => {
       return useMutation(getCreateInternalSalesOrderMutationOptions(options));
+    }
+
+export type replaceInternalSalesOrderLinesResponse200 = {
+  data: ReplaceInternalSalesOrderLines200
+  status: 200
+}
+
+export type replaceInternalSalesOrderLinesResponse400 = {
+  data: ReplaceInternalSalesOrderLines400
+  status: 400
+}
+
+export type replaceInternalSalesOrderLinesResponse401 = {
+  data: ReplaceInternalSalesOrderLines401
+  status: 401
+}
+
+export type replaceInternalSalesOrderLinesResponse403 = {
+  data: ReplaceInternalSalesOrderLines403
+  status: 403
+}
+
+export type replaceInternalSalesOrderLinesResponse404 = {
+  data: ReplaceInternalSalesOrderLines404
+  status: 404
+}
+
+export type replaceInternalSalesOrderLinesResponse409 = {
+  data: ReplaceInternalSalesOrderLines409
+  status: 409
+}
+
+export type replaceInternalSalesOrderLinesResponseSuccess = (replaceInternalSalesOrderLinesResponse200) & {
+  headers: Headers;
+};
+export type replaceInternalSalesOrderLinesResponseError = (replaceInternalSalesOrderLinesResponse400 | replaceInternalSalesOrderLinesResponse401 | replaceInternalSalesOrderLinesResponse403 | replaceInternalSalesOrderLinesResponse404 | replaceInternalSalesOrderLinesResponse409) & {
+  headers: Headers;
+};
+
+export type replaceInternalSalesOrderLinesResponse = (replaceInternalSalesOrderLinesResponseSuccess | replaceInternalSalesOrderLinesResponseError)
+
+export const getReplaceInternalSalesOrderLinesUrl = (id: string,) => {
+
+
+
+
+  return `/internal/sales-orders/${id}`
+}
+
+/**
+ * @summary Replace lines on a draft sales order
+ */
+export const replaceInternalSalesOrderLines = async (id: string,
+    replaceInternalSalesOrderLinesBody: ReplaceInternalSalesOrderLinesBody, options?: Parameters<typeof customFetch>[1]): Promise<replaceInternalSalesOrderLinesResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<replaceInternalSalesOrderLinesResponse>(getReplaceInternalSalesOrderLinesUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(replaceInternalSalesOrderLinesBody)
+  }
+);}
+
+
+
+
+
+export const getReplaceInternalSalesOrderLinesMutationOptions = <TError = ReplaceInternalSalesOrderLines400 | ReplaceInternalSalesOrderLines401 | ReplaceInternalSalesOrderLines403 | ReplaceInternalSalesOrderLines404 | ReplaceInternalSalesOrderLines409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceInternalSalesOrderLines>>, TError,{id: string;data: ReplaceInternalSalesOrderLinesBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceInternalSalesOrderLines>>, TError,{id: string;data: ReplaceInternalSalesOrderLinesBody}, TContext> => {
+
+const mutationKey = ['replaceInternalSalesOrderLines'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceInternalSalesOrderLines>>, {id: string;data: ReplaceInternalSalesOrderLinesBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceInternalSalesOrderLines(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceInternalSalesOrderLinesMutationResult = NonNullable<Awaited<ReturnType<typeof replaceInternalSalesOrderLines>>>
+    export type ReplaceInternalSalesOrderLinesMutationBody = ReplaceInternalSalesOrderLinesBody
+    export type ReplaceInternalSalesOrderLinesMutationError = ReplaceInternalSalesOrderLines400 | ReplaceInternalSalesOrderLines401 | ReplaceInternalSalesOrderLines403 | ReplaceInternalSalesOrderLines404 | ReplaceInternalSalesOrderLines409
+
+    /**
+ * @summary Replace lines on a draft sales order
+ */
+export const useReplaceInternalSalesOrderLines = <TError = ReplaceInternalSalesOrderLines400 | ReplaceInternalSalesOrderLines401 | ReplaceInternalSalesOrderLines403 | ReplaceInternalSalesOrderLines404 | ReplaceInternalSalesOrderLines409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceInternalSalesOrderLines>>, TError,{id: string;data: ReplaceInternalSalesOrderLinesBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceInternalSalesOrderLines>>,
+        TError,
+        {id: string;data: ReplaceInternalSalesOrderLinesBody},
+        TContext
+      > => {
+      return useMutation(getReplaceInternalSalesOrderLinesMutationOptions(options));
     }
 
 export type getInternalSalesOrderResponse200 = {

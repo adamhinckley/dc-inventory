@@ -15,6 +15,7 @@ import {
   salesOrderItemSchema,
   salesOrderListQuerySchema,
   salesOrderListResponseSchema,
+  salesOrderReplaceLinesBodySchema,
   salesOrderWriteBodySchema,
   salesOrdersListTable,
   unauthorizedResponseSchema,
@@ -176,6 +177,60 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         return sendInvalid(reply);
       }
       return reply.code(201).send(mapSalesOrder(result.salesOrder));
+    },
+  );
+
+  routes.patch(
+    "/sales-orders/:id",
+    {
+      schema: {
+        operationId: "replaceInternalSalesOrderLines",
+        tags: ["internal"],
+        summary: "Replace lines on a draft sales order",
+        params: salesOrderIdParamsSchema,
+        body: salesOrderReplaceLinesBodySchema,
+        response: {
+          200: salesOrderItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.sales.replaceSalesOrderLines.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        salesOrderId: OrderId.parse(request.params.id),
+        lines: request.body.lines,
+        shipLine1: request.body.shipLine1,
+        shipLine2: request.body.shipLine2,
+        shipCity: request.body.shipCity,
+        shipRegion: request.body.shipRegion,
+        shipPostal: request.body.shipPostal,
+        shipCountry: request.body.shipCountry,
+      });
+      if (!result.ok) {
+        if (
+          result.reason === "not_found" ||
+          result.reason === "customer_not_found" ||
+          result.reason === "product_not_found" ||
+          result.reason === "product_organization_mismatch"
+        ) {
+          return sendNotFound(reply);
+        }
+        if (
+          result.reason === "illegal_transition" ||
+          result.reason === "product_inactive" ||
+          result.reason === "customer_on_hold" ||
+          result.reason === "customer_inactive"
+        ) {
+          return sendConflict(reply);
+        }
+        return sendInvalid(reply);
+      }
+      return mapSalesOrder(result.salesOrder);
     },
   );
 
