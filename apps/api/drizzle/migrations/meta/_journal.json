@@ -232,6 +232,13 @@
       "when": 1789955600000,
       "tag": "0033_sales_orders_placed_by_staff_user_id",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1790055600000,
+      "tag": "0034_sales_orders_draft_per_customer_unique",
+      "breakpoints": true
     }
   ]
 }
