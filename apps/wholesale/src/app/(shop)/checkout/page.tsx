@@ -1,13 +1,19 @@
+import { CheckoutView } from "../../../components/checkout-view";
 import { ShopPage } from "../../../components/shop-page";
-import { ShopPlaceholder } from "../../../components/shop-placeholder";
 
 export default function CheckoutPage() {
   return (
     <ShopPage>
-      <ShopPlaceholder
-        title="Checkout"
-        body="Placeholder checkout. Tax will display from a quoted API total only — never price × rate in the shop."
-      />
+      <section className="flex flex-col gap-8">
+        <header className="max-w-2xl">
+          <p className="section-title">Checkout</p>
+          <h1 className="page-title mt-2">Confirm Your Order</h1>
+          <p className="mt-3 text-ink-muted">
+            Choose a ship-to address and confirm your draft sales order.
+          </p>
+        </header>
+        <CheckoutView />
+      </section>
     </ShopPage>
   );
 }

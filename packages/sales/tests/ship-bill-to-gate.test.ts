@@ -25,6 +25,7 @@ describe("Sales ship bill-to gate (ADA-261, U7)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: draft.salesOrderId,
       idempotencyKey: "bill-to-gate-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 
@@ -71,6 +72,7 @@ describe("Sales ship bill-to gate (ADA-261, U7)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: draft.salesOrderId,
       idempotencyKey: "bill-to-gate-confirm-without-bill-to",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
     if (!confirmed.ok) {

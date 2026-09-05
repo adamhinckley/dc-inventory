@@ -2,7 +2,7 @@ import {
   DrizzleSalesOrderRepository,
   type ISalesUnitOfWork,
 } from "@dc-inventory/sales";
-import { DrizzleCustomerRepository } from "@dc-inventory/customers";
+import { DrizzleCustomerRepository, DrizzleShipToRepository } from "@dc-inventory/customers";
 import {
   CustomerTermsReadAdapter,
   DrizzleInvoiceRepository,
@@ -40,6 +40,7 @@ export async function runReplaySalesOrdersOnDb(
   const firstInstant = plan.salesOrders[0]?.plannedInstant ?? plan.seedToday;
   const clock = new SeedPlaybackClock(firstInstant);
   const customers = new DrizzleCustomerRepository(db as never);
+  const shipTos = new DrizzleShipToRepository(db as never);
   const postgresUow = new PostgresInventoryUnitOfWork(
     db,
     clock,
@@ -66,6 +67,7 @@ export async function runReplaySalesOrdersOnDb(
       uow: salesUow,
       clock,
       customers,
+      shipTos,
       products,
       invoices,
       billToSnapshot: permissiveDemoBillToSnapshotPort(),

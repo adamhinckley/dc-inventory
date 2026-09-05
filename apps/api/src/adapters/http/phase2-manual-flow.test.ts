@@ -1,5 +1,5 @@
 import { CreateProductUseCase, InMemoryProductRepository } from "@dc-inventory/catalog";
-import { InMemoryBillToRepository, InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { InMemoryBillToRepository, InMemoryCustomerRepository, InMemoryShipToRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
@@ -34,6 +34,7 @@ import {
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
+import { API_TEST_SHIP_TO_ID, seedDefaultShipTo } from "./test-ship-to.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
@@ -59,6 +60,7 @@ async function startPhase2ManualFlowApp() {
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
   const billToRepo = new InMemoryBillToRepository();
+  const shipToRepo = new InMemoryShipToRepository();
   const productRepo = new InMemoryProductRepository();
   const billToSnapshot = new CustomerBillToSnapshotReadAdapter(customerRepo, billToRepo);
   const customerTerms = new CustomerTermsReadAdapter(customerRepo);
@@ -88,6 +90,7 @@ async function startPhase2ManualFlowApp() {
     postal: "97201",
     country: "US",
   });
+  await seedDefaultShipTo(shipToRepo, CUSTOMER_ID);
 
   await staffUsers.save({
     id: STAFF_ID,
@@ -135,6 +138,7 @@ async function startPhase2ManualFlowApp() {
     unitOfWork,
     customerRepo,
     billToRepo,
+    shipToRepo,
     productRepo,
     purchaseOrderRepo: unitOfWork.purchaseOrders,
     supplierRepo: unitOfWork.suppliers,
@@ -256,7 +260,7 @@ function staffCommands(
           method: "POST",
           url: `/internal/sales-orders/${ids.orderId}/confirm`,
           cookies: cookiesFor(auth),
-          payload: { idempotencyKey: "flow-confirm-so" },
+          payload: { idempotencyKey: "flow-confirm-so", shipToId: API_TEST_SHIP_TO_ID },
         }),
     },
     {
@@ -427,7 +431,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
       method: "POST",
       url: `/internal/sales-orders/${order.id}/confirm`,
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
-      payload: { idempotencyKey: "flow-confirm-so" },
+      payload: { idempotencyKey: "flow-confirm-so", shipToId: API_TEST_SHIP_TO_ID },
     });
     expect(confirmedOrder.statusCode).toBe(200);
 

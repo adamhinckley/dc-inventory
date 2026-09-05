@@ -30,6 +30,8 @@ describe("wholesale shop HTTP", () => {
     expect(joined).toMatch(/useListWholesaleCatalog/);
     expect(joined).toMatch(/useCreateWholesaleSalesOrder/);
     expect(joined).toMatch(/useListWholesaleSalesOrders/);
+    expect(joined).toMatch(/useListWholesaleShipTos/);
+    expect(joined).toMatch(/useConfirmWholesaleSalesOrder/);
     expect(joined).toMatch(/useLoginWholesale/);
     expect(joined).not.toMatch(/@dc-inventory\/api-client-internal/);
     expect(joined).not.toMatch(/@dc-inventory\/api-client-ops/);

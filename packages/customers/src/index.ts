@@ -1,5 +1,6 @@
 export { CustomerAccountStatusReadAdapter } from "./adapters/customer-account-status-read.js";
 export { CustomerBillToSnapshotReadAdapter } from "./adapters/customer-bill-to-snapshot-read.js";
+export { CustomerShipToSnapshotReadAdapter } from "./adapters/customer-ship-to-snapshot-read.js";
 export { InMemoryBillToRepository } from "./adapters/in-memory-bill-to-repository.js";
 export { InMemoryContactRepository } from "./adapters/in-memory-contact-repository.js";
 export { InMemoryCustomerRepository } from "./adapters/in-memory-customer-repository.js";
@@ -50,6 +51,7 @@ export type { IBillToRepository } from "./domain/ports/bill-to-repository.js";
 export type { IContactRepository } from "./domain/ports/contact-repository.js";
 export type { ICustomerAccountStatusReadPort } from "./domain/ports/customer-account-status-read.js";
 export type { ICustomerBillToSnapshotReadPort } from "./domain/ports/customer-bill-to-snapshot-read.js";
+export type { ICustomerShipToSnapshotReadPort } from "./domain/ports/customer-ship-to-snapshot-read.js";
 export type {
   CustomerListSortBy,
   ICustomerRepository,

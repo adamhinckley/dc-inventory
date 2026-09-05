@@ -7,7 +7,7 @@ import {
   type StaffRole,
 } from "@dc-inventory/identity";
 import { InMemoryProductRepository } from "@dc-inventory/catalog";
-import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { InMemoryCustomerRepository, InMemoryShipToRepository } from "@dc-inventory/customers";
 import { RecordAdjustmentIncreaseUseCase } from "@dc-inventory/inventory";
 import {
   CustomerId,
@@ -25,6 +25,7 @@ import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
+import { API_TEST_SHIP_TO_ID, seedDefaultShipTo } from "./test-ship-to.js";
 import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
@@ -663,6 +664,7 @@ describe("internal purchase orders HTTP", () => {
     const staffUsers = new InMemoryStaffUserRepository();
     const sessions = new InMemorySessionStore();
     const customerRepo = new InMemoryCustomerRepository();
+    const shipToRepo = new InMemoryShipToRepository();
     const productRepo = new InMemoryProductRepository();
     const shipPorts = testShipAccountingReadPorts();
   const unitOfWork = new InMemoryUnitOfWork(shipPorts.billToSnapshot, shipPorts.customerTerms);
@@ -683,6 +685,7 @@ describe("internal purchase orders HTTP", () => {
       terms: "NET30",
       createdAt: new Date("2026-09-02T00:00:00.000Z"),
     });
+    await seedDefaultShipTo(shipToRepo, CUSTOMER_ID);
     await productRepo.save({
       id: PRODUCT_A_ID,
       organizationId: OrganizationId.DEFAULT,
@@ -732,6 +735,7 @@ describe("internal purchase orders HTTP", () => {
       supplierRepo: unitOfWork.suppliers,
       catalogSkuLookup: catalog,
       customerRepo,
+      shipToRepo,
       productRepo,
       salesOrderRepo: unitOfWork.salesOrders,
     });
@@ -769,7 +773,7 @@ describe("internal purchase orders HTTP", () => {
       method: "POST",
       url: `/internal/sales-orders/${order.id}/confirm`,
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
-      payload: { idempotencyKey: "short-readout-confirm-so" },
+      payload: { idempotencyKey: "short-readout-confirm-so", shipToId: API_TEST_SHIP_TO_ID },
     });
     expect(confirmed.statusCode).toBe(200);
 

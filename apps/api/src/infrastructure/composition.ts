@@ -30,6 +30,7 @@ import {
   CreateShipToUseCase,
   CustomerAccountStatusReadAdapter,
   CustomerBillToSnapshotReadAdapter,
+  CustomerShipToSnapshotReadAdapter,
   DrizzleBillToRepository,
   DrizzleContactRepository,
   DrizzleCustomerRepository,
@@ -169,6 +170,7 @@ import {
   ShipSalesOrderUseCase,
   type ICatalogProductPort,
   type ICustomerBillToSnapshotReadPort,
+  type ICustomerShipToSnapshotReadPort,
   type ICustomerLookupPort,
   type ISalesOrderRepository,
   type SalesDrizzle,
@@ -268,6 +270,7 @@ export type CustomersHttpServices = {
 
 export type CustomerReadPorts = {
   billToSnapshot: ICustomerBillToSnapshotReadPort;
+  shipToSnapshot: ICustomerShipToSnapshotReadPort;
   accountStatus: ICustomerAccountStatusReadPort;
 };
 
@@ -456,9 +459,11 @@ function customersServices(
 function customerReadPorts(
   customerRepo: ICustomerRepository,
   billToRepo: IBillToRepository,
+  shipToRepo: IShipToRepository,
 ): CustomerReadPorts {
   return {
     billToSnapshot: new CustomerBillToSnapshotReadAdapter(customerRepo, billToRepo),
+    shipToSnapshot: new CustomerShipToSnapshotReadAdapter(customerRepo, shipToRepo),
     accountStatus: new CustomerAccountStatusReadAdapter(customerRepo),
   };
 }
@@ -616,6 +621,7 @@ function salesServices(
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/sales").IClock,
   billToSnapshot: ICustomerBillToSnapshotReadPort,
+  shipToSnapshot: ICustomerShipToSnapshotReadPort,
   accountStatus: ICustomerAccountStatusReadPort,
 ): SalesHttpServices {
   const customers = customerLookupPort(customerRepo, accountStatus);
@@ -633,7 +639,7 @@ function salesServices(
       catalogProduct,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
-    confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales, customers),
+    confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales, customers, shipToSnapshot),
     cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
     shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot),
   };
@@ -776,7 +782,7 @@ export function composeAppServices(
       ? new DrizzleBillToRepository(customersDb)
       : new InMemoryBillToRepository());
 
-  const readPorts = customerReadPorts(customerRepo, billToRepo);
+  const readPorts = customerReadPorts(customerRepo, billToRepo, shipToRepo);
   const customerTermsRead = new CustomerTermsReadAdapter(customerRepo);
 
   const productRepo =
@@ -985,6 +991,7 @@ export function composeAppServices(
       unitOfWork,
       clock,
       readPorts.billToSnapshot,
+      readPorts.shipToSnapshot,
       readPorts.accountStatus,
     ),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),

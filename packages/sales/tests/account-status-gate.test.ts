@@ -34,6 +34,7 @@ describe("Sales account status gates (ADA-263, U10)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "on-hold-confirm",
+        shipToId: h.shipToId,
       });
       expect(result.ok).toBe(false);
       if (result.ok) {
@@ -98,6 +99,7 @@ describe("Sales account status gates (ADA-263, U10)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "on-hold-ship-confirm",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
 
@@ -144,6 +146,7 @@ describe("Sales account status gates (ADA-263, U10)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: inserted.id,
         idempotencyKey: "inactive-confirm",
+        shipToId: h.shipToId,
       });
       expect(result.ok).toBe(false);
       if (result.ok) {
@@ -196,6 +199,7 @@ describe("Sales account status gates (ADA-263, U10)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "inactive-ship-confirm",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
 
@@ -234,6 +238,7 @@ describe("Sales account status gates (ADA-263, U10)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: wholesaleDraft.salesOrderId,
         idempotencyKey: "active-confirm",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
       if (!confirmed.ok) {

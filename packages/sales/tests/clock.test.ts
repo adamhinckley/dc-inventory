@@ -14,6 +14,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { InMemoryCatalogProductPort } from "../src/adapters/in-memory-catalog-product-port.js";
+import { InMemoryCustomerShipToSnapshotReadPort } from "../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import {
   ConfirmSalesOrderUseCase,
@@ -26,6 +27,7 @@ import {
   testShipBillToSnapshot,
   testShipCustomerTerms,
 } from "./support/ship-invoice-readports.js";
+import { seedTestShipTo, TEST_SHIP_TO_ID } from "./support/test-ship-to.js";
 
 const billToSnapshot: ICustomerBillToSnapshotReadPort = {
   getBillToAddressSnapshot: async () => ({
@@ -66,15 +68,19 @@ async function harness() {
     },
   ]);
 
+  const shipToSnapshot = new InMemoryCustomerShipToSnapshotReadPort();
+  seedTestShipTo(shipToSnapshot, CUSTOMER_ID);
+
   return {
     clock,
     uow,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog, clock),
     get: new GetSalesOrderUseCase(uow.salesOrders),
-    confirm: new ConfirmSalesOrderUseCase(uow, customers),
+    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot),
     ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
+    shipToId: TEST_SHIP_TO_ID,
   };
 }
 
@@ -110,6 +116,7 @@ describe("Sales seed clock (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "clock-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 
@@ -166,6 +173,7 @@ describe("Sales seed clock (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "clock-confirm-posted",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 
