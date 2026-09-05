@@ -24,8 +24,8 @@ describe("isShopSellable", () => {
     expect(isShopSellable(qty({ available: 12 }))).toBe(true);
   });
 
-  it("excludes open SKUs with no warehouse leftover", () => {
-    expect(isShopSellable(qty({ available: 0 }))).toBe(false);
+  it("includes open SKUs with no warehouse leftover", () => {
+    expect(isShopSellable(qty({ available: 0 }))).toBe(true);
   });
 
   it("includes locked SKUs with availableToSell on PO", () => {
@@ -53,8 +53,8 @@ describe("isShopSellable", () => {
 });
 
 describe("shopDisplayAvailableQty", () => {
-  it("shows warehouse leftover for open SKUs", () => {
-    expect(shopDisplayAvailableQty(qty({ available: 12 }))).toBe(12);
+  it("returns null for open SKUs (no warehouse leftover on shop)", () => {
+    expect(shopDisplayAvailableQty(qty({ available: 12 }))).toBeNull();
   });
 
   it("shows availableToSell for locked SKUs", () => {
@@ -83,10 +83,17 @@ describe("shopDisplayAvailableQty", () => {
 });
 
 describe("shopAvailabilityLabel", () => {
-  it("formats sellable open stock", () => {
+  it("shows Available to order for open SKUs", () => {
     expect(shopAvailabilityLabel(qty({ available: 12 }))).toEqual({
       inStock: true,
-      label: "12 available",
+      label: "Available to order",
+    });
+  });
+
+  it("shows Available to order for open SKUs with no warehouse leftover", () => {
+    expect(shopAvailabilityLabel(qty({ available: 0 }))).toEqual({
+      inStock: true,
+      label: "Available to order",
     });
   });
 

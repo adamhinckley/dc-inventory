@@ -93,7 +93,7 @@ const SHOP_SELLABLE_CASES = [
       windowOpensAt: null,
       windowClosesAt: null,
     },
-    expected: false,
+    expected: true,
   },
   {
     label: "locked ATP > 0 in",

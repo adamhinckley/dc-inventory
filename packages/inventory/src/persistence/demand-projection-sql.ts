@@ -60,7 +60,7 @@ export function staffCatalogDemandProjectionSql(
   });
 }
 
-/** WHERE fragment: open SKUs by warehouse leftover; locked SKUs by availableToSell > 0. */
+/** WHERE fragment: every open SKU; locked SKUs by availableToSell > 0. */
 export function isShopSellableSql(
   warehouseAvailable: SQL<number>,
   columns: DemandProjectionSnapshotColumns,
@@ -69,7 +69,7 @@ export function isShopSellableSql(
   const projection = staffCatalogDemandProjectionSql(columns, nowIso);
   return sql<boolean>`(CASE
     WHEN ${projection.isLockedForSell} THEN ${projection.availableToSell} > 0
-    ELSE ${warehouseAvailable} > 0
+    ELSE true
   END)`;
 }
 
