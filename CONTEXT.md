@@ -84,6 +84,16 @@ _Avoid_: uncovered, min order qty (vendor MOQ), committed
 Upper target on warehouse on-hand for a SKU at a location. Used with reorder minimum for replenishment band planning. Not a purchase-order line quantity by itself.
 _Avoid_: uncovered, max order qty, on order / Qty On PO
 
+### Purchasing
+
+**Supplier**:
+Factory or vendor that fulfills purchase orders. Staff link catalog SKUs to a supplier before drafting factory POs from the uncovered worksheet.
+_Avoid_: vendor as the only word in tickets (prefer Supplier), customer, wholesale buyer
+
+**Purchase order**:
+Inbound factory document. Draft while staff edit lines and dates; confirmed to place the factory order (`InboundFromPo`); received when stock arrives. One PO belongs to one supplier — the uncovered worksheet splits a multi-SKU selection into one draft per factory.
+_Avoid_: purchase request, mixed-factory PO, auto-confirm from uncovered
+
 ### Customers
 
 **Customer**:

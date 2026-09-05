@@ -36,6 +36,8 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("listInternalCustomers");
     expect(specs.internal).toContain("x-table");
     expect(specs.internal).toContain("listInternalProducts");
+    expect(specs.internal).toContain("draftInternalUncoveredPurchaseOrders");
+    expect(specs.internal).toContain("/internal/uncovered-skus/draft-purchase-orders");
     expect(specs.internal).not.toContain("/ops/auth/");
 
     expect(specs.wholesale).toContain("/wholesale/catalog");

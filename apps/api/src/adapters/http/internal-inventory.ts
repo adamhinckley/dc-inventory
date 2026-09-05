@@ -1,8 +1,12 @@
-import type { FastifyInstance, FastifySchema } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { Sku } from "@dc-inventory/shared-kernel";
+import type { PurchaseOrder } from "@dc-inventory/purchasing";
+import { Sku, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
+  draftUncoveredPurchaseOrdersBodySchema,
+  draftUncoveredPurchaseOrdersResponseSchema,
   featureDisabledResponseSchema,
+  invalidResponseSchema,
   inventoryStockParamsSchema,
   inventoryStockSnapshotSchema,
   unauthorizedResponseSchema,
@@ -15,6 +19,28 @@ import { staffOrganizationId } from "./org-session.js";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
+}
+
+function mapPurchaseOrder(order: PurchaseOrder) {
+  return {
+    id: order.id,
+    supplierId: order.supplierId,
+    documentNumber: order.documentNumber,
+    status: order.status,
+    shipDate: order.shipDate,
+    cancelDate: order.cancelDate,
+    lines: order.lines.map((line) => ({
+      id: line.id,
+      sku: line.sku.value,
+      name: line.name,
+      qty: line.qty,
+      receivedQty: line.receivedQty,
+    })),
+  };
+}
+
+function sendInvalid(reply: FastifyReply) {
+  return reply.code(400).send({ error: "invalid" as const });
 }
 
 export function registerInternalInventoryRoutes(app: FastifyInstance): void {
@@ -52,7 +78,7 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
   );
 }
 
-export function registerInternalUncoveredSkusRoutes(app: FastifyInstance): void {
+export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
   routes.get(
@@ -94,6 +120,45 @@ export function registerInternalUncoveredSkusRoutes(app: FastifyInstance): void 
         pageSize: result.pageSize,
         total: result.total,
       };
+    },
+  );
+}
+
+export function registerInternalUncoveredSkusDraftPurchaseOrderRoutes(
+  app: FastifyInstance,
+): void {
+  const routes = typed(app);
+
+  routes.post(
+    "/uncovered-skus/draft-purchase-orders",
+    {
+      schema: {
+        operationId: "draftInternalUncoveredPurchaseOrders",
+        tags: ["internal"],
+        summary: "Create draft purchase orders from uncovered SKU selection",
+        body: draftUncoveredPurchaseOrdersBodySchema,
+        response: {
+          201: draftUncoveredPurchaseOrdersResponseSchema,
+          400: invalidResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = request.body as { skus: string[] };
+      const result = await request.server.purchasing.draftPurchaseOrdersFromUncoveredSkus.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: StaffUserId.parse(request.staffAuth?.staffUserId ?? ""),
+        skus: body.skus,
+      });
+      if (!result.ok) {
+        return sendInvalid(reply);
+      }
+      return reply.code(201).send({
+        purchaseOrders: result.purchaseOrders.map(mapPurchaseOrder),
+        unmappedSkus: [...result.unmappedSkus],
+      });
     },
   );
 }

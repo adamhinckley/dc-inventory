@@ -79,6 +79,7 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
     return this.inventoryUow.run(async () => {
       const salesSnap = this.salesOrders.snapshot();
       const invoiceSnap = this.invoices.snapshot();
+      const purchaseOrderSnap = this.purchaseOrders.snapshot();
       try {
         const scope: IUnitOfWork = {
           inventory: this.inventory,
@@ -90,6 +91,7 @@ export class InMemoryUnitOfWork implements IUnitOfWork {
       } catch (error) {
         this.salesOrders.restore(salesSnap);
         this.invoices.restore(invoiceSnap);
+        this.purchaseOrders.restore(purchaseOrderSnap);
         throw error;
       }
     });

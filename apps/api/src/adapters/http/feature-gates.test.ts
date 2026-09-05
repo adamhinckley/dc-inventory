@@ -65,11 +65,16 @@ async function authenticatedApp(disabled: FeatureName) {
 }
 
 describe("named feature gates", () => {
-  const cases: Array<{ feature: FeatureName; url: string }> = [
+  const cases: Array<{ feature: FeatureName; url: string; method?: "GET" | "POST" }> = [
     { feature: "catalog", url: "/internal/products" },
     { feature: "inventory", url: "/internal/products" },
     { feature: "customers", url: "/internal/customers" },
     { feature: "purchasing", url: "/internal/purchase-orders" },
+    {
+      feature: "purchasing",
+      url: "/internal/uncovered-skus/draft-purchase-orders",
+      method: "POST",
+    },
     { feature: "sales", url: "/internal/sales-orders" },
     {
       feature: "ar",
@@ -77,13 +82,16 @@ describe("named feature gates", () => {
     },
   ];
 
-  it.each(cases)("returns 403 when $feature is disabled", async ({ feature, url }) => {
+  it.each(cases)("returns 403 when $feature is disabled", async ({ feature, url, method = "GET" }) => {
     const { app, session } = await authenticatedApp(feature);
 
     const response = await app.inject({
-      method: "GET",
+      method,
       url,
       cookies: { [STAFF_SESSION_COOKIE]: session },
+      ...(method === "POST"
+        ? { payload: { skus: ["UNCOVERED-HTTP-1"] } }
+        : {}),
     });
 
     expect(response.statusCode).toBe(403);
