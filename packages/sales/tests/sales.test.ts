@@ -15,6 +15,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import { InMemoryCatalogProductPort } from "../src/adapters/in-memory-catalog-product-port.js";
+import { InMemoryCustomerShipToSnapshotReadPort } from "../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import {
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
@@ -29,6 +30,7 @@ import {
   testShipBillToSnapshot,
   testShipCustomerTerms,
 } from "./support/ship-invoice-readports.js";
+import { seedTestShipTo, TEST_SHIP_TO_ID } from "./support/test-ship-to.js";
 
 const SKU = Sku.parse("SO-TEST-SKU");
 const SKU_B = Sku.parse("SO-TEST-SKU-B");
@@ -56,6 +58,8 @@ const billToSnapshot: ICustomerBillToSnapshotReadPort = {
 
 async function harness() {
   const uow = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms);
+  const shipToSnapshot = new InMemoryCustomerShipToSnapshotReadPort();
+  seedTestShipTo(shipToSnapshot, CUSTOMER_ID);
   const customers = {
     findById: async (organizationId: OrganizationId, id: CustomerId) => {
       if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
@@ -108,11 +112,12 @@ async function harness() {
     customers,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog),
     list: new ListSalesOrdersUseCase(uow.salesOrders),
-    confirm: new ConfirmSalesOrderUseCase(uow, customers),
+    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot),
     cancel: new CancelSalesOrderUseCase(uow),
     ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
+    shipToId: TEST_SHIP_TO_ID,
   };
 }
 
@@ -317,6 +322,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-partial-cover",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
     if (!confirmed.ok) {
@@ -354,6 +360,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-cancel",
+      shipToId: h.shipToId,
     });
 
     const cancelled = await h.cancel.execute({
@@ -393,6 +400,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: firstOrder.salesOrder.id,
       idempotencyKey: "confirm-a",
+      shipToId: h.shipToId,
     });
     expect(firstConfirm.ok).toBe(true);
 
@@ -413,6 +421,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: secondOrder.salesOrder.id,
       idempotencyKey: "confirm-b",
+      shipToId: h.shipToId,
     });
     expect(secondConfirm.ok).toBe(true);
 
@@ -442,6 +451,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-ship",
+      shipToId: h.shipToId,
     });
 
     const shipped = await h.ship.execute({
@@ -489,6 +499,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-retry",
+      shipToId: h.shipToId,
     });
 
     const first = await h.ship.execute({
@@ -533,6 +544,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "confirm-no-cancel",
+      shipToId: h.shipToId,
     });
     await h.ship.execute({
       organizationId: DEFAULT_ORG,
@@ -574,6 +586,8 @@ describe("Sales (in-memory)", () => {
         return null;
       },
     };
+    const shipToSnapshot = new InMemoryCustomerShipToSnapshotReadPort();
+    seedTestShipTo(shipToSnapshot, CUSTOMER_ID);
     const catalog = new InMemoryCatalogProductPort([
       {
         productId: PRODUCT_ID,
@@ -589,7 +603,7 @@ describe("Sales (in-memory)", () => {
       customers,
       catalog,
     );
-    const confirm = new ConfirmSalesOrderUseCase(failingUow, customers);
+    const confirm = new ConfirmSalesOrderUseCase(failingUow, customers, shipToSnapshot);
     const ship = new ShipSalesOrderUseCase(failingUow, billToSnapshot);
     const snapshot = new GetStockSnapshotUseCase(base.inventoryReadModel);
     const adjustmentIncrease = new RecordAdjustmentIncreaseUseCase(base.ledger);
@@ -621,6 +635,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "rollback-confirm",
+      shipToId: TEST_SHIP_TO_ID,
     });
 
     const result = await ship.execute({
@@ -714,6 +729,7 @@ describe("Sales (in-memory)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: betaOrderId,
       idempotencyKey: "confirm-beta-from-acme",
+      shipToId: h.shipToId,
     });
     expect(crossOrgConfirm.ok).toBe(false);
     if (crossOrgConfirm.ok) {

@@ -1,5 +1,6 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
+import type { ICustomerShipToSnapshotReadPort } from "../domain/ports/customer-ship-to-snapshot-read.js";
 import type {
   ICustomerLookupPort,
   ISalesUnitOfWork,
@@ -12,6 +13,7 @@ export type ConfirmSalesOrderRequest = {
   staffUserId: StaffUserId;
   salesOrderId: OrderId;
   idempotencyKey: string;
+  shipToId: string;
 };
 
 export type ConfirmSalesOrderResult =
@@ -27,13 +29,37 @@ export type ConfirmSalesOrderResult =
         | "idempotency_conflict"
         | "customer_on_hold"
         | "customer_inactive"
-        | "customer_not_found";
+        | "customer_not_found"
+        | "ship_to_not_found";
     };
+
+function applyShipToSnapshot(
+  order: SalesOrder,
+  snapshot: {
+    line1: string;
+    line2: string | null;
+    city: string;
+    region: string;
+    postal: string;
+    country: string;
+  },
+): SalesOrder {
+  return {
+    ...order,
+    shipLine1: snapshot.line1,
+    shipLine2: snapshot.line2,
+    shipCity: snapshot.city,
+    shipRegion: snapshot.region,
+    shipPostal: snapshot.postal,
+    shipCountry: snapshot.country,
+  };
+}
 
 export class ConfirmSalesOrderUseCase {
   constructor(
     private readonly uow: ISalesUnitOfWork,
     private readonly customers: ICustomerLookupPort,
+    private readonly shipTos: ICustomerShipToSnapshotReadPort,
   ) {}
 
   async execute(input: ConfirmSalesOrderRequest): Promise<ConfirmSalesOrderResult> {
@@ -81,6 +107,15 @@ export class ConfirmSalesOrderUseCase {
           return { ok: false, reason: accountStatusGate };
         }
 
+        const shipToSnapshot = await this.shipTos.getShipToAddressSnapshot(
+          input.organizationId,
+          existing.customerId,
+          input.shipToId,
+        );
+        if (shipToSnapshot === null) {
+          return { ok: false, reason: "ship_to_not_found" };
+        }
+
         await scope.inventory.lockSnapshots(
           existing.lines.map((line) => ({
             organizationId: existing.organizationId,
@@ -109,7 +144,10 @@ export class ConfirmSalesOrderUseCase {
           }
         }
 
-        const updated: SalesOrder = { ...existing, status: "confirmed" };
+        const updated: SalesOrder = applyShipToSnapshot(
+          { ...existing, status: "confirmed" },
+          shipToSnapshot,
+        );
         await scope.salesOrders.save(updated);
         return { ok: true, salesOrder: updated };
       });

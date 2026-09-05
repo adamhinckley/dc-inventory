@@ -41,6 +41,7 @@ describe("Line-level decommit (ADA-181)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "multi-line-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
     if (!confirmed.ok) {
@@ -115,6 +116,7 @@ describe("Line-level decommit (ADA-181)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: draft.salesOrderId,
       idempotencyKey: "atp-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 
@@ -160,6 +162,7 @@ describe("Line-level decommit (ADA-181)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: draft.salesOrderId,
       idempotencyKey: "retry-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 
@@ -243,6 +246,7 @@ describe("Line-level decommit (ADA-181)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: draftOrder.salesOrderId,
       idempotencyKey: "guard-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 
@@ -284,6 +288,7 @@ describe("Line-level decommit (ADA-181)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: shipDraft.salesOrderId,
       idempotencyKey: "ship-guard-confirm",
+      shipToId: h.shipToId,
     });
     await h.ship.execute({
       organizationId: DEFAULT_ORG,
@@ -337,6 +342,7 @@ describe("Line-level decommit (ADA-181)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "ship-after-decommit-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 
@@ -425,6 +431,7 @@ describe("Line-level decommit (ADA-181)", () => {
       staffUserId: STAFF_ID,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: "cancel-after-decommit-confirm",
+      shipToId: h.shipToId,
     });
     expect(confirmed.ok).toBe(true);
 

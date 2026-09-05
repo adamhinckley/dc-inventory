@@ -22,6 +22,7 @@ import {
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { InMemoryCatalogProductPort } from "../../src/adapters/in-memory-catalog-product-port.js";
+import { InMemoryCustomerShipToSnapshotReadPort } from "../../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import { InMemorySalesUnitOfWork } from "../../src/adapters/in-memory-sales-unit-of-work.js";
 import type { IClock } from "../../src/domain/clock.js";
 import type { ICustomerLookupPort } from "../../src/domain/ports/sales-order-repository.js";
@@ -39,6 +40,7 @@ import {
   testShipBillToSnapshot,
   testShipCustomerTerms,
 } from "./ship-invoice-readports.js";
+import { seedTestShipTo, TEST_SHIP_TO_ID } from "./test-ship-to.js";
 
 export const DEFAULT_ORG = OrganizationId.DEFAULT;
 export const DEFAULT_LOCATION = LocationId.DEFAULT;
@@ -97,6 +99,9 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     },
   };
 
+  const shipToSnapshot = new InMemoryCustomerShipToSnapshotReadPort();
+  seedTestShipTo(shipToSnapshot, CUSTOMER_ID);
+
   const uow = new InMemorySalesUnitOfWork(billToSnapshot, testShipCustomerTerms, clock);
   const ledger = uow.ledger;
   const readModel = uow.inventoryReadModel;
@@ -146,7 +151,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
 
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
   const replaceLines = new ReplaceSalesOrderLinesUseCase(uow.salesOrders, customers, catalog);
-  const confirm = new ConfirmSalesOrderUseCase(uow, customers);
+  const confirm = new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot);
   const cancel = new CancelSalesOrderUseCase(uow);
   const decommitLine = new DecommitSalesOrderLineUseCase(uow);
   const ship = new ShipSalesOrderUseCase(uow, billToSnapshot);
@@ -239,6 +244,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     createStaffDraft,
     createWholesaleDraft,
     createStaffActingDraft,
+    shipToId: TEST_SHIP_TO_ID,
   };
 }
 

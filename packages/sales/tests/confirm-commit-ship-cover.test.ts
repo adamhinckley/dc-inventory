@@ -38,6 +38,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "open-commit-100k",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
 
@@ -77,6 +78,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "open-partial-cover",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
 
@@ -130,6 +132,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "locked-oversell-401",
+        shipToId: h.shipToId,
       });
       expect(failed.ok).toBe(false);
       if (failed.ok) {
@@ -164,6 +167,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: firstDraft.salesOrderId,
         idempotencyKey: "concurrent-a",
+        shipToId: h.shipToId,
       });
       expect(firstConfirm.ok).toBe(true);
 
@@ -179,6 +183,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: secondDraft.salesOrderId,
         idempotencyKey: "concurrent-b",
+        shipToId: h.shipToId,
       });
       expect(secondConfirm.ok).toBe(false);
       if (secondConfirm.ok) {
@@ -209,6 +214,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "cancel-cover-confirm",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
 
@@ -283,6 +289,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "ship-cover-confirm",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
 
@@ -356,6 +363,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "receive-cover-confirm",
+        shipToId: h.shipToId,
       });
       expect(confirmed.ok).toBe(true);
 
@@ -423,6 +431,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "confirm-retry",
+        shipToId: h.shipToId,
       });
       expect(first.ok).toBe(true);
 
@@ -434,6 +443,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         staffUserId: STAFF_ID,
         salesOrderId: draft.salesOrderId,
         idempotencyKey: "confirm-retry",
+        shipToId: h.shipToId,
       });
       expect(retry.ok).toBe(true);
 
