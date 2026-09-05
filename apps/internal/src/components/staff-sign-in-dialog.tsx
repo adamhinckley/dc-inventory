@@ -4,9 +4,8 @@ import {
   getGetInternalSessionQueryKey,
   useGetInternalSession,
 } from "@dc-inventory/api-client-internal";
-import { Dialog } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   isStaffSessionSignedIn,
   shouldShowStaffSessionLoading,
@@ -15,50 +14,48 @@ import { StaffSignInForm } from "./staff-sign-in-form";
 
 export function StaffSessionGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const [sessionQueryEnabled, setSessionQueryEnabled] = useState(false);
+  useEffect(() => {
+    setSessionQueryEnabled(true);
+  }, []);
   const session = useGetInternalSession({
     query: {
       queryKey: getGetInternalSessionQueryKey(),
       retry: false,
+      enabled: sessionQueryEnabled,
     },
   });
 
   const signedIn = isStaffSessionSignedIn(session);
-
-  if (shouldShowStaffSessionLoading(session)) {
-    return <div className="min-h-screen bg-surface-base" />;
-  }
 
   if (signedIn) {
     return children;
   }
 
   return (
-    <div className="min-h-screen bg-surface-base">
-      <Dialog
-        open
-        onOpenChange={() => {
-          return;
-        }}
+    <div
+      className="flex min-h-screen items-center justify-center bg-surface-base px-region-x"
+      aria-busy={shouldShowStaffSessionLoading(session)}
+    >
+      <section
+        className="section-flat w-full max-w-md p-panel"
+        data-testid="auth-sign-in-dialog"
       >
-        <Dialog.Content size="sm" data-testid="auth-sign-in-dialog">
-          <Dialog.Header>
-            <Dialog.Title>Sign in</Dialog.Title>
-          </Dialog.Header>
-          <Dialog.Body>
-            <p className="page-description mb-field-group">
-              Staff sign-in. After <code>pnpm db:seed:phase1</code>, use
-              organization <code>acme</code> with <code>staff@local.test</code>.
-            </p>
-            <StaffSignInForm
-              onSignedIn={() => {
-                void queryClient.invalidateQueries({
-                  queryKey: getGetInternalSessionQueryKey(),
-                });
-              }}
-            />
-          </Dialog.Body>
-        </Dialog.Content>
-      </Dialog>
+        <h1 className="page-title">Sign in</h1>
+        <p className="page-description mt-2">
+          Staff sign-in. After <code>pnpm db:seed:phase1</code>, use organization{" "}
+          <code>acme</code> with <code>staff@local.test</code>.
+        </p>
+        <div className="mt-8">
+          <StaffSignInForm
+            onSignedIn={() => {
+              void queryClient.invalidateQueries({
+                queryKey: getGetInternalSessionQueryKey(),
+              });
+            }}
+          />
+        </div>
+      </section>
     </div>
   );
 }
