@@ -141,3 +141,15 @@ export const REDUCED_PERSONA_ORDER_BUDGETS: PersonaOrderBudgets = {
 };
 
 export const DEMO_COUNTS = FULL_DEMO_COUNTS;
+
+export function demoCountsWithSalesOrderDraftSpill(
+  counts: DemoCounts,
+  draftSpillToShipped: number,
+): DemoCounts {
+  return {
+    ...counts,
+    shippedSalesOrders: counts.shippedSalesOrders + draftSpillToShipped,
+    invoices: counts.invoices + draftSpillToShipped,
+    payments: counts.payments + draftSpillToShipped,
+  };
+}

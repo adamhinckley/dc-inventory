@@ -179,21 +179,39 @@ describe("planDemoBook", () => {
     expect(recentIdle).toHaveLength(1);
 
     const leftovers = plan.salesOrders.filter((row) => row.status !== "shipped");
-    expect(leftovers.length).toBe(DEMO_COUNTS.salesOrders - DEMO_COUNTS.shippedSalesOrders);
+    expect(leftovers.length).toBe(
+      DEMO_COUNTS.salesOrders -
+        DEMO_COUNTS.shippedSalesOrders -
+        plan.salesOrderDraftSpillToShipped,
+    );
     expect(
       leftovers.every((row) =>
         isWithinLastDays(row.plannedInstant, SEED_TODAY, FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverWindowDays),
       ),
     ).toBe(true);
     expect(plan.salesOrders.some((row) => row.customerKey === "acme" && row.status === "leftoverDraft")).toBe(true);
+    const draftCountsByCustomer = new Map<string, number>();
+    for (const order of plan.salesOrders) {
+      if (order.status === "leftoverDraft") {
+        draftCountsByCustomer.set(
+          order.customerKey,
+          (draftCountsByCustomer.get(order.customerKey) ?? 0) + 1,
+        );
+      }
+    }
+    for (const [customerKey, count] of draftCountsByCustomer) {
+      expect(count, customerKey).toBeLessThanOrEqual(1);
+    }
     expect(
       plan.salesOrders.some((row) => row.customerKey === "idlePark" && row.status !== "shipped"),
     ).toBe(false);
   });
 
   it("selects stable payment replay fields", () => {
-    expect(plan.shippedInvoices).toHaveLength(DEMO_COUNTS.invoices);
-    expect(selectPaymentReplay(plan.shippedInvoices)).toHaveLength(DEMO_COUNTS.payments);
+    const invoiceCount = DEMO_COUNTS.invoices + plan.salesOrderDraftSpillToShipped;
+    const paymentCount = DEMO_COUNTS.payments + plan.salesOrderDraftSpillToShipped;
+    expect(plan.shippedInvoices).toHaveLength(invoiceCount);
+    expect(selectPaymentReplay(plan.shippedInvoices)).toHaveLength(paymentCount);
     expect(selectUnpaidReplay(plan.shippedInvoices)).toHaveLength(DEMO_COUNTS.unpaidInvoices);
 
     const idleUnpaid = plan.shippedInvoices.filter((row) => row.customerKey === "idlePark" && !row.paid);

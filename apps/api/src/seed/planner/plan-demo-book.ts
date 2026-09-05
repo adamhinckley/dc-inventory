@@ -1,5 +1,6 @@
 import {
   DEFAULT_DEMO_SEED,
+  demoCountsWithSalesOrderDraftSpill,
   FULL_DEMO_COUNTS,
   PERSONA_ORDER_BUDGETS,
   type DemoCounts,
@@ -75,7 +76,7 @@ export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
     scopedRandom(seed, "so-leftover-count"),
     counts,
   );
-  const salesOrders = planSalesOrders({
+  const { orders: salesOrders, draftSpillToShipped } = planSalesOrders({
     rng: scopedRandom(seed, "sales-orders"),
     seedToday,
     historicalStart,
@@ -110,7 +111,7 @@ export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
     customers,
     seedToday,
     idleParkInstants,
-    counts,
+    counts: demoCountsWithSalesOrderDraftSpill(counts, draftSpillToShipped),
   });
 
   const plan: DemoBookPlan = {
@@ -134,6 +135,7 @@ export function planDemoBook(input: PlanDemoBookOptions): DemoBookPlan {
     shippedInvoices,
     leftoverConfirmedPurchaseOrderCount,
     leftoverConfirmedSalesOrderCount,
+    salesOrderDraftSpillToShipped: draftSpillToShipped,
   };
   alignDemoPlanStockClock(plan);
   return plan;

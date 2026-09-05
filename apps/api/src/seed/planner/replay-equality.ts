@@ -18,6 +18,7 @@ export function toReplayComparablePlan(plan: DemoBookPlan): ReplayComparablePlan
     shippedInvoices: stripInstant(plan.shippedInvoices),
     leftoverConfirmedPurchaseOrderCount: plan.leftoverConfirmedPurchaseOrderCount,
     leftoverConfirmedSalesOrderCount: plan.leftoverConfirmedSalesOrderCount,
+    salesOrderDraftSpillToShipped: plan.salesOrderDraftSpillToShipped,
   };
 }
 

@@ -110,6 +110,7 @@ export type DemoBookPlan = {
   shippedInvoices: PlannedShippedInvoice[];
   leftoverConfirmedPurchaseOrderCount: number;
   leftoverConfirmedSalesOrderCount: number;
+  salesOrderDraftSpillToShipped: number;
 };
 
 export type PlanDemoBookInput = {

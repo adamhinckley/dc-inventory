@@ -19,7 +19,10 @@ import { InMemorySupplierProductSeedRepository } from "./ports/in-memory-supplie
 import type { StaticDemoSeedPorts } from "./ports/static-seed-types.js";
 import { assertDemoBook } from "./reconciliation/assert-demo-book.js";
 import type { DemoReconciliationExpectations } from "./reconciliation/expectations.js";
-import { FULL_DEMO_RECONCILIATION_EXPECTATIONS } from "./reconciliation/expectations.js";
+import {
+  FULL_DEMO_RECONCILIATION_EXPECTATIONS,
+  demoExpectationsWithSalesOrderDraftSpill,
+} from "./reconciliation/expectations.js";
 import { InMemoryDemoBookLoader, type InMemoryDemoBookLoadPorts } from "./reconciliation/in-memory-demo-book-loader.js";
 import type { DemoReconciliationResult } from "./reconciliation/contracts.js";
 import {
@@ -238,7 +241,12 @@ export async function runDemoSeedInMemory(
     }),
     {
       seedToday: input.plan.seedToday,
-      expectations: input.expectations ?? FULL_DEMO_RECONCILIATION_EXPECTATIONS,
+      expectations:
+        input.expectations ??
+        demoExpectationsWithSalesOrderDraftSpill(
+          FULL_DEMO_RECONCILIATION_EXPECTATIONS,
+          input.plan.salesOrderDraftSpillToShipped,
+        ),
     },
   );
   if (!reconciliation.ok) {

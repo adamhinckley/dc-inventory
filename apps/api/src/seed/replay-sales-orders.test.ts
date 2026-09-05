@@ -166,9 +166,11 @@ describe("replay sales orders (in-memory)", () => {
     expect(replay.lastSalesDocumentNumber).toBe(
       `SO-${String(DEMO_COUNTS.salesOrders).padStart(5, "0")}`,
     );
-    expect(replay.shippedCount).toBe(DEMO_COUNTS.shippedSalesOrders);
+    expect(replay.shippedCount).toBe(
+      DEMO_COUNTS.shippedSalesOrders + plan.salesOrderDraftSpillToShipped,
+    );
     expect(replay.lastInvoiceDocumentNumber).toBe(
-      `INV-${String(DEMO_COUNTS.invoices).padStart(5, "0")}`,
+      `INV-${String(DEMO_COUNTS.invoices + plan.salesOrderDraftSpillToShipped).padStart(5, "0")}`,
     );
     expect(replay.leftoverConfirmedCount).toBe(plan.leftoverConfirmedSalesOrderCount);
     expect(replay.leftoverConfirmedCount).toBeGreaterThanOrEqual(
@@ -178,7 +180,10 @@ describe("replay sales orders (in-memory)", () => {
       FULL_DEMO_RECONCILIATION_EXPECTATIONS.leftoverConfirmedSalesOrderMax,
     );
     expect(replay.leftoverDraftCount).toBe(
-      DEMO_COUNTS.salesOrders - DEMO_COUNTS.shippedSalesOrders - plan.leftoverConfirmedSalesOrderCount,
+      DEMO_COUNTS.salesOrders -
+        DEMO_COUNTS.shippedSalesOrders -
+        plan.leftoverConfirmedSalesOrderCount -
+        plan.salesOrderDraftSpillToShipped,
     );
 
     const listed = await uow.salesOrders.list({
@@ -208,11 +213,23 @@ describe("replay sales orders (in-memory)", () => {
     const confirmed = listed.items.filter((row) => row.status === "confirmed");
     const drafts = listed.items.filter((row) => row.status === "draft");
 
-    expect(shipped).toHaveLength(DEMO_COUNTS.shippedSalesOrders);
+    expect(shipped).toHaveLength(
+      DEMO_COUNTS.shippedSalesOrders + plan.salesOrderDraftSpillToShipped,
+    );
     expect(confirmed).toHaveLength(plan.leftoverConfirmedSalesOrderCount);
     expect(drafts).toHaveLength(replay.leftoverDraftCount);
 
     expect(drafts.some((row) => customerKeyById.get(row.customerId) === "acme")).toBe(true);
+    const draftCountByCustomer = new Map<string, number>();
+    for (const draft of drafts) {
+      draftCountByCustomer.set(
+        draft.customerId,
+        (draftCountByCustomer.get(draft.customerId) ?? 0) + 1,
+      );
+    }
+    for (const [customerId, count] of draftCountByCustomer) {
+      expect(count, customerKeyById.get(customerId) ?? customerId).toBeLessThanOrEqual(1);
+    }
     expect(
       listed.items.every(
         (row) =>

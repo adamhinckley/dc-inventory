@@ -128,3 +128,15 @@ export const FULL_DEMO_RECONCILIATION_EXPECTATIONS: DemoReconciliationExpectatio
   customerTerms: PHASE1_CUSTOMER_TERMS,
   customerCurrency: PHASE1_CUSTOMER_CURRENCY,
 };
+
+export function demoExpectationsWithSalesOrderDraftSpill(
+  expectations: DemoReconciliationExpectations,
+  draftSpillToShipped: number,
+): DemoReconciliationExpectations {
+  return {
+    ...expectations,
+    shippedSalesOrderCount: expectations.shippedSalesOrderCount + draftSpillToShipped,
+    invoiceCount: expectations.invoiceCount + draftSpillToShipped,
+    paymentCount: expectations.paymentCount + draftSpillToShipped,
+  };
+}

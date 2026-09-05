@@ -3,6 +3,7 @@ import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { DEMO_SEED_ORGANIZATION_ID } from "./demo-seed-organization.js";
 import { planReducedDemoBook, REDUCED_PLAYBACK_COUNTS } from "./planner/plan-reduced-demo-book.js";
 import { REDUCED_DEMO_RECONCILIATION_EXPECTATIONS } from "./reconciliation/valid-reduced-demo-book.js";
+import { demoExpectationsWithSalesOrderDraftSpill } from "./reconciliation/expectations.js";
 import { runDemoSeedInMemory, staticSeedPortsForDemo } from "./run-demo-seed.js";
 import { runWriteStaticDemoBook } from "./write-static-demo-book.js";
 
@@ -25,6 +26,10 @@ const REDUCED_PLAYBACK_EXPECTATIONS = {
 describe("runDemoSeedInMemory", () => {
   it("replays a reduced test-only plan through real use cases and passes reconciliation", async () => {
     const plan = planReducedDemoBook(SEED_TODAY);
+    const expectations = demoExpectationsWithSalesOrderDraftSpill(
+      REDUCED_PLAYBACK_EXPECTATIONS,
+      plan.salesOrderDraftSpillToShipped,
+    );
 
     const result = await runDemoSeedInMemory({
       plan,
@@ -32,7 +37,7 @@ describe("runDemoSeedInMemory", () => {
         staffPassword: "staff-placeholder",
         wholesalePassword: "wholesale-placeholder",
       },
-      expectations: REDUCED_PLAYBACK_EXPECTATIONS,
+      expectations,
     });
 
     expect(result.reconciliation.ok).toBe(true);
