@@ -19,6 +19,10 @@ import { Ban, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import {
+  cancelSalesOrderErrorMessage,
+  shipSalesOrderErrorMessage,
+} from "../lib/sales-order-action-errors";
+import {
   lineSubtotalCents,
   salesOrderCancelDisabled,
   salesOrderShipDisabled,
@@ -183,7 +187,7 @@ export function SalesOrderFrozenWorkspace({
         data: { idempotencyKey: `cancel-${salesOrderId}` },
       });
       if (result.status !== 200) {
-        setActionError("Could not cancel this sales order.");
+        setActionError(cancelSalesOrderErrorMessage(result));
         return;
       }
       await invalidateOrder();
@@ -201,7 +205,7 @@ export function SalesOrderFrozenWorkspace({
         data: { idempotencyKey: `ship-${salesOrderId}` },
       });
       if (result.status !== 200) {
-        setActionError("Could not ship this sales order.");
+        setActionError(shipSalesOrderErrorMessage(result));
         return;
       }
       await invalidateOrder();
@@ -215,10 +219,13 @@ export function SalesOrderFrozenWorkspace({
     status,
     autosavePending: false,
     cancelPending: cancelMutation.isPending,
+    confirmPending: false,
+    shipPending: shipMutation.isPending,
   });
   const shipDisabled = salesOrderShipDisabled({
     status,
     shipPending: shipMutation.isPending,
+    cancelPending: cancelMutation.isPending,
   });
 
   return (

@@ -2,6 +2,7 @@
 
 import {
   getGetInternalSalesOrderQueryKey,
+  getListInternalProductsQueryKey,
   getListInternalSalesOrdersQueryKey,
   useCancelInternalSalesOrder,
   useConfirmInternalSalesOrder,
@@ -20,6 +21,7 @@ import {
   Label,
   LabeledField,
   Table,
+  TextInput,
   useTable,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,18 +36,36 @@ import {
   type CSSProperties,
 } from "react";
 import {
+  confirmSalesOrderErrorMessage,
+  cancelSalesOrderErrorMessage,
+  replaceSalesOrderLinesErrorMessage,
+} from "../lib/sales-order-action-errors";
+import {
+  lineSubtotalCents,
+  salesOrderCancelDisabled,
+  salesOrderCatalogLookupPending,
   salesOrderConfirmDisabled,
   salesOrderLineRowKey,
+  salesOrderLinesResolved,
   salesOrderLineWritesEqual,
   salesOrderSubtotalCents,
   salesOrderWriteLines,
-  lineSubtotalCents,
 } from "../lib/sales-order-line-math";
 import type { SalesOrderLineDraft } from "../lib/sales-order-types";
+import { useCatalogProductsBySku } from "../lib/use-catalog-products-by-sku";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { DashboardTopbarPortal } from "./purchase-order-workspace-shared";
 
 type SalesOrderLineRow = SalesOrderLineDraft & { rowIndex: number };
+
+type SalesOrderLineResponse = {
+  id: string;
+  sku: string;
+  name: string;
+  qty: number;
+  unitPriceCents: number;
+  currency: string;
+};
 
 function CustomerName({ customerId }: { customerId: string }) {
   const customerQuery = useGetInternalCustomer(customerId);
@@ -59,30 +79,10 @@ function CustomerName({ customerId }: { customerId: string }) {
   );
 }
 
-type SalesOrderLineResponse = {
-  id: string;
-  sku: string;
-  name: string;
-  qty: number;
-  unitPriceCents: number;
-  currency: string;
-};
-
-type CatalogProductOption = {
-  id: string;
-  sku: string;
-  name: string;
-  memberPrice: number;
-  currency: string;
-};
-
-function draftLinesFromOrder(
-  lines: readonly SalesOrderLineResponse[],
-  productIdBySku: ReadonlyMap<string, CatalogProductOption>,
-): SalesOrderLineDraft[] {
+function draftLinesFromOrder(lines: readonly SalesOrderLineResponse[]): SalesOrderLineDraft[] {
   return lines.map((line) => ({
     rowKey: salesOrderLineRowKey(line),
-    productId: productIdBySku.get(line.sku)?.id ?? "",
+    productId: "",
     sku: line.sku,
     name: line.name,
     qty: line.qty,
@@ -91,20 +91,57 @@ function draftLinesFromOrder(
   }));
 }
 
-function SalesOrderLineAdder({
+function SalesOrderProductSearchAdder({
   lines,
-  productOptions,
-  productBySku,
   disabled = false,
   onAddLines,
 }: {
   lines: SalesOrderLineDraft[];
-  productOptions: Array<{ value: string; label: string }>;
-  productBySku: ReadonlyMap<string, CatalogProductOption>;
   disabled?: boolean;
   onAddLines: (next: SalesOrderLineDraft[]) => void;
 }) {
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const searchParams = useMemo(
+    () => ({
+      q: debouncedSearch,
+      page: 1,
+      pageSize: 25,
+    }),
+    [debouncedSearch],
+  );
+  const searchQuery = useListInternalProducts(searchParams, {
+    query: {
+      enabled: debouncedSearch.length >= 2,
+      queryKey: getListInternalProductsQueryKey(searchParams),
+    },
+  });
+  const searchItems =
+    searchQuery.data?.status === 200 ? searchQuery.data.data.items : [];
+
+  const productOptions = useMemo(() => {
+    const taken = new Set(lines.map((line) => line.sku));
+    return searchItems
+      .filter((product) => !taken.has(product.sku) && !product.inactive)
+      .map((product) => ({
+        value: product.sku,
+        label: `${product.sku} — ${product.name}`,
+      }));
+  }, [lines, searchItems]);
+
+  const productBySku = useMemo(
+    () => new Map(searchItems.map((product) => [product.sku, product])),
+    [searchItems],
+  );
 
   const addSku = (value: string | string[] | null) => {
     const skus = Array.isArray(value) ? value : value ? [value] : [];
@@ -141,15 +178,29 @@ function SalesOrderLineAdder({
 
   return (
     <FieldRow>
+      <LabeledField className="w-52 shrink-0">
+        <Label htmlFor="sales-order-product-search">Find Product</Label>
+        <TextInput
+          id="sales-order-product-search"
+          density="compact"
+          value={search}
+          placeholder="Search SKU or name"
+          disabled={disabled}
+          onChange={setSearch}
+        />
+      </LabeledField>
       <LabeledField className="min-w-56 flex-1">
-        <Label htmlFor="sales-order-product">Catalog product</Label>
+        <Label htmlFor="sales-order-product">Catalog Product</Label>
         <Combobox
           id="sales-order-product"
           options={productOptions}
           value={[]}
           onChange={addSku}
-          disabled={disabled}
-          placeholder="Add SKU"
+          disabled={disabled || debouncedSearch.length < 2 || searchQuery.isLoading}
+          loading={searchQuery.isLoading}
+          placeholder={
+            debouncedSearch.length < 2 ? "Type to search catalog" : "Add SKU"
+          }
         />
       </LabeledField>
       {error ? (
@@ -174,34 +225,13 @@ export function SalesOrderDraftWorkspace({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const productsParams = { page: 1, pageSize: 100 };
-  const productsQuery = useListInternalProducts(productsParams);
   const shipTosQuery = useListInternalCustomerShipTos(customerId);
   const replaceMutation = useReplaceInternalSalesOrderLines();
   const confirmMutation = useConfirmInternalSalesOrder();
   const cancelMutation = useCancelInternalSalesOrder();
 
-  const productItems =
-    productsQuery.data?.status === 200 ? productsQuery.data.data.items : [];
-  const productBySku = useMemo(
-    () =>
-      new Map(
-        productItems.map((product) => [
-          product.sku,
-          {
-            id: product.id,
-            sku: product.sku,
-            name: product.name,
-            memberPrice: product.memberPrice,
-            currency: product.currency,
-          },
-        ]),
-      ),
-    [productItems],
-  );
-
   const [lines, setLines] = useState<SalesOrderLineDraft[]>(() =>
-    draftLinesFromOrder(initialLines, productBySku),
+    draftLinesFromOrder(initialLines),
   );
   const [selectedShipToId, setSelectedShipToId] = useState("");
   const [saveState, setSaveState] = useState<
@@ -214,11 +244,28 @@ export function SalesOrderDraftWorkspace({
   linesRef.current = lines;
   const persistChainRef = useRef(Promise.resolve(true));
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastPersistSucceededRef = useRef(true);
+
+  const lineSkus = useMemo(() => lines.map((line) => line.sku), [lines]);
+  const { productBySku, statusBySku } = useCatalogProductsBySku(lineSkus);
 
   useEffect(() => {
-    setLines(draftLinesFromOrder(initialLines, productBySku));
-    lastSavedLinesRef.current = draftLinesFromOrder(initialLines, productBySku);
-  }, [initialLines, productBySku]);
+    setLines((current) => {
+      let changed = false;
+      const next = current.map((line) => {
+        if (line.productId.length > 0) {
+          return line;
+        }
+        const product = productBySku.get(line.sku);
+        if (!product) {
+          return line;
+        }
+        changed = true;
+        return { ...line, productId: product.id };
+      });
+      return changed ? next : current;
+    });
+  }, [productBySku]);
 
   const shipToItems =
     shipTosQuery.data?.status === 200 ? shipTosQuery.data.data.items : [];
@@ -246,6 +293,9 @@ export function SalesOrderDraftWorkspace({
     (nextLines: SalesOrderLineDraft[], force = false): Promise<boolean> => {
       const run = async (): Promise<boolean> => {
         const payloadLines = nextLines;
+        if (!salesOrderLinesResolved(payloadLines)) {
+          return false;
+        }
         if (
           !force &&
           salesOrderLineWritesEqual(payloadLines, lastSavedLinesRef.current)
@@ -273,7 +323,7 @@ export function SalesOrderDraftWorkspace({
             return true;
           }
           setSaveState("error");
-          setActionError("Autosave failed.");
+          setActionError(replaceSalesOrderLinesErrorMessage(result));
           lastPersistSucceededRef.current = false;
           return false;
         } catch {
@@ -293,9 +343,19 @@ export function SalesOrderDraftWorkspace({
     [invalidateOrder, replaceMutation, router, salesOrderId],
   );
 
-  const lastPersistSucceededRef = useRef(true);
+  const linesResolved = salesOrderLinesResolved(lines);
+  const catalogLookupPending = salesOrderCatalogLookupPending(lines, statusBySku);
+  const workspaceLocked =
+    !linesResolved ||
+    catalogLookupPending ||
+    saveState === "saving" ||
+    confirmMutation.isPending ||
+    cancelMutation.isPending;
 
   useEffect(() => {
+    if (!linesResolved || catalogLookupPending) {
+      return;
+    }
     if (salesOrderLineWritesEqual(lines, lastSavedLinesRef.current)) {
       return;
     }
@@ -310,7 +370,7 @@ export function SalesOrderDraftWorkspace({
         clearTimeout(autosaveTimerRef.current);
       }
     };
-  }, [lines, persistReplace]);
+  }, [catalogLookupPending, lines, linesResolved, persistReplace]);
 
   const flushAutosave = useCallback(
     async (force = false) => {
@@ -355,16 +415,6 @@ export function SalesOrderDraftWorkspace({
     setLines((current) => current.filter((line) => !remove.has(line.rowKey)));
   }, []);
 
-  const productOptions = useMemo(() => {
-    const taken = new Set(lines.map((line) => line.sku));
-    return productItems
-      .filter((product) => !taken.has(product.sku) && !product.inactive)
-      .map((product) => ({
-        value: product.sku,
-        label: `${product.sku} — ${product.name}`,
-      }));
-  }, [lines, productItems]);
-
   const rows = useMemo<SalesOrderLineRow[]>(
     () => lines.map((line, rowIndex) => ({ ...line, rowIndex })),
     [lines],
@@ -386,6 +436,7 @@ export function SalesOrderDraftWorkspace({
             type="number"
             min={1}
             value={record.qty}
+            disabled={workspaceLocked || record.productId.length === 0}
             onChange={(event) =>
               updateLineQty(record.rowKey, Number(event.target.value))
             }
@@ -422,6 +473,7 @@ export function SalesOrderDraftWorkspace({
             type="button"
             variant="secondary"
             size="sm"
+            disabled={workspaceLocked}
             onClick={() => removeLines([record.rowKey])}
           >
             <Trash2 className="size-icon" aria-hidden />
@@ -441,13 +493,23 @@ export function SalesOrderDraftWorkspace({
   const subtotalCents = salesOrderSubtotalCents(lines);
   const linesDirty = !salesOrderLineWritesEqual(lines, lastSavedLinesRef.current);
   const autosavePending = saveState === "saving";
+  const cancelDisabled = salesOrderCancelDisabled({
+    status: "draft",
+    autosavePending,
+    cancelPending: cancelMutation.isPending,
+    confirmPending: confirmMutation.isPending,
+    shipPending: false,
+  });
   const confirmDisabled = salesOrderConfirmDisabled({
     status: "draft",
     lineCount: lines.length,
     shipToId: selectedShipToId,
     autosavePending,
     linesDirty,
+    linesUnresolved: !linesResolved,
+    catalogLookupPending,
     confirmPending: confirmMutation.isPending,
+    cancelPending: cancelMutation.isPending,
   });
 
   const confirmOrder = useCallback(async () => {
@@ -465,7 +527,7 @@ export function SalesOrderDraftWorkspace({
         },
       });
       if (result.status !== 200) {
-        setActionError("Could not confirm this sales order.");
+        setActionError(confirmSalesOrderErrorMessage(result));
         return;
       }
       await invalidateOrder();
@@ -494,7 +556,7 @@ export function SalesOrderDraftWorkspace({
         data: { idempotencyKey: `cancel-${salesOrderId}` },
       });
       if (result.status !== 200) {
-        setActionError("Could not cancel this sales order.");
+        setActionError(cancelSalesOrderErrorMessage(result));
         return;
       }
       await invalidateOrder();
@@ -507,15 +569,17 @@ export function SalesOrderDraftWorkspace({
   useBreadcrumbLabel(salesOrderId, documentNumber);
 
   const saveLabel =
-    saveState === "saving"
-      ? "Saving"
-      : saveState === "saved"
-        ? "Saved"
-        : saveState === "error"
-          ? "Save failed"
-          : "Autosave on";
+    catalogLookupPending
+      ? "Resolving SKUs"
+      : saveState === "saving"
+        ? "Saving"
+        : saveState === "saved"
+          ? "Saved"
+          : saveState === "error"
+            ? "Save failed"
+            : "Autosave on";
   const saveChipColor =
-    saveState === "saving"
+    catalogLookupPending || saveState === "saving"
       ? "var(--color-info)"
       : saveState === "saved"
         ? "var(--color-success)"
@@ -527,7 +591,7 @@ export function SalesOrderDraftWorkspace({
     <section className="flex min-h-0 flex-1 flex-col gap-form-section">
       <DashboardTopbarPortal>
         <Chip
-          busy={saveState === "saving"}
+          busy={catalogLookupPending || saveState === "saving"}
           icon={<Chip.Dot />}
           aria-live="polite"
           style={{ "--chip-color": saveChipColor } as CSSProperties}
@@ -548,7 +612,7 @@ export function SalesOrderDraftWorkspace({
           <Button
             type="button"
             variant="secondary"
-            disabled={cancelMutation.isPending || autosavePending}
+            disabled={cancelDisabled}
             onClick={() => void cancelOrder()}
           >
             <Ban className="size-icon-lg" aria-hidden />
@@ -572,11 +636,15 @@ export function SalesOrderDraftWorkspace({
         </p>
       ) : null}
 
-      <SalesOrderLineAdder
+      {!linesResolved && !catalogLookupPending ? (
+        <p className="text-body-sm text-error" role="alert">
+          One or more line SKUs could not be resolved in the catalog.
+        </p>
+      ) : null}
+
+      <SalesOrderProductSearchAdder
         lines={lines}
-        productOptions={productOptions}
-        productBySku={productBySku}
-        disabled={autosavePending || productsQuery.isLoading}
+        disabled={workspaceLocked}
         onAddLines={addLines}
       />
 
@@ -606,6 +674,7 @@ export function SalesOrderDraftWorkspace({
                     name="sales-order-ship-to"
                     value={shipTo.id}
                     checked={selectedShipToId === shipTo.id}
+                    disabled={workspaceLocked}
                     onChange={() => setSelectedShipToId(shipTo.id)}
                     className="mt-1"
                   />

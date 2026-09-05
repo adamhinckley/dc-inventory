@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   salesOrderCancelDisabled,
+  salesOrderCatalogLookupPending,
   salesOrderConfirmDisabled,
+  salesOrderLinesResolved,
   salesOrderLineWritesEqual,
   salesOrderShipDisabled,
   salesOrderWriteLines,
@@ -41,7 +43,15 @@ describe("sales order line math", () => {
     ).toBe(false);
   });
 
-  it("blocks confirm while autosave is pending or lines are dirty", () => {
+  it("requires every line to have a product id before save or confirm", () => {
+    expect(salesOrderLinesResolved([lineA])).toBe(true);
+    expect(salesOrderLinesResolved([{ ...lineA, productId: "" }])).toBe(false);
+    expect(
+      salesOrderCatalogLookupPending([lineA], new Map([["SKU-A", "loading"]])),
+    ).toBe(true);
+  });
+
+  it("blocks confirm while autosave, unresolved lines, or cancel is pending", () => {
     expect(
       salesOrderConfirmDisabled({
         status: "draft",
@@ -49,7 +59,10 @@ describe("sales order line math", () => {
         shipToId: "ship-to",
         autosavePending: false,
         linesDirty: false,
+        linesUnresolved: false,
+        catalogLookupPending: false,
         confirmPending: false,
+        cancelPending: false,
       }),
     ).toBe(false);
     expect(
@@ -57,58 +70,56 @@ describe("sales order line math", () => {
         status: "draft",
         lineCount: 1,
         shipToId: "ship-to",
-        autosavePending: true,
+        autosavePending: false,
         linesDirty: false,
+        linesUnresolved: true,
+        catalogLookupPending: false,
         confirmPending: false,
+        cancelPending: false,
       }),
     ).toBe(true);
     expect(
       salesOrderConfirmDisabled({
         status: "draft",
         lineCount: 1,
-        shipToId: "",
+        shipToId: "ship-to",
         autosavePending: false,
         linesDirty: false,
+        linesUnresolved: false,
+        catalogLookupPending: false,
         confirmPending: false,
+        cancelPending: true,
       }),
     ).toBe(true);
   });
 
-  it("allows cancel on draft and confirmed only", () => {
+  it("blocks cancel while confirm or ship is pending", () => {
     expect(
       salesOrderCancelDisabled({
         status: "draft",
         autosavePending: false,
         cancelPending: false,
+        confirmPending: true,
+        shipPending: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       salesOrderCancelDisabled({
         status: "confirmed",
         autosavePending: false,
         cancelPending: false,
-      }),
-    ).toBe(false);
-    expect(
-      salesOrderCancelDisabled({
-        status: "shipped",
-        autosavePending: false,
-        cancelPending: false,
+        confirmPending: false,
+        shipPending: true,
       }),
     ).toBe(true);
   });
 
-  it("allows ship only on confirmed orders", () => {
+  it("blocks ship while cancel is pending", () => {
     expect(
       salesOrderShipDisabled({
         status: "confirmed",
         shipPending: false,
-      }),
-    ).toBe(false);
-    expect(
-      salesOrderShipDisabled({
-        status: "draft",
-        shipPending: false,
+        cancelPending: true,
       }),
     ).toBe(true);
   });

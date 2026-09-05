@@ -39,13 +39,27 @@ export function salesOrderSubtotalCents(
   return lines.reduce((sum, line) => sum + lineSubtotalCents(line.qty, line.unitPriceCents), 0);
 }
 
+export function salesOrderLinesResolved(lines: readonly SalesOrderLineDraft[]): boolean {
+  return lines.every((line) => line.productId.length > 0);
+}
+
+export function salesOrderCatalogLookupPending(
+  lines: readonly SalesOrderLineDraft[],
+  statusBySku: ReadonlyMap<string, "loading" | "missing" | "ready">,
+): boolean {
+  return lines.some((line) => statusBySku.get(line.sku) === "loading");
+}
+
 export function salesOrderConfirmDisabled(input: {
   status: string;
   lineCount: number;
   shipToId: string;
   autosavePending: boolean;
   linesDirty: boolean;
+  linesUnresolved: boolean;
+  catalogLookupPending: boolean;
   confirmPending: boolean;
+  cancelPending: boolean;
 }): boolean {
   return (
     input.status !== "draft" ||
@@ -53,7 +67,10 @@ export function salesOrderConfirmDisabled(input: {
     input.shipToId.length === 0 ||
     input.autosavePending ||
     input.linesDirty ||
-    input.confirmPending
+    input.linesUnresolved ||
+    input.catalogLookupPending ||
+    input.confirmPending ||
+    input.cancelPending
   );
 }
 
@@ -61,17 +78,22 @@ export function salesOrderCancelDisabled(input: {
   status: string;
   autosavePending: boolean;
   cancelPending: boolean;
+  confirmPending: boolean;
+  shipPending: boolean;
 }): boolean {
   return (
     (input.status !== "draft" && input.status !== "confirmed") ||
     input.autosavePending ||
-    input.cancelPending
+    input.cancelPending ||
+    input.confirmPending ||
+    input.shipPending
   );
 }
 
 export function salesOrderShipDisabled(input: {
   status: string;
   shipPending: boolean;
+  cancelPending: boolean;
 }): boolean {
-  return input.status !== "confirmed" || input.shipPending;
+  return input.status !== "confirmed" || input.shipPending || input.cancelPending;
 }
