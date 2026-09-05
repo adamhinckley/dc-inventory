@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  getListInternalSuppliersQueryKey,
   useListInternalCategories,
-  useListInternalSuppliers,
 } from "@dc-inventory/api-client-internal";
 import type { FilterOption } from "@dc-inventory/ui-internal";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { listAllInternalSuppliers } from "./list-all-internal-suppliers";
 
 export function useProductListFilterOptions(): {
   category: FilterOption[];
@@ -13,13 +15,15 @@ export function useProductListFilterOptions(): {
   sellState: FilterOption[];
 } {
   const categoriesQuery = useListInternalCategories();
-  const suppliersQuery = useListInternalSuppliers({ page: 1, pageSize: 100 });
+  const suppliersQuery = useQuery({
+    queryKey: [...getListInternalSuppliersQueryKey(), "all-filter-options"],
+    queryFn: () => listAllInternalSuppliers(),
+  });
 
   return useMemo(() => {
     const categories =
       categoriesQuery.data?.status === 200 ? categoriesQuery.data.data.items : [];
-    const suppliers =
-      suppliersQuery.data?.status === 200 ? suppliersQuery.data.data.items : [];
+    const suppliers = suppliersQuery.data ?? [];
     return {
       category: categories.map((category) => ({
         value: category.name,
