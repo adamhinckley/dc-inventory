@@ -56,7 +56,7 @@ Lives in `apps/wholesale` (not `packages/ui` / AppShell). Tokens: cream canvas, 
 | On hand / allocated / on order as separate staff figures (shop gets available only, if at all) |
 | Reorder min/max, location codes, pick bin |
 | Other customers, their orders, their invoices |
-| Credit limit and AR aging |
+| AR aging |
 | Staff reports and charts |
 | Spreadsheet import / export |
 | Purchase orders |

@@ -53,7 +53,7 @@ export function SalesOrdersTable({
       linkField="documentNumber"
       renderRowLink={renderRowLink}
       filterOptions={{ status: salesOrderStatusFilterOptions }}
-      filterLabels={{ status: "Status", customerId: "Customer ID" }}
+      filterLabels={{ status: "Status", customerId: "Customer" }}
       renderColumns={{
         customerName: (row) => {
           const cell = salesCustomerCell(row);

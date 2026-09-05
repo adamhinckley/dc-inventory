@@ -19,6 +19,10 @@ import { Pencil, Plus, Star } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import { formatPostalAddressInline } from "../lib/postal-address-format";
+import {
+  SHIP_TOS_DESCRIPTION,
+  SHIP_TOS_EMPTY_MESSAGE,
+} from "../lib/customer-address-empty-copy";
 import type { CustomerShipToRow } from "../lib/customer-types";
 
 const shipToSchema = z.object({
@@ -160,10 +164,7 @@ export function CustomerShipTosPanel({
       <header className="flex flex-col gap-region sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-heading-sm">Ship-Tos</h2>
-          <p className="text-body-sm text-fg-secondary mt-1">
-            Delivery addresses for this customer. One default is required before
-            shipping orders.
-          </p>
+          <p className="text-body-sm text-fg-secondary mt-1">{SHIP_TOS_DESCRIPTION}</p>
         </div>
         {canManage ? (
           <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
@@ -177,7 +178,7 @@ export function CustomerShipTosPanel({
         sticky
         table={table}
         emptyMessage={
-          query.isLoading ? "Loading ship-tos…" : "No ship-to addresses yet."
+          query.isLoading ? "Loading ship-tos…" : SHIP_TOS_EMPTY_MESSAGE
         }
       >
         <Table.Header />

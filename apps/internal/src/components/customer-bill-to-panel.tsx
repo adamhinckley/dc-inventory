@@ -14,6 +14,7 @@ import { Copy, Pencil, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { formatPostalAddress } from "../lib/postal-address-format";
+import { billToEmptyMessage } from "../lib/customer-address-empty-copy";
 
 const billToSchema = z.object({
   line1: z.string().min(1),
@@ -139,10 +140,7 @@ export function CustomerBillToPanel({
       ) : (
         <div className="section-flat rounded-section p-card">
           <p className="text-body-sm text-fg-secondary">
-            No bill-to address yet.
-            {defaultShipTo
-              ? " Add one manually or copy from the default ship-to."
-              : " Shipping will refuse until a default ship-to exists, then you can copy bill-to from it."}
+            {billToEmptyMessage(defaultShipTo !== undefined)}
           </p>
         </div>
       )}

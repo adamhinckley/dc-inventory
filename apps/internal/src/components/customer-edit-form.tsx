@@ -67,7 +67,7 @@ export function CustomerEditForm({ customer }: { customer: CustomerDetail }) {
       <Form.Field name="terms" label="Terms" required form={{ kind: "text" }} />
       <Form.Field
         name="creditLimitCents"
-        label="Credit limit (¢)"
+        label="Credit limit"
         required
         form={{ kind: "number" }}
       />
