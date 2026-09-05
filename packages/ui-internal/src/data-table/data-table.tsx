@@ -76,6 +76,8 @@ export type DataTableRootProps<
   rowActions?: (row: TRow) => ReactNode;
   /** Per-field cell override. Feature owns domain chips and other custom cells. */
   renderColumns?: Partial<Record<string, (row: TRow) => ReactNode>>;
+  /** Shown when the list returns zero rows. */
+  emptyMessage?: ReactNode;
   children: ReactNode;
 };
 
@@ -83,6 +85,7 @@ type DataTableContextValue = ReturnType<typeof useDataTable> & {
   filterOptions?: DataTableRootProps["filterOptions"];
   filterLabels?: DataTableRootProps["filterLabels"];
   filterDefaults?: DataTableRootProps["filterDefaults"];
+  emptyMessage?: ReactNode;
   /** Per-Root prefix so two tables do not share form-control IDs. */
   idBase: string;
   getRowHref?: (row: Record<string, unknown>) => string | undefined;
@@ -305,6 +308,7 @@ export function DataTableRoot<
   renderRowLink,
   rowActions,
   renderColumns,
+  emptyMessage,
   children,
 }: DataTableRootProps<TParams, TRow>) {
   const idBase = tableControlIdBase(meta, idPrefix);
@@ -334,6 +338,7 @@ export function DataTableRoot<
         renderColumns: renderColumns as
           | Partial<Record<string, (row: Record<string, unknown>) => ReactNode>>
           | undefined,
+        emptyMessage,
       }}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-field-group">{children}</div>
@@ -666,6 +671,7 @@ export function DataTableTable() {
     renderRowLink,
     rowActions,
     renderColumns,
+    emptyMessage,
   } = useDataTableContext();
   const resolvedLinkField = linkField ?? meta.columns[0]?.field;
   const fillColumn = fillColumnId(meta);
@@ -761,7 +767,7 @@ export function DataTableTable() {
       sticky
       className="min-h-0 flex-1"
       table={table}
-      emptyMessage="No rows"
+      emptyMessage={emptyMessage ?? "No rows"}
     >
       <Table.Header />
       <Table.Body />
