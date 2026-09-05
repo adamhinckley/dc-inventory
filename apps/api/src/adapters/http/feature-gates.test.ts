@@ -75,6 +75,11 @@ describe("named feature gates", () => {
       url: "/internal/uncovered-skus/draft-purchase-orders",
       method: "POST",
     },
+    {
+      feature: "inventory",
+      url: "/internal/inventory/reopen-skus",
+      method: "POST",
+    },
     { feature: "sales", url: "/internal/sales-orders" },
     {
       feature: "ar",

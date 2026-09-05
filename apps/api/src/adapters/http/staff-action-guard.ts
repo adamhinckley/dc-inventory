@@ -41,6 +41,7 @@ const ACTION_BY_OPERATION: Readonly<
   updateInternalSupplierProduct: "purchase_orders_manage",
   unlinkInternalSupplierProduct: "purchase_orders_manage",
   receiveInternalPurchaseOrder: "stock_manage",
+  reopenInternalInventorySkus: "stock_manage",
   shipInternalSalesOrder: "stock_manage",
   createInternalSalesOrder: "sales_orders_manage",
   replaceInternalSalesOrderLines: "sales_orders_manage",
