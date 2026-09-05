@@ -296,26 +296,21 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
       },
     },
     async (request, reply) => {
+      const actor = wholesaleCreateInput(request);
       const result = await request.server.sales.confirmSalesOrder.execute({
         organizationId: wholesaleOrganizationId(request),
         staffUserId: wholesaleStaffUserId(request),
+        customerId: actor.customerId,
         salesOrderId: OrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
         shipToId: request.body.shipToId,
       });
       if (!result.ok) {
-        if (result.reason === "not_found" || result.reason === "customer_not_found") {
-          return sendNotFound(reply);
-        }
-        if (result.reason === "ship_to_not_found") {
-          return sendNotFound(reply);
-        }
-        const order = await request.server.sales.getSalesOrder.execute({
-          organizationId: wholesaleOrganizationId(request),
-          staffUserId: wholesaleStaffUserId(request),
-          salesOrderId: OrderId.parse(request.params.id),
-        });
-        if (!order.ok || order.salesOrder.customerId !== wholesaleCustomerId(request)) {
+        if (
+          result.reason === "not_found" ||
+          result.reason === "customer_not_found" ||
+          result.reason === "ship_to_not_found"
+        ) {
           return sendNotFound(reply);
         }
         if (result.reason === "insufficient_atp") {
@@ -331,9 +326,6 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           return reply.code(409).send({ error: "conflict" as const });
         }
         return reply.code(400).send({ error: "invalid" as const });
-      }
-      if (result.salesOrder.customerId !== wholesaleCustomerId(request)) {
-        return sendNotFound(reply);
       }
       return mapSalesOrder(result.salesOrder);
     },

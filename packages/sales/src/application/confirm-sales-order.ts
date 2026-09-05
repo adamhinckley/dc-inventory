@@ -1,4 +1,9 @@
-import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import {
+  CustomerId,
+  OrderId,
+  OrganizationId,
+  type StaffUserId,
+} from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
 import type { ICustomerShipToSnapshotReadPort } from "../domain/ports/customer-ship-to-snapshot-read.js";
 import type {
@@ -14,6 +19,8 @@ export type ConfirmSalesOrderRequest = {
   salesOrderId: OrderId;
   idempotencyKey: string;
   shipToId: string;
+  /** When set, the order must belong to this customer (wholesale session gate). */
+  customerId?: CustomerId;
 };
 
 export type ConfirmSalesOrderResult =
@@ -71,6 +78,9 @@ export class ConfirmSalesOrderUseCase {
           input.salesOrderId,
         );
         if (existing === null) {
+          return { ok: false, reason: "not_found" };
+        }
+        if (input.customerId !== undefined && existing.customerId !== input.customerId) {
           return { ok: false, reason: "not_found" };
         }
         if (existing.status === "confirmed") {

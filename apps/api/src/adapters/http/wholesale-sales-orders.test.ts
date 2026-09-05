@@ -21,7 +21,12 @@ import {
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
-import { API_TEST_SHIP_TO_ID, seedDefaultShipTo } from "./test-ship-to.js";
+import {
+  API_TEST_SHIP_TO_ID,
+  API_TEST_SHIP_TO_ID_B,
+  seedDefaultShipTo,
+  seedShipTo,
+} from "./test-ship-to.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
@@ -117,7 +122,7 @@ async function startApp(options?: {
     shipToRepo,
   });
   apps.push(app);
-  return { app, customerRepo, saveCustomer };
+  return { app, customerRepo, saveCustomer, shipToRepo };
 }
 
 function wholesaleCookie(
@@ -492,6 +497,36 @@ describe("wholesale sales orders (ADA-272)", () => {
     });
   });
 
+  it("GET ship-tos does not return another customer's addresses", async () => {
+    const { app, shipToRepo } = await startApp();
+    await seedShipTo(shipToRepo, CUSTOMER_B_ID, API_TEST_SHIP_TO_ID_B, "300 Buyer B St");
+
+    const buyerBCookie = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "buyer-b@local.test",
+        password: "buyer-b-secret",
+      },
+    }).then((res) => wholesaleCookie(res));
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/wholesale/ship-tos",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+    });
+    expect(response.statusCode).toBe(200);
+    const items = response.json().items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      id: API_TEST_SHIP_TO_ID_B,
+      customerId: CUSTOMER_B_ID,
+      line1: "300 Buyer B St",
+    });
+    expect(items.every((item: { id: string }) => item.id !== API_TEST_SHIP_TO_ID)).toBe(true);
+  });
+
   it("POST confirm snapshots ship-to and returns confirmed order", async () => {
     const { app } = await startApp();
     const staffInternal = await loginStaffInternal(app);
@@ -531,7 +566,7 @@ describe("wholesale sales orders (ADA-272)", () => {
   });
 
   it("POST confirm returns 404 for another customer's order", async () => {
-    const { app } = await startApp();
+    const { app, shipToRepo } = await startApp();
     const staffInternal = await loginStaffInternal(app);
     const buyerBCookie = await app.inject({
       method: "POST",
@@ -544,6 +579,7 @@ describe("wholesale sales orders (ADA-272)", () => {
     }).then((res) => wholesaleCookie(res));
     const actingCookie = await loginStaffActing(app);
     const productId = await createProduct(app, staffInternal, "CONFIRM-SCOPE-SKU");
+    await seedShipTo(shipToRepo, CUSTOMER_B_ID, API_TEST_SHIP_TO_ID_B, "300 Buyer B St");
 
     const buyerOrder = await app.inject({
       method: "POST",
@@ -562,10 +598,18 @@ describe("wholesale sales orders (ADA-272)", () => {
       cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
       payload: {
         idempotencyKey: "confirm-scope",
-        shipToId: API_TEST_SHIP_TO_ID,
+        shipToId: API_TEST_SHIP_TO_ID_B,
       },
     });
     expect(forbidden.statusCode).toBe(404);
     expect(forbidden.json()).toEqual({ error: "not_found" });
+
+    const victim = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/${buyerOrderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+    });
+    expect(victim.statusCode).toBe(200);
+    expect(victim.json().status).toBe("draft");
   });
 });

@@ -2,35 +2,56 @@
 
 import { useListWholesaleSalesOrders } from "@dc-inventory/api-client-wholesale";
 import Link from "next/link";
+import { useMemo } from "react";
 import { formatMoneyMinorUnits } from "../lib/format-money";
 import { isVisibleOrderStatus } from "../lib/order-history";
+
+const PAGE_SIZE = 50;
 
 function lineSubtotalCents(qty: number, unitPriceCents: number): number {
   return qty * unitPriceCents;
 }
 
-export function OrdersHistoryView() {
-  const orders = useListWholesaleSalesOrders({
+function useHistoryOrders(status: "confirmed" | "shipped" | "cancelled") {
+  return useListWholesaleSalesOrders({
+    status,
     page: 1,
-    pageSize: 50,
+    pageSize: PAGE_SIZE,
     sortBy: "documentNumber",
     sortOrder: "desc",
   });
+}
 
-  if (orders.isPending) {
+export function OrdersHistoryView() {
+  const confirmed = useHistoryOrders("confirmed");
+  const shipped = useHistoryOrders("shipped");
+  const cancelled = useHistoryOrders("cancelled");
+
+  const isPending = confirmed.isPending || shipped.isPending || cancelled.isPending;
+  const isError = confirmed.isError || shipped.isError || cancelled.isError;
+
+  const visibleOrders = useMemo(() => {
+    const items = [
+      confirmed.data?.data,
+      shipped.data?.data,
+      cancelled.data?.data,
+    ].flatMap((payload) => (payload && "items" in payload ? payload.items : []));
+    return items
+      .filter((order) => isVisibleOrderStatus(order.status))
+      .sort((left, right) => right.documentNumber.localeCompare(left.documentNumber));
+  }, [cancelled.data?.data, confirmed.data?.data, shipped.data?.data]);
+
+  if (isPending) {
     return <p className="text-ink-muted">Loading orders…</p>;
   }
 
-  const payload = orders.data?.data;
-  if (orders.isError || !payload || !("items" in payload)) {
+  if (isError) {
     return (
       <p className="text-sold-out" role="alert">
         Order history is unavailable. Start the API with `pnpm dev:api` and reload.
       </p>
     );
   }
-
-  const visibleOrders = payload.items.filter((order) => isVisibleOrderStatus(order.status));
 
   if (visibleOrders.length === 0) {
     return (
@@ -56,7 +77,10 @@ export function OrdersHistoryView() {
             0,
           );
           return (
-            <li key={order.id} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <li
+              key={order.id}
+              className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            >
               <div>
                 <p className="font-semibold text-ink">{order.documentNumber}</p>
                 <p className="text-sm capitalize text-ink-muted">{order.status}</p>

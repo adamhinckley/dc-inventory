@@ -2,15 +2,18 @@ import { ShipToId, type IShipToRepository } from "@dc-inventory/customers";
 import type { CustomerId } from "@dc-inventory/shared-kernel";
 
 export const API_TEST_SHIP_TO_ID = ShipToId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
+export const API_TEST_SHIP_TO_ID_B = ShipToId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
 
-export async function seedDefaultShipTo(
+export async function seedShipTo(
   shipTos: IShipToRepository,
   customerId: CustomerId,
+  id: ShipToId,
+  line1: string,
 ): Promise<void> {
   await shipTos.save({
-    id: API_TEST_SHIP_TO_ID,
+    id,
     customerId,
-    line1: "200 Ship St",
+    line1,
     line2: "Suite 5",
     city: "Seattle",
     region: "WA",
@@ -18,4 +21,11 @@ export async function seedDefaultShipTo(
     country: "US",
     isDefault: true,
   });
+}
+
+export async function seedDefaultShipTo(
+  shipTos: IShipToRepository,
+  customerId: CustomerId,
+): Promise<void> {
+  await seedShipTo(shipTos, customerId, API_TEST_SHIP_TO_ID, "200 Ship St");
 }

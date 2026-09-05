@@ -32,6 +32,8 @@ const DEFAULT = LocationId.DEFAULT;
 const DEFAULT_ORG = OrganizationId.DEFAULT;
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+const OTHER_CUSTOMER_ID = CustomerId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+const OTHER_SHIP_TO_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 const MISSING_SHIP_TO_ID = "99999999-9999-4999-8999-999999999999";
 
 async function harness() {
@@ -62,6 +64,7 @@ async function harness() {
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
     shipToId: TEST_SHIP_TO_ID,
+    shipToSnapshot,
   };
 }
 
@@ -99,6 +102,44 @@ describe("Confirm sales order ship-to (ADA-292)", () => {
       shipPostal: TEST_SHIP_TO_SNAPSHOT.postal,
       shipCountry: TEST_SHIP_TO_SNAPSHOT.country,
     });
+  });
+
+  it("fails when ship-to belongs to another customer", async () => {
+    const h = await harness();
+    h.shipToSnapshot.seed(OTHER_CUSTOMER_ID, OTHER_SHIP_TO_ID, {
+      line1: "300 Other St",
+      line2: null,
+      city: "Portland",
+      region: "OR",
+      postal: "97201",
+      country: "US",
+    });
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const failed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "confirm-cross-customer-ship-to",
+      shipToId: OTHER_SHIP_TO_ID,
+    });
+    expect(failed.ok).toBe(false);
+    if (failed.ok) {
+      return;
+    }
+    expect(failed.reason).toBe("ship_to_not_found");
+
+    const reloaded = await h.uow.salesOrders.findById(DEFAULT_ORG, created.salesOrder.id);
+    expect(reloaded?.status).toBe("draft");
   });
 
   it("fails when ship-to is missing", async () => {
