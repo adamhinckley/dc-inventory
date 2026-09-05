@@ -721,7 +721,7 @@ function BuyerAccountView() {
             className="shop-button-secondary"
             onClick={openCertDialog}
           >
-            Upload Certificate
+            Add Certificate
           </button>
         </div>
         {certificates.isError ? (
