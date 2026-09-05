@@ -7,9 +7,12 @@ import {
 } from "@dc-inventory/inventory";
 import { createDemandProjectionSqlEvaluator } from "../../../../packages/inventory/tests/support/evaluate-demand-projection-sql.js";
 import type { DemandProjectionFixtureRow } from "../../../../packages/inventory/tests/support/evaluate-demand-projection-sql.js";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { stockSnapshots } from "@dc-inventory/inventory/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { CatalogInventoryListQuery } from "./catalog-inventory-list-query.js";
+import { createCatalogListQueryPgliteHarness } from "./support/catalog-list-query-pglite.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
 const NOW = new Date("2026-09-03T12:00:00.000Z");
@@ -138,5 +141,24 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
     const byCellAsc = [...cellValues].sort(compareStaffCatalogQtySellState);
     const bySqlAsc = await orderBySellState(ROWS, NOW, "asc");
     expect(bySqlAsc).toEqual(byCellAsc.map((row) => row.sellState === "locked"));
+  });
+});
+
+describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
+  it("returns bigint last_po_cost_cents without int4 cast overflow", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const listed = await harness.catalogListQuery.list({
+        organizationId: OrganizationId.DEFAULT,
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(listed.total).toBe(1);
+      expect(listed.items[0]?.lastPoCostCents).toBe(500);
+    } finally {
+      await harness.close();
+    }
   });
 });

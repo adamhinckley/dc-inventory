@@ -5,6 +5,7 @@ import {
   type ProductQty,
 } from "@dc-inventory/catalog";
 import {
+  isShopSellableSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
   type IClock,
@@ -20,6 +21,7 @@ import { supplierProducts, suppliers } from "@dc-inventory/purchasing/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import { normalizeCents } from "./normalize-cents.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
@@ -116,15 +118,8 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     const available = sql<number>`${onHand} - ${allocated}`;
     const committed = sql<number>`coalesce(${stockSnapshots.committed}, 0)`;
     const stickyLocked = sql<boolean>`coalesce(${stockSnapshots.stickyLocked}, false)`;
-    if (query.hideZeroInventory === true) {
-      clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
-    }
-    if (query.availableOnly === true) {
-      clauses.push(gt(available, 0));
-    }
-    const where = and(...clauses);
-    const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
     const now = this.clock ? this.clock.now() : new Date();
+    const nowIso = now.toISOString();
     const demandProjectionColumns = {
       onHand: stockSnapshots.onHand,
       onOrder: stockSnapshots.onOrder,
@@ -133,9 +128,15 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
       windowOpensAt: stockSnapshots.windowOpensAt,
       windowClosesAt: stockSnapshots.windowClosesAt,
     };
-    // postgres.js cannot bind a Date in drizzle `sql` fragments (TypeError).
-    const nowIso = now.toISOString();
     const demandProjection = staffCatalogDemandProjectionSql(demandProjectionColumns, nowIso);
+    if (query.hideZeroInventory === true) {
+      clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
+    }
+    if (query.availableOnly === true) {
+      clauses.push(isShopSellableSql(available, demandProjectionColumns, nowIso));
+    }
+    const where = and(...clauses);
+    const caseQty = sql<number>`coalesce(${productPackaging.caseQty}, 0)`;
     const direction = query.sortOrder === "desc" ? desc : asc;
     const tieBreak = asc(products.id);
     const orderBy =
@@ -242,7 +243,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
         ) satisfies ProductQty,
         createdAt: row.createdAt,
         caseQty: row.caseQty ?? null,
-        lastPoCostCents: row.lastPoCostCents ?? null,
+        lastPoCostCents: normalizeCents(row.lastPoCostCents),
       })),
       total: totalRows[0]?.value ?? 0,
     };

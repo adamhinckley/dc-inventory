@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../app.js";
 import { catalogQuerySchema } from "../../schemas.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
+import { createCatalogListQueryPgliteHarness } from "../support/catalog-list-query-pglite.js";
 import { STAFF_SESSION_COOKIE, WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
 
@@ -41,6 +42,7 @@ afterEach(async () => {
 
 async function startCatalogApp(
   productRepo: InMemoryProductRepository = new InMemoryProductRepository(),
+  qtyRead: InMemoryQtyReadPort = new InMemoryQtyReadPort(),
 ) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
@@ -48,7 +50,6 @@ async function startCatalogApp(
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
-  const qtyRead = new InMemoryQtyReadPort();
   const customerRepo = new InMemoryCustomerRepository();
   await customerRepo.save({
     id: CUSTOMER_ID,
@@ -354,8 +355,9 @@ describe("catalog HTTP", () => {
     expect(hiddenGet.json()).toEqual({ error: "not_found" });
   });
 
-  it("defaults the wholesale catalog to available products only", async () => {
-    const app = await startCatalogApp();
+  it("defaults the wholesale catalog to sellable products only", async () => {
+    const qtyRead = new InMemoryQtyReadPort();
+    const app = await startCatalogApp(new InMemoryProductRepository(), qtyRead);
     const staff = await staffCookie(app);
     const stocked = await app.inject({
       method: "POST",
@@ -371,20 +373,85 @@ describe("catalog HTTP", () => {
       },
     });
     expect(stocked.statusCode).toBe(201);
-    const empty = await app.inject({
+    const openEmpty = await app.inject({
       method: "POST",
       url: "/internal/products",
       cookies: { [STAFF_SESSION_COOKIE]: staff },
       payload: {
-        sku: "SHOP-EMPTY",
-        name: "Shop empty",
+        sku: "SHOP-OPEN-EMPTY",
+        name: "Shop open empty",
         uom: "EA",
         memberPriceCents: 100,
         listPriceCents: 100,
         webWholesale: true,
       },
     });
-    expect(empty.statusCode).toBe(201);
+    expect(openEmpty.statusCode).toBe(201);
+    const onFactoryPo = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staff },
+      payload: {
+        sku: "SHOP-ON-PO",
+        name: "Shop on factory PO",
+        uom: "EA",
+        memberPriceCents: 200,
+        listPriceCents: 200,
+        webWholesale: true,
+      },
+    });
+    expect(onFactoryPo.statusCode).toBe(201);
+    const lockedLeftover = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: staff },
+      payload: {
+        sku: "SHOP-LOCKED-LEFTOVER",
+        name: "Shop locked leftover",
+        uom: "EA",
+        memberPriceCents: 300,
+        listPriceCents: 300,
+        webWholesale: true,
+      },
+    });
+    expect(lockedLeftover.statusCode).toBe(201);
+
+    qtyRead.set(OrganizationId.DEFAULT, "SHOP-STOCKED", {
+      onHand: 4,
+      onOrder: 0,
+      allocated: 0,
+      available: 4,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    qtyRead.set(OrganizationId.DEFAULT, "SHOP-OPEN-EMPTY", {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    qtyRead.set(OrganizationId.DEFAULT, "SHOP-ON-PO", {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "locked",
+      availableToSell: 100,
+    });
+    qtyRead.set(OrganizationId.DEFAULT, "SHOP-LOCKED-LEFTOVER", {
+      onHand: 5,
+      onOrder: 0,
+      allocated: 0,
+      available: 5,
+      committed: 5,
+      sellState: "locked",
+      availableToSell: 0,
+    });
 
     const wholesale = await wholesaleCookie(app);
     const listed = await app.inject({
@@ -393,8 +460,11 @@ describe("catalog HTTP", () => {
       cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
     });
     expect(listed.statusCode).toBe(200);
-    expect(listed.json().total).toBe(0);
-    expect(listed.json().items).toEqual([]);
+    expect(listed.json().total).toBe(2);
+    expect(listed.json().items.map((item: { name: string }) => item.name).sort()).toEqual([
+      "Shop on factory PO",
+      "Shop stocked",
+    ]);
 
     const includeUnavailable = await app.inject({
       method: "GET",
@@ -402,7 +472,7 @@ describe("catalog HTTP", () => {
       cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
     });
     expect(includeUnavailable.statusCode).toBe(200);
-    expect(includeUnavailable.json().total).toBe(2);
+    expect(includeUnavailable.json().total).toBe(4);
   });
 
   it("passes every declared wholesale filter into the repository query", async () => {
@@ -629,5 +699,46 @@ describe("catalog HTTP", () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toEqual({ error: "invalid" });
+  });
+
+  it("returns bigint supplier lastPoCostCents on the staff product list", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const passwords = new InMemoryPasswordHasher();
+      const organizations = new InMemoryOrganizationRepository();
+      await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+      const staffUsers = new InMemoryStaffUserRepository();
+      const sessions = new InMemorySessionStore();
+      await staffUsers.save({
+        id: STAFF_ID,
+        organizationId: OrganizationId.DEFAULT,
+        email: "staff@local.test",
+        passwordHash: await passwords.hash("staff-secret"),
+        roles: ["admin"],
+      });
+      const app = await buildApp({
+        logger: false,
+        database: new InMemoryDatabase(),
+        staffUsers,
+        sessions,
+        passwords,
+        organizationRepo: organizations,
+        catalogListQuery: harness.catalogListQuery,
+      });
+      apps.push(app);
+      const cookie = await staffCookie(app);
+      const listed = await app.inject({
+        method: "GET",
+        url: "/internal/products",
+        cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      });
+      expect(listed.statusCode).toBe(200);
+      expect(listed.json()).toMatchObject({
+        total: 1,
+        items: [{ sku: "LAST-PO-COST-500", lastPoCostCents: 500 }],
+      });
+    } finally {
+      await harness.close();
+    }
   });
 });

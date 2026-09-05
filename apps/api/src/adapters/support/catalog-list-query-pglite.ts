@@ -1,0 +1,144 @@
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { InMemoryClock } from "@dc-inventory/identity";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
+import { CatalogInventoryListQuery } from "../catalog-inventory-list-query.js";
+import { schema } from "../../infrastructure/schema.js";
+import type { AppDrizzle } from "../../infrastructure/db.js";
+
+const ORG = OrganizationId.DEFAULT;
+const PRODUCT_ID = "da209000-0000-4000-8000-000000000101";
+const SUPPLIER_ID = "da209000-0000-4000-8000-000000000102";
+const SUPPLIER_PRODUCT_ID = "da209000-0000-4000-8000-000000000103";
+const LOCATION_ID = "da209000-0000-4000-8000-000000000104";
+const SKU = "LAST-PO-COST-500";
+
+async function execCatalogListQuerySchema(client: PGlite): Promise<void> {
+  await client.exec(`
+    CREATE SCHEMA catalog;
+    CREATE SCHEMA inventory;
+    CREATE SCHEMA purchasing;
+
+    CREATE TABLE catalog.products (
+      id uuid PRIMARY KEY,
+      organization_id text NOT NULL,
+      sku text NOT NULL,
+      name text NOT NULL,
+      description text,
+      uom text NOT NULL,
+      member_price_cents bigint NOT NULL,
+      list_price_cents bigint,
+      currency char(3) NOT NULL DEFAULT 'USD',
+      inactive boolean NOT NULL DEFAULT false,
+      discontinued boolean NOT NULL DEFAULT false,
+      web_wholesale boolean NOT NULL DEFAULT false,
+      tax_category_code text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE (organization_id, sku)
+    );
+
+    CREATE TABLE catalog.product_packaging (
+      id uuid PRIMARY KEY,
+      product_id uuid NOT NULL UNIQUE REFERENCES catalog.products(id),
+      case_qty integer,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE inventory.locations (
+      id uuid PRIMARY KEY,
+      organization_id text NOT NULL,
+      code text NOT NULL,
+      is_pick_bin boolean NOT NULL DEFAULT false,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE (organization_id, code)
+    );
+
+    CREATE TABLE inventory.stock_snapshots (
+      organization_id text NOT NULL,
+      sku text NOT NULL,
+      location_id uuid NOT NULL REFERENCES inventory.locations(id),
+      on_hand integer NOT NULL DEFAULT 0,
+      allocated integer NOT NULL DEFAULT 0,
+      on_order integer NOT NULL DEFAULT 0,
+      committed integer NOT NULL DEFAULT 0,
+      sticky_locked boolean NOT NULL DEFAULT false,
+      window_opens_at timestamptz,
+      window_closes_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (organization_id, sku, location_id)
+    );
+
+    CREATE TABLE purchasing.suppliers (
+      id uuid PRIMARY KEY,
+      organization_id text NOT NULL,
+      vendor_number text NOT NULL,
+      name text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE (organization_id, vendor_number)
+    );
+
+    CREATE TABLE purchasing.supplier_products (
+      id uuid PRIMARY KEY,
+      supplier_id uuid NOT NULL REFERENCES purchasing.suppliers(id),
+      sku text NOT NULL,
+      supplier_sku text,
+      min_order_qty integer,
+      min_order_amount_cents bigint,
+      last_po_cost_cents bigint,
+      currency char(3) NOT NULL DEFAULT 'USD',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE (supplier_id, sku)
+    );
+  `);
+}
+
+export async function createCatalogListQueryPgliteHarness() {
+  const client = new PGlite();
+  await execCatalogListQuerySchema(client);
+
+  await client.query(
+    `INSERT INTO catalog.products
+      (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+     VALUES ($1, $2, $3, 'Widget with last PO cost', 'EA', 1000, 500, true)`,
+    [PRODUCT_ID, ORG, SKU],
+  );
+  await client.query(
+    `INSERT INTO inventory.locations (id, organization_id, code)
+     VALUES ($1, $2, 'DEFAULT')`,
+    [LOCATION_ID, ORG],
+  );
+  await client.query(
+    `INSERT INTO inventory.stock_snapshots
+      (organization_id, sku, location_id, on_hand, allocated, on_order, committed)
+     VALUES ($1, $2, $3, 3, 0, 0, 0)`,
+    [ORG, SKU, LOCATION_ID],
+  );
+  await client.query(
+    `INSERT INTO purchasing.suppliers (id, organization_id, vendor_number, name)
+     VALUES ($1, $2, 'VEND-500', 'Acme Supply')`,
+    [SUPPLIER_ID, ORG],
+  );
+  await client.query(
+    `INSERT INTO purchasing.supplier_products
+      (id, supplier_id, sku, supplier_sku, last_po_cost_cents)
+     VALUES ($1, $2, $3, 'ACME-500', $4::bigint)`,
+    [SUPPLIER_PRODUCT_ID, SUPPLIER_ID, SKU, 500],
+  );
+
+  const db = drizzle(client, { schema }) as unknown as AppDrizzle;
+  const clock = new InMemoryClock(new Date("2026-09-03T12:00:00.000Z"));
+  const catalogListQuery = new CatalogInventoryListQuery(db, clock);
+
+  return {
+    catalogListQuery,
+    async close(): Promise<void> {
+      await client.close();
+    },
+  };
+}

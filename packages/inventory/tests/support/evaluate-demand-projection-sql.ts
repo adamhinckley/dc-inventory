@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { boolean, integer, pgTable, timestamp } from "drizzle-orm/pg-core";
 import {
+  isShopSellableSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
   type DemandProjectionSnapshotColumns,
@@ -101,6 +102,15 @@ function buildSellStateOrderByQuery(
     .orderBy(orderBy);
 }
 
+function buildIsShopSellableQuery(db: DemandProjectionSqlDb, nowIso: string, warehouseAvailable: number) {
+  const available = sql<number>`${warehouseAvailable}`;
+  return db
+    .select({
+      isShopSellable: isShopSellableSql(available, projectionColumns, nowIso).as("is_shop_sellable"),
+    })
+    .from(demandProjectionFixture);
+}
+
 async function seedFixtureRows(
   client: PGlite,
   rows: readonly DemandProjectionFixtureRow[],
@@ -193,6 +203,27 @@ export async function createDemandProjectionSqlEvaluator() {
         is_locked: boolean;
       }>(selectSql, params);
       return result.rows.map((row) => row.is_locked);
+    },
+    async evaluateIsShopSellable(
+      row: DemandProjectionFixtureRow,
+      now: Date,
+    ): Promise<boolean> {
+      await seedFixtureRows(client, [row]);
+      const nowIso = now.toISOString();
+      const warehouseAvailable = row.onHand - row.allocated;
+      const { sql: selectSql, params } = buildIsShopSellableQuery(
+        db,
+        nowIso,
+        warehouseAvailable,
+      ).toSQL();
+      const result = await client.query<{
+        is_shop_sellable: boolean;
+      }>(selectSql, params);
+      const evaluated = result.rows[0];
+      if (evaluated === undefined) {
+        throw new Error("isShopSellable SQL evaluation returned no row");
+      }
+      return evaluated.is_shop_sellable;
     },
     async close(): Promise<void> {
       await client.close();

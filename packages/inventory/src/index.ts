@@ -146,6 +146,7 @@ export {
 export {
   availableToSellProjectionSql,
   isLockedForSellSql,
+  isShopSellableSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
   type DemandProjectionSnapshotColumns,
