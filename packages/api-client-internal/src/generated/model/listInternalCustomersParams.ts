@@ -4,11 +4,13 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalCustomersAccountStatus } from './listInternalCustomersAccountStatus';
 import type { ListInternalCustomersSortBy } from './listInternalCustomersSortBy';
 import type { ListInternalCustomersSortOrder } from './listInternalCustomersSortOrder';
 
 export type ListInternalCustomersParams = {
 q?: string;
+accountStatus?: ListInternalCustomersAccountStatus;
 /**
  * @minimum 1
  * @maximum 9007199254740991

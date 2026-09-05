@@ -189,6 +189,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
     async (request) => {
       const query = request.query as {
         q?: string;
+        accountStatus?: "active" | "on_hold" | "inactive";
         page: number;
         pageSize: number;
         sortBy: "name" | "createdAt" | "creditLimitCents" | "customerNumber";
@@ -198,6 +199,7 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         q: query.q,
+        accountStatus: query.accountStatus,
         page: query.page,
         pageSize: query.pageSize,
         sortBy: query.sortBy,

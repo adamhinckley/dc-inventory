@@ -33,30 +33,28 @@ export const listInternalCustomersTable = {
       "label": "Customer #"
     },
     {
-      "field": "creditLimitCents",
-      "label": "Credit limit (¢)"
-    },
-    {
-      "field": "currency",
-      "label": "Currency"
+      "field": "accountStatus",
+      "label": "Status"
     },
     {
       "field": "terms",
       "label": "Terms"
-    },
-    {
-      "field": "accountStatus",
-      "label": "Status"
     }
   ],
   "search": {
     "param": "q",
     "fields": [
-      "name"
+      "name",
+      "customerNumber"
     ],
-    "placeholder": "Search customer name"
+    "placeholder": "Search name or customer #"
   },
-  "filters": [],
+  "filters": [
+    {
+      "param": "accountStatus",
+      "control": "select"
+    }
+  ],
   "sort": {
     "defaultBy": "name",
     "defaultOrder": "asc",

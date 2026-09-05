@@ -1,4 +1,5 @@
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
+import type { AccountStatus } from "../account-status.js";
 import type { Customer } from "../customer.js";
 
 export type CustomerListSortBy = "name" | "createdAt" | "creditLimitCents" | "customerNumber";
@@ -7,6 +8,7 @@ export type SortOrder = "asc" | "desc";
 export type ListCustomersQuery = {
   organizationId: OrganizationId;
   q?: string;
+  accountStatus?: AccountStatus;
   page: number;
   pageSize: number;
   sortBy: CustomerListSortBy;
