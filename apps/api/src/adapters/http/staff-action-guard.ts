@@ -30,6 +30,7 @@ const ACTION_BY_OPERATION: Readonly<
   updateInternalCustomerBillTo: "master_data_manage",
   copyInternalCustomerBillToFromDefaultShipTo: "master_data_manage",
   createInternalPurchaseOrder: "purchase_orders_manage",
+  draftInternalUncoveredPurchaseOrders: "purchase_orders_manage",
   replaceInternalPurchaseOrderLines: "purchase_orders_manage",
   confirmInternalPurchaseOrder: "purchase_orders_manage",
   cancelInternalPurchaseOrder: "purchase_orders_manage",

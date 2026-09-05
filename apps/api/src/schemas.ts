@@ -647,6 +647,15 @@ export const purchaseOrderItemSchema = z.object({
   lines: z.array(purchaseOrderLineSchema),
 });
 
+export const draftUncoveredPurchaseOrdersBodySchema = z.object({
+  skus: z.array(z.string().min(1)).min(1),
+});
+
+export const draftUncoveredPurchaseOrdersResponseSchema = z.object({
+  purchaseOrders: z.array(purchaseOrderItemSchema),
+  unmappedSkus: z.array(z.string()),
+});
+
 export const purchaseOrderListItemSchema = purchaseOrderItemSchema.extend({
   supplierName: z.string(),
   remaining: z.number().int(),

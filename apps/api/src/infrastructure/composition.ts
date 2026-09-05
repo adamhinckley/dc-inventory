@@ -116,6 +116,7 @@ import {
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
   CreateSupplierUseCase,
+  DraftPurchaseOrdersFromUncoveredSkusUseCase,
   DrizzlePurchaseOrderRepository,
   DrizzleSupplierProductRepository,
   DrizzleSupplierRepository,
@@ -129,6 +130,7 @@ import {
   InMemoryPurchaseOrderRepository,
   InMemorySupplierProductRepository,
   InMemorySupplierRepository,
+  InMemorySupplierSkuMappingReadPort,
   ListPurchaseOrdersUseCase,
   ListSupplierProductsUseCase,
   ListSuppliersUseCase,
@@ -145,6 +147,7 @@ import {
   type ISupplierRepository,
   type ICommittedCustomerNamesPort,
   type IInventoryUncoveredReadPort,
+  type ISupplierSkuMappingReadPort,
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
@@ -209,6 +212,7 @@ import {
   factorySendCatalogPort,
   supplierProductQtyReadPort,
 } from "../adapters/purchasing-catalog-ports.js";
+import { supplierSkuMappingReadPort } from "../adapters/supplier-sku-mapping-read-port.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
@@ -295,6 +299,7 @@ export type PurchasingHttpServices = {
   assignSupplierProduct: AssignSupplierProductUseCase;
   updateSupplierProduct: UpdateSupplierProductUseCase;
   unlinkSupplierProduct: UnlinkSupplierProductUseCase;
+  draftPurchaseOrdersFromUncoveredSkus: DraftPurchaseOrdersFromUncoveredSkusUseCase;
 };
 
 export type SalesHttpServices = {
@@ -368,6 +373,7 @@ export type AppServiceOverrides = {
   purchaseOrderRepo?: IPurchaseOrderRepository;
   supplierRepo?: ISupplierRepository;
   supplierProductRepo?: ISupplierProductRepository;
+  supplierSkuMapping?: ISupplierSkuMappingReadPort;
   catalogSkuLookup?: ICatalogSkuLookupPort;
   factorySendCatalog?: IFactorySendCatalogPort;
   supplierProductQtyRead?: ISupplierProductQtyReadPort;
@@ -531,18 +537,21 @@ function purchasingServices(
   factorySendCatalog: IFactorySendCatalogPort,
   inventoryUncovered: IInventoryUncoveredReadPort,
   committedCustomerNames: ICommittedCustomerNamesPort,
+  supplierSkuMapping: ISupplierSkuMappingReadPort,
+  caseQty: import("@dc-inventory/inventory").IUncoveredCaseQtyReadPort,
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
   const workbookWriter = new ExcelJsWorkbookWriter();
+  const createPurchaseOrder = new CreatePurchaseOrderUseCase(
+    purchaseOrderRepo,
+    supplierRepo,
+    catalogSkuLookup,
+    clock,
+  );
   return {
     listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo, supplierRepo),
-    createPurchaseOrder: new CreatePurchaseOrderUseCase(
-      purchaseOrderRepo,
-      supplierRepo,
-      catalogSkuLookup,
-      clock,
-    ),
+    createPurchaseOrder,
     getPurchaseOrder: new GetPurchaseOrderUseCase(purchaseOrderRepo),
     getPurchaseOrderByDocumentNumber: new GetPurchaseOrderByDocumentNumberUseCase(
       purchaseOrderRepo,
@@ -592,6 +601,12 @@ function purchasingServices(
     ),
     updateSupplierProduct: new UpdateSupplierProductUseCase(supplierRepo, supplierProductRepo),
     unlinkSupplierProduct: new UnlinkSupplierProductUseCase(supplierRepo, supplierProductRepo),
+    draftPurchaseOrdersFromUncoveredSkus: new DraftPurchaseOrdersFromUncoveredSkusUseCase(
+      supplierSkuMapping,
+      inventoryUncovered,
+      caseQty,
+      createPurchaseOrder,
+    ),
   };
 }
 
@@ -840,6 +855,14 @@ export function composeAppServices(
     overrides.factorySendCatalog ?? factorySendCatalogPort(productRepo, productPackagingRepo);
   const supplierProductQty =
     overrides.supplierProductQtyRead ?? supplierProductQtyReadPort(qtyRead);
+  const supplierSkuMapping =
+    overrides.supplierSkuMapping ??
+    (purchasingDb
+      ? supplierSkuMappingReadPort(purchasingDb)
+      : new InMemorySupplierSkuMappingReadPort(
+          supplierRepo,
+          supplierProductRepo as InMemorySupplierProductRepository,
+        ));
 
   const salesOrderRepo =
     overrides.salesOrderRepo ??
@@ -981,6 +1004,8 @@ export function composeAppServices(
       factorySendCatalog,
       inventoryUncoveredReadPort(unitOfWork.inventory.readModel),
       committedCustomerNamesPort(committedCustomerNamesListQuery),
+      supplierSkuMapping,
+      uncoveredCaseQty,
       unitOfWork,
       clock,
     ),
