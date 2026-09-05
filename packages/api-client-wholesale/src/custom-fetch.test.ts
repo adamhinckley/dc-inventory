@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { customFetch } from "./custom-fetch";
+import { customFetch, WholesaleHttpError } from "./custom-fetch";
 
 describe("customFetch", () => {
   afterEach(() => {
@@ -10,15 +10,33 @@ describe("customFetch", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        Response.json({ error: "insufficient_atp" }, { status: 409 }),
+        Response.json(
+          {
+            error: "insufficient_atp",
+            name: "Locked presell widget",
+            requestedQty: 401,
+            availableQty: 400,
+          },
+          { status: 409 },
+        ),
       ),
     );
 
-    await expect(
-      customFetch("/wholesale/sales-orders/abc/confirm", {
-        method: "POST",
-        body: JSON.stringify({ idempotencyKey: "k" }),
-      }),
-    ).rejects.toThrow("HTTP 409");
+    const error = await customFetch("/wholesale/sales-orders/abc/confirm", {
+      method: "POST",
+      body: JSON.stringify({ idempotencyKey: "k" }),
+    }).catch((thrown: unknown) => thrown);
+
+    expect(error).toBeInstanceOf(WholesaleHttpError);
+    expect(error).toMatchObject({
+      message: expect.stringContaining("HTTP 409"),
+      status: 409,
+      data: {
+        error: "insufficient_atp",
+        name: "Locked presell widget",
+        requestedQty: 401,
+        availableQty: 400,
+      },
+    });
   });
 });

@@ -12,6 +12,17 @@ describe("sales order action errors", () => {
     expect(isSuccessfulOrvalResponse(insufficientAtp)).toBe(false);
     expect(confirmSalesOrderErrorMessage(insufficientAtp)).toMatch(/available-to-sell/i);
     expect(
+      confirmSalesOrderErrorMessage({
+        status: 409,
+        data: {
+          error: "insufficient_atp",
+          name: "Locked presell widget",
+          requestedQty: 401,
+          availableQty: 400,
+        },
+      }),
+    ).toBe("Locked presell widget has 400 available. You asked for 401.");
+    expect(
       confirmSalesOrderErrorMessage({ status: 409, data: { error: "conflict" } }),
     ).toMatch(/conflict/i);
   });

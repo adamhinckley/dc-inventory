@@ -2,6 +2,7 @@
 
 import {
   getListWholesaleSalesOrdersQueryKey,
+  useGetWholesaleCatalogProduct,
   useListWholesaleSalesOrders,
   useReplaceWholesaleSalesOrderLines,
 } from "@dc-inventory/api-client-wholesale";
@@ -9,7 +10,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { parseCartQty, remainingDraftLines, toReplaceLines } from "../lib/cart-line-qty";
+import {
+  cartQtyCapMessage,
+  cartQtyOverCap,
+  parseCartQty,
+  remainingDraftLines,
+  toReplaceLines,
+} from "../lib/cart-line-qty";
+import { wholesaleShortageErrorMessage } from "../lib/confirm-shortage-message";
+import { shopDisplayAvailableQty } from "../lib/shop-availability";
 import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
 import { formatMoneyMinorUnits } from "../lib/format-money";
 import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
@@ -26,6 +35,101 @@ function TrashIcon() {
         d="M9 3a1 1 0 0 0-1 1v1H5a1 1 0 0 0 0 2h.1l1.1 12.1A2 2 0 0 0 8.2 21h7.6a2 2 0 0 0 2-1.9L18.9 7H19a1 1 0 1 0 0-2h-3V4a1 1 0 0 0-1-1H9Zm2 2h2v1h-2V5Zm-1.9 4 .8 9h1.9l-.8-9H9.1Zm4.1 0 .8 9h1.9l-.8-9H13.2Z"
       />
     </svg>
+  );
+}
+
+function CartQtyForm({
+  productId,
+  name,
+  qtyInput,
+  pending,
+  onQtyInput,
+  onCancel,
+  onSave,
+}: {
+  productId?: string;
+  name: string;
+  qtyInput: string;
+  pending: boolean;
+  onQtyInput: (raw: string) => void;
+  onCancel: () => void;
+  onSave: (maxQty: number | null) => void;
+}) {
+  const [capMessage, setCapMessage] = useState<string | null>(null);
+  const product = useGetWholesaleCatalogProduct(productId ?? "", {
+    query: { enabled: productId !== undefined },
+  });
+  const payload =
+    product.data?.data !== undefined && "id" in product.data.data ? product.data.data : undefined;
+  const maxQty = payload === undefined ? null : shopDisplayAvailableQty(payload);
+
+  return (
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const qty = parseCartQty(qtyInput);
+        if (qty !== null && maxQty !== null && cartQtyOverCap(qty, maxQty)) {
+          setCapMessage(cartQtyCapMessage(maxQty));
+          return;
+        }
+        setCapMessage(null);
+        onSave(maxQty);
+      }}
+    >
+      <header>
+        <h2 className="text-lg font-semibold text-ink">Edit Quantity</h2>
+        <p className="mt-1 text-sm text-ink-muted">{name}</p>
+      </header>
+      <label className="flex flex-col gap-2 text-sm font-semibold text-ink">
+        Quantity
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={maxQty ?? undefined}
+          step={1}
+          value={qtyInput}
+          disabled={pending}
+          onChange={(event) => {
+            const raw = event.target.value;
+            const parsed = parseCartQty(raw);
+            if (parsed !== null && maxQty !== null && cartQtyOverCap(parsed, maxQty)) {
+              onQtyInput(String(maxQty));
+              setCapMessage(cartQtyCapMessage(maxQty));
+              return;
+            }
+            setCapMessage(null);
+            onQtyInput(raw);
+          }}
+          className="shop-input font-normal tabular-nums"
+        />
+      </label>
+      {capMessage !== null ? (
+        <p className="text-sm text-sold-out" role="alert">
+          {capMessage}
+        </p>
+      ) : maxQty !== null ? (
+        <p className="text-sm text-ink-muted">{cartQtyCapMessage(maxQty)}</p>
+      ) : null}
+      <div className="flex flex-wrap justify-end gap-3">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={onCancel}
+          className="shop-button-secondary cursor-pointer px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={pending}
+          className="shop-button-primary cursor-pointer px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {pending ? "Saving…" : "Save Quantity"}
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -132,9 +236,9 @@ export function CartView() {
           await invalidateCart();
           onSettled();
         },
-        onError: () => {
+        onError: (error) => {
           onSettled();
-          setMessage(failMessage);
+          setMessage(wholesaleShortageErrorMessage(error, failMessage));
         },
       },
     );
@@ -150,13 +254,17 @@ export function CartView() {
     });
   }
 
-  async function saveEditedQty() {
+  async function saveEditedQty(maxQty: number | null) {
     if (editingLine === null) {
       return;
     }
     const qty = parseCartQty(qtyInput);
     if (qty === null || qty < 1) {
       setMessage("Enter a quantity of 1 or more");
+      return;
+    }
+    if (maxQty !== null && cartQtyOverCap(qty, maxQty)) {
+      setMessage(cartQtyCapMessage(maxQty));
       return;
     }
     setMessage(null);
@@ -275,52 +383,21 @@ export function CartView() {
           setEditingLine(null);
         }}
       >
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void saveEditedQty();
-          }}
-        >
-          <header>
-            <h2 className="text-lg font-semibold text-ink">Edit Quantity</h2>
-            <p className="mt-1 text-sm text-ink-muted">{editingLine?.name}</p>
-          </header>
-          <label className="flex flex-col gap-2 text-sm font-semibold text-ink">
-            Quantity
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              step={1}
-              value={qtyInput}
-              disabled={pending}
-              onChange={(event) => {
-                setQtyInput(event.target.value);
-              }}
-              className="shop-input font-normal tabular-nums"
-            />
-          </label>
-          <div className="flex flex-wrap justify-end gap-3">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => {
-                setEditingLine(null);
-              }}
-              className="shop-button-secondary cursor-pointer px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="shop-button-primary cursor-pointer px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pending ? "Saving…" : "Save Quantity"}
-            </button>
-          </div>
-        </form>
+        {editingLine !== null ? (
+          <CartQtyForm
+            productId={editingLine.productId}
+            name={editingLine.name}
+            qtyInput={qtyInput}
+            pending={pending}
+            onQtyInput={setQtyInput}
+            onCancel={() => {
+              setEditingLine(null);
+            }}
+            onSave={(maxQty) => {
+              void saveEditedQty(maxQty);
+            }}
+          />
+        ) : null}
       </dialog>
     </div>
   );

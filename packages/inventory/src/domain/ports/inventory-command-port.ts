@@ -15,7 +15,7 @@ export type InventoryCommandFailureReason =
 
 export type InventoryCommandResult =
   | { ok: true }
-  | { ok: false; reason: InventoryCommandFailureReason };
+  | { ok: false; reason: InventoryCommandFailureReason; availableToSell?: number };
 
 export type InventorySnapshotLock = {
   organizationId: OrganizationId;

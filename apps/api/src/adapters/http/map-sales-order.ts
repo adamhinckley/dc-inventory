@@ -1,4 +1,21 @@
-import type { SalesOrder } from "@dc-inventory/sales";
+import type { ConfirmSalesOrderResult, SalesOrder } from "@dc-inventory/sales";
+
+export function toInsufficientAtpBody(
+  result: Extract<ConfirmSalesOrderResult, { reason: "insufficient_atp" }>,
+) {
+  const shortage = result.shortage;
+  return {
+    error: "insufficient_atp" as const,
+    ...(shortage !== undefined
+      ? {
+          sku: shortage.sku,
+          name: shortage.name,
+          requestedQty: shortage.requestedQty,
+          availableQty: shortage.availableQty,
+        }
+      : {}),
+  };
+}
 
 export async function mapSalesOrder(
   order: SalesOrder,

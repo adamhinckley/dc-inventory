@@ -57,7 +57,7 @@ export function gateCommittedQuantity(
     state.demand.committed,
   );
   if (commitQuantity > availableToSell) {
-    return { ok: false, reason: "insufficient_available_to_sell" };
+    return { ok: false, reason: "insufficient_available_to_sell", availableToSell };
   }
   return null;
 }

@@ -1527,15 +1527,37 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - conflict
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - conflict
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - insufficient_atp
+                      sku:
+                        type: string
+                      name:
+                        type: string
+                      requestedQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      availableQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - error
+                    additionalProperties: false
   /wholesale/sales-orders/{id}:
     get:
       operationId: getWholesaleSalesOrder
@@ -1895,15 +1917,37 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - conflict
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - conflict
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - insufficient_atp
+                      sku:
+                        type: string
+                      name:
+                        type: string
+                      requestedQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      availableQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - error
+                    additionalProperties: false
   /wholesale/sales-orders/{id}/confirm:
     post:
       operationId: confirmWholesaleSalesOrder
@@ -2098,6 +2142,18 @@ paths:
                         type: string
                         enum:
                           - insufficient_atp
+                      sku:
+                        type: string
+                      name:
+                        type: string
+                      requestedQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      availableQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
                     required:
                       - error
                     additionalProperties: false

@@ -4,7 +4,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import type { SalesOrder } from "@dc-inventory/sales";
 import { CustomerId, OrderId, StaffUserId } from "@dc-inventory/shared-kernel";
-import { mapSalesOrder } from "./map-sales-order.js";
+import { mapSalesOrder, toInsufficientAtpBody } from "./map-sales-order.js";
 import {
   conflictResponseSchema,
   insufficientAtpResponseSchema,
@@ -86,8 +86,11 @@ function sendConflict(reply: FastifyReply) {
   return reply.code(409).send({ error: "conflict" as const });
 }
 
-function sendInsufficientAtp(reply: FastifyReply) {
-  return reply.code(409).send({ error: "insufficient_atp" as const });
+function sendInsufficientAtp(
+  reply: FastifyReply,
+  result: Parameters<typeof toInsufficientAtpBody>[0],
+) {
+  return reply.code(409).send(toInsufficientAtpBody(result));
 }
 
 const readErrors = {
@@ -164,7 +167,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: conflictResponseSchema,
+          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
         },
       },
     },
@@ -188,6 +191,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           result.reason === "product_organization_mismatch"
         ) {
           return sendNotFound(reply);
+        }
+        if (result.reason === "insufficient_atp") {
+          return sendInsufficientAtp(reply, result);
         }
         if (result.reason === "product_inactive") {
           return sendConflict(reply);
@@ -220,7 +226,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: conflictResponseSchema,
+          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
         },
       },
     },
@@ -245,6 +251,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           result.reason === "product_organization_mismatch"
         ) {
           return sendNotFound(reply);
+        }
+        if (result.reason === "insufficient_atp") {
+          return sendInsufficientAtp(reply, result);
         }
         if (
           result.reason === "illegal_transition" ||
@@ -322,7 +331,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           return sendNotFound(reply);
         }
         if (result.reason === "insufficient_atp") {
-          return sendInsufficientAtp(reply);
+          return sendInsufficientAtp(reply, result);
         }
         if (
           result.reason === "illegal_transition" ||

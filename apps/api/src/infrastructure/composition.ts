@@ -1026,7 +1026,7 @@ export function composeAppServices(
     sales: salesServices(
       salesOrderRepo,
       customerRepo,
-      overrides.catalogProduct ?? catalogProductPort(productRepo),
+      overrides.catalogProduct ?? catalogProductPort(productRepo, qtyRead),
       unitOfWork,
       clock,
       readPorts.billToSnapshot,

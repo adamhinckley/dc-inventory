@@ -9,6 +9,15 @@ export function parseCartQty(raw: string): number | null {
   return qty;
 }
 
+/** Locked catalog cap; `null` means open (no numeric shop cap). */
+export function cartQtyOverCap(qty: number, maxQty: number | null): boolean {
+  return maxQty !== null && qty > maxQty;
+}
+
+export function cartQtyCapMessage(maxQty: number): string {
+  return `Only ${maxQty.toLocaleString()} available`;
+}
+
 export type CartLineForReplace = {
   productId?: string;
   name: string;

@@ -8,6 +8,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { wholesaleConfirmErrorMessage } from "../lib/confirm-shortage-message";
 import { formatMoneyMinorUnits } from "../lib/format-money";
 import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
 
@@ -178,8 +179,8 @@ export function CheckoutView() {
                 onSuccess: () => {
                   router.push("/orders");
                 },
-                onError: () => {
-                  setErrorMessage("Could not confirm this order. Check availability and try again.");
+                onError: (error) => {
+                  setErrorMessage(wholesaleConfirmErrorMessage(error));
                 },
               },
             );

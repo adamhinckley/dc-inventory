@@ -20,6 +20,8 @@ import {
   buildSalesOrderLines,
   type SalesOrderLineInput,
 } from "./build-sales-order-lines.js";
+import type { ConfirmSalesOrderShortage } from "./confirm-sales-order.js";
+import { lockedDraftIncreaseShortage } from "./draft-line-sellable.js";
 
 export type CreateSalesOrderLineInput = SalesOrderLineInput;
 
@@ -56,7 +58,9 @@ export type CreateSalesOrderResult =
         | "product_inactive"
         | "product_organization_mismatch"
         | "customer_on_hold"
-        | "customer_inactive";
+        | "customer_inactive"
+        | "insufficient_atp";
+      shortage?: ConfirmSalesOrderShortage;
     };
 
 function mergeDraftLines(
@@ -186,6 +190,14 @@ export class CreateSalesOrderUseCase {
         },
         input,
       );
+      const shortage = await this.firstLockedDraftShortage(
+        input.organizationId,
+        salesOrder.lines,
+        existingDraft.lines,
+      );
+      if (shortage !== null) {
+        return { ok: false, reason: "insufficient_atp", shortage };
+      }
       await repo.save(salesOrder);
       return { ok: true, salesOrder };
     }
@@ -226,8 +238,42 @@ export class CreateSalesOrderUseCase {
         },
         input,
       );
+      const shortage = await this.firstLockedDraftShortage(
+        input.organizationId,
+        salesOrder.lines,
+        draft.lines,
+      );
+      if (shortage !== null) {
+        return { ok: false, reason: "insufficient_atp", shortage };
+      }
       await repo.save(salesOrder);
       return { ok: true, salesOrder };
     }
+  }
+
+  private async firstLockedDraftShortage(
+    organizationId: CreateSalesOrderRequest["organizationId"],
+    lines: readonly SalesOrderLine[],
+    previousLines: readonly SalesOrderLine[],
+  ): Promise<ConfirmSalesOrderShortage | null> {
+    const alreadyBySku = new Map<string, number>();
+    for (const line of previousLines) {
+      alreadyBySku.set(line.sku.value, (alreadyBySku.get(line.sku.value) ?? 0) + line.qty);
+    }
+    for (const line of lines) {
+      const product = await this.catalogProducts.findBySku(organizationId, line.sku);
+      if (product === null) {
+        continue;
+      }
+      const shortage = lockedDraftIncreaseShortage(
+        product,
+        line.qty,
+        alreadyBySku.get(line.sku.value) ?? 0,
+      );
+      if (shortage !== null) {
+        return shortage;
+      }
+    }
+    return null;
   }
 }

@@ -8,7 +8,7 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { mapSalesOrder } from "./map-sales-order.js";
+import { mapSalesOrder, toInsufficientAtpBody } from "./map-sales-order.js";
 import {
   conflictResponseSchema,
   insufficientAtpResponseSchema,
@@ -101,8 +101,11 @@ function sendNotFound(reply: FastifyReply) {
   return reply.code(404).send({ error: "not_found" as const });
 }
 
-function sendInsufficientAtp(reply: FastifyReply) {
-  return reply.code(409).send({ error: "insufficient_atp" as const });
+function sendInsufficientAtp(
+  reply: FastifyReply,
+  result: Parameters<typeof toInsufficientAtpBody>[0],
+) {
+  return reply.code(409).send(toInsufficientAtpBody(result));
 }
 
 export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
@@ -201,7 +204,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           401: unauthorizedResponseSchema,
           403: needsCustomerResponseSchema,
           404: notFoundResponseSchema,
-          409: conflictResponseSchema,
+          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
         },
       },
     },
@@ -225,6 +228,9 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           result.reason === "product_organization_mismatch"
         ) {
           return sendNotFound(reply);
+        }
+        if (result.reason === "insufficient_atp") {
+          return sendInsufficientAtp(reply, result);
         }
         if (result.reason === "product_inactive") {
           return reply.code(409).send({ error: "conflict" as const });
@@ -255,7 +261,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           401: unauthorizedResponseSchema,
           403: needsCustomerResponseSchema,
           404: notFoundResponseSchema,
-          409: conflictResponseSchema,
+          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
         },
       },
     },
@@ -281,6 +287,9 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           result.reason === "product_organization_mismatch"
         ) {
           return sendNotFound(reply);
+        }
+        if (result.reason === "insufficient_atp") {
+          return sendInsufficientAtp(reply, result);
         }
         if (result.reason === "illegal_transition" || result.reason === "product_inactive") {
           return reply.code(409).send({ error: "conflict" as const });
@@ -332,7 +341,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           return sendNotFound(reply);
         }
         if (result.reason === "insufficient_atp") {
-          return sendInsufficientAtp(reply);
+          return sendInsufficientAtp(reply, result);
         }
         if (
           result.reason === "illegal_transition" ||

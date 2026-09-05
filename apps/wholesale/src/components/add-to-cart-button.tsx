@@ -8,14 +8,28 @@ import {
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { findDraftCartLine, parseCartQty, toReplaceLines } from "../lib/cart-line-qty";
+import {
+  cartQtyCapMessage,
+  cartQtyOverCap,
+  findDraftCartLine,
+  parseCartQty,
+  toReplaceLines,
+} from "../lib/cart-line-qty";
+import { wholesaleShortageErrorMessage } from "../lib/confirm-shortage-message";
 import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
+import {
+  shopDisplayAvailableQty,
+  type ShopSellState,
+} from "../lib/shop-availability";
 import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
 
 export type AddToCartButtonProps = {
   productId: string;
   name: string;
   disabled?: boolean;
+  available: number;
+  availableToSell: number | null;
+  sellState: ShopSellState;
 };
 
 function CartRecordedIcon() {
@@ -33,12 +47,20 @@ function CartRecordedIcon() {
   );
 }
 
-export function AddToCartButton({ productId, name, disabled = false }: AddToCartButtonProps) {
+export function AddToCartButton({
+  productId,
+  name,
+  disabled = false,
+  available,
+  availableToSell,
+  sellState,
+}: AddToCartButtonProps) {
   const queryClient = useQueryClient();
   const cart = useListWholesaleSalesOrders(wholesaleDraftCartParams);
   const createOrder = useCreateWholesaleSalesOrder();
   const replaceLines = useReplaceWholesaleSalesOrderLines();
   const qtyFieldId = `cart-qty-${productId}`;
+  const maxQty = shopDisplayAvailableQty({ available, availableToSell, sellState });
   const [qtyInput, setQtyInput] = useState("1");
   const [qtyTouched, setQtyTouched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -56,13 +78,34 @@ export function AddToCartButton({ productId, name, disabled = false }: AddToCart
     if (qtyTouched) {
       return;
     }
-    setQtyInput(cartQty !== null ? String(cartQty) : "1");
-  }, [cartQty, qtyTouched]);
+    if (cartQty === null) {
+      setQtyInput("1");
+      return;
+    }
+    if (maxQty !== null && cartQtyOverCap(cartQty, maxQty)) {
+      setQtyInput(String(maxQty));
+      setMessage(cartQtyCapMessage(maxQty));
+      return;
+    }
+    setQtyInput(String(cartQty));
+  }, [cartQty, qtyTouched, maxQty]);
 
   function invalidateCart() {
     return queryClient.invalidateQueries({
       queryKey: getListWholesaleSalesOrdersQueryKey(),
     });
+  }
+
+  function applyQtyInput(raw: string) {
+    setQtyTouched(true);
+    const parsed = parseCartQty(raw);
+    if (parsed !== null && parsed > 0 && maxQty !== null && cartQtyOverCap(parsed, maxQty)) {
+      setQtyInput(String(maxQty));
+      setMessage(cartQtyCapMessage(maxQty));
+      return;
+    }
+    setQtyInput(raw);
+    setMessage(null);
   }
 
   async function addToCart() {
@@ -71,10 +114,14 @@ export function AddToCartButton({ productId, name, disabled = false }: AddToCart
       setMessage("Enter a quantity of 1 or more");
       return;
     }
+    if (qty > 0 && maxQty !== null && cartQtyOverCap(qty, maxQty)) {
+      setMessage(cartQtyCapMessage(maxQty));
+      return;
+    }
     setMessage(null);
 
-    if (inCart && draft !== undefined && cartLine !== undefined) {
-      if (qty === cartQty) {
+    if (draft !== undefined) {
+      if (inCart && qty === cartQty) {
         setMessage("In cart");
         return;
       }
@@ -82,7 +129,7 @@ export function AddToCartButton({ productId, name, disabled = false }: AddToCart
       const nextLines =
         qty === 0
           ? others
-          : [...others, { productId, sku: cartLine.sku, name, qty }];
+          : [...others, { productId, sku: cartLine?.sku ?? "", name, qty }];
       const lines = await toReplaceLines(nextLines, lookupWholesaleProductId);
       if (lines === null) {
         setMessage("Could not update cart");
@@ -96,8 +143,8 @@ export function AddToCartButton({ productId, name, disabled = false }: AddToCart
             setQtyTouched(false);
             setMessage(qty === 0 ? "Removed from cart" : "Updated cart");
           },
-          onError: () => {
-            setMessage("Could not update cart");
+          onError: (error) => {
+            setMessage(wholesaleShortageErrorMessage(error, "Could not update cart"));
           },
         },
       );
@@ -112,9 +159,9 @@ export function AddToCartButton({ productId, name, disabled = false }: AddToCart
           setQtyTouched(false);
           setMessage("Added to cart");
         },
-        onError: () => {
-          setMessage("Could not add to cart");
-        },
+          onError: (error) => {
+            setMessage(wholesaleShortageErrorMessage(error, "Could not add to cart"));
+          },
       },
     );
   }
@@ -134,17 +181,16 @@ export function AddToCartButton({ productId, name, disabled = false }: AddToCart
           ) : null}
           <input
             id={qtyFieldId}
-            type="number"
+            type="text"
             inputMode="numeric"
-            min={0}
-            step={1}
+            autoComplete="off"
+            maxLength={maxQty === null ? 7 : String(maxQty).length}
             value={qtyInput}
             disabled={inputDisabled}
             onChange={(event) => {
-              setQtyTouched(true);
-              setQtyInput(event.target.value);
+              applyQtyInput(event.target.value);
             }}
-            className="shop-input min-h-0 w-[calc(7ch+4.25rem)] max-w-[calc(7ch+4.25rem)] shrink-0 py-2.5 pl-9 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="shop-input min-h-0 w-[calc(7ch+4.25rem)] max-w-[calc(7ch+4.25rem)] shrink-0 py-2.5 pl-9 text-center tabular-nums"
           />
         </span>
         <button

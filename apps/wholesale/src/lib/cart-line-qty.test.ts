@@ -3,6 +3,8 @@ import {
   findDraftCartLine,
   remainingDraftLines,
   toReplaceLines,
+  cartQtyCapMessage,
+  cartQtyOverCap,
   parseCartQty,
   replaceDraftLineQty,
 } from "./cart-line-qty";
@@ -17,6 +19,18 @@ describe("parseCartQty", () => {
   it("rejects empty and decimal strings", () => {
     expect(parseCartQty("")).toBeNull();
     expect(parseCartQty("1.5")).toBeNull();
+  });
+});
+
+describe("cartQtyOverCap", () => {
+  it("blocks qty above a locked available-to-sell cap", () => {
+    expect(cartQtyOverCap(123_424, 5)).toBe(true);
+    expect(cartQtyOverCap(5, 5)).toBe(false);
+    expect(cartQtyOverCap(123_424, null)).toBe(false);
+  });
+
+  it("names the purchasable quantity", () => {
+    expect(cartQtyCapMessage(5)).toBe("Only 5 available");
   });
 });
 

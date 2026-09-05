@@ -107,7 +107,11 @@ function recordingStub(
 describe("cover-policy (ADA-255)", () => {
   it("rejects locked commits above available-to-sell", () => {
     const failure = gateCommittedQuantity(1_200, lockedState(freezeStockFigures(500, 0, 0), 0));
-    expect(failure).toEqual({ ok: false, reason: "insufficient_available_to_sell" });
+    expect(failure).toEqual({
+      ok: false,
+      reason: "insufficient_available_to_sell",
+      availableToSell: 500,
+    });
   });
 
   it("allows locked commits within available-to-sell", () => {

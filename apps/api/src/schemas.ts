@@ -1090,6 +1090,10 @@ export const salesOrderConfirmBodySchema = salesOrderCommandBodySchema.extend({
 
 export const insufficientAtpResponseSchema = z.object({
   error: z.literal("insufficient_atp"),
+  sku: z.string().optional(),
+  name: z.string().optional(),
+  requestedQty: z.number().int().optional(),
+  availableQty: z.number().int().optional(),
 });
 
 export const salesOrdersListTable = {

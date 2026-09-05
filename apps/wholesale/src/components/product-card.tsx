@@ -73,7 +73,14 @@ export function ProductCard({
         </div>
       </div>
       <div className="p-4 pt-0">
-        <AddToCartButton productId={id} name={name} disabled={!inStock} />
+        <AddToCartButton
+          productId={id}
+          name={name}
+          disabled={!inStock}
+          available={available}
+          availableToSell={availableToSell}
+          sellState={sellState}
+        />
       </div>
     </article>
   );
