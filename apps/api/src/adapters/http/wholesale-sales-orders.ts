@@ -38,6 +38,7 @@ type WholesaleAuth = {
   staffUserId: string | null;
   wholesaleUserId: string | null;
   customerId: string | null;
+  organizationId: string;
 };
 
 function wholesaleStaffUserId(request: { wholesaleAuth?: WholesaleAuth }): StaffUserId {

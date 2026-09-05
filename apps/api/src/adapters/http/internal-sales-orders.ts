@@ -35,7 +35,7 @@ import { staffOrganizationId } from "./org-session.js";
 
 function lookupProductId(request: {
   server: FastifyInstance;
-  staffAuth?: { staffUserId: string };
+  staffAuth?: { staffUserId: string; organizationId: string };
 }): (sku: string) => Promise<string | null> {
   const organizationId = staffOrganizationId(request);
   return (sku) => request.server.catalog.lookupProductIdBySku(organizationId, sku);
@@ -43,7 +43,7 @@ function lookupProductId(request: {
 
 function lookupCustomerName(request: {
   server: FastifyInstance;
-  staffAuth?: { staffUserId: string };
+  staffAuth?: { staffUserId: string; organizationId: string };
 }): (customerId: string) => Promise<string | null> {
   const organizationId = staffOrganizationId(request);
   const cache = new Map<string, Promise<string | null>>();
@@ -67,7 +67,7 @@ function lookupCustomerName(request: {
 function toSalesOrderBody(
   request: {
     server: FastifyInstance;
-    staffAuth?: { staffUserId: string };
+    staffAuth?: { staffUserId: string; organizationId: string };
   },
   order: SalesOrder,
 ) {

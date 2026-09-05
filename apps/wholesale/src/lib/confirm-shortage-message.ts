@@ -35,7 +35,14 @@ export function wholesaleShortageErrorMessage(error: unknown, fallback: string):
     "error" in data &&
     data.error === "insufficient_atp"
   ) {
-    const specific = formatConfirmShortageMessage(data);
+    const body = data as Record<string, unknown>;
+    const shortage: ConfirmShortageFields = {
+      ...(typeof body.name === "string" ? { name: body.name } : {}),
+      ...(typeof body.sku === "string" ? { sku: body.sku } : {}),
+      ...(typeof body.requestedQty === "number" ? { requestedQty: body.requestedQty } : {}),
+      ...(typeof body.availableQty === "number" ? { availableQty: body.availableQty } : {}),
+    };
+    const specific = formatConfirmShortageMessage(shortage);
     if (specific !== null) {
       return specific;
     }

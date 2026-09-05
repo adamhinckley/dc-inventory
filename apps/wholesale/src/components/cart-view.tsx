@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  getGetWholesaleCatalogProductQueryKey,
   getListWholesaleSalesOrdersQueryKey,
   useGetWholesaleCatalogProduct,
   useListWholesaleSalesOrders,
@@ -56,8 +57,12 @@ function CartQtyForm({
   onSave: (maxQty: number | null) => void;
 }) {
   const [capMessage, setCapMessage] = useState<string | null>(null);
-  const product = useGetWholesaleCatalogProduct(productId ?? "", {
-    query: { enabled: productId !== undefined },
+  const resolvedProductId = productId ?? "";
+  const product = useGetWholesaleCatalogProduct(resolvedProductId, {
+    query: {
+      enabled: productId !== undefined,
+      queryKey: getGetWholesaleCatalogProductQueryKey(resolvedProductId),
+    },
   });
   const payload =
     product.data?.data !== undefined && "id" in product.data.data ? product.data.data : undefined;

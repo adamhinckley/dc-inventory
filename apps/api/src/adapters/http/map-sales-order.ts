@@ -1,8 +1,8 @@
-import type { ConfirmSalesOrderResult, SalesOrder } from "@dc-inventory/sales";
+import type { ConfirmSalesOrderShortage, SalesOrder } from "@dc-inventory/sales";
 
-export function toInsufficientAtpBody(
-  result: Extract<ConfirmSalesOrderResult, { reason: "insufficient_atp" }>,
-) {
+export function toInsufficientAtpBody(result: {
+  shortage?: ConfirmSalesOrderShortage;
+}) {
   const shortage = result.shortage;
   return {
     error: "insufficient_atp" as const,
