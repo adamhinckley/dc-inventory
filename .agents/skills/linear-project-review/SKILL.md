@@ -1,6 +1,6 @@
 ---
 name: linear-project-review
-description: Review a Linear project's plan and issues for reuse, gaps, and agent-ready tickets.
+description: Review a Linear project's plan and issues for reuse, gaps, and agent-ready tickets. Always emit a copyable other-agent handoff after the owner review.
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Review the Linear project the user named. Do not implement tickets. Do not rewrite issue text unless the user asked.
 
-**Produces:** a review covering every issue plus the project as a whole. After the user approves issues, those issues move to Todo and assign to the invoking user.
+**Produces:** (1) an owner review of every issue plus the project, then (2) a copyable handoff for another agent that can fix the findings. After the user approves issues, those issues move to Todo and assign to the invoking user. The turn is not done until both artifacts are in the reply.
 
 If the user did not name a project (name, slug, id, or Linear URL), stop and ask for one. Do not pick a project from the workspace, the repo, the current branch, or conversation context.
 
@@ -45,7 +45,7 @@ An issue is **agent-ready** when all of these are written, not implied:
 
 Score every issue. Missing any of those five is a direction finding on that issue.
 
-Work-packet shape to measure against (`docs/architecture.md`):
+Work-packet shape to measure against (`AGENTS.md` Work packets and `docs/architecture.md`):
 
 ```
 Context: <module>
@@ -70,7 +70,9 @@ Lead with whether the project is safe to hand to agents. Then three lists, each 
 
 Silence on an issue means it passed. Do not pad with praise.
 
-Stop after the report. Wait for approval. Do not move issues on the review pass.
+Then emit the **handoff** in the same reply. Read [`HANDOFF.md`](HANDOFF.md) in this folder and follow it. The owner review stays for the human; the handoff is the only prompt the next agent needs. Do not tell the user they must paste the review too.
+
+Wait for approval. Do not move issues on the review pass.
 
 ## Approve
 

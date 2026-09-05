@@ -572,16 +572,23 @@ Allowed paths: packages/<context>/** and the HTTP adapter for this slice
 Forbidden: packages/inventory/domain, packages/shared-kernel (unless this ticket says otherwise)
 
 Given:
-- Port <IName> already defined
-- Use case <Name> already defined
-- Unit tests in packages/<context>/tests/unit/ currently fail
+- Port <IName> already defined (path)
+- Use case <Name> already defined (path)
+- Follow existing <list/table/HTTP/CSV/adapter path> — or none exists
+- Unit tests in packages/<context>/tests/… currently fail (or name the test file to add)
 
 Do:
 - Implement the adapter(s) and any HTTP DTO mapping
 - Keep application/ importing only domain/
 - Do not store available or availableToSell as inputs; do not add framework types to domain entities
+- OpenAPI change → pnpm gen:api
 - Run the unit tests for this context; stop when green
+
+Done:
+- <named tests green / named route exists / named screen shows X>
 ```
+
+Linear-block this packet if another ticket still produces the Given. Two tickets, one use case: name who owns the use case vs HTTP/UI. Writing rules: [`AGENTS.md`](../AGENTS.md) Work packets.
 
 ### Follow-on repo guidance (not this pass)
 

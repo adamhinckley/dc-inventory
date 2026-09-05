@@ -30,16 +30,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 
 ## Work packet shape
 
-Expect tickets in this form:
-
-```
-Context: <catalog|customers|identity|inventory|…>
-Allowed paths: …
-Forbidden: packages/inventory/domain, packages/shared-kernel (unless ticket says otherwise)
-
-Given: port + use case + failing unit tests
-Do: adapters / HTTP / UI wiring; keep application/ importing only domain/; tests green
-```
+Expect tickets in the [`AGENTS.md`](../../../AGENTS.md) Work packets form: Context, Allowed / forbidden, Given (file or symbol names), Do, observable Done. Cite the existing adapter to follow or `none exists`. Linear-block when another ticket still produces the Given.
 
 ## Cost / model policy
 

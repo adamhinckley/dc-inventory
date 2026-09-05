@@ -1,0 +1,14 @@
+---
+description: When writing or rewriting Linear implementation tickets or work packets, require Context, Allowed/Forbidden, named Given, Do, and observable Done. Reuse existing ports and HTTP shapes.
+alwaysApply: false
+---
+
+# Work packets
+
+Mirror of [`AGENTS.md`](../../AGENTS.md) Work packets. Full template: [`docs/architecture.md`](../../docs/architecture.md) § Work packet template.
+
+Implementation tickets (not grilling/map decisions) need all five fields written before `ready-for-agent`: **Context**, **Allowed / forbidden paths**, **Given** (file or symbol names), **Do**, **Done** (named tests, route, or screen — not "implement X").
+
+Cite the existing list/table/HTTP/CSV/adapter to follow, or write `none exists`. Do not add a second table stack, CSV dialect, or HTTP resource beside a working one.
+
+Linear-block a ticket whose Given another ticket still owns. OpenAPI changes include `pnpm gen:api`. Two tickets, one use case: name who owns the use case vs HTTP/UI.

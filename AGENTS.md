@@ -53,15 +53,25 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/customers.md`](./docs/customer
 
 ## Work packets
 
-Tickets should look like:
+Implementation tickets (not grilling/map decisions) must be this shape **before** `ready-for-agent`. All five fields written, not implied:
 
 ```
 Context: <catalog|customers|identity|inventory|shopify-bridge|…>
 Allowed paths: …
 Forbidden: …
 
-Given: port + use case + failing unit tests
-Do: adapters / HTTP / UI wiring; keep application/ importing only domain/; tests green
+Given:
+- <port / use case / test / fixture — file or symbol names>
+
+Do:
+- …
+- Run the tests for this context; stop when green
 ```
+
+**Given** names what exists. One repo pass: cite the list/table/HTTP/CSV/adapter to follow, or write `none exists`. Do not sketch a second table stack, CSV dialect, or HTTP resource beside a working one.
+
+**Done** is observable: tests green for this context, a named route, or a named screen shows X. "Implement X" is not Done. OpenAPI changes include `pnpm gen:api`.
+
+If another ticket produces this packet's Given, Linear-block it. Do not write "can start immediately" when the port, flag, or HTTP is still missing. If two tickets share a use case, name which issue owns the use case and which owns HTTP/UI.
 
 If asked to invent ledger math, authz matrices, AR rules, sales tax, software-billing/flag catalogs, or operator-platform message kinds without failing tests already in the repo — **stop and ask the owner**.
