@@ -3,10 +3,12 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { SalesOrder } from "@dc-inventory/sales";
 import { z } from "zod";
 import {
+  CustomerId,
   OrderId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import { mapSalesOrder } from "./map-sales-order.js";
 import {
   conflictResponseSchema,
   insufficientAtpResponseSchema,
@@ -59,28 +61,40 @@ function wholesaleCreateInput(request: { wholesaleAuth?: WholesaleAuth }) {
   };
 }
 
-function mapSalesOrder(order: SalesOrder) {
-  return {
-    id: order.id,
-    customerId: order.customerId,
-    documentNumber: order.documentNumber,
-    status: order.status,
-    shipLine1: order.shipLine1,
-    shipLine2: order.shipLine2,
-    shipCity: order.shipCity,
-    shipRegion: order.shipRegion,
-    shipPostal: order.shipPostal,
-    shipCountry: order.shipCountry,
-    lines: order.lines.map((line) => ({
-      id: line.id,
-      sku: line.sku.value,
-      name: line.name,
-      qty: line.qty,
-      unitPriceCents: line.unitPrice.amountMinor,
-      currency: line.unitPrice.currency,
-      taxCategoryCode: line.taxCategoryCode,
-    })),
+function lookupProductId(
+  request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
+): (sku: string) => Promise<string | null> {
+  const organizationId = wholesaleOrganizationId(request);
+  return (sku) => request.server.catalog.lookupProductIdBySku(organizationId, sku);
+}
+
+function lookupCustomerName(
+  request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
+): (customerId: string) => Promise<string | null> {
+  const organizationId = wholesaleOrganizationId(request);
+  const cache = new Map<string, Promise<string | null>>();
+  return (customerId) => {
+    const cached = cache.get(customerId);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const pending = request.server.customers.getCustomer
+      .execute({
+        organizationId,
+        staffUserId: wholesaleStaffUserId(request),
+        customerId: CustomerId.parse(customerId),
+      })
+      .then((result) => (result.ok ? result.customer.name : null));
+    cache.set(customerId, pending);
+    return pending;
   };
+}
+
+function toSalesOrderBody(
+  request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
+  order: SalesOrder,
+) {
+  return mapSalesOrder(order, lookupProductId(request), lookupCustomerName(request));
 }
 
 function sendNotFound(reply: FastifyReply) {
@@ -131,7 +145,9 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         status: query.status,
       });
       return {
-        items: result.items.map(mapSalesOrder),
+        items: await Promise.all(
+          result.items.map((order) => toSalesOrderBody(request, order)),
+        ),
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
@@ -167,7 +183,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
       if (result.salesOrder.customerId !== wholesaleCustomerId(request)) {
         return sendNotFound(reply);
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 
@@ -218,7 +234,9 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         }
         return reply.code(400).send({ error: "invalid" as const });
       }
-      return reply.code(201).send(mapSalesOrder(result.salesOrder));
+      return reply.code(201).send(
+        await toSalesOrderBody(request, result.salesOrder),
+      );
     },
   );
 
@@ -272,7 +290,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         }
         return reply.code(400).send({ error: "invalid" as const });
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 
@@ -327,7 +345,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         }
         return reply.code(400).send({ error: "invalid" as const });
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 }

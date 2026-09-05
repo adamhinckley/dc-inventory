@@ -4,6 +4,7 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import type { SalesOrder } from "@dc-inventory/sales";
 import { CustomerId, OrderId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { mapSalesOrder } from "./map-sales-order.js";
 import {
   conflictResponseSchema,
   insufficientAtpResponseSchema,
@@ -32,28 +33,45 @@ function staffUserId(request: { staffAuth?: { staffUserId: string } }): StaffUse
 
 import { staffOrganizationId } from "./org-session.js";
 
-function mapSalesOrder(order: SalesOrder) {
-  return {
-    id: order.id,
-    customerId: order.customerId,
-    documentNumber: order.documentNumber,
-    status: order.status,
-    shipLine1: order.shipLine1,
-    shipLine2: order.shipLine2,
-    shipCity: order.shipCity,
-    shipRegion: order.shipRegion,
-    shipPostal: order.shipPostal,
-    shipCountry: order.shipCountry,
-    lines: order.lines.map((line) => ({
-      id: line.id,
-      sku: line.sku.value,
-      name: line.name,
-      qty: line.qty,
-      unitPriceCents: line.unitPrice.amountMinor,
-      currency: line.unitPrice.currency,
-      taxCategoryCode: line.taxCategoryCode,
-    })),
+function lookupProductId(request: {
+  server: FastifyInstance;
+  staffAuth?: { staffUserId: string };
+}): (sku: string) => Promise<string | null> {
+  const organizationId = staffOrganizationId(request);
+  return (sku) => request.server.catalog.lookupProductIdBySku(organizationId, sku);
+}
+
+function lookupCustomerName(request: {
+  server: FastifyInstance;
+  staffAuth?: { staffUserId: string };
+}): (customerId: string) => Promise<string | null> {
+  const organizationId = staffOrganizationId(request);
+  const cache = new Map<string, Promise<string | null>>();
+  return (customerId) => {
+    const cached = cache.get(customerId);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const pending = request.server.customers.getCustomer
+      .execute({
+        organizationId,
+        staffUserId: staffUserId(request),
+        customerId: CustomerId.parse(customerId),
+      })
+      .then((result) => (result.ok ? result.customer.name : null));
+    cache.set(customerId, pending);
+    return pending;
   };
+}
+
+function toSalesOrderBody(
+  request: {
+    server: FastifyInstance;
+    staffAuth?: { staffUserId: string };
+  },
+  order: SalesOrder,
+) {
+  return mapSalesOrder(order, lookupProductId(request), lookupCustomerName(request));
 }
 
 function sendNotFound(reply: FastifyReply) {
@@ -118,8 +136,14 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         customerId:
           query.customerId === undefined ? undefined : CustomerId.parse(query.customerId),
       });
+      const productIdBySku = lookupProductId(request);
+      const nameByCustomerId = lookupCustomerName(request);
       return {
-        items: result.items.map(mapSalesOrder),
+        items: await Promise.all(
+          result.items.map((order) =>
+            mapSalesOrder(order, productIdBySku, nameByCustomerId),
+          ),
+        ),
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
@@ -176,7 +200,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         }
         return sendInvalid(reply);
       }
-      return reply.code(201).send(mapSalesOrder(result.salesOrder));
+      return reply.code(201).send(
+        await toSalesOrderBody(request, result.salesOrder),
+      );
     },
   );
 
@@ -230,7 +256,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         }
         return sendInvalid(reply);
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 
@@ -257,7 +283,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
       if (!result.ok) {
         return sendNotFound(reply);
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 
@@ -309,7 +335,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         }
         return sendInvalid(reply);
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 
@@ -350,7 +376,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         }
         return sendNotFound(reply);
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 
@@ -394,7 +420,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         }
         return sendInvalid(reply);
       }
-      return mapSalesOrder(result.salesOrder);
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 }

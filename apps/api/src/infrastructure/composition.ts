@@ -188,7 +188,7 @@ import {
   type InMemoryInventoryReadModel,
   type IUncoveredListQuery,
 } from "@dc-inventory/inventory";
-import { OrganizationId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
 import {
   committedCustomerNamesPort,
@@ -248,6 +248,10 @@ export type CatalogHttpServices = {
   importProductBrowser: ImportProductBrowserUseCase;
   listWholesaleCatalog: ListWholesaleCatalogUseCase;
   getWholesaleProduct: GetWholesaleProductUseCase;
+  lookupProductIdBySku: (
+    organizationId: OrganizationId,
+    sku: string,
+  ) => Promise<string | null>;
 };
 
 export type CustomersHttpServices = {
@@ -416,6 +420,14 @@ function catalogServices(
     ),
     listWholesaleCatalog: new ListWholesaleCatalogUseCase(catalogListQuery),
     getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead),
+    lookupProductIdBySku: async (organizationId, sku) => {
+      try {
+        const product = await productRepo.findBySku(organizationId, Sku.parse(sku));
+        return product?.id ?? null;
+      } catch {
+        return null;
+      }
+    },
   };
 }
 

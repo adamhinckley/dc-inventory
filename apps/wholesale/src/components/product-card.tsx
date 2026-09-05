@@ -32,8 +32,12 @@ export function ProductCard({
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition-shadow hover:shadow-md">
-      <Link href={`/products/${id}`} className="flex flex-1 flex-col">
-        <div className="flex aspect-[4/3] items-center justify-center bg-canvas text-sm text-ink-muted">
+      <div className="flex flex-1 flex-col">
+        <Link
+          href={`/products/${id}`}
+          tabIndex={-1}
+          className="flex aspect-[4/3] items-center justify-center bg-canvas text-sm text-ink-muted outline-none"
+        >
           {imageUrl ? (
             // Catalog image URLs come from the API; next/image host allowlist is later.
             // eslint-disable-next-line @next/next/no-img-element
@@ -45,9 +49,16 @@ export function ProductCard({
           ) : (
             <span>No image</span>
           )}
-        </div>
+        </Link>
         <div className="flex flex-1 flex-col gap-2 p-4">
-          <h2 className="text-lg font-semibold leading-snug text-ink">{name}</h2>
+          <h2 className="text-lg font-semibold leading-snug">
+            <Link
+              href={`/products/${id}`}
+              className="text-ink hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              {name}
+            </Link>
+          </h2>
           <p className="text-base text-ink">
             {formatMoneyMinorUnits(wholesalePrice, currency)}
             <span className="ml-1 text-sm font-normal text-ink-muted">
@@ -60,9 +71,9 @@ export function ProductCard({
             {label}
           </p>
         </div>
-      </Link>
-      <div className="border-t border-line p-4 pt-0">
-        <AddToCartButton productId={id} disabled={!inStock} />
+      </div>
+      <div className="p-4 pt-0">
+        <AddToCartButton productId={id} name={name} disabled={!inStock} />
       </div>
     </article>
   );

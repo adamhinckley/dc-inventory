@@ -257,6 +257,7 @@ describe("wholesale sales orders (ADA-272)", () => {
       payload: { lines: [{ productId, qty: 2 }] },
     });
     expect(created.statusCode).toBe(201);
+    expect(created.json().lines[0]?.productId).toBe(productId);
     const orderId = created.json().id as string;
 
     const list = await app.inject({

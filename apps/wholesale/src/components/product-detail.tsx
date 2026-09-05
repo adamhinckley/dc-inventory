@@ -47,7 +47,7 @@ export function ProductDetail({ productId }: { productId: string }) {
           <span className="ml-2 text-base font-normal text-ink-muted">wholesale</span>
         </p>
         <p className={inStock ? "text-ink-muted" : "text-sold-out"}>{label}</p>
-        <AddToCartButton productId={payload.id} disabled={!inStock} />
+        <AddToCartButton productId={payload.id} name={payload.name} disabled={!inStock} />
       </div>
     </article>
   );

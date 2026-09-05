@@ -4,13 +4,15 @@ import {
   listInternalSalesOrdersTable,
   useListInternalSalesOrders,
 } from "@dc-inventory/api-client-internal";
+import { Chip } from "@dc-inventory/ui";
 import {
   DataTable,
   type ListQueryHook,
   type ListQueryParams,
 } from "@dc-inventory/ui-internal";
 import Link from "next/link";
-import { useCallback, type ReactNode } from "react";
+import { useCallback, type CSSProperties, type ReactNode } from "react";
+import { salesOrderStatusPresentation } from "../lib/sales-order-status-chip";
 import { salesOrderStatusFilterOptions } from "../lib/sales-order-status-filter";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
@@ -51,6 +53,22 @@ export function SalesOrdersTable({
       renderRowLink={renderRowLink}
       filterOptions={{ status: salesOrderStatusFilterOptions }}
       filterLabels={{ status: "Status", customerId: "Customer ID" }}
+      renderColumns={{
+        status: (row) => {
+          const presentation = salesOrderStatusPresentation(row.status);
+          if (presentation === null) {
+            return "—";
+          }
+          return (
+            <Chip
+              icon={<Chip.Dot />}
+              style={{ "--chip-color": presentation.color } as CSSProperties}
+            >
+              {presentation.label}
+            </Chip>
+          );
+        },
+      }}
       idPrefix="sales-orders"
     >
       <DataTable.Toolbar>
