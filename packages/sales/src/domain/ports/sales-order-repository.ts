@@ -45,6 +45,15 @@ export interface ISalesOrderRepository {
     organizationId: OrganizationId,
     customerId: CustomerId,
   ): Promise<SalesOrder | null>;
+  findDraftByCustomerForUpdate(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null>;
+  runDraftCustomerTransaction<T>(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+    work: (repo: ISalesOrderRepository) => Promise<T>,
+  ): Promise<T>;
   save(order: SalesOrder): Promise<void>;
   insertWithNextDocumentNumber(order: UnnumberedSalesOrder): Promise<SalesOrder>;
   findByDocumentNumber(

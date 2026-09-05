@@ -1,4 +1,5 @@
 import {
+  CustomerId,
   OrderId,
   OrganizationId,
   type StaffUserId,
@@ -18,6 +19,7 @@ import {
 
 export type ReplaceSalesOrderLinesRequest = {
   organizationId: OrganizationId;
+  customerId: CustomerId;
   salesOrderId: OrderId;
   lines: readonly SalesOrderLineInput[];
   shipLine1?: string;
@@ -62,6 +64,9 @@ export class ReplaceSalesOrderLinesUseCase {
 
     const existing = await this.salesOrders.findById(input.organizationId, input.salesOrderId);
     if (existing === null) {
+      return { ok: false, reason: "not_found" };
+    }
+    if (existing.customerId !== input.customerId) {
       return { ok: false, reason: "not_found" };
     }
     if (existing.status !== "draft") {

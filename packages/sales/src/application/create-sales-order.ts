@@ -6,6 +6,7 @@ import {
   type StaffUserId,
   type WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import { isSalesDraftPerCustomerUniqueViolation } from "../adapters/postgres-sales-draft-unique.js";
 import type { IClock } from "../domain/clock.js";
 import { newUuid, SalesOrderLineId } from "../domain/ids.js";
 import type { ICatalogProductPort } from "../domain/ports/catalog-product.js";
@@ -90,6 +91,21 @@ function mergeDraftLines(
   return merged;
 }
 
+function applyShipToSnapshot(
+  existingDraft: SalesOrder,
+  input: CreateSalesOrderRequestBase,
+): SalesOrder {
+  return {
+    ...existingDraft,
+    shipLine1: input.shipLine1 ?? existingDraft.shipLine1,
+    shipLine2: input.shipLine2 ?? existingDraft.shipLine2,
+    shipCity: input.shipCity ?? existingDraft.shipCity,
+    shipRegion: input.shipRegion ?? existingDraft.shipRegion,
+    shipPostal: input.shipPostal ?? existingDraft.shipPostal,
+    shipCountry: input.shipCountry ?? existingDraft.shipCountry,
+  };
+}
+
 export class CreateSalesOrderUseCase {
   constructor(
     private readonly salesOrders: ISalesOrderRepository,
@@ -126,44 +142,92 @@ export class CreateSalesOrderUseCase {
       return builtIncoming;
     }
 
-    const existingDraft =
-      input.mode === "always_new"
-        ? null
-        : await this.salesOrders.findDraftByCustomer(
-            input.organizationId,
-            input.customerId,
-          );
-    if (existingDraft !== null) {
-      const salesOrder: SalesOrder = {
-        ...existingDraft,
-        lines: mergeDraftLines(existingDraft.lines, builtIncoming.lines),
-        shipLine1: input.shipLine1 ?? existingDraft.shipLine1,
-        shipLine2: input.shipLine2 ?? existingDraft.shipLine2,
-        shipCity: input.shipCity ?? existingDraft.shipCity,
-        shipRegion: input.shipRegion ?? existingDraft.shipRegion,
-        shipPostal: input.shipPostal ?? existingDraft.shipPostal,
-        shipCountry: input.shipCountry ?? existingDraft.shipCountry,
-      };
-      await this.salesOrders.save(salesOrder);
+    if (input.mode === "always_new") {
+      const createdAt = this.clock?.now() ?? new Date();
+      const salesOrder = await this.salesOrders.insertWithNextDocumentNumber({
+        id: OrderId.parse(newUuid()),
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        status: "draft",
+        createdAt,
+        lines: builtIncoming.lines,
+        placedByStaffUserId: input.placedByStaffUserId,
+        shipLine1: input.shipLine1,
+        shipLine2: input.shipLine2,
+        shipCity: input.shipCity,
+        shipRegion: input.shipRegion,
+        shipPostal: input.shipPostal,
+        shipCountry: input.shipCountry,
+      });
       return { ok: true, salesOrder };
     }
 
-    const createdAt = this.clock?.now() ?? new Date();
-    const salesOrder = await this.salesOrders.insertWithNextDocumentNumber({
-      id: OrderId.parse(newUuid()),
-      organizationId: input.organizationId,
-      customerId: input.customerId,
-      status: "draft",
-      createdAt,
-      lines: builtIncoming.lines,
-      placedByStaffUserId: input.placedByStaffUserId,
-      shipLine1: input.shipLine1,
-      shipLine2: input.shipLine2,
-      shipCity: input.shipCity,
-      shipRegion: input.shipRegion,
-      shipPostal: input.shipPostal,
-      shipCountry: input.shipCountry,
-    });
-    return { ok: true, salesOrder };
+    return this.salesOrders.runDraftCustomerTransaction(
+      input.organizationId,
+      input.customerId,
+      async (repo) => this.findOrCreateDraft(repo, input, builtIncoming.lines),
+    );
+  }
+
+  private async findOrCreateDraft(
+    repo: ISalesOrderRepository,
+    input: CreateSalesOrderRequest,
+    incomingLines: readonly SalesOrderLine[],
+  ): Promise<CreateSalesOrderResult> {
+    const existingDraft = await repo.findDraftByCustomerForUpdate(
+      input.organizationId,
+      input.customerId,
+    );
+    if (existingDraft !== null) {
+      const salesOrder: SalesOrder = applyShipToSnapshot(
+        {
+          ...existingDraft,
+          lines: mergeDraftLines(existingDraft.lines, incomingLines),
+        },
+        input,
+      );
+      await repo.save(salesOrder);
+      return { ok: true, salesOrder };
+    }
+
+    try {
+      const createdAt = this.clock?.now() ?? new Date();
+      const salesOrder = await repo.insertWithNextDocumentNumber({
+        id: OrderId.parse(newUuid()),
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        status: "draft",
+        createdAt,
+        lines: incomingLines,
+        placedByStaffUserId: input.placedByStaffUserId,
+        shipLine1: input.shipLine1,
+        shipLine2: input.shipLine2,
+        shipCity: input.shipCity,
+        shipRegion: input.shipRegion,
+        shipPostal: input.shipPostal,
+        shipCountry: input.shipCountry,
+      });
+      return { ok: true, salesOrder };
+    } catch (error) {
+      if (!isSalesDraftPerCustomerUniqueViolation(error)) {
+        throw error;
+      }
+      const draft = await repo.findDraftByCustomerForUpdate(
+        input.organizationId,
+        input.customerId,
+      );
+      if (draft === null) {
+        throw error;
+      }
+      const salesOrder: SalesOrder = applyShipToSnapshot(
+        {
+          ...draft,
+          lines: mergeDraftLines(draft.lines, incomingLines),
+        },
+        input,
+      );
+      await repo.save(salesOrder);
+      return { ok: true, salesOrder };
+    }
   }
 }

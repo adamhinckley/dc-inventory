@@ -168,7 +168,22 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
     organizationId: OrganizationId,
     customerId: CustomerId,
   ): Promise<SalesOrder | null> {
-    const rows = await this.db
+    return this.loadDraftByCustomer(organizationId, customerId, false);
+  }
+
+  async findDraftByCustomerForUpdate(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null> {
+    return this.loadDraftByCustomer(organizationId, customerId, true);
+  }
+
+  private async loadDraftByCustomer(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+    forUpdate: boolean,
+  ): Promise<SalesOrder | null> {
+    const query = this.db
       .select()
       .from(orders)
       .where(
@@ -180,12 +195,26 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
       )
       .orderBy(asc(orders.createdAt), asc(orders.id))
       .limit(1);
+    const rows = forUpdate ? await query.for("update") : await query;
     const header = rows[0];
     if (header === undefined) {
       return null;
     }
     const lines = await loadLines(this.db, header.id);
     return toOrder(header, lines);
+  }
+
+  async runDraftCustomerTransaction<T>(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+    work: (repo: ISalesOrderRepository) => Promise<T>,
+  ): Promise<T> {
+    void organizationId;
+    void customerId;
+    return this.db.transaction(async (tx) => {
+      const repo = new DrizzleSalesOrderRepository(tx as SalesDrizzle);
+      return work(repo);
+    });
   }
 
   async findByDocumentNumber(

@@ -301,6 +301,51 @@ describe("wholesale sales orders (ADA-272)", () => {
     expect(forbidden.json()).toEqual({ error: "not_found" });
   });
 
+  it("PATCH replace-lines returns 404 for another customer's order without mutating it", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const buyerBCookie = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "buyer-b@local.test",
+        password: "buyer-b-secret",
+      },
+    }).then((res) => wholesaleCookie(res));
+    const actingCookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "PATCH-SCOPE-SKU");
+
+    const buyerOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(buyerOrder.statusCode).toBe(201);
+    const buyerOrderId = buyerOrder.json().id as string;
+    const buyerQtyBefore = buyerOrder.json().lines[0]?.qty as number;
+
+    await selectCustomer(app, actingCookie, CUSTOMER_A_ID);
+
+    const forbidden = await app.inject({
+      method: "PATCH",
+      url: `/wholesale/sales-orders/${buyerOrderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+      payload: { lines: [{ productId, qty: 99 }] },
+    });
+    expect(forbidden.statusCode).toBe(404);
+    expect(forbidden.json()).toEqual({ error: "not_found" });
+
+    const buyerRefetch = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/${buyerOrderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+    });
+    expect(buyerRefetch.statusCode).toBe(200);
+    expect(buyerRefetch.json().lines[0]?.qty).toBe(buyerQtyBefore);
+  });
+
   it("GET by id returns the order for session customer", async () => {
     const { app } = await startApp();
     const staffInternal = await loginStaffInternal(app);

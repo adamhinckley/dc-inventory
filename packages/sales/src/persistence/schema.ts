@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { customers } from "@dc-inventory/customers/schema";
 
 /**
@@ -59,6 +60,9 @@ export const orders = sales.table(
       table.organizationId,
       table.documentNumber,
     ),
+    uniqueIndex("orders_organization_id_customer_id_draft_unique")
+      .on(table.organizationId, table.customerId)
+      .where(sql`${table.status} = 'draft'`),
     foreignKey({
       columns: [table.organizationId, table.customerId],
       foreignColumns: [customers.organizationId, customers.id],

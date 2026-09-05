@@ -266,9 +266,6 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         }
         return reply.code(400).send({ error: "invalid" as const });
       }
-      if (result.salesOrder.customerId !== wholesaleCustomerId(request)) {
-        return sendNotFound(reply);
-      }
       return mapSalesOrder(result.salesOrder);
     },
   );

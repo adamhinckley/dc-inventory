@@ -82,6 +82,7 @@ describe("cart draft sales order (ADA-289)", () => {
 
     const replaced = await h.replaceLines.execute({
       organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
       wholesaleUserId: WHOLESALE_USER_ID,
       salesOrderId: created.salesOrderId,
       lines: [],
@@ -108,6 +109,7 @@ describe("cart draft sales order (ADA-289)", () => {
 
     const replaced = await h.replaceLines.execute({
       organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
       wholesaleUserId: WHOLESALE_USER_ID,
       salesOrderId: created.salesOrderId,
       lines: [
@@ -127,5 +129,43 @@ describe("cart draft sales order (ADA-289)", () => {
     expect(
       replaced.salesOrder.lines.find((line) => line.sku.value === "SALES-LOCK-1")?.qty,
     ).toBe(1);
+  });
+
+  it("concurrent find-or-create merges into one draft", async () => {
+    const h = salesDemandHarness();
+
+    const [first, second] = await Promise.all([
+      h.create.execute({
+        organizationId: DEFAULT_ORG,
+        wholesaleUserId: WHOLESALE_USER_ID,
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: OPEN_PRODUCT_ID, qty: 2 }],
+      }),
+      h.create.execute({
+        organizationId: DEFAULT_ORG,
+        wholesaleUserId: WHOLESALE_USER_ID,
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: OPEN_PRODUCT_ID, qty: 3 }],
+      }),
+    ]);
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (!first.ok || !second.ok) {
+      return;
+    }
+
+    expect(first.salesOrder.id).toBe(second.salesOrder.id);
+    const reloaded = await h.uow.salesOrders.findDraftByCustomer(DEFAULT_ORG, CUSTOMER_ID);
+    expect(reloaded?.lines).toHaveLength(1);
+    expect(reloaded?.lines[0]?.qty).toBe(5);
+
+    const drafts = [...h.uow.salesOrders.snapshot().byId.values()].filter(
+      (row) =>
+        row.order.organizationId === DEFAULT_ORG &&
+        row.order.customerId === CUSTOMER_ID &&
+        row.order.status === "draft",
+    );
+    expect(drafts).toHaveLength(1);
   });
 });
