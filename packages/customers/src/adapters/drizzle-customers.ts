@@ -174,6 +174,9 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
       const needle = `%${query.q.trim()}%`;
       clauses.push(or(ilike(customers.name, needle), ilike(customers.customerNumber, needle))!);
     }
+    if (query.accountStatus !== undefined) {
+      clauses.push(eq(customers.accountStatus, query.accountStatus));
+    }
     const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
     const [rows, countRows] = await Promise.all([

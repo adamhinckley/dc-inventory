@@ -17,6 +17,9 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
       if (customer.organizationId !== query.organizationId) {
         return false;
       }
+      if (query.accountStatus !== undefined && customer.accountStatus !== query.accountStatus) {
+        return false;
+      }
       if (needle.length === 0) {
         return true;
       }

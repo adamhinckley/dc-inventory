@@ -374,8 +374,11 @@ export const duplicateEmailResponseSchema = z.object({
   error: z.literal("duplicate_email"),
 });
 
+export const accountStatusSchema = z.enum(["active", "on_hold", "inactive"]);
+
 export const customerListQuerySchema = z.object({
   q: z.string().optional(),
+  accountStatus: accountStatusSchema.optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z
@@ -383,8 +386,6 @@ export const customerListQuerySchema = z.object({
     .default("name"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
-
-export const accountStatusSchema = z.enum(["active", "on_hold", "inactive"]);
 
 export const customerItemSchema = z.object({
   id: z.string().uuid(),
@@ -414,17 +415,15 @@ export const customersListTable = {
   columns: [
     { field: "name", label: "Name" },
     { field: "customerNumber", label: "Customer #" },
-    { field: "creditLimitCents", label: "Credit limit (¢)" },
-    { field: "currency", label: "Currency" },
-    { field: "terms", label: "Terms" },
     { field: "accountStatus", label: "Status" },
+    { field: "terms", label: "Terms" },
   ],
   search: {
     param: "q",
-    fields: ["name"],
-    placeholder: "Search customer name",
+    fields: ["name", "customerNumber"],
+    placeholder: "Search name or customer #",
   },
-  filters: [],
+  filters: [{ param: "accountStatus", control: "select" }],
   sort: {
     defaultBy: "name",
     defaultOrder: "asc",

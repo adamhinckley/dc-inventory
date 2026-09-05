@@ -195,6 +195,15 @@ paths:
           name: q
           required: false
         - schema:
+            type: string
+            enum:
+              - active
+              - on_hold
+              - inactive
+          in: query
+          name: accountStatus
+          required: false
+        - schema:
             default: 1
             type: integer
             minimum: 1
@@ -237,20 +246,19 @@ paths:
             label: Name
           - field: customerNumber
             label: "Customer #"
-          - field: creditLimitCents
-            label: Credit limit (¢)
-          - field: currency
-            label: Currency
-          - field: terms
-            label: Terms
           - field: accountStatus
             label: Status
+          - field: terms
+            label: Terms
         search:
           param: q
           fields:
             - name
-          placeholder: Search customer name
-        filters: []
+            - customerNumber
+          placeholder: "Search name or customer #"
+        filters:
+          - param: accountStatus
+            control: select
         sort:
           defaultBy: name
           defaultOrder: asc

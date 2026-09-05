@@ -1,5 +1,20 @@
 import type { CustomerAccountStatus } from "./customer-types";
 
+export function customerListAccountStatusLabel(status: CustomerAccountStatus): string {
+  switch (status) {
+    case "active":
+      return "active";
+    case "on_hold":
+      return "on hold";
+    case "inactive":
+      return "inactive";
+    default: {
+      const exhaustive: never = status;
+      return exhaustive;
+    }
+  }
+}
+
 export function customerAccountStatusLabel(status: CustomerAccountStatus): string {
   switch (status) {
     case "active":

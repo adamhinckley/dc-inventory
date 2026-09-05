@@ -1,5 +1,6 @@
 import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { Customer } from "../domain/customer.js";
+import type { AccountStatus } from "../domain/account-status.js";
 import type {
   CustomerListSortBy,
   ICustomerRepository,
@@ -10,6 +11,7 @@ export type ListCustomersRequest = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId;
   q?: string;
+  accountStatus?: AccountStatus;
   page: number;
   pageSize: number;
   sortBy: CustomerListSortBy;
@@ -31,6 +33,7 @@ export class ListCustomersUseCase {
     const page = await this.customers.list({
       organizationId: input.organizationId,
       q: input.q,
+      accountStatus: input.accountStatus,
       page: input.page,
       pageSize: input.pageSize,
       sortBy: input.sortBy,
