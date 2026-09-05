@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildInventoryReopenCommand,
   fetchInventoryMatchPages,
+  fetchRemainingInventoryMatches,
   INVENTORY_MATCH_PAGE_SIZE,
   type InventoryMatchListFn,
   parseOptionalWindowInstant,
@@ -109,5 +110,48 @@ describe("inventory reopen workflow", () => {
 
     const second = await fetchInventoryMatchPages({}, 6, 5, listProducts);
     expect(second.nextPage).toBe(11);
+  });
+
+  it("concatenates remaining page windows into the reopen command", async () => {
+    const total = 900;
+    const listProductsMock = vi.fn(async (params: { page?: number; pageSize?: number }) => {
+      const page = params.page ?? 1;
+      const pageSize = params.pageSize ?? INVENTORY_MATCH_PAGE_SIZE;
+      const startSku = (page - 1) * pageSize + 1;
+      const count = Math.min(pageSize, Math.max(0, total - (page - 1) * pageSize));
+      return {
+        status: 200 as const,
+        data: {
+          items: Array.from({ length: count }, (_, index) => ({
+            sku: `SKU-${startSku + index}`,
+            name: `Style ${startSku + index}`,
+            supplierName: "Acme Supply",
+            sellState: "locked",
+            onHand: 0,
+            onOrder: 1,
+          })),
+          total,
+          page,
+          pageSize,
+        },
+      };
+    });
+    const listProducts = listProductsMock as unknown as InventoryMatchListFn;
+
+    const initial = await fetchInventoryMatchPages({}, 1, 5, listProducts);
+    const remaining = await fetchRemainingInventoryMatches({}, initial.nextPage ?? 1, listProducts);
+    const command = buildInventoryReopenCommand(
+      [...initial.items, ...remaining],
+      "2027-01-15",
+      "",
+    );
+
+    expect(initial.items).toHaveLength(500);
+    expect(remaining.length).toBe(total - initial.items.length);
+    expect(command.skus).toHaveLength(total);
+    expect(command.skus[0]).toBe("SKU-1");
+    expect(command.skus.at(-1)).toBe(`SKU-${total}`);
+    expect(command.windowOpensAt).toBe(new Date(2027, 0, 15).toISOString());
+    expect(command.windowClosesAt).toBeNull();
   });
 });

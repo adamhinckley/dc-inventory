@@ -60,6 +60,7 @@ export function InventoryReopenReview() {
       if (
         !matchesQuery.hasNextPage ||
         matchesQuery.isFetchingNextPage ||
+        matchesQuery.isFetchNextPageError ||
         !shouldPrefetchInventoryMatches({
           loadedCount: matching.length,
           total: matchCount,
@@ -75,6 +76,7 @@ export function InventoryReopenReview() {
       matching.length,
       matchesQuery.fetchNextPage,
       matchesQuery.hasNextPage,
+      matchesQuery.isFetchNextPageError,
       matchesQuery.isFetchingNextPage,
     ],
   );
@@ -104,6 +106,8 @@ export function InventoryReopenReview() {
       setLastAppliedCount(result.data.reopenedCount);
       void queryClient.invalidateQueries({ queryKey: getListInternalProductsQueryKey() });
       void queryClient.invalidateQueries({ queryKey: inventoryReopenQueryKey(filterParams) });
+    } catch {
+      setActionError("Could not load matching SKUs for reopen.");
     } finally {
       applyingRef.current = false;
     }
