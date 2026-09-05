@@ -17,6 +17,7 @@ import {
 import { customerAccountStatusLabel } from "../lib/customer-account-status";
 import type { CustomerDetail } from "../lib/customer-types";
 import { useCanManageMasterData } from "../lib/staff-master-data-manage";
+import type { ListQueryParams } from "@dc-inventory/ui-internal";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { CustomerBillToPanel } from "./customer-bill-to-panel";
 import { CustomerCertificatesPanel } from "./customer-certificates-panel";
@@ -65,10 +66,12 @@ function CustomerDetailTabPanel({
   customerId,
   activeTab,
   canManage,
+  ordersInitialParams,
 }: {
   customerId: string;
   activeTab: CustomerDetailTabKey;
   canManage: boolean;
+  ordersInitialParams?: ListQueryParams;
 }) {
   switch (activeTab) {
     case "ship-tos":
@@ -82,16 +85,23 @@ function CustomerDetailTabPanel({
         <CustomerCertificatesPanel customerId={customerId} canManage={canManage} />
       );
     case "orders":
-      return <CustomerOrdersPanel />;
+      return (
+        <CustomerOrdersPanel
+          customerId={customerId}
+          initialParams={ordersInitialParams}
+        />
+      );
   }
 }
 
 export function CustomerDetailPage({
   customerId,
   activeTab,
+  ordersInitialParams,
 }: {
   customerId: string;
   activeTab: CustomerDetailTabKey;
+  ordersInitialParams?: ListQueryParams;
 }) {
   const query = useGetInternalCustomer(customerId);
   const customer = query.data?.status === 200 ? query.data.data : undefined;
@@ -148,6 +158,7 @@ export function CustomerDetailPage({
                   customerId={customerId}
                   activeTab={activeTab}
                   canManage={canManage}
+                  ordersInitialParams={ordersInitialParams}
                 />
               </RouterTabs.Panel>
             </RouterTabs>

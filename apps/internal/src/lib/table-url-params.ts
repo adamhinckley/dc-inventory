@@ -5,6 +5,7 @@ import {
   type ListQueryParams,
   type TableMeta,
 } from "@dc-inventory/ui-internal";
+import { customersOrdersTable } from "./customers-orders-table";
 import { inventoryListTable } from "./inventory-list-table";
 import { receivingListTable } from "./receiving-list-table";
 import { uncoveredListTable } from "./uncovered-list-table";
@@ -16,6 +17,7 @@ const STAFF_TABLE_METAS: readonly TableMeta[] = [
   inventoryListTable,
   receivingListTable,
   uncoveredListTable,
+  customersOrdersTable,
 ];
 
 /** Union of unprefixed list keys used on any staff dashboard table. */
