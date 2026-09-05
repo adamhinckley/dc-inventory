@@ -9,7 +9,8 @@ describe("DashboardTableUrlCleanup source", () => {
     );
     expect(source).toContain("popstate");
     expect(source).toContain("skipNextStrip");
-    expect(source).toMatch(/if \(!skipNextStrip\.current\)/);
+    expect(source).toContain("skipNextStrip.current");
+    expect(source).toContain("shouldStripStaffTableUrlOnNavigate");
     expect(source).toMatch(/stripStaffTableUrlParams\(current\)/);
   });
 });

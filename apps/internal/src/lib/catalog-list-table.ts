@@ -20,7 +20,7 @@ export const catalogListTable = {
   ],
   search: listInternalProductsTable.search,
   filters: listInternalProductsTable.filters?.filter(
-    (filter) => filter.param !== "hideZeroInventory",
+    (filter) => filter.param !== "hideZeroInventory" && filter.param !== "sellState",
   ),
   sort: {
     defaultBy: "sku",

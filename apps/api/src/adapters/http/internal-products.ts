@@ -7,6 +7,7 @@ import { ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   duplicateSkuResponseSchema,
   invalidResponseSchema,
+  categoryListResponseSchema,
   listQuerySchema,
   notFoundResponseSchema,
   productDetailSchema,
@@ -54,6 +55,7 @@ function mapListItem(
   createdAt: Date,
   caseQty: number | null,
   lastPoCostCents: number | null,
+  supplierName: string | null,
 ) {
   return {
     id: product.id,
@@ -62,6 +64,7 @@ function mapListItem(
     memberPrice: product.memberPrice.amountMinor,
     listPrice: product.listPrice?.amountMinor ?? null,
     lastPoCostCents,
+    supplierName,
     currency: product.memberPrice.currency,
     inactive: product.inactive,
     discontinued: product.discontinued,
@@ -108,6 +111,30 @@ const writeErrorResponses = {
 
 export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
   const routes = typed(app);
+
+  routes.get(
+    "/categories",
+    {
+      schema: {
+        operationId: "listInternalCategories",
+        tags: ["internal"],
+        summary: "List catalog category names for staff product filters",
+        response: {
+          200: categoryListResponseSchema,
+          401: unauthorizedResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const result = await request.server.catalog.listStaffCategories.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+      });
+      return {
+        items: result.items.map((name) => ({ name })),
+      };
+    },
+  );
 
   routes.post(
     "/products/import",
@@ -331,6 +358,9 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortOrder: "asc" | "desc";
         inactive?: boolean;
         hideZeroInventory?: boolean;
+        category?: string[];
+        supplierId?: string[];
+        sellState?: "open" | "locked";
       };
       const result = await request.server.catalog.exportStaffProductsCsv.execute({
         organizationId: staffOrganizationId(request),
@@ -340,6 +370,9 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortOrder: query.sortOrder,
         inactive: query.inactive,
         hideZeroInventory: query.hideZeroInventory,
+        category: query.category,
+        supplierId: query.supplierId,
+        sellState: query.sellState,
       });
       return reply
         .code(200)
@@ -374,6 +407,9 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortOrder: "asc" | "desc";
         inactive?: boolean;
         hideZeroInventory?: boolean;
+        category?: string[];
+        supplierId?: string[];
+        sellState?: "open" | "locked";
       };
       const result = await request.server.catalog.listStaffProducts.execute({
         organizationId: staffOrganizationId(request),
@@ -385,10 +421,20 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         sortOrder: query.sortOrder,
         inactive: query.inactive,
         hideZeroInventory: query.hideZeroInventory,
+        category: query.category,
+        supplierId: query.supplierId,
+        sellState: query.sellState,
       });
       return {
         items: result.items.map((row) =>
-          mapListItem(row.product, row.qty, row.createdAt, row.caseQty, row.lastPoCostCents),
+          mapListItem(
+            row.product,
+            row.qty,
+            row.createdAt,
+            row.caseQty,
+            row.lastPoCostCents,
+            row.supplierName,
+          ),
         ),
         page: result.page,
         pageSize: result.pageSize,

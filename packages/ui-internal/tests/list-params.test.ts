@@ -40,6 +40,21 @@ describe("listParamsFromState", () => {
     expect(listParamsFromState(productsListTable, state).q).toBe("bolt");
   });
 
+  it("sends every selected value for a declared multiselect filter", () => {
+    const meta: TableMeta = {
+      ...productsListTable,
+      filters: [{ param: "category", control: "multiselect" }],
+    };
+    const state: DataTableState = {
+      ...defaultTableState(meta),
+      filters: { category: ["Hardware", "Textiles"] },
+    };
+    expect(listParamsFromState(meta, state).category).toEqual([
+      "Hardware",
+      "Textiles",
+    ]);
+  });
+
   it("includes declared filter params from x-table", () => {
     const state: DataTableState = {
       ...defaultTableState(productsListTable),

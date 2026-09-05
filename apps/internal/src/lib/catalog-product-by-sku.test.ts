@@ -14,6 +14,7 @@ function productRow(sku: string): CatalogProductRow {
     memberPrice: 100,
     listPrice: 100,
     lastPoCostCents: null,
+    supplierName: null,
     currency: "USD",
     inactive: false,
     discontinued: false,

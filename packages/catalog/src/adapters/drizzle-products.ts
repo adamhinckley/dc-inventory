@@ -59,8 +59,10 @@ export function buildProductListQuery(
     const pattern = `%${needle}%`;
     clauses.push(or(ilike(products.sku, pattern), ilike(products.name, pattern))!);
   }
-  const category = query.category?.trim() ?? "";
-  if (category.length > 0) {
+  const categoryNames = (query.category ?? [])
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0);
+  if (categoryNames.length > 0) {
     const productIds = db
       .select({ productId: productCategories.productId })
       .from(productCategories)
@@ -68,7 +70,7 @@ export function buildProductListQuery(
       .where(
         and(
           eq(categories.organizationId, query.organizationId),
-          eq(categories.name, category),
+          inArray(categories.name, categoryNames),
         ),
       );
     clauses.push(inArray(products.id, productIds));
@@ -78,6 +80,15 @@ export function buildProductListQuery(
 
 export class DrizzleProductRepository implements IProductRepository {
   constructor(private readonly db: CatalogDrizzle) {}
+
+  async listCategoryNames(organizationId: OrganizationId): Promise<string[]> {
+    const rows = await this.db
+      .select({ name: categories.name })
+      .from(categories)
+      .where(eq(categories.organizationId, organizationId))
+      .orderBy(categories.name);
+    return rows.map((row) => row.name);
+  }
 
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
     const rows = await buildProductListQuery(this.db, query);

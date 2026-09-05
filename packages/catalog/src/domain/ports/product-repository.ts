@@ -4,7 +4,8 @@ import type { Product } from "../product.js";
 export type ProductListMatch = {
   organizationId: OrganizationId;
   q?: string;
-  category?: string;
+  category?: readonly string[];
+  supplierId?: readonly string[];
   inactive?: boolean;
   shopVisibleOnly?: boolean;
 };
@@ -16,6 +17,7 @@ export type ListedProduct = {
 
 export interface IProductRepository {
   listMatching(query: ProductListMatch): Promise<ListedProduct[]>;
+  listCategoryNames(organizationId: OrganizationId): Promise<string[]>;
   findById(organizationId: OrganizationId, id: ProductId): Promise<Product | null>;
   findBySku(organizationId: OrganizationId, sku: Sku): Promise<Product | null>;
   save(product: Product): Promise<void>;

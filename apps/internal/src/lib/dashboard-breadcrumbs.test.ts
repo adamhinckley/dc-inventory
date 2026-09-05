@@ -17,4 +17,11 @@ describe("crumbsFromPathname", () => {
       { href: "/catalog", label: "Catalog", current: true },
     ]);
   });
+
+  it("labels the inventory reopen tab", () => {
+    expect(crumbsFromPathname("/inventory/reopen")).toEqual([
+      { href: "/inventory", label: "Inventory", current: false },
+      { href: "/inventory/reopen", label: "Manage Pre-Sell", current: true },
+    ]);
+  });
 });

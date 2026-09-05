@@ -28,6 +28,8 @@ export type ListInternalProducts200ItemsItem = {
      * @nullable
      */
   lastPoCostCents: number | null;
+  /** @nullable */
+  supplierName: string | null;
   currency: string;
   inactive: boolean;
   discontinued: boolean;

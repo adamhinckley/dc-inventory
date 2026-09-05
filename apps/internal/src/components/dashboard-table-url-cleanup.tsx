@@ -2,7 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { stripStaffTableUrlParams } from "../lib/table-url-params";
+import {
+  shouldStripStaffTableUrlOnNavigate,
+  stripStaffTableUrlParams,
+} from "../lib/table-url-params";
 
 /** Clears unprefixed list query keys when navigating between staff routes. */
 export function DashboardTableUrlCleanup() {
@@ -24,7 +27,10 @@ export function DashboardTableUrlCleanup() {
       previousPathname.current !== null &&
       previousPathname.current !== current
     ) {
-      if (!skipNextStrip.current) {
+      if (
+        !skipNextStrip.current &&
+        shouldStripStaffTableUrlOnNavigate(previousPathname.current, current)
+      ) {
         stripStaffTableUrlParams(current);
       }
       skipNextStrip.current = false;

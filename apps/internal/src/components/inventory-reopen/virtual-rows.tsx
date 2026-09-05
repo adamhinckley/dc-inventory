@@ -1,19 +1,21 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 export function VirtualRows<T>({
   items,
   estimateSize,
   overscan = 12,
   className,
+  onVisibleRange,
   children,
 }: {
   items: readonly T[];
   estimateSize: number;
   overscan?: number;
   className?: string;
+  onVisibleRange?: (range: { startIndex: number; endIndex: number }) => void;
   children: (item: T, index: number) => ReactNode;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -24,6 +26,16 @@ export function VirtualRows<T>({
     estimateSize: () => estimateSize,
     overscan,
   });
+  const virtualItems = virtualizer.getVirtualItems();
+  const startIndex = virtualItems[0]?.index ?? 0;
+  const endIndex = virtualItems[virtualItems.length - 1]?.index ?? 0;
+
+  useEffect(() => {
+    if (virtualItems.length === 0) {
+      return;
+    }
+    onVisibleRange?.({ startIndex, endIndex });
+  }, [endIndex, onVisibleRange, startIndex, virtualItems.length]);
 
   return (
     <div
@@ -38,7 +50,7 @@ export function VirtualRows<T>({
       className={className}
     >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-        {virtualizer.getVirtualItems().map((virtualItem) => {
+        {virtualItems.map((virtualItem) => {
           const item = items[virtualItem.index];
           if (item === undefined) {
             return null;

@@ -9,7 +9,7 @@ export type InternalTableMetadata = {
   };
   readonly filters?: readonly {
     readonly param: string;
-    readonly control: "select" | "text" | "date" | "dateRange" | "boolean";
+    readonly control: "select" | "multiselect" | "text" | "date" | "dateRange" | "boolean";
     readonly rangePair?: string;
   }[];
   readonly sort?: {
@@ -117,6 +117,18 @@ export const listInternalProductsTable = {
     {
       "param": "hideZeroInventory",
       "control": "boolean"
+    },
+    {
+      "param": "category",
+      "control": "multiselect"
+    },
+    {
+      "param": "supplierId",
+      "control": "multiselect"
+    },
+    {
+      "param": "sellState",
+      "control": "select"
     }
   ],
   "sort": {

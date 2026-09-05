@@ -1,5 +1,6 @@
 export {
   DataTable,
+  DataTableFilterBar,
   DataTableFilters,
   DataTablePagination,
   DataTableRoot,
@@ -31,6 +32,10 @@ export type {
   TableSortMeta,
 } from "./table-meta";
 export { tableControlIdBase } from "./table-meta";
+export {
+  appliedTableFilterValue,
+  tableFilterFields,
+} from "./table-filter-bar";
 export {
   unwrapListData,
   useDataTable,

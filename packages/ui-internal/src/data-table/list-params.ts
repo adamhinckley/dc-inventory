@@ -7,7 +7,7 @@ export type ListQueryParams = {
   pageSize?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
-  [filterParam: string]: string | number | boolean | undefined;
+  [filterParam: string]: string | number | boolean | readonly string[] | undefined;
 };
 
 export type DataTableState = {
@@ -17,7 +17,7 @@ export type DataTableState = {
   sortBy: string;
   sortOrder: "asc" | "desc";
   /** Values keyed by `x-table` filter params (and `rangePair` for date ranges). */
-  filters: Record<string, string | boolean | undefined>;
+  filters: Record<string, string | boolean | readonly string[] | undefined>;
 };
 
 export function defaultTableState(meta: TableMeta): DataTableState {
@@ -81,19 +81,30 @@ export function tableStateFromInitial(
     if (!allowed.has(key) || value === undefined || value === "") {
       continue;
     }
+    const control = meta.filters?.find(
+      (filter) => filter.param === key || filter.rangePair === key,
+    )?.control;
     if (typeof value === "boolean") {
       filters[key] = value;
       continue;
     }
+    if (Array.isArray(value)) {
+      const items = value.filter((item): item is string => typeof item === "string" && item !== "");
+      if (items.length > 0) {
+        filters[key] = items;
+      }
+      continue;
+    }
     if (typeof value === "string" || typeof value === "number") {
-      const control = meta.filters?.find(
-        (filter) => filter.param === key || filter.rangePair === key,
-      )?.control;
       if (control === "boolean") {
         const parsed = parseBooleanFilterParam(value);
         if (parsed !== undefined) {
           filters[key] = parsed;
         }
+        continue;
+      }
+      if (control === "multiselect") {
+        filters[key] = [String(value)];
         continue;
       }
       filters[key] = String(value);
@@ -159,6 +170,9 @@ export function listParamsFromState(
       continue;
     }
     if (value === undefined || value === "") {
+      continue;
+    }
+    if (Array.isArray(value) && value.length === 0) {
       continue;
     }
     params[key] = value;
