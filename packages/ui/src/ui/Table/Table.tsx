@@ -108,6 +108,20 @@ export function computeColumnWidths<T>(
 }
 
 /**
+ * Card chrome. Sticky mode caps at the host (`max-h-full min-h-0`) and
+ * scrolls rows inside the card. `flex-initial` is last so a consumer
+ * `flex-1` cannot stretch the card past its rows.
+ */
+export function tableRootClassName(sticky: boolean, className?: string) {
+  return cn(
+    'flex min-w-0 w-full flex-col overflow-clip rounded-section border border-border',
+    sticky && 'max-h-full min-h-0',
+    className,
+    sticky && 'flex-initial',
+  )
+}
+
+/**
  * Pixel floor for the `<table>` itself. `w-full table-fixed` otherwise
  * squeezes col widths to the card; this min-width lets the inner
  * `overflow-auto` scroller take over when columns are wider than the card.
@@ -341,33 +355,7 @@ export function TableRoot({
         // `sticky-scrollport` utility (Dialog.Body) uses it to swap its
         // vertical padding for pseudo spacers.
         data-sticky-table={sticky || undefined}
-        className={cn(
-          'flex min-w-0 w-full flex-col overflow-clip rounded-section border border-border',
-          // `overflow-clip` keeps header and last-row fills inside
-          // `rounded-section` without creating a scrollport (sticky thead
-          // still pins to the inner overflow-auto scroller).
-          // Sticky mode: the card owns its own scrolling (CORE-990). It caps
-          // at the hosting container's content height and the rows scroll
-          // INSIDE it — the card outline stays put while content disappears
-          // under the frame, both scrollbars render at the card's own edges,
-          // and the bulk/pagination bars are static card chrome below the
-          // scroller (always visible, no sticky machinery).
-          //
-          // `min-h-0` is the height binding when the card is a flex item
-          // (detail-tab / reports feature roots). It keeps the DEFAULT flex
-          // sizing (grow:0, shrink:1) so the card shrink-wraps its content when
-          // rows are few and caps + scrolls only once content exceeds the space
-          // left under a sibling filter-bar row — matching ExplorerView, which
-          // shrink-wraps too. `min-h-0` (not the fragile `overflow-clip`
-          // min-height zeroing) is what lets it shrink below content. NOT
-          // `flex-1`: that forces the card to fill all remaining space, leaving
-          // dead space below the last row on short tables. Inert in block-flow
-          // scrollport parents (ExplorerViewContent, Dialog.Body) where
-          // `max-h-full` is the binding — a child is only a flex item when its
-          // parent is `display:flex`, and `min-h-0` is a no-op on block boxes.
-          sticky && 'max-h-full min-h-0',
-          className,
-        )}
+        className={tableRootClassName(sticky, className)}
         {...rest}
       >
         {liveNoticeNode}

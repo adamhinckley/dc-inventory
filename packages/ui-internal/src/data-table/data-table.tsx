@@ -765,7 +765,6 @@ export function DataTableTable() {
   return (
     <Table
       sticky
-      className="min-h-0 flex-1"
       table={table}
       emptyMessage={emptyMessage ?? "No rows"}
     >
