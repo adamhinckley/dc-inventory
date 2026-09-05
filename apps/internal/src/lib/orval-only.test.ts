@@ -30,6 +30,7 @@ describe("internal dashboard HTTP", () => {
     expect(joined).toMatch(/useListInternalProducts/);
     expect(joined).toMatch(/useListInternalUncoveredSkus/);
     expect(joined).toMatch(/useDraftInternalUncoveredPurchaseOrders/);
+    expect(joined).toMatch(/useReopenInternalInventorySkus/);
     expect(joined).toMatch(/useListInternalSuppliers/);
     expect(joined).toMatch(/useListInternalSalesOrders/);
     expect(joined).toMatch(/useGetInternalSalesOrder/);

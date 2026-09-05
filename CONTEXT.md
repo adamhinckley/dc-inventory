@@ -72,6 +72,14 @@ _Avoid_: selling season, company-wide infinite, unlocked
 Per-SKU sell state after a factory PO is placed (`InboundFromPo`). Gate is available to sell. Stays locked until staff reopens. Receive does not reopen.
 _Avoid_: closed season, sold out as a company flag
 
+**Reopen**:
+Staff command that clears sticky lock on a chosen SKU list so the next pre-sell can run open again. Takes an explicit SKU list — not a company-wide switch. Optional shared sell window on the same command.
+_Avoid_: company-wide infinity, season row, auto-reopen on receive
+
+**Sell window**:
+Optional per-SKU calendar bounds (`windowOpensAt`, `windowClosesAt`) set on reopen. Outside the window the SKU is locked even with no PO. Staff may apply one window pair to many SKUs in one reopen batch.
+_Avoid_: cron, company selling season, ATP in the UI
+
 **Uncovered**:
 `max(0, committed − on_hand − on_order)`. The factory to-order list. Not a shop number.
 _Avoid_: available to sell, backorder document, purchase request

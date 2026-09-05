@@ -267,6 +267,11 @@ import type {
   RecordInternalInvoicePayment404,
   RecordInternalInvoicePayment409,
   RecordInternalInvoicePaymentBody,
+  ReopenInternalInventorySkus200,
+  ReopenInternalInventorySkus400,
+  ReopenInternalInventorySkus401,
+  ReopenInternalInventorySkus403,
+  ReopenInternalInventorySkusBody,
   ReplaceInternalPurchaseOrderLines200,
   ReplaceInternalPurchaseOrderLines400,
   ReplaceInternalPurchaseOrderLines401,
@@ -3590,6 +3595,112 @@ export function useGetInternalInventoryStock<TData = Awaited<ReturnType<typeof g
 
 
 
+
+export type reopenInternalInventorySkusResponse200 = {
+  data: ReopenInternalInventorySkus200
+  status: 200
+}
+
+export type reopenInternalInventorySkusResponse400 = {
+  data: ReopenInternalInventorySkus400
+  status: 400
+}
+
+export type reopenInternalInventorySkusResponse401 = {
+  data: ReopenInternalInventorySkus401
+  status: 401
+}
+
+export type reopenInternalInventorySkusResponse403 = {
+  data: ReopenInternalInventorySkus403
+  status: 403
+}
+
+export type reopenInternalInventorySkusResponseSuccess = (reopenInternalInventorySkusResponse200) & {
+  headers: Headers;
+};
+export type reopenInternalInventorySkusResponseError = (reopenInternalInventorySkusResponse400 | reopenInternalInventorySkusResponse401 | reopenInternalInventorySkusResponse403) & {
+  headers: Headers;
+};
+
+export type reopenInternalInventorySkusResponse = (reopenInternalInventorySkusResponseSuccess | reopenInternalInventorySkusResponseError)
+
+export const getReopenInternalInventorySkusUrl = () => {
+
+
+
+
+  return `/internal/inventory/reopen-skus`
+}
+
+/**
+ * @summary Reopen filtered SKUs for the next pre-sell with an optional shared sell window
+ */
+export const reopenInternalInventorySkus = async (reopenInternalInventorySkusBody: ReopenInternalInventorySkusBody, options?: Parameters<typeof customFetch>[1]): Promise<reopenInternalInventorySkusResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<reopenInternalInventorySkusResponse>(getReopenInternalInventorySkusUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reopenInternalInventorySkusBody)
+  }
+);}
+
+
+
+
+
+export const getReopenInternalInventorySkusMutationOptions = <TError = ReopenInternalInventorySkus400 | ReopenInternalInventorySkus401 | ReopenInternalInventorySkus403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reopenInternalInventorySkus>>, TError,{data: ReopenInternalInventorySkusBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reopenInternalInventorySkus>>, TError,{data: ReopenInternalInventorySkusBody}, TContext> => {
+
+const mutationKey = ['reopenInternalInventorySkus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reopenInternalInventorySkus>>, {data: ReopenInternalInventorySkusBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reopenInternalInventorySkus(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReopenInternalInventorySkusMutationResult = NonNullable<Awaited<ReturnType<typeof reopenInternalInventorySkus>>>
+    export type ReopenInternalInventorySkusMutationBody = ReopenInternalInventorySkusBody
+    export type ReopenInternalInventorySkusMutationError = ReopenInternalInventorySkus400 | ReopenInternalInventorySkus401 | ReopenInternalInventorySkus403
+
+    /**
+ * @summary Reopen filtered SKUs for the next pre-sell with an optional shared sell window
+ */
+export const useReopenInternalInventorySkus = <TError = ReopenInternalInventorySkus400 | ReopenInternalInventorySkus401 | ReopenInternalInventorySkus403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reopenInternalInventorySkus>>, TError,{data: ReopenInternalInventorySkusBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reopenInternalInventorySkus>>,
+        TError,
+        {data: ReopenInternalInventorySkusBody},
+        TContext
+      > => {
+      return useMutation(getReopenInternalInventorySkusMutationOptions(options));
+    }
 
 export type listInternalPurchaseOrdersResponse200 = {
   data: ListInternalPurchaseOrders200

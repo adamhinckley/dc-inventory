@@ -647,6 +647,16 @@ export const purchaseOrderItemSchema = z.object({
   lines: z.array(purchaseOrderLineSchema),
 });
 
+export const reopenInventorySkusBodySchema = z.object({
+  skus: z.array(z.string().min(1)).min(1),
+  windowOpensAt: z.string().datetime().nullable().optional(),
+  windowClosesAt: z.string().datetime().nullable().optional(),
+});
+
+export const reopenInventorySkusResponseSchema = z.object({
+  reopenedCount: z.number().int().min(0),
+});
+
 export const draftUncoveredPurchaseOrdersBodySchema = z.object({
   skus: z.array(z.string().min(1)).min(1),
 });

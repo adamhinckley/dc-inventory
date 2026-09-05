@@ -6,6 +6,7 @@ export {
   DataTableSearch,
   DataTableTable,
   DataTableToolbar,
+  useDataTableContext,
   type DataTableRootProps,
   type FilterOption,
 } from "./data-table";

@@ -9,6 +9,8 @@ import {
   invalidResponseSchema,
   inventoryStockParamsSchema,
   inventoryStockSnapshotSchema,
+  reopenInventorySkusBodySchema,
+  reopenInventorySkusResponseSchema,
   unauthorizedResponseSchema,
   uncoveredSkusListQuerySchema,
   uncoveredSkusListResponseSchema,
@@ -43,6 +45,16 @@ function sendInvalid(reply: FastifyReply) {
   return reply.code(400).send({ error: "invalid" as const });
 }
 
+function parseWindowInstant(value: string | null | undefined): Date | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  return new Date(value);
+}
+
 export function registerInternalInventoryRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
@@ -74,6 +86,41 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
         allocated: figures.allocated,
         available: figures.available,
       };
+    },
+  );
+
+  routes.post(
+    "/inventory/reopen-skus",
+    {
+      schema: {
+        operationId: "reopenInternalInventorySkus",
+        tags: ["internal"],
+        summary: "Reopen filtered SKUs for the next pre-sell with an optional shared sell window",
+        body: reopenInventorySkusBodySchema,
+        response: {
+          200: reopenInventorySkusResponseSchema,
+          400: invalidResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = request.body as {
+        skus: string[];
+        windowOpensAt?: string | null;
+        windowClosesAt?: string | null;
+      };
+      const result = await request.server.inventory.reopenSkusForPresell.execute({
+        organizationId: staffOrganizationId(request),
+        skus: body.skus.map((sku) => Sku.parse(sku)),
+        windowOpensAt: parseWindowInstant(body.windowOpensAt),
+        windowClosesAt: parseWindowInstant(body.windowClosesAt),
+      });
+      if (!result.ok) {
+        return sendInvalid(reply);
+      }
+      return reply.code(200).send({ reopenedCount: body.skus.length });
     },
   );
 }

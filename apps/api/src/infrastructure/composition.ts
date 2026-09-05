@@ -185,6 +185,7 @@ import {
   InMemoryUncoveredReorderPolicyReadPort,
   ListPurchaseOrderGoodsReceivedUseCase,
   ListUncoveredSkusUseCase,
+  RecordReopenSkusForPresellUseCase,
   type InMemoryInventoryReadModel,
   type IUncoveredListQuery,
 } from "@dc-inventory/inventory";
@@ -330,6 +331,7 @@ export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
   listPurchaseOrderGoodsReceived: ListPurchaseOrderGoodsReceivedUseCase;
   listUncoveredSkus: ListUncoveredSkusUseCase;
+  reopenSkusForPresell: RecordReopenSkusForPresellUseCase;
 };
 
 /**
@@ -705,6 +707,7 @@ function inventoryServices(
       new PurchaseOrderLookupAdapter(purchaseOrderRepo),
     ),
     listUncoveredSkus,
+    reopenSkusForPresell: new RecordReopenSkusForPresellUseCase(unitOfWork.inventory.ledger),
   };
 }
 
