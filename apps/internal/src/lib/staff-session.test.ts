@@ -14,6 +14,7 @@ describe("staff session gate", () => {
       isStaffSessionSignedIn({
         isPending: false,
         isFetched: true,
+        isFetching: false,
         isSuccess: true,
         data: { status: 200 },
       }),
@@ -22,6 +23,7 @@ describe("staff session gate", () => {
       isStaffSessionSignedIn({
         isPending: false,
         isFetched: true,
+        isFetching: false,
         isSuccess: false,
         data: { status: 200 },
       }),
@@ -30,6 +32,7 @@ describe("staff session gate", () => {
       isStaffSessionSignedIn({
         isPending: false,
         isFetched: true,
+        isFetching: false,
         isSuccess: true,
         data: { status: 401 },
       }),
@@ -41,17 +44,27 @@ describe("staff session gate", () => {
       isStaffSessionSignedIn({
         isPending: false,
         isFetched: true,
+        isFetching: false,
         isSuccess: false,
         data: { status: 200 },
       }),
     ).toBe(false);
   });
 
-  it("shows the loading shell only before the first session fetch settles", () => {
+  it("shows the loading shell only while the first session fetch is in flight", () => {
     expect(
       shouldShowStaffSessionLoading({
         isPending: true,
         isFetched: false,
+        isFetching: false,
+        isSuccess: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowStaffSessionLoading({
+        isPending: true,
+        isFetched: false,
+        isFetching: true,
         isSuccess: false,
       }),
     ).toBe(true);
@@ -59,6 +72,7 @@ describe("staff session gate", () => {
       shouldShowStaffSessionLoading({
         isPending: true,
         isFetched: true,
+        isFetching: true,
         isSuccess: true,
         data: { status: 200 },
       }),

@@ -3,6 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 type SessionQuerySnapshot = {
   isPending: boolean;
   isFetched: boolean;
+  isFetching: boolean;
   isSuccess: boolean;
   data?: { status: number };
 };
@@ -12,7 +13,10 @@ export function isStaffSessionSignedIn(session: SessionQuerySnapshot): boolean {
 }
 
 export function shouldShowStaffSessionLoading(session: SessionQuerySnapshot): boolean {
-  return session.isPending && !session.isFetched;
+  // Idle + pending is the pre-fetch / SSR / `enabled: false` snapshot. Treating
+  // that as loading paints a blank surface forever when the query never starts
+  // (Next's patched `fetch` during SSR is one way that happens).
+  return session.isFetching && !session.isFetched;
 }
 
 export function isLogoutAlreadySignedOut(error: unknown): boolean {
