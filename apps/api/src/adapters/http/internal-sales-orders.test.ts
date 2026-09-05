@@ -265,4 +265,121 @@ describe("internal sales orders HTTP", () => {
     });
     expect(response.statusCode).toBe(401);
   });
+
+  it("replace-lines cancels the draft when lines are empty", async () => {
+    const { app } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const cleared = await app.inject({
+      method: "PATCH",
+      url: `/internal/sales-orders/${orderId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { lines: [] },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).toMatchObject({
+      id: orderId,
+      status: "cancelled",
+      lines: [],
+    });
+  });
+
+  it("replace-lines rejects confirmed orders", async () => {
+    const { app, unitOfWork } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    await unitOfWork.run(async (scope) => {
+      const result = await new RecordAdjustmentIncreaseUseCase(scope.inventory.ledger).execute({
+        organizationId: OrganizationId.DEFAULT,
+        idempotencyKey: "replace-confirmed-seed",
+        sku: SKU,
+        quantity: 10,
+        refType: "adjustment",
+        refId: "replace-confirmed-seed",
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "replace-confirmed", shipToId: API_TEST_SHIP_TO_ID },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const replaced = await app.inject({
+      method: "PATCH",
+      url: `/internal/sales-orders/${orderId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId: PRODUCT_ID, qty: 2 }] },
+    });
+    expect(replaced.statusCode).toBe(409);
+    expect(replaced.json()).toEqual({ error: "conflict" });
+  });
+
+  it("rejects replace-lines without staff_session", async () => {
+    const { app } = await startSalesApp();
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/internal/sales-orders/11111111-1111-4111-8111-111111111111",
+      payload: { lines: [{ productId: PRODUCT_ID, qty: 1 }] },
+    });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("replace-lines updates qty on a draft order", async () => {
+    const { app } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const replaced = await app.inject({
+      method: "PATCH",
+      url: `/internal/sales-orders/${orderId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId: PRODUCT_ID, qty: 4 }] },
+    });
+    expect(replaced.statusCode).toBe(200);
+    expect(replaced.json()).toMatchObject({
+      id: orderId,
+      status: "draft",
+      lines: [{ sku: SKU.value, qty: 4 }],
+    });
+  });
 });

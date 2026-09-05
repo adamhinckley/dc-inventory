@@ -1,7 +1,7 @@
 "use client";
 
 import { useLoginInternal } from "@dc-inventory/api-client-internal";
-import { Button, Input, Label, LabeledField } from "@dc-inventory/ui";
+import { Button, Input, Label, LabeledField, isSuccessfulOrvalResponse } from "@dc-inventory/ui";
 import { useState, type FormEvent } from "react";
 
 export function StaffSignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
@@ -18,7 +18,11 @@ export function StaffSignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
     login.mutate(
       { data: { organizationSlug, email, password } },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
+          if (!isSuccessfulOrvalResponse(result)) {
+            setError("Sign-in failed.");
+            return;
+          }
           onSignedIn?.();
         },
         onError: () => {

@@ -19,7 +19,7 @@ import {
 
 export type ReplaceSalesOrderLinesRequest = {
   organizationId: OrganizationId;
-  customerId: CustomerId;
+  customerId?: CustomerId;
   salesOrderId: OrderId;
   lines: readonly SalesOrderLineInput[];
   shipLine1?: string;
@@ -30,8 +30,18 @@ export type ReplaceSalesOrderLinesRequest = {
   shipCountry?: string;
 } & (
   | { staffUserId: StaffUserId; wholesaleUserId?: never; placedByStaffUserId?: never }
-  | { wholesaleUserId: WholesaleUserId; staffUserId?: never; placedByStaffUserId?: never }
-  | { placedByStaffUserId: StaffUserId; staffUserId?: never; wholesaleUserId?: never }
+  | {
+      wholesaleUserId: WholesaleUserId;
+      customerId: CustomerId;
+      staffUserId?: never;
+      placedByStaffUserId?: never;
+    }
+  | {
+      placedByStaffUserId: StaffUserId;
+      customerId: CustomerId;
+      staffUserId?: never;
+      wholesaleUserId?: never;
+    }
 );
 
 export type ReplaceSalesOrderLinesResult =
@@ -66,8 +76,10 @@ export class ReplaceSalesOrderLinesUseCase {
     if (existing === null) {
       return { ok: false, reason: "not_found" };
     }
-    if (existing.customerId !== input.customerId) {
-      return { ok: false, reason: "not_found" };
+    if (input.staffUserId === undefined) {
+      if (input.customerId === undefined || existing.customerId !== input.customerId) {
+        return { ok: false, reason: "not_found" };
+      }
     }
     if (existing.status !== "draft") {
       return { ok: false, reason: "illegal_transition" };
