@@ -164,6 +164,59 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
     return toOrder(header, lines);
   }
 
+  async findDraftByCustomer(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null> {
+    return this.loadDraftByCustomer(organizationId, customerId, false);
+  }
+
+  async findDraftByCustomerForUpdate(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null> {
+    return this.loadDraftByCustomer(organizationId, customerId, true);
+  }
+
+  private async loadDraftByCustomer(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+    forUpdate: boolean,
+  ): Promise<SalesOrder | null> {
+    const query = this.db
+      .select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.organizationId, organizationId),
+          eq(orders.customerId, customerId),
+          eq(orders.status, "draft"),
+        ),
+      )
+      .orderBy(asc(orders.createdAt), asc(orders.id))
+      .limit(1);
+    const rows = forUpdate ? await query.for("update") : await query;
+    const header = rows[0];
+    if (header === undefined) {
+      return null;
+    }
+    const lines = await loadLines(this.db, header.id);
+    return toOrder(header, lines);
+  }
+
+  async runDraftCustomerTransaction<T>(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+    work: (repo: ISalesOrderRepository) => Promise<T>,
+  ): Promise<T> {
+    void organizationId;
+    void customerId;
+    return this.db.transaction(async (tx) => {
+      const repo = new DrizzleSalesOrderRepository(tx as SalesDrizzle);
+      return work(repo);
+    });
+  }
+
   async findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,
@@ -262,6 +315,23 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         updatedAt: new Date(),
       })
       .where(eq(orders.id, order.id));
+
+    const nextLineIds = order.lines.map((line) => line.id);
+    if (nextLineIds.length === 0) {
+      await this.db.delete(orderLines).where(eq(orderLines.orderId, order.id));
+    } else {
+      await this.db
+        .delete(orderLines)
+        .where(
+          and(
+            eq(orderLines.orderId, order.id),
+            sql`${orderLines.id} not in (${sql.join(
+              nextLineIds.map((id) => sql`${id}`),
+              sql`, `,
+            )})`,
+          ),
+        );
+    }
 
     for (const line of order.lines) {
       const lineRows = await this.db

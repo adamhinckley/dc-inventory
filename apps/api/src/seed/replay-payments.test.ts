@@ -174,8 +174,10 @@ describe("replay payments (in-memory)", () => {
       },
     );
 
-    expect(replay.paymentCount).toBe(DEMO_COUNTS.payments);
-    expect(selectPaymentReplay(plan.shippedInvoices)).toHaveLength(DEMO_COUNTS.payments);
+    expect(replay.paymentCount).toBe(DEMO_COUNTS.payments + plan.salesOrderDraftSpillToShipped);
+    expect(selectPaymentReplay(plan.shippedInvoices)).toHaveLength(
+      DEMO_COUNTS.payments + plan.salesOrderDraftSpillToShipped,
+    );
     expect(selectUnpaidReplay(plan.shippedInvoices)).toHaveLength(DEMO_COUNTS.unpaidInvoices);
 
     const salesOrderIdByKey = await buildSalesOrderIdByPlanKey(plan, uow.salesOrders);
@@ -235,9 +237,10 @@ describe("replay payments (in-memory)", () => {
       }
     }
 
-    expect(paidCount).toBe(DEMO_COUNTS.payments);
+    const expectedPayments = DEMO_COUNTS.payments + plan.salesOrderDraftSpillToShipped;
+    expect(paidCount).toBe(expectedPayments);
     expect(unpaidCount).toBe(DEMO_COUNTS.unpaidInvoices);
-    expect(paymentsSeen.size).toBe(DEMO_COUNTS.payments);
+    expect(paymentsSeen.size).toBe(expectedPayments);
 
     const idleParkUnpaid = plan.shippedInvoices.filter(
       (row) => row.customerKey === "idlePark" && !row.paid,

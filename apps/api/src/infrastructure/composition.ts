@@ -165,6 +165,7 @@ import {
   InMemoryCommittedCustomerNamesListQuery,
   InMemorySalesOrderRepository,
   ListSalesOrdersUseCase,
+  ReplaceSalesOrderLinesUseCase,
   ShipSalesOrderUseCase,
   type ICatalogProductPort,
   type ICustomerBillToSnapshotReadPort,
@@ -282,6 +283,7 @@ export type PurchasingHttpServices = {
 export type SalesHttpServices = {
   listSalesOrders: ListSalesOrdersUseCase;
   createSalesOrder: CreateSalesOrderUseCase;
+  replaceSalesOrderLines: ReplaceSalesOrderLinesUseCase;
   getSalesOrder: GetSalesOrderUseCase;
   confirmSalesOrder: ConfirmSalesOrderUseCase;
   cancelSalesOrder: CancelSalesOrderUseCase;
@@ -606,6 +608,11 @@ function salesServices(
       customers,
       catalogProduct,
       clock,
+    ),
+    replaceSalesOrderLines: new ReplaceSalesOrderLinesUseCase(
+      salesOrderRepo,
+      customers,
+      catalogProduct,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
     confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales, customers),

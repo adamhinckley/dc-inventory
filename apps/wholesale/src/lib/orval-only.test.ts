@@ -28,6 +28,8 @@ describe("wholesale shop HTTP", () => {
     const joined = sources.map((file) => readFileSync(file, "utf8")).join("\n");
     expect(joined).toMatch(/@dc-inventory\/api-client-wholesale/);
     expect(joined).toMatch(/useListWholesaleCatalog/);
+    expect(joined).toMatch(/useCreateWholesaleSalesOrder/);
+    expect(joined).toMatch(/useListWholesaleSalesOrders/);
     expect(joined).toMatch(/useLoginWholesale/);
     expect(joined).not.toMatch(/@dc-inventory\/api-client-internal/);
     expect(joined).not.toMatch(/@dc-inventory\/api-client-ops/);

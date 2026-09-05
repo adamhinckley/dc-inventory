@@ -10,6 +10,7 @@ export { InMemorySalesUnitOfWork } from "./adapters/in-memory-sales-unit-of-work
 export { CancelSalesOrderUseCase } from "./application/cancel-sales-order.js";
 export { ConfirmSalesOrderUseCase } from "./application/confirm-sales-order.js";
 export { CreateSalesOrderUseCase } from "./application/create-sales-order.js";
+export { ReplaceSalesOrderLinesUseCase } from "./application/replace-sales-order-lines.js";
 export { DecommitSalesOrderLineUseCase } from "./application/decommit-sales-order-line.js";
 export { GetSalesOrderUseCase } from "./application/get-sales-order.js";
 export { ListSalesOrdersUseCase } from "./application/list-sales-orders.js";

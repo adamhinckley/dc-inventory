@@ -301,6 +301,51 @@ describe("wholesale sales orders (ADA-272)", () => {
     expect(forbidden.json()).toEqual({ error: "not_found" });
   });
 
+  it("PATCH replace-lines returns 404 for another customer's order without mutating it", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const buyerBCookie = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "buyer-b@local.test",
+        password: "buyer-b-secret",
+      },
+    }).then((res) => wholesaleCookie(res));
+    const actingCookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "PATCH-SCOPE-SKU");
+
+    const buyerOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(buyerOrder.statusCode).toBe(201);
+    const buyerOrderId = buyerOrder.json().id as string;
+    const buyerQtyBefore = buyerOrder.json().lines[0]?.qty as number;
+
+    await selectCustomer(app, actingCookie, CUSTOMER_A_ID);
+
+    const forbidden = await app.inject({
+      method: "PATCH",
+      url: `/wholesale/sales-orders/${buyerOrderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+      payload: { lines: [{ productId, qty: 99 }] },
+    });
+    expect(forbidden.statusCode).toBe(404);
+    expect(forbidden.json()).toEqual({ error: "not_found" });
+
+    const buyerRefetch = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/${buyerOrderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+    });
+    expect(buyerRefetch.statusCode).toBe(200);
+    expect(buyerRefetch.json().lines[0]?.qty).toBe(buyerQtyBefore);
+  });
+
   it("GET by id returns the order for session customer", async () => {
     const { app } = await startApp();
     const staffInternal = await loginStaffInternal(app);
@@ -329,5 +374,97 @@ describe("wholesale sales orders (ADA-272)", () => {
       customerId: CUSTOMER_A_ID,
       status: "draft",
     });
+  });
+
+  it("second create returns the same draft for the session customer", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "CART-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(first.statusCode).toBe(201);
+    const firstId = first.json().id as string;
+
+    const second = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 2 }] },
+    });
+    expect(second.statusCode).toBe(201);
+    expect(second.json().id).toBe(firstId);
+    expect(second.json().lines[0]?.qty).toBe(3);
+  });
+
+  it("replace-lines cancels the draft when lines are empty", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "CLEAR-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const cleared = await app.inject({
+      method: "PATCH",
+      url: `/wholesale/sales-orders/${orderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [] },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).toMatchObject({
+      id: orderId,
+      status: "cancelled",
+      lines: [],
+    });
+  });
+
+  it("replace-lines merges duplicate SKUs in the request", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "MERGE-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const replaced = await app.inject({
+      method: "PATCH",
+      url: `/wholesale/sales-orders/${orderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: {
+        lines: [
+          { productId, qty: 2 },
+          { productId, qty: 3 },
+        ],
+      },
+    });
+    expect(replaced.statusCode).toBe(200);
+    expect(replaced.json().lines).toHaveLength(1);
+    expect(replaced.json().lines[0]?.qty).toBe(5);
   });
 });

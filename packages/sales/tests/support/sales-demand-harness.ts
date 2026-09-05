@@ -30,6 +30,7 @@ import {
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
   DecommitSalesOrderLineUseCase,
+  ReplaceSalesOrderLinesUseCase,
   ShipSalesOrderUseCase,
   type BillToAddressSnapshot,
   type ICustomerBillToSnapshotReadPort,
@@ -144,6 +145,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
   ]);
 
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
+  const replaceLines = new ReplaceSalesOrderLinesUseCase(uow.salesOrders, customers, catalog);
   const confirm = new ConfirmSalesOrderUseCase(uow, customers);
   const cancel = new CancelSalesOrderUseCase(uow);
   const decommitLine = new DecommitSalesOrderLineUseCase(uow);
@@ -221,6 +223,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     readModel,
     accountStatus,
     create,
+    replaceLines,
     confirm,
     cancel,
     decommitLine,

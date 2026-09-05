@@ -109,7 +109,10 @@ function assignLeftoverCounts(
   orderCounts: CustomerOrderCounts,
   leftoverConfirmedCount: number,
   counts: DemoCounts,
-): Map<string, { confirmed: number; draft: number }> {
+): {
+  allocations: Map<string, { confirmed: number; draft: number }>;
+  draftSpillToShipped: number;
+} {
   const leftoverDraftTotal =
     counts.salesOrders - counts.shippedSalesOrders - leftoverConfirmedCount;
   const result = new Map<string, { confirmed: number; draft: number }>(
@@ -134,6 +137,9 @@ function assignLeftoverCounts(
     if (!slot) {
       return false;
     }
+    if (slot.draft >= 1) {
+      return false;
+    }
     return total - slot.confirmed - slot.draft > 0;
   };
 
@@ -155,7 +161,11 @@ function assignLeftoverCounts(
   };
 
   while (draftRemaining > 0) {
-    const key = pickEligible(canTakeDraft);
+    const keys = eligible.filter(canTakeDraft);
+    if (keys.length === 0) {
+      break;
+    }
+    const key = rng.pick(keys);
     const slot = result.get(key);
     if (!slot) {
       throw new Error("leftover slot missing");
@@ -179,7 +189,17 @@ function assignLeftoverCounts(
     throw new Error("Idle Park cannot own leftover orders");
   }
 
-  return result;
+  return { allocations: result, draftSpillToShipped: draftRemaining };
+}
+
+function countAssignedDrafts(
+  allocations: Map<string, { confirmed: number; draft: number }>,
+): number {
+  let total = 0;
+  for (const slot of allocations.values()) {
+    total += slot.draft;
+  }
+  return total;
 }
 
 function shipToSnapshot(
@@ -249,7 +269,7 @@ export function planSalesOrders(input: {
   leftoverConfirmedCount: number;
   counts?: DemoCounts;
   personaOrderBudgets?: PersonaOrderBudgets;
-}): PlannedSalesOrder[] {
+}): { orders: PlannedSalesOrder[]; draftSpillToShipped: number } {
   const counts = input.counts ?? DEMO_COUNTS;
   const personaOrderBudgets = input.personaOrderBudgets ?? PERSONA_ORDER_BUDGETS;
   const orderCounts = allocateCustomerOrderCounts(
@@ -258,13 +278,23 @@ export function planSalesOrders(input: {
     counts,
     personaOrderBudgets,
   );
-  const leftovers = assignLeftoverCounts(
+  const { allocations: leftovers, draftSpillToShipped: unassignedDraftBudget } =
+    assignLeftoverCounts(
     input.rng,
     input.customers,
     orderCounts,
     input.leftoverConfirmedCount,
     counts,
   );
+  const assignedDraftCount = countAssignedDrafts(leftovers);
+  const draftSpillToShipped =
+    counts.salesOrders -
+    counts.shippedSalesOrders -
+    input.leftoverConfirmedCount -
+    assignedDraftCount;
+  if (draftSpillToShipped !== unassignedDraftBudget) {
+    throw new Error("draft spill accounting mismatch");
+  }
 
   const lineCounts: number[] = [];
   const orders: PlannedSalesOrder[] = [];
@@ -453,7 +483,7 @@ export function planSalesOrders(input: {
   if (orders.length !== counts.salesOrders) {
     throw new Error(`expected ${String(counts.salesOrders)} sales orders`);
   }
-  if (orders.filter((row) => row.status === "shipped").length !== counts.shippedSalesOrders) {
+  if (orders.filter((row) => row.status === "shipped").length !== counts.shippedSalesOrders + draftSpillToShipped) {
     throw new Error("shipped sales order count mismatch");
   }
   const defaultPersonaLineCounts = orders
@@ -525,7 +555,22 @@ export function planSalesOrders(input: {
     throw new Error("leftover sales orders are not all recent");
   }
 
-  return orders;
+  const draftCountsByCustomer = new Map<string, number>();
+  for (const order of orders) {
+    if (order.status === "leftoverDraft") {
+      draftCountsByCustomer.set(
+        order.customerKey,
+        (draftCountsByCustomer.get(order.customerKey) ?? 0) + 1,
+      );
+    }
+  }
+  for (const [customerKey, count] of draftCountsByCustomer) {
+    if (count > 1) {
+      throw new Error(`${customerKey} has ${String(count)} leftover drafts`);
+    }
+  }
+
+  return { orders, draftSpillToShipped };
 }
 
 export function planIdleParkAges(input: {

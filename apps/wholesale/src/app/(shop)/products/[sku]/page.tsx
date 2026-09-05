@@ -1,5 +1,5 @@
+import { ProductDetail } from "../../../../components/product-detail";
 import { ShopPage } from "../../../../components/shop-page";
-import { ShopPlaceholder } from "../../../../components/shop-placeholder";
 
 export default async function ProductDetailPage({
   params,
@@ -10,10 +10,7 @@ export default async function ProductDetailPage({
 
   return (
     <ShopPage>
-      <ShopPlaceholder
-        title="Product"
-        body={`Placeholder product detail for ${productId}. A catalog-by-id Orval hook is not on the stub yet.`}
-      />
+      <ProductDetail productId={productId} />
     </ShopPage>
   );
 }

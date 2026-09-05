@@ -41,6 +41,19 @@ export type ListSalesOrdersQuery = {
 export interface ISalesOrderRepository {
   list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage>;
   findById(organizationId: OrganizationId, id: OrderId): Promise<SalesOrder | null>;
+  findDraftByCustomer(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null>;
+  findDraftByCustomerForUpdate(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<SalesOrder | null>;
+  runDraftCustomerTransaction<T>(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+    work: (repo: ISalesOrderRepository) => Promise<T>,
+  ): Promise<T>;
   save(order: SalesOrder): Promise<void>;
   insertWithNextDocumentNumber(order: UnnumberedSalesOrder): Promise<SalesOrder>;
   findByDocumentNumber(

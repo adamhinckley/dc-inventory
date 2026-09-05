@@ -154,10 +154,8 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
       await seedStickyLockedOnHand(h, LOCK_SKU, 500, PO_COVER, "concurrent-lock");
 
       const firstDraft = await h.createDraft(LOCK_PRODUCT_ID, 300);
-      const secondDraft = await h.createDraft(LOCK_PRODUCT_ID, 300);
       expect(firstDraft.ok).toBe(true);
-      expect(secondDraft.ok).toBe(true);
-      if (!firstDraft.ok || !secondDraft.ok) {
+      if (!firstDraft.ok) {
         return;
       }
 
@@ -168,6 +166,13 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         idempotencyKey: "concurrent-a",
       });
       expect(firstConfirm.ok).toBe(true);
+
+      const secondDraft = await h.createDraft(LOCK_PRODUCT_ID, 300);
+      expect(secondDraft.ok).toBe(true);
+      if (!secondDraft.ok) {
+        return;
+      }
+      expect(secondDraft.salesOrderId).not.toBe(firstDraft.salesOrderId);
 
       const secondConfirm = await h.confirm.execute({
         organizationId: DEFAULT_ORG,

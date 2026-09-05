@@ -383,15 +383,8 @@ describe("Sales (in-memory)", () => {
       customerId: CUSTOMER_ID,
       lines: [{ productId: PRODUCT_ID, qty: 4 }],
     });
-    const secondOrder = await h.create.execute({
-      organizationId: DEFAULT_ORG,
-      staffUserId: STAFF_ID,
-      customerId: CUSTOMER_ID,
-      lines: [{ productId: PRODUCT_ID, qty: 4 }],
-    });
     expect(firstOrder.ok).toBe(true);
-    expect(secondOrder.ok).toBe(true);
-    if (!firstOrder.ok || !secondOrder.ok) {
+    if (!firstOrder.ok) {
       return;
     }
 
@@ -402,6 +395,18 @@ describe("Sales (in-memory)", () => {
       idempotencyKey: "confirm-a",
     });
     expect(firstConfirm.ok).toBe(true);
+
+    const secondOrder = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 4 }],
+    });
+    expect(secondOrder.ok).toBe(true);
+    if (!secondOrder.ok) {
+      return;
+    }
+    expect(secondOrder.salesOrder.id).not.toBe(firstOrder.salesOrder.id);
 
     const secondConfirm = await h.confirm.execute({
       organizationId: DEFAULT_ORG,

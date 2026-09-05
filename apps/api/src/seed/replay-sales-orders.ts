@@ -170,6 +170,7 @@ export async function runReplaySalesOrders(
       organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       customerId,
+      mode: "always_new",
       lines,
       shipLine1: planned.shipTo.line1,
       shipLine2: planned.shipTo.line2 ?? undefined,

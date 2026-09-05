@@ -1,13 +1,20 @@
+import { CartView } from "../../../components/cart-view";
 import { ShopPage } from "../../../components/shop-page";
-import { ShopPlaceholder } from "../../../components/shop-placeholder";
 
 export default function CartPage() {
   return (
     <ShopPage>
-      <ShopPlaceholder
-        title="Cart"
-        body="Placeholder cart. Quantity and availability stay on the server — this app will not invent stock in the browser."
-      />
+      <section className="flex flex-col gap-8">
+        <header className="max-w-2xl">
+          <p className="section-title">Cart</p>
+          <h1 className="page-title mt-2">Your Cart</h1>
+          <p className="mt-3 text-ink-muted">
+            One draft sales order per account. Quantities and availability stay on
+            the server.
+          </p>
+        </header>
+        <CartView />
+      </section>
     </ShopPage>
   );
 }

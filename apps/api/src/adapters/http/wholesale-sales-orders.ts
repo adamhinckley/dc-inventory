@@ -18,6 +18,7 @@ import {
   salesOrderListResponseSchema,
   unauthorizedResponseSchema,
   wholesaleSalesOrderWriteBodySchema,
+  salesOrderReplaceLinesBodySchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { wholesaleCustomerId, wholesaleOrganizationId } from "./org-session.js";
@@ -212,6 +213,60 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         return reply.code(400).send({ error: "invalid" as const });
       }
       return reply.code(201).send(mapSalesOrder(result.salesOrder));
+    },
+  );
+
+  routes.patch(
+    "/sales-orders/:id",
+    {
+      schema: {
+        operationId: "replaceWholesaleSalesOrderLines",
+        tags: ["wholesale"],
+        summary: "Replace lines on a draft sales order",
+        params: salesOrderIdParamsSchema,
+        body: salesOrderReplaceLinesBodySchema,
+        response: {
+          200: salesOrderItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const actor = wholesaleCreateInput(request);
+      const result = await request.server.sales.replaceSalesOrderLines.execute({
+        organizationId: wholesaleOrganizationId(request),
+        ...actor,
+        salesOrderId: OrderId.parse(request.params.id),
+        lines: request.body.lines,
+        shipLine1: request.body.shipLine1,
+        shipLine2: request.body.shipLine2,
+        shipCity: request.body.shipCity,
+        shipRegion: request.body.shipRegion,
+        shipPostal: request.body.shipPostal,
+        shipCountry: request.body.shipCountry,
+      });
+      if (!result.ok) {
+        if (
+          result.reason === "not_found" ||
+          result.reason === "customer_not_found" ||
+          result.reason === "product_not_found" ||
+          result.reason === "product_organization_mismatch"
+        ) {
+          return sendNotFound(reply);
+        }
+        if (result.reason === "illegal_transition" || result.reason === "product_inactive") {
+          return reply.code(409).send({ error: "conflict" as const });
+        }
+        if (result.reason === "customer_inactive") {
+          return reply.code(409).send({ error: "conflict" as const });
+        }
+        return reply.code(400).send({ error: "invalid" as const });
+      }
+      return mapSalesOrder(result.salesOrder);
     },
   );
 }

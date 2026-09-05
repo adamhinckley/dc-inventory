@@ -6,6 +6,7 @@ import {
   type StaffUserId,
   type WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import { isSalesDraftPerCustomerUniqueViolation } from "../adapters/postgres-sales-draft-unique.js";
 import type { IClock } from "../domain/clock.js";
 import { newUuid, SalesOrderLineId } from "../domain/ids.js";
 import type { ICatalogProductPort } from "../domain/ports/catalog-product.js";
@@ -15,16 +16,19 @@ import type {
 } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
 import { createDraftAccountStatusGate } from "./account-status-gate.js";
+import {
+  buildSalesOrderLines,
+  type SalesOrderLineInput,
+} from "./build-sales-order-lines.js";
 
-export type CreateSalesOrderLineInput = {
-  productId: string;
-  qty: number;
-};
+export type CreateSalesOrderLineInput = SalesOrderLineInput;
 
 type CreateSalesOrderRequestBase = {
   organizationId: OrganizationId;
   customerId: CustomerId;
   lines: readonly CreateSalesOrderLineInput[];
+  /** Default find-or-create for cart; seed replay passes always_new. */
+  mode?: "find_or_create" | "always_new";
   shipLine1?: string;
   shipLine2?: string | null;
   shipCity?: string;
@@ -55,6 +59,53 @@ export type CreateSalesOrderResult =
         | "customer_inactive";
     };
 
+function mergeDraftLines(
+  existingLines: readonly SalesOrderLine[],
+  incomingLines: readonly SalesOrderLine[],
+): SalesOrderLine[] {
+  const merged: SalesOrderLine[] = [];
+  const consumedIncoming = new Set<string>();
+
+  for (const existing of existingLines) {
+    const incoming = incomingLines.find((line) => line.sku.equals(existing.sku));
+    if (incoming === undefined) {
+      merged.push(existing);
+      continue;
+    }
+    consumedIncoming.add(incoming.sku.value);
+    merged.push({
+      ...existing,
+      qty: existing.qty + incoming.qty,
+      unitPrice: incoming.unitPrice,
+      name: incoming.name,
+      taxCategoryCode: incoming.taxCategoryCode,
+    });
+  }
+
+  for (const incoming of incomingLines) {
+    if (!consumedIncoming.has(incoming.sku.value)) {
+      merged.push(incoming);
+    }
+  }
+
+  return merged;
+}
+
+function applyShipToSnapshot(
+  existingDraft: SalesOrder,
+  input: CreateSalesOrderRequestBase,
+): SalesOrder {
+  return {
+    ...existingDraft,
+    shipLine1: input.shipLine1 ?? existingDraft.shipLine1,
+    shipLine2: input.shipLine2 ?? existingDraft.shipLine2,
+    shipCity: input.shipCity ?? existingDraft.shipCity,
+    shipRegion: input.shipRegion ?? existingDraft.shipRegion,
+    shipPostal: input.shipPostal ?? existingDraft.shipPostal,
+    shipCountry: input.shipCountry ?? existingDraft.shipCountry,
+  };
+}
+
 export class CreateSalesOrderUseCase {
   constructor(
     private readonly salesOrders: ISalesOrderRepository,
@@ -82,60 +133,101 @@ export class CreateSalesOrderUseCase {
       return { ok: false, reason: accountStatusGate };
     }
 
-    const requestedQuantities = new Map<ProductId, number>();
-    for (const line of input.lines) {
-      if (!Number.isInteger(line.qty) || line.qty <= 0) {
-        return { ok: false, reason: "invalid" };
-      }
-      try {
-        const productId = ProductId.parse(line.productId);
-        requestedQuantities.set(
-          productId,
-          (requestedQuantities.get(productId) ?? 0) + line.qty,
-        );
-      } catch {
-        return { ok: false, reason: "invalid" };
-      }
+    const builtIncoming = await buildSalesOrderLines(
+      input.organizationId,
+      this.catalogProducts,
+      input.lines,
+    );
+    if (!builtIncoming.ok) {
+      return builtIncoming;
     }
 
-    const lines: SalesOrderLine[] = [];
-    for (const [productId, qty] of requestedQuantities) {
-      const product = await this.catalogProducts.findById(input.organizationId, productId);
-      if (product === null) {
-        return { ok: false, reason: "product_not_found" };
-      }
-      if (product.organizationId !== input.organizationId) {
-        return { ok: false, reason: "product_organization_mismatch" };
-      }
-      if (!product.active) {
-        return { ok: false, reason: "product_inactive" };
-      }
-      lines.push({
-        id: SalesOrderLineId.parse(newUuid()),
-        sku: product.sku,
-        name: product.name,
-        qty,
-        unitPrice: product.unitPrice,
-        taxCategoryCode: product.taxCategoryCode,
+    if (input.mode === "always_new") {
+      const createdAt = this.clock?.now() ?? new Date();
+      const salesOrder = await this.salesOrders.insertWithNextDocumentNumber({
+        id: OrderId.parse(newUuid()),
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        status: "draft",
+        createdAt,
+        lines: builtIncoming.lines,
+        placedByStaffUserId: input.placedByStaffUserId,
+        shipLine1: input.shipLine1,
+        shipLine2: input.shipLine2,
+        shipCity: input.shipCity,
+        shipRegion: input.shipRegion,
+        shipPostal: input.shipPostal,
+        shipCountry: input.shipCountry,
       });
+      return { ok: true, salesOrder };
     }
 
-    const createdAt = this.clock?.now() ?? new Date();
-    const salesOrder = await this.salesOrders.insertWithNextDocumentNumber({
-      id: OrderId.parse(newUuid()),
-      organizationId: input.organizationId,
-      customerId: input.customerId,
-      status: "draft",
-      createdAt,
-      lines,
-      placedByStaffUserId: input.placedByStaffUserId,
-      shipLine1: input.shipLine1,
-      shipLine2: input.shipLine2,
-      shipCity: input.shipCity,
-      shipRegion: input.shipRegion,
-      shipPostal: input.shipPostal,
-      shipCountry: input.shipCountry,
-    });
-    return { ok: true, salesOrder };
+    return this.salesOrders.runDraftCustomerTransaction(
+      input.organizationId,
+      input.customerId,
+      async (repo) => this.findOrCreateDraft(repo, input, builtIncoming.lines),
+    );
+  }
+
+  private async findOrCreateDraft(
+    repo: ISalesOrderRepository,
+    input: CreateSalesOrderRequest,
+    incomingLines: readonly SalesOrderLine[],
+  ): Promise<CreateSalesOrderResult> {
+    const existingDraft = await repo.findDraftByCustomerForUpdate(
+      input.organizationId,
+      input.customerId,
+    );
+    if (existingDraft !== null) {
+      const salesOrder: SalesOrder = applyShipToSnapshot(
+        {
+          ...existingDraft,
+          lines: mergeDraftLines(existingDraft.lines, incomingLines),
+        },
+        input,
+      );
+      await repo.save(salesOrder);
+      return { ok: true, salesOrder };
+    }
+
+    try {
+      const createdAt = this.clock?.now() ?? new Date();
+      const salesOrder = await repo.insertWithNextDocumentNumber({
+        id: OrderId.parse(newUuid()),
+        organizationId: input.organizationId,
+        customerId: input.customerId,
+        status: "draft",
+        createdAt,
+        lines: incomingLines,
+        placedByStaffUserId: input.placedByStaffUserId,
+        shipLine1: input.shipLine1,
+        shipLine2: input.shipLine2,
+        shipCity: input.shipCity,
+        shipRegion: input.shipRegion,
+        shipPostal: input.shipPostal,
+        shipCountry: input.shipCountry,
+      });
+      return { ok: true, salesOrder };
+    } catch (error) {
+      if (!isSalesDraftPerCustomerUniqueViolation(error)) {
+        throw error;
+      }
+      const draft = await repo.findDraftByCustomerForUpdate(
+        input.organizationId,
+        input.customerId,
+      );
+      if (draft === null) {
+        throw error;
+      }
+      const salesOrder: SalesOrder = applyShipToSnapshot(
+        {
+          ...draft,
+          lines: mergeDraftLines(draft.lines, incomingLines),
+        },
+        input,
+      );
+      await repo.save(salesOrder);
+      return { ok: true, salesOrder };
+    }
   }
 }

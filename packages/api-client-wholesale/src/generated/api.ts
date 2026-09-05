@@ -61,6 +61,13 @@ import type {
   LoginWholesaleBody,
   LogoutWholesale200,
   LogoutWholesale401,
+  ReplaceWholesaleSalesOrderLines200,
+  ReplaceWholesaleSalesOrderLines400,
+  ReplaceWholesaleSalesOrderLines401,
+  ReplaceWholesaleSalesOrderLines403,
+  ReplaceWholesaleSalesOrderLines404,
+  ReplaceWholesaleSalesOrderLines409,
+  ReplaceWholesaleSalesOrderLinesBody,
   SelectActingCustomer200,
   SelectActingCustomer401,
   SelectActingCustomer404,
@@ -1442,3 +1449,126 @@ export function useGetWholesaleSalesOrder<TData = Awaited<ReturnType<typeof getW
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
+export type replaceWholesaleSalesOrderLinesResponse200 = {
+  data: ReplaceWholesaleSalesOrderLines200
+  status: 200
+}
+
+export type replaceWholesaleSalesOrderLinesResponse400 = {
+  data: ReplaceWholesaleSalesOrderLines400
+  status: 400
+}
+
+export type replaceWholesaleSalesOrderLinesResponse401 = {
+  data: ReplaceWholesaleSalesOrderLines401
+  status: 401
+}
+
+export type replaceWholesaleSalesOrderLinesResponse403 = {
+  data: ReplaceWholesaleSalesOrderLines403
+  status: 403
+}
+
+export type replaceWholesaleSalesOrderLinesResponse404 = {
+  data: ReplaceWholesaleSalesOrderLines404
+  status: 404
+}
+
+export type replaceWholesaleSalesOrderLinesResponse409 = {
+  data: ReplaceWholesaleSalesOrderLines409
+  status: 409
+}
+
+export type replaceWholesaleSalesOrderLinesResponseSuccess = (replaceWholesaleSalesOrderLinesResponse200) & {
+  headers: Headers;
+};
+export type replaceWholesaleSalesOrderLinesResponseError = (replaceWholesaleSalesOrderLinesResponse400 | replaceWholesaleSalesOrderLinesResponse401 | replaceWholesaleSalesOrderLinesResponse403 | replaceWholesaleSalesOrderLinesResponse404 | replaceWholesaleSalesOrderLinesResponse409) & {
+  headers: Headers;
+};
+
+export type replaceWholesaleSalesOrderLinesResponse = (replaceWholesaleSalesOrderLinesResponseSuccess | replaceWholesaleSalesOrderLinesResponseError)
+
+export const getReplaceWholesaleSalesOrderLinesUrl = (id: string,) => {
+
+
+
+
+  return `/wholesale/sales-orders/${id}`
+}
+
+/**
+ * @summary Replace lines on a draft sales order
+ */
+export const replaceWholesaleSalesOrderLines = async (id: string,
+    replaceWholesaleSalesOrderLinesBody: ReplaceWholesaleSalesOrderLinesBody, options?: Parameters<typeof customFetch>[1]): Promise<replaceWholesaleSalesOrderLinesResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<replaceWholesaleSalesOrderLinesResponse>(getReplaceWholesaleSalesOrderLinesUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(replaceWholesaleSalesOrderLinesBody)
+  }
+);}
+
+
+
+
+
+export const getReplaceWholesaleSalesOrderLinesMutationOptions = <TError = ReplaceWholesaleSalesOrderLines400 | ReplaceWholesaleSalesOrderLines401 | ReplaceWholesaleSalesOrderLines403 | ReplaceWholesaleSalesOrderLines404 | ReplaceWholesaleSalesOrderLines409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceWholesaleSalesOrderLines>>, TError,{id: string;data: ReplaceWholesaleSalesOrderLinesBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceWholesaleSalesOrderLines>>, TError,{id: string;data: ReplaceWholesaleSalesOrderLinesBody}, TContext> => {
+
+const mutationKey = ['replaceWholesaleSalesOrderLines'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceWholesaleSalesOrderLines>>, {id: string;data: ReplaceWholesaleSalesOrderLinesBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceWholesaleSalesOrderLines(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReplaceWholesaleSalesOrderLinesMutationResult = NonNullable<Awaited<ReturnType<typeof replaceWholesaleSalesOrderLines>>>
+    export type ReplaceWholesaleSalesOrderLinesMutationBody = ReplaceWholesaleSalesOrderLinesBody
+    export type ReplaceWholesaleSalesOrderLinesMutationError = ReplaceWholesaleSalesOrderLines400 | ReplaceWholesaleSalesOrderLines401 | ReplaceWholesaleSalesOrderLines403 | ReplaceWholesaleSalesOrderLines404 | ReplaceWholesaleSalesOrderLines409
+
+    /**
+ * @summary Replace lines on a draft sales order
+ */
+export const useReplaceWholesaleSalesOrderLines = <TError = ReplaceWholesaleSalesOrderLines400 | ReplaceWholesaleSalesOrderLines401 | ReplaceWholesaleSalesOrderLines403 | ReplaceWholesaleSalesOrderLines404 | ReplaceWholesaleSalesOrderLines409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceWholesaleSalesOrderLines>>, TError,{id: string;data: ReplaceWholesaleSalesOrderLinesBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof replaceWholesaleSalesOrderLines>>,
+        TError,
+        {id: string;data: ReplaceWholesaleSalesOrderLinesBody},
+        TContext
+      > => {
+      return useMutation(getReplaceWholesaleSalesOrderLinesMutationOptions(options));
+    }
