@@ -28,9 +28,5 @@ export async function customFetch<T>(
       : await response.blob()
     : undefined;
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText}`);
-  }
-
   return { data, status: response.status, headers: response.headers } as T;
 }

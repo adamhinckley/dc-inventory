@@ -78,6 +78,7 @@ export default defineConfig({
       "packages/sales/tests/**/*.test.ts",
       "packages/accounting/tests/**/*.test.ts",
       "packages/licensing/tests/**/*.test.ts",
+      "packages/api-client-internal/src/**/*.test.ts",
       "packages/ui/tests/**/*.test.ts",
       "packages/ui-internal/tests/**/*.test.ts",
     ],

@@ -345,12 +345,11 @@ export function SalesOrderDraftWorkspace({
 
   const linesResolved = salesOrderLinesResolved(lines);
   const catalogLookupPending = salesOrderCatalogLookupPending(lines, statusBySku);
-  const workspaceLocked =
-    !linesResolved ||
-    catalogLookupPending ||
+  const actionLocked =
     saveState === "saving" ||
     confirmMutation.isPending ||
     cancelMutation.isPending;
+  const lineEditLocked = catalogLookupPending || actionLocked;
 
   useEffect(() => {
     if (!linesResolved || catalogLookupPending) {
@@ -436,7 +435,7 @@ export function SalesOrderDraftWorkspace({
             type="number"
             min={1}
             value={record.qty}
-            disabled={workspaceLocked || record.productId.length === 0}
+            disabled={lineEditLocked || record.productId.length === 0}
             onChange={(event) =>
               updateLineQty(record.rowKey, Number(event.target.value))
             }
@@ -473,7 +472,7 @@ export function SalesOrderDraftWorkspace({
             type="button"
             variant="secondary"
             size="sm"
-            disabled={workspaceLocked}
+            disabled={actionLocked}
             onClick={() => removeLines([record.rowKey])}
           >
             <Trash2 className="size-icon" aria-hidden />
@@ -546,10 +545,6 @@ export function SalesOrderDraftWorkspace({
 
   const cancelOrder = useCallback(async () => {
     setActionError(null);
-    const saved = await flushAutosave(true);
-    if (!saved && lines.length > 0) {
-      return;
-    }
     try {
       const result = await cancelMutation.mutateAsync({
         id: salesOrderId,
@@ -564,7 +559,7 @@ export function SalesOrderDraftWorkspace({
     } catch {
       setActionError("Could not cancel this sales order.");
     }
-  }, [cancelMutation, flushAutosave, invalidateOrder, lines.length, router, salesOrderId]);
+  }, [cancelMutation, invalidateOrder, router, salesOrderId]);
 
   useBreadcrumbLabel(salesOrderId, documentNumber);
 
@@ -644,7 +639,7 @@ export function SalesOrderDraftWorkspace({
 
       <SalesOrderProductSearchAdder
         lines={lines}
-        disabled={workspaceLocked}
+        disabled={lineEditLocked}
         onAddLines={addLines}
       />
 
@@ -674,7 +669,7 @@ export function SalesOrderDraftWorkspace({
                     name="sales-order-ship-to"
                     value={shipTo.id}
                     checked={selectedShipToId === shipTo.id}
-                    disabled={workspaceLocked}
+                    disabled={lineEditLocked}
                     onChange={() => setSelectedShipToId(shipTo.id)}
                     className="mt-1"
                   />
