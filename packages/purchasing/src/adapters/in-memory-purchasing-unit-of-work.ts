@@ -27,7 +27,15 @@ export class InMemoryPurchasingUnitOfWork implements IPurchasingUnitOfWork {
   }
 
   run<T>(work: (uow: IPurchasingUnitOfWork) => Promise<T>): Promise<T> {
-    return this.inventoryUow.run(async () => work(this));
+    const purchaseOrderSnap = this.purchaseOrders.snapshot();
+    return this.inventoryUow.run(async () => {
+      try {
+        return await work(this);
+      } catch (error) {
+        this.purchaseOrders.restore(purchaseOrderSnap);
+        throw error;
+      }
+    });
   }
 
   get inventoryReadModel() {

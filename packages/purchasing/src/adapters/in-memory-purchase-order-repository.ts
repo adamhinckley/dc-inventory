@@ -163,4 +163,28 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     await this.save(numbered);
     return toOrder(numbered);
   }
+
+  snapshot(): {
+    byId: Map<PurchaseOrderId, Stored>;
+    nextSequenceByOrg: Map<string, number>;
+  } {
+    return {
+      byId: new Map(this.byId),
+      nextSequenceByOrg: new Map(this.nextSequenceByOrg),
+    };
+  }
+
+  restore(snapshot: {
+    byId: Map<PurchaseOrderId, Stored>;
+    nextSequenceByOrg: Map<string, number>;
+  }): void {
+    this.byId.clear();
+    for (const [id, row] of snapshot.byId) {
+      this.byId.set(id, row);
+    }
+    this.nextSequenceByOrg.clear();
+    for (const [orgKey, sequence] of snapshot.nextSequenceByOrg) {
+      this.nextSequenceByOrg.set(orgKey, sequence);
+    }
+  }
 }

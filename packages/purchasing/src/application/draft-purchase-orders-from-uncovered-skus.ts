@@ -5,7 +5,11 @@ import {
   type StaffUserId,
   type SupplierId,
 } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
+import { DraftPurchaseOrdersAbortError } from "../domain/errors.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
+import type { IPurchasingUnitOfWork } from "../domain/ports/purchase-order-repository.js";
+import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
 import type { IInventoryUncoveredReadPort } from "../domain/ports/short-readout.js";
 import type { ISupplierSkuMappingReadPort } from "../domain/ports/supplier-sku-mapping.js";
 import {
@@ -69,7 +73,9 @@ export class DraftPurchaseOrdersFromUncoveredSkusUseCase {
     private readonly supplierMapping: ISupplierSkuMappingReadPort,
     private readonly inventoryUncovered: IInventoryUncoveredReadPort,
     private readonly caseQty: IUncoveredCaseQtyReadPort,
-    private readonly createPurchaseOrder: CreatePurchaseOrderUseCase,
+    private readonly uow: IPurchasingUnitOfWork,
+    private readonly catalog: ICatalogSkuLookupPort,
+    private readonly clock?: IClock,
   ) {}
 
   async execute(
@@ -112,32 +118,48 @@ export class DraftPurchaseOrdersFromUncoveredSkusUseCase {
       supplierForSku: (sku) => supplierBySku.get(sku.value) ?? null,
     });
 
-    const purchaseOrders: PurchaseOrder[] = [];
-    for (const [supplierId, lines] of grouped.bySupplier) {
-      const created = await this.createPurchaseOrder.execute({
-        organizationId: input.organizationId,
-        staffUserId: input.staffUserId,
-        supplierId,
-        lines: lines.map((line) => ({
-          sku: line.sku.value,
-          qty: line.qty,
-        })),
+    try {
+      const purchaseOrders = await this.uow.run(async (scope) => {
+        const createPurchaseOrder = new CreatePurchaseOrderUseCase(
+          scope.purchaseOrders,
+          scope.suppliers,
+          this.catalog,
+          this.clock,
+        );
+        const createdOrders: PurchaseOrder[] = [];
+        for (const [supplierId, lines] of grouped.bySupplier) {
+          const created = await createPurchaseOrder.execute({
+            organizationId: input.organizationId,
+            staffUserId: input.staffUserId,
+            supplierId,
+            lines: lines.map((line) => ({
+              sku: line.sku.value,
+              qty: line.qty,
+            })),
+          });
+          if (!created.ok) {
+            throw new DraftPurchaseOrdersAbortError("invalid", grouped.unmappedSkus);
+          }
+          createdOrders.push(created.purchaseOrder);
+        }
+        return createdOrders;
       });
-      if (!created.ok) {
+
+      return {
+        ok: true,
+        purchaseOrders,
+        unmappedSkus: grouped.unmappedSkus,
+      };
+    } catch (error) {
+      if (error instanceof DraftPurchaseOrdersAbortError) {
         return {
           ok: false,
-          reason: "invalid",
-          unmappedSkus: grouped.unmappedSkus,
+          reason: error.reason,
+          unmappedSkus: error.unmappedSkus,
         };
       }
-      purchaseOrders.push(created.purchaseOrder);
+      throw error;
     }
-
-    return {
-      ok: true,
-      purchaseOrders,
-      unmappedSkus: grouped.unmappedSkus,
-    };
   }
 }
 

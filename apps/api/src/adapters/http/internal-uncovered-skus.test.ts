@@ -325,4 +325,15 @@ describe("internal uncovered SKUs HTTP", () => {
     expect(bySupplier.get(SUPPLIER_A)?.lines[0]?.qty).toBe(144);
     expect(bySupplier.get(SUPPLIER_B)?.lines[0]?.qty).toBe(40);
   });
+
+  it("requires staff_session to draft purchase orders from uncovered SKUs", async () => {
+    const app = await startUncoveredApp({ withDraftSuppliers: true });
+    const missing = await app.inject({
+      method: "POST",
+      url: "/internal/uncovered-skus/draft-purchase-orders",
+      payload: { skus: [SKU.value] },
+    });
+    expect(missing.statusCode).toBe(401);
+    expect(missing.json()).toEqual({ error: "unauthorized" });
+  });
 });

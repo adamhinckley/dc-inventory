@@ -14,7 +14,6 @@ import { InMemorySupplierProductRepository } from "../src/adapters/in-memory-sup
 import { InMemorySupplierSkuMappingReadPort } from "../src/adapters/in-memory-supplier-sku-mapping.js";
 import { DraftPurchaseOrdersFromUncoveredSkusUseCase } from "../src/application/draft-purchase-orders-from-uncovered-skus.js";
 import { groupUncoveredSkusBySupplier } from "../src/application/group-uncovered-skus-by-supplier.js";
-import { CreatePurchaseOrderUseCase } from "../src/application/create-purchase-order.js";
 import { AssignSupplierProductUseCase } from "../src/application/assign-supplier-product.js";
 import { SupplierProductId } from "../src/domain/ids.js";
 import type { IInventoryUncoveredReadPort } from "../src/domain/ports/short-readout.js";
@@ -65,16 +64,12 @@ async function harness() {
     supplierProducts,
     catalog,
   );
-  const createPurchaseOrder = new CreatePurchaseOrderUseCase(
-    uow.purchaseOrders,
-    uow.suppliers,
-    catalog,
-  );
   const draftFromUncovered = new DraftPurchaseOrdersFromUncoveredSkusUseCase(
     supplierMapping,
     uncovered,
     caseQty,
-    createPurchaseOrder,
+    uow,
+    catalog,
   );
 
   catalog.set(DEFAULT_ORG, SKU_A.value, "Widget A");
@@ -235,5 +230,45 @@ describe("DraftPurchaseOrdersFromUncoveredSkusUseCase", () => {
     }
     expect(result.unmappedSkus).toEqual([SKU_A.value]);
     expect(result.purchaseOrders).toEqual([]);
+  });
+
+  it("rolls back earlier drafts when a later supplier create fails", async () => {
+    const h = await harness();
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_B,
+      sku: SKU_B.value,
+    });
+
+    h.uncovered.set(SKU_A.value, 12);
+    h.uncovered.set(SKU_B.value, 12);
+    h.catalog.set(DEFAULT_ORG, SKU_B.value, "Widget B", { archived: true });
+
+    const result = await h.draftFromUncovered.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      skus: [SKU_A.value, SKU_B.value],
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.reason).toBe("invalid");
+
+    const listed = await h.uow.purchaseOrders.list({
+      organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 50,
+      status: "draft",
+    });
+    expect(listed.total).toBe(0);
   });
 });

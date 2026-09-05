@@ -78,7 +78,7 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
   );
 }
 
-export function registerInternalUncoveredSkusRoutes(app: FastifyInstance): void {
+export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
   routes.get(
@@ -122,6 +122,12 @@ export function registerInternalUncoveredSkusRoutes(app: FastifyInstance): void 
       };
     },
   );
+}
+
+export function registerInternalUncoveredSkusDraftPurchaseOrderRoutes(
+  app: FastifyInstance,
+): void {
+  const routes = typed(app);
 
   routes.post(
     "/uncovered-skus/draft-purchase-orders",

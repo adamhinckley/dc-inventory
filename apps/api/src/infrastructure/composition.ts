@@ -605,7 +605,9 @@ function purchasingServices(
       supplierSkuMapping,
       inventoryUncovered,
       caseQty,
-      createPurchaseOrder,
+      unitOfWork.purchasing,
+      catalogSkuLookup,
+      clock,
     ),
   };
 }

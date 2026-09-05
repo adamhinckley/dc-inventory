@@ -16,7 +16,11 @@ import { Button, Table, useTable, type TableColumnDef } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { FilePlus2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  afterDraftUncoveredPos,
+  shouldDraftUncoveredSelection,
+} from "../lib/uncovered-draft-workflow";
 import { suggestedDraftPoQty } from "../lib/purchase-order-line-math";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 import { uncoveredListTable } from "../lib/uncovered-list-table";
@@ -107,6 +111,7 @@ export function UncoveredSkusTable({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const creatingRef = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [unmappedNotice, setUnmappedNotice] = useState<string | null>(null);
   const draftMutation = useDraftInternalUncoveredPurchaseOrders();
@@ -178,31 +183,38 @@ export function UncoveredSkusTable({
   });
 
   const draftSelected = useCallback(async () => {
+    if (creatingRef.current) {
+      return;
+    }
+    const skus = [...table.selection.selectedIds];
+    if (!shouldDraftUncoveredSelection(skus.length)) {
+      return;
+    }
+    creatingRef.current = true;
     setActionError(null);
     setUnmappedNotice(null);
-    const skus = [...table.selection.selectedIds];
-    if (skus.length === 0) {
-      return;
-    }
-    const result = await draftMutation.mutateAsync({ data: { skus } });
-    if (result.status !== 201) {
-      setActionError("Could not create draft purchase orders.");
-      return;
-    }
-    table.selection.clear();
-    void queryClient.invalidateQueries({
-      queryKey: getListInternalPurchaseOrdersQueryKey(),
-    });
-    if (result.data.unmappedSkus.length > 0) {
-      setUnmappedNotice(
-        `Skipped ${result.data.unmappedSkus.length} SKU(s) with no vendor mapping: ${result.data.unmappedSkus.join(", ")}`,
+    try {
+      const result = await draftMutation.mutateAsync({ data: { skus } });
+      if (result.status !== 201) {
+        setActionError("Could not create draft purchase orders.");
+        return;
+      }
+      table.selection.clear();
+      void queryClient.invalidateQueries({
+        queryKey: getListInternalPurchaseOrdersQueryKey(),
+      });
+      const next = afterDraftUncoveredPos(
+        result.data.purchaseOrders,
+        result.data.unmappedSkus,
       );
+      if (next.action === "stay") {
+        setUnmappedNotice(next.unmappedNotice);
+        return;
+      }
+      router.push(`/purchasing/${next.purchaseOrderId}`);
+    } finally {
+      creatingRef.current = false;
     }
-    const first = result.data.purchaseOrders[0];
-    if (first === undefined) {
-      return;
-    }
-    router.push(`/purchasing/${first.id}`);
   }, [draftMutation, queryClient, router, table.selection]);
 
   return (
