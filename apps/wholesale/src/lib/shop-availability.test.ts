@@ -41,4 +41,14 @@ describe("shopAvailabilityLabel", () => {
       }),
     ).toEqual({ inStock: false, label: "Unavailable" });
   });
+
+  it("shows unavailable when locked leftover remains but availableToSell is zero", () => {
+    expect(
+      shopAvailabilityLabel({
+        sellState: "locked",
+        available: 5,
+        availableToSell: 0,
+      }),
+    ).toEqual({ inStock: false, label: "Unavailable" });
+  });
 });

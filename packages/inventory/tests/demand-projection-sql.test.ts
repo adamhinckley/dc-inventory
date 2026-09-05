@@ -156,3 +156,87 @@ describe("demand projection SQL lockstep", () => {
     expect(bySqlDesc[0]).toBeNull();
   });
 });
+
+const SHOP_SELLABLE_CASES = [
+  {
+    label: "open leftover in",
+    row: {
+      onHand: 10,
+      onOrder: 0,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: false,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: true,
+  },
+  {
+    label: "open zero out",
+    row: {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: false,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: false,
+  },
+  {
+    label: "locked ATP > 0 in",
+    row: {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: true,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: true,
+  },
+  {
+    label: "locked ATP = 0 out",
+    row: {
+      onHand: 5,
+      onOrder: 0,
+      allocated: 0,
+      committed: 5,
+      stickyLocked: true,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+    expected: false,
+  },
+] as const satisfies ReadonlyArray<{
+  label: string;
+  row: DemandProjectionFixtureRow;
+  expected: boolean;
+}>;
+
+describe("isShopSellableSql", () => {
+  let evaluateIsShopSellable: (
+    row: DemandProjectionFixtureRow,
+    now: Date,
+  ) => Promise<boolean>;
+  let closeEvaluator: () => Promise<void>;
+
+  beforeAll(async () => {
+    const evaluator = await createDemandProjectionSqlEvaluator();
+    evaluateIsShopSellable = evaluator.evaluateIsShopSellable.bind(evaluator);
+    closeEvaluator = evaluator.close.bind(evaluator);
+  });
+
+  afterAll(async () => {
+    await closeEvaluator();
+  });
+
+  it.each(SHOP_SELLABLE_CASES.map((testCase) => [testCase.label, testCase] as const))(
+    "%s",
+    async (_label, testCase) => {
+      await expect(evaluateIsShopSellable(testCase.row, NOW)).resolves.toBe(testCase.expected);
+    },
+  );
+});

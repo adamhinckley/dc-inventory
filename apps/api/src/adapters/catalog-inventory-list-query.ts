@@ -21,12 +21,13 @@ import { supplierProducts, suppliers } from "@dc-inventory/purchasing/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import { normalizeCents } from "./normalize-cents.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
 
 const lastPoCostCents = sql<number | null>`(
-  select ${supplierProducts.lastPoCostCents}::int
+  select ${supplierProducts.lastPoCostCents}
   from ${supplierProducts}
   inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
   where ${supplierProducts.sku} = ${products.sku}
@@ -35,13 +36,6 @@ const lastPoCostCents = sql<number | null>`(
   order by ${supplierProducts.updatedAt} desc
   limit 1
 )`;
-
-function normalizeCents(value: unknown): number | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  return typeof value === "number" ? value : Number(value);
-}
 
 function productFromRow(row: {
   id: string;

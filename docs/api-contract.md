@@ -204,7 +204,7 @@ The wholesale spec is an **ordering API**, not a cut-down admin:
 
 | Operation | Role |
 |---|---|
-| `GET /wholesale/catalog` | Browse: `q`, category, pagination, sort (shop-relevant). Response includes image URLs, wholesale price, `available`. |
+| `GET /wholesale/catalog` | Browse: `q`, category, pagination, sort (shop-relevant). Response includes image URLs, wholesale price, `available`, `availableToSell`, and `sellState` for shop sellability display. |
 | `GET /wholesale/catalog/:id` | Product detail |
 | `GET/PATCH /wholesale/cart` | Cart lines; qty changes; merchandise totals only. |
 | `POST /wholesale/checkout` | Place order (Sales confirm + Inventory allocate). |

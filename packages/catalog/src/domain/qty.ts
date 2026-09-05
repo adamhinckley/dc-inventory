@@ -46,21 +46,31 @@ export const ZERO_QTY: ProductQty = {
   availableToSell: null,
 };
 
-/** Wholesale shop filter: warehouse leftover or locked SKUs with sellable qty on PO. */
+/** Wholesale shop filter: open SKUs by warehouse leftover; locked SKUs by availableToSell. */
 export function isShopSellable(qty: ProductQty): boolean {
-  if (qty.available > 0) {
-    return true;
-  }
   if (qty.sellState === "locked") {
     return qty.availableToSell !== null && qty.availableToSell > 0;
   }
-  return false;
+  return qty.available > 0;
 }
 
 /** Qty to show on wholesale product cards (matches isShopSellable). */
-export function shopDisplayAvailableQty(qty: Pick<ProductQty, "available" | "availableToSell" | "sellState">): number | null {
+export function shopDisplayAvailableQty(
+  qty: Pick<ProductQty, "available" | "availableToSell" | "sellState">,
+): number | null {
   if (qty.sellState === "locked") {
     return qty.availableToSell !== null && qty.availableToSell > 0 ? qty.availableToSell : null;
   }
   return qty.available > 0 ? qty.available : null;
+}
+
+/** Wholesale card availability label (matches isShopSellable / shopDisplayAvailableQty). */
+export function shopAvailabilityLabel(
+  qty: Pick<ProductQty, "available" | "availableToSell" | "sellState">,
+): { inStock: boolean; label: string } {
+  const displayQty = shopDisplayAvailableQty(qty);
+  if (displayQty === null) {
+    return { inStock: false, label: "Unavailable" };
+  }
+  return { inStock: true, label: `${displayQty.toLocaleString()} available` };
 }

@@ -240,6 +240,10 @@ describe("Catalog use cases (in-memory)", () => {
       sku: "SHOP-SOLD-OUT",
       name: "Shop sold out",
     });
+    const lockedLeftover = await createProduct(h, {
+      sku: "SHOP-LOCKED-LEFTOVER",
+      name: "Shop locked leftover",
+    });
     h.qty.set(DEFAULT_ORG, stocked.sku.value, {
       onHand: 4,
       onOrder: 0,
@@ -273,6 +277,15 @@ describe("Catalog use cases (in-memory)", () => {
       allocated: 0,
       available: 0,
       committed: 100,
+      sellState: "locked",
+      availableToSell: 0,
+    });
+    h.qty.set(DEFAULT_ORG, lockedLeftover.sku.value, {
+      onHand: 5,
+      onOrder: 0,
+      allocated: 0,
+      available: 5,
+      committed: 5,
       sellState: "locked",
       availableToSell: 0,
     });
