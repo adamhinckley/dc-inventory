@@ -168,6 +168,7 @@ export async function runDemoSeedInMemory(
       sales: uow.sales,
       clock,
       customers: staticPorts.customers,
+      shipTos: staticPorts.shipTos,
       products: staticPorts.products,
       invoices: uow.invoices,
       billToSnapshot: permissiveDemoBillToSnapshotPort(),

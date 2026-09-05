@@ -1,6 +1,7 @@
 import type { IInvoiceRepository } from "@dc-inventory/accounting";
 import type { IProductRepository } from "@dc-inventory/catalog";
-import type { ICustomerRepository } from "@dc-inventory/customers";
+import type { ICustomerRepository, IShipToRepository } from "@dc-inventory/customers";
+import { CustomerShipToSnapshotReadAdapter } from "@dc-inventory/customers";
 import {
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
@@ -33,6 +34,7 @@ import {
 } from "./replay-purchase-orders.js";
 import {
   demoCustomerLookup,
+  defaultShipToIdForCustomer,
   ReplaySalesOrdersError,
   type PlaybackClock as SalesPlaybackClock,
 } from "./replay-sales-orders.js";
@@ -64,6 +66,7 @@ export type ReplayDemoOrdersPorts = {
   sales: ISalesUnitOfWork;
   clock: PurchasePlaybackClock & SalesPlaybackClock;
   customers: Pick<ICustomerRepository, "findById">;
+  shipTos: Pick<IShipToRepository, "listByCustomer" | "findById">;
   products: Pick<IProductRepository, "findBySku" | "findById">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
   billToSnapshot: ICustomerBillToSnapshotReadPort;
@@ -232,9 +235,14 @@ export async function runReplayDemoOrders(
     catalogProductPort(ports.products),
     ports.clock,
   );
+  const shipToSnapshot = new CustomerShipToSnapshotReadAdapter(
+    ports.customers as ICustomerRepository,
+    ports.shipTos as IShipToRepository,
+  );
   const confirmSo = new ConfirmSalesOrderUseCase(
     ports.sales,
     demoCustomerLookup(ports.customers),
+    shipToSnapshot,
   );
   const shipSo = new ShipSalesOrderUseCase(ports.sales, ports.billToSnapshot);
 
@@ -367,11 +375,17 @@ export async function runReplayDemoOrders(
         if (created === undefined) {
           throw new ReplayDemoOrdersError(`confirm ${planned.key} before create`);
         }
+        const customerId = input.customerIdByKey.get(planned.customerKey);
+        if (customerId === undefined) {
+          throw new ReplayDemoOrdersError(`confirm ${planned.key} before create`);
+        }
+        const shipToId = await defaultShipToIdForCustomer(ports.shipTos, customerId);
         const confirmed = await confirmSo.execute({
           organizationId: OrganizationId.DEFAULT,
           staffUserId: input.staffUserId,
           salesOrderId: created.id,
           idempotencyKey: `demo:${planned.key}:confirm`,
+          shipToId,
         });
         if (!confirmed.ok) {
           throw new ReplaySalesOrdersError(`confirm ${planned.key} failed: ${confirmed.reason}`);

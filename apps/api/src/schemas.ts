@@ -1073,6 +1073,10 @@ export const salesOrderCommandBodySchema = z.object({
   idempotencyKey: z.string().min(1),
 });
 
+export const salesOrderConfirmBodySchema = salesOrderCommandBodySchema.extend({
+  shipToId: z.string().uuid(),
+});
+
 export const insufficientAtpResponseSchema = z.object({
   error: z.literal("insufficient_atp"),
 });

@@ -10,6 +10,7 @@ import {
   invalidResponseSchema,
   notFoundResponseSchema,
   salesOrderCommandBodySchema,
+  salesOrderConfirmBodySchema,
   salesOrderIdParamsSchema,
   salesOrderItemSchema,
   salesOrderListQuerySchema,
@@ -213,7 +214,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         tags: ["internal"],
         summary: "Confirm sales order and allocate inventory",
         params: salesOrderIdParamsSchema,
-        body: salesOrderCommandBodySchema,
+        body: salesOrderConfirmBodySchema,
         response: {
           200: salesOrderItemSchema,
           400: invalidResponseSchema,
@@ -229,9 +230,14 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         staffUserId: staffUserId(request),
         salesOrderId: OrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
+        shipToId: request.body.shipToId,
       });
       if (!result.ok) {
-        if (result.reason === "not_found" || result.reason === "customer_not_found") {
+        if (
+          result.reason === "not_found" ||
+          result.reason === "customer_not_found" ||
+          result.reason === "ship_to_not_found"
+        ) {
           return sendNotFound(reply);
         }
         if (result.reason === "insufficient_atp") {

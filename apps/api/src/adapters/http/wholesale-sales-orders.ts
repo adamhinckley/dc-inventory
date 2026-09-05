@@ -9,9 +9,11 @@ import {
 } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
+  insufficientAtpResponseSchema,
   invalidResponseSchema,
   needsCustomerResponseSchema,
   notFoundResponseSchema,
+  salesOrderConfirmBodySchema,
   salesOrderIdParamsSchema,
   salesOrderItemSchema,
   salesOrderListQuerySchema,
@@ -83,6 +85,10 @@ function mapSalesOrder(order: SalesOrder) {
 
 function sendNotFound(reply: FastifyReply) {
   return reply.code(404).send({ error: "not_found" as const });
+}
+
+function sendInsufficientAtp(reply: FastifyReply) {
+  return reply.code(409).send({ error: "insufficient_atp" as const });
 }
 
 export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
@@ -265,6 +271,69 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
           return reply.code(409).send({ error: "conflict" as const });
         }
         return reply.code(400).send({ error: "invalid" as const });
+      }
+      return mapSalesOrder(result.salesOrder);
+    },
+  );
+
+  routes.post(
+    "/sales-orders/:id/confirm",
+    {
+      schema: {
+        operationId: "confirmWholesaleSalesOrder",
+        tags: ["wholesale"],
+        summary: "Confirm draft sales order for session customer",
+        params: salesOrderIdParamsSchema,
+        body: salesOrderConfirmBodySchema,
+        response: {
+          200: salesOrderItemSchema,
+          400: invalidResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.sales.confirmSalesOrder.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: wholesaleStaffUserId(request),
+        salesOrderId: OrderId.parse(request.params.id),
+        idempotencyKey: request.body.idempotencyKey,
+        shipToId: request.body.shipToId,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found" || result.reason === "customer_not_found") {
+          return sendNotFound(reply);
+        }
+        if (result.reason === "ship_to_not_found") {
+          return sendNotFound(reply);
+        }
+        const order = await request.server.sales.getSalesOrder.execute({
+          organizationId: wholesaleOrganizationId(request),
+          staffUserId: wholesaleStaffUserId(request),
+          salesOrderId: OrderId.parse(request.params.id),
+        });
+        if (!order.ok || order.salesOrder.customerId !== wholesaleCustomerId(request)) {
+          return sendNotFound(reply);
+        }
+        if (result.reason === "insufficient_atp") {
+          return sendInsufficientAtp(reply);
+        }
+        if (
+          result.reason === "illegal_transition" ||
+          result.reason === "idempotency_conflict" ||
+          result.reason === "inventory_conflict" ||
+          result.reason === "customer_on_hold" ||
+          result.reason === "customer_inactive"
+        ) {
+          return reply.code(409).send({ error: "conflict" as const });
+        }
+        return reply.code(400).send({ error: "invalid" as const });
+      }
+      if (result.salesOrder.customerId !== wholesaleCustomerId(request)) {
+        return sendNotFound(reply);
       }
       return mapSalesOrder(result.salesOrder);
     },

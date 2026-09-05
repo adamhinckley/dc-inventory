@@ -1,6 +1,7 @@
 import type { IInvoiceRepository } from "@dc-inventory/accounting";
 import type { IProductRepository } from "@dc-inventory/catalog";
-import type { ICustomerRepository } from "@dc-inventory/customers";
+import type { ICustomerRepository, IShipToRepository } from "@dc-inventory/customers";
+import { CustomerShipToSnapshotReadAdapter } from "@dc-inventory/customers";
 import {
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
@@ -35,6 +36,7 @@ export type ReplaySalesOrdersPorts = {
   uow: ISalesUnitOfWork;
   clock: PlaybackClock;
   customers: Pick<ICustomerRepository, "findById">;
+  shipTos: Pick<IShipToRepository, "listByCustomer" | "findById">;
   products: Pick<IProductRepository, "findBySku" | "findById">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
   billToSnapshot: ICustomerBillToSnapshotReadPort;
@@ -119,6 +121,18 @@ export function permissiveDemoCustomerTermsPort(): import("@dc-inventory/account
   };
 }
 
+export async function defaultShipToIdForCustomer(
+  shipTos: Pick<IShipToRepository, "listByCustomer">,
+  customerId: CustomerId,
+): Promise<string> {
+  const rows = await shipTos.listByCustomer(customerId);
+  const shipTo = rows.find((row) => row.isDefault) ?? rows[0];
+  if (shipTo === undefined) {
+    throw new ReplaySalesOrdersError(`missing ship-to for customer ${customerId}`);
+  }
+  return shipTo.id;
+}
+
 export async function runReplaySalesOrders(
   ports: ReplaySalesOrdersPorts,
   input: ReplaySalesOrdersInput,
@@ -129,9 +143,14 @@ export async function runReplaySalesOrders(
     catalogProductPort(ports.products),
     ports.clock,
   );
+  const shipToSnapshot = new CustomerShipToSnapshotReadAdapter(
+    ports.customers as ICustomerRepository,
+    ports.shipTos as IShipToRepository,
+  );
   const confirm = new ConfirmSalesOrderUseCase(
     ports.uow,
     demoCustomerLookup(ports.customers),
+    shipToSnapshot,
   );
   const ship = new ShipSalesOrderUseCase(ports.uow, ports.billToSnapshot);
   const shipInstantBySalesOrderKey = new Map(
@@ -195,11 +214,14 @@ export async function runReplaySalesOrders(
       allocateInstant(planned.plannedInstant, shipInstant, planned.status === "shipped"),
     );
 
+    const shipToId = await defaultShipToIdForCustomer(ports.shipTos, customerId);
+
     const confirmed = await confirm.execute({
       organizationId: OrganizationId.DEFAULT,
       staffUserId: input.staffUserId,
       salesOrderId: created.salesOrder.id,
       idempotencyKey: `demo:${planned.key}:confirm`,
+      shipToId,
     });
     if (!confirmed.ok) {
       throw new ReplaySalesOrdersError(`confirm ${planned.key} failed: ${confirmed.reason}`);

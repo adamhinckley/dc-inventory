@@ -22,6 +22,13 @@ import type {
   ClearActingCustomer200,
   ClearActingCustomer401,
   ClearActingCustomer404,
+  ConfirmWholesaleSalesOrder200,
+  ConfirmWholesaleSalesOrder400,
+  ConfirmWholesaleSalesOrder401,
+  ConfirmWholesaleSalesOrder403,
+  ConfirmWholesaleSalesOrder404,
+  ConfirmWholesaleSalesOrder409,
+  ConfirmWholesaleSalesOrderBody,
   CreateWholesaleSalesOrder201,
   CreateWholesaleSalesOrder400,
   CreateWholesaleSalesOrder401,
@@ -55,6 +62,10 @@ import type {
   ListWholesaleSalesOrders401,
   ListWholesaleSalesOrders403,
   ListWholesaleSalesOrdersParams,
+  ListWholesaleShipTos200,
+  ListWholesaleShipTos401,
+  ListWholesaleShipTos403,
+  ListWholesaleShipTos404,
   LoginWholesale200,
   LoginWholesale401,
   LoginWholesale429,
@@ -1121,6 +1132,112 @@ export const useUpdateWholesaleAccountCustomerNote = <TError = UpdateWholesaleAc
       return useMutation(getUpdateWholesaleAccountCustomerNoteMutationOptions(options));
     }
 
+export type listWholesaleShipTosResponse200 = {
+  data: ListWholesaleShipTos200
+  status: 200
+}
+
+export type listWholesaleShipTosResponse401 = {
+  data: ListWholesaleShipTos401
+  status: 401
+}
+
+export type listWholesaleShipTosResponse403 = {
+  data: ListWholesaleShipTos403
+  status: 403
+}
+
+export type listWholesaleShipTosResponse404 = {
+  data: ListWholesaleShipTos404
+  status: 404
+}
+
+export type listWholesaleShipTosResponseSuccess = (listWholesaleShipTosResponse200) & {
+  headers: Headers;
+};
+export type listWholesaleShipTosResponseError = (listWholesaleShipTosResponse401 | listWholesaleShipTosResponse403 | listWholesaleShipTosResponse404) & {
+  headers: Headers;
+};
+
+export type listWholesaleShipTosResponse = (listWholesaleShipTosResponseSuccess | listWholesaleShipTosResponseError)
+
+export const getListWholesaleShipTosUrl = () => {
+
+
+
+
+  return `/wholesale/ship-tos`
+}
+
+/**
+ * @summary List ship-tos for session customer
+ */
+export const listWholesaleShipTos = async ( options?: Parameters<typeof customFetch>[1]): Promise<listWholesaleShipTosResponse> => {
+
+  return customFetch<listWholesaleShipTosResponse>(getListWholesaleShipTosUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWholesaleShipTosQueryKey = () => {
+    return [
+    `/wholesale/ship-tos`
+    ] as const;
+    }
+
+
+export const getListWholesaleShipTosQueryOptions = <TData = Awaited<ReturnType<typeof listWholesaleShipTos>>, TError = ListWholesaleShipTos401 | ListWholesaleShipTos403 | ListWholesaleShipTos404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleShipTos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWholesaleShipTosQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWholesaleShipTos>>> = ({ signal }) => listWholesaleShipTos({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWholesaleShipTos>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWholesaleShipTosQueryResult = NonNullable<Awaited<ReturnType<typeof listWholesaleShipTos>>>
+export type ListWholesaleShipTosQueryError = ListWholesaleShipTos401 | ListWholesaleShipTos403 | ListWholesaleShipTos404
+
+
+/**
+ * @summary List ship-tos for session customer
+ */
+
+export function useListWholesaleShipTos<TData = Awaited<ReturnType<typeof listWholesaleShipTos>>, TError = ListWholesaleShipTos401 | ListWholesaleShipTos403 | ListWholesaleShipTos404>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleShipTos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWholesaleShipTosQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export type listWholesaleSalesOrdersResponse200 = {
   data: ListWholesaleSalesOrders200
   status: 200
@@ -1571,4 +1688,121 @@ export const useReplaceWholesaleSalesOrderLines = <TError = ReplaceWholesaleSale
         TContext
       > => {
       return useMutation(getReplaceWholesaleSalesOrderLinesMutationOptions(options));
+    }
+
+export type confirmWholesaleSalesOrderResponse200 = {
+  data: ConfirmWholesaleSalesOrder200
+  status: 200
+}
+
+export type confirmWholesaleSalesOrderResponse400 = {
+  data: ConfirmWholesaleSalesOrder400
+  status: 400
+}
+
+export type confirmWholesaleSalesOrderResponse401 = {
+  data: ConfirmWholesaleSalesOrder401
+  status: 401
+}
+
+export type confirmWholesaleSalesOrderResponse403 = {
+  data: ConfirmWholesaleSalesOrder403
+  status: 403
+}
+
+export type confirmWholesaleSalesOrderResponse404 = {
+  data: ConfirmWholesaleSalesOrder404
+  status: 404
+}
+
+export type confirmWholesaleSalesOrderResponse409 = {
+  data: ConfirmWholesaleSalesOrder409
+  status: 409
+}
+
+export type confirmWholesaleSalesOrderResponseSuccess = (confirmWholesaleSalesOrderResponse200) & {
+  headers: Headers;
+};
+export type confirmWholesaleSalesOrderResponseError = (confirmWholesaleSalesOrderResponse400 | confirmWholesaleSalesOrderResponse401 | confirmWholesaleSalesOrderResponse403 | confirmWholesaleSalesOrderResponse404 | confirmWholesaleSalesOrderResponse409) & {
+  headers: Headers;
+};
+
+export type confirmWholesaleSalesOrderResponse = (confirmWholesaleSalesOrderResponseSuccess | confirmWholesaleSalesOrderResponseError)
+
+export const getConfirmWholesaleSalesOrderUrl = (id: string,) => {
+
+
+
+
+  return `/wholesale/sales-orders/${id}/confirm`
+}
+
+/**
+ * @summary Confirm draft sales order for session customer
+ */
+export const confirmWholesaleSalesOrder = async (id: string,
+    confirmWholesaleSalesOrderBody: ConfirmWholesaleSalesOrderBody, options?: Parameters<typeof customFetch>[1]): Promise<confirmWholesaleSalesOrderResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<confirmWholesaleSalesOrderResponse>(getConfirmWholesaleSalesOrderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(confirmWholesaleSalesOrderBody)
+  }
+);}
+
+
+
+
+
+export const getConfirmWholesaleSalesOrderMutationOptions = <TError = ConfirmWholesaleSalesOrder400 | ConfirmWholesaleSalesOrder401 | ConfirmWholesaleSalesOrder403 | ConfirmWholesaleSalesOrder404 | ConfirmWholesaleSalesOrder409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmWholesaleSalesOrder>>, TError,{id: string;data: ConfirmWholesaleSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmWholesaleSalesOrder>>, TError,{id: string;data: ConfirmWholesaleSalesOrderBody}, TContext> => {
+
+const mutationKey = ['confirmWholesaleSalesOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmWholesaleSalesOrder>>, {id: string;data: ConfirmWholesaleSalesOrderBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  confirmWholesaleSalesOrder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmWholesaleSalesOrderMutationResult = NonNullable<Awaited<ReturnType<typeof confirmWholesaleSalesOrder>>>
+    export type ConfirmWholesaleSalesOrderMutationBody = ConfirmWholesaleSalesOrderBody
+    export type ConfirmWholesaleSalesOrderMutationError = ConfirmWholesaleSalesOrder400 | ConfirmWholesaleSalesOrder401 | ConfirmWholesaleSalesOrder403 | ConfirmWholesaleSalesOrder404 | ConfirmWholesaleSalesOrder409
+
+    /**
+ * @summary Confirm draft sales order for session customer
+ */
+export const useConfirmWholesaleSalesOrder = <TError = ConfirmWholesaleSalesOrder400 | ConfirmWholesaleSalesOrder401 | ConfirmWholesaleSalesOrder403 | ConfirmWholesaleSalesOrder404 | ConfirmWholesaleSalesOrder409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmWholesaleSalesOrder>>, TError,{id: string;data: ConfirmWholesaleSalesOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmWholesaleSalesOrder>>,
+        TError,
+        {id: string;data: ConfirmWholesaleSalesOrderBody},
+        TContext
+      > => {
+      return useMutation(getConfirmWholesaleSalesOrderMutationOptions(options));
     }

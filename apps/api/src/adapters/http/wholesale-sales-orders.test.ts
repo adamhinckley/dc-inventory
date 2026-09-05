@@ -5,7 +5,7 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { InMemoryCustomerRepository, InMemoryShipToRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
@@ -21,6 +21,7 @@ import {
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
+import { API_TEST_SHIP_TO_ID, seedDefaultShipTo } from "./test-ship-to.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
@@ -45,6 +46,7 @@ async function startApp(options?: {
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
+  const shipToRepo = new InMemoryShipToRepository();
   const createdAt = new Date("2026-08-24T03:30:00.000Z");
 
   async function saveCustomer(
@@ -78,6 +80,7 @@ async function startApp(options?: {
     "C-00002",
     options?.customerBStatus ?? "active",
   );
+  await seedDefaultShipTo(shipToRepo, CUSTOMER_A_ID);
 
   await staffUsers.save({
     id: STAFF_ID,
@@ -111,6 +114,7 @@ async function startApp(options?: {
     passwords,
     organizationRepo: organizations,
     customerRepo,
+    shipToRepo,
   });
   apps.push(app);
   return { app, customerRepo, saveCustomer };
@@ -466,5 +470,102 @@ describe("wholesale sales orders (ADA-272)", () => {
     expect(replaced.statusCode).toBe(200);
     expect(replaced.json().lines).toHaveLength(1);
     expect(replaced.json().lines[0]?.qty).toBe(5);
+  });
+
+  it("GET ship-tos returns session customer addresses", async () => {
+    const { app } = await startApp();
+    const cookie = await loginStaffActing(app);
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/wholesale/ship-tos",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().items).toHaveLength(1);
+    expect(response.json().items[0]).toMatchObject({
+      id: API_TEST_SHIP_TO_ID,
+      customerId: CUSTOMER_A_ID,
+      line1: "200 Ship St",
+      isDefault: true,
+    });
+  });
+
+  it("POST confirm snapshots ship-to and returns confirmed order", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "CONFIRM-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 2 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${orderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: {
+        idempotencyKey: "wholesale-confirm",
+        shipToId: API_TEST_SHIP_TO_ID,
+      },
+    });
+    expect(confirmed.statusCode).toBe(200);
+    expect(confirmed.json()).toMatchObject({
+      id: orderId,
+      status: "confirmed",
+      shipLine1: "200 Ship St",
+      shipCity: "Seattle",
+      shipRegion: "WA",
+      shipPostal: "98101",
+      shipCountry: "US",
+    });
+  });
+
+  it("POST confirm returns 404 for another customer's order", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const buyerBCookie = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "buyer-b@local.test",
+        password: "buyer-b-secret",
+      },
+    }).then((res) => wholesaleCookie(res));
+    const actingCookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "CONFIRM-SCOPE-SKU");
+
+    const buyerOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(buyerOrder.statusCode).toBe(201);
+    const buyerOrderId = buyerOrder.json().id as string;
+
+    await selectCustomer(app, actingCookie, CUSTOMER_A_ID);
+
+    const forbidden = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${buyerOrderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+      payload: {
+        idempotencyKey: "confirm-scope",
+        shipToId: API_TEST_SHIP_TO_ID,
+      },
+    });
+    expect(forbidden.statusCode).toBe(404);
+    expect(forbidden.json()).toEqual({ error: "not_found" });
   });
 });

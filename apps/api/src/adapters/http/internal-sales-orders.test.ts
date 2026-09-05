@@ -17,7 +17,8 @@ import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
 import { loginBody } from "./test-login.js";
-import { InMemoryCustomerRepository, InMemoryBillToRepository } from "@dc-inventory/customers";
+import { API_TEST_SHIP_TO_ID, seedDefaultShipTo } from "./test-ship-to.js";
+import { InMemoryCustomerRepository, InMemoryBillToRepository, InMemoryShipToRepository } from "@dc-inventory/customers";
 import { InMemoryProductRepository } from "@dc-inventory/catalog";
 import { ProductId } from "@dc-inventory/shared-kernel";
 
@@ -40,6 +41,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
   const billToRepo = new InMemoryBillToRepository();
+  const shipToRepo = new InMemoryShipToRepository();
   const productRepo = new InMemoryProductRepository();
   const billToSnapshot = new CustomerBillToSnapshotReadAdapter(customerRepo, billToRepo);
   const customerTerms = new CustomerTermsReadAdapter(customerRepo);
@@ -62,6 +64,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
     postal: "97201",
     country: "US",
   });
+  await seedDefaultShipTo(shipToRepo, CUSTOMER_ID);
   await productRepo.save({
     id: PRODUCT_ID,
     organizationId: OrganizationId.DEFAULT,
@@ -96,6 +99,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
     unitOfWork,
     customerRepo,
     billToRepo,
+    shipToRepo,
     productRepo,
     salesOrderRepo: unitOfWork.salesOrders,
   });
@@ -208,7 +212,7 @@ describe("internal sales orders HTTP", () => {
       method: "POST",
       url: `/internal/sales-orders/${order.id}/confirm`,
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
-      payload: { idempotencyKey: "http-confirm" },
+      payload: { idempotencyKey: "http-confirm", shipToId: API_TEST_SHIP_TO_ID },
     });
     expect(confirmed.statusCode).toBe(200);
     expect(confirmed.json()).toMatchObject({ status: "confirmed" });
