@@ -4,12 +4,13 @@ import {
   replaceSalesOrderLinesErrorMessage,
   shipSalesOrderErrorMessage,
 } from "./sales-order-action-errors";
+import { isSuccessfulOrvalResponse } from "@dc-inventory/ui";
 
 describe("sales order action errors", () => {
   it("distinguishes confirm insufficient ATP from other conflicts", () => {
-    expect(
-      confirmSalesOrderErrorMessage({ status: 409, data: { error: "insufficient_atp" } }),
-    ).toMatch(/available-to-sell/i);
+    const insufficientAtp = { status: 409, data: { error: "insufficient_atp" } };
+    expect(isSuccessfulOrvalResponse(insufficientAtp)).toBe(false);
+    expect(confirmSalesOrderErrorMessage(insufficientAtp)).toMatch(/available-to-sell/i);
     expect(
       confirmSalesOrderErrorMessage({ status: 409, data: { error: "conflict" } }),
     ).toMatch(/conflict/i);

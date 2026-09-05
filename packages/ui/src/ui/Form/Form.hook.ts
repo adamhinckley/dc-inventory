@@ -3,6 +3,7 @@
 import { type QueryKey, useQueryClient } from '@tanstack/react-query'
 import { type FieldValues, type UseFormReturn } from 'react-hook-form'
 import { useToast } from '#ds/ui/Toast'
+import { assertSuccessfulOrvalResponse } from '#shared/http/orval-response'
 import { mapServerErrors } from '#shared/http/server-errors'
 
 export interface UseFormSubmitOptions<TInput extends FieldValues, TResult = unknown> {
@@ -79,6 +80,7 @@ export function useFormSubmit<TInput extends FieldValues, TResult = unknown>({
   return async (data: TInput, form: UseFormReturn<TInput>): Promise<void> => {
     try {
       const result = await mutate(data)
+      assertSuccessfulOrvalResponse(result)
       const title =
         typeof successMessage === 'function' ? successMessage(result, data) : successMessage
       toast({ intent: 'success', title, testid: 'form-submit-success-toast' })

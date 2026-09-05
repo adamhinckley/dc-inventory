@@ -6,7 +6,7 @@ describe("customFetch", () => {
     vi.unstubAllGlobals();
   });
 
-  it("returns parsed JSON and status on HTTP errors instead of throwing", async () => {
+  it("returns parsed JSON and status on HTTP errors for internal sales actions", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>

@@ -16,5 +16,9 @@ export async function customFetch<T>(
   const hasBody = response.status !== 204 && response.status !== 205;
   const data = hasBody ? await response.json() : undefined;
 
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
+
   return { data, status: response.status, headers: response.headers } as T;
 }
