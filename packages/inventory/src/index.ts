@@ -29,6 +29,13 @@ export {
   type PurchaseOrderGoodsReceivedItem,
 } from "./application/list-purchase-order-goods-received.js";
 export { ListUncoveredSkusUseCase } from "./application/list-uncovered-skus.js";
+export {
+  ListUncoveredFactoriesUseCase,
+  UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
+  type ListUncoveredFactoriesRequest,
+  type ListUncoveredFactoriesResult,
+  type UncoveredFactorySummaryRow,
+} from "./application/list-uncovered-factories.js";
 export { RecordAdjustmentDecreaseUseCase } from "./application/record-adjustment-decrease.js";
 export { RecordAdjustmentIncreaseUseCase } from "./application/record-adjustment-increase.js";
 export { RecordAllocatedUseCase } from "./application/record-allocated.js";
@@ -144,7 +151,19 @@ export type {
   UncoveredListPage,
   UncoveredListQuery,
   UncoveredListRow,
+  UncoveredSkuDraftPurchaseOrderRef,
 } from "./domain/ports/uncovered-list-query.js";
+export type {
+  IUncoveredSkuDraftPurchaseOrderReadPort,
+  IUncoveredSkuSupplierMappingReadPort,
+  IUncoveredSkuSupplierReadPort,
+  UncoveredSkuDraftPurchaseOrderRef as UncoveredSkuEnrichmentDraftPurchaseOrderRef,
+  UncoveredSkuMappingStatus,
+  UncoveredSkuSupplierInfo,
+  UncoveredSkuSupplierMapping,
+  UncoveredSkuSupplierSku,
+} from "./domain/ports/uncovered-sku-enrichment.js";
+export { uncoveredSkuDraftKey } from "./domain/ports/uncovered-sku-enrichment.js";
 export type {
   IUncoveredCaseQtyReadPort,
   IUncoveredReorderPolicyReadPort,

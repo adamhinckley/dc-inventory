@@ -341,12 +341,42 @@ export const listInternalSuppliersTable = {
   }
 } as const satisfies InternalTableMetadata;
 
+export const listInternalUncoveredFactoriesTable = {
+  "rowId": "id",
+  "columns": [
+    {
+      "field": "supplierName",
+      "label": "Factory"
+    },
+    {
+      "field": "supplierNumber",
+      "label": "Factory #"
+    },
+    {
+      "field": "productCount",
+      "label": "Products"
+    },
+    {
+      "field": "totalUncoveredUnits",
+      "label": "Uncovered units"
+    }
+  ]
+} as const satisfies InternalTableMetadata;
+
 export const listInternalUncoveredSkusTable = {
   "rowId": "sku",
   "columns": [
     {
       "field": "sku",
       "label": "SKU"
+    },
+    {
+      "field": "supplierName",
+      "label": "Factory"
+    },
+    {
+      "field": "supplierNumber",
+      "label": "Factory #"
     },
     {
       "field": "uncovered",
@@ -375,6 +405,14 @@ export const listInternalUncoveredSkusTable = {
     {
       "field": "reorderMax",
       "label": "Reorder max"
+    },
+    {
+      "field": "mappingStatus",
+      "label": "Mapping"
+    },
+    {
+      "field": "draftPurchaseOrder.documentNumber",
+      "label": "Draft PO"
     }
   ]
 } as const satisfies InternalTableMetadata;
@@ -386,6 +424,7 @@ export const internalTableMetadata = {
   listInternalSalesOrders: listInternalSalesOrdersTable,
   listInternalSupplierProducts: listInternalSupplierProductsTable,
   listInternalSuppliers: listInternalSuppliersTable,
+  listInternalUncoveredFactories: listInternalUncoveredFactoriesTable,
   listInternalUncoveredSkus: listInternalUncoveredSkusTable,
 } as const;
 

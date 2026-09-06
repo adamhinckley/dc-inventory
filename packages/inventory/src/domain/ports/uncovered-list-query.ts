@@ -1,5 +1,6 @@
 import type { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
-import type { Sku } from "@dc-inventory/shared-kernel";
+import type { PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
+import type { UncoveredSkuMappingStatus } from "./uncovered-sku-enrichment.js";
 
 export type UncoveredListQuery = {
   organizationId: OrganizationId;
@@ -16,6 +17,11 @@ export type UncoveredListCoreRow = Readonly<{
   uncovered: number;
 }>;
 
+export type UncoveredSkuDraftPurchaseOrderRef = Readonly<{
+  id: PurchaseOrderId;
+  documentNumber: string;
+}>;
+
 export type UncoveredListRow = Readonly<{
   sku: Sku;
   committed: number;
@@ -25,6 +31,11 @@ export type UncoveredListRow = Readonly<{
   caseQty: number | null;
   reorderMin: number | null;
   reorderMax: number | null;
+  supplierId: SupplierId | null;
+  supplierNumber: string | null;
+  supplierName: string | null;
+  mappingStatus: UncoveredSkuMappingStatus;
+  draftPurchaseOrder: UncoveredSkuDraftPurchaseOrderRef | null;
 }>;
 
 export type UncoveredListPage = {
@@ -38,4 +49,5 @@ export type UncoveredListPage = {
  */
 export interface IUncoveredListQuery {
   list(query: UncoveredListQuery): Promise<UncoveredListPage>;
+  listAll(query: Omit<UncoveredListQuery, "page" | "pageSize">): Promise<readonly UncoveredListCoreRow[]>;
 }

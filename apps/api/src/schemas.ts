@@ -223,6 +223,16 @@ export const inventoryStockSnapshotSchema = z.object({
 export const uncoveredSkusListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  supplierId: z.string().uuid().optional(),
+  needsMapping: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
+});
+
+export const uncoveredSkuDraftPurchaseOrderRefSchema = z.object({
+  id: z.string().uuid(),
+  documentNumber: z.string(),
 });
 
 export const uncoveredSkuListItemSchema = z.object({
@@ -234,6 +244,11 @@ export const uncoveredSkuListItemSchema = z.object({
   caseQty: z.number().int().positive().nullable(),
   reorderMin: z.number().int().nullable(),
   reorderMax: z.number().int().nullable(),
+  supplierId: z.string().uuid().nullable(),
+  supplierNumber: z.string().nullable(),
+  supplierName: z.string().nullable(),
+  mappingStatus: z.enum(["mapped", "unmapped", "ambiguous"]),
+  draftPurchaseOrder: uncoveredSkuDraftPurchaseOrderRefSchema.nullable(),
 });
 
 export const uncoveredSkusListResponseSchema = z.object({
@@ -247,6 +262,8 @@ export const uncoveredSkusListTable = {
   rowId: "sku",
   columns: [
     { field: "sku", label: "SKU" },
+    { field: "supplierName", label: "Factory" },
+    { field: "supplierNumber", label: "Factory #" },
     { field: "uncovered", label: "Uncovered" },
     { field: "onHand", label: "On hand" },
     { field: "onOrder", label: "On order" },
@@ -254,6 +271,40 @@ export const uncoveredSkusListTable = {
     { field: "caseQty", label: "Master pack" },
     { field: "reorderMin", label: "Reorder min" },
     { field: "reorderMax", label: "Reorder max" },
+    { field: "mappingStatus", label: "Mapping" },
+    { field: "draftPurchaseOrder.documentNumber", label: "Draft PO" },
+  ],
+};
+
+export const uncoveredFactoriesListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const uncoveredFactoriesListResponseSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string().min(1),
+      supplierId: z.string().uuid().nullable(),
+      supplierNumber: z.string().nullable(),
+      supplierName: z.string(),
+      productCount: z.number().int().nonnegative(),
+      totalUncoveredUnits: z.number().int().nonnegative(),
+      needsMapping: z.boolean(),
+    }),
+  ),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const uncoveredFactoriesListTable = {
+  rowId: "id",
+  columns: [
+    { field: "supplierName", label: "Factory" },
+    { field: "supplierNumber", label: "Factory #" },
+    { field: "productCount", label: "Products" },
+    { field: "totalUncoveredUnits", label: "Uncovered units" },
   ],
 };
 

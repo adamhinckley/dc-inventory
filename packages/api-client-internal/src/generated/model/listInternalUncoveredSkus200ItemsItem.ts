@@ -4,6 +4,8 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalUncoveredSkus200ItemsItemDraftPurchaseOrder } from './listInternalUncoveredSkus200ItemsItemDraftPurchaseOrder';
+import type { ListInternalUncoveredSkus200ItemsItemMappingStatus } from './listInternalUncoveredSkus200ItemsItemMappingStatus';
 
 export type ListInternalUncoveredSkus200ItemsItem = {
   sku: string;
@@ -45,4 +47,16 @@ export type ListInternalUncoveredSkus200ItemsItem = {
      * @nullable
      */
   reorderMax: number | null;
+  /**
+     * @nullable
+     * @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+     */
+  supplierId: string | null;
+  /** @nullable */
+  supplierNumber: string | null;
+  /** @nullable */
+  supplierName: string | null;
+  mappingStatus: ListInternalUncoveredSkus200ItemsItemMappingStatus;
+  /** @nullable */
+  draftPurchaseOrder: ListInternalUncoveredSkus200ItemsItemDraftPurchaseOrder;
 };

@@ -9,6 +9,7 @@ export { InMemoryPurchaseOrderRepository } from "./adapters/in-memory-purchase-o
 export { InMemorySupplierProductQtyReadPort } from "./adapters/in-memory-supplier-product-qty-read.js";
 export { InMemorySupplierProductRepository } from "./adapters/in-memory-supplier-product-repository.js";
 export { InMemorySupplierSkuMappingReadPort } from "./adapters/in-memory-supplier-sku-mapping.js";
+export { InMemoryUncoveredOpenDraftPurchaseOrderReadPort } from "./adapters/in-memory-uncovered-open-draft-purchase-order-read.js";
 export { InMemorySupplierRepository } from "./adapters/in-memory-supplier-repository.js";
 export { InMemoryWorkbookWriter } from "./adapters/in-memory-workbook-writer.js";
 export { ExcelJsWorkbookWriter } from "./adapters/exceljs-workbook-writer.js";
@@ -66,6 +67,17 @@ export type {
   SupplierProductListPage,
 } from "./domain/ports/supplier-product-repository.js";
 export type { ISupplierSkuMappingReadPort } from "./domain/ports/supplier-sku-mapping.js";
+export {
+  resolveSupplierSkuMapping,
+  type SupplierSkuMapping,
+  type SupplierSkuMappingStatus,
+} from "./domain/supplier-sku-mapping-status.js";
+export type {
+  IUncoveredOpenDraftPurchaseOrderReadPort,
+  UncoveredOpenDraftPurchaseOrderRef,
+  UncoveredOpenDraftSupplierSku,
+} from "./domain/ports/uncovered-open-draft-purchase-order-read.js";
+export { uncoveredOpenDraftKey } from "./domain/ports/uncovered-open-draft-purchase-order-read.js";
 export type {
   FactorySendCatalogRow,
   IFactorySendCatalogPort,

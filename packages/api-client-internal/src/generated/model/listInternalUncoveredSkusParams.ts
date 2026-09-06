@@ -4,6 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalUncoveredSkusNeedsMapping } from './listInternalUncoveredSkusNeedsMapping';
 
 export type ListInternalUncoveredSkusParams = {
 /**
@@ -16,4 +17,9 @@ page?: number;
  * @maximum 100
  */
 pageSize?: number;
+/**
+ * @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+ */
+supplierId?: string;
+needsMapping?: ListInternalUncoveredSkusNeedsMapping;
 };

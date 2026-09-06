@@ -245,6 +245,11 @@ import type {
   ListInternalSuppliers401,
   ListInternalSuppliers403,
   ListInternalSuppliersParams,
+  ListInternalUncoveredFactories200,
+  ListInternalUncoveredFactories400,
+  ListInternalUncoveredFactories401,
+  ListInternalUncoveredFactories403,
+  ListInternalUncoveredFactoriesParams,
   ListInternalUncoveredSkus200,
   ListInternalUncoveredSkus400,
   ListInternalUncoveredSkus401,
@@ -2684,6 +2689,119 @@ export function useListInternalUncoveredSkus<TData = Awaited<ReturnType<typeof l
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListInternalUncoveredSkusQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listInternalUncoveredFactoriesResponse200 = {
+  data: ListInternalUncoveredFactories200
+  status: 200
+}
+
+export type listInternalUncoveredFactoriesResponse400 = {
+  data: ListInternalUncoveredFactories400
+  status: 400
+}
+
+export type listInternalUncoveredFactoriesResponse401 = {
+  data: ListInternalUncoveredFactories401
+  status: 401
+}
+
+export type listInternalUncoveredFactoriesResponse403 = {
+  data: ListInternalUncoveredFactories403
+  status: 403
+}
+
+export type listInternalUncoveredFactoriesResponseSuccess = (listInternalUncoveredFactoriesResponse200) & {
+  headers: Headers;
+};
+export type listInternalUncoveredFactoriesResponseError = (listInternalUncoveredFactoriesResponse400 | listInternalUncoveredFactoriesResponse401 | listInternalUncoveredFactoriesResponse403) & {
+  headers: Headers;
+};
+
+export type listInternalUncoveredFactoriesResponse = (listInternalUncoveredFactoriesResponseSuccess | listInternalUncoveredFactoriesResponseError)
+
+export const getListInternalUncoveredFactoriesUrl = (params?: ListInternalUncoveredFactoriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/uncovered-skus/factories?${stringifiedParams}` : `/internal/uncovered-skus/factories`
+}
+
+/**
+ * @summary List uncovered demand grouped by factory
+ */
+export const listInternalUncoveredFactories = async (params?: ListInternalUncoveredFactoriesParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalUncoveredFactoriesResponse> => {
+
+  return customFetch<listInternalUncoveredFactoriesResponse>(getListInternalUncoveredFactoriesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalUncoveredFactoriesQueryKey = (params?: ListInternalUncoveredFactoriesParams,) => {
+    return [
+    `/internal/uncovered-skus/factories`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalUncoveredFactoriesQueryOptions = <TData = Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError = ListInternalUncoveredFactories400 | ListInternalUncoveredFactories401 | ListInternalUncoveredFactories403>(params?: ListInternalUncoveredFactoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalUncoveredFactoriesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalUncoveredFactories>>> = ({ signal }) => listInternalUncoveredFactories(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalUncoveredFactoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalUncoveredFactories>>>
+export type ListInternalUncoveredFactoriesQueryError = ListInternalUncoveredFactories400 | ListInternalUncoveredFactories401 | ListInternalUncoveredFactories403
+
+
+/**
+ * @summary List uncovered demand grouped by factory
+ */
+
+export function useListInternalUncoveredFactories<TData = Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError = ListInternalUncoveredFactories400 | ListInternalUncoveredFactories401 | ListInternalUncoveredFactories403>(
+ params?: ListInternalUncoveredFactoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalUncoveredFactoriesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
