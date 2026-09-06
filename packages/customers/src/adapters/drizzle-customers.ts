@@ -387,7 +387,8 @@ export class DrizzleShipToRepository implements IShipToRepository {
     const rows = await this.db
       .select()
       .from(shipTos)
-      .where(eq(shipTos.customerId, customerId));
+      .where(eq(shipTos.customerId, customerId))
+      .orderBy(asc(shipTos.createdAt), asc(shipTos.id));
     return rows.map(toShipTo);
   }
 

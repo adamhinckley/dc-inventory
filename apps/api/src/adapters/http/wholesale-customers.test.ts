@@ -211,6 +211,7 @@ describe("wholesale customers HTTP", () => {
     expect(listedShipTos.statusCode).toBe(200);
     const shipToItems = listedShipTos.json().items as Array<{ id: string; isDefault: boolean }>;
     expect(shipToItems.find((row) => row.id === shipTo.id)?.isDefault).toBe(true);
+    expect(shipToItems.filter((row) => row.isDefault)).toHaveLength(1);
 
     await app.inject({
       method: "POST",

@@ -3,6 +3,7 @@ import { newUuid, ShipToId } from "../domain/ids.js";
 import type { ICustomerRepository } from "../domain/ports/customer-repository.js";
 import type { IShipToRepository } from "../domain/ports/ship-to-repository.js";
 import type { ShipTo } from "../domain/ship-to.js";
+import { saveShipToWithExclusiveDefault } from "./assign-exclusive-default-ship-to.js";
 
 export type CreateShipToRequest = {
   organizationId: OrganizationId;
@@ -58,7 +59,7 @@ export class CreateShipToUseCase {
       country,
       isDefault: input.isDefault === true,
     };
-    await this.shipTos.save(shipTo);
+    await saveShipToWithExclusiveDefault(this.shipTos, shipTo);
     return { ok: true, shipTo };
   }
 }

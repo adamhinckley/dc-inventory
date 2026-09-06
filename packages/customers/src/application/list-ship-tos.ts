@@ -25,6 +25,9 @@ export class ListShipTosUseCase {
     if (customer === null) {
       return { ok: false, reason: "not_found" };
     }
-    return { ok: true, items: await this.shipTos.listByCustomer(input.customerId) };
+    return {
+      ok: true,
+      items: await this.shipTos.listByCustomer(input.customerId),
+    };
   }
 }
