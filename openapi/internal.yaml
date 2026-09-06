@@ -2890,7 +2890,7 @@ paths:
           name: pageSize
           required: false
       x-table:
-        rowId: supplierId
+        rowId: id
         columns:
           - field: supplierName
             label: Factory
@@ -2913,6 +2913,9 @@ paths:
                     items:
                       type: object
                       properties:
+                        id:
+                          type: string
+                          minLength: 1
                         supplierId:
                           nullable: true
                           type: string
@@ -2934,6 +2937,7 @@ paths:
                         needsMapping:
                           type: boolean
                       required:
+                        - id
                         - supplierId
                         - supplierNumber
                         - supplierName

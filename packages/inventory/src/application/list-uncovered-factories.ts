@@ -5,7 +5,10 @@ import type {
   IUncoveredSkuSupplierReadPort,
 } from "../domain/ports/uncovered-sku-enrichment.js";
 
+export const UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID = "needs-mapping";
+
 export type UncoveredFactorySummaryRow = Readonly<{
+  id: string;
   supplierId: SupplierId | null;
   supplierNumber: string | null;
   supplierName: string;
@@ -75,6 +78,7 @@ export class ListUncoveredFactoriesUseCase {
       }
       const supplier = supplierInfo.get(supplierId);
       items.push({
+        id: supplierId,
         supplierId,
         supplierNumber: supplier?.supplierNumber ?? null,
         supplierName: supplier?.supplierName ?? "Unknown factory",
@@ -87,6 +91,7 @@ export class ListUncoveredFactoriesUseCase {
 
     if (needsMappingProductCount > 0) {
       items.push({
+        id: UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
         supplierId: null,
         supplierNumber: null,
         supplierName: "Needs mapping",

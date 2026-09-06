@@ -284,6 +284,7 @@ export const uncoveredFactoriesListQuerySchema = z.object({
 export const uncoveredFactoriesListResponseSchema = z.object({
   items: z.array(
     z.object({
+      id: z.string().min(1),
       supplierId: z.string().uuid().nullable(),
       supplierNumber: z.string().nullable(),
       supplierName: z.string(),
@@ -298,7 +299,7 @@ export const uncoveredFactoriesListResponseSchema = z.object({
 });
 
 export const uncoveredFactoriesListTable = {
-  rowId: "supplierId",
+  rowId: "id",
   columns: [
     { field: "supplierName", label: "Factory" },
     { field: "supplierNumber", label: "Factory #" },

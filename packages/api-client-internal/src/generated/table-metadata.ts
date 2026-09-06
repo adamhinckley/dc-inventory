@@ -342,7 +342,7 @@ export const listInternalSuppliersTable = {
 } as const satisfies InternalTableMetadata;
 
 export const listInternalUncoveredFactoriesTable = {
-  "rowId": "supplierId",
+  "rowId": "id",
   "columns": [
     {
       "field": "supplierName",

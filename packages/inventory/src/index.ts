@@ -31,6 +31,7 @@ export {
 export { ListUncoveredSkusUseCase } from "./application/list-uncovered-skus.js";
 export {
   ListUncoveredFactoriesUseCase,
+  UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
   type ListUncoveredFactoriesRequest,
   type ListUncoveredFactoriesResult,
   type UncoveredFactorySummaryRow,

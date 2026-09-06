@@ -12,12 +12,14 @@ import {
 } from "@dc-inventory/identity";
 import {
   InMemoryUncoveredReorderPolicyReadPort,
+  UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
 } from "@dc-inventory/inventory";
 import {
   AssignSupplierProductUseCase,
   InMemoryCatalogSkuLookupPort,
   InMemorySupplierProductRepository,
   InMemorySupplierSkuMappingReadPort,
+  SupplierProductId,
 } from "@dc-inventory/purchasing";
 import {
   LocationId,
@@ -37,6 +39,7 @@ const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SKU = Sku.parse("UNCOVERED-HTTP-1");
 const SKU_B = Sku.parse("UNCOVERED-HTTP-2");
 const SKU_UNMAPPED = Sku.parse("UNCOVERED-HTTP-X");
+const SKU_AMBIGUOUS = Sku.parse("UNCOVERED-HTTP-AMB");
 const SUPPLIER_A = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 const SUPPLIER_B = SupplierId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 
@@ -65,7 +68,10 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startUncoveredApp(options?: { withDraftSuppliers?: boolean }) {
+async function startUncoveredApp(options?: {
+  withDraftSuppliers?: boolean;
+  withAmbiguousSku?: boolean;
+}) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
@@ -206,6 +212,52 @@ async function startUncoveredApp(options?: { withDraftSuppliers?: boolean }) {
     if (!committedUnmapped.ok) {
       throw new Error("expected commit unmapped");
     }
+
+    if (options?.withAmbiguousSku) {
+      const createdAmbiguous = await createProduct.execute({
+        organizationId: OrganizationId.DEFAULT,
+        staffUserId: STAFF_ID,
+        sku: SKU_AMBIGUOUS.value,
+        name: "Uncovered ambiguous",
+        uom: "EA",
+        memberPriceCents: 500,
+        taxCategoryCode: "P0000000",
+      });
+      if (!createdAmbiguous.ok) {
+        throw new Error("expected ambiguous product");
+      }
+      await supplierProductRepo.save({
+        id: SupplierProductId.parse("77777777-7777-4777-8777-777777777777"),
+        supplierId: SUPPLIER_A,
+        sku: SKU_AMBIGUOUS,
+        supplierSku: "A-AMB",
+        minOrderQty: null,
+        minOrderAmountCents: null,
+        lastPoCostCents: null,
+        currency: "USD",
+      });
+      await supplierProductRepo.save({
+        id: SupplierProductId.parse("88888888-8888-4888-8888-888888888888"),
+        supplierId: SUPPLIER_B,
+        sku: SKU_AMBIGUOUS,
+        supplierSku: "B-AMB",
+        minOrderQty: null,
+        minOrderAmountCents: null,
+        lastPoCostCents: null,
+        currency: "USD",
+      });
+      const committedAmbiguous = await unitOfWork.inventory.ledger.recordCommitted({
+        organizationId: OrganizationId.DEFAULT,
+        idempotencyKey: "uncovered-http-commit-amb",
+        sku: SKU_AMBIGUOUS,
+        quantity: 18,
+        refType: "sales_order",
+        refId: "550e8400-e29b-41d4-a716-446655440102",
+      });
+      if (!committedAmbiguous.ok) {
+        throw new Error("expected ambiguous commit");
+      }
+    }
   }
 
   const supplierSkuMapping = new InMemorySupplierSkuMappingReadPort(
@@ -243,6 +295,7 @@ async function startUncoveredApp(options?: { withDraftSuppliers?: boolean }) {
       catalog.set(OrganizationId.DEFAULT, SKU.value, "Uncovered widget");
       catalog.set(OrganizationId.DEFAULT, SKU_B.value, "Uncovered bolt");
       catalog.set(OrganizationId.DEFAULT, SKU_UNMAPPED.value, "Uncovered orphan");
+      catalog.set(OrganizationId.DEFAULT, SKU_AMBIGUOUS.value, "Uncovered ambiguous");
       return catalog;
     })(),
   });
@@ -358,6 +411,7 @@ describe("internal uncovered SKUs HTTP", () => {
     expect(listed.json()).toEqual({
       items: [
         {
+          id: SUPPLIER_A,
           supplierId: SUPPLIER_A,
           supplierNumber: "V-A",
           supplierName: "Factory A",
@@ -366,6 +420,7 @@ describe("internal uncovered SKUs HTTP", () => {
           needsMapping: false,
         },
         {
+          id: SUPPLIER_B,
           supplierId: SUPPLIER_B,
           supplierNumber: "V-B",
           supplierName: "Factory B",
@@ -374,6 +429,7 @@ describe("internal uncovered SKUs HTTP", () => {
           needsMapping: false,
         },
         {
+          id: UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
           supplierId: null,
           supplierNumber: null,
           supplierName: "Needs mapping",
@@ -441,5 +497,53 @@ describe("internal uncovered SKUs HTTP", () => {
         },
       ],
     });
+  });
+
+  it("surfaces ambiguous mapping when a SKU maps to multiple suppliers", async () => {
+    const app = await startUncoveredApp({
+      withDraftSuppliers: true,
+      withAmbiguousSku: true,
+    });
+    const cookie = await staffCookie(app);
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/uncovered-skus",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    const ambiguousRow = (listed.json() as { items: Array<{ sku: string }> }).items.find(
+      (row) => row.sku === SKU_AMBIGUOUS.value,
+    );
+    expect(ambiguousRow).toMatchObject({
+      sku: SKU_AMBIGUOUS.value,
+      supplierId: null,
+      supplierNumber: null,
+      supplierName: null,
+      mappingStatus: "ambiguous",
+      draftPurchaseOrder: null,
+    });
+
+    const needsMapping = await app.inject({
+      method: "GET",
+      url: "/internal/uncovered-skus?needsMapping=true",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(needsMapping.statusCode).toBe(200);
+    expect((needsMapping.json() as { total: number }).total).toBe(2);
+    expect(
+      (needsMapping.json() as { items: Array<{ sku: string }> }).items.map((row) => row.sku).sort(),
+    ).toEqual([SKU_AMBIGUOUS.value, SKU_UNMAPPED.value].sort());
+
+    const bySupplierA = await app.inject({
+      method: "GET",
+      url: `/internal/uncovered-skus?supplierId=${SUPPLIER_A}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(bySupplierA.statusCode).toBe(200);
+    expect((bySupplierA.json() as { total: number }).total).toBe(1);
+    expect((bySupplierA.json() as { items: Array<{ sku: string }> }).items[0]?.sku).toBe(
+      SKU.value,
+    );
   });
 });

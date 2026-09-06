@@ -213,6 +213,7 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
       const items = result.items.slice(offset, offset + query.pageSize);
       return {
         items: items.map((row) => ({
+          id: row.id,
           supplierId: row.supplierId,
           supplierNumber: row.supplierNumber,
           supplierName: row.supplierName,
