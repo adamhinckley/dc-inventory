@@ -5,7 +5,6 @@ import {
   getListInternalUncoveredFactoriesQueryKey,
   getListInternalUncoveredSkusQueryKey,
   useDraftInternalUncoveredPurchaseOrders,
-  useListInternalUncoveredFactories,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -14,8 +13,7 @@ import {
   useTable,
   type TableColumnDef,
 } from "@dc-inventory/ui";
-import { unwrapListData, type ListQueryResult } from "@dc-inventory/ui-internal";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,22 +24,16 @@ import {
   uncoveredFactoryDetailHref,
 } from "../lib/uncovered-constants";
 import {
+  listAllUncoveredFactories,
+  type UncoveredFactoryRow,
+} from "../lib/list-all-uncovered-factories";
+import {
   afterDraftUncoveredPos,
   type UncoveredBatchDraftRow,
 } from "../lib/uncovered-draft-workflow";
 import { UncoveredBatchDraftModal } from "./uncovered-batch-draft-modal";
 
-type FactoryRow = {
-  id: string;
-  supplierId: string | null;
-  supplierNumber: string | null;
-  supplierName: string;
-  productCount: number;
-  totalUncoveredUnits: number;
-  needsMapping: boolean;
-};
-
-function FactoryNameCell({ row }: { row: FactoryRow }) {
+function FactoryNameCell({ row }: { row: UncoveredFactoryRow }) {
   if (row.needsMapping) {
     return (
       <Link
@@ -67,7 +59,7 @@ function FactoryNameCell({ row }: { row: FactoryRow }) {
   );
 }
 
-function formatFactoryCell(row: FactoryRow, field: keyof FactoryRow): string {
+function formatFactoryCell(row: UncoveredFactoryRow, field: keyof UncoveredFactoryRow): string {
   const value = row[field];
   if (value === null || value === undefined) {
     return "—";
@@ -87,19 +79,14 @@ export function UncoveredFactorySummary() {
   );
   const [batchUnmappedNotice, setBatchUnmappedNotice] = useState<string | null>(null);
 
-  const factoriesQuery = useListInternalUncoveredFactories();
+  const factoriesQuery = useQuery({
+    queryKey: [...getListInternalUncoveredFactoriesQueryKey(), "all"],
+    queryFn: () => listAllUncoveredFactories(),
+  });
   const draftMutation = useDraftInternalUncoveredPurchaseOrders();
 
-  const envelope = unwrapListData(
-    factoriesQuery.data as ListQueryResult<FactoryRow>["data"],
-  );
-  const rows = useMemo(
-    (): FactoryRow[] => envelope?.items ?? [],
-    [envelope?.items],
-  );
-  const busy =
-    factoriesQuery.isPending === true ||
-    (envelope === undefined && factoriesQuery.isError !== true);
+  const rows = factoriesQuery.data ?? [];
+  const busy = factoriesQuery.isPending;
 
   const supplierNamesById = useMemo(() => {
     const names = new Map<string, string>();
@@ -111,7 +98,7 @@ export function UncoveredFactorySummary() {
     return names;
   }, [rows]);
 
-  const columns = useMemo<TableColumnDef<FactoryRow>[]>(
+  const columns = useMemo<TableColumnDef<UncoveredFactoryRow>[]>(
     () => [
       {
         id: "supplierName",
@@ -217,6 +204,8 @@ export function UncoveredFactorySummary() {
       setBatchDrafts(next.drafts);
       setBatchUnmappedNotice(next.unmappedNotice);
       setBatchModalOpen(true);
+    } catch {
+      setActionError("Could not load uncovered SKUs for the selected factories.");
     } finally {
       creatingRef.current = false;
     }

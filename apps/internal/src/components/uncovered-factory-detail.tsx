@@ -5,7 +5,6 @@ import {
   getListInternalUncoveredFactoriesQueryKey,
   getListInternalUncoveredSkusQueryKey,
   useDraftInternalUncoveredPurchaseOrders,
-  useListInternalUncoveredFactories,
   useListInternalUncoveredSkus,
 } from "@dc-inventory/api-client-internal";
 import {
@@ -22,12 +21,16 @@ import {
   useTable,
   type TableColumnDef,
 } from "@dc-inventory/ui";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import { isUncoveredNeedsMappingFactoryId } from "../lib/uncovered-constants";
+import {
+  listAllUncoveredFactories,
+  type UncoveredFactoryRow,
+} from "../lib/list-all-uncovered-factories";
 import {
   afterDraftUncoveredPos,
   shouldDraftUncoveredSelection,
@@ -56,14 +59,6 @@ type UncoveredApiRow = {
   supplierName: string | null;
   mappingStatus: "mapped" | "unmapped" | "ambiguous";
   draftPurchaseOrder: { id: string; documentNumber: string } | null;
-};
-
-type FactorySummaryRow = {
-  id: string;
-  supplierId: string | null;
-  supplierName: string;
-  productCount: number;
-  totalUncoveredUnits: number;
 };
 
 type UncoveredRow = UncoveredApiRow & {
@@ -213,22 +208,19 @@ export function UncoveredFactoryDetail({
   const [batchUnmappedNotice, setBatchUnmappedNotice] = useState<string | null>(null);
 
   const needsMapping = isUncoveredNeedsMappingFactoryId(factoryId);
-  const factoriesQuery = useListInternalUncoveredFactories();
+  const factoriesQuery = useQuery({
+    queryKey: [...getListInternalUncoveredFactoriesQueryKey(), "all"],
+    queryFn: () => listAllUncoveredFactories(),
+  });
   const draftMutation = useDraftInternalUncoveredPurchaseOrders();
   const useSkuList = useMemo(
     () => useUncoveredFactorySkuList(factoryId),
     [factoryId],
   );
 
-  const factoryEnvelope = unwrapListData(
-    factoriesQuery.data as ListQueryResult<FactorySummaryRow>["data"],
-  );
   const factorySummary = useMemo(
-    () =>
-      (factoryEnvelope?.items ?? []).find(
-        (row) => row.id === factoryId,
-      ),
-    [factoryEnvelope?.items, factoryId],
+    () => factoriesQuery.data?.find((row) => row.id === factoryId),
+    [factoriesQuery.data, factoryId],
   );
 
   const onParamsChange = useCallback((params: ListQueryParams) => {
@@ -398,9 +390,19 @@ export function UncoveredFactoryDetail({
         <header>
           <h2 className="text-heading-md font-semibold">{factorySummary.supplierName}</h2>
           <p className="page-description mt-2">
-            {factorySummary.productCount} product
-            {factorySummary.productCount === 1 ? "" : "s"} ready for a purchase order ·{" "}
-            {factorySummary.totalUncoveredUnits} total uncovered units
+            {needsMapping ? (
+              <>
+                {factorySummary.productCount} product
+                {factorySummary.productCount === 1 ? "" : "s"} ·{" "}
+                {factorySummary.totalUncoveredUnits} total uncovered units
+              </>
+            ) : (
+              <>
+                {factorySummary.productCount} product
+                {factorySummary.productCount === 1 ? "" : "s"} ready for a purchase order ·{" "}
+                {factorySummary.totalUncoveredUnits} total uncovered units
+              </>
+            )}
           </p>
         </header>
       ) : null}
