@@ -421,7 +421,7 @@ export class DrizzleShipToRepository implements IShipToRepository {
           region: shipTo.region,
           postal: shipTo.postal,
           country: shipTo.country,
-          isDefault: shipTo.isDefault ? false : shipTo.isDefault,
+          isDefault: false,
         })
         .onConflictDoUpdate({
           target: shipTos.id,
@@ -432,7 +432,7 @@ export class DrizzleShipToRepository implements IShipToRepository {
             region: shipTo.region,
             postal: shipTo.postal,
             country: shipTo.country,
-            isDefault: shipTo.isDefault ? false : shipTo.isDefault,
+            isDefault: false,
             updatedAt: new Date(),
           },
         });
@@ -440,11 +440,15 @@ export class DrizzleShipToRepository implements IShipToRepository {
       if (shipTo.isDefault) {
         await tx
           .update(shipTos)
-          .set({
-            isDefault: sql`(${shipTos.id} = ${shipTo.id})`,
-            updatedAt: new Date(),
-          })
-          .where(eq(shipTos.customerId, shipTo.customerId));
+          .set({ isDefault: false, updatedAt: new Date() })
+          .where(
+            and(eq(shipTos.customerId, shipTo.customerId), eq(shipTos.isDefault, true)),
+          );
+
+        await tx
+          .update(shipTos)
+          .set({ isDefault: true, updatedAt: new Date() })
+          .where(eq(shipTos.id, shipTo.id));
       }
     });
   }
