@@ -14,11 +14,11 @@ import {
   useTable,
   type TableColumnDef,
 } from "@dc-inventory/ui";
-import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Star } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { formatPostalAddressInline } from "../lib/postal-address-format";
+import { mergeStableIds } from "../lib/stable-item-order";
 import {
   SHIP_TOS_DESCRIPTION,
   SHIP_TOS_EMPTY_MESSAGE,
@@ -72,39 +72,44 @@ export function CustomerShipTosPanel({
   customerId: string;
   canManage: boolean;
 }) {
-  const queryClient = useQueryClient();
   const query = useListInternalCustomerShipTos(customerId);
-  const items =
+  const fetchedItems =
     query.data?.status === 200 ? query.data.data.items : ([] as CustomerShipToRow[]);
+  const orderRef = useRef<{ customerId: string; ids: string[] }>({
+    customerId,
+    ids: [],
+  });
+  if (orderRef.current.customerId !== customerId) {
+    orderRef.current = { customerId, ids: [] };
+  }
+  const items = useMemo(() => {
+    const nextIds = mergeStableIds(
+      orderRef.current.ids,
+      fetchedItems.map((row) => row.id),
+    );
+    orderRef.current = { customerId, ids: nextIds };
+    const byId = new Map(fetchedItems.map((row) => [row.id, row]));
+    return nextIds.flatMap((id) => {
+      const row = byId.get(id);
+      return row === undefined ? [] : [row];
+    });
+  }, [customerId, fetchedItems]);
   const { mutateAsync: createShipTo } = useCreateInternalCustomerShipTo();
   const { mutateAsync: updateShipTo } = useUpdateInternalCustomerShipTo();
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<CustomerShipToRow | null>(null);
 
-  const invalidateShipTos = useCallback(async () => {
-    await queryClient.invalidateQueries({
-      queryKey: getListInternalCustomerShipTosQueryKey(customerId),
-    });
-  }, [customerId, queryClient]);
-
-  const setDefault = useCallback(
-    async (shipTo: CustomerShipToRow) => {
-      if (shipTo.isDefault) {
-        return;
-      }
-      await updateShipTo({
-        id: customerId,
-        shipToId: shipTo.id,
-        data: { isDefault: true },
-      });
-      await invalidateShipTos();
-    },
-    [customerId, invalidateShipTos, updateShipTo],
-  );
-
   const rowActions = useCallback(
     (row: CustomerShipToRow) => (
-      <div className="flex items-center gap-tight">
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-tight">
+        {row.isDefault ? (
+          <span className="inline-flex items-center justify-end gap-icon text-button font-bold">
+            <Star className="size-icon fill-warning text-warning" aria-hidden />
+            Default
+          </span>
+        ) : (
+          <span />
+        )}
         <Button
           type="button"
           variant="ghost"
@@ -114,19 +119,9 @@ export function CustomerShipTosPanel({
           <Pencil className="size-icon" aria-hidden />
           Edit
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={row.isDefault}
-          onClick={() => void setDefault(row)}
-        >
-          <Star className="size-icon" aria-hidden />
-          Set Default
-        </Button>
       </div>
     ),
-    [setDefault],
+    [],
   );
 
   const columns = useMemo<TableColumnDef<CustomerShipToRow>[]>(
@@ -136,13 +131,6 @@ export function CustomerShipTosPanel({
         label: "Address",
         sort: false as const,
         render: ({ record }) => formatPostalAddressInline(record),
-      },
-      {
-        id: "default",
-        label: "Default",
-        sort: false as const,
-        width: 96,
-        render: ({ record }) => (record.isDefault ? "Yes" : "—"),
       },
     ],
     [],
@@ -167,8 +155,13 @@ export function CustomerShipTosPanel({
           <p className="text-body-sm text-fg-secondary mt-1">{SHIP_TOS_DESCRIPTION}</p>
         </div>
         {canManage ? (
-          <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-icon-lg" aria-hidden />
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-icon" aria-hidden />
             Add Ship-To
           </Button>
         ) : null}

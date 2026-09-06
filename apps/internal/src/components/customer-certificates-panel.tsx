@@ -134,8 +134,13 @@ export function CustomerCertificatesPanel({
           </p>
         </div>
         {canManage ? (
-          <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-icon-lg" aria-hidden />
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-icon" aria-hidden />
             Add Certificate
           </Button>
         ) : null}

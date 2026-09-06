@@ -129,7 +129,10 @@ export function CustomerDetailPage({
                 </p>
               </div>
               {canManage ? (
-                <DetailView.EditButton data-testid="customer-detail-edit-trigger">
+                <DetailView.EditButton
+                  size="sm"
+                  data-testid="customer-detail-edit-trigger"
+                >
                   Edit Customer
                 </DetailView.EditButton>
               ) : null}

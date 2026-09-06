@@ -239,6 +239,13 @@
       "when": 1790055600000,
       "tag": "0034_sales_orders_draft_per_customer_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1790155600000,
+      "tag": "0035_ship_tos_customer_default_unique",
+      "breakpoints": true
     }
   ]
 }

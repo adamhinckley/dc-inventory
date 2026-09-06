@@ -15,6 +15,13 @@ export class InMemoryShipToRepository implements IShipToRepository {
   }
 
   async save(shipTo: ShipTo): Promise<void> {
+    if (shipTo.isDefault) {
+      for (const [id, row] of this.byId) {
+        if (row.customerId === shipTo.customerId && row.isDefault && row.id !== shipTo.id) {
+          this.byId.set(id, { ...row, isDefault: false });
+        }
+      }
+    }
     this.byId.set(shipTo.id, shipTo);
   }
 }

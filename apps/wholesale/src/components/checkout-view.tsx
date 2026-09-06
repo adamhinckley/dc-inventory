@@ -7,7 +7,8 @@ import {
 } from "@dc-inventory/api-client-wholesale";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { initialCheckoutShipToId } from "../lib/checkout-ship-to";
 import { wholesaleConfirmErrorMessage } from "../lib/confirm-shortage-message";
 import {
   CHECKOUT_ACCOUNT_PATH,
@@ -49,6 +50,14 @@ export function CheckoutView() {
   }, [draft]);
 
   const currency = draft?.lines[0]?.currency ?? "USD";
+
+  useEffect(() => {
+    const initial = initialCheckoutShipToId(shipToItems);
+    if (initial !== null) {
+      setSelectedShipToId((current) => (current === "" ? initial : current));
+    }
+  }, [shipToItems]);
+
   const canConfirm =
     draft !== undefined &&
     draft.lines.length > 0 &&

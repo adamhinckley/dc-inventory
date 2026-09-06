@@ -380,14 +380,22 @@ export class DrizzleContactRepository implements IContactRepository {
   }
 }
 
+export function buildShipToListByCustomerQuery(
+  db: CustomersDrizzle,
+  customerId: CustomerId,
+) {
+  return db
+    .select()
+    .from(shipTos)
+    .where(eq(shipTos.customerId, customerId))
+    .orderBy(asc(shipTos.createdAt), asc(shipTos.id));
+}
+
 export class DrizzleShipToRepository implements IShipToRepository {
   constructor(private readonly db: CustomersDrizzle) {}
 
   async listByCustomer(customerId: CustomerId): Promise<ShipTo[]> {
-    const rows = await this.db
-      .select()
-      .from(shipTos)
-      .where(eq(shipTos.customerId, customerId));
+    const rows = await buildShipToListByCustomerQuery(this.db, customerId);
     return rows.map(toShipTo);
   }
 
@@ -401,32 +409,48 @@ export class DrizzleShipToRepository implements IShipToRepository {
   }
 
   async save(shipTo: ShipTo): Promise<void> {
-    await this.db
-      .insert(shipTos)
-      .values({
-        id: shipTo.id,
-        customerId: shipTo.customerId,
-        line1: shipTo.line1,
-        line2: shipTo.line2,
-        city: shipTo.city,
-        region: shipTo.region,
-        postal: shipTo.postal,
-        country: shipTo.country,
-        isDefault: shipTo.isDefault,
-      })
-      .onConflictDoUpdate({
-        target: shipTos.id,
-        set: {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .insert(shipTos)
+        .values({
+          id: shipTo.id,
+          customerId: shipTo.customerId,
           line1: shipTo.line1,
           line2: shipTo.line2,
           city: shipTo.city,
           region: shipTo.region,
           postal: shipTo.postal,
           country: shipTo.country,
-          isDefault: shipTo.isDefault,
-          updatedAt: new Date(),
-        },
-      });
+          isDefault: false,
+        })
+        .onConflictDoUpdate({
+          target: shipTos.id,
+          set: {
+            line1: shipTo.line1,
+            line2: shipTo.line2,
+            city: shipTo.city,
+            region: shipTo.region,
+            postal: shipTo.postal,
+            country: shipTo.country,
+            isDefault: false,
+            updatedAt: new Date(),
+          },
+        });
+
+      if (shipTo.isDefault) {
+        await tx
+          .update(shipTos)
+          .set({ isDefault: false, updatedAt: new Date() })
+          .where(
+            and(eq(shipTos.customerId, shipTo.customerId), eq(shipTos.isDefault, true)),
+          );
+
+        await tx
+          .update(shipTos)
+          .set({ isDefault: true, updatedAt: new Date() })
+          .where(eq(shipTos.id, shipTo.id));
+      }
+    });
   }
 }
 
