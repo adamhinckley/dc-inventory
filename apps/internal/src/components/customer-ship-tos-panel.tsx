@@ -155,8 +155,13 @@ export function CustomerShipTosPanel({
           <p className="text-body-sm text-fg-secondary mt-1">{SHIP_TOS_DESCRIPTION}</p>
         </div>
         {canManage ? (
-          <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-icon-lg" aria-hidden />
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="size-icon" aria-hidden />
             Add Ship-To
           </Button>
         ) : null}

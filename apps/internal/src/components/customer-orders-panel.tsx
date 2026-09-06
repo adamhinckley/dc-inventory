@@ -79,8 +79,7 @@ export function CustomerOrdersPanel({
       idPrefix="customer-orders"
     >
       <DataTable.Toolbar>
-        <DataTable.Search />
-        <DataTable.Filters />
+        <DataTable.FilterBar resource="Sales Order" />
       </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />

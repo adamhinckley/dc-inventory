@@ -91,19 +91,30 @@ export function CustomerBillToPanel({
         {canManage ? (
           <div className="flex flex-wrap items-center gap-action">
             {billTo ? (
-              <Button type="button" variant="secondary" onClick={() => setEditOpen(true)}>
-                <Pencil className="size-icon-lg" aria-hidden />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setEditOpen(true)}
+              >
+                <Pencil className="size-icon" aria-hidden />
                 Edit Bill-To
               </Button>
             ) : (
               <>
-                <Button type="button" variant="primary" onClick={() => setCreateOpen(true)}>
-                  <Plus className="size-icon-lg" aria-hidden />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setCreateOpen(true)}
+                >
+                  <Plus className="size-icon" aria-hidden />
                   Add Bill-To
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
+                  size="sm"
                   disabled={!defaultShipTo}
                   title={
                     defaultShipTo
@@ -118,7 +129,7 @@ export function CustomerBillToPanel({
                     })
                   }
                 >
-                  <Copy className="size-icon-lg" aria-hidden />
+                  <Copy className="size-icon" aria-hidden />
                   Copy From Default Ship-To
                 </Button>
               </>
