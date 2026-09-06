@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -7,6 +8,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -71,20 +73,28 @@ export const contacts = customersSchema.table(
   (table) => [unique().on(table.customerId, table.email)],
 );
 
-export const shipTos = customersSchema.table("ship_tos", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => customers.id),
-  line1: text("line_1").notNull(),
-  line2: text("line_2"),
-  city: text("city").notNull(),
-  region: text("region").notNull(),
-  postal: text("postal").notNull(),
-  country: text("country").notNull(),
-  isDefault: boolean("is_default").notNull().default(false),
-  ...timestamps(),
-});
+export const shipTos = customersSchema.table(
+  "ship_tos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    line1: text("line_1").notNull(),
+    line2: text("line_2"),
+    city: text("city").notNull(),
+    region: text("region").notNull(),
+    postal: text("postal").notNull(),
+    country: text("country").notNull(),
+    isDefault: boolean("is_default").notNull().default(false),
+    ...timestamps(),
+  },
+  (table) => [
+    uniqueIndex("ship_tos_customer_id_default_unique")
+      .on(table.customerId)
+      .where(sql`${table.isDefault} = true`),
+  ],
+);
 
 export const billTos = customersSchema.table("bill_tos", {
   customerId: uuid("customer_id")

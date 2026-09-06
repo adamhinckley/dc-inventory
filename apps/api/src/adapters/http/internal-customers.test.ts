@@ -122,4 +122,86 @@ describe("internal customers HTTP", () => {
       entityUseCode: null,
     });
   });
+
+  it("keeps ship-to list order when the default changes", async () => {
+    const app = await startCustomersApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        name: "Acme Wholesale",
+        creditLimitCents: 1_000_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    const main = await app.inject({
+      method: "POST",
+      url: `/internal/customers/${customerId}/ship-tos`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        line1: "123 Main St",
+        city: "Ogden",
+        region: "UT",
+        postal: "84401",
+        country: "US",
+        isDefault: true,
+      },
+    });
+    expect(main.statusCode).toBe(201);
+    const mainId = main.json().id as string;
+
+    const warehouse = await app.inject({
+      method: "POST",
+      url: `/internal/customers/${customerId}/ship-tos`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        line1: "100 Warehouse Rd",
+        city: "Ogden",
+        region: "UT",
+        postal: "84401",
+        country: "US",
+        isDefault: false,
+      },
+    });
+    expect(warehouse.statusCode).toBe(201);
+    const warehouseId = warehouse.json().id as string;
+
+    const before = await app.inject({
+      method: "GET",
+      url: `/internal/customers/${customerId}/ship-tos`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(before.statusCode).toBe(200);
+    const orderBefore = (before.json().items as Array<{ id: string }>).map((row) => row.id);
+    expect(orderBefore).toContain(mainId);
+    expect(orderBefore).toContain(warehouseId);
+
+    const promoted = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}/ship-tos/${warehouseId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { isDefault: true },
+    });
+    expect(promoted.statusCode).toBe(200);
+    expect(promoted.json()).toMatchObject({ id: warehouseId, isDefault: true });
+
+    const after = await app.inject({
+      method: "GET",
+      url: `/internal/customers/${customerId}/ship-tos`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(after.statusCode).toBe(200);
+    const items = after.json().items as Array<{ id: string; isDefault: boolean }>;
+    expect(items.map((row) => row.id)).toEqual(orderBefore);
+    expect(items.find((row) => row.id === warehouseId)?.isDefault).toBe(true);
+    expect(items.find((row) => row.id === mainId)?.isDefault).toBe(false);
+    expect(items.filter((row) => row.isDefault)).toHaveLength(1);
+  });
 });
