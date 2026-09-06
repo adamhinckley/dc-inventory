@@ -1,4 +1,4 @@
-import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryCustomerRepository } from "../src/adapters/in-memory-customer-repository.js";
 import { InMemoryShipToRepository } from "../src/adapters/in-memory-ship-to-repository.js";
@@ -39,7 +39,7 @@ async function createCustomer(h: ReturnType<typeof harness>) {
 
 async function addShipTo(
   h: ReturnType<typeof harness>,
-  customerId: ReturnType<typeof createCustomer> extends Promise<infer T> ? T["id"] : never,
+  customerId: CustomerId,
   line1: string,
   isDefault?: boolean,
 ) {
