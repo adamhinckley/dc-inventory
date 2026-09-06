@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { UncoveredSkusTable } from "../../../../components/uncovered-skus-table";
 import { listParamsFromSearchParams } from "../../../../lib/table-url-params";
 import { uncoveredListTable } from "../../../../lib/uncovered-list-table";
@@ -20,7 +21,10 @@ export default async function UncoveredSkusPage({
         <h1 className="page-title">Uncovered SKUs</h1>
         <p className="page-description mt-2">
           Factory to-order need with on-hand, inbound PO, and reorder context.
-          Suggested qty rounds uncovered demand up to the master pack.
+          Suggested qty rounds uncovered demand up to the master pack.{" "}
+          <Link href="/purchasing/uncovered/prototype" className="text-link hover:text-link-hover">
+            Try factory prototype →
+          </Link>
         </p>
       </header>
       <UncoveredSkusTable initialParams={initialParams} />
