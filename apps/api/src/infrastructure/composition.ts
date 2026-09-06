@@ -149,6 +149,8 @@ import {
   type ICommittedCustomerNamesPort,
   type IInventoryUncoveredReadPort,
   type ISupplierSkuMappingReadPort,
+  InMemoryUncoveredOpenDraftPurchaseOrderReadPort,
+  type IUncoveredOpenDraftPurchaseOrderReadPort,
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
@@ -185,6 +187,7 @@ import {
   InMemoryUncoveredListQuery,
   InMemoryUncoveredReorderPolicyReadPort,
   ListPurchaseOrderGoodsReceivedUseCase,
+  ListUncoveredFactoriesUseCase,
   ListUncoveredSkusUseCase,
   RecordReopenSkusForPresellUseCase,
   type InMemoryInventoryReadModel,
@@ -216,6 +219,15 @@ import {
   supplierProductQtyReadPort,
 } from "../adapters/purchasing-catalog-ports.js";
 import { supplierSkuMappingReadPort } from "../adapters/supplier-sku-mapping-read-port.js";
+import {
+  inMemoryUncoveredOpenDraftPurchaseOrderReadPort,
+  uncoveredOpenDraftPurchaseOrderReadPort,
+} from "../adapters/uncovered-open-draft-purchase-order-read-port.js";
+import {
+  uncoveredSkuDraftPurchaseOrderReadPort,
+  uncoveredSkuSupplierMappingReadPort,
+  uncoveredSkuSupplierReadPort,
+} from "../adapters/uncovered-sku-enrichment-read-ports.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
@@ -334,6 +346,7 @@ export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
   listPurchaseOrderGoodsReceived: ListPurchaseOrderGoodsReceivedUseCase;
   listUncoveredSkus: ListUncoveredSkusUseCase;
+  listUncoveredFactories: ListUncoveredFactoriesUseCase;
   reopenSkusForPresell: Pick<RecordReopenSkusForPresellUseCase, "execute">;
 };
 
@@ -382,7 +395,8 @@ export type AppServiceOverrides = {
   purchaseOrderRepo?: IPurchaseOrderRepository;
   supplierRepo?: ISupplierRepository;
   supplierProductRepo?: ISupplierProductRepository;
-  supplierSkuMapping?: ISupplierSkuMappingReadPort;
+  supplierSkuMapping?: import("@dc-inventory/purchasing").ISupplierSkuMappingReadPort;
+  openDraftPurchaseOrderRead?: IUncoveredOpenDraftPurchaseOrderReadPort;
   catalogSkuLookup?: ICatalogSkuLookupPort;
   factorySendCatalog?: IFactorySendCatalogPort;
   supplierProductQtyRead?: ISupplierProductQtyReadPort;
@@ -703,6 +717,7 @@ function inventoryServices(
   purchaseOrderRepo: IPurchaseOrderRepository,
   uncoveredList: IUncoveredListQuery,
   listUncoveredSkus: ListUncoveredSkusUseCase,
+  listUncoveredFactories: ListUncoveredFactoriesUseCase,
 ): InventoryHttpServices {
   return {
     getStockSnapshot: new GetStockSnapshotUseCase(unitOfWork.inventory.readModel),
@@ -711,6 +726,7 @@ function inventoryServices(
       new PurchaseOrderLookupAdapter(purchaseOrderRepo),
     ),
     listUncoveredSkus,
+    listUncoveredFactories,
     reopenSkusForPresell: {
       execute: (input: RecordReopenSkusForPresellRequest) =>
         unitOfWork.run((scope) =>
@@ -940,10 +956,28 @@ export function composeAppServices(
     (appDb
       ? uncoveredReorderPolicyReadPort(appDb)
       : new InMemoryUncoveredReorderPolicyReadPort());
+  const openDraftPurchaseOrderRead =
+    overrides.openDraftPurchaseOrderRead ??
+    (purchasingDb
+      ? uncoveredOpenDraftPurchaseOrderReadPort(purchasingDb)
+      : inMemoryUncoveredOpenDraftPurchaseOrderReadPort(purchaseOrderRepo));
+  const uncoveredSkuSupplierMapping = uncoveredSkuSupplierMappingReadPort(supplierSkuMapping);
+  const uncoveredSkuSupplier = uncoveredSkuSupplierReadPort(supplierRepo);
+  const uncoveredSkuDraftPurchaseOrder = uncoveredSkuDraftPurchaseOrderReadPort(
+    openDraftPurchaseOrderRead,
+  );
   const listUncoveredSkus = new ListUncoveredSkusUseCase(
     uncoveredList,
     uncoveredCaseQty,
     uncoveredReorderPolicy,
+    uncoveredSkuSupplierMapping,
+    uncoveredSkuSupplier,
+    uncoveredSkuDraftPurchaseOrder,
+  );
+  const listUncoveredFactories = new ListUncoveredFactoriesUseCase(
+    uncoveredList,
+    uncoveredSkuSupplierMapping,
+    uncoveredSkuSupplier,
   );
 
   return {
@@ -1047,7 +1081,13 @@ export function composeAppServices(
     ),
     accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
     licensing: licensingServices(licensingRepository),
-    inventory: inventoryServices(unitOfWork, purchaseOrderRepo, uncoveredList, listUncoveredSkus),
+    inventory: inventoryServices(
+      unitOfWork,
+      purchaseOrderRepo,
+      uncoveredList,
+      listUncoveredSkus,
+      listUncoveredFactories,
+    ),
     unitOfWork,
   };
 }

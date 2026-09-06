@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import type { PurchaseOrder } from "@dc-inventory/purchasing";
-import { Sku, StaffUserId } from "@dc-inventory/shared-kernel";
+import { Sku, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
   draftUncoveredPurchaseOrdersBodySchema,
   draftUncoveredPurchaseOrdersResponseSchema,
@@ -15,6 +15,9 @@ import {
   uncoveredSkusListQuerySchema,
   uncoveredSkusListResponseSchema,
   uncoveredSkusListTable,
+  uncoveredFactoriesListResponseSchema,
+  uncoveredFactoriesListTable,
+  uncoveredFactoriesListQuerySchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
@@ -146,11 +149,19 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
       } as FastifySchema & { "x-table": typeof uncoveredSkusListTable },
     },
     async (request) => {
-      const query = request.query as { page: number; pageSize: number };
+      const query = request.query as {
+        page: number;
+        pageSize: number;
+        supplierId?: string;
+        needsMapping?: boolean;
+      };
       const result = await request.server.inventory.listUncoveredSkus.execute({
         organizationId: staffOrganizationId(request),
         page: query.page,
         pageSize: query.pageSize,
+        supplierId:
+          query.supplierId === undefined ? undefined : SupplierId.parse(query.supplierId),
+        needsMapping: query.needsMapping,
       });
       return {
         items: result.items.map((row) => ({
@@ -162,10 +173,56 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
           caseQty: row.caseQty,
           reorderMin: row.reorderMin,
           reorderMax: row.reorderMax,
+          supplierId: row.supplierId,
+          supplierNumber: row.supplierNumber,
+          supplierName: row.supplierName,
+          mappingStatus: row.mappingStatus,
+          draftPurchaseOrder: row.draftPurchaseOrder,
         })),
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
+      };
+    },
+  );
+
+  routes.get(
+    "/uncovered-skus/factories",
+    {
+      schema: {
+        operationId: "listInternalUncoveredFactories",
+        tags: ["internal"],
+        summary: "List uncovered demand grouped by factory",
+        querystring: uncoveredFactoriesListQuerySchema,
+        response: {
+          200: uncoveredFactoriesListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+        },
+        "x-table": uncoveredFactoriesListTable,
+      } as FastifySchema & { "x-table": typeof uncoveredFactoriesListTable },
+    },
+    async (request) => {
+      const query = request.query as { page: number; pageSize: number };
+      const result = await request.server.inventory.listUncoveredFactories.execute({
+        organizationId: staffOrganizationId(request),
+      });
+      const total = result.items.length;
+      const offset = (query.page - 1) * query.pageSize;
+      const items = result.items.slice(offset, offset + query.pageSize);
+      return {
+        items: items.map((row) => ({
+          supplierId: row.supplierId,
+          supplierNumber: row.supplierNumber,
+          supplierName: row.supplierName,
+          productCount: row.productCount,
+          totalUncoveredUnits: row.totalUncoveredUnits,
+          needsMapping: row.needsMapping,
+        })),
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
       };
     },
   );

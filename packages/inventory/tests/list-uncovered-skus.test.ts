@@ -11,6 +11,11 @@ import {
   InMemoryUncoveredCaseQtyReadPort,
   InMemoryUncoveredReorderPolicyReadPort,
 } from "../src/adapters/in-memory-uncovered-stock-context.js";
+import {
+  InMemoryUncoveredSkuDraftPurchaseOrderReadPort,
+  InMemoryUncoveredSkuSupplierMappingReadPort,
+  InMemoryUncoveredSkuSupplierReadPort,
+} from "../src/adapters/in-memory-uncovered-sku-enrichment.js";
 import { ListUncoveredSkusUseCase } from "../src/application/list-uncovered-skus.js";
 import { computeUncovered } from "../src/domain/demand-model.js";
 import { demandModelHarness } from "./support/demand-model-harness.js";
@@ -36,13 +41,34 @@ function harness() {
   const uncoveredList = new InMemoryUncoveredListQuery(h.readModel);
   const caseQty = new InMemoryUncoveredCaseQtyReadPort();
   const reorderPolicies = new InMemoryUncoveredReorderPolicyReadPort();
+  const supplierMapping = new InMemoryUncoveredSkuSupplierMappingReadPort();
+  const suppliers = new InMemoryUncoveredSkuSupplierReadPort();
+  const openDraftPurchaseOrders = new InMemoryUncoveredSkuDraftPurchaseOrderReadPort();
   return {
     ...h,
     caseQty,
     reorderPolicies,
-    listUncovered: new ListUncoveredSkusUseCase(uncoveredList, caseQty, reorderPolicies),
+    supplierMapping,
+    suppliers,
+    openDraftPurchaseOrders,
+    listUncovered: new ListUncoveredSkusUseCase(
+      uncoveredList,
+      caseQty,
+      reorderPolicies,
+      supplierMapping,
+      suppliers,
+      openDraftPurchaseOrders,
+    ),
   };
 }
+
+const unmappedEnrichment = {
+  supplierId: null,
+  supplierNumber: null,
+  supplierName: null,
+  mappingStatus: "unmapped" as const,
+  draftPurchaseOrder: null,
+};
 
 describe("List uncovered SKUs — demand-to-PO query (ADA-180)", () => {
   it("lists open pre-sell with no PO at full committed qty", async () => {
@@ -74,6 +100,7 @@ describe("List uncovered SKUs — demand-to-PO query (ADA-180)", () => {
         caseQty: null,
         reorderMin: null,
         reorderMax: null,
+        ...unmappedEnrichment,
       },
     ]);
   });
@@ -305,6 +332,7 @@ describe("List uncovered SKUs — demand-to-PO query (ADA-180)", () => {
       caseQty: 100,
       reorderMin: 24,
       reorderMax: 120,
+      ...unmappedEnrichment,
     });
   });
 });

@@ -36,4 +36,24 @@ export class InMemoryUncoveredListQuery implements IUncoveredListQuery {
       total: rows.length,
     };
   }
+
+  async listAll(query: Omit<UncoveredListQuery, "page" | "pageSize">) {
+    const organizationId = requireOrganizationId(query.organizationId);
+    const locationId = query.locationId ?? LocationId.DEFAULT;
+    const rows = this.readModel
+      .listOrganizationSnapshots(organizationId, locationId)
+      .filter((row) => row.snapshot.uncovered > 0)
+      .map(
+        (row): UncoveredListCoreRow =>
+          Object.freeze({
+            sku: row.sku,
+            committed: row.snapshot.committed,
+            onHand: row.snapshot.onHand,
+            onOrder: row.snapshot.onOrder,
+            uncovered: row.snapshot.uncovered,
+          }),
+      );
+    rows.sort(compareRowsBySku);
+    return rows;
+  }
 }

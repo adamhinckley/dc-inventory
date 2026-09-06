@@ -40,6 +40,14 @@ const SKU_UNMAPPED = Sku.parse("UNCOVERED-HTTP-X");
 const SUPPLIER_A = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 const SUPPLIER_B = SupplierId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 
+const unmappedEnrichment = {
+  supplierId: null,
+  supplierNumber: null,
+  supplierName: null,
+  mappingStatus: "unmapped",
+  draftPurchaseOrder: null,
+};
+
 /** Mirrors apps/internal/src/lib/purchase-order-line-math.ts suggestedDraftPoQty. */
 function suggestedDraftPoQty(need: number, caseQty: number | null): number {
   if (need <= 0) {
@@ -277,6 +285,7 @@ describe("internal uncovered SKUs HTTP", () => {
           caseQty: 48,
           reorderMin: 12,
           reorderMax: 96,
+          ...unmappedEnrichment,
         },
       ],
       page: 1,
@@ -335,5 +344,102 @@ describe("internal uncovered SKUs HTTP", () => {
     });
     expect(missing.statusCode).toBe(401);
     expect(missing.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("lists factory summary rows with a needs-mapping bucket", async () => {
+    const app = await startUncoveredApp({ withDraftSuppliers: true });
+    const cookie = await staffCookie(app);
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/uncovered-skus/factories",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json()).toEqual({
+      items: [
+        {
+          supplierId: SUPPLIER_A,
+          supplierNumber: "V-A",
+          supplierName: "Factory A",
+          productCount: 1,
+          totalUncoveredUnits: 120,
+          needsMapping: false,
+        },
+        {
+          supplierId: SUPPLIER_B,
+          supplierNumber: "V-B",
+          supplierName: "Factory B",
+          productCount: 1,
+          totalUncoveredUnits: 40,
+          needsMapping: false,
+        },
+        {
+          supplierId: null,
+          supplierNumber: null,
+          supplierName: "Needs mapping",
+          productCount: 1,
+          totalUncoveredUnits: 25,
+          needsMapping: true,
+        },
+      ],
+      page: 1,
+      pageSize: 25,
+      total: 3,
+    });
+  });
+
+  it("filters enriched SKU rows by supplier and needsMapping and surfaces draft PO refs", async () => {
+    const app = await startUncoveredApp({ withDraftSuppliers: true });
+    const cookie = await staffCookie(app);
+    const drafted = await app.inject({
+      method: "POST",
+      url: "/internal/uncovered-skus/draft-purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { skus: [SKU.value] },
+    });
+    expect(drafted.statusCode).toBe(201);
+    const draftBody = drafted.json() as {
+      purchaseOrders: Array<{ id: string; documentNumber: string }>;
+    };
+
+    const bySupplier = await app.inject({
+      method: "GET",
+      url: `/internal/uncovered-skus?supplierId=${SUPPLIER_A}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(bySupplier.statusCode).toBe(200);
+    expect(bySupplier.json()).toMatchObject({
+      total: 1,
+      items: [
+        {
+          sku: SKU.value,
+          supplierId: SUPPLIER_A,
+          supplierNumber: "V-A",
+          supplierName: "Factory A",
+          mappingStatus: "mapped",
+          draftPurchaseOrder: {
+            id: draftBody.purchaseOrders[0]?.id,
+            documentNumber: draftBody.purchaseOrders[0]?.documentNumber,
+          },
+        },
+      ],
+    });
+
+    const needsMapping = await app.inject({
+      method: "GET",
+      url: "/internal/uncovered-skus?needsMapping=true",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(needsMapping.statusCode).toBe(200);
+    expect(needsMapping.json()).toMatchObject({
+      total: 1,
+      items: [
+        {
+          sku: SKU_UNMAPPED.value,
+          mappingStatus: "unmapped",
+          draftPurchaseOrder: null,
+        },
+      ],
+    });
   });
 });
