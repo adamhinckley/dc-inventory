@@ -247,7 +247,9 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         order.organizationId,
         order.documentNumber,
       );
-      await new DrizzleSalesOrderRepository(transactionalDb).persist(order);
+      const repo = new DrizzleSalesOrderRepository(transactionalDb);
+      const existing = await repo.findById(order.organizationId, order.id);
+      await repo.persist(order, existing);
     });
   }
 
@@ -261,13 +263,15 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         order.organizationId,
       );
       const numbered = { ...order, documentNumber };
-      await new DrizzleSalesOrderRepository(transactionalDb).persist(numbered);
+      await new DrizzleSalesOrderRepository(transactionalDb).persist(numbered, null);
       return numbered;
     });
   }
 
-  private async persist(order: SalesOrder): Promise<void> {
-    const existing = await this.findById(order.organizationId, order.id);
+  private async persist(
+    order: SalesOrder,
+    existing: SalesOrder | null,
+  ): Promise<void> {
     if (existing === null) {
       await this.db.insert(orders).values({
         id: order.id,
@@ -284,18 +288,7 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         shipPostal: order.shipPostal,
         shipCountry: order.shipCountry,
       });
-      for (const line of order.lines) {
-        await this.db.insert(orderLines).values({
-          id: line.id,
-          orderId: order.id,
-          sku: line.sku.value,
-          name: line.name,
-          qty: line.qty,
-          unitPriceCents: line.unitPrice.amountMinor,
-          currency: line.unitPrice.currency,
-          taxCategoryCode: line.taxCategoryCode,
-        });
-      }
+      await this.replaceOrderLines(order);
       return;
     }
 
@@ -316,31 +309,36 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
       })
       .where(eq(orders.id, order.id));
 
+    await this.replaceOrderLines(order);
+  }
+
+  private async replaceOrderLines(order: SalesOrder): Promise<void> {
     const nextLineIds = order.lines.map((line) => line.id);
     if (nextLineIds.length === 0) {
       await this.db.delete(orderLines).where(eq(orderLines.orderId, order.id));
-    } else {
-      await this.db
-        .delete(orderLines)
-        .where(
-          and(
-            eq(orderLines.orderId, order.id),
-            sql`${orderLines.id} not in (${sql.join(
-              nextLineIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
-          ),
-        );
+      return;
     }
 
-    for (const line of order.lines) {
-      const lineRows = await this.db
-        .select()
-        .from(orderLines)
-        .where(eq(orderLines.id, line.id))
-        .limit(1);
-      if (lineRows[0] === undefined) {
-        await this.db.insert(orderLines).values({
+    await this.db
+      .delete(orderLines)
+      .where(
+        and(
+          eq(orderLines.orderId, order.id),
+          sql`${orderLines.id} not in (${sql.join(
+            nextLineIds.map((id) => sql`${id}`),
+            sql`, `,
+          )})`,
+        ),
+      );
+
+    if (order.lines.length === 0) {
+      return;
+    }
+
+    await this.db
+      .insert(orderLines)
+      .values(
+        order.lines.map((line) => ({
           id: line.id,
           orderId: order.id,
           sku: line.sku.value,
@@ -349,21 +347,19 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
           unitPriceCents: line.unitPrice.amountMinor,
           currency: line.unitPrice.currency,
           taxCategoryCode: line.taxCategoryCode,
-        });
-      } else {
-        await this.db
-          .update(orderLines)
-          .set({
-            sku: line.sku.value,
-            name: line.name,
-            qty: line.qty,
-            unitPriceCents: line.unitPrice.amountMinor,
-            currency: line.unitPrice.currency,
-            taxCategoryCode: line.taxCategoryCode,
-            updatedAt: new Date(),
-          })
-          .where(eq(orderLines.id, line.id));
-      }
-    }
+        })),
+      )
+      .onConflictDoUpdate({
+        target: orderLines.id,
+        set: {
+          sku: sql`excluded.sku`,
+          name: sql`excluded.name`,
+          qty: sql`excluded.qty`,
+          unitPriceCents: sql`excluded.unit_price_cents`,
+          currency: sql`excluded.currency`,
+          taxCategoryCode: sql`excluded.tax_category_code`,
+          updatedAt: new Date(),
+        },
+      });
   }
 }

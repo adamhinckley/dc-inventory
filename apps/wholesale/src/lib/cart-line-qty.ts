@@ -72,6 +72,10 @@ export async function toReplaceLines(
   lines: readonly DraftCartLine[],
   lookupProductId: (sku: string, name: string) => Promise<string | null>,
 ): Promise<Array<{ productId: string; qty: number }> | null> {
+  const synced = linesForReplace(lines);
+  if (synced !== null) {
+    return synced;
+  }
   const next: Array<{ productId: string; qty: number }> = [];
   for (const line of lines) {
     const productId =
@@ -80,6 +84,20 @@ export async function toReplaceLines(
       return null;
     }
     next.push({ productId, qty: line.qty });
+  }
+  return next;
+}
+
+/** Sync path when every line already carries productId (normal cart flow). */
+export function linesForReplace(
+  lines: readonly DraftCartLine[],
+): Array<{ productId: string; qty: number }> | null {
+  const next: Array<{ productId: string; qty: number }> = [];
+  for (const line of lines) {
+    if (line.productId === undefined) {
+      return null;
+    }
+    next.push({ productId: line.productId, qty: line.qty });
   }
   return next;
 }

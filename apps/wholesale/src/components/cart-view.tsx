@@ -2,7 +2,6 @@
 
 import {
   getGetWholesaleCatalogProductQueryKey,
-  getListWholesaleSalesOrdersQueryKey,
   useGetWholesaleCatalogProduct,
   useListWholesaleSalesOrders,
   useReplaceWholesaleSalesOrderLines,
@@ -14,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   cartQtyCapMessage,
   cartQtyOverCap,
+  linesForReplace,
   parseCartQty,
   remainingDraftLines,
   toReplaceLines,
@@ -22,6 +22,12 @@ import { wholesaleShortageErrorMessage } from "../lib/confirm-shortage-message";
 import { shopDisplayAvailableQty } from "../lib/shop-availability";
 import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
 import { formatMoneyMinorUnits } from "../lib/format-money";
+import {
+  buildOptimisticDraftOrder,
+  readDraftCartList,
+  wholesaleDraftCartQueryKey,
+  writeDraftCartOrder,
+} from "../lib/wholesale-cart-cache";
 import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
 
 function lineSubtotalCents(qty: number, unitPriceCents: number): number {
@@ -155,6 +161,7 @@ export function CartView() {
   const replaceLines = useReplaceWholesaleSalesOrderLines();
   const qtyDialogRef = useRef<HTMLDialogElement>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [removingLineId, setRemovingLineId] = useState<string | null>(null);
   const [editingLine, setEditingLine] = useState<DraftLine | null>(null);
   const [qtyInput, setQtyInput] = useState("1");
@@ -203,20 +210,16 @@ export function CartView() {
     );
   }
 
-  const draftId = draft.id;
-  const draftLines = draft.lines;
+  const cartDraft = draft;
+
+  const draftId = cartDraft.id;
+  const draftLines = cartDraft.lines;
   const currency = draftLines[0]?.currency ?? "USD";
   const subtotalCents = draftLines.reduce(
     (sum, line) => sum + lineSubtotalCents(line.qty, line.unitPriceCents),
     0,
   );
-  const pending = replaceLines.isPending;
-
-  function invalidateCart() {
-    return queryClient.invalidateQueries({
-      queryKey: getListWholesaleSalesOrdersQueryKey(),
-    });
-  }
+  const pending = replaceLines.isPending || saving;
 
   function openQtyEditor(line: DraftLine) {
     setMessage(null);
@@ -225,6 +228,7 @@ export function CartView() {
   }
 
   async function persistLines(
+    currentDraft: typeof cartDraft,
     lines: Awaited<ReturnType<typeof toReplaceLines>>,
     failMessage: string,
     onSettled: () => void,
@@ -234,27 +238,50 @@ export function CartView() {
       setMessage(failMessage);
       return;
     }
-    replaceLines.mutate(
-      { id: draftId, data: { lines } },
-      {
-        onSuccess: async () => {
-          await invalidateCart();
-          onSettled();
-        },
-        onError: (error) => {
-          onSettled();
-          setMessage(wholesaleShortageErrorMessage(error, failMessage));
-        },
-      },
-    );
+
+    setSaving(true);
+    const previous = readDraftCartList(queryClient);
+    if (lines.length === 0) {
+      writeDraftCartOrder(queryClient, null);
+    } else {
+      writeDraftCartOrder(
+        queryClient,
+        buildOptimisticDraftOrder(currentDraft, lines),
+      );
+    }
+
+    try {
+      const response = await replaceLines.mutateAsync({
+        id: draftId,
+        data: { lines },
+      });
+      if (response.status === 200) {
+        if (response.data.status === "cancelled" || response.data.lines.length === 0) {
+          writeDraftCartOrder(queryClient, null);
+        } else {
+          writeDraftCartOrder(queryClient, response.data);
+        }
+      }
+      onSettled();
+    } catch (error) {
+      if (previous !== undefined) {
+        queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
+      }
+      onSettled();
+      setMessage(wholesaleShortageErrorMessage(error, failMessage));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function removeLine(lineId: string) {
     setMessage(null);
     setRemovingLineId(lineId);
     const remaining = remainingDraftLines(draftLines, lineId);
-    const lines = await toReplaceLines(remaining, lookupWholesaleProductId);
-    await persistLines(lines, "Could not remove item", () => {
+    const lines =
+      linesForReplace(remaining) ??
+      (await toReplaceLines(remaining, lookupWholesaleProductId));
+    persistLines(cartDraft, lines, "Could not remove item", () => {
       setRemovingLineId(null);
     });
   }
@@ -276,8 +303,9 @@ export function CartView() {
     const next = draftLines.map((line) =>
       line.id === editingLine.id ? { ...line, qty } : line,
     );
-    const lines = await toReplaceLines(next, lookupWholesaleProductId);
-    await persistLines(lines, "Could not update item", () => {
+    const lines =
+      linesForReplace(next) ?? (await toReplaceLines(next, lookupWholesaleProductId));
+    persistLines(cartDraft, lines, "Could not update item", () => {
       setEditingLine(null);
     });
   }

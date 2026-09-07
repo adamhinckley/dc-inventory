@@ -73,6 +73,10 @@ export type SupplierListPage = {
 export interface ISupplierRepository {
   list(query: ListSuppliersQuery): Promise<SupplierListPage>;
   findById(organizationId: OrganizationId, id: SupplierId): Promise<import("../supplier.js").Supplier | null>;
+  findByIds(
+    organizationId: OrganizationId,
+    ids: readonly SupplierId[],
+  ): Promise<ReadonlyMap<string, import("../supplier.js").Supplier>>;
   save(supplier: import("../supplier.js").Supplier): Promise<void>;
   findByVendorNumber(
     organizationId: OrganizationId,

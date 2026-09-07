@@ -69,6 +69,13 @@ function lookupProductId(
   return (sku) => request.server.catalog.lookupProductIdBySku(organizationId, sku);
 }
 
+function lookupProductIds(
+  request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
+): (skus: readonly string[]) => Promise<ReadonlyMap<string, string | null>> {
+  const organizationId = wholesaleOrganizationId(request);
+  return (skus) => request.server.catalog.lookupProductIdsBySkus(organizationId, skus);
+}
+
 function lookupCustomerName(
   request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
 ): (customerId: string) => Promise<string | null> {
@@ -95,7 +102,12 @@ function toSalesOrderBody(
   request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
   order: SalesOrder,
 ) {
-  return mapSalesOrder(order, lookupProductId(request), lookupCustomerName(request));
+  return mapSalesOrder(
+    order,
+    lookupProductId(request),
+    lookupCustomerName(request),
+    lookupProductIds(request),
+  );
 }
 
 function sendNotFound(reply: FastifyReply) {

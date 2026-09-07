@@ -1,5 +1,5 @@
 import { OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type {
   ISupplierRepository,
   ListSuppliersQuery,
@@ -57,6 +57,30 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
       .where(and(eq(suppliers.id, id), eq(suppliers.organizationId, organizationId)))
       .limit(1);
     return rows[0] === undefined ? null : toSupplier(rows[0]);
+  }
+
+  async findByIds(
+    organizationId: OrganizationId,
+    ids: readonly SupplierId[],
+  ): Promise<ReadonlyMap<string, Supplier>> {
+    const result = new Map<string, Supplier>();
+    if (ids.length === 0) {
+      return result;
+    }
+    const rows = await this.db
+      .select()
+      .from(suppliers)
+      .where(
+        and(
+          eq(suppliers.organizationId, organizationId),
+          inArray(suppliers.id, [...ids]),
+        ),
+      );
+    for (const row of rows) {
+      const supplier = toSupplier(row);
+      result.set(supplier.id, supplier);
+    }
+    return result;
   }
 
   async findByVendorNumber(

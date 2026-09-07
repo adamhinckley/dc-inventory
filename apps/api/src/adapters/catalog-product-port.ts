@@ -24,8 +24,22 @@ function toSnapshot(
   };
 }
 
+function snapshotsFromProducts(
+  products: ReadonlyMap<string, Product>,
+  qtyBySku: ReadonlyMap<string, { sellState: "open" | "locked"; availableToSell: number | null }>,
+  qtyRead: IQtyReadPort | undefined,
+): ReadonlyMap<string, ProductSnapshot> {
+  const result = new Map<string, ProductSnapshot>();
+  for (const [productId, product] of products) {
+    const qty =
+      qtyRead === undefined ? undefined : qtyBySku.get(product.sku.value);
+    result.set(productId, toSnapshot(product, qty));
+  }
+  return result;
+}
+
 export function catalogProductPort(
-  products: Pick<IProductRepository, "findById" | "findBySku">,
+  products: Pick<IProductRepository, "findById" | "findByIds" | "findBySku">,
   qtyRead?: IQtyReadPort,
 ): ICatalogProductPort {
   async function withQty(product: Product): Promise<ProductSnapshot> {
@@ -46,6 +60,24 @@ export function catalogProductPort(
         return null;
       }
       return withQty(product);
+    },
+    findByIds: async (
+      organizationId: OrganizationId,
+      productIds: readonly ProductId[],
+    ): Promise<ReadonlyMap<string, ProductSnapshot>> => {
+      if (productIds.length === 0) {
+        return new Map();
+      }
+      const loaded = await products.findByIds(organizationId, productIds);
+      if (loaded.size === 0) {
+        return new Map();
+      }
+      if (qtyRead === undefined) {
+        return snapshotsFromProducts(loaded, new Map(), undefined);
+      }
+      const skus = [...loaded.values()].map((product) => product.sku);
+      const qtyBySku = await qtyRead.readBySkus(organizationId, skus);
+      return snapshotsFromProducts(loaded, qtyBySku, qtyRead);
     },
     findBySku: async (
       organizationId: OrganizationId,

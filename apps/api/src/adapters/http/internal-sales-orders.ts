@@ -41,6 +41,14 @@ function lookupProductId(request: {
   return (sku) => request.server.catalog.lookupProductIdBySku(organizationId, sku);
 }
 
+function lookupProductIds(request: {
+  server: FastifyInstance;
+  staffAuth?: { staffUserId: string; organizationId: string };
+}): (skus: readonly string[]) => Promise<ReadonlyMap<string, string | null>> {
+  const organizationId = staffOrganizationId(request);
+  return (skus) => request.server.catalog.lookupProductIdsBySkus(organizationId, skus);
+}
+
 function lookupCustomerName(request: {
   server: FastifyInstance;
   staffAuth?: { staffUserId: string; organizationId: string };
@@ -71,7 +79,12 @@ function toSalesOrderBody(
   },
   order: SalesOrder,
 ) {
-  return mapSalesOrder(order, lookupProductId(request), lookupCustomerName(request));
+  return mapSalesOrder(
+    order,
+    lookupProductId(request),
+    lookupCustomerName(request),
+    lookupProductIds(request),
+  );
 }
 
 function sendNotFound(reply: FastifyReply) {

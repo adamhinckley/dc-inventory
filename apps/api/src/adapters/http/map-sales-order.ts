@@ -21,14 +21,23 @@ export async function mapSalesOrder(
   order: SalesOrder,
   lookupProductId: (sku: string) => Promise<string | null>,
   lookupCustomerName: (customerId: string) => Promise<string | null>,
+  lookupProductIds?: (skus: readonly string[]) => Promise<ReadonlyMap<string, string | null>>,
 ) {
   const customerName = await lookupCustomerName(order.customerId);
+  const skus = order.lines.map((line) => line.sku.value);
+  const productIdsBySku =
+    lookupProductIds !== undefined && skus.length > 0
+      ? await lookupProductIds(skus)
+      : undefined;
+
   const lines = await Promise.all(
     order.lines.map(async (line) => {
-      const productId = await lookupProductId(line.sku.value);
+      const productId =
+        productIdsBySku?.get(line.sku.value) ??
+        (await lookupProductId(line.sku.value));
       return {
         id: line.id,
-        ...(productId !== null ? { productId } : {}),
+        ...(productId !== null && productId !== undefined ? { productId } : {}),
         sku: line.sku.value,
         name: line.name,
         qty: line.qty,

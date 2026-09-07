@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  getListWholesaleSalesOrdersQueryKey,
   useCreateWholesaleSalesOrder,
   useListWholesaleSalesOrders,
   useReplaceWholesaleSalesOrderLines,
@@ -12,6 +11,7 @@ import {
   cartQtyCapMessage,
   cartQtyOverCap,
   findDraftCartLine,
+  linesForReplace,
   parseCartQty,
   toReplaceLines,
 } from "../lib/cart-line-qty";
@@ -21,11 +21,20 @@ import {
   shopDisplayAvailableQty,
   type ShopSellState,
 } from "../lib/shop-availability";
+import {
+  buildOptimisticDraftOrder,
+  readDraftCartList,
+  wholesaleDraftCartQueryKey,
+  writeDraftCartOrder,
+  type OptimisticLineMeta,
+} from "../lib/wholesale-cart-cache";
 import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
 
 export type AddToCartButtonProps = {
   productId: string;
   name: string;
+  unitPriceCents?: number;
+  currency?: string;
   disabled?: boolean;
   available: number;
   availableToSell: number | null;
@@ -50,6 +59,8 @@ function CartRecordedIcon() {
 export function AddToCartButton({
   productId,
   name,
+  unitPriceCents = 0,
+  currency = "USD",
   disabled = false,
   available,
   availableToSell,
@@ -64,6 +75,7 @@ export function AddToCartButton({
   const [qtyInput, setQtyInput] = useState("1");
   const [qtyTouched, setQtyTouched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
 
   const draft =
     cart.data?.data && "items" in cart.data.data ? cart.data.data.items[0] : undefined;
@@ -71,7 +83,6 @@ export function AddToCartButton({
     draft === undefined ? undefined : findDraftCartLine(draft.lines, productId, name);
   const inCart = cartLine !== undefined;
   const cartQty = cartLine?.qty ?? null;
-  const pending = createOrder.isPending || replaceLines.isPending;
   const inputDisabled = pending || (disabled && !inCart);
 
   useEffect(() => {
@@ -90,22 +101,8 @@ export function AddToCartButton({
     setQtyInput(String(cartQty));
   }, [cartQty, qtyTouched, maxQty]);
 
-  function invalidateCart() {
-    return queryClient.invalidateQueries({
-      queryKey: getListWholesaleSalesOrdersQueryKey(),
-    });
-  }
-
-  function applyQtyInput(raw: string) {
-    setQtyTouched(true);
-    const parsed = parseCartQty(raw);
-    if (parsed !== null && parsed > 0 && maxQty !== null && cartQtyOverCap(parsed, maxQty)) {
-      setQtyInput(String(maxQty));
-      setMessage(cartQtyCapMessage(maxQty));
-      return;
-    }
-    setQtyInput(raw);
-    setMessage(null);
+  function lineMeta(): OptimisticLineMeta {
+    return { name, unitPriceCents, currency, sku: cartLine?.sku };
   }
 
   async function addToCart() {
@@ -119,51 +116,82 @@ export function AddToCartButton({
       return;
     }
     setMessage(null);
+    setPending(true);
 
-    if (draft !== undefined) {
-      if (inCart && qty === cartQty) {
-        setMessage("In cart");
-        return;
-      }
-      const others = draft.lines.filter((line) => line !== cartLine);
-      const nextLines =
-        qty === 0
-          ? others
-          : [...others, { productId, sku: cartLine?.sku ?? "", name, qty }];
-      const lines = await toReplaceLines(nextLines, lookupWholesaleProductId);
-      if (lines === null) {
-        setMessage("Could not update cart");
-        return;
-      }
-      replaceLines.mutate(
-        { id: draft.id, data: { lines } },
-        {
-          onSuccess: async () => {
-            await invalidateCart();
-            setQtyTouched(false);
-            setMessage(qty === 0 ? "Removed from cart" : "Updated cart");
-          },
-          onError: (error) => {
-            setMessage(wholesaleShortageErrorMessage(error, "Could not update cart"));
-          },
-        },
-      );
-      return;
-    }
+    try {
+      if (draft !== undefined) {
+        if (inCart && qty === cartQty) {
+          setMessage("In cart");
+          return;
+        }
+        const others = draft.lines.filter((line) => line !== cartLine);
+        const nextLines =
+          qty === 0
+            ? others
+            : [
+                ...others,
+                {
+                  productId,
+                  sku: cartLine?.sku ?? "",
+                  name,
+                  qty,
+                },
+              ];
+        const lines =
+          linesForReplace(nextLines) ??
+          (await toReplaceLines(nextLines, lookupWholesaleProductId));
+        if (lines === null) {
+          setMessage("Could not update cart");
+          return;
+        }
 
-    createOrder.mutate(
-      { data: { lines: [{ productId, qty }] } },
-      {
-        onSuccess: async () => {
-          await invalidateCart();
+        const previous = readDraftCartList(queryClient);
+        writeDraftCartOrder(
+          queryClient,
+          buildOptimisticDraftOrder(
+            draft,
+            lines,
+            new Map([[productId, lineMeta()]]),
+          ),
+        );
+
+        try {
+          const response = await replaceLines.mutateAsync({
+            id: draft.id,
+            data: { lines },
+          });
+          if (response.status === 200) {
+            writeDraftCartOrder(queryClient, response.data);
+          }
           setQtyTouched(false);
-          setMessage("Added to cart");
-        },
-          onError: (error) => {
-            setMessage(wholesaleShortageErrorMessage(error, "Could not add to cart"));
-          },
-      },
-    );
+          setMessage(qty === 0 ? "Removed from cart" : "Updated cart");
+        } catch (error) {
+          if (previous !== undefined) {
+            queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
+          }
+          setMessage(wholesaleShortageErrorMessage(error, "Could not update cart"));
+        }
+        return;
+      }
+
+      const response = await createOrder.mutateAsync({
+        data: { lines: [{ productId, qty }] },
+      });
+      if (response.status === 201) {
+        writeDraftCartOrder(queryClient, response.data);
+      }
+      setQtyTouched(false);
+      setMessage("Added to cart");
+    } catch (error) {
+      setMessage(
+        wholesaleShortageErrorMessage(
+          error,
+          draft === undefined ? "Could not add to cart" : "Could not update cart",
+        ),
+      );
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -188,7 +216,16 @@ export function AddToCartButton({
             value={qtyInput}
             disabled={inputDisabled}
             onChange={(event) => {
-              applyQtyInput(event.target.value);
+              const raw = event.target.value;
+              const parsed = parseCartQty(raw);
+              if (parsed !== null && maxQty !== null && cartQtyOverCap(parsed, maxQty)) {
+                setQtyInput(String(maxQty));
+                setMessage(cartQtyCapMessage(maxQty));
+                return;
+              }
+              setQtyTouched(true);
+              setQtyInput(raw);
+              setMessage(null);
             }}
             className="shop-input min-h-0 w-[calc(7ch+4.25rem)] max-w-[calc(7ch+4.25rem)] shrink-0 py-2.5 pl-9 text-center tabular-nums"
           />
@@ -196,7 +233,9 @@ export function AddToCartButton({
         <button
           type="button"
           disabled={inputDisabled || pending}
-          onClick={addToCart}
+          onClick={() => {
+            void addToCart();
+          }}
           className="inline-flex min-h-0 flex-1 items-center justify-center rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending
