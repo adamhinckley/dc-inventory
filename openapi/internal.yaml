@@ -2889,6 +2889,14 @@ paths:
           in: query
           name: pageSize
           required: false
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          in: query
+          name: excludeSuppliersWithOpenDraft
+          required: false
       x-table:
         rowId: id
         columns:

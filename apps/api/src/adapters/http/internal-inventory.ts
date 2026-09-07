@@ -204,9 +204,14 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
       } as FastifySchema & { "x-table": typeof uncoveredFactoriesListTable },
     },
     async (request) => {
-      const query = request.query as { page: number; pageSize: number };
+      const query = request.query as {
+        page: number;
+        pageSize: number;
+        excludeSuppliersWithOpenDraft?: boolean;
+      };
       const result = await request.server.inventory.listUncoveredFactories.execute({
         organizationId: staffOrganizationId(request),
+        excludeSuppliersWithOpenDraft: query.excludeSuppliersWithOpenDraft,
       });
       const total = result.items.length;
       const offset = (query.page - 1) * query.pageSize;

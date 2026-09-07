@@ -1,9 +1,17 @@
-import { LocationId, OrganizationId, requireOrganizationId, type SupplierId } from "@dc-inventory/shared-kernel";
+import {
+  LocationId,
+  OrganizationId,
+  requireOrganizationId,
+  type Sku,
+  type SupplierId,
+} from "@dc-inventory/shared-kernel";
 import type { IUncoveredListQuery } from "../domain/ports/uncovered-list-query.js";
 import type {
+  IUncoveredSkuDraftPurchaseOrderReadPort,
   IUncoveredSkuSupplierMappingReadPort,
   IUncoveredSkuSupplierReadPort,
 } from "../domain/ports/uncovered-sku-enrichment.js";
+import { uncoveredSkuDraftKey } from "../domain/ports/uncovered-sku-enrichment.js";
 
 export const UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID = "needs-mapping";
 
@@ -20,6 +28,7 @@ export type UncoveredFactorySummaryRow = Readonly<{
 export type ListUncoveredFactoriesRequest = {
   organizationId: OrganizationId;
   locationId?: LocationId;
+  excludeSuppliersWithOpenDraft?: boolean;
 };
 
 export type ListUncoveredFactoriesResult = {
@@ -31,6 +40,7 @@ export class ListUncoveredFactoriesUseCase {
     private readonly uncoveredList: IUncoveredListQuery,
     private readonly supplierMapping: IUncoveredSkuSupplierMappingReadPort,
     private readonly suppliers: IUncoveredSkuSupplierReadPort,
+    private readonly openDraftPurchaseOrders: IUncoveredSkuDraftPurchaseOrderReadPort,
   ) {}
 
   async execute(input: ListUncoveredFactoriesRequest): Promise<ListUncoveredFactoriesResult> {
@@ -46,6 +56,7 @@ export class ListUncoveredFactoriesUseCase {
     );
 
     const bySupplier = new Map<SupplierId, { productCount: number; totalUncoveredUnits: number }>();
+    const supplierSkus = new Map<SupplierId, Sku[]>();
     let needsMappingProductCount = 0;
     let needsMappingUnits = 0;
 
@@ -62,6 +73,9 @@ export class ListUncoveredFactoriesUseCase {
         existing.productCount += 1;
         existing.totalUncoveredUnits += row.uncovered;
         bySupplier.set(mapping.supplierId, existing);
+        const skus = supplierSkus.get(mapping.supplierId) ?? [];
+        skus.push(row.sku);
+        supplierSkus.set(mapping.supplierId, skus);
         continue;
       }
       needsMappingProductCount += 1;
@@ -99,6 +113,33 @@ export class ListUncoveredFactoriesUseCase {
         totalUncoveredUnits: needsMappingUnits,
         needsMapping: true,
       });
+    }
+
+    if (input.excludeSuppliersWithOpenDraft === true && supplierSkus.size > 0) {
+      const draftLookupRows = [...supplierSkus.entries()].flatMap(([supplierId, skus]) =>
+        skus.map((sku) => ({ supplierId, sku })),
+      );
+      const openDrafts = await this.openDraftPurchaseOrders.findOpenDraftsForSupplierSkus(
+        organizationId,
+        draftLookupRows,
+      );
+      const suppliersWithOpenDraft = new Set<SupplierId>();
+      for (const [supplierId, skus] of supplierSkus) {
+        for (const sku of skus) {
+          if (openDrafts.has(uncoveredSkuDraftKey(supplierId, sku))) {
+            suppliersWithOpenDraft.add(supplierId);
+            break;
+          }
+        }
+      }
+      return {
+        items: items.filter(
+          (row) =>
+            row.needsMapping ||
+            row.supplierId === null ||
+            !suppliersWithOpenDraft.has(row.supplierId),
+        ),
+      };
     }
 
     return { items };

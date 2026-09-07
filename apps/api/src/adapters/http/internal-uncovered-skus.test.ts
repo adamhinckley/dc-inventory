@@ -444,6 +444,58 @@ describe("internal uncovered SKUs HTTP", () => {
     });
   });
 
+  it("omits factories with open draft POs when excludeSuppliersWithOpenDraft is true", async () => {
+    const app = await startUncoveredApp({ withDraftSuppliers: true });
+    const cookie = await staffCookie(app);
+    const drafted = await app.inject({
+      method: "POST",
+      url: "/internal/uncovered-skus/draft-purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { skus: [SKU.value] },
+    });
+    expect(drafted.statusCode).toBe(201);
+
+    const unfiltered = await app.inject({
+      method: "GET",
+      url: "/internal/uncovered-skus/factories",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(unfiltered.statusCode).toBe(200);
+    expect((unfiltered.json() as { total: number }).total).toBe(3);
+
+    const filtered = await app.inject({
+      method: "GET",
+      url: "/internal/uncovered-skus/factories?excludeSuppliersWithOpenDraft=true",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json()).toEqual({
+      items: [
+        {
+          id: SUPPLIER_B,
+          supplierId: SUPPLIER_B,
+          supplierNumber: "V-B",
+          supplierName: "Factory B",
+          productCount: 1,
+          totalUncoveredUnits: 40,
+          needsMapping: false,
+        },
+        {
+          id: UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
+          supplierId: null,
+          supplierNumber: null,
+          supplierName: "Needs mapping",
+          productCount: 1,
+          totalUncoveredUnits: 25,
+          needsMapping: true,
+        },
+      ],
+      page: 1,
+      pageSize: 25,
+      total: 2,
+    });
+  });
+
   it("filters enriched SKU rows by supplier and needsMapping and surfaces draft PO refs", async () => {
     const app = await startUncoveredApp({ withDraftSuppliers: true });
     const cookie = await staffCookie(app);
