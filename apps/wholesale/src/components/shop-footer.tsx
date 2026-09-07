@@ -4,12 +4,6 @@ import { company, legalDocs } from "../lib/company";
 export function ShopFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-canvas-muted">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/brand/footer.jpg"
-        alt=""
-        className="h-44 w-full object-cover object-right sm:h-56"
-      />
       <div className="px-6 py-8">
         <div className="shop-social-band">
           <p className="shop-social-band-title">Let's Be Friends</p>
