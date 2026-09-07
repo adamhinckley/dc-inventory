@@ -325,7 +325,11 @@ export function Purchasing2UncoveredDetail({
         return;
       }
       await invalidateUncoveredQueries();
-      await syncPurchasing2DraftPurchaseOrders(queryClient, [factoryId]);
+      try {
+        await syncPurchasing2DraftPurchaseOrders(queryClient, [factoryId]);
+      } catch {
+        // Ignore a failed resync after a successful Save Draft.
+      }
       const next = afterDraftUncoveredPos(
         result.data.purchaseOrders,
         result.data.unmappedSkus,
@@ -354,6 +358,7 @@ export function Purchasing2UncoveredDetail({
     factoryId,
     invalidateUncoveredQueries,
     needsMapping,
+    queryClient,
     router,
     supplierNamesById,
   ]);

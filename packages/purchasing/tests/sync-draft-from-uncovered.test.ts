@@ -374,6 +374,46 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     expect(skipped?.lines[0]?.qty).toBe(1);
   });
 
+  it("returns invalid when replace lines fails", async () => {
+    const h = await harness();
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+
+    seedUncovered(h, [
+      { sku: SKU_A, uncovered: 12, committed: 12, onHand: 0, onOrder: 0 },
+    ]);
+
+    const created = await h.createPurchaseOrder.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      lines: [{ sku: SKU_A.value, qty: 48 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    h.catalog.set(DEFAULT_ORG, SKU_A.value, "Widget A", { archived: true });
+
+    const result = await h.syncDrafts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+    });
+
+    expect(result).toEqual({ ok: false, reason: "invalid" });
+
+    const unchanged = await h.uow.purchaseOrders.findById(
+      DEFAULT_ORG,
+      created.purchaseOrder.id,
+    );
+    expect(unchanged?.lines[0]?.qty).toBe(48);
+  });
+
   it("returns an empty list when no draft purchase orders exist", async () => {
     const h = await harness();
     const result = await h.syncDrafts.execute({

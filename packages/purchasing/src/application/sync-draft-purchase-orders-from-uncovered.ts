@@ -121,9 +121,10 @@ export class SyncDraftPurchaseOrdersFromUncoveredUseCase {
         lines,
       });
 
-      if (replaced.ok) {
-        synced.push(replaced.purchaseOrder);
+      if (!replaced.ok) {
+        return { ok: false, reason: "invalid" };
       }
+      synced.push(replaced.purchaseOrder);
     }
 
     return { ok: true, purchaseOrders: synced };
