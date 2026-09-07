@@ -1,12 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { carouselSlides } from "../lib/carousel-slides";
 
 const AUTO_ADVANCE_MS = 5000;
+const FADE_MS = 700;
 
 export function HeroCarousel() {
   const [index, setIndex] = useState(0);
+  const [outgoingIndex, setOutgoingIndex] = useState<number | null>(null);
+  const [incomingReady, setIncomingReady] = useState(true);
+  const previousIndexRef = useRef(index);
+
+  useEffect(() => {
+    if (previousIndexRef.current === index) {
+      return;
+    }
+
+    setOutgoingIndex(previousIndexRef.current);
+    previousIndexRef.current = index;
+    setIncomingReady(false);
+    const raf = requestAnimationFrame(() => setIncomingReady(true));
+    return () => cancelAnimationFrame(raf);
+  }, [index]);
+
+  useEffect(() => {
+    if (outgoingIndex === null) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setOutgoingIndex(null), FADE_MS);
+    return () => window.clearTimeout(timer);
+  }, [outgoingIndex, index]);
 
   useEffect(() => {
     if (carouselSlides.length <= 1) {
@@ -24,6 +49,16 @@ export function HeroCarousel() {
     return () => window.clearInterval(timer);
   }, [index]);
 
+  useEffect(() => {
+    if (carouselSlides.length <= 1) {
+      return;
+    }
+
+    const nextIndex = (index + 1) % carouselSlides.length;
+    const preload = new Image();
+    preload.src = carouselSlides[nextIndex]?.src ?? "";
+  }, [index]);
+
   const slide = carouselSlides[index] ?? carouselSlides[0];
 
   if (!slide) {
@@ -34,11 +69,19 @@ export function HeroCarousel() {
     setIndex((next + carouselSlides.length) % carouselSlides.length);
   }
 
+  const visibleIndices =
+    outgoingIndex === null ? [index] : [index, outgoingIndex];
+
   return (
     <section aria-roledescription="carousel" aria-label="Featured photography">
       <div className="mx-auto w-full max-w-[var(--max-width-content)]">
         <div className="relative aspect-[1730/900] w-full overflow-hidden bg-canvas-muted">
-          {carouselSlides.map((item, slideIndex) => {
+          {visibleIndices.map((slideIndex) => {
+            const item = carouselSlides[slideIndex];
+            if (!item) {
+              return null;
+            }
+
             const isActive = slideIndex === index;
             return (
               // eslint-disable-next-line @next/next/no-img-element
@@ -47,8 +90,14 @@ export function HeroCarousel() {
                 src={item.src}
                 alt={isActive ? item.alt : ""}
                 aria-hidden={!isActive}
+                fetchPriority={slideIndex === 0 ? "high" : undefined}
+                loading={slideIndex === 0 ? "eager" : "lazy"}
                 className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ease-in-out ${
-                  isActive ? "opacity-100" : "opacity-0"
+                  isActive
+                    ? incomingReady
+                      ? "opacity-100"
+                      : "opacity-0"
+                    : "opacity-0"
                 }`}
               />
             );
