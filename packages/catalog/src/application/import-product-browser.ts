@@ -14,6 +14,7 @@ import type {
 import type {
   ISupplierLinkPort,
   SupplierLinkRequest,
+  SupplierLinkResult,
 } from "../domain/ports/supplier-link.js";
 import type { WorkbookRow } from "../domain/ports/workbook-parser.js";
 import type { Product } from "../domain/product.js";
@@ -271,7 +272,26 @@ export class ImportProductBrowserUseCase {
     const linkRows = prepared.filter(
       (row) => packagingSaved.has(row.rowNumber) && row.link !== null,
     ) as Array<PreparedRow & { link: SupplierLinkRequest }>;
-    const linkResults = await this.suppliers.linkSkus(linkRows.map((row) => row.link));
+    let linkResults: readonly SupplierLinkResult[];
+    try {
+      linkResults = await this.suppliers.linkSkus(linkRows.map((row) => row.link));
+    } catch {
+      for (const row of linkRows) {
+        errors.push({
+          row: row.rowNumber,
+          field: "vendor",
+          message: "Vendor SKU could not be assigned",
+        });
+      }
+      return {
+        dryRun: false,
+        rowsOk: valid.length,
+        created,
+        updated,
+        linked: 0,
+        errors,
+      };
+    }
     let linked = 0;
     for (const [index, row] of linkRows.entries()) {
       const result = linkResults[index];

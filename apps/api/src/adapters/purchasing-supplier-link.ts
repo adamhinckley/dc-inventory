@@ -45,7 +45,7 @@ export class PurchasingSupplierLinkAdapter implements ISupplierLinkPort {
   constructor(
     private readonly suppliers: ISupplierRepository,
     private readonly supplierProducts: ISupplierProductRepository,
-    _catalog: ICatalogSkuLookupPort,
+    private readonly catalog: ICatalogSkuLookupPort,
   ) {
     this.createSupplier = new CreateSupplierUseCase(suppliers);
     this.updateSupplier = new UpdateSupplierUseCase(suppliers);
@@ -66,6 +66,7 @@ export class PurchasingSupplierLinkAdapter implements ISupplierLinkPort {
     const existingVendors = await this.suppliers.findByVendorNumbers(organizationId, vendorNumbers);
     const vendorToSupplierId = new Map<string, SupplierId>();
     const failedVendors = new Set<string>();
+    const failedVendorUpdates = new Set<string>();
 
     for (const vendorNumber of vendorNumbers) {
       const sample = inputs.find((input) => input.vendorNumber === vendorNumber);
@@ -81,10 +82,14 @@ export class PurchasingSupplierLinkAdapter implements ISupplierLinkPort {
           vendorNumber,
         });
         if (!created.ok) {
-          failedVendors.add(vendorNumber);
-          continue;
+          supplier = await this.suppliers.findByVendorNumber(organizationId, vendorNumber);
+          if (supplier === null) {
+            failedVendors.add(vendorNumber);
+            continue;
+          }
+        } else {
+          supplier = created.supplier;
         }
-        supplier = created.supplier;
       } else if (supplier.name !== sample.vendorName) {
         const updated = await this.updateSupplier.execute({
           organizationId,
@@ -93,26 +98,45 @@ export class PurchasingSupplierLinkAdapter implements ISupplierLinkPort {
           name: sample.vendorName,
         });
         if (!updated.ok) {
-          failedVendors.add(vendorNumber);
+          failedVendorUpdates.add(vendorNumber);
           continue;
         }
       }
       vendorToSupplierId.set(vendorNumber, supplier.id);
     }
 
-    const supplierIds = [...new Set(vendorToSupplierId.values())];
-    const existingProducts = await this.supplierProducts.listBySupplierIds(supplierIds);
+    const prefetchPairs: Array<{ supplierId: SupplierId; sku: Sku }> = [];
+    for (const input of inputs) {
+      if (failedVendors.has(input.vendorNumber) || failedVendorUpdates.has(input.vendorNumber)) {
+        continue;
+      }
+      const supplierId = vendorToSupplierId.get(input.vendorNumber);
+      if (supplierId === undefined) {
+        continue;
+      }
+      try {
+        prefetchPairs.push({ supplierId, sku: Sku.parse(input.sku) });
+      } catch {
+        continue;
+      }
+    }
+    const existingProducts = await this.supplierProducts.findBySupplierSkuPairs(prefetchPairs);
     const bySupplierSku = new Map<string, SupplierProduct>();
     for (const product of existingProducts) {
       bySupplierSku.set(`${product.supplierId}:${product.sku.value}`, product);
     }
 
+    const catalogChecked = new Map<string, boolean>();
     const results: SupplierLinkResult[] = [];
     const pending: Array<{ product: SupplierProduct; resultIndex: number }> = [];
 
     for (const input of inputs) {
       if (failedVendors.has(input.vendorNumber)) {
         results.push({ ok: false, message: "Vendor could not be created" });
+        continue;
+      }
+      if (failedVendorUpdates.has(input.vendorNumber)) {
+        results.push({ ok: false, message: "Vendor could not be updated" });
         continue;
       }
       const supplierId = vendorToSupplierId.get(input.vendorNumber);
@@ -124,6 +148,17 @@ export class PurchasingSupplierLinkAdapter implements ISupplierLinkPort {
       try {
         sku = Sku.parse(input.sku);
       } catch {
+        results.push({ ok: false, message: "Vendor SKU could not be assigned" });
+        continue;
+      }
+      const catalogKey = sku.value;
+      let catalogKnown = catalogChecked.get(catalogKey);
+      if (catalogKnown === undefined) {
+        const catalogRow = await this.catalog.findBySku(organizationId, sku);
+        catalogKnown = catalogRow !== null;
+        catalogChecked.set(catalogKey, catalogKnown);
+      }
+      if (!catalogKnown) {
         results.push({ ok: false, message: "Vendor SKU could not be assigned" });
         continue;
       }

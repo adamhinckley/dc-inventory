@@ -59,9 +59,12 @@ export class InMemorySupplierProductRepository implements ISupplierProductReposi
     return this.bySupplierSku.get(this.supplierSkuKey(supplierId, sku)) ?? null;
   }
 
-  async listBySupplierIds(supplierIds: readonly SupplierId[]): Promise<readonly SupplierProduct[]> {
-    const allowed = new Set(supplierIds);
-    return [...this.byId.values()].filter((row) => allowed.has(row.supplierId));
+  async findBySupplierSkuPairs(
+    pairs: readonly { supplierId: SupplierId; sku: Sku }[],
+  ): Promise<readonly SupplierProduct[]> {
+    return pairs
+      .map((pair) => this.bySupplierSku.get(this.supplierSkuKey(pair.supplierId, pair.sku)))
+      .filter((row): row is SupplierProduct => row !== undefined);
   }
 
   async save(product: SupplierProduct): Promise<void> {

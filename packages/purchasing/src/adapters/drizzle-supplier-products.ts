@@ -10,6 +10,16 @@ import type { SupplierProduct } from "../domain/supplier-product.js";
 import { supplierProducts } from "../persistence/schema.js";
 import type { PurchasingDrizzle } from "./drizzle-purchase-orders.js";
 
+const QUERY_BATCH_SIZE = 500;
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    out.push(items.slice(index, index + size));
+  }
+  return out;
+}
+
 function toSupplierProduct(row: typeof supplierProducts.$inferSelect): SupplierProduct {
   return {
     id: SupplierProductId.parse(row.id),
@@ -85,15 +95,30 @@ export class DrizzleSupplierProductRepository implements ISupplierProductReposit
     return rows[0] === undefined ? null : toSupplierProduct(rows[0]);
   }
 
-  async listBySupplierIds(supplierIds: readonly SupplierId[]): Promise<readonly SupplierProduct[]> {
-    if (supplierIds.length === 0) {
+  async findBySupplierSkuPairs(
+    pairs: readonly { supplierId: SupplierId; sku: Sku }[],
+  ): Promise<readonly SupplierProduct[]> {
+    if (pairs.length === 0) {
       return [];
     }
-    const rows = await this.db
-      .select()
-      .from(supplierProducts)
-      .where(inArray(supplierProducts.supplierId, [...supplierIds]));
-    return rows.map(toSupplierProduct);
+    const results: SupplierProduct[] = [];
+    for (const batch of chunks(pairs, QUERY_BATCH_SIZE)) {
+      const rows = await this.db
+        .select()
+        .from(supplierProducts)
+        .where(
+          or(
+            ...batch.map((pair) =>
+              and(
+                eq(supplierProducts.supplierId, pair.supplierId),
+                eq(supplierProducts.sku, pair.sku.value),
+              ),
+            ),
+          ),
+        );
+      results.push(...rows.map(toSupplierProduct));
+    }
+    return results;
   }
 
   async save(product: SupplierProduct): Promise<void> {
