@@ -301,6 +301,11 @@ import type {
   ShipInternalSalesOrder404,
   ShipInternalSalesOrder409,
   ShipInternalSalesOrderBody,
+  SyncInternalPurchaseOrdersFromUncovered200,
+  SyncInternalPurchaseOrdersFromUncovered400,
+  SyncInternalPurchaseOrdersFromUncovered401,
+  SyncInternalPurchaseOrdersFromUncovered403,
+  SyncInternalPurchaseOrdersFromUncoveredBody,
   UnlinkInternalSupplierProduct204,
   UnlinkInternalSupplierProduct400,
   UnlinkInternalSupplierProduct401,
@@ -4162,6 +4167,112 @@ export const useCreateInternalPurchaseOrder = <TError = CreateInternalPurchaseOr
         TContext
       > => {
       return useMutation(getCreateInternalPurchaseOrderMutationOptions(options));
+    }
+
+export type syncInternalPurchaseOrdersFromUncoveredResponse200 = {
+  data: SyncInternalPurchaseOrdersFromUncovered200
+  status: 200
+}
+
+export type syncInternalPurchaseOrdersFromUncoveredResponse400 = {
+  data: SyncInternalPurchaseOrdersFromUncovered400
+  status: 400
+}
+
+export type syncInternalPurchaseOrdersFromUncoveredResponse401 = {
+  data: SyncInternalPurchaseOrdersFromUncovered401
+  status: 401
+}
+
+export type syncInternalPurchaseOrdersFromUncoveredResponse403 = {
+  data: SyncInternalPurchaseOrdersFromUncovered403
+  status: 403
+}
+
+export type syncInternalPurchaseOrdersFromUncoveredResponseSuccess = (syncInternalPurchaseOrdersFromUncoveredResponse200) & {
+  headers: Headers;
+};
+export type syncInternalPurchaseOrdersFromUncoveredResponseError = (syncInternalPurchaseOrdersFromUncoveredResponse400 | syncInternalPurchaseOrdersFromUncoveredResponse401 | syncInternalPurchaseOrdersFromUncoveredResponse403) & {
+  headers: Headers;
+};
+
+export type syncInternalPurchaseOrdersFromUncoveredResponse = (syncInternalPurchaseOrdersFromUncoveredResponseSuccess | syncInternalPurchaseOrdersFromUncoveredResponseError)
+
+export const getSyncInternalPurchaseOrdersFromUncoveredUrl = () => {
+
+
+
+
+  return `/internal/purchase-orders/sync-from-uncovered`
+}
+
+/**
+ * @summary Sync open draft purchase order lines from current uncovered SKUs
+ */
+export const syncInternalPurchaseOrdersFromUncovered = async (syncInternalPurchaseOrdersFromUncoveredBody: SyncInternalPurchaseOrdersFromUncoveredBody, options?: Parameters<typeof customFetch>[1]): Promise<syncInternalPurchaseOrdersFromUncoveredResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<syncInternalPurchaseOrdersFromUncoveredResponse>(getSyncInternalPurchaseOrdersFromUncoveredUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(syncInternalPurchaseOrdersFromUncoveredBody)
+  }
+);}
+
+
+
+
+
+export const getSyncInternalPurchaseOrdersFromUncoveredMutationOptions = <TError = SyncInternalPurchaseOrdersFromUncovered400 | SyncInternalPurchaseOrdersFromUncovered401 | SyncInternalPurchaseOrdersFromUncovered403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, TError,{data: SyncInternalPurchaseOrdersFromUncoveredBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, TError,{data: SyncInternalPurchaseOrdersFromUncoveredBody}, TContext> => {
+
+const mutationKey = ['syncInternalPurchaseOrdersFromUncovered'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, {data: SyncInternalPurchaseOrdersFromUncoveredBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  syncInternalPurchaseOrdersFromUncovered(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncInternalPurchaseOrdersFromUncoveredMutationResult = NonNullable<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>>
+    export type SyncInternalPurchaseOrdersFromUncoveredMutationBody = SyncInternalPurchaseOrdersFromUncoveredBody
+    export type SyncInternalPurchaseOrdersFromUncoveredMutationError = SyncInternalPurchaseOrdersFromUncovered400 | SyncInternalPurchaseOrdersFromUncovered401 | SyncInternalPurchaseOrdersFromUncovered403
+
+    /**
+ * @summary Sync open draft purchase order lines from current uncovered SKUs
+ */
+export const useSyncInternalPurchaseOrdersFromUncovered = <TError = SyncInternalPurchaseOrdersFromUncovered400 | SyncInternalPurchaseOrdersFromUncovered401 | SyncInternalPurchaseOrdersFromUncovered403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, TError,{data: SyncInternalPurchaseOrdersFromUncoveredBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>,
+        TError,
+        {data: SyncInternalPurchaseOrdersFromUncoveredBody},
+        TContext
+      > => {
+      return useMutation(getSyncInternalPurchaseOrdersFromUncoveredMutationOptions(options));
     }
 
 export type getInternalPurchaseOrderByDocumentNumberResponse200 = {
