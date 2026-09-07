@@ -598,4 +598,70 @@ describe("internal uncovered SKUs HTTP", () => {
       SKU.value,
     );
   });
+
+  it("syncs open draft PO lines from current uncovered SKUs", async () => {
+    const app = await startUncoveredApp({ withDraftSuppliers: true });
+    const cookie = await staffCookie(app);
+
+    const drafted = await app.inject({
+      method: "POST",
+      url: "/internal/uncovered-skus/draft-purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { skus: [SKU.value, SKU_B.value] },
+    });
+    expect(drafted.statusCode).toBe(201);
+    const draftBody = drafted.json() as {
+      purchaseOrders: Array<{ id: string; supplierId: string }>;
+    };
+    const poA = draftBody.purchaseOrders.find((po) => po.supplierId === SUPPLIER_A);
+    expect(poA).toBeDefined();
+    if (poA === undefined) {
+      return;
+    }
+
+    const stale = await app.inject({
+      method: "PATCH",
+      url: `/internal/purchase-orders/${poA.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        lines: [{ sku: SKU.value, name: "Uncovered widget", qty: 1 }],
+      },
+    });
+    expect(stale.statusCode).toBe(200);
+
+    const synced = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders/sync-from-uncovered",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {},
+    });
+    expect(synced.statusCode).toBe(200);
+    const body = synced.json() as {
+      purchaseOrders: Array<{
+        id: string;
+        supplierId: string;
+        lines: Array<{ sku: string; qty: number }>;
+      }>;
+    };
+    const syncedA = body.purchaseOrders.find((po) => po.supplierId === SUPPLIER_A);
+    expect(syncedA?.id).toBe(poA.id);
+    expect(
+      syncedA?.lines.map((line) => ({ sku: line.sku, qty: line.qty })),
+    ).toEqual([{ sku: SKU.value, qty: suggestedDraftPoQty(120, 48) }]);
+    const syncedB = body.purchaseOrders.find((po) => po.supplierId === SUPPLIER_B);
+    expect(
+      syncedB?.lines.map((line) => ({ sku: line.sku, qty: line.qty })),
+    ).toEqual([{ sku: SKU_B.value, qty: suggestedDraftPoQty(40, null) }]);
+  });
+
+  it("requires staff_session to sync draft purchase orders from uncovered", async () => {
+    const app = await startUncoveredApp({ withDraftSuppliers: true });
+    const missing = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders/sync-from-uncovered",
+      payload: {},
+    });
+    expect(missing.statusCode).toBe(401);
+    expect(missing.json()).toEqual({ error: "unauthorized" });
+  });
 });

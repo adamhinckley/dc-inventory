@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import { collectUncoveredSkusForFactories } from "../lib/uncovered-collect-skus";
 import { listPurchasing2UncoveredFactories } from "../lib/list-purchasing-2-uncovered-factories";
+import { syncPurchasing2DraftPurchaseOrders } from "../lib/purchasing-2-sync-draft-pos";
 import {
   isPurchasing2UncoveredNeedsMappingFactoryId,
   purchasing2PurchaseOrderHref,
@@ -324,6 +325,7 @@ export function Purchasing2UncoveredDetail({
         return;
       }
       await invalidateUncoveredQueries();
+      await syncPurchasing2DraftPurchaseOrders(queryClient, [factoryId]);
       const next = afterDraftUncoveredPos(
         result.data.purchaseOrders,
         result.data.unmappedSkus,

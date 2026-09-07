@@ -23,6 +23,8 @@ import {
   purchaseOrderReplaceLinesBodySchema,
   purchaseOrderWriteBodySchema,
   purchaseOrdersListTable,
+  syncDraftPurchaseOrdersFromUncoveredBodySchema,
+  syncDraftPurchaseOrdersFromUncoveredResponseSchema,
   unauthorizedResponseSchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
@@ -134,6 +136,37 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
+      };
+    },
+  );
+
+  routes.post(
+    "/purchase-orders/sync-from-uncovered",
+    {
+      schema: {
+        operationId: "syncInternalPurchaseOrdersFromUncovered",
+        tags: ["internal"],
+        summary: "Sync open draft purchase order lines from current uncovered SKUs",
+        body: syncDraftPurchaseOrdersFromUncoveredBodySchema,
+        response: {
+          200: syncDraftPurchaseOrdersFromUncoveredResponseSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const supplierIds = request.body.supplierIds?.map((id) => SupplierId.parse(id));
+      const result = await request.server.purchasing.syncDraftPurchaseOrdersFromUncovered.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        supplierIds,
+      });
+      if (!result.ok) {
+        return sendInvalid(reply);
+      }
+      return {
+        purchaseOrders: result.purchaseOrders.map(mapPurchaseOrder),
       };
     },
   );

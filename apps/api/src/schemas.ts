@@ -753,6 +753,14 @@ export const draftUncoveredPurchaseOrdersResponseSchema = z.object({
   unmappedSkus: z.array(z.string()),
 });
 
+export const syncDraftPurchaseOrdersFromUncoveredBodySchema = z.object({
+  supplierIds: z.array(z.string().uuid()).optional(),
+});
+
+export const syncDraftPurchaseOrdersFromUncoveredResponseSchema = z.object({
+  purchaseOrders: z.array(purchaseOrderItemSchema),
+});
+
 export const purchaseOrderListItemSchema = purchaseOrderItemSchema.extend({
   supplierName: z.string(),
   remaining: z.number().int(),

@@ -16,6 +16,7 @@ import {
   CreatePurchaseOrderUseCase,
   type CreatePurchaseOrderResult,
 } from "./create-purchase-order.js";
+import { draftPoQtyFromUncovered } from "./draft-po-qty-from-uncovered.js";
 import { groupUncoveredSkusBySupplier } from "./group-uncovered-skus-by-supplier.js";
 
 export type DraftPurchaseOrdersFromUncoveredSkusRequest = {
@@ -35,20 +36,6 @@ export type DraftPurchaseOrdersFromUncoveredSkusResult =
       reason: "invalid" | "empty_selection";
       unmappedSkus?: readonly string[];
     };
-
-/**
- * Matches `suggestedDraftPoQty` in apps/internal purchase-order-line-math.
- * Ceil uncovered need to the next master pack when case qty exists.
- */
-function draftPoQtyFromUncovered(need: number, caseQty: number | null): number {
-  if (need <= 0) {
-    return 1;
-  }
-  if (caseQty === null || caseQty <= 0) {
-    return need;
-  }
-  return Math.ceil(need / caseQty) * caseQty;
-}
 
 function uniqueSkus(raw: readonly string[]): Sku[] {
   const parsed: Sku[] = [];

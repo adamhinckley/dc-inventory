@@ -18,7 +18,9 @@ export { CancelPurchaseOrderUseCase } from "./application/cancel-purchase-order.
 export { CancelRemainingPurchaseOrderUseCase } from "./application/cancel-remaining-purchase-order.js";
 export { ConfirmPurchaseOrderUseCase } from "./application/confirm-purchase-order.js";
 export { CreatePurchaseOrderUseCase } from "./application/create-purchase-order.js";
+export { draftPoQtyFromUncovered } from "./application/draft-po-qty-from-uncovered.js";
 export { DraftPurchaseOrdersFromUncoveredSkusUseCase } from "./application/draft-purchase-orders-from-uncovered-skus.js";
+export { SyncDraftPurchaseOrdersFromUncoveredUseCase } from "./application/sync-draft-purchase-orders-from-uncovered.js";
 export { groupUncoveredSkusBySupplier } from "./application/group-uncovered-skus-by-supplier.js";
 export { ExportPurchaseOrderUseCase } from "./application/export-purchase-order.js";
 export { GetPurchaseOrderFactorySendUseCase } from "./application/get-purchase-order-factory-send.js";

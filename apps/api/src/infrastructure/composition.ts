@@ -137,6 +137,7 @@ import {
   ListSuppliersUseCase,
   ReceivePurchaseOrderUseCase,
   ReplacePurchaseOrderLinesUseCase,
+  SyncDraftPurchaseOrdersFromUncoveredUseCase,
   UnlinkSupplierProductUseCase,
   UpdateSupplierProductUseCase,
   UpdateSupplierUseCase,
@@ -320,6 +321,7 @@ export type PurchasingHttpServices = {
   updateSupplierProduct: UpdateSupplierProductUseCase;
   unlinkSupplierProduct: UnlinkSupplierProductUseCase;
   draftPurchaseOrdersFromUncoveredSkus: DraftPurchaseOrdersFromUncoveredSkusUseCase;
+  syncDraftPurchaseOrdersFromUncovered: SyncDraftPurchaseOrdersFromUncoveredUseCase;
 };
 
 export type SalesHttpServices = {
@@ -571,6 +573,7 @@ function purchasingServices(
   committedCustomerNames: ICommittedCustomerNamesPort,
   supplierSkuMapping: ISupplierSkuMappingReadPort,
   caseQty: import("@dc-inventory/inventory").IUncoveredCaseQtyReadPort,
+  uncoveredList: import("@dc-inventory/inventory").IUncoveredListQuery,
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
@@ -580,6 +583,10 @@ function purchasingServices(
     supplierRepo,
     catalogSkuLookup,
     clock,
+  );
+  const replacePurchaseOrderLines = new ReplacePurchaseOrderLinesUseCase(
+    purchaseOrderRepo,
+    catalogSkuLookup,
   );
   return {
     listPurchaseOrders: new ListPurchaseOrdersUseCase(purchaseOrderRepo, supplierRepo),
@@ -593,10 +600,7 @@ function purchasingServices(
       catalogSkuLookup,
     ),
     receivePurchaseOrder: new ReceivePurchaseOrderUseCase(unitOfWork.purchasing),
-    replacePurchaseOrderLines: new ReplacePurchaseOrderLinesUseCase(
-      purchaseOrderRepo,
-      catalogSkuLookup,
-    ),
+    replacePurchaseOrderLines,
     exportPurchaseOrder: new ExportPurchaseOrderUseCase(
       purchaseOrderRepo,
       supplierProductRepo,
@@ -640,6 +644,14 @@ function purchasingServices(
       unitOfWork.purchasing,
       catalogSkuLookup,
       clock,
+    ),
+    syncDraftPurchaseOrdersFromUncovered: new SyncDraftPurchaseOrdersFromUncoveredUseCase(
+      purchaseOrderRepo,
+      supplierSkuMapping,
+      uncoveredList,
+      caseQty,
+      inventoryUncovered,
+      replacePurchaseOrderLines,
     ),
   };
 }
@@ -1067,6 +1079,7 @@ export function composeAppServices(
       committedCustomerNamesPort(committedCustomerNamesListQuery),
       supplierSkuMapping,
       uncoveredCaseQty,
+      uncoveredList,
       unitOfWork,
       clock,
     ),
