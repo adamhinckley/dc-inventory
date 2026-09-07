@@ -59,6 +59,14 @@ export class InMemorySupplierProductRepository implements ISupplierProductReposi
     return this.bySupplierSku.get(this.supplierSkuKey(supplierId, sku)) ?? null;
   }
 
+  async findBySupplierSkuPairs(
+    pairs: readonly { supplierId: SupplierId; sku: Sku }[],
+  ): Promise<readonly SupplierProduct[]> {
+    return pairs
+      .map((pair) => this.bySupplierSku.get(this.supplierSkuKey(pair.supplierId, pair.sku)))
+      .filter((row): row is SupplierProduct => row !== undefined);
+  }
+
   async save(product: SupplierProduct): Promise<void> {
     const normalized: SupplierProduct = {
       id: SupplierProductId.parse(product.id),
@@ -76,6 +84,12 @@ export class InMemorySupplierProductRepository implements ISupplierProductReposi
     }
     this.byId.set(normalized.id, normalized);
     this.bySupplierSku.set(this.supplierSkuKey(normalized.supplierId, normalized.sku), normalized);
+  }
+
+  async saveMany(products: readonly SupplierProduct[]): Promise<void> {
+    for (const product of products) {
+      await this.save(product);
+    }
   }
 
   async delete(supplierId: SupplierId, id: SupplierProductId): Promise<boolean> {

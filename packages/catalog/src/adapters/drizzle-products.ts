@@ -1,5 +1,5 @@
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
-import { and, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Product } from "../domain/product.js";
 import type {
@@ -198,6 +198,47 @@ export class DrizzleProductRepository implements IProductRepository {
           discontinued: product.discontinued,
           webWholesale: product.webWholesale,
           taxCategoryCode: product.taxCategoryCode,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  async saveMany(productsList: readonly Product[]): Promise<void> {
+    if (productsList.length === 0) {
+      return;
+    }
+    await this.db
+      .insert(products)
+      .values(
+        productsList.map((product) => ({
+          id: product.id,
+          organizationId: product.organizationId,
+          sku: product.sku.value,
+          name: product.name,
+          description: product.description,
+          uom: product.uom,
+          memberPriceCents: product.memberPrice.amountMinor,
+          listPriceCents: product.listPrice?.amountMinor ?? null,
+          currency: product.memberPrice.currency,
+          inactive: product.inactive,
+          discontinued: product.discontinued,
+          webWholesale: product.webWholesale,
+          taxCategoryCode: product.taxCategoryCode,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: products.id,
+        set: {
+          name: sql`excluded.name`,
+          description: sql`excluded.description`,
+          uom: sql`excluded.uom`,
+          memberPriceCents: sql`excluded.member_price_cents`,
+          listPriceCents: sql`excluded.list_price_cents`,
+          currency: sql`excluded.currency`,
+          inactive: sql`excluded.inactive`,
+          discontinued: sql`excluded.discontinued`,
+          webWholesale: sql`excluded.web_wholesale`,
+          taxCategoryCode: sql`excluded.tax_category_code`,
           updatedAt: new Date(),
         },
       });

@@ -439,8 +439,6 @@ function catalogServices(
     updateProduct,
     importProductBrowser: new ImportProductBrowserUseCase(
       productRepo,
-      createProduct,
-      updateProduct,
       supplierLink,
       packaging,
     ),

@@ -34,6 +34,14 @@ export class InMemorySupplierLinkPort implements ISupplierLinkPort {
     return { ok: true };
   }
 
+  async linkSkus(inputs: readonly SupplierLinkRequest[]): Promise<readonly SupplierLinkResult[]> {
+    const results: SupplierLinkResult[] = [];
+    for (const input of inputs) {
+      results.push(await this.linkSku(input));
+    }
+    return results;
+  }
+
   suppliersFor(organizationId: OrganizationId): { vendorNumber: string; name: string }[] {
     const prefix = `${organizationId}:`;
     return [...this.suppliers.entries()]

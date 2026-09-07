@@ -1,5 +1,5 @@
 import { ProductId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { newUuid } from "../domain/ids.js";
 import type {
@@ -53,6 +53,34 @@ export class DrizzleProductPackagingRepository implements IProductPackagingRepos
           caseLength: packaging.caseLength,
           caseWidth: packaging.caseWidth,
           caseHeight: packaging.caseHeight,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  async saveMany(packagingList: readonly ProductPackaging[]): Promise<void> {
+    if (packagingList.length === 0) {
+      return;
+    }
+    await this.db
+      .insert(productPackaging)
+      .values(
+        packagingList.map((packaging) => ({
+          id: newUuid(),
+          productId: packaging.productId,
+          caseQty: packaging.caseQty,
+          caseLength: packaging.caseLength,
+          caseWidth: packaging.caseWidth,
+          caseHeight: packaging.caseHeight,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: productPackaging.productId,
+        set: {
+          caseQty: sql`excluded.case_qty`,
+          caseLength: sql`excluded.case_length`,
+          caseWidth: sql`excluded.case_width`,
+          caseHeight: sql`excluded.case_height`,
           updatedAt: new Date(),
         },
       });

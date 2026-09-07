@@ -9,6 +9,16 @@ import type { Supplier } from "../domain/supplier.js";
 import { suppliers } from "../persistence/schema.js";
 import type { PurchasingDrizzle } from "./drizzle-purchase-orders.js";
 
+const QUERY_BATCH_SIZE = 500;
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    out.push(items.slice(index, index + size));
+  }
+  return out;
+}
+
 function toSupplier(row: typeof suppliers.$inferSelect): Supplier {
   return {
     id: SupplierId.parse(row.id),
@@ -95,6 +105,32 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
       )
       .limit(1);
     return rows[0] === undefined ? null : toSupplier(rows[0]);
+  }
+
+  async findByVendorNumbers(
+    organizationId: OrganizationId,
+    vendorNumbers: readonly string[],
+  ): Promise<ReadonlyMap<string, Supplier>> {
+    const result = new Map<string, Supplier>();
+    if (vendorNumbers.length === 0) {
+      return result;
+    }
+    for (const batch of chunks(vendorNumbers, QUERY_BATCH_SIZE)) {
+      const rows = await this.db
+        .select()
+        .from(suppliers)
+        .where(
+          and(
+            eq(suppliers.organizationId, organizationId),
+            inArray(suppliers.vendorNumber, [...batch]),
+          ),
+        );
+      for (const row of rows) {
+        const supplier = toSupplier(row);
+        result.set(supplier.vendorNumber, supplier);
+      }
+    }
+    return result;
   }
 
   async save(supplier: Supplier): Promise<void> {

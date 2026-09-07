@@ -131,4 +131,10 @@ export class InMemoryProductRepository implements IProductRepository {
       createdAt: existing?.createdAt ?? new Date(),
     });
   }
+
+  async saveMany(productsList: readonly Product[]): Promise<void> {
+    for (const product of productsList) {
+      await this.save(product);
+    }
+  }
 }

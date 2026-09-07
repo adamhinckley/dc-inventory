@@ -16,4 +16,5 @@ export type SupplierLinkResult = { ok: true } | { ok: false; message: string };
 
 export interface ISupplierLinkPort {
   linkSku(input: SupplierLinkRequest): Promise<SupplierLinkResult>;
+  linkSkus(inputs: readonly SupplierLinkRequest[]): Promise<readonly SupplierLinkResult[]>;
 }

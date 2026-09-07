@@ -1,5 +1,5 @@
 import { Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { SupplierProductId } from "../domain/ids.js";
 import type {
   ISupplierProductRepository,
@@ -9,6 +9,16 @@ import type {
 import type { SupplierProduct } from "../domain/supplier-product.js";
 import { supplierProducts } from "../persistence/schema.js";
 import type { PurchasingDrizzle } from "./drizzle-purchase-orders.js";
+
+const QUERY_BATCH_SIZE = 500;
+
+function chunks<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    out.push(items.slice(index, index + size));
+  }
+  return out;
+}
 
 function toSupplierProduct(row: typeof supplierProducts.$inferSelect): SupplierProduct {
   return {
@@ -85,6 +95,32 @@ export class DrizzleSupplierProductRepository implements ISupplierProductReposit
     return rows[0] === undefined ? null : toSupplierProduct(rows[0]);
   }
 
+  async findBySupplierSkuPairs(
+    pairs: readonly { supplierId: SupplierId; sku: Sku }[],
+  ): Promise<readonly SupplierProduct[]> {
+    if (pairs.length === 0) {
+      return [];
+    }
+    const results: SupplierProduct[] = [];
+    for (const batch of chunks(pairs, QUERY_BATCH_SIZE)) {
+      const rows = await this.db
+        .select()
+        .from(supplierProducts)
+        .where(
+          or(
+            ...batch.map((pair) =>
+              and(
+                eq(supplierProducts.supplierId, pair.supplierId),
+                eq(supplierProducts.sku, pair.sku.value),
+              ),
+            ),
+          ),
+        );
+      results.push(...rows.map(toSupplierProduct));
+    }
+    return results;
+  }
+
   async save(product: SupplierProduct): Promise<void> {
     const existing = await this.findById(product.supplierId, product.id);
     if (existing === null) {
@@ -111,6 +147,37 @@ export class DrizzleSupplierProductRepository implements ISupplierProductReposit
         updatedAt: new Date(),
       })
       .where(eq(supplierProducts.id, product.id));
+  }
+
+  async saveMany(products: readonly SupplierProduct[]): Promise<void> {
+    if (products.length === 0) {
+      return;
+    }
+    await this.db
+      .insert(supplierProducts)
+      .values(
+        products.map((product) => ({
+          id: product.id,
+          supplierId: product.supplierId,
+          sku: product.sku.value,
+          supplierSku: product.supplierSku,
+          minOrderQty: product.minOrderQty,
+          minOrderAmountCents: product.minOrderAmountCents,
+          lastPoCostCents: product.lastPoCostCents,
+          currency: product.currency,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [supplierProducts.supplierId, supplierProducts.sku],
+        set: {
+          supplierSku: sql`excluded.supplier_sku`,
+          minOrderQty: sql`excluded.min_order_qty`,
+          minOrderAmountCents: sql`excluded.min_order_amount_cents`,
+          lastPoCostCents: sql`excluded.last_po_cost_cents`,
+          currency: sql`excluded.currency`,
+          updatedAt: new Date(),
+        },
+      });
   }
 
   async delete(supplierId: SupplierId, id: SupplierProductId): Promise<boolean> {
