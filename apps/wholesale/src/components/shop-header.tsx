@@ -64,7 +64,7 @@ export function ShopHeader() {
           <img
             src="/brand/logo.png"
             alt={company.name}
-            className="h-10 w-auto max-w-56 object-contain sm:h-12 sm:max-w-72"
+            className="h-10 w-auto max-w-56 object-contain sm:h-12 sm:max-w-72 lg:h-auto lg:w-[300px] lg:max-w-[300px]"
           />
         </Link>
         <nav aria-label="Shop" className="hidden items-center gap-6 md:flex">

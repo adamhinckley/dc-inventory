@@ -1,10 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { carouselSlides } from "../lib/carousel-slides";
+
+const AUTO_ADVANCE_MS = 5000;
 
 export function HeroCarousel() {
   const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (carouselSlides.length <= 1) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % carouselSlides.length);
+    }, AUTO_ADVANCE_MS);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const slide = carouselSlides[index] ?? carouselSlides[0];
 
   if (!slide) {
@@ -17,46 +32,57 @@ export function HeroCarousel() {
 
   return (
     <section aria-roledescription="carousel" aria-label="Featured photography">
-      <div className="relative overflow-hidden bg-canvas-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={slide.src}
-          alt={slide.alt}
-          className="aspect-[1730/900] w-full object-cover"
-        />
-        <button
-          type="button"
-          aria-label="Previous"
-          className="absolute top-1/2 left-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
-          onClick={() => go(index - 1)}
-        >
-          <Chevron direction="left" />
-        </button>
-        <button
-          type="button"
-          aria-label="Next"
-          className="absolute top-1/2 right-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
-          onClick={() => go(index + 1)}
-        >
-          <Chevron direction="right" />
-        </button>
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-          {carouselSlides.map((item, slideIndex) => (
-            <button
-              key={item.src}
-              type="button"
-              aria-label={`Show slide ${slideIndex + 1}`}
-              aria-current={slideIndex === index ? true : undefined}
-              className={`h-2.5 w-2.5 rounded-full border border-card ${
-                slideIndex === index ? "bg-card" : "bg-transparent"
-              }`}
-              onClick={() => go(slideIndex)}
-            />
-          ))}
+      <div className="mx-auto w-full max-w-[var(--max-width-content)]">
+        <div className="relative aspect-[1730/900] w-full overflow-hidden bg-canvas-muted">
+          {carouselSlides.map((item, slideIndex) => {
+            const isActive = slideIndex === index;
+            return (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={item.src}
+                src={item.src}
+                alt={isActive ? item.alt : ""}
+                aria-hidden={!isActive}
+                className={`absolute inset-0 size-full object-cover transition-opacity duration-700 ease-in-out ${
+                  isActive ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            );
+          })}
+          <button
+            type="button"
+            aria-label="Previous"
+            className="absolute top-1/2 left-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
+            onClick={() => go(index - 1)}
+          >
+            <Chevron direction="left" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next"
+            className="absolute top-1/2 right-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
+            onClick={() => go(index + 1)}
+          >
+            <Chevron direction="right" />
+          </button>
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
+            {carouselSlides.map((item, slideIndex) => (
+              <button
+                key={item.src}
+                type="button"
+                aria-label={`Show slide ${slideIndex + 1}`}
+                aria-current={slideIndex === index ? true : undefined}
+                className={`h-2.5 w-2.5 rounded-full border border-card ${
+                  slideIndex === index ? "bg-card" : "bg-transparent"
+                }`}
+                onClick={() => go(slideIndex)}
+              />
+            ))}
+          </div>
+          <p className="sr-only">
+            Slide {index + 1} of {carouselSlides.length}
+          </p>
         </div>
-        <p className="sr-only">
-          Slide {index + 1} of {carouselSlides.length}
-        </p>
       </div>
     </section>
   );
