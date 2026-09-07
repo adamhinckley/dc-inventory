@@ -13,6 +13,10 @@ export function HeroCarousel() {
       return;
     }
 
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % carouselSlides.length);
     }, AUTO_ADVANCE_MS);
