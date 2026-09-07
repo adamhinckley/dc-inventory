@@ -20,6 +20,10 @@ import type {
   UncoveredOpenDraftSupplierSku,
 } from "@dc-inventory/purchasing";
 
+function draftKey(supplierId: SupplierId, sku: Sku): string {
+  return `${supplierId}:${sku.value}`;
+}
+
 export function uncoveredOpenDraftPurchaseOrderReadPort(
   db: PurchasingDrizzle,
 ): IUncoveredOpenDraftPurchaseOrderReadPort {
@@ -48,20 +52,26 @@ export function uncoveredOpenDraftPurchaseOrderReadPort(
         ),
       );
 
+    const draftByKey = new Map<string, UncoveredOpenDraftPurchaseOrderRef>();
+    for (const row of draftRows) {
+      const key = `${row.supplierId}:${row.sku}`;
+      if (draftByKey.has(key)) {
+        continue;
+      }
+      draftByKey.set(key, {
+        id: PurchaseOrderId.parse(row.id),
+        documentNumber: row.documentNumber,
+      });
+    }
+
     for (const row of rows) {
-      const key = `${row.supplierId}:${row.sku.value}`;
+      const key = draftKey(row.supplierId, row.sku);
       if (refs.has(key)) {
         continue;
       }
-      const match = draftRows.find(
-        (draft) =>
-          draft.supplierId === row.supplierId && draft.sku === row.sku.value,
-      );
+      const match = draftByKey.get(key);
       if (match !== undefined) {
-        refs.set(key, {
-          id: PurchaseOrderId.parse(match.id),
-          documentNumber: match.documentNumber,
-        });
+        refs.set(key, match);
       }
     }
 
@@ -75,7 +85,7 @@ export function uncoveredOpenDraftPurchaseOrderReadPort(
       sku: Sku,
     ) {
       const refs = await findOpenDraftsForSupplierSkus(organizationId, [{ supplierId, sku }]);
-      return refs.get(`${supplierId}:${sku.value}`) ?? null;
+      return refs.get(draftKey(supplierId, sku)) ?? null;
     },
     findOpenDraftsForSupplierSkus,
   };

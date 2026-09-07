@@ -50,6 +50,8 @@ export function ProductDetail({ productId }: { productId: string }) {
         <AddToCartButton
           productId={payload.id}
           name={payload.name}
+          unitPriceCents={payload.wholesalePrice}
+          currency={payload.currency}
           disabled={!inStock}
           available={payload.available}
           availableToSell={payload.availableToSell}

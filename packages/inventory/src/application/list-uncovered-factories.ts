@@ -116,12 +116,15 @@ export class ListUncoveredFactoriesUseCase {
     }
 
     if (input.excludeSuppliersWithOpenDraft === true && supplierSkus.size > 0) {
-      const draftLookupRows = [...supplierSkus.entries()].flatMap(([supplierId, skus]) =>
-        skus.map((sku) => ({ supplierId, sku })),
-      );
+      const draftLookupByKey = new Map<string, { supplierId: SupplierId; sku: Sku }>();
+      for (const [supplierId, skus] of supplierSkus) {
+        for (const sku of skus) {
+          draftLookupByKey.set(uncoveredSkuDraftKey(supplierId, sku), { supplierId, sku });
+        }
+      }
       const openDrafts = await this.openDraftPurchaseOrders.findOpenDraftsForSupplierSkus(
         organizationId,
-        draftLookupRows,
+        [...draftLookupByKey.values()],
       );
       const suppliersWithOpenDraft = new Set<SupplierId>();
       for (const [supplierId, skus] of supplierSkus) {

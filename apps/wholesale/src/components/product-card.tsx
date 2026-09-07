@@ -76,6 +76,8 @@ export function ProductCard({
         <AddToCartButton
           productId={id}
           name={name}
+          unitPriceCents={wholesalePrice}
+          currency={currency}
           disabled={!inStock}
           available={available}
           availableToSell={availableToSell}

@@ -8,7 +8,8 @@ import type {
   IUncoveredSkuSupplierMappingReadPort,
   IUncoveredSkuSupplierReadPort,
 } from "@dc-inventory/inventory";
-import type { OrganizationId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { SupplierId } from "@dc-inventory/shared-kernel";
 
 export function uncoveredSkuSupplierMappingReadPort(
   supplierMapping: ISupplierSkuMappingReadPort,
@@ -31,14 +32,17 @@ export function uncoveredSkuSupplierReadPort(
 ): IUncoveredSkuSupplierReadPort {
   return {
     async findByIds(organizationId: OrganizationId, supplierIds: readonly SupplierId[]) {
-      const info = new Map<string, { supplierId: SupplierId; supplierNumber: string; supplierName: string }>();
-      for (const supplierId of supplierIds) {
-        const supplier = await suppliers.findById(organizationId, supplierId);
-        if (supplier === null) {
-          continue;
-        }
+      const info = new Map<
+        string,
+        { supplierId: SupplierId; supplierNumber: string; supplierName: string }
+      >();
+      if (supplierIds.length === 0) {
+        return info;
+      }
+      const loaded = await suppliers.findByIds(organizationId, supplierIds);
+      for (const [supplierId, supplier] of loaded) {
         info.set(supplierId, {
-          supplierId,
+          supplierId: SupplierId.parse(supplierId),
           supplierNumber: supplier.vendorNumber,
           supplierName: supplier.name,
         });

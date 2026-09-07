@@ -23,6 +23,10 @@ export interface ICatalogProductPort {
     organizationId: OrganizationId,
     productId: ProductId,
   ): Promise<ProductSnapshot | null>;
+  findByIds(
+    organizationId: OrganizationId,
+    productIds: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, ProductSnapshot>>;
   findBySku(
     organizationId: OrganizationId,
     sku: Sku,

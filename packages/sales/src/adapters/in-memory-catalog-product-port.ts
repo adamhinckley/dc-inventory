@@ -24,6 +24,20 @@ export class InMemoryCatalogProductPort implements ICatalogProductPort {
     return this.products.get(productId) ?? null;
   }
 
+  async findByIds(
+    _organizationId: OrganizationId,
+    productIds: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, ProductSnapshot>> {
+    const result = new Map<string, ProductSnapshot>();
+    for (const productId of productIds) {
+      const product = this.products.get(productId);
+      if (product !== undefined) {
+        result.set(productId, product);
+      }
+    }
+    return result;
+  }
+
   async findBySku(
     organizationId: OrganizationId,
     sku: Sku,

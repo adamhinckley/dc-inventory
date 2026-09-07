@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   findDraftCartLine,
+  linesForReplace,
   remainingDraftLines,
   toReplaceLines,
   cartQtyCapMessage,
@@ -151,5 +152,25 @@ describe("toReplaceLines", () => {
     await expect(
       toReplaceLines([{ sku: "MISSING", name: "Ghost", qty: 1 }], async () => null),
     ).resolves.toBeNull();
+  });
+});
+
+describe("linesForReplace", () => {
+  it("maps lines synchronously when every line has productId", () => {
+    expect(
+      linesForReplace([
+        { productId: "p1", sku: "L1", name: "Lantern", qty: 2 },
+        { productId: "p2", sku: "V1", name: "Vase", qty: 1 },
+      ]),
+    ).toEqual([
+      { productId: "p1", qty: 2 },
+      { productId: "p2", qty: 1 },
+    ]);
+  });
+
+  it("returns null when a line is missing productId", () => {
+    expect(
+      linesForReplace([{ sku: "L1", name: "Lantern", qty: 2 }]),
+    ).toBeNull();
   });
 });

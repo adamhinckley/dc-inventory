@@ -56,9 +56,12 @@ export async function buildSalesOrderLines(
   }
 
   const built: SalesOrderLine[] = [];
+  const productIds = [...merged.keys()];
+  const products = await catalogProducts.findByIds(organizationId, productIds);
+
   for (const [productId, qty] of merged) {
-    const product = await catalogProducts.findById(organizationId, productId);
-    if (product === null) {
+    const product = products.get(productId);
+    if (product === undefined) {
       return { ok: false, reason: "product_not_found" };
     }
     if (product.organizationId !== organizationId) {

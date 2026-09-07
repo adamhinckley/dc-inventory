@@ -19,6 +19,14 @@ export interface IProductRepository {
   listMatching(query: ProductListMatch): Promise<ListedProduct[]>;
   listCategoryNames(organizationId: OrganizationId): Promise<string[]>;
   findById(organizationId: OrganizationId, id: ProductId): Promise<Product | null>;
+  findByIds(
+    organizationId: OrganizationId,
+    ids: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, Product>>;
   findBySku(organizationId: OrganizationId, sku: Sku): Promise<Product | null>;
+  findBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, Product>>;
   save(product: Product): Promise<void>;
 }

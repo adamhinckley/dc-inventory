@@ -15,35 +15,82 @@ const DEFAULT_LOCATION_CODE = "DEFAULT";
  * Formula only — catalog/reorder joins happen in `ListUncoveredSkusUseCase`.
  */
 export class UncoveredInventoryListQuery implements IUncoveredListQuery {
+  private readonly locationUuidByOrgAndCode = new Map<string, Promise<string | null>>();
+
   constructor(private readonly db: AppDrizzle) {}
 
-  async list(query: UncoveredListQuery) {
-    const organizationId = OrganizationId.parse(query.organizationId);
-    const locationId = query.locationId ?? LocationId.DEFAULT;
+  private locationCacheKey(organizationId: OrganizationId, locationId: LocationId): string {
+    return `${organizationId}:${locationId}`;
+  }
+
+  private resolveLocationUuid(
+    organizationId: OrganizationId,
+    locationId: LocationId,
+  ): Promise<string | null> {
+    const cacheKey = this.locationCacheKey(organizationId, locationId);
+    const cached = this.locationUuidByOrgAndCode.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const loaded = this.loadLocationUuid(organizationId, locationId)
+      .then((id) => {
+        if (id === null) {
+          this.locationUuidByOrgAndCode.delete(cacheKey);
+        }
+        return id;
+      })
+      .catch((error: unknown) => {
+        this.locationUuidByOrgAndCode.delete(cacheKey);
+        throw error;
+      });
+    this.locationUuidByOrgAndCode.set(cacheKey, loaded);
+    return loaded;
+  }
+
+  private async loadLocationUuid(
+    organizationId: OrganizationId,
+    locationId: LocationId,
+  ): Promise<string | null> {
     const locationRows = await this.db
       .select({ id: locations.id })
       .from(locations)
       .where(
         and(
           eq(locations.organizationId, organizationId),
-          eq(locations.code, locationId === LocationId.DEFAULT ? DEFAULT_LOCATION_CODE : locationId),
+          eq(
+            locations.code,
+            locationId === LocationId.DEFAULT ? DEFAULT_LOCATION_CODE : locationId,
+          ),
         ),
       )
       .limit(1);
-    const locationUuid = locationRows[0]?.id;
-    if (locationUuid === undefined) {
-      return { items: [], total: 0 };
-    }
+    return locationRows[0]?.id ?? null;
+  }
 
+  private uncoveredWhere(organizationId: OrganizationId, locationUuid: string) {
     const onHand = sql<number>`coalesce(${stockSnapshots.onHand}, 0)`;
     const onOrder = sql<number>`coalesce(${stockSnapshots.onOrder}, 0)`;
     const committed = sql<number>`coalesce(${stockSnapshots.committed}, 0)`;
     const uncovered = sql<number>`greatest(0, ${committed} - ${onHand} - ${onOrder})`;
-    const where = and(
-      eq(stockSnapshots.organizationId, organizationId),
-      eq(stockSnapshots.locationId, locationUuid),
-      gt(uncovered, 0),
-    );
+    return {
+      where: and(
+        eq(stockSnapshots.organizationId, organizationId),
+        eq(stockSnapshots.locationId, locationUuid),
+        gt(uncovered, 0),
+      ),
+      uncovered,
+    };
+  }
+
+  async list(query: UncoveredListQuery) {
+    const organizationId = OrganizationId.parse(query.organizationId);
+    const locationId = query.locationId ?? LocationId.DEFAULT;
+    const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+    if (locationUuid === null) {
+      return { items: [], total: 0 };
+    }
+
+    const { where } = this.uncoveredWhere(organizationId, locationUuid);
     const offset = (query.page - 1) * query.pageSize;
 
     const [totalRow] = await this.db
@@ -80,31 +127,12 @@ export class UncoveredInventoryListQuery implements IUncoveredListQuery {
   async listAll(query: Omit<UncoveredListQuery, "page" | "pageSize">) {
     const organizationId = OrganizationId.parse(query.organizationId);
     const locationId = query.locationId ?? LocationId.DEFAULT;
-    const locationRows = await this.db
-      .select({ id: locations.id })
-      .from(locations)
-      .where(
-        and(
-          eq(locations.organizationId, organizationId),
-          eq(locations.code, locationId === LocationId.DEFAULT ? DEFAULT_LOCATION_CODE : locationId),
-        ),
-      )
-      .limit(1);
-    const locationUuid = locationRows[0]?.id;
-    if (locationUuid === undefined) {
+    const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+    if (locationUuid === null) {
       return [];
     }
 
-    const onHand = sql<number>`coalesce(${stockSnapshots.onHand}, 0)`;
-    const onOrder = sql<number>`coalesce(${stockSnapshots.onOrder}, 0)`;
-    const committed = sql<number>`coalesce(${stockSnapshots.committed}, 0)`;
-    const uncovered = sql<number>`greatest(0, ${committed} - ${onHand} - ${onOrder})`;
-    const where = and(
-      eq(stockSnapshots.organizationId, organizationId),
-      eq(stockSnapshots.locationId, locationUuid),
-      gt(uncovered, 0),
-    );
-
+    const { where } = this.uncoveredWhere(organizationId, locationUuid);
     const rows = await this.db
       .select({
         sku: stockSnapshots.sku,

@@ -107,6 +107,30 @@ export class DrizzleProductRepository implements IProductRepository {
     return rows[0] === undefined ? null : toProduct(rows[0]);
   }
 
+  async findByIds(
+    organizationId: OrganizationId,
+    ids: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, Product>> {
+    const result = new Map<string, Product>();
+    if (ids.length === 0) {
+      return result;
+    }
+    const rows = await this.db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.organizationId, organizationId),
+          inArray(products.id, [...ids]),
+        ),
+      );
+    for (const row of rows) {
+      const product = toProduct(row);
+      result.set(product.id, product);
+    }
+    return result;
+  }
+
   async findBySku(organizationId: OrganizationId, sku: Sku): Promise<Product | null> {
     const rows = await this.db
       .select()
@@ -114,6 +138,33 @@ export class DrizzleProductRepository implements IProductRepository {
       .where(and(eq(products.organizationId, organizationId), eq(products.sku, sku.value)))
       .limit(1);
     return rows[0] === undefined ? null : toProduct(rows[0]);
+  }
+
+  async findBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, Product>> {
+    const result = new Map<string, Product>();
+    if (skus.length === 0) {
+      return result;
+    }
+    const rows = await this.db
+      .select()
+      .from(products)
+      .where(
+        and(
+          eq(products.organizationId, organizationId),
+          inArray(
+            products.sku,
+            skus.map((sku) => sku.value),
+          ),
+        ),
+      );
+    for (const row of rows) {
+      const product = toProduct(row);
+      result.set(product.sku.value, product);
+    }
+    return result;
   }
 
   async save(product: Product): Promise<void> {

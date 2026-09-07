@@ -84,6 +84,20 @@ export class InMemoryProductRepository implements IProductRepository {
     return row.product;
   }
 
+  async findByIds(
+    organizationId: OrganizationId,
+    ids: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, Product>> {
+    const result = new Map<string, Product>();
+    for (const id of ids) {
+      const product = await this.findById(organizationId, id);
+      if (product !== null) {
+        result.set(id, product);
+      }
+    }
+    return result;
+  }
+
   async findBySku(organizationId: OrganizationId, sku: Sku): Promise<Product | null> {
     for (const row of this.byId.values()) {
       if (
@@ -94,6 +108,20 @@ export class InMemoryProductRepository implements IProductRepository {
       }
     }
     return null;
+  }
+
+  async findBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, Product>> {
+    const result = new Map<string, Product>();
+    for (const sku of skus) {
+      const product = await this.findBySku(organizationId, sku);
+      if (product !== null) {
+        result.set(sku.value, product);
+      }
+    }
+    return result;
   }
 
   async save(product: Product): Promise<void> {

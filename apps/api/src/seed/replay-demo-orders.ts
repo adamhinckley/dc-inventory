@@ -67,7 +67,7 @@ export type ReplayDemoOrdersPorts = {
   clock: PurchasePlaybackClock & SalesPlaybackClock;
   customers: Pick<ICustomerRepository, "findById">;
   shipTos: Pick<IShipToRepository, "listByCustomer" | "findById">;
-  products: Pick<IProductRepository, "findBySku" | "findById">;
+  products: Pick<IProductRepository, "findById" | "findByIds" | "findBySku">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
   billToSnapshot: ICustomerBillToSnapshotReadPort;
 };

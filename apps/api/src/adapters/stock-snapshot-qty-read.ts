@@ -15,19 +15,34 @@ const DEFAULT_LOCATION_CODE = "DEFAULT";
  * Lives in the API app so the Catalog Postgres adapter never imports inventory.
  */
 export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
+  private readonly defaultLocationIdByOrg = new Map<string, Promise<string | null>>();
+
   constructor(
     private readonly db: AppDrizzle,
     private readonly clock?: IClock,
   ) {}
 
-  async readBySkus(
-    organizationId: OrganizationId,
-    skus: readonly Sku[],
-  ): Promise<ReadonlyMap<string, ProductQty>> {
-    const result = new Map<string, ProductQty>();
-    if (skus.length === 0) {
-      return result;
+  private getDefaultLocationId(organizationId: OrganizationId): Promise<string | null> {
+    const cached = this.defaultLocationIdByOrg.get(organizationId);
+    if (cached !== undefined) {
+      return cached;
     }
+    const loaded = this.loadDefaultLocationId(organizationId)
+      .then((id) => {
+        if (id === null) {
+          this.defaultLocationIdByOrg.delete(organizationId);
+        }
+        return id;
+      })
+      .catch((error: unknown) => {
+        this.defaultLocationIdByOrg.delete(organizationId);
+        throw error;
+      });
+    this.defaultLocationIdByOrg.set(organizationId, loaded);
+    return loaded;
+  }
+
+  private async loadDefaultLocationId(organizationId: OrganizationId): Promise<string | null> {
     const locationRows = await this.db
       .select({ id: locations.id })
       .from(locations)
@@ -38,8 +53,19 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
         ),
       )
       .limit(1);
-    const locationId = locationRows[0]?.id;
-    if (locationId === undefined) {
+    return locationRows[0]?.id ?? null;
+  }
+
+  async readBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, ProductQty>> {
+    const result = new Map<string, ProductQty>();
+    if (skus.length === 0) {
+      return result;
+    }
+    const locationId = await this.getDefaultLocationId(organizationId);
+    if (locationId === null) {
       return result;
     }
     const rows = await this.db

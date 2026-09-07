@@ -269,6 +269,10 @@ export type CatalogHttpServices = {
     organizationId: OrganizationId,
     sku: string,
   ) => Promise<string | null>;
+  lookupProductIdsBySkus: (
+    organizationId: OrganizationId,
+    skus: readonly string[],
+  ) => Promise<ReadonlyMap<string, string | null>>;
 };
 
 export type CustomersHttpServices = {
@@ -449,6 +453,22 @@ function catalogServices(
       } catch {
         return null;
       }
+    },
+    lookupProductIdsBySkus: async (organizationId, skus) => {
+      const parsedSkus: Sku[] = [];
+      for (const sku of skus) {
+        try {
+          parsedSkus.push(Sku.parse(sku));
+        } catch {
+          // skip invalid sku values
+        }
+      }
+      const products = await productRepo.findBySkus(organizationId, parsedSkus);
+      const result = new Map<string, string | null>();
+      for (const sku of skus) {
+        result.set(sku, products.get(sku)?.id ?? null);
+      }
+      return result;
     },
   };
 }

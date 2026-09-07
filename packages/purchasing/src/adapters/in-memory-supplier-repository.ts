@@ -50,6 +50,20 @@ export class InMemorySupplierRepository implements ISupplierRepository {
     return supplier;
   }
 
+  async findByIds(
+    organizationId: OrganizationId,
+    ids: readonly SupplierId[],
+  ): Promise<ReadonlyMap<string, Supplier>> {
+    const result = new Map<string, Supplier>();
+    for (const id of ids) {
+      const supplier = await this.findById(organizationId, id);
+      if (supplier !== null) {
+        result.set(id, supplier);
+      }
+    }
+    return result;
+  }
+
   async findByVendorNumber(
     organizationId: OrganizationId,
     vendorNumber: string,
