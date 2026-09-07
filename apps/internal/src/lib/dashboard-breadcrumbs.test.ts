@@ -24,4 +24,21 @@ describe("crumbsFromPathname", () => {
       { href: "/inventory/reopen", label: "Manage Pre-Sell", current: true },
     ]);
   });
+
+  it("labels purchasing 2.0 hub and uncovered tabs", () => {
+    expect(crumbsFromPathname("/purchasing-2")).toEqual([
+      { href: "/purchasing-2", label: "Purchasing 2.0", current: true },
+    ]);
+    expect(crumbsFromPathname("/purchasing-2/uncovered")).toEqual([
+      { href: "/purchasing-2", label: "Purchasing 2.0", current: false },
+      { href: "/purchasing-2/uncovered", label: "Uncovered", current: true },
+    ]);
+  });
+
+  it("labels a purchasing 2.0 purchase order with a document-number label", () => {
+    expect(crumbsFromPathname("/purchasing-2/abc", { abc: "PO-00042" })).toEqual([
+      { href: "/purchasing-2", label: "Purchasing 2.0", current: false },
+      { href: "/purchasing-2/abc", label: "PO-00042", current: true },
+    ]);
+  });
 });

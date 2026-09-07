@@ -6,9 +6,16 @@ import { dashboardNav } from "./dashboard-routes";
 const srcRoot = join(import.meta.dirname, "..");
 
 describe("internal dashboard shell", () => {
+  const navPagePath = (href: string) => {
+    if (href === "/purchasing-2") {
+      return "purchasing-2/(hub)/page.tsx";
+    }
+    return `${href.slice(1)}/page.tsx`;
+  };
+
   it("declares the staff placeholder routes", () => {
     for (const item of dashboardNav) {
-      const page = join(srcRoot, "app/(dashboard)", item.href.slice(1), "page.tsx");
+      const page = join(srcRoot, "app/(dashboard)", navPagePath(item.href));
       expect(existsSync(page), page).toBe(true);
     }
 
@@ -22,6 +29,17 @@ describe("internal dashboard shell", () => {
     expect(
       existsSync(join(srcRoot, "app/(dashboard)/purchasing/suppliers/page.tsx")),
     ).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/purchasing-2/(hub)/page.tsx")),
+    ).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/purchasing-2/(hub)/uncovered/page.tsx")),
+    ).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/purchasing-2/(workspace)/[id]/page.tsx")),
+    ).toBe(true);
+    expect(existsSync(join(srcRoot, "components/purchasing-2-workspace.tsx"))).toBe(true);
+    expect(existsSync(join(srcRoot, "components/purchasing-2-heading.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchase-orders-table.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchase-order-workspace.tsx"))).toBe(true);
     expect(
