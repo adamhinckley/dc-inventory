@@ -11,4 +11,5 @@ export type ProductPackaging = {
 export interface IProductPackagingRepository {
   findByProductId(productId: ProductId): Promise<ProductPackaging | null>;
   save(packaging: ProductPackaging): Promise<void>;
+  saveMany(packaging: readonly ProductPackaging[]): Promise<void>;
 }

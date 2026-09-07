@@ -20,7 +20,9 @@ export interface ISupplierProductRepository {
   listBySupplier(query: ListSupplierProductsQuery): Promise<SupplierProductListPage>;
   findById(supplierId: SupplierId, id: SupplierProductId): Promise<SupplierProduct | null>;
   findBySupplierAndSku(supplierId: SupplierId, sku: Sku): Promise<SupplierProduct | null>;
+  listBySupplierIds(supplierIds: readonly SupplierId[]): Promise<readonly SupplierProduct[]>;
   save(product: SupplierProduct): Promise<void>;
+  saveMany(products: readonly SupplierProduct[]): Promise<void>;
   delete(supplierId: SupplierId, id: SupplierProductId): Promise<boolean>;
 }
 

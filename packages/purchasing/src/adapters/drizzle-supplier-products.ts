@@ -1,5 +1,5 @@
 import { Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { SupplierProductId } from "../domain/ids.js";
 import type {
   ISupplierProductRepository,
@@ -85,6 +85,17 @@ export class DrizzleSupplierProductRepository implements ISupplierProductReposit
     return rows[0] === undefined ? null : toSupplierProduct(rows[0]);
   }
 
+  async listBySupplierIds(supplierIds: readonly SupplierId[]): Promise<readonly SupplierProduct[]> {
+    if (supplierIds.length === 0) {
+      return [];
+    }
+    const rows = await this.db
+      .select()
+      .from(supplierProducts)
+      .where(inArray(supplierProducts.supplierId, [...supplierIds]));
+    return rows.map(toSupplierProduct);
+  }
+
   async save(product: SupplierProduct): Promise<void> {
     const existing = await this.findById(product.supplierId, product.id);
     if (existing === null) {
@@ -111,6 +122,37 @@ export class DrizzleSupplierProductRepository implements ISupplierProductReposit
         updatedAt: new Date(),
       })
       .where(eq(supplierProducts.id, product.id));
+  }
+
+  async saveMany(products: readonly SupplierProduct[]): Promise<void> {
+    if (products.length === 0) {
+      return;
+    }
+    await this.db
+      .insert(supplierProducts)
+      .values(
+        products.map((product) => ({
+          id: product.id,
+          supplierId: product.supplierId,
+          sku: product.sku.value,
+          supplierSku: product.supplierSku,
+          minOrderQty: product.minOrderQty,
+          minOrderAmountCents: product.minOrderAmountCents,
+          lastPoCostCents: product.lastPoCostCents,
+          currency: product.currency,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [supplierProducts.supplierId, supplierProducts.sku],
+        set: {
+          supplierSku: sql`excluded.supplier_sku`,
+          minOrderQty: sql`excluded.min_order_qty`,
+          minOrderAmountCents: sql`excluded.min_order_amount_cents`,
+          lastPoCostCents: sql`excluded.last_po_cost_cents`,
+          currency: sql`excluded.currency`,
+          updatedAt: new Date(),
+        },
+      });
   }
 
   async delete(supplierId: SupplierId, id: SupplierProductId): Promise<boolean> {

@@ -29,4 +29,5 @@ export interface IProductRepository {
     skus: readonly Sku[],
   ): Promise<ReadonlyMap<string, Product>>;
   save(product: Product): Promise<void>;
+  saveMany(products: readonly Product[]): Promise<void>;
 }

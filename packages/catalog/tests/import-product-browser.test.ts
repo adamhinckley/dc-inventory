@@ -2,11 +2,8 @@ import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryProductPackagingRepository } from "../src/adapters/in-memory-product-packaging.js";
 import { InMemoryProductRepository } from "../src/adapters/in-memory-product-repository.js";
-import { InMemoryQtyReadPort } from "../src/adapters/in-memory-qty-read.js";
 import { InMemorySupplierLinkPort } from "../src/adapters/in-memory-supplier-link.js";
-import { CreateProductUseCase } from "../src/application/create-product.js";
 import { ImportProductBrowserUseCase } from "../src/application/import-product-browser.js";
-import { UpdateProductUseCase } from "../src/application/update-product.js";
 import type { WorkbookRow } from "../src/domain/ports/workbook-parser.js";
 
 const ORG = OrganizationId.DEFAULT;
@@ -37,20 +34,13 @@ function productRow(overrides: Record<string, string> = {}): WorkbookRow {
 
 function harness() {
   const products = new InMemoryProductRepository();
-  const qty = new InMemoryQtyReadPort();
   const suppliers = new InMemorySupplierLinkPort();
   const packaging = new InMemoryProductPackagingRepository();
   return {
     products,
     suppliers,
     packaging,
-    importCatalog: new ImportProductBrowserUseCase(
-      products,
-      new CreateProductUseCase(products),
-      new UpdateProductUseCase(products, qty, packaging),
-      suppliers,
-      packaging,
-    ),
+    importCatalog: new ImportProductBrowserUseCase(products, suppliers, packaging),
   };
 }
 
@@ -178,7 +168,6 @@ describe("ImportProductBrowserUseCase", () => {
 
   it("records a row error when packaging save throws instead of rejecting the import", async () => {
     const products = new InMemoryProductRepository();
-    const qty = new InMemoryQtyReadPort();
     const packaging = {
       async findByProductId() {
         return null;
@@ -186,11 +175,12 @@ describe("ImportProductBrowserUseCase", () => {
       async save() {
         throw new Error("packaging write failed");
       },
+      async saveMany() {
+        throw new Error("packaging write failed");
+      },
     };
     const importCatalog = new ImportProductBrowserUseCase(
       products,
-      new CreateProductUseCase(products),
-      new UpdateProductUseCase(products, qty, packaging),
       new InMemorySupplierLinkPort(),
       packaging,
     );

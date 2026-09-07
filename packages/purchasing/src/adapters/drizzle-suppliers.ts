@@ -97,6 +97,30 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
     return rows[0] === undefined ? null : toSupplier(rows[0]);
   }
 
+  async findByVendorNumbers(
+    organizationId: OrganizationId,
+    vendorNumbers: readonly string[],
+  ): Promise<ReadonlyMap<string, Supplier>> {
+    const result = new Map<string, Supplier>();
+    if (vendorNumbers.length === 0) {
+      return result;
+    }
+    const rows = await this.db
+      .select()
+      .from(suppliers)
+      .where(
+        and(
+          eq(suppliers.organizationId, organizationId),
+          inArray(suppliers.vendorNumber, [...vendorNumbers]),
+        ),
+      );
+    for (const row of rows) {
+      const supplier = toSupplier(row);
+      result.set(supplier.vendorNumber, supplier);
+    }
+    return result;
+  }
+
   async save(supplier: Supplier): Promise<void> {
     const existing = await this.findById(supplier.organizationId, supplier.id);
     if (existing === null) {

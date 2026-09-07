@@ -20,4 +20,10 @@ export class InMemoryProductPackagingRepository implements IProductPackagingRepo
       caseHeight: packaging.caseHeight,
     });
   }
+
+  async saveMany(packagingList: readonly ProductPackaging[]): Promise<void> {
+    for (const packaging of packagingList) {
+      await this.save(packaging);
+    }
+  }
 }
