@@ -279,6 +279,10 @@ export const uncoveredSkusListTable = {
 export const uncoveredFactoriesListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  excludeSuppliersWithOpenDraft: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true"),
 });
 
 export const uncoveredFactoriesListResponseSchema = z.object({

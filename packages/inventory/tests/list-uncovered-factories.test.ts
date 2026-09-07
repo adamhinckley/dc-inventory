@@ -95,6 +95,7 @@ function harness() {
       uncoveredList,
       supplierMapping,
       suppliers,
+      openDraftPurchaseOrders,
     ),
     listUncovered: new ListUncoveredSkusUseCase(
       uncoveredList,
@@ -160,6 +161,65 @@ describe("List uncovered factories", () => {
         supplierName: "Needs mapping",
         productCount: 2,
         totalUncoveredUnits: 35,
+        needsMapping: true,
+      },
+    ]);
+  });
+
+  it("excludes mapped factories whose supplier already has an open draft PO when requested", async () => {
+    const h = harness();
+    h.supplierMapping.assign(SKU_A, SUPPLIER_A);
+    h.supplierMapping.assign(SKU_B, SUPPLIER_B);
+
+    for (const [sku, qty, key] of [
+      [SKU_A, 120, "draft-filter-a"],
+      [SKU_B, 40, "draft-filter-b"],
+      [SKU_UNMAPPED, 25, "draft-filter-x"],
+    ] as const) {
+      const commit = await h.committed({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: `${key}-commit`,
+        sku,
+        quantity: qty,
+        refType: "sales_order",
+        refId: `${key}-so`,
+      });
+      expect(commit.ok).toBe(true);
+    }
+
+    h.openDraftPurchaseOrders.set(DEFAULT_ORG, SUPPLIER_A, SKU_A, {
+      id: PurchaseOrderId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd"),
+      documentNumber: "PO-00042",
+    });
+
+    const unfiltered = await h.listFactories.execute({ organizationId: DEFAULT_ORG });
+    expect(unfiltered.items.map((row) => row.id)).toEqual([
+      SUPPLIER_A,
+      SUPPLIER_B,
+      UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
+    ]);
+
+    const filtered = await h.listFactories.execute({
+      organizationId: DEFAULT_ORG,
+      excludeSuppliersWithOpenDraft: true,
+    });
+    expect(filtered.items).toEqual([
+      {
+        id: SUPPLIER_B,
+        supplierId: SUPPLIER_B,
+        supplierNumber: "V-B",
+        supplierName: "Factory B",
+        productCount: 1,
+        totalUncoveredUnits: 40,
+        needsMapping: false,
+      },
+      {
+        id: UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
+        supplierId: null,
+        supplierNumber: null,
+        supplierName: "Needs mapping",
+        productCount: 1,
+        totalUncoveredUnits: 25,
         needsMapping: true,
       },
     ]);

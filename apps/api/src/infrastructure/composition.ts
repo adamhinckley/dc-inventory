@@ -978,6 +978,7 @@ export function composeAppServices(
     uncoveredList,
     uncoveredSkuSupplierMapping,
     uncoveredSkuSupplier,
+    uncoveredSkuDraftPurchaseOrder,
   );
 
   return {

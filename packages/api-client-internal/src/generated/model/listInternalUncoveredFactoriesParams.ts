@@ -4,6 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalUncoveredFactoriesExcludeSuppliersWithOpenDraft } from './listInternalUncoveredFactoriesExcludeSuppliersWithOpenDraft';
 
 export type ListInternalUncoveredFactoriesParams = {
 /**
@@ -16,4 +17,5 @@ page?: number;
  * @maximum 100
  */
 pageSize?: number;
+excludeSuppliersWithOpenDraft?: ListInternalUncoveredFactoriesExcludeSuppliersWithOpenDraft;
 };
