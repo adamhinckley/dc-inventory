@@ -18,7 +18,7 @@ export function HeroCarousel() {
     }, AUTO_ADVANCE_MS);
 
     return () => window.clearInterval(timer);
-  }, []);
+  }, [index]);
 
   const slide = carouselSlides[index] ?? carouselSlides[0];
 
@@ -52,7 +52,7 @@ export function HeroCarousel() {
           <button
             type="button"
             aria-label="Previous"
-            className="absolute top-1/2 left-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
+            className="absolute top-1/2 left-4 -translate-y-1/2 cursor-pointer p-2"
             onClick={() => go(index - 1)}
           >
             <Chevron direction="left" />
@@ -60,24 +60,27 @@ export function HeroCarousel() {
           <button
             type="button"
             aria-label="Next"
-            className="absolute top-1/2 right-4 flex size-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-sm"
+            className="absolute top-1/2 right-4 -translate-y-1/2 cursor-pointer p-2"
             onClick={() => go(index + 1)}
           >
             <Chevron direction="right" />
           </button>
           <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-            {carouselSlides.map((item, slideIndex) => (
-              <button
-                key={item.src}
-                type="button"
-                aria-label={`Show slide ${slideIndex + 1}`}
-                aria-current={slideIndex === index ? true : undefined}
-                className={`h-2.5 w-2.5 rounded-full border border-card ${
-                  slideIndex === index ? "bg-card" : "bg-transparent"
-                }`}
-                onClick={() => go(slideIndex)}
-              />
-            ))}
+            {carouselSlides.map((item, slideIndex) => {
+              const isActive = slideIndex === index;
+              return (
+                <button
+                  key={item.src}
+                  type="button"
+                  aria-label={`Show slide ${slideIndex + 1}`}
+                  aria-current={isActive ? true : undefined}
+                  className={`h-2.5 w-2.5 cursor-pointer rounded-full border-2 border-white drop-shadow-[0_0_1px_rgba(0,0,0,0.9)] drop-shadow-[0_1px_3px_rgba(0,0,0,0.55)] ${
+                    isActive ? "bg-white" : "bg-black/30"
+                  }`}
+                  onClick={() => go(slideIndex)}
+                />
+              );
+            })}
           </div>
           <p className="sr-only">
             Slide {index + 1} of {carouselSlides.length}
@@ -89,13 +92,16 @@ export function HeroCarousel() {
 }
 
 function Chevron({ direction }: { direction: "left" | "right" }) {
+  const base =
+    "inline-block size-5 rotate-45 border-current text-white drop-shadow-[0_0_1px_rgba(0,0,0,0.9)] drop-shadow-[0_1px_4px_rgba(0,0,0,0.55)]";
+
   return (
     <span
       aria-hidden="true"
       className={
         direction === "left"
-          ? "mt-0.5 ml-0.5 inline-block size-2.5 rotate-45 border-b-2 border-l-2 border-current"
-          : "mt-0.5 mr-0.5 inline-block size-2.5 rotate-45 border-t-2 border-r-2 border-current"
+          ? `${base} ml-1 border-b-[3px] border-l-[3px]`
+          : `${base} mr-1 border-t-[3px] border-r-[3px]`
       }
     />
   );
