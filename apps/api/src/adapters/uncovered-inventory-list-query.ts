@@ -32,7 +32,17 @@ export class UncoveredInventoryListQuery implements IUncoveredListQuery {
     if (cached !== undefined) {
       return cached;
     }
-    const loaded = this.loadLocationUuid(organizationId, locationId);
+    const loaded = this.loadLocationUuid(organizationId, locationId)
+      .then((id) => {
+        if (id === null) {
+          this.locationUuidByOrgAndCode.delete(cacheKey);
+        }
+        return id;
+      })
+      .catch((error: unknown) => {
+        this.locationUuidByOrgAndCode.delete(cacheKey);
+        throw error;
+      });
     this.locationUuidByOrgAndCode.set(cacheKey, loaded);
     return loaded;
   }

@@ -27,7 +27,17 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
     if (cached !== undefined) {
       return cached;
     }
-    const loaded = this.loadDefaultLocationId(organizationId);
+    const loaded = this.loadDefaultLocationId(organizationId)
+      .then((id) => {
+        if (id === null) {
+          this.defaultLocationIdByOrg.delete(organizationId);
+        }
+        return id;
+      })
+      .catch((error: unknown) => {
+        this.defaultLocationIdByOrg.delete(organizationId);
+        throw error;
+      });
     this.defaultLocationIdByOrg.set(organizationId, loaded);
     return loaded;
   }

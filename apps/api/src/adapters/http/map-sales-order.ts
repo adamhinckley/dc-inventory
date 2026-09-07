@@ -32,9 +32,11 @@ export async function mapSalesOrder(
 
   const lines = await Promise.all(
     order.lines.map(async (line) => {
+      const batchProductId = productIdsBySku?.get(line.sku.value);
       const productId =
-        productIdsBySku?.get(line.sku.value) ??
-        (await lookupProductId(line.sku.value));
+        batchProductId !== undefined
+          ? batchProductId
+          : await lookupProductId(line.sku.value);
       return {
         id: line.id,
         ...(productId !== null && productId !== undefined ? { productId } : {}),

@@ -161,7 +161,11 @@ export function AddToCartButton({
             data: { lines },
           });
           if (response.status === 200) {
-            writeDraftCartOrder(queryClient, response.data);
+            if (response.data.status === "cancelled" || response.data.lines.length === 0) {
+              writeDraftCartOrder(queryClient, null);
+            } else {
+              writeDraftCartOrder(queryClient, response.data);
+            }
           }
           setQtyTouched(false);
           setMessage(qty === 0 ? "Removed from cart" : "Updated cart");
