@@ -1,4 +1,8 @@
 import { computeAvailable, freezeStockFigures, type StockFigures } from "./snapshot.js";
+import {
+  computeSellWindowStatus,
+  type SellWindowTiming,
+} from "./sell-window.js";
 
 export type SellState = "open" | "locked";
 
@@ -87,20 +91,62 @@ export function applySetSellWindow(
   return observeWindowClose(withNewWindow, now);
 }
 
+export type EffectiveSellStateOptions = Readonly<{
+  /** Precomputed from SQL EXISTS — any active SellWindow membership at `now`. */
+  hasActiveSellWindowMembership?: boolean;
+  /** Full timings for in-memory OR across overlapping SellWindow memberships. */
+  activeSellWindows?: readonly SellWindowTiming[];
+}>;
+
+/** Snapshot instants only — does not consult SellWindow memberships. */
+export function isSnapshotSellWindowOpen(
+  state: Pick<DemandPersistedState, "windowOpensAt" | "windowClosesAt">,
+  now: Date,
+): boolean {
+  if (state.windowOpensAt !== null && now < state.windowOpensAt) {
+    return false;
+  }
+  if (state.windowClosesAt !== null && now >= state.windowClosesAt) {
+    return false;
+  }
+  return true;
+}
+
+export function hasActiveSellWindowMembership(
+  windows: readonly SellWindowTiming[],
+  now: Date,
+): boolean {
+  return windows.some((window) => computeSellWindowStatus(window, now) === "open");
+}
+
+function resolveActiveSellWindowMembership(
+  now: Date,
+  options?: EffectiveSellStateOptions,
+): boolean {
+  if (options?.hasActiveSellWindowMembership === true) {
+    return true;
+  }
+  if (options?.activeSellWindows !== undefined && options.activeSellWindows.length > 0) {
+    return hasActiveSellWindowMembership(options.activeSellWindows, now);
+  }
+  return false;
+}
+
 export function computeEffectiveSellState(
   state: DemandPersistedState,
   now: Date,
+  options?: EffectiveSellStateOptions,
 ): SellState {
   if (state.stickyLocked) {
     return "locked";
   }
-  if (state.windowOpensAt !== null && now < state.windowOpensAt) {
-    return "locked";
+  if (isSnapshotSellWindowOpen(state, now)) {
+    return "open";
   }
-  if (state.windowClosesAt !== null && now >= state.windowClosesAt) {
-    return "locked";
+  if (resolveActiveSellWindowMembership(now, options)) {
+    return "open";
   }
-  return "open";
+  return "locked";
 }
 
 export function computeAvailableToSell(
@@ -166,11 +212,13 @@ export function staffCatalogQtyDemandState(
 export function projectStaffCatalogQtyFromSnapshot(
   row: StaffCatalogQtySnapshotRow,
   now: Date,
+  options?: EffectiveSellStateOptions,
 ): StaffCatalogQtyCell {
   const projected = projectDemandFigures(
     freezeStockFigures(row.onHand, row.onOrder, row.allocated),
     staffCatalogQtyDemandState(row),
     now,
+    options,
   );
   return Object.freeze({
     onHand: projected.onHand,
@@ -216,8 +264,9 @@ export function projectDemandFigures(
   figures: StockFigures,
   demand: DemandPersistedState,
   now: Date,
+  options?: EffectiveSellStateOptions,
 ): DemandStockFigures {
-  const sellState = computeEffectiveSellState(demand, now);
+  const sellState = computeEffectiveSellState(demand, now, options);
   const availableToSell = computeAvailableToSell(
     sellState,
     figures.onHand,

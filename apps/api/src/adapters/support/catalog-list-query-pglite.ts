@@ -115,6 +115,34 @@ async function execCatalogListQuerySchema(client: PGlite): Promise<void> {
       updated_at timestamptz NOT NULL DEFAULT now(),
       UNIQUE (supplier_id, sku)
     );
+
+    CREATE TYPE inventory.sell_window_status AS ENUM ('scheduled', 'open', 'closed');
+
+    CREATE TABLE inventory.sell_windows (
+      id uuid PRIMARY KEY,
+      organization_id text NOT NULL,
+      name text NOT NULL,
+      filter_snapshot jsonb NOT NULL,
+      window_opens_at timestamptz,
+      window_closes_at timestamptz NOT NULL,
+      status inventory.sell_window_status NOT NULL,
+      manually_closed_at timestamptz,
+      applied_by text NOT NULL,
+      applied_at timestamptz NOT NULL,
+      sku_count integer NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE inventory.sell_window_skus (
+      id uuid PRIMARY KEY,
+      organization_id text NOT NULL,
+      sell_window_id uuid NOT NULL REFERENCES inventory.sell_windows(id),
+      sku text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      UNIQUE (organization_id, sell_window_id, sku)
+    );
   `);
 }
 
