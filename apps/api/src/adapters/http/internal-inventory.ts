@@ -192,15 +192,11 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
       const query = request.query as {
         page: number;
         pageSize: number;
-        sortBy: "name" | "appliedAt" | "windowOpensAt" | "windowClosesAt" | "status";
-        sortOrder: "asc" | "desc";
       };
       const result = await request.server.inventory.listSellWindows.execute({
         organizationId: staffOrganizationId(request),
         page: query.page,
         pageSize: query.pageSize,
-        sortBy: query.sortBy,
-        sortOrder: query.sortOrder,
       });
       return {
         items: result.items.map(mapSellWindow),

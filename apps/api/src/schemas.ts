@@ -831,10 +831,6 @@ export const sellWindowFilterSnapshotSchema = z.object({
 export const sellWindowsListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
-  sortBy: z
-    .enum(["name", "appliedAt", "windowOpensAt", "windowClosesAt", "status"])
-    .default("appliedAt"),
-  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
 export const sellWindowListItemSchema = z.object({

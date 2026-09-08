@@ -11,7 +11,7 @@ import type {
   SellWindowListPage,
 } from "../domain/ports/sell-window-repository.js";
 import { sellWindowSkus, sellWindows } from "../persistence/schema.js";
-import { toSellWindow } from "./in-memory-sell-window-repository.js";
+import { toSellWindow } from "../persistence/sell-window-mapper.js";
 
 export type SellWindowDrizzle = PostgresJsDatabase<{
   sellWindows: typeof sellWindows;

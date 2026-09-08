@@ -45,3 +45,11 @@ export function computeSellWindowStatus(timing: SellWindowTiming, now: Date): Se
   }
   return "open";
 }
+
+export function projectLiveSellWindowStatus<T extends SellWindow>(window: T, now: Date): T {
+  const status = computeSellWindowStatus(window, now);
+  if (status === window.status) {
+    return window;
+  }
+  return { ...window, status };
+}

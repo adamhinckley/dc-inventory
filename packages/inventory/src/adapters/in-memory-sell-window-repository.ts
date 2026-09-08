@@ -1,10 +1,6 @@
-import { OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
-import { SellWindowId } from "../domain/ids.js";
-import {
-  computeSellWindowStatus,
-  type SellWindow,
-  type SellWindowFilterSnapshot,
-} from "../domain/sell-window.js";
+import { OrganizationId, type Sku } from "@dc-inventory/shared-kernel";
+import type { SellWindowId } from "../domain/ids.js";
+import type { SellWindow } from "../domain/sell-window.js";
 import type {
   CreateSellWindowRecord,
   ISellWindowRepository,
@@ -92,80 +88,4 @@ export class InMemorySellWindowRepository implements ISellWindowRepository {
     this.windows.set(id, closed);
     return cloneWindow(closed);
   }
-
-  /** Test helper: refresh derived status from clock without mutating manually closed rows. */
-  refreshStatuses(now: Date): void {
-    for (const [id, window] of this.windows) {
-      if (window.manuallyClosedAt !== null) {
-        continue;
-      }
-      const status = computeSellWindowStatus(window, now);
-      if (status !== window.status) {
-        this.windows.set(id, { ...cloneWindow(window), status, updatedAt: now });
-      }
-    }
-  }
-}
-
-function parseFilterSnapshot(value: unknown): SellWindowFilterSnapshot {
-  if (value === null || typeof value !== "object") {
-    return {};
-  }
-  const snapshot = value as Record<string, unknown>;
-  return {
-    ...(typeof snapshot.q === "string" ? { q: snapshot.q } : {}),
-    ...(Array.isArray(snapshot.category)
-      ? { category: snapshot.category.filter((item): item is string => typeof item === "string") }
-      : {}),
-    ...(Array.isArray(snapshot.supplierId)
-      ? {
-          supplierId: snapshot.supplierId.filter(
-            (item): item is string => typeof item === "string",
-          ),
-        }
-      : {}),
-    ...(Array.isArray(snapshot.excludeSupplierId)
-      ? {
-          excludeSupplierId: snapshot.excludeSupplierId.filter(
-            (item): item is string => typeof item === "string",
-          ),
-        }
-      : {}),
-  };
-}
-
-export function toSellWindow(row: {
-  id: string;
-  organizationId: string;
-  name: string;
-  filterSnapshot: unknown;
-  windowOpensAt: Date | null;
-  windowClosesAt: Date;
-  status: string;
-  manuallyClosedAt: Date | null;
-  appliedBy: string;
-  appliedAt: Date;
-  skuCount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}): SellWindow {
-  const status =
-    row.status === "scheduled" || row.status === "open" || row.status === "closed"
-      ? row.status
-      : "closed";
-  return {
-    id: SellWindowId.parse(row.id),
-    organizationId: OrganizationId.parse(row.organizationId),
-    name: row.name,
-    filterSnapshot: parseFilterSnapshot(row.filterSnapshot),
-    windowOpensAt: row.windowOpensAt,
-    windowClosesAt: row.windowClosesAt,
-    status,
-    manuallyClosedAt: row.manuallyClosedAt,
-    appliedBy: StaffUserId.parse(row.appliedBy),
-    appliedAt: row.appliedAt,
-    skuCount: row.skuCount,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
 }

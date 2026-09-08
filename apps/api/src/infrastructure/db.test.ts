@@ -38,6 +38,8 @@ describe("PostgresDatabase", () => {
         "purchasingDocumentNumberCounters",
         "reorderPolicies",
         "salesDocumentNumberCounters",
+        "sellWindowSkus",
+        "sellWindows",
         "sessions",
         "shipTos",
         "softwarePayments",

@@ -1,7 +1,11 @@
 import type { OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import type { SellWindowId } from "../domain/ids.js";
-import type { SellWindow } from "../domain/sell-window.js";
+import {
+  computeSellWindowStatus,
+  projectLiveSellWindowStatus,
+  type SellWindow,
+} from "../domain/sell-window.js";
 import type { ISellWindowRepository } from "../domain/ports/sell-window-repository.js";
 
 export type CloseSellWindowRequest = {
@@ -24,17 +28,15 @@ export class CloseSellWindowUseCase {
     if (existing === null) {
       return { ok: false, reason: "not_found" };
     }
-    if (existing.manuallyClosedAt !== null || existing.status === "closed") {
+    const now = this.clock.now();
+    const liveStatus = computeSellWindowStatus(existing, now);
+    if (existing.manuallyClosedAt !== null || liveStatus === "closed") {
       return { ok: false, reason: "already_closed" };
     }
-    const closed = await this.sellWindows.close(
-      input.organizationId,
-      input.id,
-      this.clock.now(),
-    );
+    const closed = await this.sellWindows.close(input.organizationId, input.id, now);
     if (closed === null) {
       return { ok: false, reason: "not_found" };
     }
-    return { ok: true, window: closed };
+    return { ok: true, window: projectLiveSellWindowStatus(closed, now) };
   }
 }

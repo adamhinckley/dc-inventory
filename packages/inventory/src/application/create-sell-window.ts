@@ -40,7 +40,8 @@ export class CreateSellWindowUseCase {
 
   async execute(input: CreateSellWindowRequest): Promise<CreateSellWindowResult> {
     const name = input.name.trim();
-    if (name.length === 0 || input.skus.length === 0) {
+    const uniqueSkus = [...new Map(input.skus.map((sku) => [sku.value, sku])).values()];
+    if (name.length === 0 || uniqueSkus.length === 0) {
       return { ok: false, reason: "invalid" };
     }
     const windowOpensAt = input.windowOpensAt ?? null;
@@ -67,13 +68,13 @@ export class CreateSellWindowUseCase {
       manuallyClosedAt: null,
       appliedBy: StaffUserId.parse(input.staffUserId),
       appliedAt: now,
-      skuCount: input.skus.length,
+      skuCount: uniqueSkus.length,
       createdAt: now,
       updatedAt: now,
     };
     const record: CreateSellWindowRecord = {
       window,
-      skus: [...input.skus],
+      skus: uniqueSkus,
     };
     await this.sellWindows.create(record);
     return { ok: true, window };

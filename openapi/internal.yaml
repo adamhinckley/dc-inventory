@@ -5866,27 +5866,6 @@ paths:
           in: query
           name: pageSize
           required: false
-        - schema:
-            default: appliedAt
-            type: string
-            enum:
-              - name
-              - appliedAt
-              - windowOpensAt
-              - windowClosesAt
-              - status
-          in: query
-          name: sortBy
-          required: false
-        - schema:
-            default: desc
-            type: string
-            enum:
-              - asc
-              - desc
-          in: query
-          name: sortOrder
-          required: false
       x-table:
         rowId: id
         columns:

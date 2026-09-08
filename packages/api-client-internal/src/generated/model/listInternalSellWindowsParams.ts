@@ -4,8 +4,6 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ListInternalSellWindowsSortBy } from './listInternalSellWindowsSortBy';
-import type { ListInternalSellWindowsSortOrder } from './listInternalSellWindowsSortOrder';
 
 export type ListInternalSellWindowsParams = {
 /**
@@ -18,6 +16,4 @@ page?: number;
  * @maximum 100
  */
 pageSize?: number;
-sortBy?: ListInternalSellWindowsSortBy;
-sortOrder?: ListInternalSellWindowsSortOrder;
 };

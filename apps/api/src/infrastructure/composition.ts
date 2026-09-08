@@ -827,8 +827,8 @@ function inventoryServices(
           new RecordReopenSkusForPresellUseCase(scope.inventory.ledger).execute(input),
         ),
     },
-    listSellWindows: new ListSellWindowsUseCase(sellWindowRepo),
-    getSellWindow: new GetSellWindowUseCase(sellWindowRepo),
+    listSellWindows: new ListSellWindowsUseCase(sellWindowRepo, clock),
+    getSellWindow: new GetSellWindowUseCase(sellWindowRepo, clock),
     createSellWindow: new CreateSellWindowUseCase(sellWindowRepo, clock),
     closeSellWindow: new CloseSellWindowUseCase(sellWindowRepo, clock),
   };

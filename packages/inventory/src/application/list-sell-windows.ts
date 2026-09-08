@@ -1,4 +1,6 @@
 import type { OrganizationId } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
+import { projectLiveSellWindowStatus } from "../domain/sell-window.js";
 import type {
   ISellWindowRepository,
   ListSellWindowsQuery,
@@ -21,7 +23,10 @@ export type ListSellWindowsResult = SellWindowListPage & {
 };
 
 export class ListSellWindowsUseCase {
-  constructor(private readonly sellWindows: ISellWindowRepository) {}
+  constructor(
+    private readonly sellWindows: ISellWindowRepository,
+    private readonly clock: IClock,
+  ) {}
 
   async execute(input: ListSellWindowsRequest): Promise<ListSellWindowsResult> {
     const query: ListSellWindowsQuery = {
@@ -32,8 +37,9 @@ export class ListSellWindowsUseCase {
       sortOrder: input.sortOrder ?? "desc",
     };
     const page = await this.sellWindows.list(query);
+    const now = this.clock.now();
     return {
-      items: page.items,
+      items: page.items.map((window) => projectLiveSellWindowStatus(window, now)),
       total: page.total,
       page: input.page,
       pageSize: input.pageSize,

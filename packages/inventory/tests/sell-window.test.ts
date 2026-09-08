@@ -20,15 +20,17 @@ const OPENS = new Date("2026-07-01T00:00:00.000Z");
 const CLOSES = new Date("2026-08-01T00:00:00.000Z");
 const INSIDE = new Date("2026-07-15T12:00:00.000Z");
 const BEFORE = new Date("2026-06-15T12:00:00.000Z");
+const AFTER = new Date("2026-09-01T12:00:00.000Z");
 
 function harness(now: Date) {
   const repo = new InMemorySellWindowRepository();
   const clock = new InMemoryClock(now);
   return {
     repo,
+    clock,
     create: new CreateSellWindowUseCase(repo, clock),
-    list: new ListSellWindowsUseCase(repo),
-    get: new GetSellWindowUseCase(repo),
+    list: new ListSellWindowsUseCase(repo, clock),
+    get: new GetSellWindowUseCase(repo, clock),
     close: new CloseSellWindowUseCase(repo, clock),
   };
 }
@@ -62,6 +64,7 @@ describe("SellWindow repository ports", () => {
     });
     expect(listed.total).toBe(1);
     expect(listed.items[0]?.name).toBe("Summer pre-sell");
+    expect(listed.items[0]?.status).toBe("open");
 
     const got = await h.get.execute({
       organizationId: ORG,
@@ -71,12 +74,13 @@ describe("SellWindow repository ports", () => {
     if (!got.ok) {
       throw new Error("expected get ok");
     }
+    expect(got.window.status).toBe("open");
     expect(got.window.skus.map((sku) => sku.value)).toEqual([SKU_A.value, SKU_B.value]);
   });
 
-  it("marks scheduled windows before opens and closed after closes", async () => {
-    const h = harness(BEFORE);
-    const created = await h.create.execute({
+  it("marks scheduled windows before opens and closed after closes on list/get", async () => {
+    const repo = new InMemorySellWindowRepository();
+    const created = await new CreateSellWindowUseCase(repo, new InMemoryClock(BEFORE)).execute({
       organizationId: ORG,
       staffUserId: STAFF,
       name: "Future block",
@@ -90,6 +94,50 @@ describe("SellWindow repository ports", () => {
       throw new Error("expected create ok");
     }
     expect(created.window.status).toBe("scheduled");
+
+    const listedOpen = await new ListSellWindowsUseCase(repo, new InMemoryClock(INSIDE)).execute({
+      organizationId: ORG,
+      page: 1,
+      pageSize: 25,
+    });
+    expect(listedOpen.items[0]?.status).toBe("open");
+
+    const gotClosed = await new GetSellWindowUseCase(repo, new InMemoryClock(AFTER)).execute({
+      organizationId: ORG,
+      id: created.window.id,
+    });
+    expect(gotClosed.ok).toBe(true);
+    if (!gotClosed.ok) {
+      throw new Error("expected get ok");
+    }
+    expect(gotClosed.window.status).toBe("closed");
+  });
+
+  it("dedupes skus before persisting membership", async () => {
+    const h = harness(INSIDE);
+    const created = await h.create.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      name: "Deduped",
+      filterSnapshot: {},
+      windowClosesAt: CLOSES,
+      skus: [SKU_A, SKU_A, SKU_B],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      throw new Error("expected create ok");
+    }
+    expect(created.window.skuCount).toBe(2);
+
+    const got = await h.get.execute({
+      organizationId: ORG,
+      id: created.window.id,
+    });
+    expect(got.ok).toBe(true);
+    if (!got.ok) {
+      throw new Error("expected get ok");
+    }
+    expect(got.window.skus.map((sku) => sku.value)).toEqual([SKU_A.value, SKU_B.value]);
   });
 
   it("rejects invalid sell windows", async () => {
@@ -135,6 +183,27 @@ describe("SellWindow repository ports", () => {
       id: created.window.id,
     });
     expect(again).toEqual({ ok: false, reason: "already_closed" });
+  });
+
+  it("treats elapsed windows as already closed", async () => {
+    const repo = new InMemorySellWindowRepository();
+    const created = await new CreateSellWindowUseCase(repo, new InMemoryClock(INSIDE)).execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      name: "Elapsed",
+      filterSnapshot: {},
+      windowClosesAt: CLOSES,
+      skus: [SKU_A],
+    });
+    if (!created.ok) {
+      throw new Error("expected create ok");
+    }
+
+    const result = await new CloseSellWindowUseCase(repo, new InMemoryClock(AFTER)).execute({
+      organizationId: ORG,
+      id: created.window.id,
+    });
+    expect(result).toEqual({ ok: false, reason: "already_closed" });
   });
 
   it("returns not_found for unknown ids", async () => {
