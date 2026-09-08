@@ -13,6 +13,7 @@ export class InMemoryProductRepository implements IProductRepository {
   private readonly byId = new Map<ProductId, Stored>();
   private readonly categoriesByProductId = new Map<ProductId, readonly string[]>();
   private readonly supplierIdsByProductId = new Map<ProductId, Set<string>>();
+  private readonly primarySupplierIdByProductId = new Map<ProductId, string>();
 
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
     const needle = query.q?.trim().toLowerCase() ?? "";
@@ -20,6 +21,9 @@ export class InMemoryProductRepository implements IProductRepository {
       .map((name) => name.trim())
       .filter((name) => name.length > 0);
     const supplierIds = (query.supplierId ?? [])
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+    const excludeSupplierIds = (query.excludeSupplierId ?? [])
       .map((id) => id.trim())
       .filter((id) => id.length > 0);
     return [...this.byId.values()].filter((row) => {
@@ -44,6 +48,15 @@ export class InMemoryProductRepository implements IProductRepository {
           return false;
         }
       }
+      if (excludeSupplierIds.length > 0) {
+        const primarySupplierId = this.primarySupplierIdByProductId.get(row.product.id);
+        if (
+          primarySupplierId !== undefined &&
+          excludeSupplierIds.includes(primarySupplierId)
+        ) {
+          return false;
+        }
+      }
       if (needle.length === 0) {
         return true;
       }
@@ -64,6 +77,10 @@ export class InMemoryProductRepository implements IProductRepository {
 
   setSupplierIds(productId: ProductId, supplierIds: Iterable<string>): void {
     this.supplierIdsByProductId.set(productId, new Set(supplierIds));
+  }
+
+  setPrimarySupplierId(productId: ProductId, supplierId: string): void {
+    this.primarySupplierIdByProductId.set(productId, supplierId);
   }
 
   async listCategoryNames(organizationId: OrganizationId): Promise<string[]> {

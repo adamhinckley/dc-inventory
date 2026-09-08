@@ -6,6 +6,7 @@ export type ProductListMatch = {
   q?: string;
   category?: readonly string[];
   supplierId?: readonly string[];
+  excludeSupplierId?: readonly string[];
   inactive?: boolean;
   shopVisibleOnly?: boolean;
 };

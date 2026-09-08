@@ -204,6 +204,103 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
     }
   });
 
+  it("combines category include with primary-supplier exclude filters", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const org = OrganizationId.DEFAULT;
+      const hardwareCategoryId = "da209000-0000-4000-8000-000000000301";
+      const boltProductId = "da209000-0000-4000-8000-000000000302";
+      const nailProductId = "da209000-0000-4000-8000-000000000307";
+      const ribbonProductId = "da209000-0000-4000-8000-000000000303";
+      await harness.client.exec(`
+        CREATE TABLE catalog.categories (
+          id uuid PRIMARY KEY,
+          organization_id text NOT NULL,
+          name text NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(),
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          UNIQUE (organization_id, name)
+        );
+        CREATE TABLE catalog.product_categories (
+          product_id uuid NOT NULL,
+          category_id uuid NOT NULL REFERENCES catalog.categories(id),
+          PRIMARY KEY (product_id, category_id)
+        );
+      `);
+      await harness.client.query(
+        `INSERT INTO catalog.categories (id, organization_id, name) VALUES ($1, $2, 'Hardware')`,
+        [hardwareCategoryId, org],
+      );
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, 'COMBO-BOLT', 'Combo bolt', 'EA', 100, 50, true)`,
+        [boltProductId, org],
+      );
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, 'COMBO-RIBBON', 'Combo ribbon', 'EA', 100, 50, true)`,
+        [ribbonProductId, org],
+      );
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, 'COMBO-NAIL', 'Combo nail', 'EA', 100, 50, true)`,
+        [nailProductId, org],
+      );
+      await harness.client.query(
+        `INSERT INTO catalog.product_categories (product_id, category_id) VALUES ($1, $2), ($3, $2), ($4, $2)`,
+        [boltProductId, hardwareCategoryId, ribbonProductId, nailProductId],
+      );
+      await harness.client.query(
+        `INSERT INTO purchasing.supplier_products (id, supplier_id, sku)
+         VALUES ($1, $2, 'COMBO-BOLT')`,
+        ["da209000-0000-4000-8000-000000000304", harness.supplierId],
+      );
+      await harness.client.query(
+        `INSERT INTO purchasing.supplier_products (id, supplier_id, sku)
+         VALUES ($1, $2, 'COMBO-BOLT')`,
+        ["da209000-0000-4000-8000-000000000305", harness.otherSupplierId],
+      );
+      await harness.client.query(
+        `INSERT INTO purchasing.supplier_products (id, supplier_id, sku)
+         VALUES ($1, $2, 'COMBO-RIBBON')`,
+        ["da209000-0000-4000-8000-000000000306", harness.otherSupplierId],
+      );
+
+      const byCategoryAndExclude = await harness.catalogListQuery.list({
+        organizationId: org,
+        category: ["Hardware"],
+        excludeSupplierId: [harness.supplierId],
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(byCategoryAndExclude.items.map((row) => row.product.sku.value)).toEqual([
+        "COMBO-NAIL",
+        "COMBO-RIBBON",
+      ]);
+
+      const byIncludeAndExclude = await harness.catalogListQuery.list({
+        organizationId: org,
+        category: ["Hardware"],
+        supplierId: [harness.otherSupplierId],
+        excludeSupplierId: [harness.supplierId],
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(byIncludeAndExclude.items.map((row) => row.product.sku.value)).toEqual([
+        "COMBO-RIBBON",
+      ]);
+    } finally {
+      await harness.close();
+    }
+  });
+
   it("filters by effective sell state including a future window lock", async () => {
     const harness = await createCatalogListQueryPgliteHarness();
     try {

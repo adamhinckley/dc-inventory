@@ -465,6 +465,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         hideZeroInventory?: boolean;
         category?: string[];
         supplierId?: string[];
+        excludeSupplierId?: string[];
         sellState?: "open" | "locked";
       };
       const result = await request.server.catalog.listStaffProducts.execute({
@@ -479,6 +480,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
         hideZeroInventory: query.hideZeroInventory,
         category: query.category,
         supplierId: query.supplierId,
+        excludeSupplierId: query.excludeSupplierId,
         sellState: query.sellState,
       });
       return {

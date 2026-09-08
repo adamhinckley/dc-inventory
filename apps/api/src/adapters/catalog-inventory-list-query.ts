@@ -20,7 +20,7 @@ import {
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import { supplierProducts, suppliers } from "@dc-inventory/purchasing/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
-import { and, asc, count, desc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import { normalizeCents } from "./normalize-cents.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
@@ -44,6 +44,15 @@ const supplierName = sql<string | null>`(
   inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
   where ${supplierProducts.sku} = ${products.sku}
     and ${suppliers.organizationId} = ${products.organizationId}
+)`;
+
+const primarySupplierId = sql<string | null>`(
+  select ${supplierProducts.supplierId}
+  from ${supplierProducts}
+  inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
+  where ${supplierProducts.sku} = ${products.sku}
+    and ${suppliers.organizationId} = ${products.organizationId}
+  limit 1
 )`;
 
 function productFromRow(row: {
@@ -176,6 +185,17 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           ),
         );
       clauses.push(inArray(products.sku, factorySkus));
+    }
+    const excludeSupplierIds = (query.excludeSupplierId ?? [])
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
+    if (excludeSupplierIds.length > 0) {
+      clauses.push(
+        or(
+          sql`(${primarySupplierId}) is null`,
+          notInArray(primarySupplierId, excludeSupplierIds),
+        )!,
+      );
     }
     const onHand = sql<number>`coalesce(${stockSnapshots.onHand}, 0)`;
     const onOrder = sql<number>`coalesce(${stockSnapshots.onOrder}, 0)`;

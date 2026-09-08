@@ -125,6 +125,10 @@ export const listInternalProductsTable = {
       "control": "multiselect"
     },
     {
+      "param": "excludeSupplierId",
+      "control": "multiselect"
+    },
+    {
       "param": "sellState",
       "control": "select"
     }

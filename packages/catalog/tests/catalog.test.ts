@@ -426,6 +426,56 @@ describe("Catalog use cases (in-memory)", () => {
     expect(listed.items[0]?.product.sku.value).toBe("ACME-BOLT");
   });
 
+  it("combines category include with primary-supplier exclude filters", async () => {
+    const h = harness();
+    const factoryA = "550e8400-e29b-41d4-a716-446655440030";
+    const factoryB = "550e8400-e29b-41d4-a716-446655440031";
+    const bolt = await createProduct(h, { sku: "COMBO-BOLT", name: "Combo bolt" });
+    const nail = await createProduct(h, { sku: "COMBO-NAIL", name: "Combo nail" });
+    const ribbon = await createProduct(h, { sku: "COMBO-RIBBON", name: "Combo ribbon" });
+    const wreath = await createProduct(h, { sku: "COMBO-WREATH", name: "Combo wreath" });
+    h.products.setCategories(bolt.id, ["Hardware"]);
+    h.products.setCategories(nail.id, ["Hardware"]);
+    h.products.setCategories(ribbon.id, ["Hardware"]);
+    h.products.setCategories(wreath.id, ["Textiles"]);
+    h.products.setSupplierIds(bolt.id, [factoryA, factoryB]);
+    h.products.setPrimarySupplierId(bolt.id, factoryA);
+    h.products.setSupplierIds(ribbon.id, [factoryB]);
+    h.products.setPrimarySupplierId(ribbon.id, factoryB);
+    h.products.setSupplierIds(wreath.id, [factoryA]);
+    h.products.setPrimarySupplierId(wreath.id, factoryA);
+
+    const byCategoryAndExclude = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      category: ["Hardware"],
+      excludeSupplierId: [factoryA],
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+    expect(byCategoryAndExclude.items.map((row) => row.product.sku.value)).toEqual([
+      "COMBO-NAIL",
+      "COMBO-RIBBON",
+    ]);
+
+    const byIncludeAndExclude = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      category: ["Hardware"],
+      supplierId: [factoryB],
+      excludeSupplierId: [factoryA],
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+    expect(byIncludeAndExclude.items.map((row) => row.product.sku.value)).toEqual([
+      "COMBO-RIBBON",
+    ]);
+  });
+
   it("treats missing qty snapshots as zero", async () => {
     const h = harness();
     const product = await createProduct(h);

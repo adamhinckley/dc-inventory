@@ -63,6 +63,7 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
       q: query.q,
       category: query.category,
       supplierId: query.supplierId,
+      excludeSupplierId: query.excludeSupplierId,
       inactive: query.inactive,
       shopVisibleOnly: query.shopVisibleOnly,
     });

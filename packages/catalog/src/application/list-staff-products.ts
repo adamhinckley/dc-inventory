@@ -16,6 +16,7 @@ export type ListStaffProductsRequest = {
   q?: string;
   category?: readonly string[];
   supplierId?: readonly string[];
+  excludeSupplierId?: readonly string[];
   page: number;
   pageSize: number;
   sortBy: StaffProductSortBy;
@@ -51,6 +52,7 @@ export class ListStaffProductsUseCase {
       q: input.q,
       category: input.category,
       supplierId: input.supplierId,
+      excludeSupplierId: input.excludeSupplierId,
       page: input.page,
       pageSize: input.pageSize,
       sortBy: input.sortBy,

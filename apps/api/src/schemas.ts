@@ -120,6 +120,7 @@ export const listQuerySchema = z.object({
   hideZeroInventory: optionalBooleanQuery,
   category: optionalRepeatedQuery(z.string().trim().min(1)),
   supplierId: optionalRepeatedQuery(z.string().uuid()),
+  excludeSupplierId: optionalRepeatedQuery(z.string().uuid()),
   sellState: sellStateSchema.optional(),
 });
 
@@ -760,6 +761,7 @@ export const productsListTable = {
     { param: "hideZeroInventory", control: "boolean" },
     { param: "category", control: "multiselect" },
     { param: "supplierId", control: "multiselect" },
+    { param: "excludeSupplierId", control: "multiselect" },
     { param: "sellState", control: "select" },
   ],
   sort: {
