@@ -32,6 +32,8 @@ import type {
   RecordInboundCancelledCommand,
   RecordInboundFromPoCommand,
   RecordShippedCommand,
+  CloseSkusForPresellCommand,
+  CloseSkusForPresellResult,
   ReopenSkusForPresellCommand,
   SetSellWindowCommand,
   StockCommandBase,
@@ -117,6 +119,26 @@ export class InMemoryStockLedger implements IStockLedger {
       this.readModel.setDemandState(sku, LocationId.DEFAULT, reopened, organizationId);
     }
     return { ok: true };
+  }
+
+  async closeSkusForPresell(command: CloseSkusForPresellCommand): Promise<CloseSkusForPresellResult> {
+    const organizationId = requireOrganizationId(command.organizationId);
+    const now = this.clock ? this.clock.now() : new Date();
+    let closedCount = 0;
+
+    for (const sku of command.skus) {
+      const demand = this.readModel.getDemandStateSync(sku, LocationId.DEFAULT, organizationId);
+      if (demand.stickyLocked) {
+        continue;
+      }
+      const nextDemand = applySetSellWindow(demand, demand.windowOpensAt, now, now);
+      if (!nextDemand.stickyLocked) {
+        continue;
+      }
+      this.readModel.setDemandState(sku, LocationId.DEFAULT, nextDemand, organizationId);
+      closedCount++;
+    }
+    return { ok: true, closedCount };
   }
 
   async setSellWindow(command: SetSellWindowCommand): Promise<DemandCommandResult> {

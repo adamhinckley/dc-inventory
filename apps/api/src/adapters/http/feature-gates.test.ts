@@ -90,6 +90,11 @@ describe("named feature gates", () => {
         windowClosesAt: "2026-08-01T00:00:00.000Z",
       },
     },
+    {
+      feature: "inventory",
+      url: "/internal/inventory/close-skus",
+      method: "POST",
+    },
     { feature: "sales", url: "/internal/sales-orders" },
     {
       feature: "ar",

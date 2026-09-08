@@ -2,10 +2,7 @@ import type { OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kern
 import { isSellWindowInvalid } from "../domain/demand-model.js";
 import type { IStockLedger } from "../domain/ports/stock-ledger.js";
 import type { SellWindow, SellWindowFilterSnapshot } from "../domain/sell-window.js";
-import {
-  CreateSellWindowUseCase,
-  type CreateSellWindowResult,
-} from "./create-sell-window.js";
+import { CreateSellWindowUseCase } from "./create-sell-window.js";
 
 export type RecordReopenSkusForPresellRequest = {
   organizationId: OrganizationId;
@@ -21,11 +18,11 @@ export type RecordReopenSkusForPresellResult =
   | { ok: true; reopenedCount: number; sellWindow: SellWindow }
   | { ok: false; reason: "invalid" | "invalid_sell_window" };
 
-function mapCreateFailure(result: CreateSellWindowResult): RecordReopenSkusForPresellResult {
-  if (!result.ok) {
-    return { ok: false, reason: result.reason };
+export class SellWindowPersistenceError extends Error {
+  constructor(public readonly reason: "invalid" | "invalid_sell_window") {
+    super(`sell window persistence failed: ${reason}`);
+    this.name = "SellWindowPersistenceError";
   }
-  throw new Error("expected create failure");
 }
 
 export class RecordReopenSkusForPresellUseCase {
@@ -70,7 +67,7 @@ export class RecordReopenSkusForPresellUseCase {
       skus: uniqueSkus,
     });
     if (!created.ok) {
-      return mapCreateFailure(created);
+      throw new SellWindowPersistenceError(created.reason);
     }
 
     return {

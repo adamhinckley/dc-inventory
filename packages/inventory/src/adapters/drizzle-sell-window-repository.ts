@@ -18,6 +18,14 @@ export type SellWindowDrizzle = PostgresJsDatabase<{
   sellWindowSkus: typeof sellWindowSkus;
 }>;
 
+export type DrizzleSellWindowRepositoryOptions = {
+  /**
+   * When false, inserts run on the supplied db handle (for example a UoW transaction).
+   * Defaults to true for pool-scoped repositories.
+   */
+  wrapCreateInTransaction?: boolean;
+};
+
 function sortColumn(sortBy: ListSellWindowsQuery["sortBy"]) {
   switch (sortBy) {
     case "name":
@@ -34,11 +42,18 @@ function sortColumn(sortBy: ListSellWindowsQuery["sortBy"]) {
 }
 
 export class DrizzleSellWindowRepository implements ISellWindowRepository {
-  constructor(private readonly db: SellWindowDrizzle) {}
+  constructor(
+    private readonly db: SellWindowDrizzle,
+    private readonly options: DrizzleSellWindowRepositoryOptions = {},
+  ) {}
+
+  private wrapCreateInTransaction(): boolean {
+    return this.options.wrapCreateInTransaction ?? true;
+  }
 
   async create(record: CreateSellWindowRecord): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      await tx.insert(sellWindows).values({
+    const write = async () => {
+      await this.db.insert(sellWindows).values({
         id: record.window.id,
         organizationId: record.window.organizationId,
         name: record.window.name,
@@ -54,7 +69,7 @@ export class DrizzleSellWindowRepository implements ISellWindowRepository {
         updatedAt: record.window.updatedAt,
       });
       if (record.skus.length > 0) {
-        await tx.insert(sellWindowSkus).values(
+        await this.db.insert(sellWindowSkus).values(
           record.skus.map((sku) => ({
             organizationId: record.window.organizationId,
             sellWindowId: record.window.id,
@@ -62,7 +77,13 @@ export class DrizzleSellWindowRepository implements ISellWindowRepository {
           })),
         );
       }
-    });
+    };
+
+    if (this.wrapCreateInTransaction()) {
+      await this.db.transaction(async () => write());
+      return;
+    }
+    await write();
   }
 
   async list(query: ListSellWindowsQuery): Promise<SellWindowListPage> {

@@ -81,6 +81,15 @@ export type ReopenSkusForPresellCommand = {
   windowClosesAt?: Date | null;
 };
 
+export type CloseSkusForPresellCommand = {
+  organizationId: OrganizationId;
+  skus: readonly Sku[];
+};
+
+export type CloseSkusForPresellResult =
+  | { ok: true; closedCount: number }
+  | { ok: false; reason: StockCommandFailureReason };
+
 export type SetSellWindowCommand = {
   organizationId: OrganizationId;
   sku: Sku;
@@ -119,6 +128,7 @@ export interface IStockLedger {
   recordCommitted(command: RecordCommittedCommand): Promise<StockCommandResult>;
   recordDecommitted(command: RecordDecommittedCommand): Promise<StockCommandResult>;
   reopenSkusForPresell(command: ReopenSkusForPresellCommand): Promise<DemandCommandResult>;
+  closeSkusForPresell(command: CloseSkusForPresellCommand): Promise<CloseSkusForPresellResult>;
   setSellWindow(command: SetSellWindowCommand): Promise<DemandCommandResult>;
 }
 

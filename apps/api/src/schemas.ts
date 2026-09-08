@@ -832,6 +832,24 @@ export const reopenInventorySkusResponseSchema = z.object({
   skuCount: z.number().int().min(0),
 });
 
+export const closeInventorySkusBodySchema = z
+  .object({
+    windowId: z.string().uuid().optional(),
+    skus: z.array(z.string().min(1)).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.windowId === undefined && (value.skus === undefined || value.skus.length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "windowId or skus is required",
+      });
+    }
+  });
+
+export const closeInventorySkusResponseSchema = z.object({
+  closedCount: z.number().int().min(0),
+});
+
 export const sellWindowsListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),

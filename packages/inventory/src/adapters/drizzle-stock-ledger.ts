@@ -35,6 +35,8 @@ import type {
   RecordInboundCancelledCommand,
   RecordInboundFromPoCommand,
   RecordShippedCommand,
+  CloseSkusForPresellCommand,
+  CloseSkusForPresellResult,
   ReopenSkusForPresellCommand,
   SetSellWindowCommand,
   StockCommandBase,
@@ -199,6 +201,40 @@ export class DrizzleStockLedger implements IStockLedger {
         .where(eq(stockSnapshots.id, rows.id));
     }
     return { ok: true };
+  }
+
+  async closeSkusForPresell(command: CloseSkusForPresellCommand): Promise<CloseSkusForPresellResult> {
+    const organizationId = requireOrganizationId(command.organizationId);
+    const now = this.clock.now();
+    let closedCount = 0;
+
+    for (const sku of command.skus) {
+      await this.lockSnapshots([{ organizationId, sku, locationId: LocationId.DEFAULT }]);
+      const locationUuid = await this.resolveLocationUuid(organizationId, LocationId.DEFAULT);
+      const demand = await this.readModel.getDemandState(sku, LocationId.DEFAULT, organizationId);
+      if (demand.stickyLocked) {
+        continue;
+      }
+      const nextDemand = applySetSellWindow(demand, demand.windowOpensAt, now, now);
+      if (!nextDemand.stickyLocked) {
+        continue;
+      }
+      const rows = await this.loadSnapshotRow(organizationId, sku, locationUuid);
+      if (rows === undefined) {
+        throw new Error("Locked inventory snapshot is missing");
+      }
+      await this.db
+        .update(stockSnapshots)
+        .set({
+          windowOpensAt: nextDemand.windowOpensAt,
+          windowClosesAt: nextDemand.windowClosesAt,
+          stickyLocked: nextDemand.stickyLocked,
+          updatedAt: new Date(),
+        })
+        .where(eq(stockSnapshots.id, rows.id));
+      closedCount++;
+    }
+    return { ok: true, closedCount };
   }
 
   async setSellWindow(command: SetSellWindowCommand): Promise<DemandCommandResult> {
