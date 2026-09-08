@@ -23,7 +23,7 @@ export function PurchasingOrdersExplorer({
           <div className="min-w-0 flex-1">
             <h1 className="page-title">Purchase orders</h1>
             <p className="page-description mt-2">
-              Draft purchase orders stay editable here. Open a confirmed or received PO by
+              Draft purchase orders stay editable here. Open an issued or received PO by
               document number, or browse inbound POs under Receiving.
             </p>
           </div>

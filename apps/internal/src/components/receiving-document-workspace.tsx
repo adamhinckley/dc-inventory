@@ -294,7 +294,7 @@ export function ReceivingDocumentLines() {
     <div className="flex min-h-0 flex-1 flex-col gap-form-section">
       {poStatus !== "confirmed" ? (
         <p className="text-body-sm text-fg-secondary" role="status">
-          Only confirmed purchase orders can be received.
+          Only issued purchase orders can be received.
         </p>
       ) : null}
       {actionError ? (
