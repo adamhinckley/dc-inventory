@@ -97,6 +97,7 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
           organizationId: OrganizationId.DEFAULT,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
+          poPrefix: null,
         });
         return { id, vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER };
       },

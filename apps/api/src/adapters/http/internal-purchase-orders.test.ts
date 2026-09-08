@@ -64,6 +64,7 @@ async function startPurchasingApp() {
     organizationId: OrganizationId.DEFAULT,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
+          poPrefix: null,
   });
 
   await staffUsers.save({
@@ -522,6 +523,7 @@ describe("internal purchase orders HTTP", () => {
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
+          poPrefix: null,
     });
 
     for (const [index, role] of (
@@ -676,6 +678,7 @@ describe("internal purchase orders HTTP", () => {
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
+          poPrefix: null,
     });
     await customerRepo.save({
       id: CUSTOMER_ID,

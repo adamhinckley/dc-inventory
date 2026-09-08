@@ -25,6 +25,7 @@ function toSupplier(row: typeof suppliers.$inferSelect): Supplier {
     organizationId: OrganizationId.parse(row.organizationId),
     vendorNumber: row.vendorNumber,
     name: row.name,
+    poPrefix: row.poPrefix,
   };
 }
 
@@ -133,6 +134,18 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
     return result;
   }
 
+  async findByPoPrefix(
+    organizationId: OrganizationId,
+    poPrefix: string,
+  ): Promise<Supplier | null> {
+    const rows = await this.db
+      .select()
+      .from(suppliers)
+      .where(and(eq(suppliers.organizationId, organizationId), eq(suppliers.poPrefix, poPrefix)))
+      .limit(1);
+    return rows[0] === undefined ? null : toSupplier(rows[0]);
+  }
+
   async save(supplier: Supplier): Promise<void> {
     const existing = await this.findById(supplier.organizationId, supplier.id);
     if (existing === null) {
@@ -141,6 +154,7 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
         organizationId: supplier.organizationId,
         vendorNumber: supplier.vendorNumber,
         name: supplier.name,
+        poPrefix: supplier.poPrefix,
       });
       return;
     }
@@ -149,6 +163,7 @@ export class DrizzleSupplierRepository implements ISupplierRepository {
       .set({
         vendorNumber: supplier.vendorNumber,
         name: supplier.name,
+        poPrefix: supplier.poPrefix,
         updatedAt: new Date(),
       })
       .where(eq(suppliers.id, supplier.id));

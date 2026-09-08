@@ -35,6 +35,7 @@ describe("Suppliers use cases (in-memory)", () => {
     if (!created.ok) {
       return;
     }
+    expect(created.supplier.poPrefix).toBeNull();
 
     const second = await h.createSupplier.execute({
       organizationId: DEFAULT_ORG,
@@ -218,5 +219,107 @@ describe("Suppliers use cases (in-memory)", () => {
       vendorNumber: "V-1",
     });
     expect(conflict).toEqual({ ok: false, reason: "duplicate_vendor_number" });
+  });
+
+  it("creates and updates suppliers with poPrefix", async () => {
+    const h = harness();
+    const created = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Heritage Fabrics",
+      vendorNumber: "HF-100",
+      poPrefix: "HF",
+    });
+    expect(created).toEqual({
+      ok: true,
+      supplier: {
+        id: created.ok ? created.supplier.id : "",
+        organizationId: DEFAULT_ORG,
+        name: "Heritage Fabrics",
+        vendorNumber: "HF-100",
+        poPrefix: "HF",
+      },
+    });
+
+    const cleared = await h.updateSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: created.ok ? created.supplier.id : SupplierId.parse(""),
+      poPrefix: null,
+    });
+    expect(cleared.ok).toBe(true);
+    if (cleared.ok) {
+      expect(cleared.supplier.poPrefix).toBeNull();
+    }
+  });
+
+  it("rejects invalid and duplicate poPrefix within an org", async () => {
+    const h = harness();
+    expect(
+      await h.createSupplier.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        name: "Bad Prefix",
+        vendorNumber: "BP-1",
+        poPrefix: "hf",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+
+    const first = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "First Prefix",
+      vendorNumber: "FP-1",
+      poPrefix: "HF",
+    });
+    expect(first.ok).toBe(true);
+
+    const duplicate = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Second Prefix",
+      vendorNumber: "FP-2",
+      poPrefix: "HF",
+    });
+    expect(duplicate).toEqual({ ok: false, reason: "duplicate_po_prefix" });
+
+    const other = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Other Prefix",
+      vendorNumber: "OP-1",
+      poPrefix: "OP",
+    });
+    if (!other.ok) {
+      throw new Error("expected create");
+    }
+
+    const conflict = await h.updateSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: other.supplier.id,
+      poPrefix: "HF",
+    });
+    expect(conflict).toEqual({ ok: false, reason: "duplicate_po_prefix" });
+  });
+
+  it("allows the same poPrefix in different orgs", async () => {
+    const h = harness();
+    const defaultOrg = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Default Org Supplier",
+      vendorNumber: "D-1",
+      poPrefix: "HF",
+    });
+    const betaOrg = await h.createSupplier.execute({
+      organizationId: BETA_ORG,
+      staffUserId: STAFF_ID,
+      name: "Beta Org Supplier",
+      vendorNumber: "B-1",
+      poPrefix: "HF",
+    });
+    expect(defaultOrg.ok).toBe(true);
+    expect(betaOrg.ok).toBe(true);
   });
 });

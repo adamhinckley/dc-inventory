@@ -71,6 +71,7 @@ async function startPhase2ManualFlowApp() {
     organizationId: OrganizationId.DEFAULT,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
+          poPrefix: null,
   });
 
   await customerRepo.save({

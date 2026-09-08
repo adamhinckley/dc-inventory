@@ -267,6 +267,13 @@
       "when": 1790455600000,
       "tag": "0038_inventory_sell_windows",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790555600000,
+      "tag": "0039_supplier_po_prefix",
+      "breakpoints": true
     }
   ]
 }

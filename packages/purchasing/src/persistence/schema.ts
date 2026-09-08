@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   char,
@@ -8,6 +9,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -39,9 +41,15 @@ export const suppliers = purchasing.table(
     organizationId: text("organization_id").notNull().default("DEFAULT"),
     vendorNumber: text("vendor_number").notNull(),
     name: text("name").notNull(),
+    poPrefix: text("po_prefix"),
     ...timestamps(),
   },
-  (table) => [unique().on(table.organizationId, table.vendorNumber)],
+  (table) => [
+    unique().on(table.organizationId, table.vendorNumber),
+    uniqueIndex("suppliers_organization_id_po_prefix_unique")
+      .on(table.organizationId, table.poPrefix)
+      .where(sql`${table.poPrefix} is not null`),
+  ],
 );
 
 export const supplierProducts = purchasing.table(

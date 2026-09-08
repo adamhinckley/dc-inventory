@@ -86,6 +86,10 @@ export interface ISupplierRepository {
     organizationId: OrganizationId,
     vendorNumbers: readonly string[],
   ): Promise<ReadonlyMap<string, import("../supplier.js").Supplier>>;
+  findByPoPrefix(
+    organizationId: OrganizationId,
+    poPrefix: string,
+  ): Promise<import("../supplier.js").Supplier | null>;
 }
 
 export interface IPurchasingUnitOfWork {

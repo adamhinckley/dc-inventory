@@ -354,6 +354,10 @@ export const listInternalSuppliersTable = {
     {
       "field": "name",
       "label": "Name"
+    },
+    {
+      "field": "poPrefix",
+      "label": "PO prefix"
     }
   ],
   "search": {
