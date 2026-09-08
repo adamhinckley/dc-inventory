@@ -536,6 +536,7 @@ export * from './reopenInternalInventorySkus401';
 export * from './reopenInternalInventorySkus401Error';
 export * from './reopenInternalInventorySkus403';
 export * from './reopenInternalInventorySkusBody';
+export * from './reopenInternalInventorySkusBodyFilterSnapshot';
 export * from './replaceInternalPurchaseOrderLines200';
 export * from './replaceInternalPurchaseOrderLines200LinesItem';
 export * from './replaceInternalPurchaseOrderLines200Status';

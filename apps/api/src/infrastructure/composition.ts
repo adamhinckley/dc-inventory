@@ -839,9 +839,13 @@ function inventoryServices(
     listUncoveredFactories,
     reopenSkusForPresell: {
       execute: (input: RecordReopenSkusForPresellRequest) =>
-        unitOfWork.run((scope) =>
-          new RecordReopenSkusForPresellUseCase(scope.inventory.ledger).execute(input),
-        ),
+        unitOfWork.run((scope) => {
+          const txSellWindows = scope.inventory.sellWindows ?? sellWindowRepo;
+          return new RecordReopenSkusForPresellUseCase(
+            scope.inventory.ledger,
+            new CreateSellWindowUseCase(txSellWindows, clock),
+          ).execute(input);
+        }),
     },
     closeSkusForPresell: {
       execute: async (input: CloseSkusForPresellHttpRequest): Promise<CloseSkusForPresellHttpResult> => {

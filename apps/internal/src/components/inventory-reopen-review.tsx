@@ -97,6 +97,7 @@ export function InventoryReopenReview() {
         [...matching, ...remaining],
         opensAt,
         closesAt,
+        filterParams,
       );
       const result = await reopenMutation.mutateAsync({ data: command });
       if (result.status !== 200) {
@@ -138,7 +139,10 @@ export function InventoryReopenReview() {
             variant="primary"
             size="sm"
             disabled={
-              reopenMutation.isPending || matchesQuery.isPending || matchCount === 0
+              reopenMutation.isPending ||
+              matchesQuery.isPending ||
+              matchCount === 0 ||
+              closesAt.trim() === ""
             }
             onClick={() => {
               void applyReopen();

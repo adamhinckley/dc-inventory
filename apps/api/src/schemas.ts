@@ -809,14 +809,27 @@ export const purchaseOrderItemSchema = z.object({
   lines: z.array(purchaseOrderLineSchema),
 });
 
+export const sellWindowStatusSchema = z.enum(["scheduled", "open", "closed"]);
+
+export const sellWindowFilterSnapshotSchema = z.object({
+  q: z.string().optional(),
+  category: z.array(z.string()).optional(),
+  supplierId: z.array(z.string().uuid()).optional(),
+  excludeSupplierId: z.array(z.string().uuid()).optional(),
+});
+
 export const reopenInventorySkusBodySchema = z.object({
+  name: z.string().min(1),
+  filterSnapshot: sellWindowFilterSnapshotSchema.default({}),
   skus: z.array(z.string().min(1)).min(1),
   windowOpensAt: z.string().datetime().nullable().optional(),
-  windowClosesAt: z.string().datetime().nullable().optional(),
+  windowClosesAt: z.string().datetime(),
 });
 
 export const reopenInventorySkusResponseSchema = z.object({
   reopenedCount: z.number().int().min(0),
+  sellWindowId: z.string().uuid(),
+  skuCount: z.number().int().min(0),
 });
 
 export const closeInventorySkusBodySchema = z
@@ -835,15 +848,6 @@ export const closeInventorySkusBodySchema = z
 
 export const closeInventorySkusResponseSchema = z.object({
   closedCount: z.number().int().min(0),
-});
-
-export const sellWindowStatusSchema = z.enum(["scheduled", "open", "closed"]);
-
-export const sellWindowFilterSnapshotSchema = z.object({
-  q: z.string().optional(),
-  category: z.array(z.string()).optional(),
-  supplierId: z.array(z.string().uuid()).optional(),
-  excludeSupplierId: z.array(z.string().uuid()).optional(),
 });
 
 export const sellWindowsListQuerySchema = z.object({

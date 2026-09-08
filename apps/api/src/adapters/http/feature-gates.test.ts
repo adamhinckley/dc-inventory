@@ -65,7 +65,12 @@ async function authenticatedApp(disabled: FeatureName) {
 }
 
 describe("named feature gates", () => {
-  const cases: Array<{ feature: FeatureName; url: string; method?: "GET" | "POST" }> = [
+  const cases: Array<{
+    feature: FeatureName;
+    url: string;
+    method?: "GET" | "POST";
+    payload?: Record<string, unknown>;
+  }> = [
     { feature: "catalog", url: "/internal/products" },
     { feature: "inventory", url: "/internal/products" },
     { feature: "customers", url: "/internal/customers" },
@@ -79,6 +84,11 @@ describe("named feature gates", () => {
       feature: "inventory",
       url: "/internal/inventory/reopen-skus",
       method: "POST",
+      payload: {
+        name: "Gate test",
+        skus: ["UNCOVERED-HTTP-1"],
+        windowClosesAt: "2026-08-01T00:00:00.000Z",
+      },
     },
     {
       feature: "inventory",
@@ -92,7 +102,7 @@ describe("named feature gates", () => {
     },
   ];
 
-  it.each(cases)("returns 403 when $feature is disabled", async ({ feature, url, method = "GET" }) => {
+  it.each(cases)("returns 403 when $feature is disabled", async ({ feature, url, method = "GET", payload }) => {
     const { app, session } = await authenticatedApp(feature);
 
     const response = await app.inject({
@@ -100,7 +110,7 @@ describe("named feature gates", () => {
       url,
       cookies: { [STAFF_SESSION_COOKIE]: session },
       ...(method === "POST"
-        ? { payload: { skus: ["UNCOVERED-HTTP-1"] } }
+        ? { payload: payload ?? { skus: ["UNCOVERED-HTTP-1"] } }
         : {}),
     });
 

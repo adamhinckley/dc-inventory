@@ -69,7 +69,9 @@ export { RecordInboundCancelledUseCase } from "./application/record-inbound-canc
 export { RecordInboundFromPoUseCase } from "./application/record-inbound-from-po.js";
 export {
   RecordReopenSkusForPresellUseCase,
+  SellWindowPersistenceError,
   type RecordReopenSkusForPresellRequest,
+  type RecordReopenSkusForPresellResult,
 } from "./application/record-reopen-skus-for-presell.js";
 export {
   RecordCloseSkusForPresellUseCase,

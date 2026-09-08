@@ -5,7 +5,6 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { RecordCloseSkusForPresellUseCase } from "../src/application/record-close-skus-for-presell.js";
-import { RecordReopenSkusForPresellUseCase } from "../src/application/record-reopen-skus-for-presell.js";
 import { demandModelHarness } from "./support/demand-model-harness.js";
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
@@ -37,8 +36,7 @@ describe("RecordCloseSkusForPresellUseCase", () => {
     await lockSku(h, CLOSE_A, "close-uc-a");
     await lockSku(h, CLOSE_B, "close-uc-b");
 
-    const reopen = new RecordReopenSkusForPresellUseCase(h.uow.ledger);
-    await reopen.execute({
+    await h.reopenSkusForPresell({
       organizationId: DEFAULT_ORG,
       skus: [CLOSE_A, CLOSE_B],
       windowOpensAt: WINDOW_OPENS,
