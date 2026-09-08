@@ -2,17 +2,20 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildInventoryReopenCommand,
   buildSellWindowOpenCommand,
+  enrichSellWindowSkuRows,
   fetchInventoryMatchPages,
   fetchRemainingInventoryMatches,
   filterSnapshotToListParams,
   instantToDateInput,
   INVENTORY_MATCH_PAGE_SIZE,
   isEligibleForSellWindowApply,
+  listAllInternalSellWindows,
   listParamsToFilterSnapshot,
   type InventoryMatchListFn,
   parseOptionalWindowInstant,
   sellWindowReadOnly,
   shouldPrefetchInventoryMatches,
+  type SellWindowListFn,
 } from "./inventory-reopen-workflow";
 
 const sampleRow = {
@@ -34,9 +37,13 @@ describe("inventory reopen workflow", () => {
     );
   });
 
-  it("formats instants for DateInput", () => {
+  it("formats instants for DateInput using local calendar days", () => {
     expect(instantToDateInput(new Date(2027, 0, 15).toISOString())).toBe("2027-01-15");
     expect(instantToDateInput(null)).toBe("");
+  });
+
+  it("round-trips local DateInput values through parse and format", () => {
+    expect(instantToDateInput(parseOptionalWindowInstant("2029-08-20"))).toBe("2029-08-20");
   });
 
   it("round-trips filter snapshots through list params", () => {
@@ -246,5 +253,120 @@ describe("inventory reopen workflow", () => {
     expect(command.skus.at(-1)).toBe(`SKU-${total}`);
     expect(command.windowOpensAt).toBe(new Date(2027, 0, 15).toISOString());
     expect(command.windowClosesAt).toBe(new Date(2027, 1, 15).toISOString());
+  });
+
+  it("loads every sell window page until total is covered", async () => {
+    const listWindowsMock = vi.fn(async (params: { page?: number; pageSize?: number }) => {
+      const page = params.page ?? 1;
+      const pageSize = params.pageSize ?? 100;
+      return {
+        status: 200 as const,
+        data: {
+          items: [
+            {
+              id: `window-${page}`,
+              name: `Window ${page}`,
+              filterSnapshot: {},
+              windowOpensAt: null,
+              windowClosesAt: "2027-08-01T00:00:00.000Z",
+              status: "open" as const,
+              manuallyClosedAt: null,
+              appliedBy: "11111111-1111-4111-8111-111111111111",
+              appliedAt: "2027-01-01T00:00:00.000Z",
+              skuCount: 1,
+              createdAt: "2027-01-01T00:00:00.000Z",
+              updatedAt: "2027-01-01T00:00:00.000Z",
+            },
+          ],
+          page,
+          pageSize,
+          total: 150,
+        },
+      };
+    });
+    const listWindows = listWindowsMock as unknown as SellWindowListFn;
+
+    const result = await listAllInternalSellWindows(listWindows);
+
+    expect(listWindowsMock.mock.calls.map((call) => call[0]?.page)).toEqual([1, 2]);
+    expect(result.items).toHaveLength(2);
+    expect(result.total).toBe(150);
+  });
+
+  it("enriches saved window SKUs by membership with per-sku lookup fallback", async () => {
+    const listProductsMock = vi.fn(async (params: { q?: string; page?: number }) => {
+      if (params.q === "MISSING-SKU") {
+        return {
+          status: 200 as const,
+          data: {
+            items: [
+              {
+                sku: "MISSING-SKU",
+                name: "Missing Style",
+                supplierName: "Acme Supply",
+                sellState: "locked",
+                onHand: 3,
+                onOrder: 0,
+                inactive: false,
+                discontinued: false,
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: INVENTORY_MATCH_PAGE_SIZE,
+          },
+        };
+      }
+      return {
+        status: 200 as const,
+        data: {
+          items: [
+            {
+              sku: "STYLE-A",
+              name: "Style A",
+              supplierName: "Acme Supply",
+              sellState: "locked",
+              onHand: 4,
+              onOrder: 0,
+              inactive: false,
+              discontinued: false,
+            },
+          ],
+          total: 1,
+          page: params.page ?? 1,
+          pageSize: INVENTORY_MATCH_PAGE_SIZE,
+        },
+      };
+    });
+    const listProducts = listProductsMock as unknown as InventoryMatchListFn;
+
+    const rows = await enrichSellWindowSkuRows(
+      ["STYLE-A", "MISSING-SKU"],
+      { category: ["Hats"] },
+      listProducts,
+    );
+
+    expect(rows).toEqual([
+      {
+        sku: "STYLE-A",
+        name: "Style A",
+        supplierName: "Acme Supply",
+        sellState: "locked",
+        onHand: 4,
+        onOrder: 0,
+        inactive: false,
+        discontinued: false,
+      },
+      {
+        sku: "MISSING-SKU",
+        name: "Missing Style",
+        supplierName: "Acme Supply",
+        sellState: "locked",
+        onHand: 3,
+        onOrder: 0,
+        inactive: false,
+        discontinued: false,
+      },
+    ]);
   });
 });

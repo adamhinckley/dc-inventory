@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import {
-  getListInternalSellWindowsQueryKey,
-  useListInternalSellWindows,
-} from "@dc-inventory/api-client-internal";
+import { getListInternalSellWindowsQueryKey } from "@dc-inventory/api-client-internal";
 import { buttonVariants, cn, formatDate } from "@dc-inventory/ui";
-import { Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Copy, Plus } from "lucide-react";
+import { listAllInternalSellWindows } from "../../lib/inventory-reopen-workflow";
 import { WindowStatusChip } from "./window-status-chip";
 
 export function SellWindowsList() {
-  const windowsQuery = useListInternalSellWindows({ page: 1, pageSize: 100 });
-  const windows =
-    windowsQuery.data?.status === 200 ? windowsQuery.data.data.items : [];
+  const windowsQuery = useQuery({
+    queryKey: [...getListInternalSellWindowsQueryKey(), "all"],
+    queryFn: () => listAllInternalSellWindows(),
+  });
+  const windows = windowsQuery.data?.items ?? [];
+  const total = windowsQuery.data?.total ?? 0;
 
   return (
     <section
@@ -76,6 +78,7 @@ export function SellWindowsList() {
                   href={`/inventory/reopen/new?clone=${window.id}`}
                   className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
                 >
+                  <Copy className="size-icon" aria-hidden />
                   Clone
                 </Link>
               </div>
@@ -84,9 +87,9 @@ export function SellWindowsList() {
         )}
       </div>
 
-      {windowsQuery.data?.status === 200 ? (
-        <p className="sr-only" data-query-key={getListInternalSellWindowsQueryKey()[0]}>
-          sell-windows-loaded
+      {windowsQuery.isSuccess && total > 0 ? (
+        <p className="text-body-sm text-fg-secondary">
+          Showing {windows.length.toLocaleString()} of {total.toLocaleString()} sell window(s).
         </p>
       ) : null}
     </section>

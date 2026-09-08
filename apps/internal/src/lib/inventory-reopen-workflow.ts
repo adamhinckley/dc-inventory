@@ -1,4 +1,7 @@
-import { listInternalProducts } from "@dc-inventory/api-client-internal";
+import {
+  listInternalProducts,
+  listInternalSellWindows,
+} from "@dc-inventory/api-client-internal";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
 import { inventoryListQueryParams } from "./inventory-list-table";
 
@@ -38,12 +41,21 @@ export type InventoryMatchChunk = {
   nextPage: number | null;
 };
 
+type ListInternalSellWindowsParams = NonNullable<
+  Parameters<typeof listInternalSellWindows>[0]
+>;
+
 export type InventoryMatchListFn = (
   params: ListInternalProductsParams,
 ) => Promise<Awaited<ReturnType<typeof listInternalProducts>>>;
 
+export type SellWindowListFn = (
+  params: ListInternalSellWindowsParams,
+) => Promise<Awaited<ReturnType<typeof listInternalSellWindows>>>;
+
 export const INVENTORY_MATCH_PAGE_SIZE = 100;
 export const INVENTORY_MATCH_PREFETCH_PAGES = 5;
+export const SELL_WINDOW_LIST_PAGE_SIZE = 100;
 /** 1-based page inside the current window that should trigger the next fetch. */
 export const INVENTORY_MATCH_PREFETCH_AT_PAGE = 3;
 
@@ -238,9 +250,9 @@ export function instantToDateInput(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -312,4 +324,103 @@ export function sellWindowReadOnly(input: {
   manuallyClosedAt: string | null;
 }): boolean {
   return input.status === "closed" || input.manuallyClosedAt !== null;
+}
+
+function fallbackSellWindowSkuRow(sku: string): InventoryMatchRow {
+  return {
+    sku,
+    name: sku,
+    supplierName: null,
+    sellState: "—",
+    onHand: 0,
+    onOrder: 0,
+    inactive: false,
+    discontinued: false,
+  };
+}
+
+type SellWindowListPage = Extract<
+  Awaited<ReturnType<typeof listInternalSellWindows>>,
+  { status: 200 }
+>["data"];
+
+export async function listAllInternalSellWindows(
+  listWindows: SellWindowListFn = listInternalSellWindows,
+): Promise<{ items: SellWindowListPage["items"]; total: number }> {
+  let page = 1;
+  const first = await listWindows({ page: 1, pageSize: SELL_WINDOW_LIST_PAGE_SIZE });
+  if (first.status !== 200) {
+    throw new Error("Could not load sell windows.");
+  }
+  const items = [...first.data.items];
+  const total = first.data.total;
+  page = 2;
+  while ((page - 1) * SELL_WINDOW_LIST_PAGE_SIZE < total) {
+    const response = await listWindows({
+      page,
+      pageSize: SELL_WINDOW_LIST_PAGE_SIZE,
+    });
+    if (response.status !== 200) {
+      throw new Error("Could not load sell windows.");
+    }
+    items.push(...response.data.items);
+    page += 1;
+  }
+  return { items, total };
+}
+
+async function lookupSellWindowSkuRow(
+  sku: string,
+  listProducts: InventoryMatchListFn,
+): Promise<InventoryMatchRow | null> {
+  const response = await listProducts({
+    q: sku,
+    page: 1,
+    pageSize: INVENTORY_MATCH_PAGE_SIZE,
+  });
+  if (response.status !== 200) {
+    throw new Error("Could not load inventory matches.");
+  }
+  const row = response.data.items.find((item) => item.sku === sku);
+  return row ? mapMatchRow(row) : null;
+}
+
+export async function enrichSellWindowSkuRows(
+  skus: readonly string[],
+  filterParams: ListQueryParams,
+  listProducts: InventoryMatchListFn = listInternalProducts,
+): Promise<InventoryMatchRow[]> {
+  if (skus.length === 0) {
+    return [];
+  }
+  const pending = new Set(skus);
+  const rowBySku = new Map<string, InventoryMatchRow>();
+  let page = 1;
+  while (pending.size > 0) {
+    const chunk = await fetchInventoryMatchPages(filterParams, page, 1, listProducts);
+    for (const row of chunk.items) {
+      if (pending.has(row.sku)) {
+        rowBySku.set(row.sku, row);
+        pending.delete(row.sku);
+      }
+    }
+    if (chunk.nextPage === null) {
+      break;
+    }
+    page = chunk.nextPage;
+  }
+  for (const sku of pending) {
+    const row = await lookupSellWindowSkuRow(sku, listProducts);
+    if (row !== null) {
+      rowBySku.set(sku, row);
+    }
+  }
+  return skus.map((sku) => rowBySku.get(sku) ?? fallbackSellWindowSkuRow(sku));
+}
+
+export function sellWindowSkuRowsQueryKey(
+  windowId: string,
+  skus: readonly string[],
+): readonly ["sell-window-sku-rows", string, readonly string[]] {
+  return ["sell-window-sku-rows", windowId, skus];
 }

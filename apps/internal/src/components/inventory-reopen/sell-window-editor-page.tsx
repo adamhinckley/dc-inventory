@@ -18,7 +18,7 @@ import {
 } from "@dc-inventory/ui";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { Save } from "lucide-react";
+import { Save, SquareCheckBig } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildSellWindowOpenCommand,
@@ -255,6 +255,7 @@ export function SellWindowEditorPage() {
 
       <div className="flex flex-wrap items-center gap-tight">
         <Button type="button" variant="secondary" size="sm" onClick={selectAllEligible}>
+          <SquareCheckBig className="size-icon" aria-hidden />
           Select All Eligible
         </Button>
         <span className="text-body-sm text-fg-secondary">

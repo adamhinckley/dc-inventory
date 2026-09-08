@@ -10,35 +10,21 @@ import {
   useGetInternalSellWindow,
 } from "@dc-inventory/api-client-internal";
 import { Button, FieldRow, buttonVariants, cn, formatDate, formatDateTime } from "@dc-inventory/ui";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Lock } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  fetchInventoryMatchPages,
+  enrichSellWindowSkuRows,
   filterSnapshotToListParams,
   instantToDateInput,
-  inventoryReopenQueryKey,
   sellWindowReadOnly,
-  type InventoryMatchRow,
+  sellWindowSkuRowsQueryKey,
 } from "../../lib/inventory-reopen-workflow";
 import { useProductListFilterOptions } from "../../lib/use-product-list-filter-options";
 import { FilterControls } from "./filter-controls";
 import { SkuReviewTable } from "./sku-review-table";
 import { WindowFields } from "./window-fields";
 import { WindowStatusChip } from "./window-status-chip";
-
-function fallbackRow(sku: string): InventoryMatchRow {
-  return {
-    sku,
-    name: sku,
-    supplierName: null,
-    sellState: "—",
-    onHand: 0,
-    onOrder: 0,
-    inactive: false,
-    discontinued: false,
-  };
-}
 
 export function SellWindowDetailPage({ windowId }: { windowId: string }) {
   const router = useRouter();
@@ -56,29 +42,22 @@ export function SellWindowDetailPage({ windowId }: { windowId: string }) {
     () => (window ? filterSnapshotToListParams(window.filterSnapshot) : {}),
     [window],
   );
-  const matchesQuery = useInfiniteQuery({
-    queryKey: inventoryReopenQueryKey(filterParams),
-    queryFn: ({ pageParam }) => fetchInventoryMatchPages(filterParams, pageParam),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
+  const skuRowsQuery = useQuery({
+    queryKey: sellWindowSkuRowsQueryKey(windowId, window?.skus ?? []),
+    queryFn: () => enrichSellWindowSkuRows(window!.skus, filterParams),
     enabled: window !== null,
   });
-  const matching = useMemo(
-    () => matchesQuery.data?.pages.flatMap((page) => page.items) ?? [],
-    [matchesQuery.data],
-  );
-  const rowBySku = useMemo(
-    () => new Map(matching.map((row) => [row.sku, row])),
-    [matching],
-  );
-  const displayRows = useMemo(
-    () => (window?.skus ?? []).map((sku) => rowBySku.get(sku) ?? fallbackRow(sku)),
-    [rowBySku, window?.skus],
-  );
+  const displayRows = skuRowsQuery.data ?? [];
   const checkedSkus = useMemo(
     () => Object.fromEntries((window?.skus ?? []).map((sku) => [sku, true])),
     [window?.skus],
   );
+
+  useEffect(() => {
+    if (windowQuery.data?.status === 404) {
+      router.replace("/inventory/reopen");
+    }
+  }, [router, windowQuery.data?.status]);
 
   async function applyCloseInfinity() {
     if (window === null || closingRef.current || readOnly) {
@@ -119,7 +98,6 @@ export function SellWindowDetailPage({ windowId }: { windowId: string }) {
   }
 
   if (windowQuery.data?.status === 404) {
-    router.replace("/inventory/reopen");
     return null;
   }
 
@@ -182,12 +160,18 @@ export function SellWindowDetailPage({ windowId }: { windowId: string }) {
         {` Closes ${formatDate(window.windowClosesAt)}.`}
       </p>
 
-      <SkuReviewTable
-        items={displayRows}
-        checkedSkus={checkedSkus}
-        onToggle={() => {}}
-        readOnly
-      />
+      {skuRowsQuery.isError ? (
+        <p className="text-body-sm text-error" role="alert">
+          Could not load window SKUs.
+        </p>
+      ) : (
+        <SkuReviewTable
+          items={displayRows}
+          checkedSkus={checkedSkus}
+          onToggle={() => {}}
+          readOnly
+        />
+      )}
 
       {actionError ? (
         <p className="text-body-sm text-error" role="alert">
