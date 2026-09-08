@@ -33,6 +33,4 @@ export type CreateInternalProductBody = {
   webWholesale?: boolean;
   /** @nullable */
   description?: string | null;
-  /** @nullable */
-  taxCategoryCode?: string | null;
 };

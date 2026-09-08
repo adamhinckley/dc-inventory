@@ -1,4 +1,5 @@
 import { Money, type OrganizationId, type ProductId, type Sku } from "@dc-inventory/shared-kernel";
+import type { ProductCatalogAttributes } from "./product-catalog-attributes.js";
 
 export type Product = {
   id: ProductId;
@@ -15,7 +16,7 @@ export type Product = {
   discontinued: boolean;
   webWholesale: boolean;
   taxCategoryCode: string | null;
-};
+} & ProductCatalogAttributes;
 
 export function isShopVisible(product: Product): boolean {
   return product.webWholesale && !product.inactive && !product.discontinued;

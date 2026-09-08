@@ -323,39 +323,112 @@ export const productWriteBodySchema = z.object({
   discontinued: z.boolean().optional(),
   webWholesale: z.boolean().optional(),
   description: z.string().optional().nullable(),
-  taxCategoryCode: z.string().optional().nullable(),
 });
 
-export const productPatchBodySchema = z.object({
-  name: z.string().min(1).optional(),
-  uom: z.string().min(1).optional(),
-  memberPriceCents: z.number().int().min(0).optional(),
-  listPriceCents: z.number().int().min(0).nullable().optional(),
-  currency: z.string().length(3).optional(),
-  inactive: z.boolean().optional(),
-  discontinued: z.boolean().optional(),
-  webWholesale: z.boolean().optional(),
-  description: z.string().optional().nullable(),
-  taxCategoryCode: z.string().optional().nullable(),
-  caseQty: z.number().int().positive().nullable().optional(),
+export const productPrimarySupplierFieldsSchema = z.object({
+  vendorNumber: z.string().nullable(),
+  vendorName: z.string().nullable(),
+  minOrderQty: z.number().int().nullable(),
+  minOrderAmountCents: z.number().int().nullable(),
+  lastPoCostCents: z.number().int().nullable(),
 });
 
-export const productDetailSchema = z.object({
-  id: z.string().uuid(),
-  sku: z.string(),
-  name: z.string(),
-  description: z.string().nullable(),
-  uom: z.string(),
-  memberPriceCents: z.number().int().min(0),
-  listPriceCents: z.number().int().min(0).nullable(),
-  currency: z.string(),
-  inactive: z.boolean(),
-  discontinued: z.boolean(),
-  webWholesale: z.boolean(),
-  taxCategoryCode: z.string().nullable(),
+export const productReorderFieldsSchema = z.object({
+  reorderMin: z.number().int().nullable(),
+  reorderMax: z.number().int().nullable(),
+});
+
+export const productCatalogDetailFieldsSchema = z.object({
+  countryOfOrigin: z.string().nullable(),
+  material: z.string().nullable(),
+  length: z.string().nullable(),
+  width: z.string().nullable(),
+  height: z.string().nullable(),
+  diameter: z.string().nullable(),
+  size: z.string().nullable(),
+  weight: z.string().nullable(),
+  weightUom: z.string().nullable(),
+  originalWholesalePriceCents: z.number().int().min(0).nullable(),
+  catalogPage: z.string().nullable(),
+  defaultOrderQty: z.number().int().positive().nullable(),
+  defaultWeight: z.string().nullable(),
+  defaultWeightUom: z.string().nullable(),
+  nonStock: z.boolean(),
+  noExport: z.boolean(),
+  webRetail: z.boolean(),
+});
+
+export const productPackagingDetailFieldsSchema = z.object({
+  packLength: z.string().nullable(),
+  packWidth: z.string().nullable(),
+  packHeight: z.string().nullable(),
+  packWeight: z.string().nullable(),
+  packWeightUom: z.string().nullable(),
+  innerPackQty: z.number().int().positive().nullable(),
+  innerPackLength: z.string().nullable(),
+  innerPackWidth: z.string().nullable(),
+  innerPackHeight: z.string().nullable(),
+  innerPackWeight: z.string().nullable(),
+  innerPackWeightUom: z.string().nullable(),
   caseQty: z.number().int().positive().nullable(),
-  ...productQtyFieldsSchema.shape,
+  caseLength: z.string().nullable(),
+  caseWidth: z.string().nullable(),
+  caseHeight: z.string().nullable(),
+  caseWeight: z.string().nullable(),
+  caseWeightUom: z.string().nullable(),
 });
+
+export const productPatchBodySchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    uom: z.string().min(1).optional(),
+    memberPriceCents: z.number().int().min(0).optional(),
+    listPriceCents: z.number().int().min(0).nullable().optional(),
+    currency: z.string().length(3).optional(),
+    inactive: z.boolean().optional(),
+    discontinued: z.boolean().optional(),
+    webWholesale: z.boolean().optional(),
+    description: z.string().optional().nullable(),
+    upc: z.string().optional().nullable(),
+    mfgCode: z.string().optional().nullable(),
+    altCodes: z.array(z.string()).optional().nullable(),
+    categoryNames: z.array(z.string()).optional().nullable(),
+  })
+  .merge(
+    productCatalogDetailFieldsSchema
+      .omit({ nonStock: true, noExport: true, webRetail: true })
+      .partial()
+      .extend({
+        nonStock: z.boolean().optional(),
+        noExport: z.boolean().optional(),
+        webRetail: z.boolean().optional(),
+      }),
+  )
+  .merge(productPackagingDetailFieldsSchema.partial());
+
+export const productDetailSchema = z
+  .object({
+    id: z.string().uuid(),
+    sku: z.string(),
+    name: z.string(),
+    description: z.string().nullable(),
+    uom: z.string(),
+    memberPriceCents: z.number().int().min(0),
+    listPriceCents: z.number().int().min(0).nullable(),
+    currency: z.string(),
+    inactive: z.boolean(),
+    discontinued: z.boolean(),
+    webWholesale: z.boolean(),
+    categoryNames: z.array(z.string()),
+    upc: z.string().nullable(),
+    mfgCode: z.string().nullable(),
+    altCodes: z.array(z.string()),
+    ...productPrimarySupplierFieldsSchema.shape,
+    ...productReorderFieldsSchema.shape,
+    ...productQtyFieldsSchema.shape,
+  })
+  .merge(productCatalogDetailFieldsSchema)
+  .merge(productPackagingDetailFieldsSchema);
 
 export const duplicateSkuResponseSchema = z.object({
   error: z.literal("duplicate_sku"),

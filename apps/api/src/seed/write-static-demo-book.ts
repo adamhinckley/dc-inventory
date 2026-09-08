@@ -1,4 +1,5 @@
 import type { Product } from "@dc-inventory/catalog";
+import { emptyProductCatalogAttributes } from "@dc-inventory/catalog";
 import type { Customer, ExemptionCertificate, ShipTo } from "@dc-inventory/customers";
 import { ExemptionCertificateId, ShipToId } from "@dc-inventory/customers";
 import type { StaffUser, WholesaleUser } from "@dc-inventory/identity";
@@ -80,6 +81,7 @@ async function upsertProduct(
     discontinued: false,
     webWholesale: planned.webWholesale,
     taxCategoryCode: planned.taxCategoryCode,
+    ...emptyProductCatalogAttributes(),
   };
   await ports.products.save(product);
   return product;

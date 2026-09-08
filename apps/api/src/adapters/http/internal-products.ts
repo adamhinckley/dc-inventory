@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
-import { ZERO_QTY, type Product, type ProductQty } from "@dc-inventory/catalog";
+import { ZERO_QTY, type Product, type ProductPackaging, type ProductQty } from "@dc-inventory/catalog";
+import type { ProductEnrichment } from "@dc-inventory/catalog";
 import { CsvWorkbookParser } from "@dc-inventory/catalog";
 import { ProductId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
@@ -75,7 +76,51 @@ function mapListItem(
   };
 }
 
-function mapDetail(product: Product, qty: ProductQty, caseQty: number | null = null) {
+function mapPackagingFields(packaging: ProductPackaging | null) {
+  return {
+    packLength: packaging?.packLength ?? null,
+    packWidth: packaging?.packWidth ?? null,
+    packHeight: packaging?.packHeight ?? null,
+    packWeight: packaging?.packWeight ?? null,
+    packWeightUom: packaging?.packWeightUom ?? null,
+    innerPackQty: packaging?.innerPackQty ?? null,
+    innerPackLength: packaging?.innerPackLength ?? null,
+    innerPackWidth: packaging?.innerPackWidth ?? null,
+    innerPackHeight: packaging?.innerPackHeight ?? null,
+    innerPackWeight: packaging?.innerPackWeight ?? null,
+    innerPackWeightUom: packaging?.innerPackWeightUom ?? null,
+    caseQty: packaging?.caseQty ?? null,
+    caseLength: packaging?.caseLength ?? null,
+    caseWidth: packaging?.caseWidth ?? null,
+    caseHeight: packaging?.caseHeight ?? null,
+    caseWeight: packaging?.caseWeight ?? null,
+    caseWeightUom: packaging?.caseWeightUom ?? null,
+  };
+}
+
+function mapCatalogFields(product: Product) {
+  return {
+    countryOfOrigin: product.countryOfOrigin,
+    material: product.material,
+    length: product.length,
+    width: product.width,
+    height: product.height,
+    diameter: product.diameter,
+    size: product.size,
+    weight: product.weight,
+    weightUom: product.weightUom,
+    originalWholesalePriceCents: product.originalWholesalePrice?.amountMinor ?? null,
+    catalogPage: product.catalogPage,
+    defaultOrderQty: product.defaultOrderQty,
+    defaultWeight: product.defaultWeight,
+    defaultWeightUom: product.defaultWeightUom,
+    nonStock: product.nonStock,
+    noExport: product.noExport,
+    webRetail: product.webRetail,
+  };
+}
+
+function mapDetail(product: Product, qty: ProductQty, enrichment?: ProductEnrichment) {
   return {
     id: product.id,
     sku: product.sku.value,
@@ -88,8 +133,19 @@ function mapDetail(product: Product, qty: ProductQty, caseQty: number | null = n
     inactive: product.inactive,
     discontinued: product.discontinued,
     webWholesale: product.webWholesale,
-    taxCategoryCode: product.taxCategoryCode,
-    caseQty,
+    categoryNames: enrichment ? [...enrichment.categoryNames] : [],
+    upc: enrichment?.upc ?? null,
+    mfgCode: enrichment?.mfgCode ?? null,
+    altCodes: enrichment ? [...enrichment.altCodes] : [],
+    vendorNumber: enrichment?.primarySupplier?.vendorNumber ?? null,
+    vendorName: enrichment?.primarySupplier?.vendorName ?? null,
+    minOrderQty: enrichment?.primarySupplier?.minOrderQty ?? null,
+    minOrderAmountCents: enrichment?.primarySupplier?.minOrderAmountCents ?? null,
+    lastPoCostCents: enrichment?.primarySupplier?.lastPoCostCents ?? null,
+    reorderMin: enrichment?.reorderMin ?? null,
+    reorderMax: enrichment?.reorderMax ?? null,
+    ...mapCatalogFields(product),
+    ...mapPackagingFields(enrichment?.packaging ?? null),
     ...mapQty(qty),
   };
 }
@@ -286,7 +342,7 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
         }
         return sendInvalid(reply);
       }
-      return mapDetail(result.product, result.qty, result.caseQty);
+      return mapDetail(result.product, result.qty, result);
     },
   );
 
@@ -326,7 +382,7 @@ export function registerInternalProductWriteRoutes(app: FastifyInstance): void {
         }
         return sendInvalid(reply);
       }
-      return mapDetail(result.product, result.qty, result.caseQty);
+      return mapDetail(result.product, result.qty, result);
     },
   );
 }
@@ -467,7 +523,7 @@ export function registerInternalProductStockRoutes(app: FastifyInstance): void {
       if (!result.ok) {
         return sendNotFound(reply);
       }
-      return mapDetail(result.product, result.qty, result.caseQty);
+      return mapDetail(result.product, result.qty, result);
     },
   );
 }

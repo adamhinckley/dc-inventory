@@ -2,6 +2,7 @@ import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kern
 import { and, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Product } from "../domain/product.js";
+import { emptyProductCatalogAttributes } from "../domain/product-catalog-attributes.js";
 import type {
   IProductRepository,
   ListedProduct,
@@ -10,6 +11,7 @@ import type {
 import {
   categories,
   productCategories,
+  productIdentifiers,
   products,
   productPackaging,
 } from "../persistence/schema.js";
@@ -17,11 +19,13 @@ import {
 export type CatalogDrizzle = PostgresJsDatabase<{
   categories: typeof categories;
   productCategories: typeof productCategories;
+  productIdentifiers: typeof productIdentifiers;
   products: typeof products;
   productPackaging: typeof productPackaging;
 }>;
 
 function toProduct(row: typeof products.$inferSelect): Product {
+  const defaults = emptyProductCatalogAttributes();
   return {
     id: ProductId.parse(row.id),
     organizationId: OrganizationId.parse(row.organizationId),
@@ -38,6 +42,61 @@ function toProduct(row: typeof products.$inferSelect): Product {
     discontinued: row.discontinued,
     webWholesale: row.webWholesale,
     taxCategoryCode: row.taxCategoryCode,
+    countryOfOrigin: row.countryOfOrigin ?? defaults.countryOfOrigin,
+    material: row.material ?? defaults.material,
+    length: row.length ?? defaults.length,
+    width: row.width ?? defaults.width,
+    height: row.height ?? defaults.height,
+    diameter: row.diameter ?? defaults.diameter,
+    size: row.size ?? defaults.size,
+    weight: row.weight ?? defaults.weight,
+    weightUom: row.weightUom ?? defaults.weightUom,
+    originalWholesalePrice:
+      row.originalWholesalePriceCents === null
+        ? null
+        : Money.fromMinorUnits(row.originalWholesalePriceCents, row.currency),
+    catalogPage: row.catalogPage ?? defaults.catalogPage,
+    defaultOrderQty: row.defaultOrderQty ?? defaults.defaultOrderQty,
+    defaultWeight: row.defaultWeight ?? defaults.defaultWeight,
+    defaultWeightUom: row.defaultWeightUom ?? defaults.defaultWeightUom,
+    nonStock: row.nonStock ?? defaults.nonStock,
+    noExport: row.noExport ?? defaults.noExport,
+    webRetail: row.webRetail ?? defaults.webRetail,
+  };
+}
+
+function productToInsertRow(product: Product): typeof products.$inferInsert {
+  return {
+    id: product.id,
+    organizationId: product.organizationId,
+    sku: product.sku.value,
+    name: product.name,
+    description: product.description,
+    uom: product.uom,
+    countryOfOrigin: product.countryOfOrigin,
+    material: product.material,
+    length: product.length,
+    width: product.width,
+    height: product.height,
+    diameter: product.diameter,
+    size: product.size,
+    weight: product.weight,
+    weightUom: product.weightUom,
+    memberPriceCents: product.memberPrice.amountMinor,
+    listPriceCents: product.listPrice?.amountMinor ?? null,
+    originalWholesalePriceCents: product.originalWholesalePrice?.amountMinor ?? null,
+    currency: product.memberPrice.currency,
+    catalogPage: product.catalogPage,
+    defaultOrderQty: product.defaultOrderQty,
+    defaultWeight: product.defaultWeight,
+    defaultWeightUom: product.defaultWeightUom,
+    inactive: product.inactive,
+    discontinued: product.discontinued,
+    nonStock: product.nonStock,
+    noExport: product.noExport,
+    webWholesale: product.webWholesale,
+    webRetail: product.webRetail,
+    taxCategoryCode: product.taxCategoryCode,
   };
 }
 
@@ -170,33 +229,36 @@ export class DrizzleProductRepository implements IProductRepository {
   async save(product: Product): Promise<void> {
     await this.db
       .insert(products)
-      .values({
-        id: product.id,
-        organizationId: product.organizationId,
-        sku: product.sku.value,
-        name: product.name,
-        description: product.description,
-        uom: product.uom,
-        memberPriceCents: product.memberPrice.amountMinor,
-        listPriceCents: product.listPrice?.amountMinor ?? null,
-        currency: product.memberPrice.currency,
-        inactive: product.inactive,
-        discontinued: product.discontinued,
-        webWholesale: product.webWholesale,
-        taxCategoryCode: product.taxCategoryCode,
-      })
+      .values(productToInsertRow(product))
       .onConflictDoUpdate({
         target: products.id,
         set: {
           name: product.name,
           description: product.description,
           uom: product.uom,
+          countryOfOrigin: product.countryOfOrigin,
+          material: product.material,
+          length: product.length,
+          width: product.width,
+          height: product.height,
+          diameter: product.diameter,
+          size: product.size,
+          weight: product.weight,
+          weightUom: product.weightUom,
           memberPriceCents: product.memberPrice.amountMinor,
           listPriceCents: product.listPrice?.amountMinor ?? null,
+          originalWholesalePriceCents: product.originalWholesalePrice?.amountMinor ?? null,
           currency: product.memberPrice.currency,
+          catalogPage: product.catalogPage,
+          defaultOrderQty: product.defaultOrderQty,
+          defaultWeight: product.defaultWeight,
+          defaultWeightUom: product.defaultWeightUom,
           inactive: product.inactive,
           discontinued: product.discontinued,
+          nonStock: product.nonStock,
+          noExport: product.noExport,
           webWholesale: product.webWholesale,
+          webRetail: product.webRetail,
           taxCategoryCode: product.taxCategoryCode,
           updatedAt: new Date(),
         },
@@ -209,35 +271,36 @@ export class DrizzleProductRepository implements IProductRepository {
     }
     await this.db
       .insert(products)
-      .values(
-        productsList.map((product) => ({
-          id: product.id,
-          organizationId: product.organizationId,
-          sku: product.sku.value,
-          name: product.name,
-          description: product.description,
-          uom: product.uom,
-          memberPriceCents: product.memberPrice.amountMinor,
-          listPriceCents: product.listPrice?.amountMinor ?? null,
-          currency: product.memberPrice.currency,
-          inactive: product.inactive,
-          discontinued: product.discontinued,
-          webWholesale: product.webWholesale,
-          taxCategoryCode: product.taxCategoryCode,
-        })),
-      )
+      .values(productsList.map((product) => productToInsertRow(product)))
       .onConflictDoUpdate({
         target: products.id,
         set: {
           name: sql`excluded.name`,
           description: sql`excluded.description`,
           uom: sql`excluded.uom`,
+          countryOfOrigin: sql`excluded.country_of_origin`,
+          material: sql`excluded.material`,
+          length: sql`excluded.length`,
+          width: sql`excluded.width`,
+          height: sql`excluded.height`,
+          diameter: sql`excluded.diameter`,
+          size: sql`excluded.size`,
+          weight: sql`excluded.weight`,
+          weightUom: sql`excluded.weight_uom`,
           memberPriceCents: sql`excluded.member_price_cents`,
           listPriceCents: sql`excluded.list_price_cents`,
+          originalWholesalePriceCents: sql`excluded.original_wholesale_price_cents`,
           currency: sql`excluded.currency`,
+          catalogPage: sql`excluded.catalog_page`,
+          defaultOrderQty: sql`excluded.default_order_qty`,
+          defaultWeight: sql`excluded.default_weight`,
+          defaultWeightUom: sql`excluded.default_weight_uom`,
           inactive: sql`excluded.inactive`,
           discontinued: sql`excluded.discontinued`,
+          nonStock: sql`excluded.non_stock`,
+          noExport: sql`excluded.no_export`,
           webWholesale: sql`excluded.web_wholesale`,
+          webRetail: sql`excluded.web_retail`,
           taxCategoryCode: sql`excluded.tax_category_code`,
           updatedAt: new Date(),
         },

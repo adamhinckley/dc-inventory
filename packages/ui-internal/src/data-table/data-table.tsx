@@ -659,6 +659,7 @@ export function DataTableTable() {
     meta,
     items,
     query,
+    listFailed,
     busy,
     state,
     setState,
@@ -721,7 +722,7 @@ export function DataTableTable() {
   const table = useTable({
     data: items as Record<string, unknown>[],
     isPending: busy,
-    isError: query.isError === true,
+    isError: query.isError === true || listFailed,
     columns,
     getRowId: (row) => String(row[meta.rowId] ?? ""),
     fillColumn,
