@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isWholesaleHiddenBeforeOpen,
   isShopSellable,
   shopAvailabilityLabel,
   shopDisplayAvailableQty,
@@ -18,6 +19,51 @@ function qty(overrides: Partial<ProductQty>): ProductQty {
     ...overrides,
   };
 }
+
+describe("isWholesaleHiddenBeforeOpen", () => {
+  const now = new Date("2026-09-03T12:00:00.000Z");
+  const futureOpens = new Date("2026-09-03T13:00:00.000Z");
+
+  it("hides SKUs scheduled before windowOpensAt", () => {
+    expect(
+      isWholesaleHiddenBeforeOpen(
+        qty({
+          sellState: "locked",
+          windowOpensAt: futureOpens,
+          availableToSell: 10,
+        }),
+        { now },
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps post-close sticky locked SKUs visible", () => {
+    expect(
+      isWholesaleHiddenBeforeOpen(
+        qty({
+          sellState: "locked",
+          stickyLocked: true,
+          windowOpensAt: futureOpens,
+          availableToSell: 5,
+        }),
+        { now },
+      ),
+    ).toBe(false);
+  });
+
+  it("shows snapshot-scheduled SKUs when a SellWindow membership is active", () => {
+    expect(
+      isWholesaleHiddenBeforeOpen(
+        qty({
+          sellState: "open",
+          windowOpensAt: futureOpens,
+          hasActiveSellWindowMembership: true,
+        }),
+        { now },
+      ),
+    ).toBe(false);
+  });
+});
 
 describe("isShopSellable", () => {
   it("includes open SKUs with warehouse leftover", () => {

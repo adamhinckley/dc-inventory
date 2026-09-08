@@ -24,7 +24,12 @@ export function productQtyFromSnapshotRow(
   row: InventorySnapshotQtyRow,
   now: Date,
 ): ProductQty {
-  return productQtyFromStaffCatalogProjection(
-    projectStaffCatalogQtyFromSnapshot(row, now, effectiveSellStateOptions(row)),
-  );
+  const projected = projectStaffCatalogQtyFromSnapshot(row, now, effectiveSellStateOptions(row));
+  return productQtyFromStaffCatalogProjection({
+    ...projected,
+    stickyLocked: row.stickyLocked,
+    windowOpensAt: row.windowOpensAt,
+    windowClosesAt: row.windowClosesAt,
+    hasActiveSellWindowMembership: row.hasActiveSellWindowMembership,
+  });
 }

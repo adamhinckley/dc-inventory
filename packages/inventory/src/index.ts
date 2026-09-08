@@ -195,6 +195,7 @@ export {
   type SellWindow,
   type SellWindowFilterSnapshot,
   type SellWindowStatus,
+  type SellWindowTiming,
 } from "./domain/sell-window.js";
 export type {
   CreateSellWindowRecord,
@@ -222,6 +223,7 @@ export {
   hasActiveSellWindowMembershipSql,
   isLockedForSellSql,
   isShopSellableSql,
+  isWholesaleHiddenBeforeOpenSql,
   isSnapshotSellWindowOpenSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,

@@ -111,7 +111,13 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
       for (const row of ROWS) {
         const cell = productQtyFromSnapshotRow(row, NOW);
         const projected = projectStaffCatalogQtyFromSnapshot(row, NOW);
-        expect(cell).toEqual(projected);
+        expect(cell).toEqual({
+          ...projected,
+          stickyLocked: row.stickyLocked,
+          windowOpensAt: row.windowOpensAt,
+          windowClosesAt: row.windowClosesAt,
+          hasActiveSellWindowMembership: undefined,
+        });
         const sortKeys = await evaluator.evaluate(row, NOW);
         expect(sortKeys.isLocked).toBe(cell.sellState === "locked");
         expect(sortKeys.availableToSell).toBe(cell.availableToSell);
@@ -360,6 +366,58 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
         "OTHER-FACTORY-SKU",
       ]);
       expect(open.total).toBe(2);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("hides future scheduled windows from wholesale lists but keeps post-close locked SKUs", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const org = OrganizationId.DEFAULT;
+      const scheduledSku = "WHOLESALE-SCHEDULED";
+      const postCloseSku = "WHOLESALE-POST-CLOSE";
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, $3, 'Scheduled wholesale', 'EA', 100, 50, true)`,
+        ["da209000-0000-4000-8000-000000000501", org, scheduledSku],
+      );
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, $3, 'Post-close wholesale', 'EA', 100, 50, true)`,
+        ["da209000-0000-4000-8000-000000000502", org, postCloseSku],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.stock_snapshots
+          (organization_id, sku, location_id, on_hand, sticky_locked, window_opens_at)
+         VALUES ($1, $2, $3, 4, false, $4)`,
+        [org, scheduledSku, harness.locationId, "2026-09-03T13:00:00.000Z"],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.stock_snapshots
+          (organization_id, sku, location_id, on_hand, sticky_locked)
+         VALUES ($1, $2, $3, 3, true)`,
+        [org, postCloseSku, harness.locationId],
+      );
+
+      const listed = await harness.catalogListQuery.list({
+        organizationId: org,
+        shopVisibleOnly: true,
+        hideBeforeOpen: true,
+        availableOnly: false,
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(listed.items.map((row) => row.product.sku.value)).toEqual([
+        harness.sku,
+        "OTHER-FACTORY-SKU",
+        postCloseSku,
+      ]);
+      expect(listed.items.some((row) => row.product.sku.value === scheduledSku)).toBe(false);
     } finally {
       await harness.close();
     }

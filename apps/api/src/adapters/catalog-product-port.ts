@@ -8,7 +8,16 @@ import type { OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel
 
 function toSnapshot(
   product: Product,
-  qty: { sellState: "open" | "locked"; availableToSell: number | null } | undefined,
+  qty:
+    | {
+        sellState: "open" | "locked";
+        availableToSell: number | null;
+        stickyLocked?: boolean;
+        windowOpensAt?: Date | null;
+        windowClosesAt?: Date | null;
+        hasActiveSellWindowMembership?: boolean;
+      }
+    | undefined,
 ): ProductSnapshot {
   return {
     productId: product.id,
@@ -19,14 +28,31 @@ function toSnapshot(
     taxCategoryCode: product.taxCategoryCode ?? undefined,
     active: !product.inactive && !product.discontinued,
     ...(qty !== undefined
-      ? { sellState: qty.sellState, availableToSell: qty.availableToSell }
+      ? {
+          sellState: qty.sellState,
+          availableToSell: qty.availableToSell,
+          stickyLocked: qty.stickyLocked,
+          windowOpensAt: qty.windowOpensAt,
+          windowClosesAt: qty.windowClosesAt,
+          hasActiveSellWindowMembership: qty.hasActiveSellWindowMembership,
+        }
       : {}),
   };
 }
 
 function snapshotsFromProducts(
   products: ReadonlyMap<string, Product>,
-  qtyBySku: ReadonlyMap<string, { sellState: "open" | "locked"; availableToSell: number | null }>,
+  qtyBySku: ReadonlyMap<
+    string,
+    {
+      sellState: "open" | "locked";
+      availableToSell: number | null;
+      stickyLocked?: boolean;
+      windowOpensAt?: Date | null;
+      windowClosesAt?: Date | null;
+      hasActiveSellWindowMembership?: boolean;
+    }
+  >,
   qtyRead: IQtyReadPort | undefined,
 ): ReadonlyMap<string, ProductSnapshot> {
   const result = new Map<string, ProductSnapshot>();

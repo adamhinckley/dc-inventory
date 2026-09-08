@@ -47,6 +47,7 @@ export class ListWholesaleCatalogUseCase {
       sortOrder: input.sortOrder,
       shopVisibleOnly: true,
       availableOnly: input.availableOnly ?? true,
+      hideBeforeOpen: true,
     });
     return {
       items: page.items.map(({ product, qty }) => ({ product, qty })),
