@@ -10,6 +10,8 @@ import {
   INVENTORY_MATCH_PAGE_SIZE,
   isEligibleForSellWindowApply,
   listAllInternalSellWindows,
+  sellWindowDateRangeMessage,
+  sellWindowMatchCheckSummary,
   listParamsToFilterSnapshot,
   type InventoryMatchListFn,
   parseOptionalWindowInstant,
@@ -71,10 +73,34 @@ describe("inventory reopen workflow", () => {
     });
   });
 
+  it("rejects past opens and inverted close dates", () => {
+    expect(sellWindowDateRangeMessage("2026-09-07", "2026-12-01", "2026-09-08")).toBe(
+      "Window cannot start in the past",
+    );
+    expect(sellWindowDateRangeMessage("2026-12-02", "2026-12-01", "2026-09-08")).toBe(
+      "Close date must be on or after the open date",
+    );
+    expect(sellWindowDateRangeMessage("2026-09-08", "2026-09-08", "2026-09-08")).toBeNull();
+  });
+
   it("skips inactive and discontinued rows for bulk apply", () => {
     expect(isEligibleForSellWindowApply(sampleRow)).toBe(true);
     expect(isEligibleForSellWindowApply({ ...sampleRow, inactive: true })).toBe(false);
     expect(isEligibleForSellWindowApply({ ...sampleRow, discontinued: true })).toBe(false);
+  });
+
+  it("uses the list total for matching and treats unloaded rows as checked", () => {
+    expect(
+      sellWindowMatchCheckSummary({
+        matchTotal: 1_499,
+        loaded: [
+          sampleRow,
+          { ...sampleRow, sku: "STYLE-B", inactive: true },
+          { ...sampleRow, sku: "STYLE-C" },
+        ],
+        checkedSkus: { "STYLE-A": true, "STYLE-C": false },
+      }),
+    ).toEqual({ checked: 1_497, total: 1_499 });
   });
 
   it("builds a reopen command for eligible filtered matches", () => {
@@ -103,7 +129,7 @@ describe("inventory reopen workflow", () => {
       filterSnapshot: { q: "hat" },
       skus: ["STYLE-A"],
       windowOpensAt: new Date(2027, 0, 15).toISOString(),
-      windowClosesAt: new Date(2027, 1, 15).toISOString(),
+      windowClosesAt: new Date(2027, 1, 15, 23, 59, 59, 999).toISOString(),
     });
   });
 
@@ -121,14 +147,14 @@ describe("inventory reopen workflow", () => {
       filterSnapshot: { category: ["Hats"] },
       skus: ["STYLE-A", "STYLE-B"],
       windowOpensAt: new Date(2027, 0, 15).toISOString(),
-      windowClosesAt: new Date(2029, 5, 1).toISOString(),
+      windowClosesAt: new Date(2029, 5, 1, 23, 59, 59, 999).toISOString(),
     });
   });
 
   it("requires a close date when building the reopen command", () => {
     expect(() =>
       buildInventoryReopenCommand([sampleRow], "", "", {}, "Spring Hats"),
-    ).toThrow("window close date is required");
+    ).toThrow("Open and close dates are required");
   });
 
   it("marks manually closed windows read-only", () => {
@@ -252,7 +278,7 @@ describe("inventory reopen workflow", () => {
     expect(command.skus[0]).toBe("SKU-1");
     expect(command.skus.at(-1)).toBe(`SKU-${total}`);
     expect(command.windowOpensAt).toBe(new Date(2027, 0, 15).toISOString());
-    expect(command.windowClosesAt).toBe(new Date(2027, 1, 15).toISOString());
+    expect(command.windowClosesAt).toBe(new Date(2027, 1, 15, 23, 59, 59, 999).toISOString());
   });
 
   it("loads every sell window page until total is covered", async () => {

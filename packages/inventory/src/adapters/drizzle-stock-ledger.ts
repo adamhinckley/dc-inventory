@@ -1,7 +1,7 @@
 import type { IClock } from "../domain/clock.js";
 import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   allocateReceiveCover,
@@ -93,15 +93,32 @@ export class DrizzleStockLedger implements IStockLedger {
     const ordered = [...new Map(resolved.map((snapshot) => [snapshot.key, snapshot])).values()]
       .filter((snapshot) => !this.lockedSnapshotKeys.has(snapshot.key))
       .sort((left, right) => left.key.localeCompare(right.key));
+    if (ordered.length === 0) {
+      return;
+    }
 
+    const groups = new Map<string, typeof ordered>();
     for (const snapshot of ordered) {
+      const groupKey = `${snapshot.organizationId}\0${snapshot.locationUuid}`;
+      const group = groups.get(groupKey) ?? [];
+      group.push(snapshot);
+      groups.set(groupKey, group);
+    }
+
+    for (const group of groups.values()) {
+      const first = group[0];
+      if (first === undefined) {
+        continue;
+      }
       await this.db
         .insert(stockSnapshots)
-        .values({
-          organizationId: snapshot.organizationId,
-          sku: snapshot.sku,
-          locationId: snapshot.locationUuid,
-        })
+        .values(
+          group.map((snapshot) => ({
+            organizationId: snapshot.organizationId,
+            sku: snapshot.sku,
+            locationId: snapshot.locationUuid,
+          })),
+        )
         .onConflictDoNothing({
           target: [
             stockSnapshots.organizationId,
@@ -109,25 +126,26 @@ export class DrizzleStockLedger implements IStockLedger {
             stockSnapshots.locationId,
           ],
         });
-    }
-
-    for (const snapshot of ordered) {
       const rows = await this.db
-        .select({ id: stockSnapshots.id })
+        .select({ id: stockSnapshots.id, sku: stockSnapshots.sku })
         .from(stockSnapshots)
         .where(
           and(
-            eq(stockSnapshots.organizationId, snapshot.organizationId),
-            eq(stockSnapshots.sku, snapshot.sku),
-            eq(stockSnapshots.locationId, snapshot.locationUuid),
+            eq(stockSnapshots.organizationId, first.organizationId),
+            eq(stockSnapshots.locationId, first.locationUuid),
+            inArray(
+              stockSnapshots.sku,
+              group.map((snapshot) => snapshot.sku),
+            ),
           ),
         )
-        .limit(1)
         .for("update");
-      if (rows[0] === undefined) {
+      if (rows.length !== group.length) {
         throw new Error("Inventory snapshot disappeared before it could be locked");
       }
-      this.lockedSnapshotKeys.add(snapshot.key);
+      for (const snapshot of group) {
+        this.lockedSnapshotKeys.add(snapshot.key);
+      }
     }
   }
 
@@ -183,23 +201,37 @@ export class DrizzleStockLedger implements IStockLedger {
       return { ok: false, reason: "invalid_sell_window" };
     }
 
-    for (const sku of command.skus) {
-      await this.lockSnapshots([{ organizationId, sku, locationId: LocationId.DEFAULT }]);
-      const locationUuid = await this.resolveLocationUuid(organizationId, LocationId.DEFAULT);
-      const rows = await this.loadSnapshotRow(organizationId, sku, locationUuid);
-      if (rows === undefined) {
-        throw new Error("Locked inventory snapshot is missing");
-      }
-      await this.db
-        .update(stockSnapshots)
-        .set({
-          stickyLocked: false,
-          windowOpensAt,
-          windowClosesAt,
-          updatedAt: new Date(),
-        })
-        .where(eq(stockSnapshots.id, rows.id));
+    const uniqueSkus = [...new Map(command.skus.map((sku) => [sku.value, sku])).values()];
+    if (uniqueSkus.length === 0) {
+      return { ok: true };
     }
+
+    await this.lockSnapshots(
+      uniqueSkus.map((sku) => ({
+        organizationId,
+        sku,
+        locationId: LocationId.DEFAULT,
+      })),
+    );
+    const locationUuid = await this.resolveLocationUuid(organizationId, LocationId.DEFAULT);
+    await this.db
+      .update(stockSnapshots)
+      .set({
+        stickyLocked: false,
+        windowOpensAt,
+        windowClosesAt,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(stockSnapshots.organizationId, organizationId),
+          eq(stockSnapshots.locationId, locationUuid),
+          inArray(
+            stockSnapshots.sku,
+            uniqueSkus.map((sku) => sku.value),
+          ),
+        ),
+      );
     return { ok: true };
   }
 

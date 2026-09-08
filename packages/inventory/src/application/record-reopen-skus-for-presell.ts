@@ -1,5 +1,6 @@
 import type { OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
-import { isSellWindowInvalid } from "../domain/demand-model.js";
+import type { IClock } from "../domain/clock.js";
+import { isSellWindowInvalid, isSellWindowOpenInThePast } from "../domain/demand-model.js";
 import type { IStockLedger } from "../domain/ports/stock-ledger.js";
 import type { SellWindow, SellWindowFilterSnapshot } from "../domain/sell-window.js";
 import { CreateSellWindowUseCase } from "./create-sell-window.js";
@@ -29,6 +30,7 @@ export class RecordReopenSkusForPresellUseCase {
   constructor(
     private readonly ledger: IStockLedger,
     private readonly createSellWindow: CreateSellWindowUseCase,
+    private readonly clock: IClock,
   ) {}
 
   async execute(
@@ -40,7 +42,10 @@ export class RecordReopenSkusForPresellUseCase {
       return { ok: false, reason: "invalid" };
     }
     const windowOpensAt = input.windowOpensAt ?? null;
-    if (isSellWindowInvalid(windowOpensAt, input.windowClosesAt)) {
+    if (
+      isSellWindowInvalid(windowOpensAt, input.windowClosesAt) ||
+      isSellWindowOpenInThePast(windowOpensAt, this.clock.now())
+    ) {
       return { ok: false, reason: "invalid_sell_window" };
     }
 

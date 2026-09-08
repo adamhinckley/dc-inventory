@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getGetInternalSellWindowQueryKey,
@@ -12,8 +11,10 @@ import {
 import {
   Button,
   FieldRow,
-  LabeledField,
   Label,
+  LabeledField,
+  LoadingButton,
+  Spinner,
   TextInput,
 } from "@dc-inventory/ui";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
@@ -28,6 +29,8 @@ import {
   instantToDateInput,
   inventoryReopenQueryKey,
   isEligibleForSellWindowApply,
+  sellWindowDateRangeMessage,
+  sellWindowMatchCheckSummary,
   shouldPrefetchInventoryMatches,
 } from "../../lib/inventory-reopen-workflow";
 import { useProductListFilterOptions } from "../../lib/use-product-list-filter-options";
@@ -57,6 +60,7 @@ export function SellWindowEditorPage() {
   const [closesAt, setClosesAt] = useState("");
   const [checkedSkus, setCheckedSkus] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     if (cloneFrom === null || cloneFrom === "") {
@@ -89,6 +93,7 @@ export function SellWindowEditorPage() {
   );
   const matchCount = matchesQuery.data?.pages[0]?.total ?? 0;
   const nextPage = matchesQuery.data?.pages.at(-1)?.nextPage ?? null;
+  const matchesLoading = matchesQuery.isFetching && !matchesQuery.isFetchingNextPage;
 
   useEffect(() => {
     if (matching.length === 0) {
@@ -107,17 +112,17 @@ export function SellWindowEditorPage() {
     });
   }, [matching]);
 
-  const eligibleCheckedCount = useMemo(
+  const matchCheckSummary = useMemo(
     () =>
-      matching.filter(
-        (row) => isEligibleForSellWindowApply(row) && checkedSkus[row.sku] !== false,
-      ).length,
-    [checkedSkus, matching],
+      sellWindowMatchCheckSummary({
+        matchTotal: matchCount,
+        loaded: matching,
+        checkedSkus,
+      }),
+    [checkedSkus, matchCount, matching],
   );
-  const eligibleCount = useMemo(
-    () => matching.filter(isEligibleForSellWindowApply).length,
-    [matching],
-  );
+  const eligibleCheckedCount = matchCheckSummary.checked;
+  const eligibleCount = matchCheckSummary.total;
 
   const onVisibleRange = useCallback(
     (range: { startIndex: number; endIndex: number }) => {
@@ -166,6 +171,7 @@ export function SellWindowEditorPage() {
       return;
     }
     applyingRef.current = true;
+    setApplying(true);
     setActionError(null);
     try {
       const remaining =
@@ -202,6 +208,7 @@ export function SellWindowEditorPage() {
       );
     } finally {
       applyingRef.current = false;
+      setApplying(false);
     }
   }
 
@@ -210,38 +217,32 @@ export function SellWindowEditorPage() {
       className="flex min-h-0 flex-1 flex-col gap-form-section"
       data-testid="sell-window-editor"
     >
-      <nav className="text-body-sm text-fg-secondary">
-        <Link href="/inventory/reopen" className="hover:underline">
-          Sell Windows
-        </Link>
-        <span aria-hidden> / </span>
-        <span className="text-fg">New sell window</span>
-      </nav>
-
       <div>
         <h2 className="text-heading-sm">New sell window</h2>
         <p className="text-body-sm text-fg-secondary">
-          Choose categories and factories, set open/close dates, then review SKUs before opening
-          infinity.
+          Choose categories, optionally exclude factories, set open/close dates, then review SKUs
+          before opening infinity.
         </p>
       </div>
 
-      <LabeledField className="max-w-md">
-        <Label htmlFor="window-name">Window name</Label>
-        <TextInput
-          id="window-name"
-          density="compact"
-          value={windowName}
-          onChange={setWindowName}
+      <FieldRow>
+        <WindowFields
+          opensAt={opensAt}
+          closesAt={closesAt}
+          onOpensAt={setOpensAt}
+          onClosesAt={setClosesAt}
+          constrainToFuture
         />
-      </LabeledField>
-
-      <WindowFields
-        opensAt={opensAt}
-        closesAt={closesAt}
-        onOpensAt={setOpensAt}
-        onClosesAt={setClosesAt}
-      />
+        <LabeledField className="w-52 shrink-0">
+          <Label htmlFor="window-name">Window name</Label>
+          <TextInput
+            id="window-name"
+            density="compact"
+            value={windowName}
+            onChange={setWindowName}
+          />
+        </LabeledField>
+      </FieldRow>
 
       <section className="flex flex-col gap-field-group">
         <h3 className="text-label text-fg-secondary">Match SKUs</h3>
@@ -254,14 +255,27 @@ export function SellWindowEditorPage() {
       </section>
 
       <div className="flex flex-wrap items-center gap-tight">
-        <Button type="button" variant="secondary" size="sm" onClick={selectAllEligible}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={matchesLoading}
+          onClick={selectAllEligible}
+        >
           <SquareCheckBig className="size-icon" aria-hidden />
           Select All Eligible
         </Button>
-        <span className="text-body-sm text-fg-secondary">
-          {eligibleCheckedCount.toLocaleString()} of {eligibleCount.toLocaleString()} eligible
-          checked (inactive and discontinued are skipped on apply)
-        </span>
+        {matchesLoading ? (
+          <span className="inline-flex items-center gap-tight text-body-sm text-fg-secondary">
+            <Spinner size="sm" label="Loading matches" />
+            Loading matches…
+          </span>
+        ) : (
+          <span className="text-body-sm text-fg-secondary">
+            {eligibleCheckedCount.toLocaleString()} of {eligibleCount.toLocaleString()} matching
+            checked (inactive and discontinued are skipped on apply)
+          </span>
+        )}
       </div>
 
       {matchesQuery.isError ? (
@@ -273,6 +287,7 @@ export function SellWindowEditorPage() {
           items={matching}
           checkedSkus={checkedSkus}
           onToggle={toggleSku}
+          loading={matchesLoading}
           onVisibleRange={onVisibleRange}
         />
       )}
@@ -284,13 +299,13 @@ export function SellWindowEditorPage() {
       ) : null}
 
       <FieldRow>
-        <Button
+        <LoadingButton
           type="button"
           variant="primary"
+          loading={applying}
           disabled={
-            reopenMutation.isPending ||
-            matchesQuery.isPending ||
-            closesAt.trim() === "" ||
+            matchesLoading ||
+            sellWindowDateRangeMessage(opensAt, closesAt) !== null ||
             windowName.trim() === "" ||
             eligibleCheckedCount === 0
           }
@@ -301,7 +316,7 @@ export function SellWindowEditorPage() {
         >
           <Save className="size-icon" aria-hidden />
           Save
-        </Button>
+        </LoadingButton>
       </FieldRow>
     </section>
   );

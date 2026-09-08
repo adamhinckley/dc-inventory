@@ -134,6 +134,26 @@ export function isEligibleForSellWindowApply(row: InventoryMatchRow): boolean {
   return !row.inactive && !row.discontinued;
 }
 
+/**
+ * Checked / matching totals for the sell-window review line.
+ * `matchTotal` is the list API `total` for the current filters (first page).
+ * Unloaded rows are treated as checked, same as Save.
+ */
+export function sellWindowMatchCheckSummary(input: {
+  matchTotal: number;
+  loaded: readonly InventoryMatchRow[];
+  checkedSkus: Readonly<Record<string, boolean>>;
+}): { checked: number; total: number } {
+  const skippedLoaded = input.loaded.filter(
+    (row) =>
+      !isEligibleForSellWindowApply(row) || input.checkedSkus[row.sku] === false,
+  ).length;
+  return {
+    checked: Math.max(0, input.matchTotal - skippedLoaded),
+    total: input.matchTotal,
+  };
+}
+
 export function shouldPrefetchInventoryMatches(input: {
   loadedCount: number;
   total: number;
@@ -226,7 +246,9 @@ export async function fetchRemainingInventoryMatches(
   return items;
 }
 
-export function parseOptionalWindowInstant(date: string): string | null {
+function parseLocalDateParts(
+  date: string,
+): { year: number; month: number; day: number } | null {
   const trimmed = date.trim();
   if (trimmed === "") {
     return null;
@@ -239,7 +261,52 @@ export function parseOptionalWindowInstant(date: string): string | null {
   if (!year || !month || !day) {
     return null;
   }
-  return new Date(year, month - 1, day).toISOString();
+  return { year, month, day };
+}
+
+export function parseOptionalWindowInstant(date: string): string | null {
+  const parts = parseLocalDateParts(date);
+  if (parts === null) {
+    return null;
+  }
+  return new Date(parts.year, parts.month - 1, parts.day).toISOString();
+}
+
+/** Close instant is the end of the local calendar day so same-day ranges are valid. */
+export function parseWindowCloseInstant(date: string): string | null {
+  const parts = parseLocalDateParts(date);
+  if (parts === null) {
+    return null;
+  }
+  return new Date(parts.year, parts.month - 1, parts.day, 23, 59, 59, 999).toISOString();
+}
+
+export function localTodayISO(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function isIsoCalendarDate(value: string | undefined): value is string {
+  return value !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+export function sellWindowDateRangeMessage(
+  from: string,
+  to: string,
+  today: string = localTodayISO(),
+): string | null {
+  if (from.trim() === "" || to.trim() === "") {
+    return "Open and close dates are required";
+  }
+  if (from < today) {
+    return "Window cannot start in the past";
+  }
+  if (to < from) {
+    return "Close date must be on or after the open date";
+  }
+  return null;
 }
 
 export function instantToDateInput(value: string | null | undefined): string {
@@ -263,7 +330,11 @@ export function buildInventoryReopenCommand(
   filterParams: ListQueryParams,
   name: string = "Sell Window",
 ): InventoryReopenCommand {
-  const windowClosesAt = parseOptionalWindowInstant(closesAt);
+  const rangeError = sellWindowDateRangeMessage(opensAt, closesAt);
+  if (rangeError !== null) {
+    throw new Error(rangeError);
+  }
+  const windowClosesAt = parseWindowCloseInstant(closesAt);
   if (windowClosesAt === null) {
     throw new Error("window close date is required");
   }
@@ -292,7 +363,11 @@ export function buildSellWindowOpenCommand(input: {
   opensAt: string;
   closesAt: string;
 }): InventoryReopenCommand {
-  const windowClosesAt = parseOptionalWindowInstant(input.closesAt);
+  const rangeError = sellWindowDateRangeMessage(input.opensAt, input.closesAt);
+  if (rangeError !== null) {
+    throw new Error(rangeError);
+  }
+  const windowClosesAt = parseWindowCloseInstant(input.closesAt);
   if (windowClosesAt === null) {
     throw new Error("window close date is required");
   }

@@ -97,6 +97,7 @@ export {
   computeUncovered,
   hasActiveSellWindowMembership,
   isSellWindowInvalid,
+  isSellWindowOpenInThePast,
   isSnapshotSellWindowOpen,
   observeWindowClose,
   projectDemandFigures,

@@ -116,14 +116,6 @@ export function SellWindowDetailPage({ windowId }: { windowId: string }) {
       className="flex min-h-0 flex-1 flex-col gap-form-section"
       data-testid="sell-window-detail"
     >
-      <nav className="text-body-sm text-fg-secondary">
-        <Link href="/inventory/reopen" className="hover:underline">
-          Sell Windows
-        </Link>
-        <span aria-hidden> / </span>
-        <span className="text-fg">{window.name}</span>
-      </nav>
-
       <div>
         <h2 className="text-heading-sm">{window.name}</h2>
         <div className="mt-tight flex flex-wrap items-center gap-tight">

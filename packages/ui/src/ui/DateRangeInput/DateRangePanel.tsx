@@ -42,6 +42,12 @@ export interface DateRangePanelProps {
    *  to both typed inputs. */
   min?: string
   max?: string
+  /**
+   * Relative lookback presets (Last 7 / 30 days). Default `true` for
+   * filter ranges. Set `false` when picking future dates — those
+   * presets are the past.
+   */
+  showPresets?: boolean
   /** Standard `data-testid`. Lands on the panel wrapper; sidebar presets
    *  derive `${testid}-preset-{name}`; start/end inputs derive
    *  `${testid}-start-input` / `${testid}-end-input`; footer buttons
@@ -90,6 +96,7 @@ export function DateRangePanel({
   onClose,
   min,
   max,
+  showPresets = true,
   onDirtyChange,
   'data-testid': testid,
 }: DateRangePanelProps) {
@@ -169,12 +176,14 @@ export function DateRangePanel({
   return (
     <div className="flex flex-col" data-testid={`${testid}-panel`}>
       <div className="flex">
-        <PresetSidebar
-          activeValue={activePreset?.value}
-          isCustom={isCustom}
-          onPreset={handlePreset}
-          testid={testid}
-        />
+        {showPresets ? (
+          <PresetSidebar
+            activeValue={activePreset?.value}
+            isCustom={isCustom}
+            onPreset={handlePreset}
+            testid={testid}
+          />
+        ) : null}
         <div className="flex flex-col">
           <div className="flex gap-tight px-2 pt-2">
             <div className="flex flex-1 flex-col gap-tight">

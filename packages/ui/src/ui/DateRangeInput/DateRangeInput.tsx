@@ -74,6 +74,11 @@ export interface DateRangeInputProps
    * the slot is pure layout overhead in that context.
    */
   showHint?: boolean
+  /**
+   * Relative lookback presets in the popover. Default `true`. Set
+   * `false` when the range is a future window (sell dates, ship-by).
+   */
+  showPresets?: boolean
   /** Standard `data-testid`. Lands on the trigger button. Popup derives
    *  `${testid}-popup`; start/end inputs `${testid}-start-input` /
    *  `${testid}-end-input`; footer buttons `${testid}-reset` /
@@ -120,6 +125,7 @@ export function DateRangeInput({
   max,
   placeholder = 'Pick a date range',
   showHint = true,
+  showPresets = true,
   disabled,
   'data-testid': testid,
   'data-invalid': dataInvalid,
@@ -213,6 +219,7 @@ export function DateRangeInput({
           onDirtyChange={setIsDirty}
           min={min}
           max={max}
+          showPresets={showPresets}
           data-testid={testid}
         />
       </Popover.Content>

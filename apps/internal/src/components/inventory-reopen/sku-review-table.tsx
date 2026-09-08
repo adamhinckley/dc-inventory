@@ -10,12 +10,14 @@ export function SkuReviewTable({
   checkedSkus,
   onToggle,
   readOnly = false,
+  loading = false,
   onVisibleRange,
 }: {
   items: readonly InventoryMatchRow[];
   checkedSkus: Record<string, boolean>;
   onToggle: (sku: string, checked: boolean) => void;
   readOnly?: boolean;
+  loading?: boolean;
   onVisibleRange?: (range: { startIndex: number; endIndex: number }) => void;
 }) {
   return (
@@ -30,7 +32,9 @@ export function SkuReviewTable({
         <span>On Order</span>
         <span>Flags</span>
       </div>
-      {items.length === 0 ? (
+      {loading && items.length === 0 ? (
+        <p className="px-3 py-4 text-body-sm text-fg-secondary">Loading matches…</p>
+      ) : items.length === 0 ? (
         <p className="px-3 py-4 text-body-sm text-fg-secondary">No matching SKUs.</p>
       ) : (
         <VirtualRows
