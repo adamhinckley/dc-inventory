@@ -112,6 +112,7 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           id: suppliers.id,
           vendorNumber: suppliers.vendorNumber,
           name: suppliers.name,
+          poPrefix: suppliers.poPrefix,
         })
         .from(suppliers)
         .where(eq(suppliers.organizationId, DEMO_SEED_ORGANIZATION_ID)),
@@ -318,7 +319,12 @@ export class PostgresDemoBookReader implements IDemoBookReader {
       defaultLocationId,
       products: productRows,
       images: imageRows,
-      suppliers: supplierRows,
+      suppliers: supplierRows.map((row) => ({
+        id: row.id,
+        vendorNumber: row.vendorNumber,
+        name: row.name,
+        poPrefix: row.poPrefix ?? "",
+      })),
       supplierProducts: supplierProductRows,
       customers: customerRows,
       shipTos: shipToRows,

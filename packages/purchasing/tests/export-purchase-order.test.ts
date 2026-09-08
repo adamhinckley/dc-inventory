@@ -64,7 +64,7 @@ async function harness() {
     organizationId: DEFAULT_ORG,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
-    poPrefix: null,
+    poPrefix: "HF",
   });
   const workbookWriter = new InMemoryWorkbookWriter();
   const supplierProducts = new InMemorySupplierProductRepository();
@@ -128,7 +128,7 @@ describe("ExportPurchaseOrderUseCase", () => {
     expect(result.file.contentType).toBe(
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    expect(result.file.filename).toBe("PO-00001.xlsx");
+    expect(result.file.filename).toBe("PO-HF-00001.xlsx");
     expect(h.workbookWriter.writes).toHaveLength(1);
     expect(h.workbookWriter.writes[0]?.rows).toEqual([
       factoryLine({ mat_num: SKU.value, quan: 5, description: CATALOG_BOLT }),

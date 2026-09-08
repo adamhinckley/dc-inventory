@@ -58,7 +58,7 @@ async function seedPurchaseOrder(repo: InMemoryPurchaseOrderRepository) {
     id: PO_ID,
     organizationId: DEFAULT_ORG,
     supplierId: SUPPLIER_ID,
-    documentNumber: "PO-00001",
+    documentNumber: "PO-HF-00001",
     status: "confirmed",
     shipDate: null,
     cancelDate: null,
@@ -84,7 +84,10 @@ async function seedPurchaseOrder(repo: InMemoryPurchaseOrderRepository) {
 
 describe("GetPurchaseOrderShortReadoutUseCase", () => {
   it("returns one uncovered row per PO SKU and customers only for SKUs with uncovered > 0", async () => {
-    const purchaseOrders = new InMemoryPurchaseOrderRepository();
+    const purchaseOrders = new InMemoryPurchaseOrderRepository(
+      async () => "",
+      async () => "HF",
+    );
     await seedPurchaseOrder(purchaseOrders);
     const inventoryUncovered = new StubUncoveredPort();
     inventoryUncovered.set(SKU_A.value, 10);
@@ -115,7 +118,10 @@ describe("GetPurchaseOrderShortReadoutUseCase", () => {
   });
 
   it("returns empty affectedCustomers when every uncovered is zero", async () => {
-    const purchaseOrders = new InMemoryPurchaseOrderRepository();
+    const purchaseOrders = new InMemoryPurchaseOrderRepository(
+      async () => "",
+      async () => "HF",
+    );
     await seedPurchaseOrder(purchaseOrders);
     const inventoryUncovered = new StubUncoveredPort();
     inventoryUncovered.set(SKU_A.value, 0);
