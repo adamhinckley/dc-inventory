@@ -34,6 +34,7 @@ const ACTION_BY_OPERATION: Readonly<
   syncInternalPurchaseOrdersFromUncovered: "purchase_orders_manage",
   replaceInternalPurchaseOrderLines: "purchase_orders_manage",
   confirmInternalPurchaseOrder: "purchase_orders_manage",
+  unconfirmInternalPurchaseOrder: "purchase_orders_manage",
   cancelInternalPurchaseOrder: "purchase_orders_manage",
   cancelRemainingInternalPurchaseOrder: ["stock_manage", "purchase_orders_manage"],
   createInternalSupplier: "purchase_orders_manage",

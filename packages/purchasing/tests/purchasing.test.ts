@@ -24,6 +24,7 @@ import {
   ListPurchaseOrdersUseCase,
   ReceivePurchaseOrderUseCase,
   ReplacePurchaseOrderLinesUseCase,
+  UnconfirmPurchaseOrderUseCase,
 } from "../src/index.js";
 
 const SKU = Sku.parse("PO-TEST-SKU");
@@ -56,6 +57,7 @@ async function harness() {
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
     cancelRemaining: new CancelRemainingPurchaseOrderUseCase(uow),
+    unconfirm: new UnconfirmPurchaseOrderUseCase(uow),
     replaceLines: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders, catalog),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
   };
@@ -837,6 +839,96 @@ describe("Purchasing (in-memory)", () => {
     const snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(snap.onHand).toBe(3);
     expect(snap.onOrder).toBe(0);
+  });
+
+  it("unconfirms a zero-received confirmed purchase order back to draft", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 12 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const documentNumber = created.purchaseOrder.documentNumber;
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-unconfirm",
+    });
+
+    let snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
+    expect(snap.onOrder).toBe(12);
+
+    const unconfirmed = await h.unconfirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "unconfirm-zero-received",
+    });
+    expect(unconfirmed.ok).toBe(true);
+    if (!unconfirmed.ok) {
+      return;
+    }
+    expect(unconfirmed.purchaseOrder.status).toBe("draft");
+    expect(unconfirmed.purchaseOrder.documentNumber).toBe(documentNumber);
+
+    snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
+    expect(snap.onOrder).toBe(0);
+
+    const movements = await h.uow.inventoryReadModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: SKU,
+      locationId: DEFAULT,
+    });
+    expect(movements.filter((movement) => movement.movementType === "InboundCancelled")).toHaveLength(1);
+    expect(movements.find((movement) => movement.movementType === "InboundCancelled")?.quantity).toBe(12);
+  });
+
+  it("rejects unconfirm when any line has received quantity", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-block-unconfirm",
+    });
+
+    const lineId = created.purchaseOrder.lines[0]!.id;
+    await h.receive.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "receive-block-unconfirm",
+      lines: [{ lineId, quantity: 1 }],
+    });
+
+    const blocked = await h.unconfirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "unconfirm-blocked",
+    });
+    expect(blocked).toEqual({ ok: false, reason: "illegal_transition" });
+
+    const saved = await h.uow.purchaseOrders.findById(DEFAULT_ORG, created.purchaseOrder.id);
+    expect(saved?.status).toBe("confirmed");
   });
 
   it("scopes purchase orders by organizationId and allows duplicate vendor numbers and PO numbers across orgs", async () => {
