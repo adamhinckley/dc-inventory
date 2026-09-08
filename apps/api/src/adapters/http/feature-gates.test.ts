@@ -80,6 +80,11 @@ describe("named feature gates", () => {
       url: "/internal/inventory/reopen-skus",
       method: "POST",
     },
+    {
+      feature: "inventory",
+      url: "/internal/inventory/close-skus",
+      method: "POST",
+    },
     { feature: "sales", url: "/internal/sales-orders" },
     {
       feature: "ar",

@@ -44,6 +44,12 @@ import type {
   CancelRemainingInternalPurchaseOrder404,
   CancelRemainingInternalPurchaseOrder409,
   CancelRemainingInternalPurchaseOrderBody,
+  CloseInternalInventorySkus200,
+  CloseInternalInventorySkus400,
+  CloseInternalInventorySkus401,
+  CloseInternalInventorySkus403,
+  CloseInternalInventorySkus404,
+  CloseInternalInventorySkusBody,
   ConfirmInternalPurchaseOrder200,
   ConfirmInternalPurchaseOrder400,
   ConfirmInternalPurchaseOrder401,
@@ -3952,6 +3958,117 @@ export const useReopenInternalInventorySkus = <TError = ReopenInternalInventoryS
         TContext
       > => {
       return useMutation(getReopenInternalInventorySkusMutationOptions(options));
+    }
+
+export type closeInternalInventorySkusResponse200 = {
+  data: CloseInternalInventorySkus200
+  status: 200
+}
+
+export type closeInternalInventorySkusResponse400 = {
+  data: CloseInternalInventorySkus400
+  status: 400
+}
+
+export type closeInternalInventorySkusResponse401 = {
+  data: CloseInternalInventorySkus401
+  status: 401
+}
+
+export type closeInternalInventorySkusResponse403 = {
+  data: CloseInternalInventorySkus403
+  status: 403
+}
+
+export type closeInternalInventorySkusResponse404 = {
+  data: CloseInternalInventorySkus404
+  status: 404
+}
+
+export type closeInternalInventorySkusResponseSuccess = (closeInternalInventorySkusResponse200) & {
+  headers: Headers;
+};
+export type closeInternalInventorySkusResponseError = (closeInternalInventorySkusResponse400 | closeInternalInventorySkusResponse401 | closeInternalInventorySkusResponse403 | closeInternalInventorySkusResponse404) & {
+  headers: Headers;
+};
+
+export type closeInternalInventorySkusResponse = (closeInternalInventorySkusResponseSuccess | closeInternalInventorySkusResponseError)
+
+export const getCloseInternalInventorySkusUrl = () => {
+
+
+
+
+  return `/internal/inventory/close-skus`
+}
+
+/**
+ * @summary Close listed SKUs or a sell window membership for pre-sell
+ */
+export const closeInternalInventorySkus = async (closeInternalInventorySkusBody: CloseInternalInventorySkusBody, options?: Parameters<typeof customFetch>[1]): Promise<closeInternalInventorySkusResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<closeInternalInventorySkusResponse>(getCloseInternalInventorySkusUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(closeInternalInventorySkusBody)
+  }
+);}
+
+
+
+
+
+export const getCloseInternalInventorySkusMutationOptions = <TError = CloseInternalInventorySkus400 | CloseInternalInventorySkus401 | CloseInternalInventorySkus403 | CloseInternalInventorySkus404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof closeInternalInventorySkus>>, TError,{data: CloseInternalInventorySkusBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof closeInternalInventorySkus>>, TError,{data: CloseInternalInventorySkusBody}, TContext> => {
+
+const mutationKey = ['closeInternalInventorySkus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof closeInternalInventorySkus>>, {data: CloseInternalInventorySkusBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  closeInternalInventorySkus(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CloseInternalInventorySkusMutationResult = NonNullable<Awaited<ReturnType<typeof closeInternalInventorySkus>>>
+    export type CloseInternalInventorySkusMutationBody = CloseInternalInventorySkusBody
+    export type CloseInternalInventorySkusMutationError = CloseInternalInventorySkus400 | CloseInternalInventorySkus401 | CloseInternalInventorySkus403 | CloseInternalInventorySkus404
+
+    /**
+ * @summary Close listed SKUs or a sell window membership for pre-sell
+ */
+export const useCloseInternalInventorySkus = <TError = CloseInternalInventorySkus400 | CloseInternalInventorySkus401 | CloseInternalInventorySkus403 | CloseInternalInventorySkus404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof closeInternalInventorySkus>>, TError,{data: CloseInternalInventorySkusBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof closeInternalInventorySkus>>,
+        TError,
+        {data: CloseInternalInventorySkusBody},
+        TContext
+      > => {
+      return useMutation(getCloseInternalInventorySkusMutationOptions(options));
     }
 
 export type listInternalSellWindowsResponse200 = {

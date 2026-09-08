@@ -71,6 +71,10 @@ export {
   RecordReopenSkusForPresellUseCase,
   type RecordReopenSkusForPresellRequest,
 } from "./application/record-reopen-skus-for-presell.js";
+export {
+  RecordCloseSkusForPresellUseCase,
+  type RecordCloseSkusForPresellRequest,
+} from "./application/record-close-skus-for-presell.js";
 export { RecordShippedUseCase } from "./application/record-shipped.js";
 export { SetSellWindowUseCase } from "./application/set-sell-window.js";
 export {
@@ -160,6 +164,8 @@ export type {
   RecordInboundFromPoCommand,
   RecordShippedCommand,
   ReopenSkusForPresellCommand,
+  CloseSkusForPresellCommand,
+  CloseSkusForPresellResult,
   SetSellWindowCommand,
   DemandCommandResult,
   StockCommandBase,
