@@ -1,5 +1,5 @@
 import { OrganizationId, ProductId } from "@dc-inventory/shared-kernel";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type {
   IProductCategoryRepository,
@@ -38,8 +38,9 @@ export class DrizzleProductCategoryRepository implements IProductCategoryReposit
           eq(productCategories.productId, productId),
           eq(categories.organizationId, organizationId),
         ),
-      );
-    return rows.map((row) => row.name).sort((a, b) => a.localeCompare(b));
+      )
+      .orderBy(asc(productCategories.slot));
+    return rows.map((row) => row.name);
   }
 
   async replaceForProducts(
@@ -93,9 +94,10 @@ export class DrizzleProductCategoryRepository implements IProductCategoryReposit
         .delete(productCategories)
         .where(inArray(productCategories.productId, productIds));
 
-      const links: Array<{ productId: ProductId; categoryId: string }> = [];
+      const links: Array<{ productId: ProductId; categoryId: string; slot: number }> = [];
       for (const assignment of batch) {
         const seen = new Set<string>();
+        let slot = 1;
         for (const rawName of assignment.categoryNames) {
           const name = rawName.trim();
           if (name.length === 0 || seen.has(name)) {
@@ -104,7 +106,8 @@ export class DrizzleProductCategoryRepository implements IProductCategoryReposit
           seen.add(name);
           const categoryId = categoryIdByName.get(name);
           if (categoryId !== undefined) {
-            links.push({ productId: assignment.productId, categoryId });
+            links.push({ productId: assignment.productId, categoryId, slot });
+            slot += 1;
           }
         }
       }

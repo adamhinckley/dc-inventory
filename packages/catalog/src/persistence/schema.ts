@@ -4,6 +4,7 @@ import {
   char,
   integer,
   pgSchema,
+  smallint,
   text,
   timestamp,
   unique,
@@ -132,6 +133,7 @@ export const productCategories = catalog.table(
     categoryId: uuid("category_id")
       .notNull()
       .references(() => categories.id),
+    slot: smallint("slot").notNull().default(1),
     ...timestamps(),
   },
   (table) => [unique().on(table.productId, table.categoryId)],

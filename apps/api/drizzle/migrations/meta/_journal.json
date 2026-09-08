@@ -253,6 +253,13 @@
       "when": 1790255600000,
       "tag": "0036_catalog_original_wholesale_price",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1790355600000,
+      "tag": "0037_product_category_slot",
+      "breakpoints": true
     }
   ]
 }

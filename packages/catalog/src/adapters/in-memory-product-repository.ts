@@ -11,7 +11,7 @@ type Stored = { product: Product; createdAt: Date };
 
 export class InMemoryProductRepository implements IProductRepository {
   private readonly byId = new Map<ProductId, Stored>();
-  private readonly categoriesByProductId = new Map<ProductId, Set<string>>();
+  private readonly categoriesByProductId = new Map<ProductId, readonly string[]>();
   private readonly supplierIdsByProductId = new Map<ProductId, Set<string>>();
 
   async listMatching(query: ProductListMatch): Promise<ListedProduct[]> {
@@ -33,8 +33,8 @@ export class InMemoryProductRepository implements IProductRepository {
         return false;
       }
       if (categories.length > 0) {
-        const assigned = this.categoriesByProductId.get(row.product.id);
-        if (!categories.some((name) => assigned?.has(name))) {
+        const assigned = this.categoriesByProductId.get(row.product.id) ?? [];
+        if (!categories.some((name) => assigned.includes(name))) {
           return false;
         }
       }
@@ -55,12 +55,11 @@ export class InMemoryProductRepository implements IProductRepository {
   }
 
   setCategories(productId: ProductId, categories: Iterable<string>): void {
-    this.categoriesByProductId.set(productId, new Set(categories));
+    this.categoriesByProductId.set(productId, [...categories]);
   }
 
   getCategoryNames(productId: ProductId): readonly string[] {
-    const names = this.categoriesByProductId.get(productId);
-    return names === undefined ? [] : [...names].sort((a, b) => a.localeCompare(b));
+    return this.categoriesByProductId.get(productId) ?? [];
   }
 
   setSupplierIds(productId: ProductId, supplierIds: Iterable<string>): void {
@@ -75,7 +74,9 @@ export class InMemoryProductRepository implements IProductRepository {
         continue;
       }
       for (const name of categories) {
-        names.add(name);
+        if (name.length > 0) {
+          names.add(name);
+        }
       }
     }
     return [...names].sort((left, right) => left.localeCompare(right));
