@@ -57,3 +57,24 @@ export const YearNavigation: Story = {
     )
   },
 }
+
+export const YearNavigationDefaultMax: Story = {
+  render: function YearNavDefaultMaxStory() {
+    const [value, setValue] = useState<string | null>(null)
+    const farYear = new Date().getFullYear() + 10
+    return (
+      <div className="w-72 space-y-2">
+        <p className="text-body-sm text-fg-secondary">
+          No explicit max — year dropdown runs through {farYear}.
+        </p>
+        <DateInput
+          value={value}
+          onChange={setValue}
+          yearNavigation
+          placeholder="Close date"
+          data-testid="story-date-year-default-max"
+        />
+      </div>
+    )
+  },
+}
