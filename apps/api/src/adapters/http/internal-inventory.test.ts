@@ -34,10 +34,16 @@ const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const PO_ID = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440010");
 const SKU_A = Sku.parse("REOPEN-HTTP-A");
 const SKU_B = Sku.parse("REOPEN-HTTP-B");
-const WINDOW_OPENS = "2026-07-01T00:00:00.000Z";
-const WINDOW_CLOSES = "2026-08-01T00:00:00.000Z";
-const INSIDE_WINDOW = new Date("2026-07-15T12:00:00.000Z");
-const AFTER_WINDOW = new Date("2026-09-01T12:00:00.000Z");
+
+function daysFromNow(days: number): Date {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
+
+/** Relative sell-window bounds so calendar-based sellState stays stable over time. */
+const WINDOW_OPENS = daysFromNow(-7).toISOString();
+const WINDOW_CLOSES = daysFromNow(30).toISOString();
+const INSIDE_WINDOW = daysFromNow(-1);
+const AFTER_WINDOW = daysFromNow(60);
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
