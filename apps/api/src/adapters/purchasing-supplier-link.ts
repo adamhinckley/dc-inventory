@@ -126,7 +126,14 @@ export class PurchasingSupplierLinkAdapter implements ISupplierLinkPort {
       bySupplierSku.set(`${product.supplierId}:${product.sku.value}`, product);
     }
 
-    const catalogChecked = new Map<string, boolean>();
+    const uniqueSkus = [...new Map(prefetchPairs.map((pair) => [pair.sku.value, pair.sku])).values()];
+    const catalogKnown = new Set<string>();
+    for (const batch of chunks(uniqueSkus, LINK_BATCH_SIZE)) {
+      const found = await this.catalog.findBySkus(organizationId, batch);
+      for (const sku of found.keys()) {
+        catalogKnown.add(sku);
+      }
+    }
     const results: SupplierLinkResult[] = [];
     const pending: Array<{ product: SupplierProduct; resultIndex: number }> = [];
 
@@ -151,14 +158,7 @@ export class PurchasingSupplierLinkAdapter implements ISupplierLinkPort {
         results.push({ ok: false, message: "Vendor SKU could not be assigned" });
         continue;
       }
-      const catalogKey = sku.value;
-      let catalogKnown = catalogChecked.get(catalogKey);
-      if (catalogKnown === undefined) {
-        const catalogRow = await this.catalog.findBySku(organizationId, sku);
-        catalogKnown = catalogRow !== null;
-        catalogChecked.set(catalogKey, catalogKnown);
-      }
-      if (!catalogKnown) {
+      if (!catalogKnown.has(sku.value)) {
         results.push({ ok: false, message: "Vendor SKU could not be assigned" });
         continue;
       }

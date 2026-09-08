@@ -28,4 +28,18 @@ export class InMemoryCatalogSkuLookupPort implements ICatalogSkuLookupPort {
   ): Promise<{ sku: Sku; name: string; archived: boolean } | null> {
     return this.byOrgSku.get(catalogKey(organizationId, sku.value)) ?? null;
   }
+
+  async findBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, { sku: Sku; name: string; archived: boolean }>> {
+    const result = new Map<string, { sku: Sku; name: string; archived: boolean }>();
+    for (const sku of skus) {
+      const found = await this.findBySku(organizationId, sku);
+      if (found !== null) {
+        result.set(sku.value, found);
+      }
+    }
+    return result;
+  }
 }

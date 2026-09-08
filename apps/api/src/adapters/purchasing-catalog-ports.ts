@@ -11,17 +11,32 @@ import type {
 } from "@dc-inventory/purchasing";
 import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 
+function toCatalogSnapshot(product: {
+  sku: Sku;
+  name: string;
+  inactive: boolean;
+  discontinued: boolean;
+}) {
+  return {
+    sku: product.sku,
+    name: product.name,
+    archived: product.inactive || product.discontinued,
+  };
+}
+
 export function catalogSkuLookupPort(productRepo: IProductRepository): ICatalogSkuLookupPort {
   return {
     findBySku: async (organizationId: OrganizationId, sku: Sku) => {
       const product = await productRepo.findBySku(organizationId, sku);
-      return product === null
-        ? null
-        : {
-            sku: product.sku,
-            name: product.name,
-            archived: product.inactive || product.discontinued,
-          };
+      return product === null ? null : toCatalogSnapshot(product);
+    },
+    findBySkus: async (organizationId: OrganizationId, skus: readonly Sku[]) => {
+      const products = await productRepo.findBySkus(organizationId, skus);
+      const result = new Map<string, ReturnType<typeof toCatalogSnapshot>>();
+      for (const [sku, product] of products) {
+        result.set(sku, toCatalogSnapshot(product));
+      }
+      return result;
     },
   };
 }
