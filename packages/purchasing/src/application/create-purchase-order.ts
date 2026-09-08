@@ -10,6 +10,7 @@ import { parseIsoDate } from "../domain/iso-date.js";
 import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
+import { parsePoPrefix } from "../domain/supplier.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 
 export type CreatePurchaseOrderLineInput = {
@@ -61,7 +62,7 @@ export class CreatePurchaseOrderUseCase {
     if (supplier === null) {
       return { ok: false, reason: "supplier_not_found" };
     }
-    if (supplier.poPrefix === null || supplier.poPrefix.trim().length === 0) {
+    if (parsePoPrefix(supplier.poPrefix) === null) {
       return { ok: false, reason: "supplier_po_prefix_missing" };
     }
 

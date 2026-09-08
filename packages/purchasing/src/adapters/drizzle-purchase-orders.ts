@@ -1,7 +1,7 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
+import { formatDocumentNumber, parseDocumentNumber } from "../domain/document-number.js";
 import { SupplierPoPrefixMissingError } from "../domain/errors.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
@@ -234,23 +234,22 @@ async function advanceCounter(
   db: PurchasingDrizzle,
   organizationId: OrganizationId,
   supplierId: SupplierId,
-  poPrefix: string,
   documentNumber: string,
 ): Promise<void> {
-  const sequence = parseDocumentSequence(documentNumber, poPrefix);
-  if (sequence === null || sequence < 1) {
+  const parsed = parseDocumentNumber(documentNumber);
+  if (parsed === null) {
     return;
   }
   await db
     .insert(supplierPoDocumentNumberCounters)
-    .values({ organizationId, supplierId, lastValue: sequence })
+    .values({ organizationId, supplierId, lastValue: parsed.sequence })
     .onConflictDoUpdate({
       target: [
         supplierPoDocumentNumberCounters.organizationId,
         supplierPoDocumentNumberCounters.supplierId,
       ],
       set: {
-        lastValue: sql`greatest(${supplierPoDocumentNumberCounters.lastValue}, ${sequence})`,
+        lastValue: sql`greatest(${supplierPoDocumentNumberCounters.lastValue}, ${parsed.sequence})`,
       },
     });
 }
@@ -348,16 +347,10 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
   async save(order: PurchaseOrder): Promise<void> {
     await this.db.transaction(async (tx) => {
       const transactionalDb = tx as PurchasingDrizzle;
-      const poPrefix = await loadSupplierPoPrefix(
-        transactionalDb,
-        order.organizationId,
-        order.supplierId,
-      );
       await advanceCounter(
         transactionalDb,
         order.organizationId,
         order.supplierId,
-        poPrefix,
         order.documentNumber,
       );
       await persistPurchaseOrder(transactionalDb, order);

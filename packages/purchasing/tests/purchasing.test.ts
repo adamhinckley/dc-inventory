@@ -139,6 +139,35 @@ describe("Purchasing (in-memory)", () => {
     expect(created).toEqual({ ok: false, reason: "supplier_po_prefix_missing" });
   });
 
+  it("allows updating existing POs after supplier poPrefix is cleared", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 5 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const supplier = await h.uow.suppliers.findById(DEFAULT_ORG, h.supplierId);
+    expect(supplier).not.toBeNull();
+    if (supplier === null) {
+      return;
+    }
+    await h.uow.suppliers.save({ ...supplier, poPrefix: null });
+
+    const cancelled = await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-after-prefix-cleared",
+    });
+    expect(cancelled.ok).toBe(true);
+  });
+
   it("allocates independent PO sequences per supplier", async () => {
     const h = await harness();
     const otherSupplierId = SupplierId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");

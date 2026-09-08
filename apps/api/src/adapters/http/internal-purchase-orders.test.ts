@@ -34,6 +34,7 @@ import { InMemoryCatalogSkuLookupPort } from "@dc-inventory/purchasing";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SUPPLIER_ID = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+const SUPPLIER_NO_PREFIX_ID = SupplierId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const SKU_A = Sku.parse("SHORT-A");
 const SKU_B = Sku.parse("SHORT-B");
@@ -64,7 +65,14 @@ async function startPurchasingApp() {
     organizationId: OrganizationId.DEFAULT,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
-          poPrefix: "HF",
+    poPrefix: "HF",
+  });
+  await unitOfWork.suppliers.save({
+    id: SUPPLIER_NO_PREFIX_ID,
+    organizationId: OrganizationId.DEFAULT,
+    vendorNumber: "NO-PFX",
+    name: "No Prefix Supplier",
+    poPrefix: null,
   });
 
   await staffUsers.save({
@@ -107,6 +115,22 @@ describe("internal purchase orders HTTP", () => {
     const response = await app.inject({ method: "GET", url: "/internal/purchase-orders" });
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("returns 409 when creating a PO for a supplier without poPrefix", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_NO_PREFIX_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(409);
+    expect(created.json()).toEqual({ error: "supplier_po_prefix_missing" });
   });
 
   it("gets a purchase order by exact document number", async () => {

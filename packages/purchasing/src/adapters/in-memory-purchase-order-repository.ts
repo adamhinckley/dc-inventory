@@ -4,7 +4,7 @@ import {
   Sku,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
+import { formatDocumentNumber, parseDocumentNumber } from "../domain/document-number.js";
 import { SupplierPoPrefixMissingError } from "../domain/errors.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
@@ -162,18 +162,17 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
 
   async save(order: PurchaseOrder): Promise<void> {
     const normalized = toOrder(order);
-    const poPrefix = await this.requirePoPrefix(normalized.organizationId, normalized.supplierId);
     const existing = this.byId.get(normalized.id);
     this.byId.set(normalized.id, {
       order: normalized,
       createdAt: existing?.createdAt ?? normalized.createdAt,
     });
-    const sequence = parseDocumentSequence(normalized.documentNumber, poPrefix);
-    if (sequence !== null) {
+    const parsed = parseDocumentNumber(normalized.documentNumber);
+    if (parsed !== null) {
       const key = supplierCounterKey(normalized.organizationId, normalized.supplierId);
       const current = this.nextSequenceBySupplier.get(key) ?? 1;
-      if (sequence >= current) {
-        this.nextSequenceBySupplier.set(key, sequence + 1);
+      if (parsed.sequence >= current) {
+        this.nextSequenceBySupplier.set(key, parsed.sequence + 1);
       }
     }
   }

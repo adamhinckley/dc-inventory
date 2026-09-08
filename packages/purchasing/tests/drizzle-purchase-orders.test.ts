@@ -277,4 +277,20 @@ describe("DrizzlePurchaseOrderRepository.save", () => {
     expect(loaded?.lines[0]?.qty).toBe(5);
     expect(db.lines.get(FOREIGN_LINE)).toEqual(FOREIGN_LINE_ROW);
   });
+
+  it("saves existing POs without requiring a live supplier poPrefix", async () => {
+    const db = new FakePurchasingDb();
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+
+    await repo.save(draft([line(LINE_A, SKU, "Bolt", 5)]));
+    const supplier = db.supplierRows.get(SUPPLIER_ID);
+    expect(supplier).toBeDefined();
+    if (supplier !== undefined) {
+      db.supplierRows.set(SUPPLIER_ID, { ...supplier, poPrefix: null });
+    }
+
+    await repo.save(draft([line(LINE_A, SKU, "Bolt updated", 8)]));
+    const loaded = await repo.findById(ORG, PO_ID);
+    expect(loaded?.lines[0]?.qty).toBe(8);
+  });
 });
