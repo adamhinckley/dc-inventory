@@ -1,13 +1,33 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildInventoryReopenCommand,
+  buildSellWindowOpenCommand,
+  enrichSellWindowSkuRows,
   fetchInventoryMatchPages,
   fetchRemainingInventoryMatches,
+  filterSnapshotToListParams,
+  instantToDateInput,
   INVENTORY_MATCH_PAGE_SIZE,
+  isEligibleForSellWindowApply,
+  listAllInternalSellWindows,
+  listParamsToFilterSnapshot,
   type InventoryMatchListFn,
   parseOptionalWindowInstant,
+  sellWindowReadOnly,
   shouldPrefetchInventoryMatches,
+  type SellWindowListFn,
 } from "./inventory-reopen-workflow";
+
+const sampleRow = {
+  sku: "STYLE-A",
+  name: "Style A",
+  supplierName: "Acme Supply",
+  sellState: "locked",
+  onHand: 4,
+  onOrder: 0,
+  inactive: false,
+  discontinued: false,
+};
 
 describe("inventory reopen workflow", () => {
   it("maps blank window dates to null instants", () => {
@@ -17,18 +37,51 @@ describe("inventory reopen workflow", () => {
     );
   });
 
-  it("builds a reopen command for the full filtered match set", () => {
+  it("formats instants for DateInput using local calendar days", () => {
+    expect(instantToDateInput(new Date(2027, 0, 15).toISOString())).toBe("2027-01-15");
+    expect(instantToDateInput(null)).toBe("");
+  });
+
+  it("round-trips local DateInput values through parse and format", () => {
+    expect(instantToDateInput(parseOptionalWindowInstant("2029-08-20"))).toBe("2029-08-20");
+  });
+
+  it("round-trips filter snapshots through list params", () => {
+    expect(
+      listParamsToFilterSnapshot({
+        q: "hat",
+        category: ["Hats"],
+        supplierId: ["00000000-0000-0000-0000-000000000001"],
+        excludeSupplierId: ["00000000-0000-0000-0000-000000000002"],
+      }),
+    ).toEqual({
+      q: "hat",
+      category: ["Hats"],
+      supplierId: ["00000000-0000-0000-0000-000000000001"],
+      excludeSupplierId: ["00000000-0000-0000-0000-000000000002"],
+    });
+    expect(
+      filterSnapshotToListParams({
+        q: "hat",
+        category: ["Hats"],
+      }),
+    ).toEqual({
+      q: "hat",
+      category: ["Hats"],
+    });
+  });
+
+  it("skips inactive and discontinued rows for bulk apply", () => {
+    expect(isEligibleForSellWindowApply(sampleRow)).toBe(true);
+    expect(isEligibleForSellWindowApply({ ...sampleRow, inactive: true })).toBe(false);
+    expect(isEligibleForSellWindowApply({ ...sampleRow, discontinued: true })).toBe(false);
+  });
+
+  it("builds a reopen command for eligible filtered matches", () => {
     expect(
       buildInventoryReopenCommand(
         [
-          {
-            sku: "STYLE-A",
-            name: "Style A",
-            supplierName: "Acme Supply",
-            sellState: "locked",
-            onHand: 4,
-            onOrder: 0,
-          },
+          sampleRow,
           {
             sku: "STYLE-B",
             name: "Style B",
@@ -36,39 +89,57 @@ describe("inventory reopen workflow", () => {
             sellState: "locked",
             onHand: 0,
             onOrder: 12,
+            inactive: true,
+            discontinued: false,
           },
         ],
         "2027-01-15",
         "2027-02-15",
         { q: "hat" },
+        "Spring Hats",
       ),
     ).toEqual({
-      name: "Manage Pre-Sell",
+      name: "Spring Hats",
       filterSnapshot: { q: "hat" },
-      skus: ["STYLE-A", "STYLE-B"],
+      skus: ["STYLE-A"],
       windowOpensAt: new Date(2027, 0, 15).toISOString(),
       windowClosesAt: new Date(2027, 1, 15).toISOString(),
     });
   });
 
+  it("builds an open command from checked SKUs", () => {
+    expect(
+      buildSellWindowOpenCommand({
+        name: "Spring Hats",
+        filterParams: { category: ["Hats"] },
+        checkedSkus: ["STYLE-A", "STYLE-B"],
+        opensAt: "2027-01-15",
+        closesAt: "2029-06-01",
+      }),
+    ).toEqual({
+      name: "Spring Hats",
+      filterSnapshot: { category: ["Hats"] },
+      skus: ["STYLE-A", "STYLE-B"],
+      windowOpensAt: new Date(2027, 0, 15).toISOString(),
+      windowClosesAt: new Date(2029, 5, 1).toISOString(),
+    });
+  });
+
   it("requires a close date when building the reopen command", () => {
     expect(() =>
-      buildInventoryReopenCommand(
-        [
-          {
-            sku: "STYLE-A",
-            name: "Style A",
-            supplierName: null,
-            sellState: "locked",
-            onHand: 0,
-            onOrder: 0,
-          },
-        ],
-        "",
-        "",
-        {},
-      ),
+      buildInventoryReopenCommand([sampleRow], "", "", {}, "Spring Hats"),
     ).toThrow("window close date is required");
+  });
+
+  it("marks manually closed windows read-only", () => {
+    expect(sellWindowReadOnly({ status: "open", manuallyClosedAt: null })).toBe(false);
+    expect(
+      sellWindowReadOnly({
+        status: "open",
+        manuallyClosedAt: new Date(2027, 0, 1).toISOString(),
+      }),
+    ).toBe(true);
+    expect(sellWindowReadOnly({ status: "closed", manuallyClosedAt: null })).toBe(true);
   });
 
   it("prefetches when the scroller reaches the third page of a five-page window", () => {
@@ -109,6 +180,8 @@ describe("inventory reopen workflow", () => {
               sellState: "locked",
               onHand: 0,
               onOrder: 1,
+              inactive: false,
+              discontinued: false,
             },
           ],
           total: 900,
@@ -152,6 +225,8 @@ describe("inventory reopen workflow", () => {
             sellState: "locked",
             onHand: 0,
             onOrder: 1,
+            inactive: false,
+            discontinued: false,
           })),
           total,
           page,
@@ -168,6 +243,7 @@ describe("inventory reopen workflow", () => {
       "2027-01-15",
       "2027-02-15",
       {},
+      "Sell Window",
     );
 
     expect(initial.items).toHaveLength(500);
@@ -177,5 +253,120 @@ describe("inventory reopen workflow", () => {
     expect(command.skus.at(-1)).toBe(`SKU-${total}`);
     expect(command.windowOpensAt).toBe(new Date(2027, 0, 15).toISOString());
     expect(command.windowClosesAt).toBe(new Date(2027, 1, 15).toISOString());
+  });
+
+  it("loads every sell window page until total is covered", async () => {
+    const listWindowsMock = vi.fn(async (params: { page?: number; pageSize?: number }) => {
+      const page = params.page ?? 1;
+      const pageSize = params.pageSize ?? 100;
+      return {
+        status: 200 as const,
+        data: {
+          items: [
+            {
+              id: `window-${page}`,
+              name: `Window ${page}`,
+              filterSnapshot: {},
+              windowOpensAt: null,
+              windowClosesAt: "2027-08-01T00:00:00.000Z",
+              status: "open" as const,
+              manuallyClosedAt: null,
+              appliedBy: "11111111-1111-4111-8111-111111111111",
+              appliedAt: "2027-01-01T00:00:00.000Z",
+              skuCount: 1,
+              createdAt: "2027-01-01T00:00:00.000Z",
+              updatedAt: "2027-01-01T00:00:00.000Z",
+            },
+          ],
+          page,
+          pageSize,
+          total: 150,
+        },
+      };
+    });
+    const listWindows = listWindowsMock as unknown as SellWindowListFn;
+
+    const result = await listAllInternalSellWindows(listWindows);
+
+    expect(listWindowsMock.mock.calls.map((call) => call[0]?.page)).toEqual([1, 2]);
+    expect(result.items).toHaveLength(2);
+    expect(result.total).toBe(150);
+  });
+
+  it("enriches saved window SKUs by membership with per-sku lookup fallback", async () => {
+    const listProductsMock = vi.fn(async (params: { q?: string; page?: number }) => {
+      if (params.q === "MISSING-SKU") {
+        return {
+          status: 200 as const,
+          data: {
+            items: [
+              {
+                sku: "MISSING-SKU",
+                name: "Missing Style",
+                supplierName: "Acme Supply",
+                sellState: "locked",
+                onHand: 3,
+                onOrder: 0,
+                inactive: false,
+                discontinued: false,
+              },
+            ],
+            total: 1,
+            page: 1,
+            pageSize: INVENTORY_MATCH_PAGE_SIZE,
+          },
+        };
+      }
+      return {
+        status: 200 as const,
+        data: {
+          items: [
+            {
+              sku: "STYLE-A",
+              name: "Style A",
+              supplierName: "Acme Supply",
+              sellState: "locked",
+              onHand: 4,
+              onOrder: 0,
+              inactive: false,
+              discontinued: false,
+            },
+          ],
+          total: 1,
+          page: params.page ?? 1,
+          pageSize: INVENTORY_MATCH_PAGE_SIZE,
+        },
+      };
+    });
+    const listProducts = listProductsMock as unknown as InventoryMatchListFn;
+
+    const rows = await enrichSellWindowSkuRows(
+      ["STYLE-A", "MISSING-SKU"],
+      { category: ["Hats"] },
+      listProducts,
+    );
+
+    expect(rows).toEqual([
+      {
+        sku: "STYLE-A",
+        name: "Style A",
+        supplierName: "Acme Supply",
+        sellState: "locked",
+        onHand: 4,
+        onOrder: 0,
+        inactive: false,
+        discontinued: false,
+      },
+      {
+        sku: "MISSING-SKU",
+        name: "Missing Style",
+        supplierName: "Acme Supply",
+        sellState: "locked",
+        onHand: 3,
+        onOrder: 0,
+        inactive: false,
+        discontinued: false,
+      },
+    ]);
   });
 });

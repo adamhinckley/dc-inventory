@@ -21,7 +21,7 @@ describe("crumbsFromPathname", () => {
   it("labels the inventory reopen tab", () => {
     expect(crumbsFromPathname("/inventory/reopen")).toEqual([
       { href: "/inventory", label: "Inventory", current: false },
-      { href: "/inventory/reopen", label: "Manage Pre-Sell", current: true },
+      { href: "/inventory/reopen", label: "Sell Windows", current: true },
     ]);
   });
 
