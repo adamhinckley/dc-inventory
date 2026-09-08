@@ -21,6 +21,7 @@ export type CatalogListQuery = {
   q?: string;
   category?: readonly string[];
   supplierId?: readonly string[];
+  excludeSupplierId?: readonly string[];
   page: number;
   pageSize: number;
   sortBy: CatalogListSortBy;

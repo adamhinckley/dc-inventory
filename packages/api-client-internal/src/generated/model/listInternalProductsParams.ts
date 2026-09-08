@@ -26,5 +26,6 @@ inactive?: 'true' | 'false' | boolean;
 hideZeroInventory?: 'true' | 'false' | boolean;
 category?: string | string[];
 supplierId?: string | string[];
+excludeSupplierId?: string | string[];
 sellState?: ListInternalProductsSellState;
 };

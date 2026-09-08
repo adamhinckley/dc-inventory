@@ -3179,7 +3179,7 @@ export const getListInternalProductsUrl = (params?: ListInternalProductsParams,)
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
-    const explodeParameters = ["category","supplierId"];
+    const explodeParameters = ["category","supplierId","excludeSupplierId"];
 
     if (Array.isArray(value) && explodeParameters.includes(key)) {
       value.forEach((v) => {
