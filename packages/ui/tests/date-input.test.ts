@@ -35,6 +35,13 @@ vi.mock('#ds/ui/Popover', () => {
 
 import { DateInput } from '../src/ui/DateInput'
 
+function formatLocalISO(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function renderDateInput(props: Record<string, unknown> = {}) {
   renderToStaticMarkup(
     createElement(DateInput, {
@@ -50,23 +57,28 @@ function lastCalendarProps(): Record<string, unknown> {
   return calls[calls.length - 1]![0] as Record<string, unknown>
 }
 
-describe('DateInput yearNavigation default max', () => {
+describe('DateInput default max', () => {
   beforeEach(() => {
     calendarSpy.mockClear()
   })
 
   it('passes Dec 31 of the tenth year ahead when max is omitted and yearNavigation is true', () => {
     const farYear = new Date().getFullYear() + 10
+    const expected = new Date(farYear, 11, 31)
 
     renderDateInput({ yearNavigation: true })
 
-    expect(lastCalendarProps().toDate).toEqual(new Date(farYear, 11, 31))
+    const { toDate } = lastCalendarProps()
+    expect(toDate).toEqual(expected)
+    expect(formatLocalISO(toDate as Date)).toBe(`${farYear}-12-31`)
   })
 
   it('prefers an explicit max over the yearNavigation default', () => {
     renderDateInput({ yearNavigation: true, max: '2020-06-15' })
 
-    expect(lastCalendarProps().toDate).toEqual(new Date(2020, 5, 15))
+    const { toDate } = lastCalendarProps()
+    expect(toDate).toEqual(new Date(2020, 5, 15))
+    expect(formatLocalISO(toDate as Date)).toBe('2020-06-15')
   })
 
   it('does not pass toDate when yearNavigation is false', () => {
