@@ -78,10 +78,6 @@ async function cleanFixtures(connection: DatabaseConnection): Promise<void> {
     DELETE FROM purchasing.supplier_po_document_number_counters
     WHERE organization_id = ${ORGANIZATION_ID}
   `;
-  await connection.sql`
-    DELETE FROM purchasing.document_number_counters
-    WHERE organization_id = ${ORGANIZATION_ID}
-  `;
   await connection.sql`DELETE FROM purchasing.suppliers WHERE id = ${SUPPLIER_ID}`;
   await connection.sql`DELETE FROM customers.customers WHERE id = ${CUSTOMER_ID}`;
 }
