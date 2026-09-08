@@ -4,7 +4,6 @@ export { DrizzleProductIdentifierRepository } from "./adapters/drizzle-product-i
 export { DrizzleProductCategoryRepository } from "./adapters/drizzle-product-categories.js";
 export { DrizzleProductPackagingRepository } from "./adapters/drizzle-product-packaging.js";
 export { InMemoryImportLocationPort } from "./adapters/in-memory-import-locations.js";
-export { InMemoryImportReorderPolicyPort } from "./adapters/in-memory-import-reorder-policies.js";
 export { InMemoryProductIdentifierRepository } from "./adapters/in-memory-product-identifiers.js";
 export { InMemoryProductPrimarySupplierReadPort } from "./adapters/in-memory-product-primary-supplier-read.js";
 export { InMemoryProductReorderReadPort } from "./adapters/in-memory-product-reorder-read.js";
@@ -81,7 +80,6 @@ export type {
   ProductIdentifierAssignment,
   ProductIdentifierKind,
 } from "./domain/ports/product-identifiers.js";
-export type { IProductVendorSkuReadPort } from "./domain/ports/product-vendor-sku-read.js";
 export type {
   IProductPrimarySupplierReadPort,
   ProductPrimarySupplierTerms,

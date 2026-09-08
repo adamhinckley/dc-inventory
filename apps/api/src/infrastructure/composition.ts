@@ -21,7 +21,6 @@ import {
   type ICatalogListQuery,
   DrizzleProductIdentifierRepository,
   InMemoryImportLocationPort,
-  InMemoryImportReorderPolicyPort,
   InMemoryProductIdentifierRepository,
   InMemoryProductPrimarySupplierReadPort,
   InMemoryProductReorderReadPort,
@@ -952,11 +951,17 @@ export function composeAppServices(
     (appDb
       ? new DrizzleImportLocationAdapter(appDb)
       : new InMemoryImportLocationPort());
+  const inMemoryReorderPolicies =
+    appDb === undefined
+      ? (overrides.productReorderRead ??
+        overrides.importReorderPolicyPort ??
+        new InMemoryProductReorderReadPort())
+      : undefined;
   const importReorderPolicyPort =
     overrides.importReorderPolicyPort ??
     (appDb
       ? new DrizzleImportReorderPolicyAdapter(appDb)
-      : new InMemoryImportReorderPolicyPort());
+      : (inMemoryReorderPolicies as InMemoryProductReorderReadPort));
   const unitOfWork =
     overrides.unitOfWork ??
     (appDb
@@ -1010,7 +1015,7 @@ export function composeAppServices(
     overrides.productReorderRead ??
     (appDb
       ? new DrizzleProductReorderReadAdapter(appDb)
-      : new InMemoryProductReorderReadPort());
+      : (inMemoryReorderPolicies as InMemoryProductReorderReadPort));
   const catalogSkuLookup =
     overrides.catalogSkuLookup ?? catalogSkuLookupPort(productRepo);
   const factorySendCatalog =

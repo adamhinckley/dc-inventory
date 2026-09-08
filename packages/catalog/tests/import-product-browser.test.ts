@@ -1,13 +1,15 @@
 import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryImportLocationPort } from "../src/adapters/in-memory-import-locations.js";
-import { InMemoryImportReorderPolicyPort } from "../src/adapters/in-memory-import-reorder-policies.js";
 import { InMemoryProductCategoryRepository } from "../src/adapters/in-memory-product-categories.js";
 import { InMemoryProductIdentifierRepository } from "../src/adapters/in-memory-product-identifiers.js";
 import { InMemoryProductPackagingRepository } from "../src/adapters/in-memory-product-packaging.js";
+import { InMemoryProductReorderReadPort } from "../src/adapters/in-memory-product-reorder-read.js";
 import { InMemoryProductRepository } from "../src/adapters/in-memory-product-repository.js";
 import { InMemorySupplierLinkPort } from "../src/adapters/in-memory-supplier-link.js";
 import { ImportProductBrowserUseCase } from "../src/application/import-product-browser.js";
+import { GetProductUseCase } from "../src/application/get-product.js";
+import { InMemoryQtyReadPort } from "../src/adapters/in-memory-qty-read.js";
 import type { WorkbookRow } from "../src/domain/ports/workbook-parser.js";
 
 const ORG = OrganizationId.DEFAULT;
@@ -43,7 +45,13 @@ function harness() {
   const categories = new InMemoryProductCategoryRepository(products);
   const identifiers = new InMemoryProductIdentifierRepository();
   const locations = new InMemoryImportLocationPort();
-  const reorderPolicies = new InMemoryImportReorderPolicyPort();
+  const reorderPolicies = new InMemoryProductReorderReadPort();
+  const qty = new InMemoryQtyReadPort();
+  const primarySupplier = {
+    async findByCatalogSku() {
+      return null;
+    },
+  };
   return {
     products,
     suppliers,
@@ -52,6 +60,16 @@ function harness() {
     identifiers,
     locations,
     reorderPolicies,
+    qty,
+    getProduct: new GetProductUseCase(
+      products,
+      qty,
+      packaging,
+      categories,
+      identifiers,
+      primarySupplier,
+      reorderPolicies,
+    ),
     importCatalog: new ImportProductBrowserUseCase(
       products,
       suppliers,
@@ -264,7 +282,7 @@ describe("ImportProductBrowserUseCase", () => {
       new InMemoryProductCategoryRepository(products),
       new InMemoryProductIdentifierRepository(),
       new InMemoryImportLocationPort(),
-      new InMemoryImportReorderPolicyPort(),
+      new InMemoryProductReorderReadPort(),
     );
 
     const result = await importCatalog.execute({
@@ -333,6 +351,43 @@ describe("ImportProductBrowserUseCase", () => {
       "Hardware",
       "Shopify",
     ]);
+
+    const dcA = shopify[0]?.product;
+    expect(dcA).toBeDefined();
+    if (dcA !== undefined) {
+      expect(await h.categories.listNamesForProduct(ORG, dcA.id)).toEqual([
+        "Shopify",
+        "Christmas-Ville",
+      ]);
+    }
+  });
+
+  it("round-trips onhand_min_qty and onhand_max_qty through GET product", async () => {
+    const h = harness();
+    await h.importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: false,
+      rows: [productRow({ onhand_min_qty: "12", onhand_max_qty: "96" })],
+    });
+
+    const listed = await h.products.listMatching({ organizationId: ORG });
+    const product = listed[0]?.product;
+    expect(product).toBeDefined();
+    if (product === undefined) {
+      return;
+    }
+
+    const result = await h.getProduct.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      productId: product.id,
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      reorderMin: 12,
+      reorderMax: 96,
+    });
   });
 
   it("does not replace categories or identifiers for more than 500 products at once", async () => {
@@ -367,7 +422,7 @@ describe("ImportProductBrowserUseCase", () => {
       categories,
       identifiers,
       new InMemoryImportLocationPort(),
-      new InMemoryImportReorderPolicyPort(),
+      new InMemoryProductReorderReadPort(),
     );
 
     const rows = Array.from({ length: 501 }, (_, index) =>
