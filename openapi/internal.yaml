@@ -8778,6 +8778,8 @@ paths:
             label: "Vendor #"
           - field: name
             label: Name
+          - field: poPrefix
+            label: PO prefix
         search:
           param: q
           fields:
@@ -8812,10 +8814,15 @@ paths:
                           type: string
                         name:
                           type: string
+                        poPrefix:
+                          nullable: true
+                          type: string
+                          pattern: ^[A-Z0-9]{2,4}$
                       required:
                         - id
                         - vendorNumber
                         - name
+                        - poPrefix
                       additionalProperties: false
                   page:
                     type: integer
@@ -8903,6 +8910,10 @@ paths:
                 vendorNumber:
                   type: string
                   minLength: 1
+                poPrefix:
+                  nullable: true
+                  type: string
+                  pattern: ^[A-Z0-9]{2,4}$
               required:
                 - name
                 - vendorNumber
@@ -8922,10 +8933,15 @@ paths:
                     type: string
                   name:
                     type: string
+                  poPrefix:
+                    nullable: true
+                    type: string
+                    pattern: ^[A-Z0-9]{2,4}$
                 required:
                   - id
                   - vendorNumber
                   - name
+                  - poPrefix
                 additionalProperties: false
         "400":
           description: Default Response
@@ -8984,15 +9000,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - duplicate_vendor_number
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_vendor_number
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_po_prefix
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/suppliers/{id}:
     get:
       operationId: getInternalSupplier
@@ -9023,10 +9049,15 @@ paths:
                     type: string
                   name:
                     type: string
+                  poPrefix:
+                    nullable: true
+                    type: string
+                    pattern: ^[A-Z0-9]{2,4}$
                 required:
                   - id
                   - vendorNumber
                   - name
+                  - poPrefix
                 additionalProperties: false
         "400":
           description: Default Response
@@ -9102,6 +9133,10 @@ paths:
                 vendorNumber:
                   type: string
                   minLength: 1
+                poPrefix:
+                  nullable: true
+                  type: string
+                  pattern: ^[A-Z0-9]{2,4}$
       parameters:
         - schema:
             type: string
@@ -9126,10 +9161,15 @@ paths:
                     type: string
                   name:
                     type: string
+                  poPrefix:
+                    nullable: true
+                    type: string
+                    pattern: ^[A-Z0-9]{2,4}$
                 required:
                   - id
                   - vendorNumber
                   - name
+                  - poPrefix
                 additionalProperties: false
         "400":
           description: Default Response
@@ -9202,15 +9242,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - duplicate_vendor_number
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_vendor_number
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_po_prefix
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/suppliers/{id}/products:
     get:
       operationId: listInternalSupplierProducts

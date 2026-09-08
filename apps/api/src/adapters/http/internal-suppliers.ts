@@ -1,9 +1,11 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
 import type { Supplier } from "@dc-inventory/purchasing";
 import { StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
+  duplicatePoPrefixResponseSchema,
   duplicateVendorNumberResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
@@ -32,6 +34,7 @@ function mapSupplier(supplier: Supplier) {
     id: supplier.id,
     vendorNumber: supplier.vendorNumber,
     name: supplier.name,
+    poPrefix: supplier.poPrefix,
   };
 }
 
@@ -45,6 +48,10 @@ function sendInvalid(reply: FastifyReply) {
 
 function sendDuplicateVendorNumber(reply: FastifyReply) {
   return reply.code(409).send({ error: "duplicate_vendor_number" as const });
+}
+
+function sendDuplicatePoPrefix(reply: FastifyReply) {
+  return reply.code(409).send({ error: "duplicate_po_prefix" as const });
 }
 
 const errorResponses = {
@@ -110,7 +117,7 @@ export function registerInternalSupplierRoutes(app: FastifyInstance): void {
           201: supplierItemSchema,
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
-          409: duplicateVendorNumberResponseSchema,
+          409: z.union([duplicateVendorNumberResponseSchema, duplicatePoPrefixResponseSchema]),
         },
       },
     },
@@ -120,11 +127,16 @@ export function registerInternalSupplierRoutes(app: FastifyInstance): void {
         staffUserId: staffUserId(request),
         name: request.body.name,
         vendorNumber: request.body.vendorNumber,
+        poPrefix: request.body.poPrefix,
       });
       if (!result.ok) {
-        return result.reason === "duplicate_vendor_number"
-          ? sendDuplicateVendorNumber(reply)
-          : sendInvalid(reply);
+        if (result.reason === "duplicate_vendor_number") {
+          return sendDuplicateVendorNumber(reply);
+        }
+        if (result.reason === "duplicate_po_prefix") {
+          return sendDuplicatePoPrefix(reply);
+        }
+        return sendInvalid(reply);
       }
       return reply.code(201).send(mapSupplier(result.supplier));
     },
@@ -165,7 +177,7 @@ export function registerInternalSupplierRoutes(app: FastifyInstance): void {
         body: supplierPatchBodySchema,
         response: {
           200: supplierItemSchema,
-          409: duplicateVendorNumberResponseSchema,
+          409: z.union([duplicateVendorNumberResponseSchema, duplicatePoPrefixResponseSchema]),
           ...errorResponses,
         },
       },
@@ -177,10 +189,14 @@ export function registerInternalSupplierRoutes(app: FastifyInstance): void {
         supplierId: SupplierId.parse(request.params.id),
         name: request.body.name,
         vendorNumber: request.body.vendorNumber,
+        poPrefix: request.body.poPrefix,
       });
       if (!result.ok) {
         if (result.reason === "duplicate_vendor_number") {
           return sendDuplicateVendorNumber(reply);
+        }
+        if (result.reason === "duplicate_po_prefix") {
+          return sendDuplicatePoPrefix(reply);
         }
         return result.reason === "not_found" ? sendNotFound(reply) : sendInvalid(reply);
       }

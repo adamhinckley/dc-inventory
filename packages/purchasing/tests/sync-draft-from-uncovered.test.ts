@@ -123,12 +123,14 @@ async function harness() {
     organizationId: DEFAULT_ORG,
     vendorNumber: "FA",
     name: "Factory A",
+    poPrefix: null,
   });
   await uow.suppliers.save({
     id: SUPPLIER_B,
     organizationId: DEFAULT_ORG,
     vendorNumber: "FB",
     name: "Factory B",
+    poPrefix: null,
   });
 
   return {

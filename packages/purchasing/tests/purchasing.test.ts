@@ -43,6 +43,7 @@ async function harness() {
     organizationId: DEFAULT_ORG,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
+    poPrefix: null,
   });
 
   return {
@@ -712,6 +713,7 @@ describe("Purchasing (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
+    poPrefix: null,
     });
 
     let cancelCalls = 0;
@@ -847,12 +849,14 @@ describe("Purchasing (in-memory)", () => {
       organizationId: BETA_ORG,
       vendorNumber: "V-1",
       name: "Beta vendor",
+      poPrefix: null,
     });
     await h.uow.suppliers.save({
       id: acmeSupplierId,
       organizationId: DEFAULT_ORG,
       vendorNumber: "V-1",
       name: "Acme vendor",
+      poPrefix: null,
     });
 
     const acmePoId = PurchaseOrderId.parse(newUuid());
