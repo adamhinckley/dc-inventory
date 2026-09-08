@@ -89,7 +89,9 @@ export {
   computeEffectiveSellState,
   computeLockedAvailableToSell,
   computeUncovered,
+  hasActiveSellWindowMembership,
   isSellWindowInvalid,
+  isSnapshotSellWindowOpen,
   observeWindowClose,
   projectDemandFigures,
   projectStaffCatalogQtyFromSnapshot,
@@ -98,6 +100,7 @@ export {
   ZERO_STAFF_CATALOG_QTY_CELL,
   type DemandPersistedState,
   type DemandStockFigures,
+  type EffectiveSellStateOptions,
   type SellState,
   type StaffCatalogQtyCell,
   type StaffCatalogQtySnapshotRow,
@@ -216,10 +219,13 @@ export {
 } from "./domain/snapshot.js";
 export {
   availableToSellProjectionSql,
+  hasActiveSellWindowMembershipSql,
   isLockedForSellSql,
   isShopSellableSql,
+  isSnapshotSellWindowOpenSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
+  type DemandProjectionCatalogColumns,
   type DemandProjectionSnapshotColumns,
   type StaffCatalogDemandProjectionSql,
 } from "./persistence/demand-projection-sql.js";

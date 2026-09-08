@@ -213,12 +213,22 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
       windowOpensAt: stockSnapshots.windowOpensAt,
       windowClosesAt: stockSnapshots.windowClosesAt,
     };
-    const demandProjection = staffCatalogDemandProjectionSql(demandProjectionColumns, nowIso);
+    const demandProjectionCatalogColumns = {
+      organizationId: products.organizationId,
+      sku: products.sku,
+    };
+    const demandProjection = staffCatalogDemandProjectionSql(
+      demandProjectionColumns,
+      nowIso,
+      demandProjectionCatalogColumns,
+    );
     if (query.hideZeroInventory === true) {
       clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
     }
     if (query.availableOnly === true) {
-      clauses.push(isShopSellableSql(available, demandProjectionColumns, nowIso));
+      clauses.push(
+        isShopSellableSql(available, demandProjectionColumns, nowIso, demandProjectionCatalogColumns),
+      );
     }
     if (query.sellState === "locked") {
       clauses.push(sql`${demandProjection.isLockedForSell} = true`);
@@ -322,6 +332,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           stickyLocked,
           windowOpensAt: stockSnapshots.windowOpensAt,
           windowClosesAt: stockSnapshots.windowClosesAt,
+          hasActiveSellWindowMembership: demandProjection.hasActiveSellWindowMembership,
           caseQty: productPackaging.caseQty,
           lastPoCostCents,
           supplierName,
@@ -348,6 +359,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
             stickyLocked: row.stickyLocked,
             windowOpensAt: row.windowOpensAt,
             windowClosesAt: row.windowClosesAt,
+            hasActiveSellWindowMembership: row.hasActiveSellWindowMembership,
           },
           now,
         ) satisfies ProductQty,

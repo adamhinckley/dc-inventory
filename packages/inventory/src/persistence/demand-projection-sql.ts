@@ -1,5 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import type { stockSnapshots } from "./schema.js";
+import { sellWindowSkus, sellWindows } from "./schema.js";
 
 /** Snapshot columns joined for catalog list sort/filter on demand projection. */
 export type DemandProjectionSnapshotColumns = Readonly<{
@@ -11,18 +12,65 @@ export type DemandProjectionSnapshotColumns = Readonly<{
   windowClosesAt: typeof stockSnapshots.windowClosesAt | SQL;
 }>;
 
+/** Catalog identity columns for SellWindow membership EXISTS. */
+export type DemandProjectionCatalogColumns = Readonly<{
+  organizationId: SQL | string | { name: string };
+  sku: SQL | string | { name: string };
+}>;
+
+/** SQL mirror of `isSnapshotSellWindowOpen`. */
+export function isSnapshotSellWindowOpenSql(
+  columns: DemandProjectionSnapshotColumns,
+  nowIso: string,
+): SQL<boolean> {
+  return sql<boolean>`(
+    (${columns.windowOpensAt} IS NULL OR ${columns.windowOpensAt} <= ${nowIso})
+    AND (${columns.windowClosesAt} IS NULL OR ${columns.windowClosesAt} > ${nowIso})
+  )`;
+}
+
+/**
+ * SQL mirror of active SellWindow membership at `now`.
+ * `nowIso` must be an ISO-8601 string (postgres.js cannot bind Date in sql fragments).
+ */
+export function hasActiveSellWindowMembershipSql(
+  catalog: DemandProjectionCatalogColumns,
+  nowIso: string,
+): SQL<boolean> {
+  return sql<boolean>`EXISTS (
+    SELECT 1
+    FROM ${sellWindowSkus} sws
+    INNER JOIN ${sellWindows} sw ON sw.id = sws.sell_window_id
+    WHERE sws.organization_id = ${catalog.organizationId}
+      AND sws.sku = ${catalog.sku}
+      AND sw.manually_closed_at IS NULL
+      AND sw.window_closes_at > ${nowIso}
+      AND (sw.window_opens_at IS NULL OR sw.window_opens_at <= ${nowIso})
+  )`;
+}
+
 /**
  * SQL mirror of `computeEffectiveSellState` for ORDER BY / WHERE.
+ * Pass `catalog` to OR snapshot window logic with active SellWindow memberships.
  * `nowIso` must be an ISO-8601 string (postgres.js cannot bind Date in sql fragments).
  */
 export function isLockedForSellSql(
   columns: DemandProjectionSnapshotColumns,
   nowIso: string,
+  catalog?: DemandProjectionCatalogColumns,
 ): SQL<boolean> {
+  const stickyLocked = sql`coalesce(${columns.stickyLocked}, false)`;
+  const snapshotOpen = isSnapshotSellWindowOpenSql(columns, nowIso);
+  if (catalog === undefined) {
+    return sql<boolean>`(
+      ${stickyLocked}
+      OR NOT ${snapshotOpen}
+    )`;
+  }
+  const hasActiveMembership = hasActiveSellWindowMembershipSql(catalog, nowIso);
   return sql<boolean>`(
-    coalesce(${columns.stickyLocked}, false)
-    OR (${columns.windowOpensAt} IS NOT NULL AND ${columns.windowOpensAt} > ${nowIso})
-    OR (${columns.windowClosesAt} IS NOT NULL AND ${columns.windowClosesAt} <= ${nowIso})
+    ${stickyLocked}
+    OR (NOT ${snapshotOpen} AND NOT ${hasActiveMembership})
   )`;
 }
 
@@ -33,11 +81,12 @@ export function isLockedForSellSql(
 export function availableToSellProjectionSql(
   columns: DemandProjectionSnapshotColumns,
   nowIso: string,
+  catalog?: DemandProjectionCatalogColumns,
 ): SQL<number | null> {
   const onHand = sql<number>`coalesce(${columns.onHand}, 0)`;
   const onOrder = sql<number>`coalesce(${columns.onOrder}, 0)`;
   const committed = sql<number>`coalesce(${columns.committed}, 0)`;
-  const locked = isLockedForSellSql(columns, nowIso);
+  const locked = isLockedForSellSql(columns, nowIso, catalog);
   return sql<number | null>`CASE
     WHEN ${locked} THEN ${onHand} + ${onOrder} - ${committed}
     ELSE NULL
@@ -47,16 +96,23 @@ export function availableToSellProjectionSql(
 export type StaffCatalogDemandProjectionSql = Readonly<{
   isLockedForSell: SQL<boolean>;
   availableToSell: SQL<number | null>;
+  hasActiveSellWindowMembership: SQL<boolean>;
 }>;
 
 /** SQL sort/filter fragments for staff/shop catalog list demand projection. */
 export function staffCatalogDemandProjectionSql(
   columns: DemandProjectionSnapshotColumns,
   nowIso: string,
+  catalog?: DemandProjectionCatalogColumns,
 ): StaffCatalogDemandProjectionSql {
+  const hasActiveMembership =
+    catalog === undefined
+      ? sql<boolean>`false`
+      : hasActiveSellWindowMembershipSql(catalog, nowIso);
   return Object.freeze({
-    isLockedForSell: isLockedForSellSql(columns, nowIso),
-    availableToSell: availableToSellProjectionSql(columns, nowIso),
+    isLockedForSell: isLockedForSellSql(columns, nowIso, catalog),
+    availableToSell: availableToSellProjectionSql(columns, nowIso, catalog),
+    hasActiveSellWindowMembership: hasActiveMembership,
   });
 }
 
@@ -65,8 +121,9 @@ export function isShopSellableSql(
   warehouseAvailable: SQL<number>,
   columns: DemandProjectionSnapshotColumns,
   nowIso: string,
+  catalog?: DemandProjectionCatalogColumns,
 ): SQL<boolean> {
-  const projection = staffCatalogDemandProjectionSql(columns, nowIso);
+  const projection = staffCatalogDemandProjectionSql(columns, nowIso, catalog);
   return sql<boolean>`(CASE
     WHEN ${projection.isLockedForSell} THEN ${projection.availableToSell} > 0
     ELSE true

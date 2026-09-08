@@ -364,4 +364,69 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
       await harness.close();
     }
   });
+
+  it("opens snapshot-locked SKUs when an active SellWindow membership overlaps", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const org = OrganizationId.DEFAULT;
+      const sku = "SELL-WINDOW-OPEN";
+      const sellWindowId = "da209000-0000-4000-8000-000000000401";
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, $3, 'Sell window open', 'EA', 100, 50, true)`,
+        ["da209000-0000-4000-8000-000000000402", org, sku],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.stock_snapshots
+          (organization_id, sku, location_id, on_hand, sticky_locked, window_opens_at)
+         VALUES ($1, $2, $3, 4, false, $4)`,
+        [org, sku, harness.locationId, "2026-09-03T13:00:00.000Z"],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.sell_windows
+          (id, organization_id, name, filter_snapshot, window_opens_at, window_closes_at, status,
+           manually_closed_at, applied_by, applied_at, sku_count)
+         VALUES ($1, $2, 'Summer', '{}'::jsonb, $3, $4, 'open', NULL, 'staff', $5, 1)`,
+        [
+          sellWindowId,
+          org,
+          "2026-09-03T10:00:00.000Z",
+          "2026-09-03T14:00:00.000Z",
+          "2026-09-03T12:00:00.000Z",
+        ],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.sell_window_skus
+          (id, organization_id, sell_window_id, sku)
+         VALUES ($1, $2, $3, $4)`,
+        ["da209000-0000-4000-8000-000000000403", org, sellWindowId, sku],
+      );
+
+      const listed = await harness.catalogListQuery.list({
+        organizationId: org,
+        sellState: "open",
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      const row = listed.items.find((item) => item.product.sku.value === sku);
+      expect(row?.qty.sellState).toBe("open");
+      expect(row?.qty.availableToSell).toBeNull();
+
+      const bySellState = await harness.catalogListQuery.list({
+        organizationId: org,
+        sortBy: "sellState",
+        sortOrder: "asc",
+        page: 1,
+        pageSize: 25,
+      });
+      expect(bySellState.items.find((item) => item.product.sku.value === sku)?.qty.sellState).toBe(
+        "open",
+      );
+    } finally {
+      await harness.close();
+    }
+  });
 });
