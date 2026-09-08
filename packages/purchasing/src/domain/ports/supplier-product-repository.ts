@@ -42,6 +42,10 @@ export interface ICatalogSkuLookupPort {
     organizationId: OrganizationId,
     sku: Sku,
   ): Promise<CatalogProductSnapshot | null>;
+  findBySkus(
+    organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, CatalogProductSnapshot>>;
 }
 
 export interface ISupplierProductQtyReadPort {

@@ -32,5 +32,9 @@ describe("Purchasing Catalog anti-corruption adapter", () => {
       archived: true,
     });
     await expect(catalog.findBySku(OTHER_ORG, sku)).resolves.toBeNull();
+    await expect(catalog.findBySkus(OrganizationId.DEFAULT, [sku])).resolves.toEqual(
+      new Map([[sku.value, { sku, name: "Authoritative catalog name", archived: true }]]),
+    );
+    await expect(catalog.findBySkus(OTHER_ORG, [sku])).resolves.toEqual(new Map());
   });
 });
