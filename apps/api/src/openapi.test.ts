@@ -68,6 +68,7 @@ describe("OpenAPI stub export", () => {
       "listInternalProducts",
       "listInternalPurchaseOrders",
       "listInternalSalesOrders",
+      "listInternalSellWindows",
       "listInternalSupplierProducts",
       "listInternalSuppliers",
       "listInternalUncoveredFactories",

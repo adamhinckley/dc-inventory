@@ -4,6 +4,8 @@ export { InMemoryInventoryUnitOfWork } from "./adapters/in-memory-inventory-unit
 export { StockLedgerInventoryCommandAdapter } from "./adapters/stock-ledger-inventory-command-adapter.js";
 export type { InventoryUnitOfWorkScope } from "./adapters/in-memory-inventory-unit-of-work.js";
 export { InMemoryStockLedger } from "./adapters/in-memory-stock-ledger.js";
+export { InMemorySellWindowRepository } from "./adapters/in-memory-sell-window-repository.js";
+export { DrizzleSellWindowRepository, type SellWindowDrizzle } from "./adapters/drizzle-sell-window-repository.js";
 export { InMemoryUncoveredListQuery } from "./adapters/in-memory-uncovered-list-query.js";
 export {
   InMemoryUncoveredCaseQtyReadPort,
@@ -22,6 +24,26 @@ export {
   type Phase2BootstrapResult,
 } from "./bootstrap/run-phase2-bootstrap.js";
 export { GetStockSnapshotUseCase } from "./application/get-stock-snapshot.js";
+export {
+  CreateSellWindowUseCase,
+  type CreateSellWindowRequest,
+  type CreateSellWindowResult,
+} from "./application/create-sell-window.js";
+export {
+  ListSellWindowsUseCase,
+  type ListSellWindowsRequest,
+  type ListSellWindowsResult,
+} from "./application/list-sell-windows.js";
+export {
+  GetSellWindowUseCase,
+  type GetSellWindowRequest,
+  type GetSellWindowResult,
+} from "./application/get-sell-window.js";
+export {
+  CloseSellWindowUseCase,
+  type CloseSellWindowRequest,
+  type CloseSellWindowResult,
+} from "./application/close-sell-window.js";
 export {
   ListPurchaseOrderGoodsReceivedUseCase,
   type ListPurchaseOrderGoodsReceivedRequest,
@@ -57,7 +79,7 @@ export {
   isPositiveIntegerQuantity,
   movementMatchesCommand,
 } from "./domain/ledger-rules.js";
-export { MovementId } from "./domain/ids.js";
+export { MovementId, SellWindowId } from "./domain/ids.js";
 export type { IClock } from "./domain/clock.js";
 export {
   applySetSellWindow,
@@ -164,6 +186,22 @@ export type {
   UncoveredSkuSupplierSku,
 } from "./domain/ports/uncovered-sku-enrichment.js";
 export { uncoveredSkuDraftKey } from "./domain/ports/uncovered-sku-enrichment.js";
+export {
+  computeSellWindowStatus,
+  projectLiveSellWindowStatus,
+  type SellWindow,
+  type SellWindowFilterSnapshot,
+  type SellWindowStatus,
+} from "./domain/sell-window.js";
+export type {
+  CreateSellWindowRecord,
+  ISellWindowRepository,
+  ListSellWindowsQuery,
+  SellWindowDetail,
+  SellWindowListPage,
+  SellWindowListSortBy,
+} from "./domain/ports/sell-window-repository.js";
+export { normalizeSellWindowFilterSnapshot } from "./domain/ports/sell-window-repository.js";
 export type {
   IUncoveredCaseQtyReadPort,
   IUncoveredReorderPolicyReadPort,

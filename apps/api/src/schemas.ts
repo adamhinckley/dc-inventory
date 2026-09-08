@@ -819,6 +819,62 @@ export const reopenInventorySkusResponseSchema = z.object({
   reopenedCount: z.number().int().min(0),
 });
 
+export const sellWindowStatusSchema = z.enum(["scheduled", "open", "closed"]);
+
+export const sellWindowFilterSnapshotSchema = z.object({
+  q: z.string().optional(),
+  category: z.array(z.string()).optional(),
+  supplierId: z.array(z.string().uuid()).optional(),
+  excludeSupplierId: z.array(z.string().uuid()).optional(),
+});
+
+export const sellWindowsListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const sellWindowListItemSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  filterSnapshot: sellWindowFilterSnapshotSchema,
+  windowOpensAt: z.string().datetime().nullable(),
+  windowClosesAt: z.string().datetime(),
+  status: sellWindowStatusSchema,
+  manuallyClosedAt: z.string().datetime().nullable(),
+  appliedBy: z.string().uuid(),
+  appliedAt: z.string().datetime(),
+  skuCount: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const sellWindowsListResponseSchema = z.object({
+  items: z.array(sellWindowListItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const sellWindowsListTable = {
+  rowId: "id",
+  columns: [
+    { field: "name", label: "Name" },
+    { field: "status", label: "Status" },
+    { field: "windowOpensAt", label: "Opens" },
+    { field: "windowClosesAt", label: "Closes" },
+    { field: "skuCount", label: "SKUs" },
+    { field: "appliedAt", label: "Applied" },
+  ],
+};
+
+export const sellWindowParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export const sellWindowDetailSchema = sellWindowListItemSchema.extend({
+  skus: z.array(z.string()),
+});
+
 export const draftUncoveredPurchaseOrdersBodySchema = z.object({
   skus: z.array(z.string().min(1)).min(1),
 });

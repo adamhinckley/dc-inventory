@@ -260,6 +260,13 @@
       "when": 1790355600000,
       "tag": "0037_product_category_slot",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790455600000,
+      "tag": "0038_inventory_sell_windows",
+      "breakpoints": true
     }
   ]
 }

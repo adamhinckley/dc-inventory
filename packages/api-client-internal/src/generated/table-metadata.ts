@@ -247,6 +247,36 @@ export const listInternalSalesOrdersTable = {
   }
 } as const satisfies InternalTableMetadata;
 
+export const listInternalSellWindowsTable = {
+  "rowId": "id",
+  "columns": [
+    {
+      "field": "name",
+      "label": "Name"
+    },
+    {
+      "field": "status",
+      "label": "Status"
+    },
+    {
+      "field": "windowOpensAt",
+      "label": "Opens"
+    },
+    {
+      "field": "windowClosesAt",
+      "label": "Closes"
+    },
+    {
+      "field": "skuCount",
+      "label": "SKUs"
+    },
+    {
+      "field": "appliedAt",
+      "label": "Applied"
+    }
+  ]
+} as const satisfies InternalTableMetadata;
+
 export const listInternalSupplierProductsTable = {
   "rowId": "id",
   "columns": [
@@ -426,6 +456,7 @@ export const internalTableMetadata = {
   listInternalProducts: listInternalProductsTable,
   listInternalPurchaseOrders: listInternalPurchaseOrdersTable,
   listInternalSalesOrders: listInternalSalesOrdersTable,
+  listInternalSellWindows: listInternalSellWindowsTable,
   listInternalSupplierProducts: listInternalSupplierProductsTable,
   listInternalSuppliers: listInternalSuppliersTable,
   listInternalUncoveredFactories: listInternalUncoveredFactoriesTable,

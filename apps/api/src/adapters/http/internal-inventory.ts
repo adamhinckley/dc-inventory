@@ -9,8 +9,14 @@ import {
   invalidResponseSchema,
   inventoryStockParamsSchema,
   inventoryStockSnapshotSchema,
+  notFoundResponseSchema,
   reopenInventorySkusBodySchema,
   reopenInventorySkusResponseSchema,
+  sellWindowDetailSchema,
+  sellWindowParamsSchema,
+  sellWindowsListQuerySchema,
+  sellWindowsListResponseSchema,
+  sellWindowsListTable,
   unauthorizedResponseSchema,
   uncoveredSkusListQuerySchema,
   uncoveredSkusListResponseSchema,
@@ -21,6 +27,8 @@ import {
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
+import type { SellWindow, SellWindowDetail } from "@dc-inventory/inventory";
+import { SellWindowId } from "@dc-inventory/inventory";
 
 function typed(app: FastifyInstance) {
   return app.withTypeProvider<ZodTypeProvider>();
@@ -56,6 +64,42 @@ function parseWindowInstant(value: string | null | undefined): Date | null | und
     return null;
   }
   return new Date(value);
+}
+
+function mapSellWindow(window: SellWindow) {
+  const filterSnapshot = {
+    ...(window.filterSnapshot.q !== undefined ? { q: window.filterSnapshot.q } : {}),
+    ...(window.filterSnapshot.category !== undefined
+      ? { category: [...window.filterSnapshot.category] }
+      : {}),
+    ...(window.filterSnapshot.supplierId !== undefined
+      ? { supplierId: [...window.filterSnapshot.supplierId] }
+      : {}),
+    ...(window.filterSnapshot.excludeSupplierId !== undefined
+      ? { excludeSupplierId: [...window.filterSnapshot.excludeSupplierId] }
+      : {}),
+  };
+  return {
+    id: window.id,
+    name: window.name,
+    filterSnapshot,
+    windowOpensAt: window.windowOpensAt?.toISOString() ?? null,
+    windowClosesAt: window.windowClosesAt.toISOString(),
+    status: window.status,
+    manuallyClosedAt: window.manuallyClosedAt?.toISOString() ?? null,
+    appliedBy: window.appliedBy,
+    appliedAt: window.appliedAt.toISOString(),
+    skuCount: window.skuCount,
+    createdAt: window.createdAt.toISOString(),
+    updatedAt: window.updatedAt.toISOString(),
+  };
+}
+
+function mapSellWindowDetail(window: SellWindowDetail) {
+  return {
+    ...mapSellWindow(window),
+    skus: window.skus.map((sku) => sku.value),
+  };
 }
 
 export function registerInternalInventoryRoutes(app: FastifyInstance): void {
@@ -124,6 +168,71 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
         return sendInvalid(reply);
       }
       return reply.code(200).send({ reopenedCount: body.skus.length });
+    },
+  );
+
+  routes.get(
+    "/inventory/sell-windows",
+    {
+      schema: {
+        operationId: "listInternalSellWindows",
+        tags: ["internal"],
+        summary: "List persisted sell windows",
+        querystring: sellWindowsListQuerySchema,
+        response: {
+          200: sellWindowsListResponseSchema,
+          400: zodValidationErrorResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+        },
+        "x-table": sellWindowsListTable,
+      } as FastifySchema & { "x-table": typeof sellWindowsListTable },
+    },
+    async (request) => {
+      const query = request.query as {
+        page: number;
+        pageSize: number;
+      };
+      const result = await request.server.inventory.listSellWindows.execute({
+        organizationId: staffOrganizationId(request),
+        page: query.page,
+        pageSize: query.pageSize,
+      });
+      return {
+        items: result.items.map(mapSellWindow),
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
+      };
+    },
+  );
+
+  routes.get(
+    "/inventory/sell-windows/:id",
+    {
+      schema: {
+        operationId: "getInternalSellWindow",
+        tags: ["internal"],
+        summary: "Get one persisted sell window",
+        params: sellWindowParamsSchema,
+        response: {
+          200: sellWindowDetailSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const result = await request.server.inventory.getSellWindow.execute({
+        organizationId: staffOrganizationId(request),
+        id: SellWindowId.parse(id),
+      });
+      if (!result.ok) {
+        return reply.code(404).send({ error: "not_found" as const });
+      }
+      return mapSellWindowDetail(result.window);
     },
   );
 }

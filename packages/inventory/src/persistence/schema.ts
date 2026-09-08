@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   integer,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -10,6 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { SellWindowFilterSnapshot } from "../domain/sell-window.js";
 
 /**
  * Inventory persistence models. Movements are the source of truth.
@@ -35,6 +37,12 @@ export const movementRefType = inventory.enum("movement_ref_type", [
   "purchase_order",
   "sales_order",
   "adjustment",
+]);
+
+export const sellWindowStatus = inventory.enum("sell_window_status", [
+  "scheduled",
+  "open",
+  "closed",
 ]);
 
 function timestamps() {
@@ -132,4 +140,33 @@ export const stockSnapshots = inventory.table(
     ...timestamps(),
   },
   (table) => [unique().on(table.organizationId, table.sku, table.locationId)],
+);
+
+export const sellWindows = inventory.table("sell_windows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organizationId: text("organization_id").notNull(),
+  name: text("name").notNull(),
+  filterSnapshot: jsonb("filter_snapshot").notNull().$type<SellWindowFilterSnapshot>(),
+  windowOpensAt: timestamp("window_opens_at", { withTimezone: true, mode: "date" }),
+  windowClosesAt: timestamp("window_closes_at", { withTimezone: true, mode: "date" }).notNull(),
+  status: sellWindowStatus("status").notNull(),
+  manuallyClosedAt: timestamp("manually_closed_at", { withTimezone: true, mode: "date" }),
+  appliedBy: text("applied_by").notNull(),
+  appliedAt: timestamp("applied_at", { withTimezone: true, mode: "date" }).notNull(),
+  skuCount: integer("sku_count").notNull(),
+  ...timestamps(),
+});
+
+export const sellWindowSkus = inventory.table(
+  "sell_window_skus",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull(),
+    sellWindowId: uuid("sell_window_id")
+      .notNull()
+      .references(() => sellWindows.id),
+    sku: text("sku").notNull(),
+    ...timestamps(),
+  },
+  (table) => [unique().on(table.organizationId, table.sellWindowId, table.sku)],
 );
