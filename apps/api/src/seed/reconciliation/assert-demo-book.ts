@@ -32,7 +32,8 @@ const NAMED_CUSTOMER_NAMES: ReadonlySet<string> = new Set(
 
 const PHASE1_BY_SKU = new Map(PHASE1_PRODUCTS.map((row) => [row.sku, row]));
 
-const DOCUMENT_NUMBER = /^(PO|SO|INV)-\d{5}$/;
+const DOCUMENT_NUMBER =
+  /^(PO-[A-Z0-9]{2,4}-\d{5}|SO-\d{5}|INV-\d{5})$/;
 
 export type AssertDemoBookOptions = {
   seedToday: Date;
@@ -91,7 +92,24 @@ function padDocument(prefix: string, sequence: number): string {
   return `${prefix}-${String(sequence).padStart(5, "0")}`;
 }
 
+function poSequenceOf(documentNumber: string): { poPrefix: string; sequence: number } | null {
+  const match = /^PO-([A-Z0-9]{2,4})-(\d{5})$/.exec(documentNumber);
+  if (!match) {
+    return null;
+  }
+  const poPrefix = match[1];
+  const digits = match[2];
+  if (poPrefix === undefined || digits === undefined) {
+    return null;
+  }
+  return { poPrefix, sequence: Number.parseInt(digits, 10) };
+}
+
 function sequenceOf(documentNumber: string, prefix: string): number | null {
+  if (prefix === "PO") {
+    const parsed = poSequenceOf(documentNumber);
+    return parsed?.sequence ?? null;
+  }
   const match = new RegExp(`^${prefix}-(\\d{5})$`).exec(documentNumber);
   if (!match) {
     return null;
@@ -258,6 +276,45 @@ function checkDocumentNumberEndpoints(ctx: Ctx): DemoReconciliationResult | unde
     },
   ];
   for (const group of groups) {
+    if (group.prefix === "PO") {
+      const supplierById = byId(ctx.book.suppliers);
+      const poBySupplier = new Map<string, DemoBook["purchaseOrders"]>();
+      for (const row of group.rows as DemoBook["purchaseOrders"]) {
+        const list = poBySupplier.get(row.supplierId) ?? [];
+        list.push(row);
+        poBySupplier.set(row.supplierId, list);
+      }
+      for (const [supplierId, rows] of poBySupplier) {
+        const supplier = supplierById.get(supplierId);
+        if (supplier === undefined || supplier.poPrefix.length === 0) {
+          return failContract(
+            "document_number_endpoints",
+            `purchase order supplier ${supplierId} is missing a PO prefix`,
+          );
+        }
+        const parsed = rows.map((row) => poSequenceOf(row.documentNumber));
+        if (parsed.some((value) => value === null)) {
+          return failContract(
+            "document_number_endpoints",
+            `${group.label} are not a PO-{prefix} run`,
+          );
+        }
+        if (parsed.some((value) => value!.poPrefix !== supplier.poPrefix)) {
+          return failContract(
+            "document_number_endpoints",
+            `${group.label} use mixed prefixes for ${supplier.name}`,
+          );
+        }
+        const sequences = parsed.map((value) => value!.sequence);
+        if (!isCompleteDocumentRun(sequences, rows.length)) {
+          return failContract(
+            "document_number_endpoints",
+            `${group.label} for ${supplier.name} are not ${padDocument(`PO-${supplier.poPrefix}`, 1)} through ${padDocument(`PO-${supplier.poPrefix}`, rows.length)}`,
+          );
+        }
+      }
+      continue;
+    }
     const sequences = group.rows.map((row) => sequenceOf(row.documentNumber, group.prefix));
     if (sequences.some((value) => value === null)) {
       return failContract(

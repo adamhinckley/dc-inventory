@@ -6,6 +6,7 @@ import { PurchaseOrderLineId, type PurchaseOrder } from "@dc-inventory/purchasin
 import { PurchaseOrderId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
+  supplierPoPrefixMissingResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
   purchaseOrderCommandBodySchema,
@@ -184,6 +185,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
+          409: supplierPoPrefixMissingResponseSchema,
         },
       },
     },
@@ -205,6 +207,9 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         if (result.reason === "empty_order") {
           return sendInvalid(reply);
+        }
+        if (result.reason === "supplier_po_prefix_missing") {
+          return reply.code(409).send({ error: "supplier_po_prefix_missing" as const });
         }
         return sendInvalid(reply);
       }

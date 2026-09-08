@@ -25,7 +25,7 @@ const EXPECTED_SELECT_SHAPES: readonly (readonly string[])[] = [
     "taxCategoryCode",
   ],
   ["productId", "sku", "objectKey", "contentType"],
-  ["id", "vendorNumber", "name"],
+  ["id", "vendorNumber", "name", "poPrefix"],
   ["supplierId", "sku", "minOrderQty"],
   ["id", "name", "creditLimitCents", "currency", "terms"],
   ["id", "customerId", "line1", "line2", "city", "region", "postal", "country", "isDefault"],

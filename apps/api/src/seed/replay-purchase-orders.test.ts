@@ -32,6 +32,7 @@ import {
 } from "./planner/constants.js";
 import { mean } from "./planner/corpus-samplers.js";
 import { isWithinLastDays } from "./planner/dates.js";
+import { plannedSupplierPoPrefix } from "./planner/master-data.js";
 import { planDemoBook } from "./planner/plan-demo-book.js";
 import { PHASE1_PRODUCT_SKUS } from "./phase1-fixture.js";
 import { InMemoryProductImageSeedRepository } from "./ports/in-memory-product-image-seed.js";
@@ -96,7 +97,7 @@ function staticSeedPorts(): StaticDemoSeedPorts & {
           organizationId: OrganizationId.DEFAULT,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
-          poPrefix: null,
+          poPrefix: "V01",
         });
         return { id, vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER };
       },
@@ -115,6 +116,23 @@ async function copySuppliers(
       await to.save(supplier);
     }
   }
+}
+
+function plannedByDocumentNumber(plan: ReturnType<typeof planDemoBook>) {
+  const supplierByKey = new Map(plan.master.suppliers.map((row) => [row.key, row]));
+  const counters = new Map<string, number>();
+  const byDocumentNumber = new Map<string, ReturnType<typeof planDemoBook>["purchaseOrders"][number]>();
+  for (const planned of plan.purchaseOrders) {
+    const supplier = supplierByKey.get(planned.supplierKey);
+    if (supplier === undefined) {
+      throw new Error(`missing supplier ${planned.supplierKey}`);
+    }
+    const next = (counters.get(planned.supplierKey) ?? 0) + 1;
+    counters.set(planned.supplierKey, next);
+    const documentNumber = `PO-${plannedSupplierPoPrefix(supplier.vendorNumber)}-${String(next).padStart(5, "0")}`;
+    byDocumentNumber.set(documentNumber, planned);
+  }
+  return byDocumentNumber;
 }
 
 describe("replay purchase orders (in-memory)", () => {
@@ -142,8 +160,18 @@ describe("replay purchase orders (in-memory)", () => {
     );
 
     expect(replay.purchaseOrderCount).toBe(DEMO_COUNTS.purchaseOrders);
+    const lastPlanned = plan.purchaseOrders[plan.purchaseOrders.length - 1]!;
+    const lastSupplier = plan.master.suppliers.find(
+      (row) => row.key === lastPlanned.supplierKey,
+    );
+    if (lastSupplier === undefined) {
+      throw new Error(`missing supplier ${lastPlanned.supplierKey}`);
+    }
+    const lastSupplierPoCount = plan.purchaseOrders.filter(
+      (row) => row.supplierKey === lastPlanned.supplierKey,
+    ).length;
     expect(replay.lastDocumentNumber).toBe(
-      `PO-${String(DEMO_COUNTS.purchaseOrders).padStart(5, "0")}`,
+      `PO-${plannedSupplierPoPrefix(lastSupplier.vendorNumber)}-${String(lastSupplierPoCount).padStart(5, "0")}`,
     );
     expect(replay.leftoverConfirmedCount).toBe(plan.leftoverConfirmedPurchaseOrderCount);
     expect(replay.leftoverConfirmedCount).toBeGreaterThanOrEqual(
@@ -166,7 +194,7 @@ describe("replay purchase orders (in-memory)", () => {
       true,
     );
 
-    const plannedByKey = new Map(plan.purchaseOrders.map((row) => [row.key, row]));
+    const plannedForDocumentNumber = plannedByDocumentNumber(plan);
     const supplierSkusByKey = new Map(
       plan.master.suppliers.map((supplier) => [
         supplier.key,
@@ -182,8 +210,7 @@ describe("replay purchase orders (in-memory)", () => {
     expect(confirmedUnreceived).toHaveLength(plan.leftoverConfirmedPurchaseOrderCount);
     for (const order of confirmedUnreceived) {
       expect(order.lines.every((line) => line.receivedQty === 0)).toBe(true);
-      const sequence = Number.parseInt(order.documentNumber.slice(3), 10);
-      const planned = plannedByKey.get(`po-${String(sequence).padStart(5, "0")}`);
+      const planned = plannedForDocumentNumber.get(order.documentNumber);
       expect(planned?.status).toBe("leftoverConfirmed");
       expect(
         isWithinLastDays(
@@ -196,8 +223,7 @@ describe("replay purchase orders (in-memory)", () => {
 
     for (const order of listed.items) {
       expect(new Set(order.lines.map((line) => line.sku.value)).size).toBe(order.lines.length);
-      const sequence = Number.parseInt(order.documentNumber.slice(3), 10);
-      const planned = plannedByKey.get(`po-${String(sequence).padStart(5, "0")}`);
+      const planned = plannedForDocumentNumber.get(order.documentNumber);
       expect(planned).toBeDefined();
       expect(order.createdAt.getTime()).toBe(planned!.plannedInstant.getTime());
       const supplierSkus = supplierSkusByKey.get(planned!.supplierKey);
@@ -251,8 +277,7 @@ describe("replay purchase orders (in-memory)", () => {
 
     const instantByPoId = new Map(
       listed.items.map((order) => {
-        const sequence = Number.parseInt(order.documentNumber.slice(3), 10);
-        const planned = plannedByKey.get(`po-${String(sequence).padStart(5, "0")}`);
+        const planned = plannedForDocumentNumber.get(order.documentNumber);
         return [order.id, planned!.plannedInstant] as const;
       }),
     );

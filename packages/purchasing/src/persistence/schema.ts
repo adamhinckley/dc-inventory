@@ -6,6 +6,7 @@ import {
   integer,
   pgEnum,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -87,10 +88,17 @@ export const purchaseOrders = purchasing.table(
   (table) => [unique().on(table.organizationId, table.documentNumber)],
 );
 
-export const documentNumberCounters = purchasing.table("document_number_counters", {
-  organizationId: text("organization_id").primaryKey(),
-  lastValue: integer("last_value").notNull(),
-});
+export const supplierPoDocumentNumberCounters = purchasing.table(
+  "supplier_po_document_number_counters",
+  {
+    organizationId: text("organization_id").notNull(),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    lastValue: integer("last_value").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.organizationId, table.supplierId] })],
+);
 
 /** Frozen sku/name + qty. No live catalog FK. */
 export const purchaseOrderLines = purchasing.table("purchase_order_lines", {

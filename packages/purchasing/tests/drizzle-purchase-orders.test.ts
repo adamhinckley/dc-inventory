@@ -4,9 +4,10 @@ import { DrizzlePurchaseOrderRepository } from "../src/adapters/drizzle-purchase
 import { PurchaseOrderLineId } from "../src/domain/ids.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../src/domain/purchase-order.js";
 import {
-  documentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
+  supplierPoDocumentNumberCounters,
+  suppliers,
 } from "../src/persistence/schema.js";
 
 const ORG = OrganizationId.DEFAULT;
@@ -95,10 +96,25 @@ function thenableRows<T>(rows: T[]) {
   });
 }
 
+type SupplierRow = {
+  id: string;
+  organizationId: string;
+  poPrefix: string | null;
+};
+
 class FakePurchasingDb {
   readonly orders = new Map<string, OrderRow>();
   readonly lines = new Map<string, LineRow>();
+  readonly supplierRows = new Map<string, SupplierRow>();
   failNextLineInsert = false;
+
+  constructor() {
+    this.supplierRows.set(SUPPLIER_ID, {
+      id: SUPPLIER_ID,
+      organizationId: ORG,
+      poPrefix: "HF",
+    });
+  }
 
   async transaction<T>(work: (tx: FakePurchasingDb) => Promise<T>): Promise<T> {
     const orderSnap = structuredClone([...this.orders.entries()]);
@@ -127,6 +143,11 @@ class FakePurchasingDb {
               [...this.orders.values()].filter((row) => rowMatches(row, clause)),
             );
           }
+          if (table === suppliers) {
+            return thenableRows(
+              [...this.supplierRows.values()].filter((row) => rowMatches(row, clause)),
+            );
+          }
           return thenableRows(
             [...this.lines.values()].filter((row) => rowMatches(row, clause)),
           );
@@ -138,9 +159,10 @@ class FakePurchasingDb {
   insert(table: unknown) {
     return {
       values: (value: OrderRow | LineRow | Array<OrderRow | LineRow>) => {
-        if (table === documentNumberCounters) {
+        if (table === supplierPoDocumentNumberCounters) {
           return {
-            onConflictDoUpdate: async () => undefined,
+            onConflictDoUpdate: async () => ({ sequence: 1 }),
+            returning: async () => [{ sequence: 1 }],
           };
         }
         return (async () => {
@@ -199,7 +221,7 @@ function draft(lines: PurchaseOrderLine[]): PurchaseOrder {
     id: PO_ID,
     organizationId: ORG,
     supplierId: SUPPLIER_ID,
-    documentNumber: "PO-00099",
+    documentNumber: "PO-HF-00099",
     status: "draft",
     shipDate: null,
     cancelDate: null,

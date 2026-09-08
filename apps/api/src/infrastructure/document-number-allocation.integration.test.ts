@@ -75,6 +75,10 @@ async function cleanFixtures(connection: DatabaseConnection): Promise<void> {
     WHERE organization_id = ${ORGANIZATION_ID}
   `;
   await connection.sql`
+    DELETE FROM purchasing.supplier_po_document_number_counters
+    WHERE organization_id = ${ORGANIZATION_ID}
+  `;
+  await connection.sql`
     DELETE FROM purchasing.document_number_counters
     WHERE organization_id = ${ORGANIZATION_ID}
   `;
@@ -152,8 +156,8 @@ describeWithDatabase("atomic document-number allocation", () => {
     `;
     await first.sql`
       INSERT INTO purchasing.suppliers
-        (id, organization_id, vendor_number, name)
-      VALUES (${SUPPLIER_ID}, ${ORGANIZATION_ID}, 'ADA-208', 'ADA-208 supplier')
+        (id, organization_id, vendor_number, name, po_prefix)
+      VALUES (${SUPPLIER_ID}, ${ORGANIZATION_ID}, 'ADA-208', 'ADA-208 supplier', 'HF')
     `;
   });
 
@@ -176,8 +180,8 @@ describeWithDatabase("atomic document-number allocation", () => {
       secondRepo.insertWithNextDocumentNumber(purchaseOrder(2)),
     ]);
     expect(concurrent.map((row) => row.documentNumber).sort()).toEqual([
-      "PO-00001",
-      "PO-00002",
+      "PO-HF-00001",
+      "PO-HF-00002",
     ]);
 
     await expect(
@@ -188,7 +192,7 @@ describeWithDatabase("atomic document-number allocation", () => {
       }),
     ).rejects.toThrow("force rollback");
     const retried = await secondRepo.insertWithNextDocumentNumber(purchaseOrder(4));
-    expect(retried.documentNumber).toBe("PO-00003");
+    expect(retried.documentNumber).toBe("PO-HF-00003");
   });
 
   it("allocates unique sales-order numbers across two connections and reuses a rolled-back number", async () => {

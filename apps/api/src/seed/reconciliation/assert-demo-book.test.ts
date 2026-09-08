@@ -107,9 +107,11 @@ const breaks: Array<{
   {
     contract: "document_number_endpoints",
     mutate: (book) => {
-      const po = book.purchaseOrders.find((row) => row.documentNumber === "PO-00010");
+      const po = book.purchaseOrders.find(
+        (row) => row.supplierId === "sup-003" && row.status === "confirmed",
+      );
       if (po) {
-        po.documentNumber = "PO-00011";
+        po.documentNumber = "PO-V03-00099";
       }
     },
   },

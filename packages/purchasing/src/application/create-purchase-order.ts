@@ -37,6 +37,7 @@ export type CreatePurchaseOrderResult =
       reason:
         | "invalid"
         | "supplier_not_found"
+        | "supplier_po_prefix_missing"
         | "product_not_found"
         | "product_archived"
         | "empty_order";
@@ -59,6 +60,9 @@ export class CreatePurchaseOrderUseCase {
     const supplier = await this.suppliers.findById(input.organizationId, input.supplierId);
     if (supplier === null) {
       return { ok: false, reason: "supplier_not_found" };
+    }
+    if (supplier.poPrefix === null || supplier.poPrefix.trim().length === 0) {
+      return { ok: false, reason: "supplier_po_prefix_missing" };
     }
 
     const lines: PurchaseOrderLine[] = [];

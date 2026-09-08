@@ -35,7 +35,7 @@ describe("PostgresDatabase", () => {
         "products",
         "purchaseOrderLines",
         "purchaseOrders",
-        "purchasingDocumentNumberCounters",
+        "supplierPoDocumentNumberCounters",
         "reorderPolicies",
         "salesDocumentNumberCounters",
         "sellWindowSkus",

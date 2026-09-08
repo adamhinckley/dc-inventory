@@ -43,7 +43,7 @@ async function harness() {
     organizationId: DEFAULT_ORG,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
-    poPrefix: null,
+    poPrefix: "HF",
   });
 
   return {
@@ -62,7 +62,7 @@ async function harness() {
 }
 
 describe("Purchasing (in-memory)", () => {
-  it("assigns PO-00001 document numbers with gaps allowed after cancel", async () => {
+  it("assigns PO-{poPrefix}-{#####} document numbers with gaps allowed after cancel", async () => {
     const h = await harness();
     const first = await h.create.execute({
       organizationId: DEFAULT_ORG,
@@ -74,7 +74,7 @@ describe("Purchasing (in-memory)", () => {
     if (!first.ok) {
       return;
     }
-    expect(first.purchaseOrder.documentNumber).toBe("PO-00001");
+    expect(first.purchaseOrder.documentNumber).toBe("PO-HF-00001");
 
     await h.cancel.execute({
       organizationId: DEFAULT_ORG,
@@ -93,7 +93,7 @@ describe("Purchasing (in-memory)", () => {
     if (!second.ok) {
       return;
     }
-    expect(second.purchaseOrder.documentNumber).toBe("PO-00002");
+    expect(second.purchaseOrder.documentNumber).toBe("PO-HF-00002");
 
     const sorted = await h.list.execute({
       organizationId: DEFAULT_ORG,
@@ -116,7 +116,58 @@ describe("Purchasing (in-memory)", () => {
       status: "draft",
       supplierId: h.supplierId,
     });
-    expect(searched.items.map((order) => order.documentNumber)).toEqual(["PO-00002"]);
+    expect(searched.items.map((order) => order.documentNumber)).toEqual(["PO-HF-00002"]);
+  });
+
+  it("returns supplier_po_prefix_missing when supplier has no PO prefix", async () => {
+    const h = await harness();
+    const missingPrefixId = SupplierId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+    await h.uow.suppliers.save({
+      id: missingPrefixId,
+      organizationId: DEFAULT_ORG,
+      vendorNumber: "NO-PREFIX",
+      name: "No Prefix Supplier",
+      poPrefix: null,
+    });
+
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: missingPrefixId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+    });
+    expect(created).toEqual({ ok: false, reason: "supplier_po_prefix_missing" });
+  });
+
+  it("allocates independent PO sequences per supplier", async () => {
+    const h = await harness();
+    const otherSupplierId = SupplierId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    await h.uow.suppliers.save({
+      id: otherSupplierId,
+      organizationId: DEFAULT_ORG,
+      vendorNumber: "VEND-002",
+      name: "Other Supplier",
+      poPrefix: "OS",
+    });
+
+    const first = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+    });
+    const other = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: otherSupplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+    });
+    expect(first.ok && other.ok).toBe(true);
+    if (!first.ok || !other.ok) {
+      return;
+    }
+    expect(first.purchaseOrder.documentNumber).toBe("PO-HF-00001");
+    expect(other.purchaseOrder.documentNumber).toBe("PO-OS-00001");
   });
 
   it("sorts listed purchase orders by ship date and remaining qty", async () => {
@@ -462,7 +513,7 @@ describe("Purchasing (in-memory)", () => {
       id: purchaseOrderId,
       organizationId: DEFAULT_ORG,
       supplierId: h.supplierId,
-      documentNumber: "PO-00001",
+      documentNumber: "PO-HF-00001",
       status: "draft",
       shipDate: null,
       cancelDate: null,
@@ -713,7 +764,7 @@ describe("Purchasing (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
-    poPrefix: null,
+    poPrefix: "HF",
     });
 
     let cancelCalls = 0;
@@ -849,14 +900,14 @@ describe("Purchasing (in-memory)", () => {
       organizationId: BETA_ORG,
       vendorNumber: "V-1",
       name: "Beta vendor",
-      poPrefix: null,
+      poPrefix: "HF",
     });
     await h.uow.suppliers.save({
       id: acmeSupplierId,
       organizationId: DEFAULT_ORG,
       vendorNumber: "V-1",
       name: "Acme vendor",
-      poPrefix: null,
+      poPrefix: "HF",
     });
 
     const acmePoId = PurchaseOrderId.parse(newUuid());

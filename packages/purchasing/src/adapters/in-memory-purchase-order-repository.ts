@@ -5,6 +5,7 @@ import {
   SupplierId,
 } from "@dc-inventory/shared-kernel";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
+import { SupplierPoPrefixMissingError } from "../domain/errors.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
   IPurchaseOrderRepository,
@@ -16,6 +17,13 @@ import type {
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 
 type Stored = { order: PurchaseOrder; createdAt: Date };
+
+function supplierCounterKey(
+  organizationId: OrganizationId,
+  supplierId: SupplierId,
+): string {
+  return `${organizationId}:${supplierId}`;
+}
 
 function toLine(line: PurchaseOrderLine): PurchaseOrderLine {
   return {
@@ -72,13 +80,17 @@ function comparePurchaseOrderSort(
 
 export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository {
   private readonly byId = new Map<PurchaseOrderId, Stored>();
-  private readonly nextSequenceByOrg = new Map<string, number>();
+  private readonly nextSequenceBySupplier = new Map<string, number>();
 
   constructor(
     private readonly supplierName = async (
       _organizationId: OrganizationId,
       _supplierId: SupplierId,
     ): Promise<string> => "",
+    private readonly supplierPoPrefix = async (
+      _organizationId: OrganizationId,
+      _supplierId: SupplierId,
+    ): Promise<string | null> => null,
   ) {}
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
@@ -137,19 +149,31 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     return null;
   }
 
+  private async requirePoPrefix(
+    organizationId: OrganizationId,
+    supplierId: SupplierId,
+  ): Promise<string> {
+    const poPrefix = (await this.supplierPoPrefix(organizationId, supplierId))?.trim();
+    if (poPrefix === undefined || poPrefix.length === 0) {
+      throw new SupplierPoPrefixMissingError();
+    }
+    return poPrefix;
+  }
+
   async save(order: PurchaseOrder): Promise<void> {
     const normalized = toOrder(order);
+    const poPrefix = await this.requirePoPrefix(normalized.organizationId, normalized.supplierId);
     const existing = this.byId.get(normalized.id);
     this.byId.set(normalized.id, {
       order: normalized,
       createdAt: existing?.createdAt ?? normalized.createdAt,
     });
-    const sequence = parseDocumentSequence(normalized.documentNumber);
+    const sequence = parseDocumentSequence(normalized.documentNumber, poPrefix);
     if (sequence !== null) {
-      const orgKey = normalized.organizationId;
-      const current = this.nextSequenceByOrg.get(orgKey) ?? 1;
+      const key = supplierCounterKey(normalized.organizationId, normalized.supplierId);
+      const current = this.nextSequenceBySupplier.get(key) ?? 1;
       if (sequence >= current) {
-        this.nextSequenceByOrg.set(orgKey, sequence + 1);
+        this.nextSequenceBySupplier.set(key, sequence + 1);
       }
     }
   }
@@ -157,34 +181,35 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
   async insertWithNextDocumentNumber(
     order: UnnumberedPurchaseOrder,
   ): Promise<PurchaseOrder> {
-    const orgKey = order.organizationId;
-    const next = this.nextSequenceByOrg.get(orgKey) ?? 1;
-    const numbered = { ...order, documentNumber: formatDocumentNumber(next) };
+    const poPrefix = await this.requirePoPrefix(order.organizationId, order.supplierId);
+    const key = supplierCounterKey(order.organizationId, order.supplierId);
+    const next = this.nextSequenceBySupplier.get(key) ?? 1;
+    const numbered = { ...order, documentNumber: formatDocumentNumber(poPrefix, next) };
     await this.save(numbered);
     return toOrder(numbered);
   }
 
   snapshot(): {
     byId: Map<PurchaseOrderId, Stored>;
-    nextSequenceByOrg: Map<string, number>;
+    nextSequenceBySupplier: Map<string, number>;
   } {
     return {
       byId: new Map(this.byId),
-      nextSequenceByOrg: new Map(this.nextSequenceByOrg),
+      nextSequenceBySupplier: new Map(this.nextSequenceBySupplier),
     };
   }
 
   restore(snapshot: {
     byId: Map<PurchaseOrderId, Stored>;
-    nextSequenceByOrg: Map<string, number>;
+    nextSequenceBySupplier: Map<string, number>;
   }): void {
     this.byId.clear();
     for (const [id, row] of snapshot.byId) {
       this.byId.set(id, row);
     }
-    this.nextSequenceByOrg.clear();
-    for (const [orgKey, sequence] of snapshot.nextSequenceByOrg) {
-      this.nextSequenceByOrg.set(orgKey, sequence);
+    this.nextSequenceBySupplier.clear();
+    for (const [supplierKey, sequence] of snapshot.nextSequenceBySupplier) {
+      this.nextSequenceBySupplier.set(supplierKey, sequence);
     }
   }
 }

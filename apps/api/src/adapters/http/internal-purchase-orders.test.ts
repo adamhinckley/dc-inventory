@@ -64,7 +64,7 @@ async function startPurchasingApp() {
     organizationId: OrganizationId.DEFAULT,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
-          poPrefix: null,
+          poPrefix: "HF",
   });
 
   await staffUsers.save({
@@ -260,7 +260,7 @@ describe("internal purchase orders HTTP", () => {
     });
     expect(created.statusCode).toBe(201);
     const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
-    expect(po.documentNumber).toBe("PO-00001");
+    expect(po.documentNumber).toBe("PO-HF-00001");
     expect(created.json()).toMatchObject({ shipDate: null, cancelDate: null });
     expect(created.json()).toMatchObject({
       lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
@@ -459,7 +459,7 @@ describe("internal purchase orders HTTP", () => {
     expect(exported.headers["content-type"]).toBe(
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    expect(exported.headers["content-disposition"]).toMatch(/PO-00001\.xlsx/);
+    expect(exported.headers["content-disposition"]).toMatch(/PO-HF-00001\.xlsx/);
     expect(exported.rawPayload.length).toBeGreaterThan(0);
 
     const factorySend = await app.inject({
@@ -523,7 +523,7 @@ describe("internal purchase orders HTTP", () => {
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
-          poPrefix: null,
+          poPrefix: "HF",
     });
 
     for (const [index, role] of (
@@ -678,7 +678,7 @@ describe("internal purchase orders HTTP", () => {
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
-          poPrefix: null,
+          poPrefix: "HF",
     });
     await customerRepo.save({
       id: CUSTOMER_ID,
