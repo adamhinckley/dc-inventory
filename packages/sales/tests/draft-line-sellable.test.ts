@@ -68,12 +68,14 @@ describe("lockedDraftIncreaseShortage", () => {
 });
 
 describe("isPostCloseCartFrozen", () => {
-  it("treats sticky locked SKUs as frozen after close", () => {
+  it("treats sticky locked SKUs with a closed sell window as frozen after close", () => {
     expect(
       isPostCloseCartFrozen(
         {
           ...product,
           stickyLocked: true,
+          windowOpensAt: new Date("2026-09-03T10:00:00.000Z"),
+          windowClosesAt: PAST_CLOSES,
         },
         NOW,
       ),
@@ -96,6 +98,15 @@ describe("isPostCloseCartFrozen", () => {
   });
 
   it("does not freeze inbound PO locks without sell windows", () => {
+    expect(
+      isPostCloseCartFrozen(
+        {
+          ...product,
+          stickyLocked: true,
+        },
+        NOW,
+      ),
+    ).toBe(false);
     expect(isPostCloseCartFrozen(product, NOW)).toBe(false);
   });
 
@@ -116,6 +127,8 @@ describe("post-close draft cart gates", () => {
   const postClose: ProductSnapshot = {
     ...product,
     stickyLocked: true,
+    windowOpensAt: new Date("2026-09-03T10:00:00.000Z"),
+    windowClosesAt: PAST_CLOSES,
     availableToSell: 12,
   };
 

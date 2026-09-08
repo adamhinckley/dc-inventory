@@ -1,5 +1,5 @@
 import type { IQtyReadPort, ProductQty } from "@dc-inventory/catalog";
-import type { IClock } from "@dc-inventory/inventory";
+import { hasActiveSellWindowMembershipSql, type IClock } from "@dc-inventory/inventory";
 import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray } from "drizzle-orm";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
@@ -68,6 +68,12 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
     if (locationId === null) {
       return result;
     }
+    const now = this.clock ? this.clock.now() : new Date();
+    const nowIso = now.toISOString();
+    const hasActiveSellWindowMembership = hasActiveSellWindowMembershipSql(
+      { organizationId, sku: stockSnapshots.sku },
+      nowIso,
+    );
     const rows = await this.db
       .select({
         sku: stockSnapshots.sku,
@@ -78,6 +84,7 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
         stickyLocked: stockSnapshots.stickyLocked,
         windowOpensAt: stockSnapshots.windowOpensAt,
         windowClosesAt: stockSnapshots.windowClosesAt,
+        hasActiveSellWindowMembership,
       })
       .from(stockSnapshots)
       .where(
@@ -90,9 +97,17 @@ export class StockSnapshotQtyReadAdapter implements IQtyReadPort {
           ),
         ),
       );
-    const now = this.clock ? this.clock.now() : new Date();
     for (const row of rows) {
-      result.set(row.sku, productQtyFromSnapshotRow(row, now));
+      result.set(
+        row.sku,
+        productQtyFromSnapshotRow(
+          {
+            ...row,
+            hasActiveSellWindowMembership: row.hasActiveSellWindowMembership,
+          },
+          now,
+        ),
+      );
     }
     return result;
   }

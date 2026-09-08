@@ -796,6 +796,8 @@ describe("Sales (in-memory)", () => {
         sellState: "locked",
         availableToSell: 12,
         stickyLocked: true,
+        windowOpensAt: new Date("2026-09-03T10:00:00.000Z"),
+        windowClosesAt: new Date("2026-09-03T11:00:00.000Z"),
       },
     ]);
     const customers = {

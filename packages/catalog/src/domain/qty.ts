@@ -1,8 +1,3 @@
-import {
-  hasActiveSellWindowMembership,
-  type SellWindowTiming,
-} from "@dc-inventory/inventory";
-
 export type SellState = "open" | "locked";
 
 export type ProductQty = {
@@ -36,7 +31,6 @@ export type StaffCatalogQtyProjection = Readonly<{
 
 export type WholesaleVisibilityOptions = Readonly<{
   now: Date;
-  activeSellWindows?: readonly SellWindowTiming[];
 }>;
 
 /** Anti-corruption snapshot from Inventory's staff/shop qty projection. */
@@ -58,19 +52,6 @@ export function productQtyFromStaffCatalogProjection(
   });
 }
 
-function resolveActiveSellWindowMembership(
-  qty: Pick<ProductQty, "hasActiveSellWindowMembership">,
-  options?: WholesaleVisibilityOptions,
-): boolean {
-  if (qty.hasActiveSellWindowMembership === true) {
-    return true;
-  }
-  if (options?.activeSellWindows !== undefined && options.activeSellWindows.length > 0) {
-    return hasActiveSellWindowMembership(options.activeSellWindows, options.now);
-  }
-  return false;
-}
-
 /** Wholesale shop hides SKUs scheduled before windowOpensAt; post-close locked SKUs stay visible. */
 export function isWholesaleHiddenBeforeOpen(
   qty: ProductQty,
@@ -83,7 +64,7 @@ export function isWholesaleHiddenBeforeOpen(
   if (windowOpensAt === null || options.now >= windowOpensAt) {
     return false;
   }
-  return !resolveActiveSellWindowMembership(qty, options);
+  return qty.hasActiveSellWindowMembership !== true;
 }
 
 export const ZERO_QTY: ProductQty = {

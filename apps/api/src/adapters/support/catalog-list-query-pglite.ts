@@ -203,6 +203,8 @@ export async function createCatalogListQueryPgliteHarness() {
   return {
     catalogListQuery,
     client,
+    db,
+    clock,
     locationId: LOCATION_ID,
     supplierId: SUPPLIER_ID,
     otherSupplierId: OTHER_SUPPLIER_ID,

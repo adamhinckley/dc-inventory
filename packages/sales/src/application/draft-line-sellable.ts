@@ -29,14 +29,11 @@ export function isPostCloseCartFrozen(product: ProductSnapshot, now: Date): bool
     return false;
   }
   const demand = sellWindowDemandState(product);
-  if (demand.stickyLocked) {
-    return true;
+  if (demand.windowOpensAt === null && demand.windowClosesAt === null) {
+    return false;
   }
   const windowOpensAt = demand.windowOpensAt;
   if (windowOpensAt !== null && now < windowOpensAt) {
-    return false;
-  }
-  if (demand.windowOpensAt === null && demand.windowClosesAt === null) {
     return false;
   }
   return (

@@ -18,6 +18,7 @@ export class GetWholesaleProductUseCase {
   constructor(
     private readonly products: IProductRepository,
     private readonly qty: IQtyReadPort,
+    private readonly now: () => Date = () => new Date(),
   ) {}
 
   async execute(
@@ -30,7 +31,7 @@ export class GetWholesaleProductUseCase {
     }
     const snapshots = await this.qty.readBySkus(input.organizationId, [product.sku]);
     const qty = snapshots.get(product.sku.value) ?? ZERO_QTY;
-    if (isWholesaleHiddenBeforeOpen(qty, { now: new Date() })) {
+    if (isWholesaleHiddenBeforeOpen(qty, { now: this.now() })) {
       return { ok: false, reason: "not_found" };
     }
     return {
