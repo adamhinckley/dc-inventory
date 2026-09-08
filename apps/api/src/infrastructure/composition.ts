@@ -824,7 +824,10 @@ function inventoryServices(
     reopenSkusForPresell: {
       execute: (input: RecordReopenSkusForPresellRequest) =>
         unitOfWork.run((scope) =>
-          new RecordReopenSkusForPresellUseCase(scope.inventory.ledger).execute(input),
+          new RecordReopenSkusForPresellUseCase(
+            scope.inventory.ledger,
+            new CreateSellWindowUseCase(sellWindowRepo, clock),
+          ).execute(input),
         ),
     },
     listSellWindows: new ListSellWindowsUseCase(sellWindowRepo, clock),

@@ -154,20 +154,35 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const body = request.body as {
+        name: string;
+        filterSnapshot?: {
+          q?: string;
+          category?: string[];
+          supplierId?: string[];
+          excludeSupplierId?: string[];
+        };
         skus: string[];
         windowOpensAt?: string | null;
-        windowClosesAt?: string | null;
+        windowClosesAt: string;
       };
+      const windowClosesAt = new Date(body.windowClosesAt);
       const result = await request.server.inventory.reopenSkusForPresell.execute({
         organizationId: staffOrganizationId(request),
+        staffUserId: StaffUserId.parse(request.staffAuth?.staffUserId ?? ""),
+        name: body.name,
+        filterSnapshot: body.filterSnapshot ?? {},
         skus: body.skus.map((sku) => Sku.parse(sku)),
         windowOpensAt: parseWindowInstant(body.windowOpensAt),
-        windowClosesAt: parseWindowInstant(body.windowClosesAt),
+        windowClosesAt,
       });
       if (!result.ok) {
         return sendInvalid(reply);
       }
-      return reply.code(200).send({ reopenedCount: body.skus.length });
+      return reply.code(200).send({
+        reopenedCount: result.reopenedCount,
+        sellWindowId: result.sellWindow.id,
+        skuCount: result.sellWindow.skuCount,
+      });
     },
   );
 

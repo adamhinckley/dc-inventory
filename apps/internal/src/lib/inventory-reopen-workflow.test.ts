@@ -39,13 +39,36 @@ describe("inventory reopen workflow", () => {
           },
         ],
         "2027-01-15",
-        "",
+        "2027-02-15",
+        { q: "hat" },
       ),
     ).toEqual({
+      name: "Manage Pre-Sell",
+      filterSnapshot: { q: "hat" },
       skus: ["STYLE-A", "STYLE-B"],
       windowOpensAt: new Date(2027, 0, 15).toISOString(),
-      windowClosesAt: null,
+      windowClosesAt: new Date(2027, 1, 15).toISOString(),
     });
+  });
+
+  it("requires a close date when building the reopen command", () => {
+    expect(() =>
+      buildInventoryReopenCommand(
+        [
+          {
+            sku: "STYLE-A",
+            name: "Style A",
+            supplierName: null,
+            sellState: "locked",
+            onHand: 0,
+            onOrder: 0,
+          },
+        ],
+        "",
+        "",
+        {},
+      ),
+    ).toThrow("window close date is required");
   });
 
   it("prefetches when the scroller reaches the third page of a five-page window", () => {
@@ -143,7 +166,8 @@ describe("inventory reopen workflow", () => {
     const command = buildInventoryReopenCommand(
       [...initial.items, ...remaining],
       "2027-01-15",
-      "",
+      "2027-02-15",
+      {},
     );
 
     expect(initial.items).toHaveLength(500);
@@ -152,6 +176,6 @@ describe("inventory reopen workflow", () => {
     expect(command.skus[0]).toBe("SKU-1");
     expect(command.skus.at(-1)).toBe(`SKU-${total}`);
     expect(command.windowOpensAt).toBe(new Date(2027, 0, 15).toISOString());
-    expect(command.windowClosesAt).toBeNull();
+    expect(command.windowClosesAt).toBe(new Date(2027, 1, 15).toISOString());
   });
 });

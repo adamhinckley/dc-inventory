@@ -146,12 +146,16 @@ describe("POST /internal/inventory/reopen-skus", () => {
     const response = await app.inject({
       method: "POST",
       url: "/internal/inventory/reopen-skus",
-      payload: { skus: [SKU_A.value] },
+      payload: {
+        name: "Auth test",
+        skus: [SKU_A.value],
+        windowClosesAt: WINDOW_CLOSES,
+      },
     });
     expect(response.statusCode).toBe(401);
   });
 
-  it("reopens listed SKUs with an optional shared sell window", async () => {
+  it("reopens listed SKUs and persists a listable sell window", async () => {
     const app = await startReopenApp();
     const session = await staffCookie(app);
 
@@ -160,13 +164,24 @@ describe("POST /internal/inventory/reopen-skus", () => {
       url: "/internal/inventory/reopen-skus",
       headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
       payload: {
+        name: "HTTP reopen window",
+        filterSnapshot: { q: "REOPEN-HTTP" },
         skus: [SKU_A.value, SKU_B.value],
         windowOpensAt: WINDOW_OPENS,
         windowClosesAt: WINDOW_CLOSES,
       },
     });
     expect(reopen.statusCode).toBe(200);
-    expect(reopen.json()).toEqual({ reopenedCount: 2 });
+    const body = reopen.json() as {
+      reopenedCount: number;
+      sellWindowId: string;
+      skuCount: number;
+    };
+    expect(body.reopenedCount).toBe(2);
+    expect(body.skuCount).toBe(2);
+    expect(body.sellWindowId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    );
 
     const list = await app.inject({
       method: "GET",
@@ -182,6 +197,32 @@ describe("POST /internal/inventory/reopen-skus", () => {
     for (const item of items) {
       expect(item.sellState).toBe("open");
     }
+
+    const windows = await app.inject({
+      method: "GET",
+      url: "/internal/inventory/sell-windows",
+      headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
+    });
+    expect(windows.statusCode).toBe(200);
+    const windowItems = windows.json().items as Array<{
+      id: string;
+      name: string;
+      skuCount: number;
+      status: string;
+    }>;
+    expect(windowItems).toHaveLength(1);
+    expect(windowItems[0]?.id).toBe(body.sellWindowId);
+    expect(windowItems[0]?.name).toBe("HTTP reopen window");
+    expect(windowItems[0]?.skuCount).toBe(2);
+    expect(windowItems[0]?.status).toBe("open");
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/internal/inventory/sell-windows/${body.sellWindowId}`,
+      headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
+    });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().skus).toEqual([SKU_A.value, SKU_B.value]);
   });
 
   it("returns 400 for an invalid sell window", async () => {
@@ -193,6 +234,7 @@ describe("POST /internal/inventory/reopen-skus", () => {
       url: "/internal/inventory/reopen-skus",
       headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
       payload: {
+        name: "Bad window",
         skus: [SKU_A.value],
         windowOpensAt: WINDOW_CLOSES,
         windowClosesAt: WINDOW_OPENS,

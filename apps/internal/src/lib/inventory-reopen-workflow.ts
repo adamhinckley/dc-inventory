@@ -14,9 +14,16 @@ export type InventoryMatchRow = {
 };
 
 export type InventoryReopenCommand = {
+  name: string;
+  filterSnapshot?: {
+    q?: string;
+    category?: string[];
+    supplierId?: string[];
+    excludeSupplierId?: string[];
+  };
   skus: string[];
-  windowOpensAt: string | null;
-  windowClosesAt: string | null;
+  windowOpensAt?: string | null;
+  windowClosesAt: string;
 };
 
 export type InventoryMatchChunk = {
@@ -168,11 +175,32 @@ export function buildInventoryReopenCommand(
   matching: readonly InventoryMatchRow[],
   opensAt: string,
   closesAt: string,
+  filterParams: ListQueryParams,
 ): InventoryReopenCommand {
+  const windowClosesAt = parseOptionalWindowInstant(closesAt);
+  if (windowClosesAt === null) {
+    throw new Error("window close date is required");
+  }
+  const params = inventoryListQueryParams(filterParams);
+  const filterSnapshot: InventoryReopenCommand["filterSnapshot"] = {};
+  if (typeof params.q === "string" && params.q.length > 0) {
+    filterSnapshot.q = params.q;
+  }
+  if (Array.isArray(params.category) && params.category.length > 0) {
+    filterSnapshot.category = [...params.category];
+  }
+  if (Array.isArray(params.supplierId) && params.supplierId.length > 0) {
+    filterSnapshot.supplierId = [...params.supplierId];
+  }
+  if (Array.isArray(params.excludeSupplierId) && params.excludeSupplierId.length > 0) {
+    filterSnapshot.excludeSupplierId = [...params.excludeSupplierId];
+  }
   return {
+    name: "Manage Pre-Sell",
+    filterSnapshot,
     skus: matching.map((row) => row.sku),
     windowOpensAt: parseOptionalWindowInstant(opensAt),
-    windowClosesAt: parseOptionalWindowInstant(closesAt),
+    windowClosesAt,
   };
 }
 

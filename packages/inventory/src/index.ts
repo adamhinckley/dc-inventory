@@ -70,6 +70,7 @@ export { RecordInboundFromPoUseCase } from "./application/record-inbound-from-po
 export {
   RecordReopenSkusForPresellUseCase,
   type RecordReopenSkusForPresellRequest,
+  type RecordReopenSkusForPresellResult,
 } from "./application/record-reopen-skus-for-presell.js";
 export { RecordShippedUseCase } from "./application/record-shipped.js";
 export { SetSellWindowUseCase } from "./application/set-sell-window.js";
