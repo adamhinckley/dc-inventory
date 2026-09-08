@@ -175,6 +175,10 @@ import type {
   GetInternalSalesOrder401,
   GetInternalSalesOrder403,
   GetInternalSalesOrder404,
+  GetInternalSellWindow200,
+  GetInternalSellWindow401,
+  GetInternalSellWindow403,
+  GetInternalSellWindow404,
   GetInternalSession200,
   GetInternalSession401,
   GetInternalSupplier200,
@@ -234,6 +238,11 @@ import type {
   ListInternalSalesOrders401,
   ListInternalSalesOrders403,
   ListInternalSalesOrdersParams,
+  ListInternalSellWindows200,
+  ListInternalSellWindows400,
+  ListInternalSellWindows401,
+  ListInternalSellWindows403,
+  ListInternalSellWindowsParams,
   ListInternalSupplierProducts200,
   ListInternalSupplierProducts400,
   ListInternalSupplierProducts401,
@@ -3944,6 +3953,225 @@ export const useReopenInternalInventorySkus = <TError = ReopenInternalInventoryS
       > => {
       return useMutation(getReopenInternalInventorySkusMutationOptions(options));
     }
+
+export type listInternalSellWindowsResponse200 = {
+  data: ListInternalSellWindows200
+  status: 200
+}
+
+export type listInternalSellWindowsResponse400 = {
+  data: ListInternalSellWindows400
+  status: 400
+}
+
+export type listInternalSellWindowsResponse401 = {
+  data: ListInternalSellWindows401
+  status: 401
+}
+
+export type listInternalSellWindowsResponse403 = {
+  data: ListInternalSellWindows403
+  status: 403
+}
+
+export type listInternalSellWindowsResponseSuccess = (listInternalSellWindowsResponse200) & {
+  headers: Headers;
+};
+export type listInternalSellWindowsResponseError = (listInternalSellWindowsResponse400 | listInternalSellWindowsResponse401 | listInternalSellWindowsResponse403) & {
+  headers: Headers;
+};
+
+export type listInternalSellWindowsResponse = (listInternalSellWindowsResponseSuccess | listInternalSellWindowsResponseError)
+
+export const getListInternalSellWindowsUrl = (params?: ListInternalSellWindowsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/inventory/sell-windows?${stringifiedParams}` : `/internal/inventory/sell-windows`
+}
+
+/**
+ * @summary List persisted sell windows
+ */
+export const listInternalSellWindows = async (params?: ListInternalSellWindowsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalSellWindowsResponse> => {
+
+  return customFetch<listInternalSellWindowsResponse>(getListInternalSellWindowsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalSellWindowsQueryKey = (params?: ListInternalSellWindowsParams,) => {
+    return [
+    `/internal/inventory/sell-windows`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalSellWindowsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalSellWindows>>, TError = ListInternalSellWindows400 | ListInternalSellWindows401 | ListInternalSellWindows403>(params?: ListInternalSellWindowsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalSellWindows>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalSellWindowsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalSellWindows>>> = ({ signal }) => listInternalSellWindows(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalSellWindows>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalSellWindowsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalSellWindows>>>
+export type ListInternalSellWindowsQueryError = ListInternalSellWindows400 | ListInternalSellWindows401 | ListInternalSellWindows403
+
+
+/**
+ * @summary List persisted sell windows
+ */
+
+export function useListInternalSellWindows<TData = Awaited<ReturnType<typeof listInternalSellWindows>>, TError = ListInternalSellWindows400 | ListInternalSellWindows401 | ListInternalSellWindows403>(
+ params?: ListInternalSellWindowsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalSellWindows>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalSellWindowsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getInternalSellWindowResponse200 = {
+  data: GetInternalSellWindow200
+  status: 200
+}
+
+export type getInternalSellWindowResponse401 = {
+  data: GetInternalSellWindow401
+  status: 401
+}
+
+export type getInternalSellWindowResponse403 = {
+  data: GetInternalSellWindow403
+  status: 403
+}
+
+export type getInternalSellWindowResponse404 = {
+  data: GetInternalSellWindow404
+  status: 404
+}
+
+export type getInternalSellWindowResponseSuccess = (getInternalSellWindowResponse200) & {
+  headers: Headers;
+};
+export type getInternalSellWindowResponseError = (getInternalSellWindowResponse401 | getInternalSellWindowResponse403 | getInternalSellWindowResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalSellWindowResponse = (getInternalSellWindowResponseSuccess | getInternalSellWindowResponseError)
+
+export const getGetInternalSellWindowUrl = (id: string,) => {
+
+
+
+
+  return `/internal/inventory/sell-windows/${id}`
+}
+
+/**
+ * @summary Get one persisted sell window
+ */
+export const getInternalSellWindow = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalSellWindowResponse> => {
+
+  return customFetch<getInternalSellWindowResponse>(getGetInternalSellWindowUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalSellWindowQueryKey = (id: string,) => {
+    return [
+    `/internal/inventory/sell-windows/${id}`
+    ] as const;
+    }
+
+
+export const getGetInternalSellWindowQueryOptions = <TData = Awaited<ReturnType<typeof getInternalSellWindow>>, TError = GetInternalSellWindow401 | GetInternalSellWindow403 | GetInternalSellWindow404>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalSellWindow>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalSellWindowQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalSellWindow>>> = ({ signal }) => getInternalSellWindow(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalSellWindow>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalSellWindowQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalSellWindow>>>
+export type GetInternalSellWindowQueryError = GetInternalSellWindow401 | GetInternalSellWindow403 | GetInternalSellWindow404
+
+
+/**
+ * @summary Get one persisted sell window
+ */
+
+export function useGetInternalSellWindow<TData = Awaited<ReturnType<typeof getInternalSellWindow>>, TError = GetInternalSellWindow401 | GetInternalSellWindow403 | GetInternalSellWindow404>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalSellWindow>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalSellWindowQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type listInternalPurchaseOrdersResponse200 = {
   data: ListInternalPurchaseOrders200

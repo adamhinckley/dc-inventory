@@ -17,6 +17,13 @@ export const MovementId = {
   },
 };
 
+export type SellWindowId = Brand<string, "SellWindowId">;
+export const SellWindowId = {
+  parse(value: string): SellWindowId {
+    return parseUuid("SellWindowId", value);
+  },
+};
+
 export function newUuid(): string {
   return crypto.randomUUID();
 }

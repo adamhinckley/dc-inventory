@@ -28,6 +28,9 @@ export {
   movementRefType,
   movementType,
   reorderPolicies,
+  sellWindowSkus,
+  sellWindows,
+  sellWindowStatus,
   stockMovements,
   stockSnapshots,
 } from "@dc-inventory/inventory/schema";
@@ -114,6 +117,8 @@ import {
 import {
   locations,
   reorderPolicies,
+  sellWindowSkus,
+  sellWindows,
   stockMovements,
   stockSnapshots,
 } from "@dc-inventory/inventory/schema";
@@ -168,6 +173,8 @@ export const schema = {
   purchaseOrderLines,
   locations,
   reorderPolicies,
+  sellWindowSkus,
+  sellWindows,
   stockMovements,
   stockSnapshots,
   loginThrottleCounters,

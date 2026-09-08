@@ -196,15 +196,22 @@ import {
   type SalesDrizzle,
 } from "@dc-inventory/sales";
 import {
+  CloseSellWindowUseCase,
+  CreateSellWindowUseCase,
+  DrizzleSellWindowRepository,
+  GetSellWindowUseCase,
   GetStockSnapshotUseCase,
+  InMemorySellWindowRepository,
   InMemoryUncoveredCaseQtyReadPort,
   InMemoryUncoveredListQuery,
   InMemoryUncoveredReorderPolicyReadPort,
   ListPurchaseOrderGoodsReceivedUseCase,
+  ListSellWindowsUseCase,
   ListUncoveredFactoriesUseCase,
   ListUncoveredSkusUseCase,
   RecordReopenSkusForPresellUseCase,
   type InMemoryInventoryReadModel,
+  type ISellWindowRepository,
   type IUncoveredListQuery,
   type RecordReopenSkusForPresellRequest,
 } from "@dc-inventory/inventory";
@@ -372,6 +379,10 @@ export type InventoryHttpServices = {
   listUncoveredSkus: ListUncoveredSkusUseCase;
   listUncoveredFactories: ListUncoveredFactoriesUseCase;
   reopenSkusForPresell: Pick<RecordReopenSkusForPresellUseCase, "execute">;
+  listSellWindows: ListSellWindowsUseCase;
+  getSellWindow: GetSellWindowUseCase;
+  createSellWindow: CreateSellWindowUseCase;
+  closeSellWindow: CloseSellWindowUseCase;
 };
 
 /**
@@ -438,6 +449,7 @@ export type AppServiceOverrides = {
   uncoveredList?: IUncoveredListQuery;
   uncoveredCaseQtyRead?: import("@dc-inventory/inventory").IUncoveredCaseQtyReadPort;
   uncoveredReorderPolicyRead?: import("@dc-inventory/inventory").IUncoveredReorderPolicyReadPort;
+  sellWindowRepo?: ISellWindowRepository;
   licensingStore?: InMemoryLicensingStore;
   licensingRepository?: ILicensingReadRepository;
 };
@@ -798,6 +810,8 @@ function inventoryServices(
   uncoveredList: IUncoveredListQuery,
   listUncoveredSkus: ListUncoveredSkusUseCase,
   listUncoveredFactories: ListUncoveredFactoriesUseCase,
+  sellWindowRepo: ISellWindowRepository,
+  clock: import("@dc-inventory/inventory").IClock,
 ): InventoryHttpServices {
   return {
     getStockSnapshot: new GetStockSnapshotUseCase(unitOfWork.inventory.readModel),
@@ -813,6 +827,10 @@ function inventoryServices(
           new RecordReopenSkusForPresellUseCase(scope.inventory.ledger).execute(input),
         ),
     },
+    listSellWindows: new ListSellWindowsUseCase(sellWindowRepo),
+    getSellWindow: new GetSellWindowUseCase(sellWindowRepo),
+    createSellWindow: new CreateSellWindowUseCase(sellWindowRepo, clock),
+    closeSellWindow: new CloseSellWindowUseCase(sellWindowRepo, clock),
   };
 }
 
@@ -1105,6 +1123,9 @@ export function composeAppServices(
     uncoveredSkuSupplier,
     uncoveredSkuDraftPurchaseOrder,
   );
+  const sellWindowRepo =
+    overrides.sellWindowRepo ??
+    (appDb ? new DrizzleSellWindowRepository(appDb) : new InMemorySellWindowRepository());
 
   return {
     features,
@@ -1220,6 +1241,8 @@ export function composeAppServices(
       uncoveredList,
       listUncoveredSkus,
       listUncoveredFactories,
+      sellWindowRepo,
+      clock,
     ),
     unitOfWork,
   };

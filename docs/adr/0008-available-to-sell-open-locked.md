@@ -3,6 +3,7 @@
 Status: Accepted
 Date: 2026-08-27
 Amended: 2026-08-27 (per-SKU sell window; calendar can lock with no PO)
+Amended: 2026-09-08 (SellWindow persisted staff record vs snapshot instants)
 
 David Smith (David Christopher's) stays on SoloView because of availability math Shopify Plus and other vendors could not do. On the 2026-08-27 call he stated the formula and the two modes. This repo's v1 ATP (`available = on_hand − allocated`, inbound shown not sellable) is the opposite of that product. We change the projection and add demand movements. We do not start a second ledger, and we do not switch to database-per-company.
 
@@ -23,6 +24,8 @@ David Smith (David Christopher's) stays on SoloView because of availability math
 4. **Sell window (calendar).** Optional `windowOpensAt` and `windowClosesAt` per SKU (same grain as the snapshot). Staff set them on reopen; a batch may share one pair of instants. Compare to an **injected clock** on confirm and on any read of `availableToSell` / effective sell state. No cron.
 
    Effective **open** only when all of: not already sticky-locked, `now >= windowOpensAt` if that instant is set, `now < windowClosesAt` if that instant is set. Otherwise **locked** (the three-part formula). A first `InboundFromPo` locks immediately even if `now` is still inside the window. Whichever happens first wins. After the clock has closed the window, persist sticky locked on the next inventory write that observes it so clearing the dates later does not reopen.
+
+   **SellWindow (persisted staff record).** Separate from the per-SKU snapshot instants above. A `SellWindow` row records a named staff batch (filter snapshot, opens/closes, status, `manually_closed_at`, applied by/at, `sku_count`) plus `sell_window_skus` membership. Staff list/get these records for seasonal history and clone; ADA-347 ORs active memberships into effective sell state. Snapshot `windowOpensAt` / `windowClosesAt` remain the movement-time source for bulk reopen until apply packets persist a `SellWindow`.
 
    Missing both instants: same as today — open until the first PO. Only `windowClosesAt`: infinity until that instant or the first PO. Only `windowOpensAt`: locked (floor + inbound) until that instant, then open until a PO. `windowOpensAt >= windowClosesAt` is invalid. Timezone is the stored timestamptz vs the clock, not a second policy.
 
