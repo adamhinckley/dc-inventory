@@ -48,6 +48,12 @@ function formatISODate(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+/** Default max when `yearNavigation` is true and `max` is omitted. */
+function defaultYearNavigationMaxISO(): string {
+  const year = new Date().getFullYear() + 10
+  return `${year}-12-31`
+}
+
 export interface DateInputProps
   extends
     Omit<ComponentPropsWithRef<'button'>, 'value' | 'onChange' | 'type'>,
@@ -62,9 +68,9 @@ export interface DateInputProps
   max?: string
   /**
    * Swap the calendar's prev/next month arrows for month + year `<select>`
-   * dropdowns so the user can jump straight to a far year. Must pair with
-   * `min`/`max` — the year list spans those bounds; unbounded, rdp falls back
-   * to an arbitrary ~100-year window, wrong for a birth date.
+   * dropdowns so the user can jump straight to a far year. When `max` is
+   * omitted, defaults to Dec 31 of (today's calendar year + 10). Pair with
+   * `min` when the lower bound matters (e.g. birth dates).
    */
   yearNavigation?: boolean
   /** Placeholder shown when no date is selected. Defaults to "Pick a date". */
@@ -113,7 +119,8 @@ export function DateInput({
   const [open, setOpen] = useState(false)
   const date = parseISODate(value)
   const minDate = parseISODate(min) ?? undefined
-  const maxDate = parseISODate(max) ?? undefined
+  const effectiveMax = max ?? (yearNavigation ? defaultYearNavigationMaxISO() : undefined)
+  const maxDate = parseISODate(effectiveMax) ?? undefined
   const displayLabel = date ? DISPLAY_FORMATTER.format(date) : placeholder
 
   return (
