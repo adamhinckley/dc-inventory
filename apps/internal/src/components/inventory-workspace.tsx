@@ -22,7 +22,7 @@ export function InventoryWorkspace({ children }: { children: ReactNode }) {
           Stock
         </RouterTabs.Trigger>
         <RouterTabs.Trigger href={inventoryTabHref("/inventory/reopen", search)}>
-          Manage Pre-Sell
+          Sell Windows
         </RouterTabs.Trigger>
       </RouterTabs.List>
       <RouterTabs.Panel className="flex min-h-0 flex-1 flex-col p-0 pt-card">

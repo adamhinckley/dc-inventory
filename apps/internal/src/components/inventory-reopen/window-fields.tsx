@@ -5,11 +5,13 @@ export function WindowFields({
   closesAt,
   onOpensAt,
   onClosesAt,
+  readOnly = false,
 }: {
   opensAt: string;
   closesAt: string;
   onOpensAt: (value: string) => void;
   onClosesAt: (value: string) => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className="flex shrink-0 items-center gap-tight">
@@ -19,6 +21,7 @@ export function WindowFields({
         value={opensAt}
         onChange={onOpensAt}
         yearNavigation
+        disabled={readOnly}
         placeholder="Window Opens"
         aria-label="Window Opens"
       />
@@ -28,6 +31,7 @@ export function WindowFields({
         value={closesAt}
         onChange={onClosesAt}
         yearNavigation
+        disabled={readOnly}
         placeholder="Window Closes"
         aria-label="Window Closes"
       />

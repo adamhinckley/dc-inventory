@@ -11,16 +11,22 @@ export type InventoryMatchRow = {
   sellState: string;
   onHand: number;
   onOrder: number;
+  inactive: boolean;
+  discontinued: boolean;
 };
+
+export type SellWindowFilterSnapshot = {
+  q?: string;
+  category?: string[];
+  supplierId?: string[];
+  excludeSupplierId?: string[];
+};
+
+export type SellWindowStatus = "scheduled" | "open" | "closed";
 
 export type InventoryReopenCommand = {
   name: string;
-  filterSnapshot?: {
-    q?: string;
-    category?: string[];
-    supplierId?: string[];
-    excludeSupplierId?: string[];
-  };
+  filterSnapshot?: SellWindowFilterSnapshot;
   skus: string[];
   windowOpensAt?: string | null;
   windowClosesAt: string;
@@ -52,6 +58,8 @@ function mapMatchRow(row: {
   sellState: string;
   onHand: number;
   onOrder: number;
+  inactive: boolean;
+  discontinued: boolean;
 }): InventoryMatchRow {
   return {
     sku: row.sku,
@@ -60,7 +68,58 @@ function mapMatchRow(row: {
     sellState: row.sellState,
     onHand: row.onHand,
     onOrder: row.onOrder,
+    inactive: row.inactive,
+    discontinued: row.discontinued,
   };
+}
+
+export function filterSnapshotToListParams(
+  snapshot: SellWindowFilterSnapshot,
+): ListQueryParams {
+  const params: ListQueryParams = {};
+  if (typeof snapshot.q === "string" && snapshot.q.length > 0) {
+    params.q = snapshot.q;
+  }
+  if (Array.isArray(snapshot.category) && snapshot.category.length > 0) {
+    params.category = [...snapshot.category];
+  }
+  if (Array.isArray(snapshot.supplierId) && snapshot.supplierId.length > 0) {
+    params.supplierId = [...snapshot.supplierId];
+  }
+  if (
+    Array.isArray(snapshot.excludeSupplierId) &&
+    snapshot.excludeSupplierId.length > 0
+  ) {
+    params.excludeSupplierId = [...snapshot.excludeSupplierId];
+  }
+  return params;
+}
+
+export function listParamsToFilterSnapshot(
+  params: ListQueryParams,
+): SellWindowFilterSnapshot {
+  const normalized = inventoryListQueryParams(params);
+  const snapshot: SellWindowFilterSnapshot = {};
+  if (typeof normalized.q === "string" && normalized.q.length > 0) {
+    snapshot.q = normalized.q;
+  }
+  if (Array.isArray(normalized.category) && normalized.category.length > 0) {
+    snapshot.category = [...normalized.category];
+  }
+  if (Array.isArray(normalized.supplierId) && normalized.supplierId.length > 0) {
+    snapshot.supplierId = [...normalized.supplierId];
+  }
+  if (
+    Array.isArray(normalized.excludeSupplierId) &&
+    normalized.excludeSupplierId.length > 0
+  ) {
+    snapshot.excludeSupplierId = [...normalized.excludeSupplierId];
+  }
+  return snapshot;
+}
+
+export function isEligibleForSellWindowApply(row: InventoryMatchRow): boolean {
+  return !row.inactive && !row.discontinued;
 }
 
 export function shouldPrefetchInventoryMatches(input: {
@@ -171,35 +230,73 @@ export function parseOptionalWindowInstant(date: string): string | null {
   return new Date(year, month - 1, day).toISOString();
 }
 
+export function instantToDateInput(value: string | null | undefined): string {
+  if (value == null || value === "") {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function buildInventoryReopenCommand(
   matching: readonly InventoryMatchRow[],
   opensAt: string,
   closesAt: string,
   filterParams: ListQueryParams,
+  name: string = "Sell Window",
 ): InventoryReopenCommand {
   const windowClosesAt = parseOptionalWindowInstant(closesAt);
   if (windowClosesAt === null) {
     throw new Error("window close date is required");
   }
-  const params = inventoryListQueryParams(filterParams);
-  const filterSnapshot: InventoryReopenCommand["filterSnapshot"] = {};
-  if (typeof params.q === "string" && params.q.length > 0) {
-    filterSnapshot.q = params.q;
+  const trimmedName = name.trim();
+  if (trimmedName === "") {
+    throw new Error("window name is required");
   }
-  if (Array.isArray(params.category) && params.category.length > 0) {
-    filterSnapshot.category = [...params.category];
-  }
-  if (Array.isArray(params.supplierId) && params.supplierId.length > 0) {
-    filterSnapshot.supplierId = [...params.supplierId];
-  }
-  if (Array.isArray(params.excludeSupplierId) && params.excludeSupplierId.length > 0) {
-    filterSnapshot.excludeSupplierId = [...params.excludeSupplierId];
+  const filterSnapshot = listParamsToFilterSnapshot(filterParams);
+  const eligibleSkus = matching.filter(isEligibleForSellWindowApply).map((row) => row.sku);
+  if (eligibleSkus.length === 0) {
+    throw new Error("at least one eligible SKU is required");
   }
   return {
-    name: "Manage Pre-Sell",
+    name: trimmedName,
     filterSnapshot,
-    skus: matching.map((row) => row.sku),
+    skus: eligibleSkus,
     windowOpensAt: parseOptionalWindowInstant(opensAt),
+    windowClosesAt,
+  };
+}
+
+export function buildSellWindowOpenCommand(input: {
+  name: string;
+  filterParams: ListQueryParams;
+  checkedSkus: readonly string[];
+  opensAt: string;
+  closesAt: string;
+}): InventoryReopenCommand {
+  const windowClosesAt = parseOptionalWindowInstant(input.closesAt);
+  if (windowClosesAt === null) {
+    throw new Error("window close date is required");
+  }
+  const trimmedName = input.name.trim();
+  if (trimmedName === "") {
+    throw new Error("window name is required");
+  }
+  const skus = input.checkedSkus.filter((sku) => sku.trim() !== "");
+  if (skus.length === 0) {
+    throw new Error("at least one checked SKU is required");
+  }
+  return {
+    name: trimmedName,
+    filterSnapshot: listParamsToFilterSnapshot(input.filterParams),
+    skus,
+    windowOpensAt: parseOptionalWindowInstant(input.opensAt),
     windowClosesAt,
   };
 }
@@ -208,4 +305,11 @@ export function inventoryReopenQueryKey(
   params: ListQueryParams,
 ): readonly ["inventory-reopen-matches", "window", ListQueryParams] {
   return ["inventory-reopen-matches", "window", params];
+}
+
+export function sellWindowReadOnly(input: {
+  status: string;
+  manuallyClosedAt: string | null;
+}): boolean {
+  return input.status === "closed" || input.manuallyClosedAt !== null;
 }

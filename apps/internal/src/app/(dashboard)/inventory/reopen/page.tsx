@@ -1,23 +1,5 @@
-import { InventoryReopenReview } from "../../../../components/inventory-reopen-review";
-import { InventoryTableChrome } from "../../../../components/inventory-table";
-import { inventoryListInitialParams } from "../../../../lib/inventory-list-table";
-import { listParamsFromSearchParams } from "../../../../lib/table-url-params";
+import { SellWindowsList } from "../../../../components/inventory-reopen/sell-windows-list";
 
-type InventorySearchParams = Record<string, string | string[] | undefined>;
-
-export default async function InventoryReopenPage({
-  searchParams,
-}: {
-  searchParams: Promise<InventorySearchParams>;
-}) {
-  const initialParams = inventoryListInitialParams(
-    await searchParams,
-    listParamsFromSearchParams,
-  );
-
-  return (
-    <InventoryTableChrome initialParams={initialParams}>
-      <InventoryReopenReview />
-    </InventoryTableChrome>
-  );
+export default function InventoryReopenPage() {
+  return <SellWindowsList />;
 }
