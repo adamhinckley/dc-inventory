@@ -1,7 +1,10 @@
 "use client";
 
 import {
+  getGetInternalPurchaseOrderQueryKey,
+  getListInternalPurchaseOrdersQueryKey,
   useGetInternalPurchaseOrderFactorySend,
+  useUnconfirmInternalPurchaseOrder,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -9,9 +12,13 @@ import {
   Table,
   useTable,
 } from "@dc-inventory/ui";
-import { Download, Package } from "lucide-react";
+import { Download, Package, Undo2 } from "lucide-react";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { useMemo, useState, type CSSProperties } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { unissuePurchaseOrderErrorMessage } from "../lib/purchase-order-action-errors";
+import { purchaseOrderStatusPresentation } from "../lib/purchase-order-status-chip";
 import { ProductCaseQtyDialog } from "./product-case-qty-dialog";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
 import {
@@ -152,6 +159,7 @@ export function PurchaseOrderFactorySendWorkspace({
   supplierId,
   shipDate,
   cancelDate,
+  lines,
 }: {
   purchaseOrderId: string;
   documentNumber: string;
@@ -159,7 +167,11 @@ export function PurchaseOrderFactorySendWorkspace({
   supplierId: string;
   shipDate: string | null;
   cancelDate: string | null;
+  lines: readonly { receivedQty: number }[];
 }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const unconfirmMutation = useUnconfirmInternalPurchaseOrder();
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [missingCaseQtyDownloadOpen, setMissingCaseQtyDownloadOpen] =
@@ -173,6 +185,12 @@ export function PurchaseOrderFactorySendWorkspace({
     return factorySendQuery.data.data.rows as FactorySendRow[];
   }, [factorySendQuery.data, factorySendReady]);
   const missingCaseQtySku = factorySendReady ? firstBlockedSku(factorySendRows) : null;
+  const totalReceived = useMemo(
+    () => lines.reduce((sum, line) => sum + line.receivedQty, 0),
+    [lines],
+  );
+  const canUnissue = status === "confirmed" && totalReceived === 0;
+  const statusPresentation = purchaseOrderStatusPresentation(status);
 
   useBreadcrumbLabel(purchaseOrderId, documentNumber);
 
@@ -205,13 +223,53 @@ export function PurchaseOrderFactorySendWorkspace({
     void downloadXlsx();
   };
 
+  const unissuePo = async () => {
+    if (!canUnissue) {
+      return;
+    }
+    setActionError(null);
+    try {
+      const result = await unconfirmMutation.mutateAsync({
+        id: purchaseOrderId,
+        data: { idempotencyKey: crypto.randomUUID() },
+      });
+      if (result.status === 200) {
+        await queryClient.invalidateQueries({
+          queryKey: getGetInternalPurchaseOrderQueryKey(purchaseOrderId),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: getListInternalPurchaseOrdersQueryKey(),
+        });
+        router.refresh();
+        return;
+      }
+      setActionError(unissuePurchaseOrderErrorMessage(result));
+    } catch {
+      setActionError("Unissue failed.");
+    }
+  };
+
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-region">
       <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="page-title">{documentNumber}</h1>
+          <div className="flex flex-wrap items-center gap-tight">
+            <h1 className="page-title">{documentNumber}</h1>
+            {statusPresentation ? (
+              <Chip
+                icon={<Chip.Dot />}
+                style={
+                  { "--chip-color": statusPresentation.color } as CSSProperties
+                }
+              >
+                {statusPresentation.label}
+              </Chip>
+            ) : null}
+          </div>
           <p className="page-description mt-2">
-            This purchase order is {status} and can no longer be edited here.
+            {status === "confirmed"
+              ? "This purchase order has been issued and can no longer be edited here."
+              : `This purchase order is ${status} and can no longer be edited here.`}
           </p>
           <SupplierName supplierId={supplierId} />
           <p className="text-body-sm text-fg-secondary mt-2">
@@ -219,6 +277,18 @@ export function PurchaseOrderFactorySendWorkspace({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-tight">
+          {canUnissue ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={unconfirmMutation.isPending}
+              onClick={() => void unissuePo()}
+            >
+              <Undo2 className="size-icon-lg" aria-hidden />
+              {unconfirmMutation.isPending ? "Unissuing…" : "Unissue PO"}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="secondary"

@@ -8,11 +8,16 @@ import {
 import { Form, useExplorerView, useFormSubmit } from "@dc-inventory/ui";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import {
+  SUPPLIER_PO_PREFIX_HELPER,
+  supplierPoPrefixFieldSchema,
+} from "../lib/supplier-po-prefix";
 import { z } from "zod";
 
 const createSupplierSchema = z.object({
   name: z.string().min(1, "Name is required"),
   vendorNumber: z.string().min(1, "Vendor number is required"),
+  poPrefix: supplierPoPrefixFieldSchema,
 });
 
 type CreateSupplierInput = z.infer<typeof createSupplierSchema>;
@@ -23,7 +28,14 @@ export function SupplierCreateForm() {
   const { mutateAsync } = useCreateInternalSupplier();
 
   const onSubmit = useFormSubmit<CreateSupplierInput, Awaited<ReturnType<typeof createInternalSupplier>>>({
-    mutate: (data) => mutateAsync({ data }),
+    mutate: (data) =>
+      mutateAsync({
+        data: {
+          name: data.name,
+          vendorNumber: data.vendorNumber,
+          poPrefix: data.poPrefix,
+        },
+      }),
     successMessage: "Supplier created",
     invalidate: getListInternalSuppliersQueryKey(),
     onSuccess: (result) => {
@@ -37,7 +49,7 @@ export function SupplierCreateForm() {
   return (
     <Form
       schema={createSupplierSchema}
-      defaultValues={{ name: "", vendorNumber: "" }}
+      defaultValues={{ name: "", vendorNumber: "", poPrefix: "" }}
       onSubmit={onSubmit}
     >
       <Form.Field
@@ -47,6 +59,12 @@ export function SupplierCreateForm() {
         form={{ kind: "text" }}
       />
       <Form.Field name="name" label="Name" required form={{ kind: "text" }} />
+      <Form.Field
+        name="poPrefix"
+        label="PO prefix"
+        description={SUPPLIER_PO_PREFIX_HELPER}
+        form={{ kind: "text" }}
+      />
       <Form.RootError />
       <Form.Actions>
         <Form.Submit>

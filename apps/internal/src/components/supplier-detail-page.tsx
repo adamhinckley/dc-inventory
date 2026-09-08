@@ -49,6 +49,10 @@ export function SupplierDetailPage({
                 <dt className="text-label text-fg-secondary">Name</dt>
                 <dd className="mt-1">{loaded.name}</dd>
               </div>
+              <div>
+                <dt className="text-label text-fg-secondary">PO prefix</dt>
+                <dd className="mt-1 tabular-nums">{loaded.poPrefix ?? "—"}</dd>
+              </div>
             </dl>
           </DetailView.Summary>
           <DetailView.Tabs>

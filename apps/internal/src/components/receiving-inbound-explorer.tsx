@@ -13,7 +13,7 @@ export function ReceivingInboundExplorer({
     <ExplorerView className="h-full min-h-0">
       <ExplorerView.Header className="border-b-0 pb-tight">
         <header>
-          <h1 className="page-title">Confirmed Purchase Orders</h1>
+          <h1 className="page-title">Issued Purchase Orders</h1>
         </header>
       </ExplorerView.Header>
       <ExplorerView.Content className="pt-tight">
