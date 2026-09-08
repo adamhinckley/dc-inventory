@@ -7,6 +7,7 @@ describe("catalogListTable", () => {
       "inactive",
       "category",
       "supplierId",
+      "excludeSupplierId",
     ]);
   });
 

@@ -210,6 +210,7 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
       const org = OrganizationId.DEFAULT;
       const hardwareCategoryId = "da209000-0000-4000-8000-000000000301";
       const boltProductId = "da209000-0000-4000-8000-000000000302";
+      const nailProductId = "da209000-0000-4000-8000-000000000307";
       const ribbonProductId = "da209000-0000-4000-8000-000000000303";
       await harness.client.exec(`
         CREATE TABLE catalog.categories (
@@ -243,8 +244,14 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
         [ribbonProductId, org],
       );
       await harness.client.query(
-        `INSERT INTO catalog.product_categories (product_id, category_id) VALUES ($1, $2), ($3, $2)`,
-        [boltProductId, hardwareCategoryId, ribbonProductId],
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, 'COMBO-NAIL', 'Combo nail', 'EA', 100, 50, true)`,
+        [nailProductId, org],
+      );
+      await harness.client.query(
+        `INSERT INTO catalog.product_categories (product_id, category_id) VALUES ($1, $2), ($3, $2), ($4, $2)`,
+        [boltProductId, hardwareCategoryId, ribbonProductId, nailProductId],
       );
       await harness.client.query(
         `INSERT INTO purchasing.supplier_products (id, supplier_id, sku)
@@ -272,6 +279,7 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
         sortOrder: "asc",
       });
       expect(byCategoryAndExclude.items.map((row) => row.product.sku.value)).toEqual([
+        "COMBO-NAIL",
         "COMBO-RIBBON",
       ]);
 

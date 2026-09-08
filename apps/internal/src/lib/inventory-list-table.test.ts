@@ -56,6 +56,7 @@ describe("inventoryListTable", () => {
       "hideZeroInventory",
       "category",
       "supplierId",
+      "excludeSupplierId",
       "sellState",
     ]);
   });

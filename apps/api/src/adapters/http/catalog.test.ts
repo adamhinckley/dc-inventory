@@ -349,10 +349,24 @@ describe("catalog HTTP", () => {
         listPriceCents: 100,
       },
     });
+    const nail = await app.inject({
+      method: "POST",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        sku: "COMBO-NAIL",
+        name: "Combo nail",
+        uom: "EA",
+        memberPriceCents: 100,
+        listPriceCents: 100,
+      },
+    });
     const boltId = (bolt.json() as { id: string }).id;
     const ribbonId = (ribbon.json() as { id: string }).id;
+    const nailId = (nail.json() as { id: string }).id;
     productRepo.setCategories(boltId, ["Hardware"]);
     productRepo.setCategories(ribbonId, ["Hardware"]);
+    productRepo.setCategories(nailId, ["Hardware"]);
     productRepo.setSupplierIds(boltId, [factoryA, factoryB]);
     productRepo.setPrimarySupplierId(boltId, factoryA);
     productRepo.setSupplierIds(ribbonId, [factoryB]);
@@ -366,7 +380,7 @@ describe("catalog HTTP", () => {
     expect(byCategoryAndExclude.statusCode).toBe(200);
     expect(
       byCategoryAndExclude.json().items.map((item: { sku: string }) => item.sku),
-    ).toEqual(["COMBO-RIBBON"]);
+    ).toEqual(["COMBO-NAIL", "COMBO-RIBBON"]);
 
     const byIncludeAndExclude = await app.inject({
       method: "GET",

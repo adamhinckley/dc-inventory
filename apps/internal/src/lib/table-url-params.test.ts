@@ -189,6 +189,7 @@ describe("tableUrlKeys", () => {
       "hideZeroInventory",
       "category",
       "supplierId",
+      "excludeSupplierId",
       "sellState",
     ]);
   });
@@ -202,6 +203,7 @@ describe("tableUrlKeys", () => {
       "inactive",
       "category",
       "supplierId",
+      "excludeSupplierId",
     ]);
   });
 });
