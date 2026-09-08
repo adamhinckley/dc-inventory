@@ -1,5 +1,6 @@
 import {
   CreateProductUseCase,
+  DrizzleProductCategoryRepository,
   DrizzleProductPackagingRepository,
   DrizzleProductRepository,
   GetProductUseCase,
@@ -8,6 +9,7 @@ import {
   ImportProductBrowserUseCase,
   InMemoryCatalogCsvWriter,
   InMemoryCatalogListQuery,
+  InMemoryProductCategoryRepository,
   InMemoryProductPackagingRepository,
   InMemoryProductRepository,
   InMemoryQtyReadPort,
@@ -17,7 +19,19 @@ import {
   UpdateProductUseCase,
   type CatalogDrizzle,
   type ICatalogListQuery,
+  DrizzleProductIdentifierRepository,
+  InMemoryImportLocationPort,
+  InMemoryImportReorderPolicyPort,
+  InMemoryProductIdentifierRepository,
+  InMemoryProductPrimarySupplierReadPort,
+  InMemoryProductReorderReadPort,
+  type IImportLocationPort,
+  type IImportReorderPolicyPort,
+  type IProductCategoryRepository,
+  type IProductIdentifierRepository,
   type IProductPackagingRepository,
+  type IProductPrimarySupplierReadPort,
+  type IProductReorderReadPort,
   type IProductRepository,
   type IQtyReadPort,
   type ISupplierLinkPort,
@@ -214,6 +228,10 @@ import {
 } from "../adapters/uncovered-stock-context-ports.js";
 import { InventoryReadModelQtyReadAdapter } from "../adapters/inventory-read-model-qty-read.js";
 import { PurchasingSupplierLinkAdapter } from "../adapters/purchasing-supplier-link.js";
+import { PurchasingProductPrimarySupplierReadAdapter } from "../adapters/purchasing-product-primary-supplier-read.js";
+import { InMemoryPurchasingProductPrimarySupplierReadAdapter } from "../adapters/in-memory-product-primary-supplier-read.js";
+import { DrizzleProductReorderReadAdapter } from "../adapters/drizzle-product-reorder-read.js";
+import { DrizzleImportReorderPolicyAdapter } from "../adapters/drizzle-import-reorder-policies.js";
 import {
   catalogSkuLookupPort,
   factorySendCatalogPort,
@@ -232,6 +250,7 @@ import {
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
+import { DrizzleImportLocationAdapter } from "../adapters/drizzle-import-locations.js";
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
@@ -396,6 +415,12 @@ export type AppServiceOverrides = {
   exemptionRepo?: IExemptionCertificateRepository;
   productRepo?: IProductRepository;
   productPackagingRepo?: IProductPackagingRepository;
+  productCategoryRepo?: IProductCategoryRepository;
+  productIdentifierRepo?: IProductIdentifierRepository;
+  productPrimarySupplierRead?: IProductPrimarySupplierReadPort;
+  productReorderRead?: IProductReorderReadPort;
+  importLocationPort?: IImportLocationPort;
+  importReorderPolicyPort?: IImportReorderPolicyPort;
   qtyRead?: IQtyReadPort;
   catalogListQuery?: ICatalogListQuery;
   purchaseOrderRepo?: IPurchaseOrderRepository;
@@ -424,9 +449,23 @@ function catalogServices(
   catalogListQuery: ICatalogListQuery,
   supplierLink: ISupplierLinkPort,
   packaging: IProductPackagingRepository,
+  productCategories: IProductCategoryRepository,
+  productIdentifiers: IProductIdentifierRepository,
+  productPrimarySupplier: IProductPrimarySupplierReadPort,
+  productReorder: IProductReorderReadPort,
+  importLocations: IImportLocationPort,
+  importReorderPolicies: IImportReorderPolicyPort,
 ): CatalogHttpServices {
   const createProduct = new CreateProductUseCase(productRepo);
-  const updateProduct = new UpdateProductUseCase(productRepo, qtyRead, packaging);
+  const updateProduct = new UpdateProductUseCase(
+    productRepo,
+    qtyRead,
+    packaging,
+    productCategories,
+    productIdentifiers,
+    productPrimarySupplier,
+    productReorder,
+  );
   return {
     listStaffProducts: new ListStaffProductsUseCase(catalogListQuery),
     listStaffCategories: new ListStaffCategoriesUseCase(productRepo),
@@ -435,12 +474,24 @@ function catalogServices(
       new InMemoryCatalogCsvWriter(),
     ),
     createProduct,
-    getProduct: new GetProductUseCase(productRepo, qtyRead, packaging),
+    getProduct: new GetProductUseCase(
+      productRepo,
+      qtyRead,
+      packaging,
+      productCategories,
+      productIdentifiers,
+      productPrimarySupplier,
+      productReorder,
+    ),
     updateProduct,
     importProductBrowser: new ImportProductBrowserUseCase(
       productRepo,
       supplierLink,
       packaging,
+      productCategories,
+      productIdentifiers,
+      importLocations,
+      importReorderPolicies,
     ),
     listWholesaleCatalog: new ListWholesaleCatalogUseCase(catalogListQuery),
     getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead),
@@ -882,6 +933,30 @@ export function composeAppServices(
     (catalogDb
       ? new DrizzleProductPackagingRepository(catalogDb)
       : new InMemoryProductPackagingRepository());
+  const productCategoryRepo =
+    overrides.productCategoryRepo ??
+    (catalogDb
+      ? new DrizzleProductCategoryRepository(catalogDb)
+      : new InMemoryProductCategoryRepository(
+          productRepo instanceof InMemoryProductRepository
+            ? productRepo
+            : new InMemoryProductRepository(),
+        ));
+  const productIdentifierRepo =
+    overrides.productIdentifierRepo ??
+    (catalogDb
+      ? new DrizzleProductIdentifierRepository(catalogDb)
+      : new InMemoryProductIdentifierRepository());
+  const importLocationPort =
+    overrides.importLocationPort ??
+    (appDb
+      ? new DrizzleImportLocationAdapter(appDb)
+      : new InMemoryImportLocationPort());
+  const importReorderPolicyPort =
+    overrides.importReorderPolicyPort ??
+    (appDb
+      ? new DrizzleImportReorderPolicyAdapter(appDb)
+      : new InMemoryImportReorderPolicyPort());
   const unitOfWork =
     overrides.unitOfWork ??
     (appDb
@@ -921,6 +996,21 @@ export function composeAppServices(
     (purchasingDb
       ? new DrizzleSupplierProductRepository(purchasingDb)
       : new InMemorySupplierProductRepository());
+  const productPrimarySupplierRead =
+    overrides.productPrimarySupplierRead ??
+    (purchasingDb
+      ? new PurchasingProductPrimarySupplierReadAdapter(purchasingDb)
+      : supplierProductRepo instanceof InMemorySupplierProductRepository
+        ? new InMemoryPurchasingProductPrimarySupplierReadAdapter(
+            supplierRepo,
+            supplierProductRepo,
+          )
+        : new InMemoryProductPrimarySupplierReadPort());
+  const productReorderRead =
+    overrides.productReorderRead ??
+    (appDb
+      ? new DrizzleProductReorderReadAdapter(appDb)
+      : new InMemoryProductReorderReadPort());
   const catalogSkuLookup =
     overrides.catalogSkuLookup ?? catalogSkuLookupPort(productRepo);
   const factorySendCatalog =
@@ -1085,6 +1175,12 @@ export function composeAppServices(
       catalogListQuery,
       new PurchasingSupplierLinkAdapter(supplierRepo, supplierProductRepo, catalogSkuLookup),
       productPackagingRepo,
+      productCategoryRepo,
+      productIdentifierRepo,
+      productPrimarySupplierRead,
+      productReorderRead,
+      importLocationPort,
+      importReorderPolicyPort,
     ),
     purchasing: purchasingServices(
       purchaseOrderRepo,

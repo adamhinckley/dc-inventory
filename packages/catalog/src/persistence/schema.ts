@@ -54,6 +54,7 @@ export const products = catalog.table(
   weightUom: text("weight_uom"),
   memberPriceCents: bigint("member_price_cents", { mode: "number" }).notNull(),
   listPriceCents: bigint("list_price_cents", { mode: "number" }),
+  originalWholesalePriceCents: bigint("original_wholesale_price_cents", { mode: "number" }),
   currency: char("currency", { length: 3 }).notNull().default("USD"),
   catalogPage: text("catalog_page"),
   defaultOrderQty: integer("default_order_qty"),

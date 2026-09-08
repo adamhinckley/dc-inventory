@@ -6,17 +6,26 @@ import {
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { newUuid } from "../domain/ids.js";
-import type { IProductRepository } from "../domain/ports/product-repository.js";
+import type { IImportLocationPort, ImportLocationSeed } from "../domain/ports/import-locations.js";
+import type { IImportReorderPolicyPort } from "../domain/ports/import-reorder-policies.js";
+import type { IProductCategoryRepository } from "../domain/ports/product-categories.js";
+import type {
+  IProductIdentifierRepository,
+  ProductIdentifier,
+} from "../domain/ports/product-identifiers.js";
 import type {
   IProductPackagingRepository,
   ProductPackaging,
 } from "../domain/ports/product-packaging.js";
+import { emptyProductPackaging } from "../domain/ports/product-packaging.js";
+import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type {
   ISupplierLinkPort,
   SupplierLinkRequest,
   SupplierLinkResult,
 } from "../domain/ports/supplier-link.js";
 import type { WorkbookRow } from "../domain/ports/workbook-parser.js";
+import { emptyProductCatalogAttributes } from "../domain/product-catalog-attributes.js";
 import type { Product } from "../domain/product.js";
 import {
   mapProductBrowserRow,
@@ -47,6 +56,8 @@ type PreparedRow = {
   rowNumber: number;
   product: Product;
   packaging: ProductPackaging;
+  categoryNames: readonly string[];
+  identifiers: readonly ProductIdentifier[];
   link: SupplierLinkRequest | null;
   isCreate: boolean;
 };
@@ -64,6 +75,7 @@ function buildProduct(
   value: ProductBrowserMappedRow,
   existing: Product | null,
 ): Product {
+  const defaults = emptyProductCatalogAttributes();
   return {
     id: existing?.id ?? ProductId.parse(newUuid()),
     organizationId,
@@ -79,8 +91,75 @@ function buildProduct(
     inactive: value.inactive,
     discontinued: value.discontinued,
     webWholesale: value.webWholesale,
-    taxCategoryCode: value.taxCategoryCode,
+    taxCategoryCode: null,
+    countryOfOrigin: value.countryOfOrigin ?? defaults.countryOfOrigin,
+    material: value.material ?? defaults.material,
+    length: value.length ?? defaults.length,
+    width: value.width ?? defaults.width,
+    height: value.height ?? defaults.height,
+    diameter: value.diameter ?? defaults.diameter,
+    size: value.size ?? defaults.size,
+    weight: value.weight ?? defaults.weight,
+    weightUom: value.weightUom ?? defaults.weightUom,
+    originalWholesalePrice:
+      value.originalWholesalePriceCents === null
+        ? null
+        : Money.fromMinorUnits(value.originalWholesalePriceCents, "USD"),
+    catalogPage: value.catalogPage ?? defaults.catalogPage,
+    defaultOrderQty: value.defaultOrderQty ?? defaults.defaultOrderQty,
+    defaultWeight: value.defaultWeight ?? defaults.defaultWeight,
+    defaultWeightUom: value.defaultWeightUom ?? defaults.defaultWeightUom,
+    nonStock: value.nonStock,
+    noExport: value.noExport,
+    webRetail: value.webRetail,
   };
+}
+
+function buildPackaging(productId: ProductId, value: ProductBrowserMappedRow): ProductPackaging {
+  return {
+    ...emptyProductPackaging(productId),
+    packLength: value.packLength,
+    packWidth: value.packWidth,
+    packHeight: value.packHeight,
+    packWeight: value.packWeight,
+    packWeightUom: value.packWeightUom,
+    innerPackQty: value.innerPackQty,
+    innerPackLength: value.innerPackLength,
+    innerPackWidth: value.innerPackWidth,
+    innerPackHeight: value.innerPackHeight,
+    innerPackWeight: value.innerPackWeight,
+    innerPackWeightUom: value.innerPackWeightUom,
+    caseQty: value.caseQty,
+    caseLength: value.caseLength,
+    caseWidth: value.caseWidth,
+    caseHeight: value.caseHeight,
+    caseWeight: value.caseWeight,
+  };
+}
+
+function buildIdentifiers(productId: ProductId, value: ProductBrowserMappedRow): ProductIdentifier[] {
+  const identifiers: ProductIdentifier[] = [];
+  if (value.upc !== null) {
+    identifiers.push({ productId, kind: "upc", code: value.upc });
+  }
+  if (value.supplierSku !== null) {
+    identifiers.push({ productId, kind: "mfg", code: value.supplierSku });
+  }
+  for (const code of value.altCodes) {
+    identifiers.push({ productId, kind: "alt", code });
+  }
+  return identifiers;
+}
+
+function aggregateLocationSeeds(rows: readonly ProductBrowserMappedRow[]): ImportLocationSeed[] {
+  const byCode = new Map<string, boolean>();
+  for (const row of rows) {
+    if (row.locationCode === null) {
+      continue;
+    }
+    byCode.set(row.locationCode, (byCode.get(row.locationCode) ?? false) || row.locationIsPickBin);
+  }
+  return [...byCode.entries()].map(([code, isPickBin]) => ({ code, isPickBin }));
 }
 
 async function loadExistingBySku(
@@ -103,6 +182,10 @@ export class ImportProductBrowserUseCase {
     private readonly products: IProductRepository,
     private readonly suppliers: ISupplierLinkPort,
     private readonly packaging: IProductPackagingRepository,
+    private readonly categories: IProductCategoryRepository,
+    private readonly identifiers: IProductIdentifierRepository,
+    private readonly locations: IImportLocationPort,
+    private readonly reorderPolicies: IImportReorderPolicyPort,
   ) {}
 
   async execute(input: ImportProductBrowserRequest): Promise<ImportProductBrowserResult> {
@@ -167,6 +250,40 @@ export class ImportProductBrowserUseCase {
       };
     }
 
+    try {
+      await this.locations.ensureLocations(
+        input.organizationId,
+        aggregateLocationSeeds(valid.map(({ value }) => value)),
+      );
+    } catch {
+      errors.push({
+        row: 2,
+        field: "location",
+        message: "Warehouse locations could not be saved",
+      });
+    }
+
+    try {
+      await this.reorderPolicies.upsertPolicies(
+        input.organizationId,
+        valid
+          .filter(
+            ({ value }) => value.reorderMin !== null || value.reorderMax !== null,
+          )
+          .map(({ value }) => ({
+            sku: Sku.parse(value.sku),
+            reorderMin: value.reorderMin,
+            reorderMax: value.reorderMax,
+          })),
+      );
+    } catch {
+      errors.push({
+        row: 2,
+        field: "onhand_min_qty",
+        message: "Reorder policies could not be saved",
+      });
+    }
+
     const skus = valid.map(({ value }) => Sku.parse(value.sku));
     const existingBySku = await loadExistingBySku(this.products, input.organizationId, skus);
 
@@ -178,13 +295,9 @@ export class ImportProductBrowserUseCase {
         prepared.push({
           rowNumber,
           product,
-          packaging: {
-            productId: product.id,
-            caseQty: value.caseQty,
-            caseLength: value.caseLength,
-            caseWidth: value.caseWidth,
-            caseHeight: value.caseHeight,
-          },
+          packaging: buildPackaging(product.id, value),
+          categoryNames: value.categoryNames,
+          identifiers: buildIdentifiers(product.id, value),
           link:
             value.vendorNumber === null || value.vendorName === null
               ? null
@@ -269,9 +382,67 @@ export class ImportProductBrowserUseCase {
       }
     }
 
-    const linkRows = prepared.filter(
-      (row) => packagingSaved.has(row.rowNumber) && row.link !== null,
-    ) as Array<PreparedRow & { link: SupplierLinkRequest }>;
+    const savedRows = prepared.filter((row) => packagingSaved.has(row.rowNumber));
+    for (const batch of chunks(savedRows, IMPORT_BATCH_SIZE)) {
+      try {
+        await this.categories.replaceForProducts(
+          input.organizationId,
+          batch.map((row) => ({
+            productId: row.product.id,
+            categoryNames: row.categoryNames,
+          })),
+        );
+      } catch {
+        for (const row of batch) {
+          try {
+            await this.categories.replaceForProducts(input.organizationId, [
+              {
+                productId: row.product.id,
+                categoryNames: row.categoryNames,
+              },
+            ]);
+          } catch {
+            errors.push({
+              row: row.rowNumber,
+              field: "category_1",
+              message: "Product categories could not be saved",
+            });
+          }
+        }
+      }
+    }
+
+    for (const batch of chunks(savedRows, IMPORT_BATCH_SIZE)) {
+      try {
+        await this.identifiers.replaceForProducts(
+          batch.map((row) => ({
+            productId: row.product.id,
+            identifiers: row.identifiers,
+          })),
+        );
+      } catch {
+        for (const row of batch) {
+          try {
+            await this.identifiers.replaceForProducts([
+              {
+                productId: row.product.id,
+                identifiers: row.identifiers,
+              },
+            ]);
+          } catch {
+            errors.push({
+              row: row.rowNumber,
+              field: "upcode",
+              message: "Product identifiers could not be saved",
+            });
+          }
+        }
+      }
+    }
+
+    const linkRows = savedRows.filter((row) => row.link !== null) as Array<
+      PreparedRow & { link: SupplierLinkRequest }
+    >;
     let linkResults: readonly SupplierLinkResult[];
     try {
       linkResults = await this.suppliers.linkSkus(linkRows.map((row) => row.link));

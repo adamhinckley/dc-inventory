@@ -8,6 +8,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { InMemoryProductPackagingRepository } from "../src/adapters/in-memory-product-packaging.js";
+import { InMemoryProductCategoryRepository } from "../src/adapters/in-memory-product-categories.js";
+import { InMemoryProductIdentifierRepository } from "../src/adapters/in-memory-product-identifiers.js";
+import { InMemoryProductPrimarySupplierReadPort } from "../src/adapters/in-memory-product-primary-supplier-read.js";
+import { InMemoryProductReorderReadPort } from "../src/adapters/in-memory-product-reorder-read.js";
 import { InMemoryProductRepository } from "../src/adapters/in-memory-product-repository.js";
 import { InMemoryQtyReadPort } from "../src/adapters/in-memory-qty-read.js";
 import { InMemoryCatalogCsvWriter } from "../src/adapters/in-memory-catalog-csv-writer.js";
@@ -30,13 +34,21 @@ function harness() {
   const products = new InMemoryProductRepository();
   const qty = new InMemoryQtyReadPort();
   const packaging = new InMemoryProductPackagingRepository();
+  const categories = new InMemoryProductCategoryRepository(products);
+  const identifiers = new InMemoryProductIdentifierRepository();
+  const primarySupplier = new InMemoryProductPrimarySupplierReadPort();
+  const reorder = new InMemoryProductReorderReadPort();
     const catalogList = new InMemoryCatalogListQuery(products, qty, packaging);
   return {
     products,
     qty,
+    categories,
+    identifiers,
+    primarySupplier,
+    reorder,
     create: new CreateProductUseCase(products),
-    update: new UpdateProductUseCase(products, qty, packaging),
-    get: new GetProductUseCase(products, qty, packaging),
+    update: new UpdateProductUseCase(products, qty, packaging, categories, identifiers, primarySupplier, reorder),
+    get: new GetProductUseCase(products, qty, packaging, categories, identifiers, primarySupplier, reorder),
     getWholesale: new GetWholesaleProductUseCase(products, qty),
     listStaff: new ListStaffProductsUseCase(catalogList),
     listWholesale: new ListWholesaleCatalogUseCase(catalogList),
@@ -449,7 +461,7 @@ describe("Catalog use cases (in-memory)", () => {
       staffUserId: STAFF_ID,
       productId: product.id,
     });
-    expect(withSnapshot).toEqual({
+    expect(withSnapshot).toMatchObject({
       ok: true,
       product,
       qty: {
@@ -461,7 +473,36 @@ describe("Catalog use cases (in-memory)", () => {
         sellState: "locked",
         availableToSell: 12,
       },
-      caseQty: null,
+      packaging: null,
+      categoryNames: [],
+      upc: null,
+      mfgCode: null,
+      altCodes: [],
+      primarySupplier: null,
+      reorderMin: null,
+      reorderMax: null,
+    });
+  });
+
+  it("falls back to vendor SKU when MFG identifier is missing", async () => {
+    const h = harness();
+    const product = await createProduct(h, { sku: "VENDOR-MFG-SKU", name: "Vendor MFG" });
+    h.primarySupplier.bySku.set(product.sku.value, {
+      vendorNumber: "1075",
+      vendorName: "REGXJ",
+      supplierSku: "JA149015",
+      minOrderQty: null,
+      minOrderAmountCents: null,
+      lastPoCostCents: null,
+    });
+    const result = await h.get.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      productId: product.id,
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      mfgCode: "JA149015",
     });
   });
 
@@ -737,7 +778,7 @@ describe("Catalog use cases (in-memory)", () => {
       sku: "DCB7925BK",
       caseQty: 240,
     });
-    expect(updated).toMatchObject({ ok: true, caseQty: 240 });
+    expect(updated).toMatchObject({ ok: true, packaging: { caseQty: 240 } });
     const loaded = await h.get.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
@@ -746,7 +787,7 @@ describe("Catalog use cases (in-memory)", () => {
     expect(loaded).toMatchObject({
       ok: true,
       product: { id: product.id },
-      caseQty: 240,
+      packaging: { caseQty: 240 },
     });
   });
 

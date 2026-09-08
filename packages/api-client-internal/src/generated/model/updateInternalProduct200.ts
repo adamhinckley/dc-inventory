@@ -29,14 +29,46 @@ export type UpdateInternalProduct200 = {
   inactive: boolean;
   discontinued: boolean;
   webWholesale: boolean;
+  categoryNames: string[];
   /** @nullable */
-  taxCategoryCode: string | null;
+  upc: string | null;
+  /** @nullable */
+  mfgCode: string | null;
+  altCodes: string[];
+  /** @nullable */
+  vendorNumber: string | null;
+  /** @nullable */
+  vendorName: string | null;
   /**
+     * @minimum -9007199254740991
      * @maximum 9007199254740991
-     * @exclusiveMinimum 0
      * @nullable
      */
-  caseQty: number | null;
+  minOrderQty: number | null;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  minOrderAmountCents: number | null;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  lastPoCostCents: number | null;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  reorderMin: number | null;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  reorderMax: number | null;
   /**
      * @minimum -9007199254740991
      * @maximum 9007199254740991
@@ -69,4 +101,85 @@ export type UpdateInternalProduct200 = {
      * @nullable
      */
   availableToSell: number | null;
+  /** @nullable */
+  countryOfOrigin: string | null;
+  /** @nullable */
+  material: string | null;
+  /** @nullable */
+  length: string | null;
+  /** @nullable */
+  width: string | null;
+  /** @nullable */
+  height: string | null;
+  /** @nullable */
+  diameter: string | null;
+  /** @nullable */
+  size: string | null;
+  /** @nullable */
+  weight: string | null;
+  /** @nullable */
+  weightUom: string | null;
+  /**
+     * @minimum 0
+     * @maximum 9007199254740991
+     * @nullable
+     */
+  originalWholesalePriceCents: number | null;
+  /** @nullable */
+  catalogPage: string | null;
+  /**
+     * @maximum 9007199254740991
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  defaultOrderQty: number | null;
+  /** @nullable */
+  defaultWeight: string | null;
+  /** @nullable */
+  defaultWeightUom: string | null;
+  nonStock: boolean;
+  noExport: boolean;
+  webRetail: boolean;
+  /** @nullable */
+  packLength: string | null;
+  /** @nullable */
+  packWidth: string | null;
+  /** @nullable */
+  packHeight: string | null;
+  /** @nullable */
+  packWeight: string | null;
+  /** @nullable */
+  packWeightUom: string | null;
+  /**
+     * @maximum 9007199254740991
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  innerPackQty: number | null;
+  /** @nullable */
+  innerPackLength: string | null;
+  /** @nullable */
+  innerPackWidth: string | null;
+  /** @nullable */
+  innerPackHeight: string | null;
+  /** @nullable */
+  innerPackWeight: string | null;
+  /** @nullable */
+  innerPackWeightUom: string | null;
+  /**
+     * @maximum 9007199254740991
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  caseQty: number | null;
+  /** @nullable */
+  caseLength: string | null;
+  /** @nullable */
+  caseWidth: string | null;
+  /** @nullable */
+  caseHeight: string | null;
+  /** @nullable */
+  caseWeight: string | null;
+  /** @nullable */
+  caseWeightUom: string | null;
 };

@@ -76,6 +76,7 @@ describe("Phase 0 catalog / purchasing / inventory schemas (ADA-52)", () => {
     expect(sources).toMatch(/sku/);
     expect(sources).toMatch(/member_price_cents/);
     expect(sources).toMatch(/list_price_cents/);
+    expect(sources).toMatch(/original_wholesale_price_cents/);
     expect(sources).toMatch(/web_wholesale/);
     expect(sources).toMatch(/web_retail/);
     expect(sources).toMatch(/tax_category_code/);

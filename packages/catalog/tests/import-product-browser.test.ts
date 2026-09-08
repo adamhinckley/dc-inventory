@@ -1,5 +1,9 @@
 import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
+import { InMemoryImportLocationPort } from "../src/adapters/in-memory-import-locations.js";
+import { InMemoryImportReorderPolicyPort } from "../src/adapters/in-memory-import-reorder-policies.js";
+import { InMemoryProductCategoryRepository } from "../src/adapters/in-memory-product-categories.js";
+import { InMemoryProductIdentifierRepository } from "../src/adapters/in-memory-product-identifiers.js";
 import { InMemoryProductPackagingRepository } from "../src/adapters/in-memory-product-packaging.js";
 import { InMemoryProductRepository } from "../src/adapters/in-memory-product-repository.js";
 import { InMemorySupplierLinkPort } from "../src/adapters/in-memory-supplier-link.js";
@@ -36,11 +40,27 @@ function harness() {
   const products = new InMemoryProductRepository();
   const suppliers = new InMemorySupplierLinkPort();
   const packaging = new InMemoryProductPackagingRepository();
+  const categories = new InMemoryProductCategoryRepository(products);
+  const identifiers = new InMemoryProductIdentifierRepository();
+  const locations = new InMemoryImportLocationPort();
+  const reorderPolicies = new InMemoryImportReorderPolicyPort();
   return {
     products,
     suppliers,
     packaging,
-    importCatalog: new ImportProductBrowserUseCase(products, suppliers, packaging),
+    categories,
+    identifiers,
+    locations,
+    reorderPolicies,
+    importCatalog: new ImportProductBrowserUseCase(
+      products,
+      suppliers,
+      packaging,
+      categories,
+      identifiers,
+      locations,
+      reorderPolicies,
+    ),
   };
 }
 
@@ -109,17 +129,43 @@ describe("ImportProductBrowserUseCase", () => {
     const bySku = new Map(listed.map((row) => [row.product.sku.value, row.product.id]));
     expect(await h.packaging.findByProductId(bySku.get("DC-A")!)).toEqual({
       productId: bySku.get("DC-A"),
+      packLength: null,
+      packWidth: null,
+      packHeight: null,
+      packWeight: null,
+      packWeightUom: null,
+      innerPackQty: null,
+      innerPackLength: null,
+      innerPackWidth: null,
+      innerPackHeight: null,
+      innerPackWeight: null,
+      innerPackWeightUom: null,
       caseQty: 192,
       caseLength: "23.6",
       caseWidth: "15.7",
       caseHeight: "19.7",
+      caseWeight: null,
+      caseWeightUom: null,
     });
     expect(await h.packaging.findByProductId(bySku.get("DC-C")!)).toEqual({
       productId: bySku.get("DC-C"),
+      packLength: null,
+      packWidth: null,
+      packHeight: null,
+      packWeight: null,
+      packWeightUom: null,
+      innerPackQty: null,
+      innerPackLength: null,
+      innerPackWidth: null,
+      innerPackHeight: null,
+      innerPackWeight: null,
+      innerPackWeightUom: null,
       caseQty: 384,
       caseLength: null,
       caseWidth: null,
       caseHeight: null,
+      caseWeight: null,
+      caseWeightUom: null,
     });
   });
 
@@ -150,6 +196,38 @@ describe("ImportProductBrowserUseCase", () => {
       caseWidth: null,
       caseHeight: null,
     });
+  });
+
+  it("imports country of origin, default order qty, UPC, and original wholesale price", async () => {
+    const h = harness();
+    await h.importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: false,
+      rows: [
+        productRow({
+          c_of_o: "USA",
+          def_qty: "12",
+          upcode: "743903067861",
+          original_wholesale_price: "8.8",
+          ip_qty: "6",
+          location: "XJB",
+          pickbin: "TRUE",
+        }),
+      ],
+    });
+    const listed = await h.products.listMatching({ organizationId: ORG });
+    const productId = listed[0]!.product.id;
+    const savedIdentifiers = await h.identifiers.findByProductId(productId);
+    expect(listed[0]?.product.countryOfOrigin).toBe("USA");
+    expect(listed[0]?.product.defaultOrderQty).toBe(12);
+    expect(listed[0]?.product.originalWholesalePrice?.amountMinor).toBe(880);
+    expect(await h.packaging.findByProductId(productId)).toMatchObject({
+      innerPackQty: 6,
+    });
+    expect(savedIdentifiers.find((row) => row.kind === "upc")?.code).toBe("743903067861");
+    expect(savedIdentifiers.find((row) => row.kind === "mfg")?.code).toBe("JA149015");
+    expect(h.locations.locations.get(`${ORG}:XJB`)).toEqual({ code: "XJB", isPickBin: true });
   });
 
   it("treats a header-only workbook as zero rows, not missing headers", async () => {
@@ -183,6 +261,10 @@ describe("ImportProductBrowserUseCase", () => {
       products,
       new InMemorySupplierLinkPort(),
       packaging,
+      new InMemoryProductCategoryRepository(products),
+      new InMemoryProductIdentifierRepository(),
+      new InMemoryImportLocationPort(),
+      new InMemoryImportReorderPolicyPort(),
     );
 
     const result = await importCatalog.execute({
@@ -211,5 +293,127 @@ describe("ImportProductBrowserUseCase", () => {
     const listed = await h.products.listMatching({ organizationId: ORG });
     expect(listed).toHaveLength(1);
     expect(listed[0]?.product).not.toHaveProperty("onHand");
+  });
+
+  it("imports category tags from category_1 through category_10", async () => {
+    const h = harness();
+    await h.importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: false,
+      rows: [
+        productRow({
+          product_id: "DC-A",
+          category_1: "Shopify",
+          category_2: "Christmas-Ville",
+          category_3: "",
+          category_4: "Shopify",
+        }),
+        productRow({
+          product_id: "DC-B",
+          category_1: "Hardware",
+        }),
+      ],
+    });
+
+    const shopify = await h.products.listMatching({
+      organizationId: ORG,
+      category: ["Shopify"],
+    });
+    expect(shopify.map((row) => row.product.sku.value)).toEqual(["DC-A"]);
+
+    const hardware = await h.products.listMatching({
+      organizationId: ORG,
+      category: ["Hardware"],
+    });
+    expect(hardware.map((row) => row.product.sku.value)).toEqual(["DC-B"]);
+
+    expect(await h.products.listCategoryNames(ORG)).toEqual([
+      "Christmas-Ville",
+      "Hardware",
+      "Shopify",
+    ]);
+  });
+
+  it("does not replace categories or identifiers for more than 500 products at once", async () => {
+    const products = new InMemoryProductRepository();
+    const categoryBatchSizes: number[] = [];
+    const identifierBatchSizes: number[] = [];
+    const categories = {
+      async listNamesForProduct() {
+        return [];
+      },
+      async replaceForProducts(
+        _organizationId: typeof ORG,
+        assignments: readonly { productId: string; categoryNames: readonly string[] }[],
+      ) {
+        categoryBatchSizes.push(assignments.length);
+      },
+    };
+    const identifiers = {
+      async findByProductId() {
+        return [];
+      },
+      async replaceForProducts(
+        assignments: readonly { productId: string; identifiers: readonly unknown[] }[],
+      ) {
+        identifierBatchSizes.push(assignments.length);
+      },
+    };
+    const importCatalog = new ImportProductBrowserUseCase(
+      products,
+      new InMemorySupplierLinkPort(),
+      new InMemoryProductPackagingRepository(),
+      categories,
+      identifiers,
+      new InMemoryImportLocationPort(),
+      new InMemoryImportReorderPolicyPort(),
+    );
+
+    const rows = Array.from({ length: 501 }, (_, index) =>
+      productRow({
+        product_id: `DC-${String(index + 1).padStart(4, "0")}`,
+        item: `Ornament ${String(index + 1)}`,
+        category_1: "Hardware",
+        upcode: String(743903000000 + index),
+      }),
+    );
+
+    const result = await importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: false,
+      rows,
+    });
+
+    expect(result.created).toBe(501);
+    expect(result.errors).toHaveLength(0);
+    expect(Math.max(...categoryBatchSizes)).toBeLessThanOrEqual(500);
+    expect(Math.max(...identifierBatchSizes)).toBeLessThanOrEqual(500);
+    expect(categoryBatchSizes.reduce((sum, size) => sum + size, 0)).toBe(501);
+    expect(identifierBatchSizes.reduce((sum, size) => sum + size, 0)).toBe(501);
+  });
+
+  it("replaces category tags when a SKU is reimported", async () => {
+    const h = harness();
+    await h.importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: false,
+      rows: [productRow({ category_1: "Old Tag" })],
+    });
+    await h.importCatalog.execute({
+      organizationId: ORG,
+      staffUserId: STAFF,
+      dryRun: false,
+      rows: [productRow({ category_1: "New Tag" })],
+    });
+
+    expect(
+      await h.products.listMatching({ organizationId: ORG, category: ["Old Tag"] }),
+    ).toHaveLength(0);
+    expect(
+      await h.products.listMatching({ organizationId: ORG, category: ["New Tag"] }),
+    ).toHaveLength(1);
   });
 });

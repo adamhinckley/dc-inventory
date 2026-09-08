@@ -12,13 +12,7 @@ export class InMemoryProductPackagingRepository implements IProductPackagingRepo
   }
 
   async save(packaging: ProductPackaging): Promise<void> {
-    this.byProductId.set(packaging.productId, {
-      productId: packaging.productId,
-      caseQty: packaging.caseQty,
-      caseLength: packaging.caseLength,
-      caseWidth: packaging.caseWidth,
-      caseHeight: packaging.caseHeight,
-    });
+    this.byProductId.set(packaging.productId, { ...packaging });
   }
 
   async saveMany(packagingList: readonly ProductPackaging[]): Promise<void> {

@@ -6,6 +6,7 @@ import {
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { newUuid } from "../domain/ids.js";
+import { emptyProductCatalogAttributes } from "../domain/product-catalog-attributes.js";
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { Product } from "../domain/product.js";
 import { hasQtyWriteFields } from "./write-guards.js";
@@ -23,7 +24,6 @@ export type CreateProductRequest = {
   discontinued?: boolean;
   webWholesale?: boolean;
   description?: string | null;
-  taxCategoryCode?: string | null;
 };
 
 export type CreateProductResult =
@@ -44,10 +44,6 @@ export class CreateProductUseCase {
       input.description === undefined || input.description === null
         ? null
         : input.description.trim() || null;
-    const taxCategoryCode =
-      input.taxCategoryCode === undefined || input.taxCategoryCode === null
-        ? null
-        : input.taxCategoryCode.trim() || null;
     if (name.length === 0 || uom.length === 0) {
       return { ok: false, reason: "invalid" };
     }
@@ -75,7 +71,8 @@ export class CreateProductUseCase {
         inactive: input.inactive ?? false,
         discontinued: input.discontinued ?? false,
         webWholesale: input.webWholesale ?? false,
-        taxCategoryCode,
+        taxCategoryCode: null,
+        ...emptyProductCatalogAttributes(),
       };
       await this.products.save(product);
       return { ok: true, product };

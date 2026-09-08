@@ -3266,9 +3266,6 @@ paths:
                 description:
                   nullable: true
                   type: string
-                taxCategoryCode:
-                  nullable: true
-                  type: string
               required:
                 - sku
                 - name
@@ -3312,14 +3309,50 @@ paths:
                     type: boolean
                   webWholesale:
                     type: boolean
-                  taxCategoryCode:
+                  categoryNames:
+                    type: array
+                    items:
+                      type: string
+                  upc:
                     nullable: true
                     type: string
-                  caseQty:
+                  mfgCode:
+                    nullable: true
+                    type: string
+                  altCodes:
+                    type: array
+                    items:
+                      type: string
+                  vendorNumber:
+                    nullable: true
+                    type: string
+                  vendorName:
+                    nullable: true
+                    type: string
+                  minOrderQty:
                     nullable: true
                     type: integer
-                    minimum: 0
-                    exclusiveMinimum: true
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  minOrderAmountCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  lastPoCostCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMin:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMax:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
                     maximum: 9007199254740991
                   onHand:
                     type: integer
@@ -3351,6 +3384,116 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  countryOfOrigin:
+                    nullable: true
+                    type: string
+                  material:
+                    nullable: true
+                    type: string
+                  length:
+                    nullable: true
+                    type: string
+                  width:
+                    nullable: true
+                    type: string
+                  height:
+                    nullable: true
+                    type: string
+                  diameter:
+                    nullable: true
+                    type: string
+                  size:
+                    nullable: true
+                    type: string
+                  weight:
+                    nullable: true
+                    type: string
+                  weightUom:
+                    nullable: true
+                    type: string
+                  originalWholesalePriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  catalogPage:
+                    nullable: true
+                    type: string
+                  defaultOrderQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  defaultWeight:
+                    nullable: true
+                    type: string
+                  defaultWeightUom:
+                    nullable: true
+                    type: string
+                  nonStock:
+                    type: boolean
+                  noExport:
+                    type: boolean
+                  webRetail:
+                    type: boolean
+                  packLength:
+                    nullable: true
+                    type: string
+                  packWidth:
+                    nullable: true
+                    type: string
+                  packHeight:
+                    nullable: true
+                    type: string
+                  packWeight:
+                    nullable: true
+                    type: string
+                  packWeightUom:
+                    nullable: true
+                    type: string
+                  innerPackQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  innerPackLength:
+                    nullable: true
+                    type: string
+                  innerPackWidth:
+                    nullable: true
+                    type: string
+                  innerPackHeight:
+                    nullable: true
+                    type: string
+                  innerPackWeight:
+                    nullable: true
+                    type: string
+                  innerPackWeightUom:
+                    nullable: true
+                    type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  caseLength:
+                    nullable: true
+                    type: string
+                  caseWidth:
+                    nullable: true
+                    type: string
+                  caseHeight:
+                    nullable: true
+                    type: string
+                  caseWeight:
+                    nullable: true
+                    type: string
+                  caseWeightUom:
+                    nullable: true
+                    type: string
                 required:
                   - id
                   - sku
@@ -3363,8 +3506,17 @@ paths:
                   - inactive
                   - discontinued
                   - webWholesale
-                  - taxCategoryCode
-                  - caseQty
+                  - categoryNames
+                  - upc
+                  - mfgCode
+                  - altCodes
+                  - vendorNumber
+                  - vendorName
+                  - minOrderQty
+                  - minOrderAmountCents
+                  - lastPoCostCents
+                  - reorderMin
+                  - reorderMax
                   - onHand
                   - onOrder
                   - allocated
@@ -3372,6 +3524,40 @@ paths:
                   - committed
                   - sellState
                   - availableToSell
+                  - countryOfOrigin
+                  - material
+                  - length
+                  - width
+                  - height
+                  - diameter
+                  - size
+                  - weight
+                  - weightUom
+                  - originalWholesalePriceCents
+                  - catalogPage
+                  - defaultOrderQty
+                  - defaultWeight
+                  - defaultWeightUom
+                  - nonStock
+                  - noExport
+                  - webRetail
+                  - packLength
+                  - packWidth
+                  - packHeight
+                  - packWeight
+                  - packWeightUom
+                  - innerPackQty
+                  - innerPackLength
+                  - innerPackWidth
+                  - innerPackHeight
+                  - innerPackWeight
+                  - innerPackWeightUom
+                  - caseQty
+                  - caseLength
+                  - caseWidth
+                  - caseHeight
+                  - caseWeight
+                  - caseWeightUom
                 additionalProperties: false
         "400":
           description: Default Response
@@ -3842,7 +4028,109 @@ paths:
                 description:
                   nullable: true
                   type: string
-                taxCategoryCode:
+                upc:
+                  nullable: true
+                  type: string
+                mfgCode:
+                  nullable: true
+                  type: string
+                altCodes:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+                categoryNames:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+                countryOfOrigin:
+                  nullable: true
+                  type: string
+                material:
+                  nullable: true
+                  type: string
+                length:
+                  nullable: true
+                  type: string
+                width:
+                  nullable: true
+                  type: string
+                height:
+                  nullable: true
+                  type: string
+                diameter:
+                  nullable: true
+                  type: string
+                size:
+                  nullable: true
+                  type: string
+                weight:
+                  nullable: true
+                  type: string
+                weightUom:
+                  nullable: true
+                  type: string
+                originalWholesalePriceCents:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                catalogPage:
+                  nullable: true
+                  type: string
+                defaultOrderQty:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                defaultWeight:
+                  nullable: true
+                  type: string
+                defaultWeightUom:
+                  nullable: true
+                  type: string
+                nonStock:
+                  type: boolean
+                noExport:
+                  type: boolean
+                webRetail:
+                  type: boolean
+                packLength:
+                  nullable: true
+                  type: string
+                packWidth:
+                  nullable: true
+                  type: string
+                packHeight:
+                  nullable: true
+                  type: string
+                packWeight:
+                  nullable: true
+                  type: string
+                packWeightUom:
+                  nullable: true
+                  type: string
+                innerPackQty:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                innerPackLength:
+                  nullable: true
+                  type: string
+                innerPackWidth:
+                  nullable: true
+                  type: string
+                innerPackHeight:
+                  nullable: true
+                  type: string
+                innerPackWeight:
+                  nullable: true
+                  type: string
+                innerPackWeightUom:
                   nullable: true
                   type: string
                 caseQty:
@@ -3851,6 +4139,21 @@ paths:
                   minimum: 0
                   exclusiveMinimum: true
                   maximum: 9007199254740991
+                caseLength:
+                  nullable: true
+                  type: string
+                caseWidth:
+                  nullable: true
+                  type: string
+                caseHeight:
+                  nullable: true
+                  type: string
+                caseWeight:
+                  nullable: true
+                  type: string
+                caseWeightUom:
+                  nullable: true
+                  type: string
       parameters:
         - schema:
             type: string
@@ -3896,14 +4199,50 @@ paths:
                     type: boolean
                   webWholesale:
                     type: boolean
-                  taxCategoryCode:
+                  categoryNames:
+                    type: array
+                    items:
+                      type: string
+                  upc:
                     nullable: true
                     type: string
-                  caseQty:
+                  mfgCode:
+                    nullable: true
+                    type: string
+                  altCodes:
+                    type: array
+                    items:
+                      type: string
+                  vendorNumber:
+                    nullable: true
+                    type: string
+                  vendorName:
+                    nullable: true
+                    type: string
+                  minOrderQty:
                     nullable: true
                     type: integer
-                    minimum: 0
-                    exclusiveMinimum: true
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  minOrderAmountCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  lastPoCostCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMin:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMax:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
                     maximum: 9007199254740991
                   onHand:
                     type: integer
@@ -3935,6 +4274,116 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  countryOfOrigin:
+                    nullable: true
+                    type: string
+                  material:
+                    nullable: true
+                    type: string
+                  length:
+                    nullable: true
+                    type: string
+                  width:
+                    nullable: true
+                    type: string
+                  height:
+                    nullable: true
+                    type: string
+                  diameter:
+                    nullable: true
+                    type: string
+                  size:
+                    nullable: true
+                    type: string
+                  weight:
+                    nullable: true
+                    type: string
+                  weightUom:
+                    nullable: true
+                    type: string
+                  originalWholesalePriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  catalogPage:
+                    nullable: true
+                    type: string
+                  defaultOrderQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  defaultWeight:
+                    nullable: true
+                    type: string
+                  defaultWeightUom:
+                    nullable: true
+                    type: string
+                  nonStock:
+                    type: boolean
+                  noExport:
+                    type: boolean
+                  webRetail:
+                    type: boolean
+                  packLength:
+                    nullable: true
+                    type: string
+                  packWidth:
+                    nullable: true
+                    type: string
+                  packHeight:
+                    nullable: true
+                    type: string
+                  packWeight:
+                    nullable: true
+                    type: string
+                  packWeightUom:
+                    nullable: true
+                    type: string
+                  innerPackQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  innerPackLength:
+                    nullable: true
+                    type: string
+                  innerPackWidth:
+                    nullable: true
+                    type: string
+                  innerPackHeight:
+                    nullable: true
+                    type: string
+                  innerPackWeight:
+                    nullable: true
+                    type: string
+                  innerPackWeightUom:
+                    nullable: true
+                    type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  caseLength:
+                    nullable: true
+                    type: string
+                  caseWidth:
+                    nullable: true
+                    type: string
+                  caseHeight:
+                    nullable: true
+                    type: string
+                  caseWeight:
+                    nullable: true
+                    type: string
+                  caseWeightUom:
+                    nullable: true
+                    type: string
                 required:
                   - id
                   - sku
@@ -3947,8 +4396,17 @@ paths:
                   - inactive
                   - discontinued
                   - webWholesale
-                  - taxCategoryCode
-                  - caseQty
+                  - categoryNames
+                  - upc
+                  - mfgCode
+                  - altCodes
+                  - vendorNumber
+                  - vendorName
+                  - minOrderQty
+                  - minOrderAmountCents
+                  - lastPoCostCents
+                  - reorderMin
+                  - reorderMax
                   - onHand
                   - onOrder
                   - allocated
@@ -3956,6 +4414,40 @@ paths:
                   - committed
                   - sellState
                   - availableToSell
+                  - countryOfOrigin
+                  - material
+                  - length
+                  - width
+                  - height
+                  - diameter
+                  - size
+                  - weight
+                  - weightUom
+                  - originalWholesalePriceCents
+                  - catalogPage
+                  - defaultOrderQty
+                  - defaultWeight
+                  - defaultWeightUom
+                  - nonStock
+                  - noExport
+                  - webRetail
+                  - packLength
+                  - packWidth
+                  - packHeight
+                  - packWeight
+                  - packWeightUom
+                  - innerPackQty
+                  - innerPackLength
+                  - innerPackWidth
+                  - innerPackHeight
+                  - innerPackWeight
+                  - innerPackWeightUom
+                  - caseQty
+                  - caseLength
+                  - caseWidth
+                  - caseHeight
+                  - caseWeight
+                  - caseWeightUom
                 additionalProperties: false
         "400":
           description: Default Response
@@ -4092,7 +4584,109 @@ paths:
                 description:
                   nullable: true
                   type: string
-                taxCategoryCode:
+                upc:
+                  nullable: true
+                  type: string
+                mfgCode:
+                  nullable: true
+                  type: string
+                altCodes:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+                categoryNames:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+                countryOfOrigin:
+                  nullable: true
+                  type: string
+                material:
+                  nullable: true
+                  type: string
+                length:
+                  nullable: true
+                  type: string
+                width:
+                  nullable: true
+                  type: string
+                height:
+                  nullable: true
+                  type: string
+                diameter:
+                  nullable: true
+                  type: string
+                size:
+                  nullable: true
+                  type: string
+                weight:
+                  nullable: true
+                  type: string
+                weightUom:
+                  nullable: true
+                  type: string
+                originalWholesalePriceCents:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                catalogPage:
+                  nullable: true
+                  type: string
+                defaultOrderQty:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                defaultWeight:
+                  nullable: true
+                  type: string
+                defaultWeightUom:
+                  nullable: true
+                  type: string
+                nonStock:
+                  type: boolean
+                noExport:
+                  type: boolean
+                webRetail:
+                  type: boolean
+                packLength:
+                  nullable: true
+                  type: string
+                packWidth:
+                  nullable: true
+                  type: string
+                packHeight:
+                  nullable: true
+                  type: string
+                packWeight:
+                  nullable: true
+                  type: string
+                packWeightUom:
+                  nullable: true
+                  type: string
+                innerPackQty:
+                  nullable: true
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                innerPackLength:
+                  nullable: true
+                  type: string
+                innerPackWidth:
+                  nullable: true
+                  type: string
+                innerPackHeight:
+                  nullable: true
+                  type: string
+                innerPackWeight:
+                  nullable: true
+                  type: string
+                innerPackWeightUom:
                   nullable: true
                   type: string
                 caseQty:
@@ -4101,6 +4695,21 @@ paths:
                   minimum: 0
                   exclusiveMinimum: true
                   maximum: 9007199254740991
+                caseLength:
+                  nullable: true
+                  type: string
+                caseWidth:
+                  nullable: true
+                  type: string
+                caseHeight:
+                  nullable: true
+                  type: string
+                caseWeight:
+                  nullable: true
+                  type: string
+                caseWeightUom:
+                  nullable: true
+                  type: string
       parameters:
         - schema:
             type: string
@@ -4147,14 +4756,50 @@ paths:
                     type: boolean
                   webWholesale:
                     type: boolean
-                  taxCategoryCode:
+                  categoryNames:
+                    type: array
+                    items:
+                      type: string
+                  upc:
                     nullable: true
                     type: string
-                  caseQty:
+                  mfgCode:
+                    nullable: true
+                    type: string
+                  altCodes:
+                    type: array
+                    items:
+                      type: string
+                  vendorNumber:
+                    nullable: true
+                    type: string
+                  vendorName:
+                    nullable: true
+                    type: string
+                  minOrderQty:
                     nullable: true
                     type: integer
-                    minimum: 0
-                    exclusiveMinimum: true
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  minOrderAmountCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  lastPoCostCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMin:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMax:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
                     maximum: 9007199254740991
                   onHand:
                     type: integer
@@ -4186,6 +4831,116 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  countryOfOrigin:
+                    nullable: true
+                    type: string
+                  material:
+                    nullable: true
+                    type: string
+                  length:
+                    nullable: true
+                    type: string
+                  width:
+                    nullable: true
+                    type: string
+                  height:
+                    nullable: true
+                    type: string
+                  diameter:
+                    nullable: true
+                    type: string
+                  size:
+                    nullable: true
+                    type: string
+                  weight:
+                    nullable: true
+                    type: string
+                  weightUom:
+                    nullable: true
+                    type: string
+                  originalWholesalePriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  catalogPage:
+                    nullable: true
+                    type: string
+                  defaultOrderQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  defaultWeight:
+                    nullable: true
+                    type: string
+                  defaultWeightUom:
+                    nullable: true
+                    type: string
+                  nonStock:
+                    type: boolean
+                  noExport:
+                    type: boolean
+                  webRetail:
+                    type: boolean
+                  packLength:
+                    nullable: true
+                    type: string
+                  packWidth:
+                    nullable: true
+                    type: string
+                  packHeight:
+                    nullable: true
+                    type: string
+                  packWeight:
+                    nullable: true
+                    type: string
+                  packWeightUom:
+                    nullable: true
+                    type: string
+                  innerPackQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  innerPackLength:
+                    nullable: true
+                    type: string
+                  innerPackWidth:
+                    nullable: true
+                    type: string
+                  innerPackHeight:
+                    nullable: true
+                    type: string
+                  innerPackWeight:
+                    nullable: true
+                    type: string
+                  innerPackWeightUom:
+                    nullable: true
+                    type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  caseLength:
+                    nullable: true
+                    type: string
+                  caseWidth:
+                    nullable: true
+                    type: string
+                  caseHeight:
+                    nullable: true
+                    type: string
+                  caseWeight:
+                    nullable: true
+                    type: string
+                  caseWeightUom:
+                    nullable: true
+                    type: string
                 required:
                   - id
                   - sku
@@ -4198,8 +4953,17 @@ paths:
                   - inactive
                   - discontinued
                   - webWholesale
-                  - taxCategoryCode
-                  - caseQty
+                  - categoryNames
+                  - upc
+                  - mfgCode
+                  - altCodes
+                  - vendorNumber
+                  - vendorName
+                  - minOrderQty
+                  - minOrderAmountCents
+                  - lastPoCostCents
+                  - reorderMin
+                  - reorderMax
                   - onHand
                   - onOrder
                   - allocated
@@ -4207,6 +4971,40 @@ paths:
                   - committed
                   - sellState
                   - availableToSell
+                  - countryOfOrigin
+                  - material
+                  - length
+                  - width
+                  - height
+                  - diameter
+                  - size
+                  - weight
+                  - weightUom
+                  - originalWholesalePriceCents
+                  - catalogPage
+                  - defaultOrderQty
+                  - defaultWeight
+                  - defaultWeightUom
+                  - nonStock
+                  - noExport
+                  - webRetail
+                  - packLength
+                  - packWidth
+                  - packHeight
+                  - packWeight
+                  - packWeightUom
+                  - innerPackQty
+                  - innerPackLength
+                  - innerPackWidth
+                  - innerPackHeight
+                  - innerPackWeight
+                  - innerPackWeightUom
+                  - caseQty
+                  - caseLength
+                  - caseWidth
+                  - caseHeight
+                  - caseWeight
+                  - caseWeightUom
                 additionalProperties: false
         "400":
           description: Default Response
@@ -4353,14 +5151,50 @@ paths:
                     type: boolean
                   webWholesale:
                     type: boolean
-                  taxCategoryCode:
+                  categoryNames:
+                    type: array
+                    items:
+                      type: string
+                  upc:
                     nullable: true
                     type: string
-                  caseQty:
+                  mfgCode:
+                    nullable: true
+                    type: string
+                  altCodes:
+                    type: array
+                    items:
+                      type: string
+                  vendorNumber:
+                    nullable: true
+                    type: string
+                  vendorName:
+                    nullable: true
+                    type: string
+                  minOrderQty:
                     nullable: true
                     type: integer
-                    minimum: 0
-                    exclusiveMinimum: true
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  minOrderAmountCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  lastPoCostCents:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMin:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  reorderMax:
+                    nullable: true
+                    type: integer
+                    minimum: -9007199254740991
                     maximum: 9007199254740991
                   onHand:
                     type: integer
@@ -4392,6 +5226,116 @@ paths:
                     type: integer
                     minimum: -9007199254740991
                     maximum: 9007199254740991
+                  countryOfOrigin:
+                    nullable: true
+                    type: string
+                  material:
+                    nullable: true
+                    type: string
+                  length:
+                    nullable: true
+                    type: string
+                  width:
+                    nullable: true
+                    type: string
+                  height:
+                    nullable: true
+                    type: string
+                  diameter:
+                    nullable: true
+                    type: string
+                  size:
+                    nullable: true
+                    type: string
+                  weight:
+                    nullable: true
+                    type: string
+                  weightUom:
+                    nullable: true
+                    type: string
+                  originalWholesalePriceCents:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    maximum: 9007199254740991
+                  catalogPage:
+                    nullable: true
+                    type: string
+                  defaultOrderQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  defaultWeight:
+                    nullable: true
+                    type: string
+                  defaultWeightUom:
+                    nullable: true
+                    type: string
+                  nonStock:
+                    type: boolean
+                  noExport:
+                    type: boolean
+                  webRetail:
+                    type: boolean
+                  packLength:
+                    nullable: true
+                    type: string
+                  packWidth:
+                    nullable: true
+                    type: string
+                  packHeight:
+                    nullable: true
+                    type: string
+                  packWeight:
+                    nullable: true
+                    type: string
+                  packWeightUom:
+                    nullable: true
+                    type: string
+                  innerPackQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  innerPackLength:
+                    nullable: true
+                    type: string
+                  innerPackWidth:
+                    nullable: true
+                    type: string
+                  innerPackHeight:
+                    nullable: true
+                    type: string
+                  innerPackWeight:
+                    nullable: true
+                    type: string
+                  innerPackWeightUom:
+                    nullable: true
+                    type: string
+                  caseQty:
+                    nullable: true
+                    type: integer
+                    minimum: 0
+                    exclusiveMinimum: true
+                    maximum: 9007199254740991
+                  caseLength:
+                    nullable: true
+                    type: string
+                  caseWidth:
+                    nullable: true
+                    type: string
+                  caseHeight:
+                    nullable: true
+                    type: string
+                  caseWeight:
+                    nullable: true
+                    type: string
+                  caseWeightUom:
+                    nullable: true
+                    type: string
                 required:
                   - id
                   - sku
@@ -4404,8 +5348,17 @@ paths:
                   - inactive
                   - discontinued
                   - webWholesale
-                  - taxCategoryCode
-                  - caseQty
+                  - categoryNames
+                  - upc
+                  - mfgCode
+                  - altCodes
+                  - vendorNumber
+                  - vendorName
+                  - minOrderQty
+                  - minOrderAmountCents
+                  - lastPoCostCents
+                  - reorderMin
+                  - reorderMax
                   - onHand
                   - onOrder
                   - allocated
@@ -4413,6 +5366,40 @@ paths:
                   - committed
                   - sellState
                   - availableToSell
+                  - countryOfOrigin
+                  - material
+                  - length
+                  - width
+                  - height
+                  - diameter
+                  - size
+                  - weight
+                  - weightUom
+                  - originalWholesalePriceCents
+                  - catalogPage
+                  - defaultOrderQty
+                  - defaultWeight
+                  - defaultWeightUom
+                  - nonStock
+                  - noExport
+                  - webRetail
+                  - packLength
+                  - packWidth
+                  - packHeight
+                  - packWeight
+                  - packWeightUom
+                  - innerPackQty
+                  - innerPackLength
+                  - innerPackWidth
+                  - innerPackHeight
+                  - innerPackWeight
+                  - innerPackWeightUom
+                  - caseQty
+                  - caseLength
+                  - caseWidth
+                  - caseHeight
+                  - caseWeight
+                  - caseWeightUom
                 additionalProperties: false
         "401":
           description: Default Response

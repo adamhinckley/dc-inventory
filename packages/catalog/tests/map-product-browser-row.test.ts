@@ -116,4 +116,25 @@ describe("mapProductBrowserRow", () => {
     expect(dollarsToCents("")).toEqual({ ok: true, cents: 0 });
     expect(dollarsToCents("-1")).toEqual({ ok: false });
   });
+
+  it("collects non-empty category tags and dedupes them", () => {
+    const mapped = mapProductBrowserRow(
+      row({
+        category_1: "Shopify",
+        category_2: "Christmas-Ville",
+        category_3: "",
+        category_4: "Shopify",
+        category_5: "Shatterproof Ornaments",
+      }),
+      2,
+    );
+    expect(mapped.ok).toBe(true);
+    if (mapped.ok) {
+      expect(mapped.value.categoryNames).toEqual([
+        "Shopify",
+        "Christmas-Ville",
+        "Shatterproof Ornaments",
+      ]);
+    }
+  });
 });

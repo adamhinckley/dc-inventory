@@ -8,6 +8,7 @@ import {
 import {
   categories,
   productCategories,
+  productIdentifiers,
   productPackaging,
   products,
 } from "../src/persistence/schema.js";
@@ -15,7 +16,7 @@ import {
 describe("DrizzleProductRepository queries", () => {
   it("constrains category matches through Catalog category relations", () => {
     const db = drizzle.mock({
-      schema: { categories, productCategories, productPackaging, products },
+      schema: { categories, productCategories, productIdentifiers, productPackaging, products },
     }) as CatalogDrizzle;
 
     const query = buildProductListQuery(db, {

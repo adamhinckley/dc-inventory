@@ -730,8 +730,8 @@ describe("catalog HTTP", () => {
     expect(notMultipart.json()).toEqual({ error: "invalid" });
 
     const csv = [
-      "product_id,item,vendor_num,vendor,mp_price,lp_price,uom,mfg_code,onhand_qty,webwholesale",
-      "DC-IMPORT-1,Crystal Drop,1075,REGXJ,10.20,12.75,EA,JA149015,99,TRUE",
+      "product_id,item,vendor_num,vendor,mp_price,lp_price,uom,mfg_code,onhand_qty,webwholesale,category_1,category_2",
+      "DC-IMPORT-1,Crystal Drop,1075,REGXJ,10.20,12.75,EA,JA149015,99,TRUE,Shopify,Christmas Stems & Sprays",
     ].join("\n");
     const multipart = productBrowserCsvMultipart(csv);
 
@@ -805,6 +805,28 @@ describe("catalog HTTP", () => {
     expect(vendors.json()).toMatchObject({
       total: 1,
       items: [{ vendorNumber: "1075", name: "REGXJ" }],
+    });
+
+    const categoryList = await app.inject({
+      method: "GET",
+      url: "/internal/categories",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(categoryList.statusCode).toBe(200);
+    expect(categoryList.json().items.map((row: { name: string }) => row.name).sort()).toEqual([
+      "Christmas Stems & Sprays",
+      "Shopify",
+    ]);
+
+    const filtered = await app.inject({
+      method: "GET",
+      url: "/internal/products?category=Shopify",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json()).toMatchObject({
+      total: 1,
+      items: [{ sku: "DC-IMPORT-1" }],
     });
 
     const reimport = await app.inject({

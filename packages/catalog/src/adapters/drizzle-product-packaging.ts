@@ -13,6 +13,53 @@ export type CatalogPackagingDrizzle = PostgresJsDatabase<{
   productPackaging: typeof productPackaging;
 }>;
 
+function rowToPackaging(row: typeof productPackaging.$inferSelect): ProductPackaging {
+  return {
+    productId: ProductId.parse(row.productId),
+    packLength: row.packLength,
+    packWidth: row.packWidth,
+    packHeight: row.packHeight,
+    packWeight: row.packWeight,
+    packWeightUom: row.packWeightUom,
+    innerPackQty: row.innerPackQty,
+    innerPackLength: row.innerPackLength,
+    innerPackWidth: row.innerPackWidth,
+    innerPackHeight: row.innerPackHeight,
+    innerPackWeight: row.innerPackWeight,
+    innerPackWeightUom: row.innerPackWeightUom,
+    caseQty: row.caseQty,
+    caseLength: row.caseLength,
+    caseWidth: row.caseWidth,
+    caseHeight: row.caseHeight,
+    caseWeight: row.caseWeight,
+    caseWeightUom: row.caseWeightUom,
+  };
+}
+
+function packagingToInsertRow(packaging: ProductPackaging): typeof productPackaging.$inferInsert {
+  return {
+    id: newUuid(),
+    productId: packaging.productId,
+    packLength: packaging.packLength,
+    packWidth: packaging.packWidth,
+    packHeight: packaging.packHeight,
+    packWeight: packaging.packWeight,
+    packWeightUom: packaging.packWeightUom,
+    innerPackQty: packaging.innerPackQty,
+    innerPackLength: packaging.innerPackLength,
+    innerPackWidth: packaging.innerPackWidth,
+    innerPackHeight: packaging.innerPackHeight,
+    innerPackWeight: packaging.innerPackWeight,
+    innerPackWeightUom: packaging.innerPackWeightUom,
+    caseQty: packaging.caseQty,
+    caseLength: packaging.caseLength,
+    caseWidth: packaging.caseWidth,
+    caseHeight: packaging.caseHeight,
+    caseWeight: packaging.caseWeight,
+    caseWeightUom: packaging.caseWeightUom,
+  };
+}
+
 export class DrizzleProductPackagingRepository implements IProductPackagingRepository {
   constructor(private readonly db: CatalogPackagingDrizzle) {}
 
@@ -26,33 +73,33 @@ export class DrizzleProductPackagingRepository implements IProductPackagingRepos
     if (row === undefined) {
       return null;
     }
-    return {
-      productId: ProductId.parse(row.productId),
-      caseQty: row.caseQty,
-      caseLength: row.caseLength,
-      caseWidth: row.caseWidth,
-      caseHeight: row.caseHeight,
-    };
+    return rowToPackaging(row);
   }
 
   async save(packaging: ProductPackaging): Promise<void> {
     await this.db
       .insert(productPackaging)
-      .values({
-        id: newUuid(),
-        productId: packaging.productId,
-        caseQty: packaging.caseQty,
-        caseLength: packaging.caseLength,
-        caseWidth: packaging.caseWidth,
-        caseHeight: packaging.caseHeight,
-      })
+      .values(packagingToInsertRow(packaging))
       .onConflictDoUpdate({
         target: productPackaging.productId,
         set: {
+          packLength: packaging.packLength,
+          packWidth: packaging.packWidth,
+          packHeight: packaging.packHeight,
+          packWeight: packaging.packWeight,
+          packWeightUom: packaging.packWeightUom,
+          innerPackQty: packaging.innerPackQty,
+          innerPackLength: packaging.innerPackLength,
+          innerPackWidth: packaging.innerPackWidth,
+          innerPackHeight: packaging.innerPackHeight,
+          innerPackWeight: packaging.innerPackWeight,
+          innerPackWeightUom: packaging.innerPackWeightUom,
           caseQty: packaging.caseQty,
           caseLength: packaging.caseLength,
           caseWidth: packaging.caseWidth,
           caseHeight: packaging.caseHeight,
+          caseWeight: packaging.caseWeight,
+          caseWeightUom: packaging.caseWeightUom,
           updatedAt: new Date(),
         },
       });
@@ -64,23 +111,27 @@ export class DrizzleProductPackagingRepository implements IProductPackagingRepos
     }
     await this.db
       .insert(productPackaging)
-      .values(
-        packagingList.map((packaging) => ({
-          id: newUuid(),
-          productId: packaging.productId,
-          caseQty: packaging.caseQty,
-          caseLength: packaging.caseLength,
-          caseWidth: packaging.caseWidth,
-          caseHeight: packaging.caseHeight,
-        })),
-      )
+      .values(packagingList.map((packaging) => packagingToInsertRow(packaging)))
       .onConflictDoUpdate({
         target: productPackaging.productId,
         set: {
+          packLength: sql`excluded.pack_length`,
+          packWidth: sql`excluded.pack_width`,
+          packHeight: sql`excluded.pack_height`,
+          packWeight: sql`excluded.pack_weight`,
+          packWeightUom: sql`excluded.pack_weight_uom`,
+          innerPackQty: sql`excluded.inner_pack_qty`,
+          innerPackLength: sql`excluded.inner_pack_length`,
+          innerPackWidth: sql`excluded.inner_pack_width`,
+          innerPackHeight: sql`excluded.inner_pack_height`,
+          innerPackWeight: sql`excluded.inner_pack_weight`,
+          innerPackWeightUom: sql`excluded.inner_pack_weight_uom`,
           caseQty: sql`excluded.case_qty`,
           caseLength: sql`excluded.case_length`,
           caseWidth: sql`excluded.case_width`,
           caseHeight: sql`excluded.case_height`,
+          caseWeight: sql`excluded.case_weight`,
+          caseWeightUom: sql`excluded.case_weight_uom`,
           updatedAt: new Date(),
         },
       });

@@ -1,5 +1,6 @@
 "use client";
 
+import { isSuccessfulOrvalResponse } from "@dc-inventory/ui";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   listParamsFromState,
@@ -137,13 +138,18 @@ export function useDataTable<
 
   const hydrated = useHydrated();
   const query = queryHook(params as TParams);
-  const envelope = hydrated ? unwrapListData(query.data) : undefined;
+  const listFailed =
+    hydrated &&
+    query.data !== undefined &&
+    !isSuccessfulOrvalResponse(query.data);
+  const envelope =
+    hydrated && !listFailed ? unwrapListData(query.data) : undefined;
   const items = envelope?.items ?? [];
   const total = envelope?.total ?? 0;
   const page = envelope?.page ?? state.page;
   const pageSize = envelope?.pageSize ?? state.pageSize;
   const pageCount = Math.max(1, Math.ceil(total / pageSize) || 1);
-  const busy = isListTableBusy(hydrated, envelope, query.isError);
+  const busy = isListTableBusy(hydrated, envelope, query.isError || listFailed);
 
   return {
     meta,
@@ -151,6 +157,7 @@ export function useDataTable<
     setState,
     params,
     query,
+    listFailed,
     envelope,
     items,
     total,

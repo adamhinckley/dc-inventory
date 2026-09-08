@@ -58,6 +58,11 @@ export class InMemoryProductRepository implements IProductRepository {
     this.categoriesByProductId.set(productId, new Set(categories));
   }
 
+  getCategoryNames(productId: ProductId): readonly string[] {
+    const names = this.categoriesByProductId.get(productId);
+    return names === undefined ? [] : [...names].sort((a, b) => a.localeCompare(b));
+  }
+
   setSupplierIds(productId: ProductId, supplierIds: Iterable<string>): void {
     this.supplierIdsByProductId.set(productId, new Set(supplierIds));
   }

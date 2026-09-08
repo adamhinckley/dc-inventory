@@ -3,6 +3,7 @@ import {
   type ICatalogListQuery,
   type Product,
   type ProductQty,
+  emptyProductCatalogAttributes,
 } from "@dc-inventory/catalog";
 import {
   isShopSellableSql,
@@ -59,7 +60,25 @@ function productFromRow(row: {
   webWholesale: boolean;
   taxCategoryCode: string | null;
   listPriceCents: number | null;
+  countryOfOrigin: string | null;
+  material: string | null;
+  length: string | null;
+  width: string | null;
+  height: string | null;
+  diameter: string | null;
+  size: string | null;
+  weight: string | null;
+  weightUom: string | null;
+  originalWholesalePriceCents: number | null;
+  catalogPage: string | null;
+  defaultOrderQty: number | null;
+  defaultWeight: string | null;
+  defaultWeightUom: string | null;
+  nonStock: boolean;
+  noExport: boolean;
+  webRetail: boolean;
 }): Product {
+  const defaults = emptyProductCatalogAttributes();
   return {
     id: ProductId.parse(row.id),
     organizationId: OrganizationId.parse(row.organizationId),
@@ -76,6 +95,26 @@ function productFromRow(row: {
     discontinued: row.discontinued,
     webWholesale: row.webWholesale,
     taxCategoryCode: row.taxCategoryCode,
+    countryOfOrigin: row.countryOfOrigin ?? defaults.countryOfOrigin,
+    material: row.material ?? defaults.material,
+    length: row.length ?? defaults.length,
+    width: row.width ?? defaults.width,
+    height: row.height ?? defaults.height,
+    diameter: row.diameter ?? defaults.diameter,
+    size: row.size ?? defaults.size,
+    weight: row.weight ?? defaults.weight,
+    weightUom: row.weightUom ?? defaults.weightUom,
+    originalWholesalePrice:
+      row.originalWholesalePriceCents === null
+        ? null
+        : Money.fromMinorUnits(row.originalWholesalePriceCents, row.currency),
+    catalogPage: row.catalogPage ?? defaults.catalogPage,
+    defaultOrderQty: row.defaultOrderQty ?? defaults.defaultOrderQty,
+    defaultWeight: row.defaultWeight ?? defaults.defaultWeight,
+    defaultWeightUom: row.defaultWeightUom ?? defaults.defaultWeightUom,
+    nonStock: row.nonStock ?? defaults.nonStock,
+    noExport: row.noExport ?? defaults.noExport,
+    webRetail: row.webRetail ?? defaults.webRetail,
   };
 }
 
@@ -230,12 +269,29 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
           name: products.name,
           description: products.description,
           uom: products.uom,
+          countryOfOrigin: products.countryOfOrigin,
+          material: products.material,
+          length: products.length,
+          width: products.width,
+          height: products.height,
+          diameter: products.diameter,
+          size: products.size,
+          weight: products.weight,
+          weightUom: products.weightUom,
           memberPriceCents: products.memberPriceCents,
           listPriceCents: products.listPriceCents,
+          originalWholesalePriceCents: products.originalWholesalePriceCents,
           currency: products.currency,
+          catalogPage: products.catalogPage,
+          defaultOrderQty: products.defaultOrderQty,
+          defaultWeight: products.defaultWeight,
+          defaultWeightUom: products.defaultWeightUom,
           inactive: products.inactive,
           discontinued: products.discontinued,
+          nonStock: products.nonStock,
+          noExport: products.noExport,
           webWholesale: products.webWholesale,
+          webRetail: products.webRetail,
           taxCategoryCode: products.taxCategoryCode,
           createdAt: products.createdAt,
           onHand,
