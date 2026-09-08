@@ -3,8 +3,10 @@ import type { AppDrizzle } from "../infrastructure/db.js";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import {
   DrizzleInventoryReadModel,
+  DrizzleSellWindowRepository,
   DrizzleStockLedger,
   type InventoryDrizzle,
+  type SellWindowDrizzle,
 } from "@dc-inventory/inventory";
 import {
   DrizzlePurchaseOrderRepository,
@@ -120,6 +122,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
 
     const readModel = new DrizzleInventoryReadModel(tx, resolveLocationUuid, this.clock);
     const ledger = new DrizzleStockLedger(tx, readModel, resolveLocationUuid, this.clock);
+    const sellWindows = new DrizzleSellWindowRepository(tx as unknown as SellWindowDrizzle);
     const purchaseOrders = new DrizzlePurchaseOrderRepository(tx);
     const suppliers = new DrizzleSupplierRepository(tx);
     const salesOrders = new DrizzleSalesOrderRepository(tx);
@@ -147,7 +150,7 @@ export class PostgresInventoryUnitOfWork implements IUnitOfWork {
     };
 
     const scope: IUnitOfWork = {
-      inventory: { ledger, readModel },
+      inventory: { ledger, readModel, sellWindows },
       purchasing: purchasingScope,
       sales: salesScope,
       run: (innerWork) => this.runOnTransaction(tx, innerWork),

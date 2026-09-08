@@ -37,6 +37,7 @@ const SKU_B = Sku.parse("REOPEN-HTTP-B");
 const WINDOW_OPENS = "2026-07-01T00:00:00.000Z";
 const WINDOW_CLOSES = "2026-08-01T00:00:00.000Z";
 const INSIDE_WINDOW = new Date("2026-07-15T12:00:00.000Z");
+const AFTER_WINDOW = new Date("2026-09-01T12:00:00.000Z");
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
@@ -323,16 +324,6 @@ describe("POST /internal/inventory/close-skus", () => {
       }
     }
 
-    const postgresLikeUnitOfWork: IUnitOfWork = {
-      inventory: {
-        ledger: null as unknown as IStockLedger,
-        readModel: unitOfWork.inventory.readModel,
-      },
-      purchasing: unitOfWork.purchasing,
-      sales: unitOfWork.sales,
-      run: (work) => unitOfWork.run(work),
-    };
-
     const sellWindowRepo = new InMemorySellWindowRepository();
     const clock = new InMemoryClock(INSIDE_WINDOW);
     const createSellWindow = new CreateSellWindowUseCase(sellWindowRepo, clock);
@@ -348,6 +339,17 @@ describe("POST /internal/inventory/close-skus", () => {
     if (!createdWindow.ok) {
       throw new Error("expected sell window");
     }
+
+    const postgresLikeUnitOfWork: IUnitOfWork = {
+      inventory: {
+        ledger: null as unknown as IStockLedger,
+        readModel: unitOfWork.inventory.readModel,
+        sellWindows: sellWindowRepo,
+      },
+      purchasing: unitOfWork.purchasing,
+      sales: unitOfWork.sales,
+      run: (work) => unitOfWork.run(work),
+    };
 
     const app = await buildApp({
       logger: false,
@@ -397,5 +399,149 @@ describe("POST /internal/inventory/close-skus", () => {
       status: "closed",
       manuallyClosedAt: INSIDE_WINDOW.toISOString(),
     });
+  });
+
+  it("still closes membership SKUs when the sell window is already calendar-closed", async () => {
+    const passwords = new InMemoryPasswordHasher();
+    const organizations = new InMemoryOrganizationRepository();
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+    const staffUsers = new InMemoryStaffUserRepository();
+    const sessions = new InMemorySessionStore();
+    await staffUsers.save({
+      id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "staff@local.test",
+      passwordHash: await passwords.hash("staff-secret"),
+      roles: ["admin"],
+    });
+
+    const productRepo = new InMemoryProductRepository();
+    const packagingRepo = new InMemoryProductPackagingRepository();
+    const createProduct = new CreateProductUseCase(productRepo);
+    for (const [sku, name] of [
+      [SKU_A.value, "Calendar close A"],
+      [SKU_B.value, "Calendar close B"],
+    ] as const) {
+      const created = await createProduct.execute({
+        organizationId: OrganizationId.DEFAULT,
+        staffUserId: STAFF_ID,
+        sku,
+        name,
+        uom: "EA",
+        memberPriceCents: 1000,
+        taxCategoryCode: "P0000000",
+      });
+      if (!created.ok) {
+        throw new Error(`expected product ${sku}`);
+      }
+    }
+
+    const unitOfWork = new InMemoryUnitOfWork(
+      {
+        getBillToSnapshot: async () => null,
+      },
+      {
+        getTerms: async () => "NET30",
+      },
+      new InMemoryClock(AFTER_WINDOW),
+    );
+
+    for (const [sku, key] of [
+      [SKU_A, "calendar-close-lock-a"],
+      [SKU_B, "calendar-close-lock-b"],
+    ] as const) {
+      const locked = await unitOfWork.inventory.ledger.recordInboundFromPo({
+        organizationId: OrganizationId.DEFAULT,
+        idempotencyKey: key,
+        sku,
+        quantity: 10,
+        refType: "purchase_order",
+        refId: PO_ID,
+      });
+      if (!locked.ok) {
+        throw new Error(`expected lock for ${sku.value}`);
+      }
+    }
+
+    const sellWindowRepo = new InMemorySellWindowRepository();
+    const clock = new InMemoryClock(AFTER_WINDOW);
+    const createSellWindow = new CreateSellWindowUseCase(sellWindowRepo, clock);
+    const createdWindow = await createSellWindow.execute({
+      organizationId: OrganizationId.DEFAULT,
+      staffUserId: STAFF_ID,
+      name: "Calendar closed window",
+      filterSnapshot: {},
+      windowOpensAt: new Date(WINDOW_OPENS),
+      windowClosesAt: new Date(WINDOW_CLOSES),
+      skus: [SKU_A, SKU_B],
+    });
+    if (!createdWindow.ok) {
+      throw new Error("expected sell window");
+    }
+    expect(createdWindow.window.status).toBe("closed");
+
+    const postgresLikeUnitOfWork: IUnitOfWork = {
+      inventory: {
+        ledger: null as unknown as IStockLedger,
+        readModel: unitOfWork.inventory.readModel,
+        sellWindows: sellWindowRepo,
+      },
+      purchasing: unitOfWork.purchasing,
+      sales: unitOfWork.sales,
+      run: (work) => unitOfWork.run(work),
+    };
+
+    const app = await buildApp({
+      logger: false,
+      database: new InMemoryDatabase(),
+      clock,
+      staffUsers,
+      sessions,
+      passwords,
+      organizationRepo: organizations,
+      productRepo,
+      productPackagingRepo: packagingRepo,
+      unitOfWork: postgresLikeUnitOfWork,
+      sellWindowRepo,
+      qtyRead: new InventoryReadModelQtyReadAdapter(unitOfWork.inventory.readModel),
+    });
+    apps.push(app);
+    const session = await staffCookie(app);
+
+    const reopen = await app.inject({
+      method: "POST",
+      url: "/internal/inventory/reopen-skus",
+      headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
+      payload: {
+        skus: [SKU_A.value, SKU_B.value],
+        windowOpensAt: WINDOW_OPENS,
+        windowClosesAt: WINDOW_CLOSES,
+      },
+    });
+    expect(reopen.statusCode).toBe(200);
+
+    const close = await app.inject({
+      method: "POST",
+      url: "/internal/inventory/close-skus",
+      headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
+      payload: { windowId: createdWindow.window.id },
+    });
+    expect(close.statusCode).toBe(200);
+    expect(close.json()).toEqual({ closedCount: 2 });
+
+    const list = await app.inject({
+      method: "GET",
+      url: "/internal/products?q=Calendar+close",
+      headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
+    });
+    expect(list.statusCode).toBe(200);
+    const items = list.json().items as Array<{
+      sku: string;
+      sellState: string;
+    }>;
+    expect(items).toHaveLength(2);
+    for (const item of items) {
+      expect(item.sellState).toBe("locked");
+    }
   });
 });

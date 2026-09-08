@@ -383,7 +383,7 @@ export type CloseSkusForPresellHttpRequest = {
 
 export type CloseSkusForPresellHttpResult =
   | { ok: true; closedCount: number }
-  | { ok: false; reason: "not_found" | "already_closed" | "invalid" };
+  | { ok: false; reason: "not_found" | "invalid" };
 
 export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
@@ -846,19 +846,21 @@ function inventoryServices(
     closeSkusForPresell: {
       execute: async (input: CloseSkusForPresellHttpRequest): Promise<CloseSkusForPresellHttpResult> => {
         if (input.windowId !== undefined) {
-          const window = await sellWindowRepo.findById(input.organizationId, input.windowId);
-          if (window === null) {
-            return { ok: false, reason: "not_found" };
-          }
           return unitOfWork.run(async (scope) => {
-            const windowClose = await new CloseSellWindowUseCase(sellWindowRepo, clock).execute({
+            const txSellWindows = scope.inventory.sellWindows ?? sellWindowRepo;
+            const window = await txSellWindows.findById(
+              input.organizationId,
+              input.windowId!,
+            );
+            if (window === null) {
+              return { ok: false, reason: "not_found" };
+            }
+            const windowClose = await new CloseSellWindowUseCase(txSellWindows, clock).execute({
               organizationId: input.organizationId,
               id: input.windowId!,
             });
-            if (!windowClose.ok) {
-              return windowClose.reason === "not_found"
-                ? { ok: false, reason: "not_found" }
-                : { ok: false, reason: "already_closed" };
+            if (!windowClose.ok && windowClose.reason === "not_found") {
+              return { ok: false, reason: "not_found" };
             }
             const skuClose = await new RecordCloseSkusForPresellUseCase(
               scope.inventory.ledger,
