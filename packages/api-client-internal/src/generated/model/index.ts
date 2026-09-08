@@ -439,8 +439,6 @@ export * from './listInternalSellWindows401';
 export * from './listInternalSellWindows401Error';
 export * from './listInternalSellWindows403';
 export * from './listInternalSellWindowsParams';
-export * from './listInternalSellWindowsSortBy';
-export * from './listInternalSellWindowsSortOrder';
 export * from './listInternalSupplierProducts200';
 export * from './listInternalSupplierProducts200ItemsItem';
 export * from './listInternalSupplierProducts200ItemsItemQty';
