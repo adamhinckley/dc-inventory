@@ -210,6 +210,8 @@ import {
   ListUncoveredFactoriesUseCase,
   ListUncoveredSkusUseCase,
   RecordReopenSkusForPresellUseCase,
+  RecordCloseSkusForPresellUseCase,
+  SellWindowId,
   type InMemoryInventoryReadModel,
   type ISellWindowRepository,
   type IUncoveredListQuery,
@@ -373,12 +375,26 @@ export type LicensingHttpServices = {
   listPayments: ListLicensingPaymentsUseCase;
 };
 
+export type CloseSkusForPresellHttpRequest = {
+  organizationId: OrganizationId;
+  skus?: readonly Sku[];
+  windowId?: SellWindowId;
+};
+
+export type CloseSkusForPresellHttpResult =
+  | { ok: true; closedCount: number }
+  | { ok: false; reason: "not_found" | "invalid" };
+
 export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
   listPurchaseOrderGoodsReceived: ListPurchaseOrderGoodsReceivedUseCase;
   listUncoveredSkus: ListUncoveredSkusUseCase;
   listUncoveredFactories: ListUncoveredFactoriesUseCase;
   reopenSkusForPresell: Pick<RecordReopenSkusForPresellUseCase, "execute">;
+  closeSkusForPresell: Pick<
+    { execute(input: CloseSkusForPresellHttpRequest): Promise<CloseSkusForPresellHttpResult> },
+    "execute"
+  >;
   listSellWindows: ListSellWindowsUseCase;
   getSellWindow: GetSellWindowUseCase;
   createSellWindow: CreateSellWindowUseCase;
@@ -826,6 +842,54 @@ function inventoryServices(
         unitOfWork.run((scope) =>
           new RecordReopenSkusForPresellUseCase(scope.inventory.ledger).execute(input),
         ),
+    },
+    closeSkusForPresell: {
+      execute: async (input: CloseSkusForPresellHttpRequest): Promise<CloseSkusForPresellHttpResult> => {
+        if (input.windowId !== undefined) {
+          return unitOfWork.run(async (scope) => {
+            const txSellWindows = scope.inventory.sellWindows ?? sellWindowRepo;
+            const window = await txSellWindows.findById(
+              input.organizationId,
+              input.windowId!,
+            );
+            if (window === null) {
+              return { ok: false, reason: "not_found" };
+            }
+            const windowClose = await new CloseSellWindowUseCase(txSellWindows, clock).execute({
+              organizationId: input.organizationId,
+              id: input.windowId!,
+            });
+            if (!windowClose.ok && windowClose.reason === "not_found") {
+              return { ok: false, reason: "not_found" };
+            }
+            const skuClose = await new RecordCloseSkusForPresellUseCase(
+              scope.inventory.ledger,
+            ).execute({
+              organizationId: input.organizationId,
+              skus: window.skus,
+            });
+            if (!skuClose.ok) {
+              return { ok: false, reason: "invalid" };
+            }
+            return { ok: true, closedCount: skuClose.closedCount };
+          });
+        }
+
+        const skus = input.skus ?? [];
+        if (skus.length === 0) {
+          return { ok: false, reason: "invalid" };
+        }
+        const skuClose = await unitOfWork.run((scope) =>
+          new RecordCloseSkusForPresellUseCase(scope.inventory.ledger).execute({
+            organizationId: input.organizationId,
+            skus,
+          }),
+        );
+        if (!skuClose.ok) {
+          return { ok: false, reason: "invalid" };
+        }
+        return { ok: true, closedCount: skuClose.closedCount };
+      },
     },
     listSellWindows: new ListSellWindowsUseCase(sellWindowRepo, clock),
     getSellWindow: new GetSellWindowUseCase(sellWindowRepo, clock),

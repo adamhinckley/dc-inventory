@@ -1,5 +1,6 @@
 import type {
   IInventoryReadModel,
+  ISellWindowRepository,
   IStockLedger,
 } from "@dc-inventory/inventory";
 import type { IPurchasingUnitOfWork } from "@dc-inventory/purchasing";
@@ -13,6 +14,8 @@ export interface IUnitOfWork {
   readonly inventory: {
     readonly ledger: IStockLedger;
     readonly readModel: IInventoryReadModel;
+    /** Transaction-scoped sell window port when the adapter supports it. */
+    readonly sellWindows?: ISellWindowRepository;
   };
   readonly purchasing: IPurchasingUnitOfWork;
   readonly sales: ISalesUnitOfWork;

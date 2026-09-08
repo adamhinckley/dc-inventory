@@ -12,6 +12,8 @@ import {
   notFoundResponseSchema,
   reopenInventorySkusBodySchema,
   reopenInventorySkusResponseSchema,
+  closeInventorySkusBodySchema,
+  closeInventorySkusResponseSchema,
   sellWindowDetailSchema,
   sellWindowParamsSchema,
   sellWindowsListQuerySchema,
@@ -168,6 +170,47 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
         return sendInvalid(reply);
       }
       return reply.code(200).send({ reopenedCount: body.skus.length });
+    },
+  );
+
+  routes.post(
+    "/inventory/close-skus",
+    {
+      schema: {
+        operationId: "closeInternalInventorySkus",
+        tags: ["internal"],
+        summary: "Close listed SKUs or a sell window membership for pre-sell",
+        body: closeInventorySkusBodySchema,
+        response: {
+          200: closeInventorySkusResponseSchema,
+          400: invalidResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: featureDisabledResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const body = request.body as {
+        windowId?: string;
+        skus?: string[];
+      };
+      const result = await request.server.inventory.closeSkusForPresell.execute({
+        organizationId: staffOrganizationId(request),
+        ...(body.windowId !== undefined
+          ? { windowId: SellWindowId.parse(body.windowId) }
+          : {}),
+        ...(body.skus !== undefined
+          ? { skus: body.skus.map((sku) => Sku.parse(sku)) }
+          : {}),
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return reply.code(404).send({ error: "not_found" as const });
+        }
+        return sendInvalid(reply);
+      }
+      return reply.code(200).send({ closedCount: result.closedCount });
     },
   );
 

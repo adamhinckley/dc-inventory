@@ -58,6 +58,15 @@ export type SetSellWindowCommand = {
   windowClosesAt: Date | null;
 };
 
+export type CloseSkusForPresellCommand = {
+  organizationId: OrganizationId;
+  skus: readonly Sku[];
+};
+
+export type CloseSkusForPresellResult =
+  | { ok: true; closedCount: number }
+  | { ok: false; reason: DemandCommandFailureReason };
+
 export function isDemandStockFigures(snapshot: StockFigures): snapshot is DemandStockFigures {
   return (
     "committed" in snapshot &&

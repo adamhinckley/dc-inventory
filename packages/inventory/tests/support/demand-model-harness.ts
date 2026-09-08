@@ -22,6 +22,8 @@ import {
   type DemandCommandResult,
   type DemandSalesOrderCommand,
   type DemandStockFigures,
+  type CloseSkusForPresellCommand,
+  type CloseSkusForPresellResult,
   type ReopenSkusForPresellCommand,
   type SetSellWindowCommand,
 } from "./demand-model-api.js";
@@ -30,6 +32,7 @@ type ExtendedStockLedger = IStockLedger & {
   recordCommitted?(command: DemandSalesOrderCommand): Promise<StockCommandResult>;
   recordDecommitted?(command: DemandSalesOrderCommand): Promise<StockCommandResult>;
   reopenSkusForPresell?(command: ReopenSkusForPresellCommand): Promise<DemandCommandResult>;
+  closeSkusForPresell?(command: CloseSkusForPresellCommand): Promise<CloseSkusForPresellResult>;
   setSellWindow?(command: SetSellWindowCommand): Promise<DemandCommandResult>;
 };
 
@@ -126,6 +129,13 @@ export function demandModelHarness(
         return notImplemented();
       }
       return ledger.reopenSkusForPresell(command);
+    },
+
+    async closeSkusForPresell(command: CloseSkusForPresellCommand): Promise<CloseSkusForPresellResult> {
+      if (!ledger.closeSkusForPresell) {
+        return { ok: false, reason: "demand_model_not_implemented" };
+      }
+      return ledger.closeSkusForPresell(command);
     },
 
     async setSellWindow(command: SetSellWindowCommand): Promise<DemandCommandResult> {
