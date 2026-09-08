@@ -7,6 +7,7 @@ import {
 } from "@dc-inventory/catalog";
 import {
   isShopSellableSql,
+  isWholesaleHiddenBeforeOpenSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
   type IClock,
@@ -230,6 +231,15 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
         isShopSellableSql(available, demandProjectionColumns, nowIso, demandProjectionCatalogColumns),
       );
     }
+    if (query.hideBeforeOpen === true) {
+      clauses.push(
+        isWholesaleHiddenBeforeOpenSql(
+          demandProjectionColumns,
+          nowIso,
+          demandProjection.hasActiveSellWindowMembership,
+        ),
+      );
+    }
     if (query.sellState === "locked") {
       clauses.push(sql`${demandProjection.isLockedForSell} = true`);
     } else if (query.sellState === "open") {
@@ -281,6 +291,7 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     const countFrom =
       query.hideZeroInventory === true ||
       query.availableOnly === true ||
+      query.hideBeforeOpen === true ||
       query.sellState !== undefined
         ? this.db
             .select({ value: count() })

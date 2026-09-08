@@ -322,6 +322,76 @@ describe("Catalog use cases (in-memory)", () => {
     ).toBe(false);
   });
 
+  it("hides future scheduled windows from the wholesale list but keeps post-close locked SKUs visible", async () => {
+    const h = harness();
+    const futureOpens = new Date(Date.now() + 60 * 60 * 1000);
+    const scheduled = await createProduct(h, {
+      sku: "SHOP-SCHEDULED",
+      name: "Scheduled vase",
+    });
+    const postClose = await createProduct(h, {
+      sku: "SHOP-POST-CLOSE",
+      name: "Post-close vase",
+    });
+    const openedByMembership = await createProduct(h, {
+      sku: "SHOP-WINDOW-OPEN",
+      name: "Membership open vase",
+    });
+    h.qty.set(DEFAULT_ORG, scheduled.sku.value, {
+      onHand: 10,
+      onOrder: 0,
+      allocated: 0,
+      available: 10,
+      committed: 0,
+      sellState: "locked",
+      availableToSell: 10,
+      windowOpensAt: futureOpens,
+    });
+    h.qty.set(DEFAULT_ORG, postClose.sku.value, {
+      onHand: 5,
+      onOrder: 0,
+      allocated: 0,
+      available: 5,
+      committed: 0,
+      sellState: "locked",
+      availableToSell: 5,
+      stickyLocked: true,
+    });
+    h.qty.set(DEFAULT_ORG, openedByMembership.sku.value, {
+      onHand: 4,
+      onOrder: 0,
+      allocated: 0,
+      available: 4,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+      windowOpensAt: futureOpens,
+      hasActiveSellWindowMembership: true,
+    });
+
+    const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+      availableOnly: false,
+    });
+    expect(listed.items.map((row) => row.product.sku.value).sort()).toEqual([
+      "SHOP-POST-CLOSE",
+      "SHOP-WINDOW-OPEN",
+    ].sort());
+    expect(listed.total).toBe(2);
+
+    const hiddenProduct = await h.getWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      productId: scheduled.id,
+    });
+    expect(hiddenProduct).toEqual({ ok: false, reason: "not_found" });
+  });
+
   it("constrains the wholesale list to products in the requested category", async () => {
     const h = harness();
     const bolt = await createProduct(h, {

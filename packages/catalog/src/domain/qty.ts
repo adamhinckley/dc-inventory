@@ -9,6 +9,10 @@ export type ProductQty = {
   sellState: SellState;
   /** `null` means no numeric cap while effectively open. */
   availableToSell: number | null;
+  stickyLocked?: boolean;
+  windowOpensAt?: Date | null;
+  windowClosesAt?: Date | null;
+  hasActiveSellWindowMembership?: boolean;
 };
 
 export type StaffCatalogQtyProjection = Readonly<{
@@ -19,6 +23,14 @@ export type StaffCatalogQtyProjection = Readonly<{
   committed: number;
   sellState: SellState;
   availableToSell: number | null;
+  stickyLocked?: boolean;
+  windowOpensAt?: Date | null;
+  windowClosesAt?: Date | null;
+  hasActiveSellWindowMembership?: boolean;
+}>;
+
+export type WholesaleVisibilityOptions = Readonly<{
+  now: Date;
 }>;
 
 /** Anti-corruption snapshot from Inventory's staff/shop qty projection. */
@@ -33,7 +45,26 @@ export function productQtyFromStaffCatalogProjection(
     committed: projection.committed,
     sellState: projection.sellState,
     availableToSell: projection.availableToSell,
+    stickyLocked: projection.stickyLocked,
+    windowOpensAt: projection.windowOpensAt,
+    windowClosesAt: projection.windowClosesAt,
+    hasActiveSellWindowMembership: projection.hasActiveSellWindowMembership,
   });
+}
+
+/** Wholesale shop hides SKUs scheduled before windowOpensAt; post-close locked SKUs stay visible. */
+export function isWholesaleHiddenBeforeOpen(
+  qty: ProductQty,
+  options: WholesaleVisibilityOptions,
+): boolean {
+  if (qty.stickyLocked === true) {
+    return false;
+  }
+  const windowOpensAt = qty.windowOpensAt ?? null;
+  if (windowOpensAt === null || options.now >= windowOpensAt) {
+    return false;
+  }
+  return qty.hasActiveSellWindowMembership !== true;
 }
 
 export const ZERO_QTY: ProductQty = {

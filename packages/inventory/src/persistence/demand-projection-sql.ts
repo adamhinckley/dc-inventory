@@ -116,6 +116,21 @@ export function staffCatalogDemandProjectionSql(
   });
 }
 
+/** WHERE fragment: wholesale shop omits future scheduled windows before opens. */
+export function isWholesaleHiddenBeforeOpenSql(
+  columns: DemandProjectionSnapshotColumns,
+  nowIso: string,
+  hasActiveSellWindowMembership: SQL<boolean>,
+): SQL<boolean> {
+  const stickyLocked = sql`coalesce(${columns.stickyLocked}, false)`;
+  return sql<boolean>`NOT (
+    ${stickyLocked} = false
+    AND ${columns.windowOpensAt} IS NOT NULL
+    AND ${columns.windowOpensAt} > ${nowIso}
+    AND NOT ${hasActiveSellWindowMembership}
+  )`;
+}
+
 /** WHERE fragment: every open SKU; locked SKUs by availableToSell > 0. */
 export function isShopSellableSql(
   warehouseAvailable: SQL<number>,

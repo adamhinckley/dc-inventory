@@ -32,6 +32,10 @@ export type CatalogListQuery = {
   hideZeroInventory?: boolean;
   /** When true, include every open SKU; omit locked SKUs with ATP ≤ 0. */
   availableOnly?: boolean;
+  /** When true, omit SKUs in future scheduled sell windows (wholesale shop). */
+  hideBeforeOpen?: boolean;
+  /** Evaluation instant for hideBeforeOpen; defaults to now in adapters. */
+  asOf?: Date;
   /** Effective sell state (sticky lock or sell window vs now). */
   sellState?: "open" | "locked";
 };

@@ -782,6 +782,52 @@ describe("Sales (in-memory)", () => {
     });
   });
 
+  it("rejects adding a post-close sticky locked draft line even within availableToSell", async () => {
+    const postCloseProductId = ProductId.parse("88888888-8888-4888-8888-888888888888");
+    const uow = new InMemorySalesUnitOfWork(testShipBillToSnapshot, testShipCustomerTerms);
+    const catalog = new InMemoryCatalogProductPort([
+      {
+        productId: postCloseProductId,
+        organizationId: DEFAULT_ORG,
+        sku: Sku.parse("POST-CLOSE-DRAFT"),
+        name: "Post-close vase",
+        unitPrice: Money.fromMinorUnits(500, "USD"),
+        active: true,
+        sellState: "locked",
+        availableToSell: 12,
+        stickyLocked: true,
+        windowOpensAt: new Date("2026-09-03T10:00:00.000Z"),
+        windowClosesAt: new Date("2026-09-03T11:00:00.000Z"),
+      },
+    ]);
+    const customers = {
+      findById: async (organizationId: OrganizationId, id: CustomerId) => {
+        if (organizationId === DEFAULT_ORG && id === CUSTOMER_ID) {
+          return { id, accountStatus: "active" as const };
+        }
+        return null;
+      },
+    };
+    const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
+    const result = await create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: postCloseProductId, qty: 3 }],
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.reason).toBe("insufficient_atp");
+    expect(result.shortage).toEqual({
+      sku: "POST-CLOSE-DRAFT",
+      name: "Post-close vase",
+      requestedQty: 3,
+      availableQty: 0,
+    });
+  });
+
   it("can remove one oversold draft line without re-checking leftover lines", async () => {
     const keepId = ProductId.parse("12121212-1212-4121-8121-121212121212");
     const dropId = ProductId.parse("34343434-3434-4343-8343-343434343434");

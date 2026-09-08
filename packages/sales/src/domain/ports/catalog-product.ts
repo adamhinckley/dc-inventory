@@ -16,6 +16,10 @@ export type ProductSnapshot = {
   /** Omitted on snapshots that do not carry inventory qty (open / no cap). */
   sellState?: "open" | "locked";
   availableToSell?: number | null;
+  stickyLocked?: boolean;
+  windowOpensAt?: Date | null;
+  windowClosesAt?: Date | null;
+  hasActiveSellWindowMembership?: boolean;
 };
 
 export interface ICatalogProductPort {

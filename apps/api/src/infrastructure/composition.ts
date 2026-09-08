@@ -482,6 +482,7 @@ function catalogServices(
   productReorder: IProductReorderReadPort,
   importLocations: IImportLocationPort,
   importReorderPolicies: IImportReorderPolicyPort,
+  clock: IClock,
 ): CatalogHttpServices {
   const createProduct = new CreateProductUseCase(productRepo);
   const updateProduct = new UpdateProductUseCase(
@@ -521,7 +522,7 @@ function catalogServices(
       importReorderPolicies,
     ),
     listWholesaleCatalog: new ListWholesaleCatalogUseCase(catalogListQuery),
-    getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead),
+    getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead, () => clock.now()),
     lookupProductIdBySku: async (organizationId, sku) => {
       try {
         const product = await productRepo.findBySku(organizationId, Sku.parse(sku));
@@ -1061,12 +1062,20 @@ export function composeAppServices(
 
   const inMemoryUow = unitOfWork instanceof InMemoryUnitOfWork ? unitOfWork : null;
 
+  const sellWindowRepo =
+    overrides.sellWindowRepo ??
+    (appDb ? new DrizzleSellWindowRepository(appDb) : new InMemorySellWindowRepository());
+
   const qtyRead =
     overrides.qtyRead ??
     (appDb
       ? new StockSnapshotQtyReadAdapter(appDb, clock)
       : inMemoryUow
-        ? new InventoryReadModelQtyReadAdapter(inMemoryUow.inventory.readModel)
+        ? new InventoryReadModelQtyReadAdapter(
+            inMemoryUow.inventory.readModel,
+            sellWindowRepo,
+            clock,
+          )
         : new InMemoryQtyReadPort());
   const catalogListQuery =
     overrides.catalogListQuery ??
@@ -1191,9 +1200,6 @@ export function composeAppServices(
     uncoveredSkuSupplier,
     uncoveredSkuDraftPurchaseOrder,
   );
-  const sellWindowRepo =
-    overrides.sellWindowRepo ??
-    (appDb ? new DrizzleSellWindowRepository(appDb) : new InMemorySellWindowRepository());
 
   return {
     features,
@@ -1275,6 +1281,7 @@ export function composeAppServices(
       productReorderRead,
       importLocationPort,
       importReorderPolicyPort,
+      clock,
     ),
     purchasing: purchasingServices(
       purchaseOrderRepo,

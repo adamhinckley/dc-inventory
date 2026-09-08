@@ -10,7 +10,7 @@ import type {
 import type { IProductRepository } from "../domain/ports/product-repository.js";
 import type { IProductPackagingRepository } from "../domain/ports/product-packaging.js";
 import type { IQtyReadPort } from "../domain/ports/qty-read.js";
-import { isShopSellable, ZERO_QTY } from "../domain/qty.js";
+import { isShopSellable, isWholesaleHiddenBeforeOpen, ZERO_QTY } from "../domain/qty.js";
 
 function hasNonZeroInventoryQty(qty: typeof ZERO_QTY): boolean {
   return qty.onHand > 0 || qty.onOrder > 0 || qty.allocated > 0 || qty.committed > 0;
@@ -85,6 +85,12 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
     const visibleRows = rows.filter((row) => {
       if (query.hideZeroInventory === true && !hasNonZeroInventoryQty(row.qty)) {
         return false;
+      }
+      if (query.hideBeforeOpen === true) {
+        const asOf = query.asOf ?? new Date();
+        if (isWholesaleHiddenBeforeOpen(row.qty, { now: asOf })) {
+          return false;
+        }
       }
       if (query.availableOnly === true && !isShopSellable(row.qty)) {
         return false;
