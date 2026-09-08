@@ -304,6 +304,91 @@ describe("internal purchase orders HTTP", () => {
     expect(received.json()).toMatchObject({ status: "received" });
   });
 
+  it("unconfirms a zero-received confirmed purchase order and blocks after receive", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 8 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-confirm" },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const unconfirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/unconfirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm" },
+    });
+    expect(unconfirmed.statusCode).toBe(200);
+    expect(unconfirmed.json()).toMatchObject({
+      status: "draft",
+      documentNumber: po.documentNumber,
+    });
+
+    const blockedDraft = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/unconfirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-draft" },
+    });
+    expect(blockedDraft.statusCode).toBe(409);
+    expect(blockedDraft.json()).toEqual({ error: "conflict" });
+
+    const receivePo = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "WASHER-SS", name: "Washer", qty: 6 }],
+      },
+    });
+    expect(receivePo.statusCode).toBe(201);
+    const receivedTarget = receivePo.json() as { id: string; lines: Array<{ id: string }> };
+
+    await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${receivedTarget.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-receive-confirm" },
+    });
+
+    const received = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${receivedTarget.id}/receive`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        idempotencyKey: "http-unconfirm-receive",
+        lines: [{ lineId: receivedTarget.lines[0]!.id, quantity: 1 }],
+      },
+    });
+    expect(received.statusCode).toBe(200);
+
+    const blocked = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${receivedTarget.id}/unconfirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-blocked" },
+    });
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json()).toEqual({ error: "conflict" });
+  });
+
   it("replaces lines on a draft purchase order and rejects confirmed", async () => {
     const app = await startPurchasingApp();
     const cookie = await staffCookie(app);

@@ -482,6 +482,47 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
   );
 
   routes.post(
+    "/purchase-orders/:id/unconfirm",
+    {
+      schema: {
+        operationId: "unconfirmInternalPurchaseOrder",
+        tags: ["internal"],
+        summary: "Return a zero-received confirmed purchase order to draft",
+        params: purchaseOrderIdParamsSchema,
+        body: purchaseOrderCommandBodySchema,
+        response: {
+          200: purchaseOrderItemSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.unconfirmPurchaseOrder.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+        idempotencyKey: request.body.idempotencyKey,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return sendNotFound(reply);
+        }
+        if (
+          result.reason === "illegal_transition" ||
+          result.reason === "idempotency_conflict" ||
+          result.reason === "inventory_conflict"
+        ) {
+          return sendConflict(reply);
+        }
+        return sendNotFound(reply);
+      }
+      return mapPurchaseOrder(result.purchaseOrder);
+    },
+  );
+
+  routes.post(
     "/purchase-orders/:id/receive",
     {
       schema: {

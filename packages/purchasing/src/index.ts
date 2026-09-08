@@ -33,6 +33,7 @@ export { ListPurchaseOrdersUseCase } from "./application/list-purchase-orders.js
 export { ListSupplierProductsUseCase } from "./application/list-supplier-products.js";
 export { ListSuppliersUseCase } from "./application/list-suppliers.js";
 export { ReceivePurchaseOrderUseCase } from "./application/receive-purchase-order.js";
+export { UnconfirmPurchaseOrderUseCase } from "./application/unconfirm-purchase-order.js";
 export { ReplacePurchaseOrderLinesUseCase } from "./application/replace-purchase-order-lines.js";
 export { UnlinkSupplierProductUseCase } from "./application/unlink-supplier-product.js";
 export { UpdateSupplierProductUseCase } from "./application/update-supplier-product.js";
