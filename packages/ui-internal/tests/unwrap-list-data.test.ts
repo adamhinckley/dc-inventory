@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isListTableBusy, unwrapListData } from "../src/data-table/use-data-table";
+import { isSuccessfulOrvalResponse } from "@dc-inventory/ui";
+import {
+  isListQueryFailed,
+  isListTableBusy,
+  unwrapListData,
+} from "../src/data-table/use-data-table";
 
 const envelope = {
   items: [{ id: "1" }],
@@ -23,6 +28,36 @@ describe("unwrapListData", () => {
         headers: new Headers(),
       })?.total,
     ).toBe(1);
+  });
+});
+
+describe("isListQueryFailed", () => {
+  it("treats non-2xx Orval envelopes as failed once hydrated", () => {
+    const unauthorized = {
+      status: 401,
+      data: { error: "unauthorized" },
+      headers: new Headers(),
+    } as never;
+    expect(isListQueryFailed(true, unauthorized)).toBe(true);
+    expect(isListQueryFailed(false, unauthorized)).toBe(false);
+    expect(isListTableBusy(true, undefined, isListQueryFailed(true, unauthorized))).toBe(false);
+  });
+
+  it("treats a successful empty list envelope as success", () => {
+    const empty = {
+      status: 200,
+      data: { items: [], total: 0, page: 1, pageSize: 25 },
+      headers: new Headers(),
+    };
+    expect(isListQueryFailed(true, empty)).toBe(false);
+    expect(isSuccessfulOrvalResponse(empty)).toBe(true);
+    expect(unwrapListData(empty)).toEqual({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 25,
+    });
+    expect(isListTableBusy(true, unwrapListData(empty), false)).toBe(false);
   });
 });
 

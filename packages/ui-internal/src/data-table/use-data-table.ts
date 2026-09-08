@@ -62,6 +62,13 @@ export function useHydrated(): boolean {
  * `fetchStatus` is idle, so `isLoading` is false while the client first paint
  * is fetching — that mismatch disabled the Next button (`true` vs `null`).
  */
+export function isListQueryFailed(
+  hydrated: boolean,
+  data: ListQueryResult<unknown>["data"],
+): boolean {
+  return hydrated && data !== undefined && !isSuccessfulOrvalResponse(data);
+}
+
 export function isListTableBusy(
   hydrated: boolean,
   envelope: ListEnvelope<unknown> | undefined,
@@ -138,10 +145,7 @@ export function useDataTable<
 
   const hydrated = useHydrated();
   const query = queryHook(params as TParams);
-  const listFailed =
-    hydrated &&
-    query.data !== undefined &&
-    !isSuccessfulOrvalResponse(query.data);
+  const listFailed = isListQueryFailed(hydrated, query.data);
   const envelope =
     hydrated && !listFailed ? unwrapListData(query.data) : undefined;
   const items = envelope?.items ?? [];
