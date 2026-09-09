@@ -37,8 +37,9 @@ import {
   type CSSProperties,
 } from "react";
 import {
-  confirmSalesOrderErrorMessage,
   cancelSalesOrderErrorMessage,
+  confirmSalesOrderErrorMessage,
+  formatCreditExceededMessage,
   isCreditExceededConfirmError,
   replaceSalesOrderLinesErrorMessage,
 } from "../lib/sales-order-action-errors";
@@ -241,6 +242,7 @@ export function SalesOrderDraftWorkspace({
   >("idle");
   const [actionError, setActionError] = useState<string | null>(null);
   const [creditOverrideDialogOpen, setCreditOverrideDialogOpen] = useState(false);
+  const [creditOverrideMessage, setCreditOverrideMessage] = useState<string | null>(null);
 
   const lastSavedLinesRef = useRef(lines);
   const linesRef = useRef(lines);
@@ -532,6 +534,7 @@ export function SalesOrderDraftWorkspace({
         });
         if (result.status !== 200) {
           if (!overrideCredit && isCreditExceededConfirmError(result)) {
+            setCreditOverrideMessage(formatCreditExceededMessage(result.data ?? {}));
             setCreditOverrideDialogOpen(true);
             return;
           }
@@ -539,6 +542,7 @@ export function SalesOrderDraftWorkspace({
           return;
         }
         setCreditOverrideDialogOpen(false);
+        setCreditOverrideMessage(null);
         await invalidateOrder();
         router.refresh();
       } catch {
@@ -709,7 +713,15 @@ export function SalesOrderDraftWorkspace({
         </p>
       </div>
 
-      <Dialog open={creditOverrideDialogOpen} onOpenChange={setCreditOverrideDialogOpen}>
+      <Dialog
+        open={creditOverrideDialogOpen}
+        onOpenChange={(open) => {
+          setCreditOverrideDialogOpen(open);
+          if (!open) {
+            setCreditOverrideMessage(null);
+          }
+        }}
+      >
         <Dialog.Content
           size="sm"
           className="overlay border-error"
@@ -721,8 +733,9 @@ export function SalesOrderDraftWorkspace({
           </Dialog.Header>
           <Dialog.Body>
             <Dialog.Description className="text-error">
-              This order exceeds the customer&apos;s available credit. Confirm only if
-              you intend to place it anyway.
+              {creditOverrideMessage ??
+                "This order exceeds the customer&apos;s available credit."}{" "}
+              Confirm only if you intend to place it anyway.
             </Dialog.Description>
           </Dialog.Body>
           <Dialog.Footer>

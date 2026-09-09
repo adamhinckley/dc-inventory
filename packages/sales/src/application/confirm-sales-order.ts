@@ -88,7 +88,6 @@ export class ConfirmSalesOrderUseCase {
   ) {}
 
   async execute(input: ConfirmSalesOrderRequest): Promise<ConfirmSalesOrderResult> {
-    void input.staffUserId;
     try {
       return await this.uow.run(async (scope) => {
         const existing = await scope.salesOrders.findById(

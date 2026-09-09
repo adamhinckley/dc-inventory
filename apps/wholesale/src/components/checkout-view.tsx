@@ -11,7 +11,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { cartDisplayName } from "../lib/active-cart";
 import { initialCheckoutShipToId } from "../lib/checkout-ship-to";
-import { wholesaleConfirmErrorMessage } from "../lib/confirm-shortage-message";
+import {
+  formatConfirmCreditExceededMessage,
+  wholesaleConfirmErrorMessage,
+} from "../lib/confirm-shortage-message";
 import {
   CHECKOUT_ACCOUNT_PATH,
   CHECKOUT_EMPTY_SHIP_TOS_ACCOUNT_CTA,
@@ -36,6 +39,7 @@ export function CheckoutView() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [creditOverrideOpen, setCreditOverrideOpen] = useState(false);
+  const [creditOverrideMessage, setCreditOverrideMessage] = useState<string | null>(null);
 
   const activeCart = useActiveCart();
   const session = useGetWholesaleSession();
@@ -108,6 +112,7 @@ export function CheckoutView() {
         {
           onSuccess: () => {
             setCreditOverrideOpen(false);
+            setCreditOverrideMessage(null);
             removeDraftCartOrder(queryClient, confirmedId);
             if (wasActive) {
               activeCart.clearActiveCart();
@@ -124,6 +129,17 @@ export function CheckoutView() {
               "error" in error.data &&
               error.data.error === "credit_exceeded";
             if (!overrideCredit && staffActing && creditExceeded) {
+              const body = error.data as Record<string, unknown>;
+              setCreditOverrideMessage(
+                formatConfirmCreditExceededMessage({
+                  ...(typeof body.availableCreditCents === "number"
+                    ? { availableCreditCents: body.availableCreditCents }
+                    : {}),
+                  ...(typeof body.orderTotalCents === "number"
+                    ? { orderTotalCents: body.orderTotalCents }
+                    : {}),
+                }),
+              );
               setCreditOverrideOpen(true);
               return;
             }
@@ -283,14 +299,18 @@ export function CheckoutView() {
               Credit Limit Exceeded
             </h2>
             <p className="mt-3 text-sm text-sold-out">
-              This order exceeds the customer&apos;s available credit. Confirm only if
-              you intend to place it anyway.
+              {creditOverrideMessage ??
+                "This order exceeds the customer&apos;s available credit."}{" "}
+              Confirm only if you intend to place it anyway.
             </p>
             <div className="mt-6 flex flex-wrap justify-end gap-3">
               <button
                 type="button"
                 className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-ink"
-                onClick={() => setCreditOverrideOpen(false)}
+                onClick={() => {
+                  setCreditOverrideOpen(false);
+                  setCreditOverrideMessage(null);
+                }}
               >
                 Cancel
               </button>

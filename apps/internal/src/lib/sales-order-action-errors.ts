@@ -41,7 +41,7 @@ type CreditExceededBody = ActionErrorBody & {
   orderTotalCents?: number;
 };
 
-function formatCreditExceeded(data: CreditExceededBody): string {
+export function formatCreditExceededMessage(data: CreditExceededBody): string {
   if (data.availableCreditCents !== undefined && data.orderTotalCents !== undefined) {
     const available = (data.availableCreditCents / 100).toFixed(2);
     const total = (data.orderTotalCents / 100).toFixed(2);
@@ -62,7 +62,7 @@ export function confirmSalesOrderErrorMessage(result: {
   data?: ActionErrorBody;
 }): string {
   if (result.status === 409 && result.data?.error === "credit_exceeded") {
-    return formatCreditExceeded(result.data);
+    return formatCreditExceededMessage(result.data);
   }
   if (result.status === 409 && result.data?.error === "insufficient_atp") {
     return (

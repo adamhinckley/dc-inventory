@@ -1316,7 +1316,10 @@ export function composeAppServices(
     salesOrderRepo,
     appDb,
   });
-  const creditCheck = new SalesCreditCheckAdapter(accounting.getCustomerAccountingSummary);
+  const creditCheck = new SalesCreditCheckAdapter(
+    accounting.getCustomerAccountingSummary,
+    clock,
+  );
 
   return {
     features,

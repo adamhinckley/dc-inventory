@@ -50,6 +50,18 @@ export function wholesaleShortageErrorMessage(error: unknown, fallback: string):
   return fallback;
 }
 
+export function formatConfirmCreditExceededMessage(data: {
+  availableCreditCents?: number;
+  orderTotalCents?: number;
+}): string | null {
+  if (data.availableCreditCents === undefined || data.orderTotalCents === undefined) {
+    return null;
+  }
+  const available = (data.availableCreditCents / 100).toFixed(2);
+  const total = (data.orderTotalCents / 100).toFixed(2);
+  return `Available credit is $${available}; this order totals $${total}.`;
+}
+
 function wholesaleCreditExceededErrorMessage(error: unknown, fallback: string): string {
   if (!(error instanceof Error) || !("data" in error)) {
     return fallback;
@@ -62,14 +74,16 @@ function wholesaleCreditExceededErrorMessage(error: unknown, fallback: string): 
     data.error === "credit_exceeded"
   ) {
     const body = data as Record<string, unknown>;
-    const availableCreditCents =
-      typeof body.availableCreditCents === "number" ? body.availableCreditCents : undefined;
-    const orderTotalCents =
-      typeof body.orderTotalCents === "number" ? body.orderTotalCents : undefined;
-    if (availableCreditCents !== undefined && orderTotalCents !== undefined) {
-      const available = (availableCreditCents / 100).toFixed(2);
-      const total = (orderTotalCents / 100).toFixed(2);
-      return `Available credit is $${available}; this order totals $${total}.`;
+    const specific = formatConfirmCreditExceededMessage({
+      ...(typeof body.availableCreditCents === "number"
+        ? { availableCreditCents: body.availableCreditCents }
+        : {}),
+      ...(typeof body.orderTotalCents === "number"
+        ? { orderTotalCents: body.orderTotalCents }
+        : {}),
+    });
+    if (specific !== null) {
+      return specific;
     }
     return "This order exceeds your available credit.";
   }
