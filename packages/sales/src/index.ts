@@ -1,6 +1,7 @@
 export { AccountingCommandAdapter } from "./adapters/accounting-command-adapter.js";
 export { netOrderCoverQuantity, computeLineDeallocateQuantity } from "./adapters/order-cover.js";
 export { InMemoryCatalogProductPort } from "./adapters/in-memory-catalog-product-port.js";
+export { InMemoryCreditCheckPort } from "./adapters/in-memory-credit-check.js";
 export { InMemoryCustomerShipToSnapshotReadPort } from "./adapters/in-memory-customer-ship-to-snapshot-read.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { DrizzleCommittedCustomerNamesListQuery } from "./adapters/drizzle-committed-customer-names-list-query.js";
@@ -38,6 +39,7 @@ export type {
   CommittedCustomerNamesQuery,
   ICommittedCustomerNamesListQuery,
 } from "./domain/ports/committed-customer-names-list-query.js";
+export type { ICreditCheckPort } from "./domain/ports/credit-check.js";
 export type { IOpenOrderExposureReadPort } from "./domain/ports/open-order-exposure-read.js";
 export type { IClock } from "./domain/clock.js";
 export { SalesOrderLineId } from "./domain/ids.js";

@@ -17,6 +17,7 @@ import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
   permissiveDemoBillToSnapshotPort,
+  permissiveDemoCreditCheckPort,
   permissiveDemoCustomerTermsPort,
   productNameBySkuFromPlan,
   runReplaySalesOrders,
@@ -71,6 +72,7 @@ export async function runReplaySalesOrdersOnDb(
       products,
       invoices,
       billToSnapshot: permissiveDemoBillToSnapshotPort(),
+      creditCheck: permissiveDemoCreditCheckPort(),
     },
     {
       plan,

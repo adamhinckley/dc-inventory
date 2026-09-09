@@ -43,6 +43,13 @@ function toOrder(order: SalesOrder): SalesOrder {
     ...(order.placedByStaffUserId !== undefined
       ? { placedByStaffUserId: StaffUserId.parse(order.placedByStaffUserId) }
       : {}),
+    ...(order.creditLimitOverriddenByStaffUserId !== undefined
+      ? {
+          creditLimitOverriddenByStaffUserId: StaffUserId.parse(
+            order.creditLimitOverriddenByStaffUserId,
+          ),
+        }
+      : {}),
     shipLine1: order.shipLine1,
     shipLine2: order.shipLine2,
     shipCity: order.shipCity,

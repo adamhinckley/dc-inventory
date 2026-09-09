@@ -48,4 +48,17 @@ describe("wholesaleConfirmErrorMessage", () => {
       GENERIC_CONFIRM_ORDER_ERROR,
     );
   });
+
+  it("reads credit exceeded fields from a wholesale HTTP error", () => {
+    const error = Object.assign(new Error("HTTP 409 Conflict"), {
+      data: {
+        error: "credit_exceeded",
+        availableCreditCents: 2500,
+        orderTotalCents: 5000,
+      },
+    });
+    expect(wholesaleConfirmErrorMessage(error)).toBe(
+      "Available credit is $25.00; this order totals $50.00.",
+    );
+  });
 });

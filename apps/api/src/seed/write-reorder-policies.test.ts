@@ -41,6 +41,7 @@ import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
   permissiveDemoBillToSnapshotPort,
+  permissiveDemoCreditCheckPort,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
 import { runReplayDemoOrders } from "./replay-demo-orders.js";
@@ -146,6 +147,7 @@ describe("write reorder policies (in-memory)", () => {
         products: staticPorts.products,
         invoices: uow.invoices,
         billToSnapshot: permissiveDemoBillToSnapshotPort(),
+        creditCheck: permissiveDemoCreditCheckPort(),
       },
       {
         plan,

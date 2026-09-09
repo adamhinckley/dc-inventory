@@ -2,6 +2,7 @@
 
 import {
   useConfirmWholesaleSalesOrder,
+  useGetWholesaleSession,
   useListWholesaleShipTos,
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,10 +35,14 @@ export function CheckoutView() {
   const [selectedShipToId, setSelectedShipToId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [creditOverrideOpen, setCreditOverrideOpen] = useState(false);
 
   const activeCart = useActiveCart();
+  const session = useGetWholesaleSession();
   const shipTos = useListWholesaleShipTos();
   const confirmOrder = useConfirmWholesaleSalesOrder();
+  const staffActing =
+    session.data?.status === 200 && session.data.data.mode === "staff_acting";
 
   const shipToPayload = shipTos.data?.data;
 
@@ -76,6 +81,58 @@ export function CheckoutView() {
     !confirming &&
     !cartMutation.pending &&
     !cartMutation.dirty;
+
+  function submitConfirm(overrideCredit: boolean) {
+    if (draft === undefined) {
+      return;
+    }
+    setErrorMessage(null);
+    const confirmedId = draft.id;
+    const wasActive = activeCart.activeDraft?.id === confirmedId;
+    setConfirming(true);
+    void flushCartPendingChanges(confirmedId).then((ok) => {
+      if (!ok) {
+        setConfirming(false);
+        setErrorMessage("Could not save cart changes. Try again.");
+        return;
+      }
+      confirmOrder.mutate(
+        {
+          id: confirmedId,
+          data: {
+            idempotencyKey: `checkout-${confirmedId}`,
+            shipToId: selectedShipToId,
+            ...(overrideCredit ? { overrideCredit: true } : {}),
+          },
+        },
+        {
+          onSuccess: () => {
+            setCreditOverrideOpen(false);
+            removeDraftCartOrder(queryClient, confirmedId);
+            if (wasActive) {
+              activeCart.clearActiveCart();
+            }
+            router.push("/orders");
+          },
+          onError: (error) => {
+            setConfirming(false);
+            const creditExceeded =
+              error instanceof Error &&
+              "data" in error &&
+              typeof error.data === "object" &&
+              error.data !== null &&
+              "error" in error.data &&
+              error.data.error === "credit_exceeded";
+            if (!overrideCredit && staffActing && creditExceeded) {
+              setCreditOverrideOpen(true);
+              return;
+            }
+            setErrorMessage(wholesaleConfirmErrorMessage(error));
+          },
+        },
+      );
+    });
+  }
 
   if (activeCart.isPending || shipTos.isPending) {
     return <p className="text-ink-muted">Loading checkout…</p>;
@@ -203,39 +260,7 @@ export function CheckoutView() {
           disabled={!canConfirm}
           className="inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => {
-            setErrorMessage(null);
-            const confirmedId = draft.id;
-            const wasActive = activeCart.activeDraft?.id === confirmedId;
-            setConfirming(true);
-            void flushCartPendingChanges(confirmedId).then((ok) => {
-              if (!ok) {
-                setConfirming(false);
-                setErrorMessage("Could not save cart changes. Try again.");
-                return;
-              }
-              confirmOrder.mutate(
-                {
-                  id: confirmedId,
-                  data: {
-                    idempotencyKey: `checkout-${confirmedId}`,
-                    shipToId: selectedShipToId,
-                  },
-                },
-                {
-                  onSuccess: () => {
-                    removeDraftCartOrder(queryClient, confirmedId);
-                    if (wasActive) {
-                      activeCart.clearActiveCart();
-                    }
-                    router.push("/orders");
-                  },
-                  onError: (error) => {
-                    setConfirming(false);
-                    setErrorMessage(wholesaleConfirmErrorMessage(error));
-                  },
-                },
-              );
-            });
+            void submitConfirm(false);
           }}
         >
           {confirming || cartMutation.pending || cartMutation.dirty
@@ -245,6 +270,42 @@ export function CheckoutView() {
               : "Confirm Order"}
         </button>
       </div>
+
+      {creditOverrideOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-backdrop p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="credit-override-title"
+        >
+          <div className="overlay w-full max-w-md rounded-2xl border border-sold-out p-6 shadow-overlay">
+            <h2 id="credit-override-title" className="text-lg font-semibold text-ink">
+              Credit Limit Exceeded
+            </h2>
+            <p className="mt-3 text-sm text-sold-out">
+              This order exceeds the customer&apos;s available credit. Confirm only if
+              you intend to place it anyway.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-ink"
+                onClick={() => setCreditOverrideOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="rounded-full bg-sold-out px-4 py-2 text-sm font-semibold text-on-accent"
+                disabled={confirmOrder.isPending || confirming}
+                onClick={() => submitConfirm(true)}
+              >
+                {confirmOrder.isPending || confirming ? "Confirming…" : "Confirm Anyway"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -54,6 +54,7 @@ export const orders = sales.table(
     shipPostal: text("ship_postal"),
     shipCountry: text("ship_country"),
     placedByStaffUserId: uuid("placed_by_staff_user_id"),
+    creditLimitOverriddenByStaffUserId: uuid("credit_limit_overridden_by_staff_user_id"),
     ...timestamps(),
   },
   (table) => [

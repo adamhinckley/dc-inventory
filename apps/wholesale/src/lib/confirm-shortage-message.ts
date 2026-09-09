@@ -50,6 +50,36 @@ export function wholesaleShortageErrorMessage(error: unknown, fallback: string):
   return fallback;
 }
 
+function wholesaleCreditExceededErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof Error) || !("data" in error)) {
+    return fallback;
+  }
+  const data = error.data;
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "error" in data &&
+    data.error === "credit_exceeded"
+  ) {
+    const body = data as Record<string, unknown>;
+    const availableCreditCents =
+      typeof body.availableCreditCents === "number" ? body.availableCreditCents : undefined;
+    const orderTotalCents =
+      typeof body.orderTotalCents === "number" ? body.orderTotalCents : undefined;
+    if (availableCreditCents !== undefined && orderTotalCents !== undefined) {
+      const available = (availableCreditCents / 100).toFixed(2);
+      const total = (orderTotalCents / 100).toFixed(2);
+      return `Available credit is $${available}; this order totals $${total}.`;
+    }
+    return "This order exceeds your available credit.";
+  }
+  return fallback;
+}
+
 export function wholesaleConfirmErrorMessage(error: unknown): string {
+  const creditMessage = wholesaleCreditExceededErrorMessage(error, "");
+  if (creditMessage.length > 0) {
+    return creditMessage;
+  }
   return wholesaleShortageErrorMessage(error, GENERIC_CONFIRM_ORDER_ERROR);
 }

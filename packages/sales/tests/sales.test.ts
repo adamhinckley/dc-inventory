@@ -15,6 +15,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import { InMemoryCatalogProductPort } from "../src/adapters/in-memory-catalog-product-port.js";
+import { InMemoryCreditCheckPort } from "../src/adapters/in-memory-credit-check.js";
 import { InMemoryCustomerShipToSnapshotReadPort } from "../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import {
   CancelSalesOrderUseCase,
@@ -113,7 +114,7 @@ async function harness() {
     customers,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog),
     list: new ListSalesOrdersUseCase(uow.salesOrders),
-    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot),
+    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot, new InMemoryCreditCheckPort()),
     cancel: new CancelSalesOrderUseCase(uow),
     ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
@@ -604,7 +605,12 @@ describe("Sales (in-memory)", () => {
       customers,
       catalog,
     );
-    const confirm = new ConfirmSalesOrderUseCase(failingUow, customers, shipToSnapshot);
+    const confirm = new ConfirmSalesOrderUseCase(
+      failingUow,
+      customers,
+      shipToSnapshot,
+      new InMemoryCreditCheckPort(),
+    );
     const ship = new ShipSalesOrderUseCase(failingUow, billToSnapshot);
     const snapshot = new GetStockSnapshotUseCase(base.inventoryReadModel);
     const adjustmentIncrease = new RecordAdjustmentIncreaseUseCase(base.ledger);

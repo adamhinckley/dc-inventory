@@ -22,6 +22,7 @@ import {
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { InMemoryCatalogProductPort } from "../../src/adapters/in-memory-catalog-product-port.js";
+import { InMemoryCreditCheckPort } from "../../src/adapters/in-memory-credit-check.js";
 import { InMemoryCustomerShipToSnapshotReadPort } from "../../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import { InMemorySalesUnitOfWork } from "../../src/adapters/in-memory-sales-unit-of-work.js";
 import type { IClock } from "../../src/domain/clock.js";
@@ -149,9 +150,10 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     },
   ]);
 
+  const creditCheck = new InMemoryCreditCheckPort();
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
   const replaceLines = new ReplaceSalesOrderLinesUseCase(uow.salesOrders, customers, catalog);
-  const confirm = new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot);
+  const confirm = new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot, creditCheck);
   const cancel = new CancelSalesOrderUseCase(uow);
   const decommitLine = new DecommitSalesOrderLineUseCase(uow);
   const ship = new ShipSalesOrderUseCase(uow, billToSnapshot);
@@ -228,6 +230,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     readModel,
     accountStatus,
     catalog,
+    creditCheck,
     create,
     replaceLines,
     confirm,

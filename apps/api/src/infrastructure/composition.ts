@@ -244,6 +244,7 @@ import {
 } from "@dc-inventory/inventory";
 import { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
+import { SalesCreditCheckAdapter } from "../adapters/sales-credit-check.js";
 import {
   committedCustomerNamesPort,
   inventoryUncoveredReadPort,
@@ -825,6 +826,7 @@ function salesServices(
   billToSnapshot: ICustomerBillToSnapshotReadPort,
   shipToSnapshot: ICustomerShipToSnapshotReadPort,
   accountStatus: ICustomerAccountStatusReadPort,
+  creditCheck: import("@dc-inventory/sales").ICreditCheckPort,
 ): SalesHttpServices {
   const customers = customerLookupPort(customerRepo, accountStatus);
   return {
@@ -841,7 +843,12 @@ function salesServices(
       catalogProduct,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
-    confirmSalesOrder: new ConfirmSalesOrderUseCase(unitOfWork.sales, customers, shipToSnapshot),
+    confirmSalesOrder: new ConfirmSalesOrderUseCase(
+      unitOfWork.sales,
+      customers,
+      shipToSnapshot,
+      creditCheck,
+    ),
     cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
     shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot),
   };
@@ -1301,6 +1308,15 @@ export function composeAppServices(
     uncoveredSkuSupplier,
     uncoveredSkuDraftPurchaseOrder,
   );
+  const accounting = accountingServices({
+    invoiceRepo,
+    accountingUnitOfWork,
+    clock,
+    customerRepo,
+    salesOrderRepo,
+    appDb,
+  });
+  const creditCheck = new SalesCreditCheckAdapter(accounting.getCustomerAccountingSummary);
 
   return {
     features,
@@ -1399,6 +1415,7 @@ export function composeAppServices(
       unitOfWork,
       clock,
     ),
+    accounting,
     sales: salesServices(
       salesOrderRepo,
       customerRepo,
@@ -1408,15 +1425,8 @@ export function composeAppServices(
       readPorts.billToSnapshot,
       readPorts.shipToSnapshot,
       readPorts.accountStatus,
+      creditCheck,
     ),
-    accounting: accountingServices({
-      invoiceRepo,
-      accountingUnitOfWork,
-      clock,
-      customerRepo,
-      salesOrderRepo,
-      appDb,
-    }),
     licensing: licensingServices(licensingRepository),
     inventory: inventoryServices(
       unitOfWork,

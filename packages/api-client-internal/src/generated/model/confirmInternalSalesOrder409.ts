@@ -21,4 +21,16 @@ export type ConfirmInternalSalesOrder409 = {
      * @maximum 9007199254740991
      */
   availableQty?: number;
+} | {
+  error: 'credit_exceeded';
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  availableCreditCents?: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  orderTotalCents?: number;
 };
