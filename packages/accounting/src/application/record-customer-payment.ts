@@ -70,7 +70,7 @@ export class RecordCustomerPaymentUseCase {
     ) {
       return { ok: false, reason: "invalid" };
     }
-    if (input.applications.length === 0) {
+    if (input.applications.length === 0 && !input.holdRemainderAsCredit) {
       return { ok: false, reason: "invalid" };
     }
 

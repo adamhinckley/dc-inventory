@@ -101,6 +101,24 @@ export type PaymentPlanExpectations = {
   readonly nextExpectedOn: Date | null;
   readonly estimatedEndOn: Date | null;
   readonly installmentsReceived: number;
+  readonly installmentsExpectedSoFar: number;
+  readonly missedInstallments: number;
+  readonly complete: boolean;
+};
+
+export type ArAsOfContext = {
+  readonly asOf: Date;
+  readonly paymentsById: ReadonlyMap<PaymentId, Payment>;
+};
+
+export type PaymentApplicationPrefill = {
+  readonly invoiceId: import("@dc-inventory/shared-kernel").InvoiceId;
+  readonly amountCents: number;
+};
+
+export type PrefillPaymentApplicationsResult = {
+  readonly applications: readonly PaymentApplicationPrefill[];
+  readonly remainderCents: number;
 };
 
 function startOfUtcDay(value: Date): Date {
@@ -111,11 +129,44 @@ export function isPaymentVoided(payment: Payment): boolean {
   return payment.voidedAt != null;
 }
 
+export function isInvoicePostedAsOf(invoice: Invoice, asOf: Date): boolean {
+  return invoice.postedAt !== null && invoice.postedAt <= asOf;
+}
+
+export function filterAdjustmentsForAsOf(
+  adjustments: readonly InvoiceAdjustment[],
+  asOf: Date,
+): readonly InvoiceAdjustment[] {
+  return adjustments.filter((row) => row.createdAt <= asOf);
+}
+
+export function filterApplicationsForAsOf(
+  applications: readonly PaymentApplication[],
+  asOfContext: ArAsOfContext,
+  voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
+): readonly PaymentApplication[] {
+  return applications.filter((row) => {
+    if (voidedPaymentIds.has(row.paymentId)) {
+      return false;
+    }
+    const payment = asOfContext.paymentsById.get(row.paymentId);
+    if (payment === undefined || payment.receivedAt === undefined) {
+      return false;
+    }
+    return payment.receivedAt <= asOfContext.asOf;
+  });
+}
+
 export function computeAppliedCents(
   applications: readonly PaymentApplication[],
   voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
+  asOfContext?: ArAsOfContext,
 ): number {
-  return applications.reduce((sum, row) => {
+  const visibleApplications =
+    asOfContext === undefined
+      ? applications
+      : filterApplicationsForAsOf(applications, asOfContext, voidedPaymentIds);
+  return visibleApplications.reduce((sum, row) => {
     if (voidedPaymentIds.has(row.paymentId)) {
       return sum;
     }
@@ -123,8 +174,12 @@ export function computeAppliedCents(
   }, 0);
 }
 
-export function computeAdjustmentTotalCents(adjustments: readonly InvoiceAdjustment[]): number {
-  return adjustments.reduce((sum, row) => sum + row.amountCents, 0);
+export function computeAdjustmentTotalCents(
+  adjustments: readonly InvoiceAdjustment[],
+  asOf?: Date,
+): number {
+  const visibleAdjustments = asOf === undefined ? adjustments : filterAdjustmentsForAsOf(adjustments, asOf);
+  return visibleAdjustments.reduce((sum, row) => sum + row.amountCents, 0);
 }
 
 export function computeRemainingCents(
@@ -132,9 +187,11 @@ export function computeRemainingCents(
   applications: readonly PaymentApplication[],
   voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
   adjustments: readonly InvoiceAdjustment[] = [],
+  asOfContext?: ArAsOfContext,
 ): number {
-  const applied = computeAppliedCents(applications, voidedPaymentIds);
-  const adjustmentTotal = computeAdjustmentTotalCents(adjustments);
+  const asOf = asOfContext?.asOf;
+  const applied = computeAppliedCents(applications, voidedPaymentIds, asOfContext);
+  const adjustmentTotal = computeAdjustmentTotalCents(adjustments, asOf);
   return invoice.total.amountMinor - applied - adjustmentTotal;
 }
 
@@ -155,16 +212,24 @@ export function deriveInvoiceStatus(
   asOf: Date,
   voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
   adjustments: readonly InvoiceAdjustment[] = [],
+  asOfContext?: ArAsOfContext,
 ): ArInvoiceStatus {
-  const remaining = computeRemainingCents(invoice, applications, voidedPaymentIds, adjustments);
+  const remaining = computeRemainingCents(
+    invoice,
+    applications,
+    voidedPaymentIds,
+    adjustments,
+    asOfContext,
+  );
   if (remaining <= 0) {
     return "paid";
   }
   if (computeDaysPastDue(invoice.dueDate, asOf) > 0) {
     return "past_due";
   }
-  const applied = computeAppliedCents(applications, voidedPaymentIds);
-  if (applied > 0) {
+  const applied = computeAppliedCents(applications, voidedPaymentIds, asOfContext);
+  const adjustmentTotal = computeAdjustmentTotalCents(adjustments, asOfContext?.asOf ?? asOf);
+  if (applied + adjustmentTotal > 0) {
     return "partial";
   }
   return "open";
@@ -205,6 +270,7 @@ export function computeAgingBuckets(
   >,
   asOf: Date,
   voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
+  asOfContext?: ArAsOfContext,
 ): Readonly<Record<AgingBucket, number>> {
   const buckets: Record<AgingBucket, number> = {
     current: 0,
@@ -217,9 +283,18 @@ export function computeAgingBuckets(
   };
 
   for (const invoice of invoices) {
+    if (!isInvoicePostedAsOf(invoice, asOf)) {
+      continue;
+    }
     const applications = applicationsByInvoiceId.get(invoice.id) ?? [];
     const adjustments = adjustmentsByInvoiceId.get(invoice.id) ?? [];
-    const remaining = computeRemainingCents(invoice, applications, voidedPaymentIds, adjustments);
+    const remaining = computeRemainingCents(
+      invoice,
+      applications,
+      voidedPaymentIds,
+      adjustments,
+      asOfContext,
+    );
     if (remaining <= 0) {
       continue;
     }
@@ -233,12 +308,132 @@ export function computeAgingBuckets(
 export function computeUnappliedCents(
   payment: Payment,
   applications: readonly PaymentApplication[],
+  asOf?: Date,
 ): number {
   if (isPaymentVoided(payment)) {
     return 0;
   }
+  if (asOf !== undefined && payment.receivedAt !== undefined && payment.receivedAt > asOf) {
+    return 0;
+  }
   const applied = applications.reduce((sum, row) => sum + row.amount.amountMinor, 0);
   return payment.amount.amountMinor - applied;
+}
+
+export function computeUnappliedCreditCents(
+  payments: readonly Payment[],
+  applicationsByPaymentId: ReadonlyMap<PaymentId, readonly PaymentApplication[]>,
+  asOf?: Date,
+): number {
+  return payments.reduce((sum, payment) => {
+    const applications = applicationsByPaymentId.get(payment.id) ?? [];
+    return sum + computeUnappliedCents(payment, applications, asOf);
+  }, 0);
+}
+
+export function computeOpenBalanceCents(
+  invoices: readonly Invoice[],
+  applicationsByInvoiceId: ReadonlyMap<
+    import("@dc-inventory/shared-kernel").InvoiceId,
+    readonly PaymentApplication[]
+  >,
+  adjustmentsByInvoiceId: ReadonlyMap<
+    import("@dc-inventory/shared-kernel").InvoiceId,
+    readonly InvoiceAdjustment[]
+  >,
+  payments: readonly Payment[],
+  applicationsByPaymentId: ReadonlyMap<PaymentId, readonly PaymentApplication[]>,
+  voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
+  asOfContext?: ArAsOfContext,
+): number {
+  const asOf = asOfContext?.asOf;
+  let sumRemaining = 0;
+  for (const invoice of invoices) {
+    if (asOf !== undefined && !isInvoicePostedAsOf(invoice, asOf)) {
+      continue;
+    }
+    const applications = applicationsByInvoiceId.get(invoice.id) ?? [];
+    const adjustments = adjustmentsByInvoiceId.get(invoice.id) ?? [];
+    const remaining = computeRemainingCents(
+      invoice,
+      applications,
+      voidedPaymentIds,
+      adjustments,
+      asOfContext,
+    );
+    if (remaining > 0) {
+      sumRemaining += remaining;
+    }
+  }
+  const unappliedCredit = computeUnappliedCreditCents(payments, applicationsByPaymentId, asOf);
+  return sumRemaining - unappliedCredit;
+}
+
+export function prefillPaymentApplicationsOldestDueFirst(
+  invoices: readonly Invoice[],
+  applicationsByInvoiceId: ReadonlyMap<
+    import("@dc-inventory/shared-kernel").InvoiceId,
+    readonly PaymentApplication[]
+  >,
+  adjustmentsByInvoiceId: ReadonlyMap<
+    import("@dc-inventory/shared-kernel").InvoiceId,
+    readonly InvoiceAdjustment[]
+  >,
+  amountCents: number,
+  voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
+  asOfContext?: ArAsOfContext,
+): PrefillPaymentApplicationsResult {
+  const asOf = asOfContext?.asOf;
+  const openInvoices = invoices
+    .filter((invoice) => {
+      if (invoice.postedAt === null) {
+        return false;
+      }
+      if (asOf !== undefined && invoice.postedAt > asOf) {
+        return false;
+      }
+      const applications = applicationsByInvoiceId.get(invoice.id) ?? [];
+      const adjustments = adjustmentsByInvoiceId.get(invoice.id) ?? [];
+      const remaining = computeRemainingCents(
+        invoice,
+        applications,
+        voidedPaymentIds,
+        adjustments,
+        asOfContext,
+      );
+      return remaining > 0;
+    })
+    .sort((left, right) => {
+      const leftDue = left.dueDate?.getTime() ?? 0;
+      const rightDue = right.dueDate?.getTime() ?? 0;
+      if (leftDue !== rightDue) {
+        return leftDue - rightDue;
+      }
+      const leftPosted = left.postedAt?.getTime() ?? 0;
+      const rightPosted = right.postedAt?.getTime() ?? 0;
+      return leftPosted - rightPosted;
+    });
+
+  let remainderCents = amountCents;
+  const applications: PaymentApplicationPrefill[] = [];
+  for (const invoice of openInvoices) {
+    const invoiceApplications = applicationsByInvoiceId.get(invoice.id) ?? [];
+    const adjustments = adjustmentsByInvoiceId.get(invoice.id) ?? [];
+    const remaining = computeRemainingCents(
+      invoice,
+      invoiceApplications,
+      voidedPaymentIds,
+      adjustments,
+      asOfContext,
+    );
+    const amountToApply = Math.min(remainderCents, remaining);
+    if (amountToApply > 0) {
+      applications.push({ invoiceId: invoice.id, amountCents: amountToApply });
+      remainderCents -= amountToApply;
+    }
+  }
+
+  return { applications, remainderCents };
 }
 
 function addMonthsUtc(date: Date, months: number): Date {
@@ -258,6 +453,19 @@ function advancePlanDate(from: Date, frequency: PaymentPlanFrequency, steps: num
   return addMonthsUtc(from, steps);
 }
 
+function countPlanPeriodsElapsed(plan: PaymentPlan, asOf: Date): number {
+  if (asOf < plan.startsOn) {
+    return 0;
+  }
+  let count = 0;
+  let candidate = plan.startsOn;
+  while (candidate <= asOf) {
+    count += 1;
+    candidate = advancePlanDate(candidate, plan.frequency, 1);
+  }
+  return count;
+}
+
 export function computePlanExpectations(
   plan: PaymentPlan,
   openBalanceCents: number,
@@ -269,6 +477,9 @@ export function computePlanExpectations(
       nextExpectedOn: null,
       estimatedEndOn: null,
       installmentsReceived: 0,
+      installmentsExpectedSoFar: 0,
+      missedInstallments: 0,
+      complete: openBalanceCents <= 0,
     };
   }
 
@@ -277,11 +488,12 @@ export function computePlanExpectations(
       !isPaymentVoided(payment) &&
       payment.receivedAt != null &&
       payment.receivedAt >= plan.startsOn &&
+      payment.receivedAt <= asOf &&
       payment.amount.currency === plan.currency,
   );
-  const installmentsReceived = activePayments.filter(
-    (payment) => payment.amount.amountMinor >= plan.installmentAmountCents,
-  ).length;
+  const installmentsReceived = activePayments.length;
+  const installmentsExpectedSoFar = countPlanPeriodsElapsed(plan, asOf);
+  const missedInstallments = Math.max(0, installmentsExpectedSoFar - installmentsReceived);
 
   const installmentCount =
     plan.installmentAmountCents > 0
@@ -305,5 +517,8 @@ export function computePlanExpectations(
     nextExpectedOn,
     estimatedEndOn,
     installmentsReceived,
+    installmentsExpectedSoFar,
+    missedInstallments,
+    complete: openBalanceCents <= 0,
   };
 }

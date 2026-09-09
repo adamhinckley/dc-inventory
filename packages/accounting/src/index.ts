@@ -35,6 +35,7 @@ export type { ICustomerBillToSnapshotReadPort } from "./domain/ports/customer-bi
 export type { ICustomerTermsReadPort } from "./domain/ports/customer-terms-read.js";
 export type {
   AgingBucket,
+  ArAsOfContext,
   ArInvoiceStatus,
   Invoice,
   InvoiceAdjustment,
@@ -42,10 +43,12 @@ export type {
   InvoiceStatus,
   Payment,
   PaymentApplication,
+  PaymentApplicationPrefill,
   PaymentMethod,
   PaymentPlan,
   PaymentPlanExpectations,
   PaymentPlanFrequency,
+  PrefillPaymentApplicationsResult,
 } from "./domain/invoice.js";
 export {
   AGING_BUCKETS,
@@ -58,9 +61,15 @@ export {
   computeAgingBuckets,
   computeAppliedCents,
   computeDaysPastDue,
+  computeOpenBalanceCents,
   computePlanExpectations,
   computeRemainingCents,
   computeUnappliedCents,
+  computeUnappliedCreditCents,
   deriveInvoiceStatus,
+  filterAdjustmentsForAsOf,
+  filterApplicationsForAsOf,
+  isInvoicePostedAsOf,
   isPaymentVoided,
+  prefillPaymentApplicationsOldestDueFirst,
 } from "./domain/invoice.js";

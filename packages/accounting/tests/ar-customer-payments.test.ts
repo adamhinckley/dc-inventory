@@ -11,16 +11,21 @@ import { InMemoryAccountingUnitOfWork } from "../src/adapters/in-memory-accounti
 import {
   AdjustInvoiceUseCase,
   CreateInvoiceUseCase,
+  PaymentId,
   ReallocatePaymentUseCase,
   RecordCustomerPaymentUseCase,
   SetPaymentPlanUseCase,
   VoidPaymentUseCase,
   computeAgingBucket,
   computeDaysPastDue,
+  computeOpenBalanceCents,
   computePlanExpectations,
   computeRemainingCents,
   computeUnappliedCents,
   deriveInvoiceStatus,
+  filterAdjustmentsForAsOf,
+  filterApplicationsForAsOf,
+  prefillPaymentApplicationsOldestDueFirst,
 } from "../src/index.js";
 import { testInvoiceSnapshotPorts } from "./support/invoice-snapshot-port-fixtures.js";
 
@@ -431,6 +436,9 @@ describe("AR customer payments (ADA-357 Done criteria)", () => {
     const expectations = computePlanExpectations(planResult.plan, 1500, asOf, payments);
 
     expect(expectations.installmentsReceived).toBe(1);
+    expect(expectations.installmentsExpectedSoFar).toBe(1);
+    expect(expectations.missedInstallments).toBe(0);
+    expect(expectations.complete).toBe(false);
     expect(expectations.estimatedEndOn?.toISOString()).toBe(
       new Date("2026-02-01T00:00:00.000Z").toISOString(),
     );
@@ -477,5 +485,284 @@ describe("AR customer payments (ADA-357 Done criteria)", () => {
       return;
     }
     expect(conflict.reason).toBe("conflict");
+  });
+
+  it("credit memo alone yields partial status before paid", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa70",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc70",
+      totalCents: 1000,
+      dueDate: new Date("2027-03-01T00:00:00.000Z"),
+    });
+
+    const adjusted = await h.adjustInvoice.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId,
+      kind: "credit_memo",
+      amountCents: 200,
+      reason: "goodwill",
+    });
+    expect(adjusted.ok).toBe(true);
+
+    const invoice = (await h.uow.invoices.findById(DEFAULT_ORG, invoiceId))!;
+    const adjustments = await h.uow.invoices.listAdjustments(invoiceId);
+    const asOf = adjustments[0]!.createdAt;
+    expect(deriveInvoiceStatus(invoice, [], asOf, new Set(), adjustments)).toBe("partial");
+  });
+
+  it("prepay without open invoices is rejected unless holdRemainderAsCredit is true", async () => {
+    const h = await arHarness();
+
+    const rejected = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 1000,
+      currency: "USD",
+      method: "ach",
+      idempotencyKey: "prepay-no-flag",
+      holdRemainderAsCredit: false,
+      applications: [],
+    });
+    expect(rejected.ok).toBe(false);
+    if (rejected.ok) {
+      return;
+    }
+    expect(rejected.reason).toBe("invalid");
+
+    const prepay = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 1000,
+      currency: "USD",
+      method: "ach",
+      idempotencyKey: "prepay-with-flag",
+      holdRemainderAsCredit: true,
+      applications: [],
+    });
+    expect(prepay.ok).toBe(true);
+    if (!prepay.ok) {
+      return;
+    }
+    expect(prepay.unappliedCents).toBe(1000);
+  });
+
+  it("prefill helper allocates oldest due first with posted-date ties", async () => {
+    const h = await arHarness();
+    const olderDue = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa80",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc80",
+      totalCents: 500,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+    const newerDue = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa81",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc81",
+      totalCents: 800,
+      dueDate: new Date("2026-03-01T00:00:00.000Z"),
+    });
+
+    const invoices = [
+      (await h.uow.invoices.findById(DEFAULT_ORG, olderDue))!,
+      (await h.uow.invoices.findById(DEFAULT_ORG, newerDue))!,
+    ];
+    const applicationsByInvoiceId = new Map([
+      [olderDue, await h.uow.invoices.listApplications(olderDue)],
+      [newerDue, await h.uow.invoices.listApplications(newerDue)],
+    ]);
+    const adjustmentsByInvoiceId = new Map([
+      [olderDue, await h.uow.invoices.listAdjustments(olderDue)],
+      [newerDue, await h.uow.invoices.listAdjustments(newerDue)],
+    ]);
+
+    const prefill = prefillPaymentApplicationsOldestDueFirst(
+      invoices,
+      applicationsByInvoiceId,
+      adjustmentsByInvoiceId,
+      900,
+    );
+    expect(prefill.applications).toEqual([
+      { invoiceId: olderDue, amountCents: 500 },
+      { invoiceId: newerDue, amountCents: 400 },
+    ]);
+    expect(prefill.remainderCents).toBe(0);
+  });
+
+  it("as-of ignores future-dated invoices, payments, and adjustments", async () => {
+    const h = await arHarness();
+    const asOf = new Date("2026-02-01T00:00:00.000Z");
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa90",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc90",
+      totalCents: 1000,
+      dueDate: new Date("2026-01-15T00:00:00.000Z"),
+    });
+
+    const futurePayment = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 400,
+      currency: "USD",
+      method: "check",
+      receivedAt: new Date("2026-02-15T00:00:00.000Z"),
+      idempotencyKey: "future-payment",
+      holdRemainderAsCredit: false,
+      applications: [{ invoiceId, amountCents: 400 }],
+    });
+    expect(futurePayment.ok).toBe(true);
+
+    const invoice = (await h.uow.invoices.findById(DEFAULT_ORG, invoiceId))!;
+    const applications = await h.uow.invoices.listApplications(invoiceId);
+    const payments = await h.uow.invoices.listPaymentsByCustomer(DEFAULT_ORG, CUSTOMER_ID);
+    const paymentsById = new Map(payments.map((payment) => [payment.id, payment]));
+    const asOfContext = { asOf, paymentsById };
+
+    expect(
+      computeRemainingCents(invoice, applications, new Set(), [], asOfContext),
+    ).toBe(1000);
+    expect(deriveInvoiceStatus(invoice, applications, asOf, new Set(), [], asOfContext)).toBe(
+      "past_due",
+    );
+
+    const futureAdjustment = await h.adjustInvoice.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId,
+      kind: "credit_memo",
+      amountCents: 100,
+      reason: "future credit",
+    });
+    expect(futureAdjustment.ok).toBe(true);
+    const adjustments = await h.uow.invoices.listAdjustments(invoiceId);
+    const visibleAdjustments = filterAdjustmentsForAsOf(adjustments, asOf);
+    expect(visibleAdjustments).toHaveLength(0);
+    expect(
+      computeRemainingCents(invoice, applications, new Set(), adjustments, asOfContext),
+    ).toBe(1000);
+    expect(
+      filterApplicationsForAsOf(applications, asOfContext, new Set()).map((row) => row.amount.amountMinor),
+    ).toEqual([]);
+  });
+
+  it("voided payment is ignored at every asOf even when voided after the as-of date", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa91",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc91",
+      totalCents: 1000,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+
+    const recorded = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 600,
+      currency: "USD",
+      method: "card",
+      receivedAt: new Date("2026-01-10T00:00:00.000Z"),
+      idempotencyKey: "void-asof",
+      holdRemainderAsCredit: true,
+      applications: [{ invoiceId, amountCents: 400 }],
+    });
+    expect(recorded.ok).toBe(true);
+    if (!recorded.ok) {
+      return;
+    }
+
+    const voided = await h.voidPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      paymentId: recorded.paymentId,
+      voidReason: "entered in error",
+    });
+    expect(voided.ok).toBe(true);
+
+    const asOfBeforeVoid = new Date("2026-01-20T00:00:00.000Z");
+    const invoice = (await h.uow.invoices.findById(DEFAULT_ORG, invoiceId))!;
+    const applications = await h.uow.invoices.listApplications(invoiceId);
+    const payments = await h.uow.invoices.listPaymentsByCustomer(DEFAULT_ORG, CUSTOMER_ID);
+    const payment = payments.find((row) => row.id === recorded.paymentId)!;
+    const voidedIds = new Set<PaymentId>([recorded.paymentId]);
+
+    expect(computeRemainingCents(invoice, applications, voidedIds)).toBe(1000);
+    expect(computeUnappliedCents(payment, await h.uow.invoices.listApplicationsByPayment(recorded.paymentId))).toBe(0);
+
+    const applicationsByInvoiceId = new Map([[invoiceId, applications]]);
+    const adjustmentsByInvoiceId = new Map([[invoiceId, []]]);
+    const applicationsByPaymentId = new Map([
+      [recorded.paymentId, await h.uow.invoices.listApplicationsByPayment(recorded.paymentId)],
+    ]);
+    expect(
+      computeOpenBalanceCents(
+        [invoice],
+        applicationsByInvoiceId,
+        adjustmentsByInvoiceId,
+        payments,
+        applicationsByPaymentId,
+        voidedIds,
+      ),
+    ).toBe(1000);
+  });
+
+  it("plan expectations count every non-void payment after startsOn and show missed installments", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa92",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc92",
+      totalCents: 3000,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+    const startsOn = new Date("2026-01-01T00:00:00.000Z");
+    const planResult = await h.setPaymentPlan.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      frequency: "monthly",
+      installmentAmountCents: 1000,
+      currency: "USD",
+      startsOn,
+    });
+    expect(planResult.ok).toBe(true);
+    if (!planResult.ok) {
+      return;
+    }
+
+    await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 250,
+      currency: "USD",
+      method: "card",
+      receivedAt: new Date("2026-01-05T00:00:00.000Z"),
+      idempotencyKey: "small-installment",
+      holdRemainderAsCredit: true,
+      applications: [],
+    });
+    await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 100,
+      currency: "USD",
+      method: "cash",
+      receivedAt: new Date("2026-01-20T00:00:00.000Z"),
+      idempotencyKey: "tiny-installment",
+      holdRemainderAsCredit: true,
+      applications: [],
+    });
+
+    const asOf = new Date("2026-02-15T00:00:00.000Z");
+    const payments = await h.uow.invoices.listPaymentsByCustomer(DEFAULT_ORG, CUSTOMER_ID);
+    const expectations = computePlanExpectations(planResult.plan, 3000, asOf, payments);
+
+    expect(expectations.installmentsReceived).toBe(2);
+    expect(expectations.installmentsExpectedSoFar).toBe(2);
+    expect(expectations.missedInstallments).toBe(0);
   });
 });
