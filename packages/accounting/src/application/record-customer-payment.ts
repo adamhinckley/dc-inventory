@@ -86,6 +86,7 @@ export class RecordCustomerPaymentUseCase {
       method: input.method,
       reference,
       note,
+      receivedAt,
       holdRemainderAsCredit: input.holdRemainderAsCredit,
       applications: input.applications.map((row) => ({
         invoiceId: row.invoiceId,
@@ -121,6 +122,7 @@ export class RecordCustomerPaymentUseCase {
       }
 
       let appliedTotal = 0;
+      const totalsByInvoice = new Map<InvoiceId, number>();
       for (const application of input.applications) {
         if (!Number.isInteger(application.amountCents) || application.amountCents <= 0) {
           return { ok: false, reason: "invalid" };
@@ -136,12 +138,19 @@ export class RecordCustomerPaymentUseCase {
         if (invoice.total.currency !== currency) {
           return { ok: false, reason: "wrong_currency" };
         }
+        totalsByInvoice.set(
+          application.invoiceId,
+          (totalsByInvoice.get(application.invoiceId) ?? 0) + application.amountCents,
+        );
+      }
+
+      for (const [invoiceId, totalForInvoice] of totalsByInvoice) {
         const remaining = await remainingForInvoice(
           invoices,
           input.organizationId,
-          application.invoiceId,
+          invoiceId,
         );
-        if (remaining === null || application.amountCents > remaining) {
+        if (remaining === null || totalForInvoice > remaining) {
           return { ok: false, reason: "overpay" };
         }
       }

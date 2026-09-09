@@ -67,6 +67,7 @@ export class AdjustInvoiceUseCase {
         invoiceId: input.invoiceId,
         kind: input.kind,
         amountCents: input.amountCents,
+        currency: invoice.total.currency,
         reason,
         createdAt,
         createdBy: input.staffUserId,

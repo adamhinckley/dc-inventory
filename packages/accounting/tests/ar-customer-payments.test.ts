@@ -12,6 +12,7 @@ import type { InvoiceAdjustment, PaymentApplication } from "../src/index.js";
 import {
   AdjustInvoiceUseCase,
   CreateInvoiceUseCase,
+  EndPaymentPlanUseCase,
   PaymentId,
   ReallocatePaymentUseCase,
   RecordCustomerPaymentUseCase,
@@ -52,6 +53,7 @@ async function arHarness() {
     voidPayment: new VoidPaymentUseCase(uow),
     adjustInvoice: new AdjustInvoiceUseCase(uow),
     setPaymentPlan: new SetPaymentPlanUseCase(uow),
+    endPaymentPlan: new EndPaymentPlanUseCase(uow),
   };
 }
 
@@ -565,6 +567,265 @@ describe("AR customer payments (ADA-357 Done criteria)", () => {
       return;
     }
     expect(conflict.reason).toBe("conflict");
+  });
+
+  it("rejects two application lines on one invoice whose combined amount exceeds remaining", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa61",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc61",
+      totalCents: 1000,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+
+    const overpay = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 1000,
+      currency: "USD",
+      method: "check",
+      idempotencyKey: "split-line-overpay",
+      holdRemainderAsCredit: false,
+      applications: [
+        { invoiceId, amountCents: 600 },
+        { invoiceId, amountCents: 500 },
+      ],
+    });
+    expect(overpay.ok).toBe(false);
+    if (overpay.ok) {
+      return;
+    }
+    expect(overpay.reason).toBe("overpay");
+  });
+
+  it("idempotency conflict rejects the same key with a different receivedAt", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa62",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc62",
+      totalCents: 1000,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+    const receivedAt = new Date("2026-03-01T00:00:00.000Z");
+
+    const first = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 500,
+      currency: "USD",
+      method: "check",
+      receivedAt,
+      idempotencyKey: "received-at-conflict",
+      holdRemainderAsCredit: false,
+      applications: [{ invoiceId, amountCents: 500 }],
+    });
+    expect(first.ok).toBe(true);
+
+    const conflict = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 500,
+      currency: "USD",
+      method: "check",
+      receivedAt: new Date("2026-03-02T00:00:00.000Z"),
+      idempotencyKey: "received-at-conflict",
+      holdRemainderAsCredit: false,
+      applications: [{ invoiceId, amountCents: 500 }],
+    });
+    expect(conflict.ok).toBe(false);
+    if (conflict.ok) {
+      return;
+    }
+    expect(conflict.reason).toBe("conflict");
+  });
+
+  it("treats same customer payment key and payload as no-op success", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa63",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc63",
+      totalCents: 1000,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+    const receivedAt = new Date("2026-03-01T00:00:00.000Z");
+
+    const first = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 400,
+      currency: "USD",
+      method: "card",
+      receivedAt,
+      idempotencyKey: "customer-idem-noop",
+      holdRemainderAsCredit: false,
+      applications: [{ invoiceId, amountCents: 400 }],
+    });
+    expect(first.ok).toBe(true);
+
+    const second = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 400,
+      currency: "USD",
+      method: "card",
+      receivedAt,
+      idempotencyKey: "customer-idem-noop",
+      holdRemainderAsCredit: false,
+      applications: [{ invoiceId, amountCents: 400 }],
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) {
+      return;
+    }
+    expect(second.remainingByInvoiceId[String(invoiceId)]).toBe(600);
+  });
+
+  it("reallocate rejects two positive deltas to the same invoice that exceed remaining", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa64",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc64",
+      totalCents: 500,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+    const secondInvoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa65",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc65",
+      totalCents: 1000,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+
+    const recorded = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 1000,
+      currency: "USD",
+      method: "check",
+      idempotencyKey: "reallocate-multi-delta",
+      holdRemainderAsCredit: false,
+      applications: [{ invoiceId: secondInvoiceId, amountCents: 1000 }],
+    });
+    expect(recorded.ok).toBe(true);
+    if (!recorded.ok) {
+      return;
+    }
+
+    const reallocated = await h.reallocate.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      paymentId: recorded.paymentId,
+      applications: [
+        { invoiceId: secondInvoiceId, deltaCents: -500 },
+        { invoiceId, deltaCents: 300 },
+        { invoiceId, deltaCents: 300 },
+      ],
+    });
+    expect(reallocated.ok).toBe(false);
+    if (reallocated.ok) {
+      return;
+    }
+    expect(reallocated.reason).toBe("overpay");
+  });
+
+  it("end payment plan allows a replacement plan and rejects ending twice", async () => {
+    const h = await arHarness();
+    const startsOn = new Date("2026-01-01T00:00:00.000Z");
+    const planResult = await h.setPaymentPlan.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      frequency: "monthly",
+      installmentAmountCents: 1000,
+      currency: "USD",
+      startsOn,
+    });
+    expect(planResult.ok).toBe(true);
+    if (!planResult.ok) {
+      return;
+    }
+
+    const ended = await h.endPaymentPlan.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      planId: planResult.plan.id,
+    });
+    expect(ended.ok).toBe(true);
+
+    const replacement = await h.setPaymentPlan.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      frequency: "weekly",
+      installmentAmountCents: 250,
+      currency: "USD",
+      startsOn: new Date("2026-02-01T00:00:00.000Z"),
+    });
+    expect(replacement.ok).toBe(true);
+
+    const secondEnd = await h.endPaymentPlan.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      planId: planResult.plan.id,
+    });
+    expect(secondEnd.ok).toBe(false);
+    if (secondEnd.ok) {
+      return;
+    }
+    expect(secondEnd.reason).toBe("conflict");
+  });
+
+  it("filterApplicationsForAsOf excludes voided payments without an explicit voided set", async () => {
+    const h = await arHarness();
+    const invoiceId = await seedPostedInvoice(h, {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa66",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc66",
+      totalCents: 1000,
+      dueDate: new Date("2026-02-01T00:00:00.000Z"),
+    });
+
+    const recorded = await h.recordCustomerPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      amountCents: 600,
+      currency: "USD",
+      method: "card",
+      receivedAt: new Date("2026-01-10T00:00:00.000Z"),
+      idempotencyKey: "voided-asof-map",
+      holdRemainderAsCredit: true,
+      applications: [{ invoiceId, amountCents: 400 }],
+    });
+    expect(recorded.ok).toBe(true);
+    if (!recorded.ok) {
+      return;
+    }
+
+    await h.voidPayment.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      paymentId: recorded.paymentId,
+      voidReason: "entered in error",
+    });
+
+    const asOf = new Date("2026-01-20T00:00:00.000Z");
+    const invoice = (await h.uow.invoices.findById(DEFAULT_ORG, invoiceId))!;
+    const applications = await h.uow.invoices.listApplications(invoiceId);
+    const payments = await h.uow.invoices.listPaymentsByCustomer(DEFAULT_ORG, CUSTOMER_ID);
+    const paymentsById = new Map(payments.map((payment) => [payment.id, payment]));
+    const asOfContext = { asOf, paymentsById };
+
+    expect(
+      filterApplicationsForAsOf(applications, asOfContext, new Set()).map(
+        (row) => row.amount.amountMinor,
+      ),
+    ).toEqual([]);
+    expect(computeRemainingCents(invoice, applications, new Set(), [], asOfContext)).toBe(1000);
   });
 
   it("credit memo alone yields partial status before paid", async () => {

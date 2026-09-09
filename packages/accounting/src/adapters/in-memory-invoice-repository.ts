@@ -356,6 +356,7 @@ export class InMemoryInvoiceRepository implements IAccountingRepository {
       invoiceId: InvoiceId.parse(adjustment.invoiceId),
       kind: adjustment.kind,
       amountCents: adjustment.amountCents,
+      currency: adjustment.currency,
       reason: adjustment.reason,
       createdAt: new Date(adjustment.createdAt.getTime()),
       createdBy: adjustment.createdBy,

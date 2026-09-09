@@ -79,6 +79,7 @@ export type InvoiceAdjustment = {
   readonly invoiceId: import("@dc-inventory/shared-kernel").InvoiceId;
   readonly kind: InvoiceAdjustmentKind;
   readonly amountCents: number;
+  readonly currency: string;
   readonly reason: string;
   readonly createdAt: Date;
   readonly createdBy: StaffUserId;
@@ -151,6 +152,9 @@ export function filterApplicationsForAsOf(
     }
     const payment = asOfContext.paymentsById.get(row.paymentId);
     if (payment === undefined || payment.receivedAt === undefined) {
+      return false;
+    }
+    if (isPaymentVoided(payment)) {
       return false;
     }
     return payment.receivedAt <= asOfContext.asOf;

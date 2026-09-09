@@ -2,10 +2,9 @@ import { InvoiceId, Money, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import { PaymentApplicationId } from "../domain/ids.js";
 import type { PaymentId } from "../domain/ids.js";
-import { computeRemainingCents } from "../domain/invoice.js";
 import type { AccountingUnitOfWorkWithCustomerPayments } from "../domain/ports/invoice-repository.js";
 import type { PaymentApplication } from "../domain/invoice.js";
-import { collectVoidedPaymentIds, remainingForInvoice } from "./customer-payment-support.js";
+import { remainingForInvoice } from "./customer-payment-support.js";
 
 export type ReallocatePaymentApplicationInput = {
   readonly invoiceId: InvoiceId;
@@ -51,6 +50,7 @@ export class ReallocatePaymentUseCase {
       );
       const unappliedCents = payment.amount.amountMinor - appliedTotal;
       let deltaTotal = 0;
+      const deltasByInvoice = new Map<InvoiceId, number>();
 
       for (const change of input.applications) {
         if (!Number.isInteger(change.deltaCents) || change.deltaCents === 0) {
@@ -69,10 +69,17 @@ export class ReallocatePaymentUseCase {
           return { ok: false, reason: "wrong_currency" };
         }
 
+        deltasByInvoice.set(
+          change.invoiceId,
+          (deltasByInvoice.get(change.invoiceId) ?? 0) + change.deltaCents,
+        );
+      }
+
+      for (const [invoiceId, combinedDelta] of deltasByInvoice) {
         const currentApplied = existingApplications
-          .filter((row) => row.invoiceId === change.invoiceId)
+          .filter((row) => row.invoiceId === invoiceId)
           .reduce((sum, row) => sum + row.amount.amountMinor, 0);
-        const nextApplied = currentApplied + change.deltaCents;
+        const nextApplied = currentApplied + combinedDelta;
         if (nextApplied < 0) {
           return { ok: false, reason: "invalid" };
         }
@@ -80,7 +87,7 @@ export class ReallocatePaymentUseCase {
         const remaining = await remainingForInvoice(
           invoices,
           input.organizationId,
-          change.invoiceId,
+          invoiceId,
         );
         if (remaining === null) {
           return { ok: false, reason: "not_found" };
