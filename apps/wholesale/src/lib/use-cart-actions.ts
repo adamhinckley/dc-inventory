@@ -13,6 +13,7 @@ import {
 } from "./cart-mutation-gate";
 import {
   linesForReplace,
+  mapDraftLineQty,
   remainingDraftLines,
   toReplaceLines,
   type DraftCartLine,
@@ -62,26 +63,24 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
   const mutationGate = useCartMutationGate(draft?.id);
   const draftId = draft?.id;
   const mutationState = draftId === undefined ? undefined : acquireDraftMutationState(draftId);
-  const persistQtyRef = useRef<(lines: ReplacePayload) => Promise<boolean>>(async () => true);
 
   async function persist(
+    targetDraftId: string,
     lines: ReplacePayload | null,
     failMessage: string,
     label?: string | null,
   ): Promise<boolean> {
-    if (mutationState === undefined || draftId === undefined) {
-      return false;
-    }
-    mutationState.queuedPersist = { lines, failMessage, label };
-    const run = mutationState.persistGate.then(async () => {
-      const next = mutationState.queuedPersist;
-      mutationState.queuedPersist = null;
+    const state = acquireDraftMutationState(targetDraftId);
+    state.queuedPersist = { lines, failMessage, label };
+    const run = state.persistGate.then(async () => {
+      const next = state.queuedPersist;
+      state.queuedPersist = null;
       if (next === null) {
         return true;
       }
-      return persistNow(next.lines, next.failMessage, next.label);
+      return persistNow(targetDraftId, next.lines, next.failMessage, next.label);
     });
-    mutationState.persistGate = run.then(
+    state.persistGate = run.then(
       () => undefined,
       () => undefined,
     );
@@ -89,12 +88,14 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
   }
 
   async function persistNow(
+    targetDraftId: string,
     lines: ReplacePayload | null,
     failMessage: string,
     label?: string | null,
   ): Promise<boolean> {
-    const currentDraft = draftRef.current;
-    if (currentDraft === undefined || draftId === undefined || mutationState === undefined) {
+    const state = acquireDraftMutationState(targetDraftId);
+    const currentDraft = readDraftCartOrder(queryClient, targetDraftId);
+    if (currentDraft === undefined) {
       return false;
     }
     if (lines === null) {
@@ -102,10 +103,10 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       return false;
     }
     setMessage(null);
-    const previous = mutationState.burstPrevious ?? readDraftCartList(queryClient);
-    mutationState.burstPrevious = undefined;
+    const previous = state.burstPrevious ?? readDraftCartList(queryClient);
+    state.burstPrevious = undefined;
     if (lines.length === 0) {
-      removeDraftCartOrder(queryClient, currentDraft.id);
+      removeDraftCartOrder(queryClient, targetDraftId);
     } else {
       const optimistic = buildOptimisticDraftOrder(currentDraft, lines);
       writeDraftCartOrder(
@@ -117,10 +118,10 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
             : { ...optimistic, label },
       );
     }
-    trackCartReplaceStart(draftId);
+    trackCartReplaceStart(targetDraftId);
     try {
       const response = await replaceLines.mutateAsync({
-        id: currentDraft.id,
+        id: targetDraftId,
         data: label === undefined ? { lines } : { lines, label },
       });
       if (response.status === 200) {
@@ -128,20 +129,21 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       }
       return true;
     } catch (error) {
-      mutationState.qtyTask.cancel();
+      state.qtyTask.cancel();
       if (previous !== undefined) {
         queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
       }
       setMessage(wholesaleShortageErrorMessage(error, failMessage));
       return false;
     } finally {
-      trackCartReplaceEnd(draftId);
+      trackCartReplaceEnd(targetDraftId);
     }
   }
 
-  persistQtyRef.current = async (lines) => persist(lines, "Could not update item");
-  if (mutationState !== undefined) {
-    mutationState.persistQtyHandler = async (lines) => persistQtyRef.current(lines);
+  if (mutationState !== undefined && draftId !== undefined) {
+    const boundDraftId = draftId;
+    mutationState.persistQtyHandler = async (lines) =>
+      persist(boundDraftId, lines, "Could not update item");
   }
 
   async function toPayload(lines: readonly DraftCartLine[]): Promise<ReplacePayload | null> {
@@ -156,13 +158,14 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
     return readDraftCartOrder(queryClient, current.id) ?? current;
   }
 
-  function writeOptimisticQty(lines: ReplacePayload): void {
-    const currentDraft = draftRef.current;
-    if (currentDraft === undefined || mutationState === undefined) {
+  function writeOptimisticQty(targetDraftId: string, lines: ReplacePayload): void {
+    const currentDraft = readDraftCartOrder(queryClient, targetDraftId);
+    if (currentDraft === undefined) {
       return;
     }
-    if (mutationState.burstPrevious === undefined) {
-      mutationState.burstPrevious = readDraftCartList(queryClient);
+    const state = acquireDraftMutationState(targetDraftId);
+    if (state.burstPrevious === undefined) {
+      state.burstPrevious = readDraftCartList(queryClient);
     }
     writeDraftCartOrder(queryClient, buildOptimisticDraftOrder(currentDraft, lines));
   }
@@ -179,7 +182,7 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       return flushCartPendingChanges(draftId);
     },
     async setLineQty(lineId, qty) {
-      if (mutationState === undefined) {
+      if (mutationState === undefined || draftId === undefined) {
         return false;
       }
       await mutationState.qtyTask.flush();
@@ -189,12 +192,13 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       }
       if (qty <= 0) {
         return persist(
+          draftId,
           await toPayload(remainingDraftLines(current.lines, lineId)),
           "Could not remove item",
         );
       }
-      const next = current.lines.map((line) => (line.id === lineId ? { ...line, qty } : line));
-      return persist(await toPayload(next), "Could not update item");
+      const next = mapDraftLineQty(current.lines, lineId, qty);
+      return persist(draftId, await toPayload(next), "Could not update item");
     },
     async adjustLineQty(lineId, delta) {
       if (mutationState === undefined || draftId === undefined) {
@@ -213,17 +217,18 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
         mutationState.qtyTask.cancel();
         setCartQtyDirty(draftId, false);
         return persist(
+          draftId,
           await toPayload(remainingDraftLines(current.lines, lineId)),
           "Could not remove item",
         );
       }
-      const next = current.lines.map((item) => (item.id === lineId ? { ...item, qty } : line));
+      const next = mapDraftLineQty(current.lines, lineId, qty);
       const payload = await toPayload(next);
       if (payload === null) {
         setMessage("Could not update item");
         return false;
       }
-      writeOptimisticQty(payload);
+      writeOptimisticQty(draftId, payload);
       mutationState.qtyTask.schedule(payload);
       setCartQtyDirty(draftId, true);
       return true;
@@ -240,12 +245,12 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       }
       const payload = await toPayload(remainingDraftLines(current.lines, lineId));
       if (payload !== null) {
-        writeOptimisticQty(payload);
+        writeOptimisticQty(draftId, payload);
       }
-      return persist(payload, "Could not remove item");
+      return persist(draftId, payload, "Could not remove item");
     },
     async rename(label) {
-      if (mutationState === undefined) {
+      if (mutationState === undefined || draftId === undefined) {
         return false;
       }
       await mutationState.qtyTask.flush();
@@ -253,14 +258,14 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       if (current === undefined) {
         return false;
       }
-      return persist(await toPayload(current.lines), "Could not rename cart", label);
+      return persist(draftId, await toPayload(current.lines), "Could not rename cart", label);
     },
     async deleteCart() {
-      if (mutationState === undefined) {
+      if (draftId === undefined || mutationState === undefined) {
         return false;
       }
       mutationState.qtyTask.cancel();
-      return persist([], "Could not delete cart");
+      return persist(draftId, [], "Could not delete cart");
     },
   };
 }

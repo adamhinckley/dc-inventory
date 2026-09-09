@@ -43,4 +43,34 @@ describe("cart-mutation-gate", () => {
     trackCartReplaceEnd(draftId);
     expect(readCartMutationSnapshot(draftId).pending).toBe(false);
   });
+
+  it("reuses snapshot object identity when pending/dirty are unchanged", () => {
+    const idle = readCartMutationSnapshot(undefined);
+    expect(readCartMutationSnapshot(undefined)).toBe(idle);
+
+    const draftId = "draft-stable";
+    trackCartReplaceStart(draftId);
+    const pending = readCartMutationSnapshot(draftId);
+    expect(readCartMutationSnapshot(draftId)).toBe(pending);
+    trackCartReplaceEnd(draftId);
+  });
+
+  it("runs each draft's persistQtyHandler independently", async () => {
+    const draftA = acquireDraftMutationState("draft-a");
+    const draftB = acquireDraftMutationState("draft-b");
+    const calls: string[] = [];
+    draftA.persistQtyHandler = async () => {
+      calls.push("a");
+      return true;
+    };
+    draftB.persistQtyHandler = async () => {
+      calls.push("b");
+      return true;
+    };
+
+    draftA.qtyTask.schedule([{ productId: "p1", qty: 1 }]);
+    await draftA.qtyTask.flush();
+
+    expect(calls).toEqual(["a"]);
+  });
 });

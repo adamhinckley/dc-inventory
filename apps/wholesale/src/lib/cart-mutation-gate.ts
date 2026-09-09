@@ -31,6 +31,8 @@ type DraftMutationState = {
 
 const gates = new Map<string, DraftMutationState>();
 const listeners = new Set<() => void>();
+const EMPTY_SNAPSHOT: CartMutationSnapshot = { pending: false, dirty: false };
+const snapshotCache = new Map<string, CartMutationSnapshot>();
 
 function emit(): void {
   for (const listener of listeners) {
@@ -47,16 +49,21 @@ function subscribe(listener: () => void): () => void {
 
 function readSnapshot(draftId: string | undefined): CartMutationSnapshot {
   if (draftId === undefined) {
-    return { pending: false, dirty: false };
+    return EMPTY_SNAPSHOT;
   }
   const state = gates.get(draftId);
   if (state === undefined) {
-    return { pending: false, dirty: false };
+    return EMPTY_SNAPSHOT;
   }
-  return {
-    pending: state.inFlightCount > 0,
-    dirty: state.qtyDirty || state.qtyTask.hasPending(),
-  };
+  const pending = state.inFlightCount > 0;
+  const dirty = state.qtyDirty || state.qtyTask.hasPending();
+  const cached = snapshotCache.get(draftId);
+  if (cached !== undefined && cached.pending === pending && cached.dirty === dirty) {
+    return cached;
+  }
+  const snapshot: CartMutationSnapshot = { pending, dirty };
+  snapshotCache.set(draftId, snapshot);
+  return snapshot;
 }
 
 function createDraftMutationState(draftId: string): DraftMutationState {
@@ -102,7 +109,7 @@ export function useCartMutationGate(draftId: string | undefined): CartMutationSn
   return useSyncExternalStore(
     subscribe,
     () => readSnapshot(draftId),
-    () => ({ pending: false, dirty: false }),
+    () => EMPTY_SNAPSHOT,
   );
 }
 
