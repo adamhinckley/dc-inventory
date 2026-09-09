@@ -18,6 +18,9 @@ export type CorrectPaymentResult =
   | { ok: true; remainingCents: number }
   | { ok: false; reason: "not_found" | "invalid" | "wrong_currency" };
 
+/**
+ * @deprecated Use ReallocatePaymentUseCase instead. Kept until AR 5 removes the route.
+ */
 export class CorrectPaymentUseCase {
   constructor(
     private readonly unitOfWork: IAccountingUnitOfWork,
