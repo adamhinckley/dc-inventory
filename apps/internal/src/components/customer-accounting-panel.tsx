@@ -380,12 +380,14 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     () => new Map(invoices.map((invoice) => [invoice.id, invoice.documentNumber])),
     [invoices],
   );
-  const orderNumbers = useCustomerAccountingOrderNumbers(
-    invoices.map((invoice) => invoice.orderId),
-  );
+  const { orderNumbers, isLoading: orderNumbersLoading } =
+    useCustomerAccountingOrderNumbers(invoices.map((invoice) => invoice.orderId));
 
   const loading =
-    summaryQuery.isLoading || invoicesQuery.isLoading || paymentsQuery.isLoading;
+    summaryQuery.isLoading ||
+    invoicesQuery.isLoading ||
+    paymentsQuery.isLoading ||
+    orderNumbersLoading;
   const error =
     summaryQuery.isError || invoicesQuery.isError || paymentsQuery.isError;
 

@@ -19,14 +19,20 @@ export function useCustomerAccountingOrderNumbers(orderIds: readonly string[]) {
     })),
   });
 
-  return useMemo(() => {
-    const orderNumbers = new Map<string, string>();
+  const orderNumbers = useMemo(() => {
+    const resolved = new Map<string, string>();
     uniqueOrderIds.forEach((orderId, index) => {
       const response = queries[index]?.data;
       if (response?.status === 200) {
-        orderNumbers.set(orderId, response.data.documentNumber);
+        resolved.set(orderId, response.data.documentNumber);
       }
     });
-    return orderNumbers;
+    return resolved;
   }, [queries, uniqueOrderIds]);
+
+  const isLoading =
+    uniqueOrderIds.length > 0 &&
+    queries.some((query) => query.isPending || query.isFetching);
+
+  return { orderNumbers, isLoading };
 }

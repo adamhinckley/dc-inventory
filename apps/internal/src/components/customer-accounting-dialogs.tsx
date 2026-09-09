@@ -16,10 +16,11 @@ import {
   Input,
   Label,
   LabeledField,
+  Select,
   formatMoneyMinorUnits,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, FileMinus } from "lucide-react";
+import { CalendarClock, FileMinus, HandCoins } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import {
@@ -543,6 +544,15 @@ export function CustomerAccountingApplyCreditPickerDialog({
     [onOpenChange],
   );
 
+  const paymentOptions = useMemo(
+    () =>
+      payments.map((payment) => ({
+        value: payment.id,
+        label: `${formatNullableDate(payment.receivedAt)} · ${formatMoneyMinorUnits(payment.unappliedCents, currency)} unapplied${payment.reference ? ` · ${payment.reference}` : ""}`,
+      })),
+    [currency, payments],
+  );
+
   const selectedPayment =
     payments.find((payment) => payment.id === selectedId) ?? null;
 
@@ -557,26 +567,16 @@ export function CustomerAccountingApplyCreditPickerDialog({
           <p className="text-body-sm text-fg-secondary">
             Choose which payment&apos;s unapplied credit to apply.
           </p>
-          <div className="mt-field flex flex-col gap-tight">
-            {payments.map((payment) => (
-              <label
-                key={payment.id}
-                className="flex cursor-pointer items-center gap-icon rounded-interactable border border-border px-item-x py-item-y"
-              >
-                <input
-                  type="radio"
-                  name="apply-credit-payment"
-                  checked={selectedId === payment.id}
-                  onChange={() => setSelectedId(payment.id)}
-                />
-                <span className="text-body-sm">
-                  {formatNullableDate(payment.receivedAt)} ·{" "}
-                  {formatMoneyMinorUnits(payment.unappliedCents, currency)} unapplied
-                  {payment.reference ? ` · ${payment.reference}` : ""}
-                </span>
-              </label>
-            ))}
-          </div>
+          <LabeledField className="mt-field">
+            <Label htmlFor="apply-credit-payment">Payment</Label>
+            <Select
+              id="apply-credit-payment"
+              value={selectedId}
+              onChange={setSelectedId}
+              options={paymentOptions}
+              placeholder="Choose a payment"
+            />
+          </LabeledField>
         </Dialog.Body>
         <Dialog.Footer>
           <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
@@ -593,6 +593,7 @@ export function CustomerAccountingApplyCreditPickerDialog({
               }
             }}
           >
+            <HandCoins className="size-icon" aria-hidden />
             Continue
           </Button>
         </Dialog.Footer>
