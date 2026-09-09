@@ -34,12 +34,13 @@ describe("accountingTabHref", () => {
     expect(
       accountingTabHref(ACCOUNTING_BALANCES_PATH, {
         asOf: "2026-08-01",
+        bucket: "31-45",
         range: "custom",
         from: "2026-08-01",
         to: "2026-08-15",
         page: "3",
       }),
-    ).toBe("/accounting?asOf=2026-08-01");
+    ).toBe("/accounting?asOf=2026-08-01&bucket=31-45");
   });
 
   it("stays a bare path when the query is empty", () => {

@@ -7,11 +7,15 @@ import {
 import { Chip, formatMoneyMinorUnits } from "@dc-inventory/ui";
 import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
 import { accountingCreditLimitLabel } from "../lib/accounting-display";
 import { accountingBalancesListTable } from "../lib/accounting-list-table";
 import type { AccountingBalanceRow } from "../lib/accounting-types";
+import {
+  accountingAsOfFromSearchParams,
+  accountingBalancesInitialParams,
+  accountingBucketFromSearchParams,
+} from "../lib/accounting-url-params";
 import { useAccountingUrl } from "../lib/use-accounting-url";
 import { formatNullableDate } from "../lib/customer-accounting-format";
 import { customerDetailTabHref } from "../lib/customer-detail-tabs";
@@ -22,18 +26,17 @@ type BalancesListParams = NonNullable<
 
 const CURRENCY = "USD";
 
-export function AccountingBalancesTable({
-  initialParams,
-}: {
-  initialParams?: ListQueryParams;
-}) {
-  const { setTableParams } = useAccountingUrl();
-  const searchParams = useSearchParams();
-  const remountKey = useMemo(
-    () =>
-      `${searchParams.get("asOf") ?? ""}:${searchParams.get("bucket") ?? ""}`,
-    [searchParams],
+export function AccountingBalancesTable() {
+  const { searchRecord, setTableParams } = useAccountingUrl();
+  const initialParams = useMemo(
+    () => accountingBalancesInitialParams(searchRecord),
+    [searchRecord],
   );
+  const remountKey = useMemo(() => {
+    const asOf = accountingAsOfFromSearchParams(searchRecord);
+    const bucket = accountingBucketFromSearchParams(searchRecord);
+    return `${asOf}:${bucket ?? ""}`;
+  }, [searchRecord]);
 
   const onParamsChange = useCallback(
     (params: ListQueryParams) => {

@@ -2,7 +2,14 @@
 
 import { useGetInternalAccountingSummary } from "@dc-inventory/api-client-internal";
 import type { AccountingAgingBucket } from "../lib/accounting-types";
-import { Button, DateInput, ExplorerView } from "@dc-inventory/ui";
+import {
+  Button,
+  DateInput,
+  ExplorerView,
+  FieldRow,
+  Label,
+  LabeledField,
+} from "@dc-inventory/ui";
 import { CalendarDays } from "lucide-react";
 import { useCallback, type ReactNode } from "react";
 import {
@@ -57,11 +64,12 @@ export function AccountingExplorer({ children }: { children: ReactNode }) {
               adjustments on the customer Accounting tab.
             </p>
           </div>
-          <div className="flex shrink-0 items-end gap-field-group">
-            <div className="flex flex-col gap-field">
-              <span className="text-label text-fg-secondary">As of</span>
+          <FieldRow className="shrink-0">
+            <LabeledField className="w-52 shrink-0">
+              <Label htmlFor="accounting-asof">As of</Label>
               <div className="flex items-center gap-action">
                 <DateInput
+                  id="accounting-asof"
                   density="compact"
                   value={asOf}
                   max={today}
@@ -81,8 +89,8 @@ export function AccountingExplorer({ children }: { children: ReactNode }) {
                   </Button>
                 ) : null}
               </div>
-            </div>
-          </div>
+            </LabeledField>
+          </FieldRow>
         </header>
       </ExplorerView.Header>
       <ExplorerView.Content>

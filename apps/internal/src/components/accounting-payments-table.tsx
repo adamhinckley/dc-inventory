@@ -13,7 +13,6 @@ import {
 import { CalendarRange } from "lucide-react";
 import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
 import {
   accountingAppliedUnappliedLabel,
@@ -25,12 +24,12 @@ import {
   accountingAsOfFromSearchParams,
   accountingPaymentDateRange,
   accountingPaymentRangeFromSearchParams,
+  accountingPaymentsInitialParams,
   type AccountingPaymentRange,
 } from "../lib/accounting-url-params";
 import { useAccountingUrl } from "../lib/use-accounting-url";
 import { formatNullableDate } from "../lib/customer-accounting-format";
 import { customerDetailTabHref } from "../lib/customer-detail-tabs";
-import { searchParamsToRecord } from "../lib/table-url-params";
 
 type PaymentsListParams = NonNullable<
   Parameters<typeof useListInternalAccountingPayments>[0]
@@ -111,25 +110,18 @@ function PaymentsRangeToolbar({
   );
 }
 
-export function AccountingPaymentsTable({
-  initialParams,
-  asOf,
-}: {
-  initialParams?: ListQueryParams;
-  asOf: string;
-}) {
-  const { setTableParams } = useAccountingUrl();
-  const searchParams = useSearchParams();
-  const searchRecord = useMemo(
-    () => searchParamsToRecord(searchParams),
-    [searchParams],
-  );
+export function AccountingPaymentsTable() {
+  const { searchRecord, setTableParams } = useAccountingUrl();
+  const asOf = accountingAsOfFromSearchParams(searchRecord);
   const range = accountingPaymentRangeFromSearchParams(searchRecord);
   const { from, to } = accountingPaymentDateRange(asOf, range, searchRecord);
+  const initialParams = useMemo(
+    () => accountingPaymentsInitialParams(searchRecord),
+    [searchRecord],
+  );
   const remountKey = useMemo(
-    () =>
-      `${searchParams.get("asOf") ?? ""}:${searchParams.get("range") ?? "mtd"}:${searchParams.get("from") ?? ""}:${searchParams.get("to") ?? ""}`,
-    [searchParams],
+    () => `${asOf}:${range}:${from}:${to}`,
+    [asOf, range, from, to],
   );
 
   const onParamsChange = useCallback(

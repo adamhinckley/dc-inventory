@@ -2,63 +2,55 @@ import { describe, expect, it } from "vitest";
 import {
   ACCOUNTING_BALANCES_PATH,
   ACCOUNTING_PAYMENTS_PATH,
-  accountingTabHref,
+  accountingBalancesInitialParams,
+  accountingPaymentsInitialParams,
   applyAccountingSharedPatch,
 } from "../lib/accounting-url-params";
 
-describe("accounting workspace tab href", () => {
-  it("hands off only shared as-of to the payments tab", () => {
-    expect(
-      accountingTabHref(ACCOUNTING_PAYMENTS_PATH, {
-        asOf: "2026-08-01",
-        bucket: "16-30",
-        q: "al's",
-        page: "2",
-        sortBy: "pastDueCents",
-      }),
-    ).toBe("/accounting/payments?asOf=2026-08-01");
+describe("accounting list table seed from shared URL patches", () => {
+  it("balances list seeds as-of and bucket from shared patch", () => {
+    const urlRecord = applyAccountingSharedPatch(
+      {},
+      { asOf: "2026-07-01", bucket: "31-45" },
+      ACCOUNTING_BALANCES_PATH,
+    );
+
+    expect(accountingBalancesInitialParams(urlRecord)).toEqual({
+      asOf: "2026-07-01",
+      bucket: "31-45",
+    });
   });
 
-  it("drops custom payment range when returning to balances", () => {
-    expect(
-      accountingTabHref(ACCOUNTING_BALANCES_PATH, {
-        asOf: "2026-08-01",
+  it("payments list seeds custom range dates from shared patch", () => {
+    const urlRecord = applyAccountingSharedPatch(
+      { asOf: "2026-09-08" },
+      {
         range: "custom",
-        from: "2026-08-01",
-        to: "2026-08-20",
-        page: "2",
-      }),
-    ).toBe("/accounting?asOf=2026-08-01");
-  });
-});
+        from: "2026-09-01",
+        to: "2026-09-08",
+      },
+      ACCOUNTING_PAYMENTS_PATH,
+    );
 
-describe("accounting shared controls patch hooks", () => {
-  it("changes the as-of param the summary hook receives", () => {
-    expect(
-      applyAccountingSharedPatch({}, { asOf: "2026-07-01" }, ACCOUNTING_BALANCES_PATH),
-    ).toEqual({ asOf: "2026-07-01" });
+    expect(accountingPaymentsInitialParams(urlRecord)).toMatchObject({
+      from: "2026-09-01",
+      to: "2026-09-08",
+    });
   });
 
-  it("changes the bucket param the balances list receives", () => {
-    expect(
-      applyAccountingSharedPatch({}, { bucket: "31-45" }, ACCOUNTING_BALANCES_PATH),
-    ).toEqual({ bucket: "31-45" });
-  });
+  it("payments list seeds mtd from/to when range is cleared", () => {
+    const urlRecord = applyAccountingSharedPatch(
+      {
+        asOf: "2026-09-08",
+        range: "custom",
+        from: "2026-09-01",
+        to: "2026-09-08",
+      },
+      { range: null },
+      ACCOUNTING_PAYMENTS_PATH,
+    );
 
-  it("changes the range and custom dates the payments list receives", () => {
-    expect(
-      applyAccountingSharedPatch(
-        { asOf: "2026-09-08" },
-        {
-          range: "custom",
-          from: "2026-09-01",
-          to: "2026-09-08",
-        },
-        ACCOUNTING_PAYMENTS_PATH,
-      ),
-    ).toEqual({
-      asOf: "2026-09-08",
-      range: "custom",
+    expect(accountingPaymentsInitialParams(urlRecord)).toMatchObject({
       from: "2026-09-01",
       to: "2026-09-08",
     });
