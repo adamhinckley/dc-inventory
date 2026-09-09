@@ -493,6 +493,10 @@ export const invalidResponseSchema = z.object({
   error: z.literal("invalid"),
 });
 
+export const invalidSellWindowResponseSchema = z.object({
+  error: z.literal("invalid_sell_window"),
+});
+
 export const zodValidationErrorResponseSchema = z.object({
   error: z.literal("invalid_request"),
   message: z.literal("The request is invalid."),

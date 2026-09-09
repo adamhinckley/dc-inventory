@@ -18,5 +18,7 @@
 export {
   Combobox,
   filterComboboxOptionsForQuery,
+  resolveComboboxPopupBranch,
+  type ComboboxPopupBranch,
   type ComboboxProps,
 } from './Combobox'

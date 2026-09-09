@@ -25,10 +25,11 @@ import {
   buildSellWindowOpenCommand,
   fetchInventoryMatchPages,
   fetchRemainingInventoryMatches,
-  filterSnapshotToListParams,
+  filterSnapshotToCloneListParams,
   instantToDateInput,
   inventoryReopenQueryKey,
   isEligibleForSellWindowApply,
+  SELL_WINDOW_PAST_OPEN_MESSAGE,
   sellWindowDateRangeMessage,
   sellWindowMatchCheckSummary,
   shouldPrefetchInventoryMatches,
@@ -75,7 +76,7 @@ export function SellWindowEditorPage() {
     const source = cloneQuery.data.data;
     cloneAppliedRef.current = cloneFrom;
     setWindowName(`Copy of ${source.name}`);
-    setFilters(filterSnapshotToListParams(source.filterSnapshot));
+    setFilters(filterSnapshotToCloneListParams(source.filterSnapshot));
     setOpensAt(instantToDateInput(source.windowOpensAt));
     setClosesAt(instantToDateInput(source.windowClosesAt));
     setCheckedSkus({});
@@ -193,6 +194,10 @@ export function SellWindowEditorPage() {
       });
       const result = await reopenMutation.mutateAsync({ data: command });
       if (result.status !== 200) {
+        if (result.status === 400 && result.data.error === "invalid_sell_window") {
+          setActionError(SELL_WINDOW_PAST_OPEN_MESSAGE);
+          return;
+        }
         setActionError("Could not open infinity for the selected SKUs.");
         return;
       }

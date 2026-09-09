@@ -76,6 +76,20 @@ export function filterComboboxOptionsForQuery<T>(
   return options.filter((option) => filter(option, trimmed))
 }
 
+export type ComboboxPopupBranch = 'loading' | 'needs-query' | 'no-options' | 'list'
+
+/** Popup body branch for loading, type-to-search, empty, or list states. */
+export function resolveComboboxPopupBranch(
+  loading: boolean,
+  needsQuery: boolean,
+  queryFilteredItems: readonly unknown[],
+): ComboboxPopupBranch {
+  if (loading) return 'loading'
+  if (needsQuery) return 'needs-query'
+  if (queryFilteredItems.length === 0) return 'no-options'
+  return 'list'
+}
+
 // Async resolver hook — runs the async loader on mount, tracks internal
 // loading state, surfaces resolved options. For static arrays, returns
 // the array as-is. The resource-system dispatchers don't use this path —
@@ -271,6 +285,7 @@ export function Combobox({
     trackQuery && !needsQuery
       ? filterComboboxOptionsForQuery(resolved, trimmedQuery, filterFn)
       : resolved
+  const popupBranch = resolveComboboxPopupBranch(loading, needsQuery, queryFilteredItems)
   const hint = helperText && helperText.length > 0 ? helperText : undefined
   const generatedId = useId()
   const id = idProp ?? (hint ? generatedId : undefined)
@@ -399,11 +414,11 @@ export function Combobox({
               pii && PII_MASK_CLASS,
             )}
           >
-            {loading ? (
+            {popupBranch === 'loading' ? (
               <div className="item-padding text-xs text-fg-tertiary">Loading...</div>
-            ) : needsQuery ? (
+            ) : popupBranch === 'needs-query' ? (
               <div className="item-padding text-xs text-fg-tertiary">Type to search</div>
-            ) : queryFilteredItems.length === 0 ? (
+            ) : popupBranch === 'no-options' ? (
               <div className="item-padding text-xs text-fg-tertiary">No options</div>
             ) : virtualize ? (
               <BaseCombobox.List>
@@ -451,7 +466,7 @@ export function Combobox({
 
 interface ComboboxVirtualListProps {
   /** The FILTERED options — must be the same list Base UI's indices track. */
-  items: Option[]
+  items: readonly Option[]
   /** Popup open state — the virtualizer only runs while open. */
   open: boolean
   /** Receives the live virtualizer so Root's `onItemHighlighted` can scroll. */

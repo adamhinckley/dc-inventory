@@ -263,7 +263,26 @@ describe("POST /internal/inventory/reopen-skus", () => {
       },
     });
     expect(reopen.statusCode).toBe(400);
-    expect(reopen.json()).toEqual({ error: "invalid" });
+    expect(reopen.json()).toEqual({ error: "invalid_sell_window" });
+  });
+
+  it("returns invalid_sell_window when the open date is before UTC today", async () => {
+    const app = await startReopenApp();
+    const session = await staffCookie(app);
+
+    const reopen = await app.inject({
+      method: "POST",
+      url: "/internal/inventory/reopen-skus",
+      headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
+      payload: {
+        name: "Past open",
+        skus: [SKU_A.value],
+        windowOpensAt: daysFromNow(-2).toISOString(),
+        windowClosesAt: WINDOW_CLOSES,
+      },
+    });
+    expect(reopen.statusCode).toBe(400);
+    expect(reopen.json()).toEqual({ error: "invalid_sell_window" });
   });
 });
 

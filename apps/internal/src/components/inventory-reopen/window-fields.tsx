@@ -3,8 +3,8 @@
 import { DateRangeInput, Label, LabeledField } from "@dc-inventory/ui";
 import {
   isIsoCalendarDate,
-  localTodayISO,
   sellWindowDateRangeMessage,
+  utcTodayISO,
 } from "../../lib/inventory-reopen-workflow";
 
 export function WindowFields({
@@ -22,9 +22,9 @@ export function WindowFields({
   readOnly?: boolean;
   constrainToFuture?: boolean;
 }) {
-  const today = localTodayISO();
+  const today = utcTodayISO();
   const rangeError = constrainToFuture
-    ? sellWindowDateRangeMessage(opensAt, closesAt, today)
+    ? sellWindowDateRangeMessage(opensAt, closesAt)
     : opensAt !== "" && closesAt !== "" && closesAt < opensAt
       ? "Close date must be on or after the open date"
       : null;

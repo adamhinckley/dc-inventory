@@ -5822,15 +5822,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - invalid
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_sell_window
+                    required:
+                      - error
+                    additionalProperties: false
         "401":
           description: Default Response
           content:
