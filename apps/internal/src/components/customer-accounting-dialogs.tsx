@@ -20,7 +20,7 @@ import {
   formatMoneyMinorUnits,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, FileMinus, HandCoins } from "lucide-react";
+import { ArrowLeftRight, CalendarClock, FileMinus, HandCoins } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import {
@@ -358,6 +358,7 @@ export function CustomerAccountingReallocateDialog({
             disabled={isPending}
             onClick={() => void handleSubmit()}
           >
+            <ArrowLeftRight className="size-icon" aria-hidden />
             Save Reallocation
           </Button>
         </Dialog.Footer>

@@ -30,9 +30,15 @@ export function useCustomerAccountingOrderNumbers(orderIds: readonly string[]) {
     return resolved;
   }, [queries, uniqueOrderIds]);
 
-  const isLoading =
-    uniqueOrderIds.length > 0 &&
-    queries.some((query) => query.isPending || query.isFetching);
+  const pendingOrderIds = useMemo(() => {
+    const pending = new Set<string>();
+    uniqueOrderIds.forEach((orderId, index) => {
+      if (queries[index]?.isPending) {
+        pending.add(orderId);
+      }
+    });
+    return pending;
+  }, [queries, uniqueOrderIds]);
 
-  return { orderNumbers, isLoading };
+  return { orderNumbers, pendingOrderIds };
 }

@@ -48,12 +48,14 @@ function InvoiceGrid({
   rows,
   currency,
   orderNumbers,
+  pendingOrderIds,
   canArAdjust,
   onAdjust,
 }: {
   rows: CustomerInvoiceRow[];
   currency: string;
   orderNumbers: ReadonlyMap<string, string>;
+  pendingOrderIds: ReadonlySet<string>;
   canArAdjust: boolean;
   onAdjust: (invoice: CustomerInvoiceRow) => void;
 }) {
@@ -112,12 +114,16 @@ function InvoiceGrid({
                 {formatNullableDate(invoice.dueDate)}
               </td>
               <td className="px-section-content-x py-section-content-y text-body-sm">
-                <Link
-                  href={`/sales/${invoice.orderId}`}
-                  className="text-link hover:text-link-hover tabular-nums"
-                >
-                  {orderNumbers.get(invoice.orderId) ?? invoice.orderId}
-                </Link>
+                {pendingOrderIds.has(invoice.orderId) ? (
+                  <span className="text-fg-tertiary">…</span>
+                ) : (
+                  <Link
+                    href={`/sales/${invoice.orderId}`}
+                    className="text-link hover:text-link-hover tabular-nums"
+                  >
+                    {orderNumbers.get(invoice.orderId) ?? invoice.orderId}
+                  </Link>
+                )}
               </td>
               <td className="px-section-content-x py-section-content-y text-right text-body-sm tabular-nums">
                 {formatMoneyMinorUnits(invoice.totalCents, invoice.currency)}
@@ -380,14 +386,12 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     () => new Map(invoices.map((invoice) => [invoice.id, invoice.documentNumber])),
     [invoices],
   );
-  const { orderNumbers, isLoading: orderNumbersLoading } =
-    useCustomerAccountingOrderNumbers(invoices.map((invoice) => invoice.orderId));
+  const { orderNumbers, pendingOrderIds } = useCustomerAccountingOrderNumbers(
+    invoices.map((invoice) => invoice.orderId),
+  );
 
   const loading =
-    summaryQuery.isLoading ||
-    invoicesQuery.isLoading ||
-    paymentsQuery.isLoading ||
-    orderNumbersLoading;
+    summaryQuery.isLoading || invoicesQuery.isLoading || paymentsQuery.isLoading;
   const error =
     summaryQuery.isError || invoicesQuery.isError || paymentsQuery.isError;
 
@@ -487,6 +491,7 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
             rows={invoices}
             currency={currency}
             orderNumbers={orderNumbers}
+            pendingOrderIds={pendingOrderIds}
             canArAdjust={canArAdjust}
             onAdjust={setAdjustInvoice}
           />
