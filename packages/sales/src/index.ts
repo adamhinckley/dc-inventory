@@ -4,7 +4,11 @@ export { InMemoryCatalogProductPort } from "./adapters/in-memory-catalog-product
 export { InMemoryCustomerShipToSnapshotReadPort } from "./adapters/in-memory-customer-ship-to-snapshot-read.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { DrizzleCommittedCustomerNamesListQuery } from "./adapters/drizzle-committed-customer-names-list-query.js";
+export { DrizzleLastOrderDateReadAdapter } from "./adapters/drizzle-last-order-date-read.js";
+export { DrizzleOpenOrderExposureReadAdapter } from "./adapters/drizzle-open-order-exposure-read.js";
 export { DrizzleSalesOrderRepository, type SalesDrizzle } from "./adapters/drizzle-sales-orders.js";
+export { InMemoryLastOrderDateReadAdapter } from "./adapters/in-memory-last-order-date-read.js";
+export { InMemoryOpenOrderExposureReadAdapter } from "./adapters/in-memory-open-order-exposure-read.js";
 export { InMemoryCommittedCustomerNamesListQuery } from "./adapters/in-memory-committed-customer-names-list-query.js";
 export { InMemorySalesOrderRepository } from "./adapters/in-memory-sales-order-repository.js";
 export { InMemorySalesUnitOfWork } from "./adapters/in-memory-sales-unit-of-work.js";
@@ -34,6 +38,7 @@ export type {
   CommittedCustomerNamesQuery,
   ICommittedCustomerNamesListQuery,
 } from "./domain/ports/committed-customer-names-list-query.js";
+export type { IOpenOrderExposureReadPort } from "./domain/ports/open-order-exposure-read.js";
 export type { IClock } from "./domain/clock.js";
 export { SalesOrderLineId } from "./domain/ids.js";
 export type {
