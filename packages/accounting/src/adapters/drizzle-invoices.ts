@@ -4,21 +4,37 @@ import {
   Money,
   OrderId,
   OrganizationId,
+  StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { and, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
-import { newUuid, PaymentApplicationId, PaymentId } from "../domain/ids.js";
+import {
+  InvoiceAdjustmentId,
+  newUuid,
+  PaymentApplicationId,
+  PaymentId,
+  PaymentPlanId,
+} from "../domain/ids.js";
 import type {
-  IInvoiceRepository,
+  IAccountingRepository,
+  PaymentApplicationSpec,
   PaymentIdempotencyRecord,
   UnnumberedInvoice,
 } from "../domain/ports/invoice-repository.js";
-import type { Invoice, Payment, PaymentApplication } from "../domain/invoice.js";
+import type {
+  Invoice,
+  InvoiceAdjustment,
+  Payment,
+  PaymentApplication,
+  PaymentPlan,
+} from "../domain/invoice.js";
 import {
   documentNumberCounters,
+  invoiceAdjustments,
   invoices,
   paymentApplications,
+  paymentPlans,
   payments,
 } from "../persistence/schema.js";
 
@@ -42,8 +58,27 @@ function toInvoice(row: typeof invoices.$inferSelect): Invoice {
     dueDate: row.dueDate,
     terms: row.terms,
     subtotal: Money.fromMinorUnits(row.subtotalCents, row.currency),
-    taxTotal: Money.fromMinorUnits(row.taxTotalCents, row.currency),
+    taxTotal: Money.fromMinorUnits(0, row.currency),
     total: Money.fromMinorUnits(row.totalCents, row.currency),
+  };
+}
+
+function toPayment(row: typeof payments.$inferSelect): Payment {
+  return {
+    id: PaymentId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
+    customerId: CustomerId.parse(row.customerId),
+    amount: Money.fromMinorUnits(row.amountCents, row.currency),
+    idempotencyKey: row.idempotencyKey,
+    createdAt: row.createdAt,
+    method: row.method,
+    reference: row.reference,
+    receivedAt: row.receivedAt,
+    note: row.note,
+    recordedBy: row.recordedBy ? StaffUserId.parse(row.recordedBy) : undefined,
+    voidedAt: row.voidedAt,
+    voidedBy: row.voidedBy ? StaffUserId.parse(row.voidedBy) : null,
+    voidReason: row.voidReason,
   };
 }
 
@@ -54,6 +89,77 @@ function toApplication(row: typeof paymentApplications.$inferSelect): PaymentApp
     invoiceId: InvoiceId.parse(row.invoiceId),
     amount: Money.fromMinorUnits(row.amountCents, row.currency),
     createdAt: row.createdAt,
+  };
+}
+
+function toAdjustment(row: typeof invoiceAdjustments.$inferSelect): InvoiceAdjustment {
+  return {
+    id: InvoiceAdjustmentId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
+    invoiceId: InvoiceId.parse(row.invoiceId),
+    kind: row.kind,
+    amountCents: row.amountCents,
+    currency: row.currency,
+    reason: row.reason,
+    createdAt: row.createdAt,
+    createdBy: StaffUserId.parse(row.recordedBy),
+  };
+}
+
+function toPaymentPlan(row: typeof paymentPlans.$inferSelect): PaymentPlan {
+  return {
+    id: PaymentPlanId.parse(row.id),
+    organizationId: OrganizationId.parse(row.organizationId),
+    customerId: CustomerId.parse(row.customerId),
+    frequency: row.frequency,
+    installmentAmountCents: row.amountCents,
+    currency: row.currency,
+    startsOn: row.startsOn,
+    endedAt: row.endedAt,
+    createdAt: row.createdAt,
+    createdBy: StaffUserId.parse(row.createdBy),
+  };
+}
+
+function paymentInsertValues(payment: Payment): typeof payments.$inferInsert {
+  return {
+    id: payment.id,
+    organizationId: payment.organizationId,
+    customerId: payment.customerId,
+    amountCents: payment.amount.amountMinor,
+    currency: payment.amount.currency,
+    idempotencyKey: payment.idempotencyKey,
+    createdAt: payment.createdAt,
+    method: payment.method ?? "other",
+    reference: payment.reference ?? null,
+    receivedAt: payment.receivedAt ?? payment.createdAt,
+    note: payment.note ?? null,
+    recordedBy: payment.recordedBy ?? null,
+    voidedAt: payment.voidedAt ?? null,
+    voidedBy: payment.voidedBy ?? null,
+    voidReason: payment.voidReason ?? null,
+  };
+}
+
+function toIdempotencyRecord(
+  payment: Payment,
+  applications: readonly PaymentApplicationSpec[],
+): PaymentIdempotencyRecord {
+  const appliedTotal = applications.reduce((sum, row) => sum + row.amountCents, 0);
+  const holdRemainderAsCredit =
+    appliedTotal < payment.amount.amountMinor ||
+    (applications.length === 0 && payment.amount.amountMinor > 0);
+  const firstApplication = applications[0];
+  return {
+    payment,
+    applications,
+    holdRemainderAsCredit,
+    ...(firstApplication === undefined
+      ? {}
+      : {
+          invoiceId: firstApplication.invoiceId,
+          applicationAmountCents: firstApplication.amountCents,
+        }),
   };
 }
 
@@ -114,13 +220,12 @@ async function insertInvoice(db: AccountingDrizzle, invoice: Invoice): Promise<v
     dueDate: invoice.dueDate,
     terms: invoice.terms,
     subtotalCents: invoice.subtotal.amountMinor,
-    taxTotalCents: invoice.taxTotal.amountMinor,
     totalCents: invoice.total.amountMinor,
     currency: invoice.total.currency,
   });
 }
 
-export class DrizzleInvoiceRepository implements IInvoiceRepository {
+export class DrizzleInvoiceRepository implements IAccountingRepository {
   constructor(private readonly db: AccountingDrizzle) {}
 
   async findById(organizationId: OrganizationId, id: InvoiceId): Promise<Invoice | null> {
@@ -208,6 +313,29 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
     return rows.map(toApplication);
   }
 
+  async listApplicationsByPayment(
+    paymentId: PaymentId,
+  ): Promise<readonly PaymentApplication[]> {
+    const rows = await this.db
+      .select()
+      .from(paymentApplications)
+      .where(eq(paymentApplications.paymentId, paymentId));
+    return rows.map(toApplication);
+  }
+
+  async findPaymentById(
+    organizationId: OrganizationId,
+    paymentId: PaymentId,
+  ): Promise<Payment | null> {
+    const rows = await this.db
+      .select()
+      .from(payments)
+      .where(and(eq(payments.id, paymentId), eq(payments.organizationId, organizationId)))
+      .limit(1);
+    const row = rows[0];
+    return row === undefined ? null : toPayment(row);
+  }
+
   async findPaymentByIdempotencyKey(
     organizationId: OrganizationId,
     key: string,
@@ -223,28 +351,16 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
     if (paymentRow === undefined) {
       return null;
     }
+    const payment = toPayment(paymentRow);
     const applicationRows = await this.db
       .select()
       .from(paymentApplications)
-      .where(eq(paymentApplications.paymentId, paymentRow.id))
-      .limit(1);
-    const applicationRow = applicationRows[0];
-    if (applicationRow === undefined) {
-      return null;
-    }
-    const payment: Payment = {
-      id: PaymentId.parse(paymentRow.id),
-      organizationId: OrganizationId.parse(paymentRow.organizationId),
-      customerId: CustomerId.parse(paymentRow.customerId),
-      amount: Money.fromMinorUnits(paymentRow.amountCents, paymentRow.currency),
-      idempotencyKey: paymentRow.idempotencyKey,
-      createdAt: paymentRow.createdAt,
-    };
-    return {
-      payment,
-      invoiceId: InvoiceId.parse(applicationRow.invoiceId),
-      applicationAmountCents: applicationRow.amountCents,
-    };
+      .where(eq(paymentApplications.paymentId, paymentRow.id));
+    const applications = applicationRows.map((row) => ({
+      invoiceId: InvoiceId.parse(row.invoiceId),
+      amountCents: row.amountCents,
+    }));
+    return toIdempotencyRecord(payment, applications);
   }
 
   async insertPaymentWithApplication(
@@ -252,23 +368,46 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
     invoiceId: InvoiceId,
     applicationAmountCents: number,
   ): Promise<void> {
-    await this.db.insert(payments).values({
-      id: payment.id,
-      organizationId: payment.organizationId,
-      customerId: payment.customerId,
-      amountCents: payment.amount.amountMinor,
-      currency: payment.amount.currency,
-      idempotencyKey: payment.idempotencyKey,
-      createdAt: payment.createdAt,
-    });
-    await this.db.insert(paymentApplications).values({
-      id: PaymentApplicationId.parse(newUuid()),
-      paymentId: payment.id,
-      invoiceId,
-      amountCents: applicationAmountCents,
-      currency: payment.amount.currency,
-      createdAt: payment.createdAt,
-    });
+    await this.insertPaymentWithApplications(
+      payment,
+      [{ invoiceId, amountCents: applicationAmountCents }],
+      false,
+    );
+  }
+
+  async insertPaymentWithApplications(
+    payment: Payment,
+    applications: readonly PaymentApplicationSpec[],
+    holdRemainderAsCredit: boolean,
+  ): Promise<void> {
+    await this.db.insert(payments).values(paymentInsertValues(payment));
+    for (const spec of applications) {
+      await this.db.insert(paymentApplications).values({
+        id: PaymentApplicationId.parse(newUuid()),
+        paymentId: payment.id,
+        invoiceId: spec.invoiceId,
+        amountCents: spec.amountCents,
+        currency: payment.amount.currency,
+        createdAt: payment.createdAt,
+      });
+    }
+    void holdRemainderAsCredit;
+  }
+
+  async updatePayment(payment: Payment): Promise<void> {
+    await this.db
+      .update(payments)
+      .set({
+        method: payment.method ?? "other",
+        reference: payment.reference ?? null,
+        receivedAt: payment.receivedAt ?? payment.createdAt,
+        note: payment.note ?? null,
+        recordedBy: payment.recordedBy ?? null,
+        voidedAt: payment.voidedAt ?? null,
+        voidedBy: payment.voidedBy ?? null,
+        voidReason: payment.voidReason ?? null,
+      })
+      .where(eq(payments.id, payment.id));
   }
 
   async insertApplication(application: PaymentApplication): Promise<void> {
@@ -280,5 +419,94 @@ export class DrizzleInvoiceRepository implements IInvoiceRepository {
       currency: application.amount.currency,
       createdAt: application.createdAt,
     });
+  }
+
+  async listAdjustments(invoiceId: InvoiceId): Promise<readonly InvoiceAdjustment[]> {
+    const rows = await this.db
+      .select()
+      .from(invoiceAdjustments)
+      .where(eq(invoiceAdjustments.invoiceId, invoiceId));
+    return rows.map(toAdjustment);
+  }
+
+  async insertAdjustment(adjustment: InvoiceAdjustment): Promise<void> {
+    await this.db.insert(invoiceAdjustments).values({
+      id: adjustment.id,
+      organizationId: adjustment.organizationId,
+      invoiceId: adjustment.invoiceId,
+      kind: adjustment.kind,
+      amountCents: adjustment.amountCents,
+      currency: adjustment.currency,
+      reason: adjustment.reason,
+      recordedBy: adjustment.createdBy,
+      createdAt: adjustment.createdAt,
+    });
+  }
+
+  async findActivePaymentPlan(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<PaymentPlan | null> {
+    const rows = await this.db
+      .select()
+      .from(paymentPlans)
+      .where(
+        and(
+          eq(paymentPlans.organizationId, organizationId),
+          eq(paymentPlans.customerId, customerId),
+          sql`${paymentPlans.endedAt} is null`,
+        ),
+      )
+      .limit(1);
+    const row = rows[0];
+    return row === undefined ? null : toPaymentPlan(row);
+  }
+
+  async findPaymentPlanById(
+    organizationId: OrganizationId,
+    planId: PaymentPlanId,
+  ): Promise<PaymentPlan | null> {
+    const rows = await this.db
+      .select()
+      .from(paymentPlans)
+      .where(and(eq(paymentPlans.id, planId), eq(paymentPlans.organizationId, organizationId)))
+      .limit(1);
+    const row = rows[0];
+    return row === undefined ? null : toPaymentPlan(row);
+  }
+
+  async insertPaymentPlan(plan: PaymentPlan): Promise<void> {
+    await this.db.insert(paymentPlans).values({
+      id: plan.id,
+      organizationId: plan.organizationId,
+      customerId: plan.customerId,
+      amountCents: plan.installmentAmountCents,
+      currency: plan.currency,
+      frequency: plan.frequency,
+      startsOn: plan.startsOn,
+      endedAt: plan.endedAt,
+      createdBy: plan.createdBy,
+      createdAt: plan.createdAt,
+    });
+  }
+
+  async endPaymentPlan(planId: PaymentPlanId, endedAt: Date): Promise<void> {
+    await this.db
+      .update(paymentPlans)
+      .set({ endedAt })
+      .where(eq(paymentPlans.id, planId));
+  }
+
+  async listPaymentsByCustomer(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<readonly Payment[]> {
+    const rows = await this.db
+      .select()
+      .from(payments)
+      .where(
+        and(eq(payments.organizationId, organizationId), eq(payments.customerId, customerId)),
+      );
+    return rows.map(toPayment);
   }
 }

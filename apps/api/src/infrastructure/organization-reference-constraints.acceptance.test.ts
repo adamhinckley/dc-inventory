@@ -73,10 +73,10 @@ describe.skipIf(!acceptanceEnabled)(
           sql!`
             INSERT INTO accounting.invoices
               (id, organization_id, order_id, customer_id, document_number, status,
-               subtotal_cents, tax_total_cents, total_cents, currency)
+               subtotal_cents, total_cents, currency)
             VALUES
               (${invoiceA}, ${organizationB}, ${orderA}, ${customerB}, ${`INV-${invoiceA}`},
-               'unposted', 100, 0, 100, 'USD')
+               'unposted', 100, 100, 'USD')
           `,
       );
 
@@ -85,10 +85,10 @@ describe.skipIf(!acceptanceEnabled)(
           sql!`
             INSERT INTO accounting.invoices
               (id, organization_id, order_id, customer_id, document_number, status,
-               subtotal_cents, tax_total_cents, total_cents, currency)
+               subtotal_cents, total_cents, currency)
             VALUES
               (${invoiceA}, ${organizationA}, ${orderA}, ${customerB}, ${`INV-${invoiceA}`},
-               'unposted', 100, 0, 100, 'USD')
+               'unposted', 100, 100, 'USD')
           `,
       );
 
@@ -96,25 +96,25 @@ describe.skipIf(!acceptanceEnabled)(
         async () =>
           sql!`
             INSERT INTO accounting.payments
-              (id, organization_id, customer_id, amount_cents, currency, idempotency_key)
+              (id, organization_id, customer_id, amount_cents, currency, idempotency_key, received_at)
             VALUES
-              (${paymentA}, ${organizationB}, ${customerA}, 100, 'USD', ${`PAY-${paymentA}`})
+              (${paymentA}, ${organizationB}, ${customerA}, 100, 'USD', ${`PAY-${paymentA}`}, now())
           `,
       );
 
       await sql!`
         INSERT INTO accounting.invoices
           (id, organization_id, order_id, customer_id, document_number, status,
-           subtotal_cents, tax_total_cents, total_cents, currency)
+           subtotal_cents, total_cents, currency)
         VALUES
           (${invoiceA}, ${organizationA}, ${orderA}, ${customerA}, ${`INV-${invoiceA}`},
-           'unposted', 100, 0, 100, 'USD')
+           'unposted', 100, 100, 'USD')
       `;
       await sql!`
         INSERT INTO accounting.payments
-          (id, organization_id, customer_id, amount_cents, currency, idempotency_key)
+          (id, organization_id, customer_id, amount_cents, currency, idempotency_key, received_at)
         VALUES
-          (${paymentA}, ${organizationA}, ${customerA}, 100, 'USD', ${`PAY-${paymentA}`})
+          (${paymentA}, ${organizationA}, ${customerA}, 100, 'USD', ${`PAY-${paymentA}`}, now())
       `;
     });
   },

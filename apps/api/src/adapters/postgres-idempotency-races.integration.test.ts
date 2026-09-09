@@ -3,7 +3,7 @@ import {
   RecordInboundFromPoUseCase,
   type IClock,
 } from "@dc-inventory/inventory";
-import { RecordPaymentUseCase } from "@dc-inventory/accounting";
+import { RecordCustomerPaymentUseCase, RecordPaymentUseCase } from "@dc-inventory/accounting";
 import {
   CustomerId,
   InvoiceId,
@@ -73,7 +73,6 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
             status,
             posted_at,
             subtotal_cents,
-            tax_total_cents,
             total_cents,
             currency
           )
@@ -87,7 +86,6 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
             'posted',
             ${clock.now().toISOString()},
             1000,
-            0,
             1000,
             'USD'
           )
@@ -240,6 +238,45 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       expect(provenanceResults.filter((result) => !result.ok)).toEqual([
         { ok: false, reason: "provenance_conflict" },
       ]);
+    });
+
+    it("replays concurrent RecordCustomerPayment with the same idempotency key", async () => {
+      const firstUseCase = new RecordCustomerPaymentUseCase(
+        new PostgresAccountingUnitOfWork(first.db),
+        clock,
+      );
+      const secondUseCase = new RecordCustomerPaymentUseCase(
+        new PostgresAccountingUnitOfWork(second.db),
+        clock,
+      );
+      const idempotencyKey = `ada-200-customer-payment-${randomUUID()}`;
+      const request = {
+        organizationId,
+        staffUserId,
+        customerId,
+        amountCents: 500,
+        currency: "USD",
+        method: "check" as const,
+        idempotencyKey,
+        holdRemainderAsCredit: true,
+        applications: [{ invoiceId, amountCents: 200 }],
+      };
+
+      const replayResults = await Promise.all([
+        firstUseCase.execute(request),
+        secondUseCase.execute(request),
+      ]);
+      expect(replayResults.every((result) => result.ok)).toBe(true);
+      if (replayResults[0]?.ok && replayResults[1]?.ok) {
+        expect(replayResults[0].paymentId).toBe(replayResults[1].paymentId);
+      }
+      const paymentRows = await first.sql`
+        select id
+        from accounting.payments
+        where organization_id = ${organizationId}
+          and idempotency_key = ${idempotencyKey}
+      `;
+      expect(paymentRows).toHaveLength(1);
     });
 
     it("replays a payment retry and maps a competing payload to conflict", async () => {

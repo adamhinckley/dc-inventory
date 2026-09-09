@@ -266,7 +266,6 @@ async function insertInvoiceFixture(
         status,
         posted_at,
         subtotal_cents,
-        tax_total_cents,
         total_cents,
         currency
       )
@@ -279,7 +278,6 @@ async function insertInvoiceFixture(
       'posted',
       ${TEST_INSTANT.toISOString()},
       ${totalCents},
-      0,
       ${totalCents},
       'USD'
     )

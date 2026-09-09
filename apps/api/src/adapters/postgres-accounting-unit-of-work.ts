@@ -1,7 +1,8 @@
 import {
   DrizzleInvoiceRepository,
   type AccountingDrizzle,
-  type IAccountingUnitOfWork,
+  type AccountingUnitOfWorkWithCustomerPayments,
+  type IAccountingRepository,
 } from "@dc-inventory/accounting";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import {
@@ -14,14 +15,14 @@ import {
  * Each callback runs in its own transaction. Payment use cases lock their
  * invoice row before checking and appending applications.
  */
-export class PostgresAccountingUnitOfWork implements IAccountingUnitOfWork {
-  constructor(private readonly db: AppDrizzle) {}
+export class PostgresAccountingUnitOfWork implements AccountingUnitOfWorkWithCustomerPayments {
+  readonly invoices: IAccountingRepository;
 
-  get invoices(): IAccountingUnitOfWork["invoices"] {
-    throw new Error("Access accounting repositories inside accountingUnitOfWork.run");
+  constructor(private readonly db: AppDrizzle) {
+    this.invoices = new DrizzleInvoiceRepository(this.db as unknown as AccountingDrizzle);
   }
 
-  run<T>(work: (uow: IAccountingUnitOfWork) => Promise<T>): Promise<T> {
+  run<T>(work: (uow: AccountingUnitOfWorkWithCustomerPayments) => Promise<T>): Promise<T> {
     return retryAfterIdempotencyRace(
       () =>
         this.db.transaction(async (tx) =>
@@ -33,10 +34,10 @@ export class PostgresAccountingUnitOfWork implements IAccountingUnitOfWork {
 
   private async runOnTransaction<T>(
     tx: AccountingDrizzle,
-    work: (uow: IAccountingUnitOfWork) => Promise<T>,
+    work: (uow: AccountingUnitOfWorkWithCustomerPayments) => Promise<T>,
   ): Promise<T> {
     const invoices = new DrizzleInvoiceRepository(tx);
-    const scope: IAccountingUnitOfWork = {
+    const scope: AccountingUnitOfWorkWithCustomerPayments = {
       invoices,
       run: (innerWork) => this.runOnTransaction(tx, innerWork),
     };

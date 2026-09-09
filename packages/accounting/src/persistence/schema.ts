@@ -1,6 +1,7 @@
 import {
   bigint,
   char,
+  date,
   foreignKey,
   integer,
   pgSchema,
@@ -9,18 +10,36 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { customers } from "@dc-inventory/customers/schema";
 import { orders } from "@dc-inventory/sales/schema";
 
 /**
  * Accounting persistence models. Wholesale AR only — no software payments.
- * Invoice tax lines are frozen copies; they do not live-FK to tax.
  */
 export const accounting = pgSchema("accounting");
 
 export const invoiceStatus = accounting.enum("invoice_status", [
   "unposted",
   "posted",
+]);
+
+export const paymentMethod = accounting.enum("payment_method", [
+  "check",
+  "card",
+  "ach",
+  "cash",
+  "other",
+]);
+
+export const invoiceAdjustmentKind = accounting.enum("invoice_adjustment_kind", [
+  "write_off",
+  "credit_memo",
+]);
+
+export const paymentPlanFrequency = accounting.enum("payment_plan_frequency", [
+  "weekly",
+  "monthly",
 ]);
 
 function timestamps() {
@@ -45,7 +64,6 @@ export const invoices = accounting.table(
     status: invoiceStatus("status").notNull(),
     postedAt: timestamp("posted_at", { withTimezone: true, mode: "date" }),
     subtotalCents: bigint("subtotal_cents", { mode: "number" }).notNull(),
-    taxTotalCents: bigint("tax_total_cents", { mode: "number" }).notNull(),
     totalCents: bigint("total_cents", { mode: "number" }).notNull(),
     currency: char("currency", { length: 3 }).notNull().default("USD"),
     billLine1: text("bill_line_1"),
@@ -64,6 +82,10 @@ export const invoices = accounting.table(
       table.documentNumber,
     ),
     uniqueIndex("invoices_order_id_unique").on(table.orderId),
+    uniqueIndex("invoices_organization_id_id_unique").on(
+      table.organizationId,
+      table.id,
+    ),
     foreignKey({
       columns: [table.organizationId, table.orderId],
       foreignColumns: [orders.organizationId, orders.id],
@@ -82,21 +104,6 @@ export const documentNumberCounters = accounting.table("document_number_counters
   lastValue: integer("last_value").notNull(),
 });
 
-/** Same shape as tax_commit_lines. Frozen. No live FK to tax. */
-export const invoiceTaxLines = accounting.table("invoice_tax_lines", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  invoiceId: uuid("invoice_id")
-    .notNull()
-    .references(() => invoices.id),
-  jurisdiction: text("jurisdiction").notNull(),
-  taxName: text("tax_name"),
-  rateBps: integer("rate_bps").notNull(),
-  taxableBaseCents: bigint("taxable_base_cents", { mode: "number" }).notNull(),
-  taxCents: bigint("tax_cents", { mode: "number" }).notNull(),
-  currency: char("currency", { length: 3 }).notNull().default("USD"),
-  ...timestamps(),
-});
-
 export const payments = accounting.table(
   "payments",
   {
@@ -106,6 +113,14 @@ export const payments = accounting.table(
     amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
     currency: char("currency", { length: 3 }).notNull().default("USD"),
     idempotencyKey: text("idempotency_key").notNull(),
+    method: paymentMethod("method").notNull().default("other"),
+    reference: text("reference"),
+    receivedAt: timestamp("received_at", { withTimezone: true, mode: "date" }).notNull(),
+    note: text("note"),
+    recordedBy: uuid("recorded_by"),
+    voidedAt: timestamp("voided_at", { withTimezone: true, mode: "date" }),
+    voidedBy: uuid("voided_by"),
+    voidReason: text("void_reason"),
     ...timestamps(),
   },
   (table) => [
@@ -133,3 +148,56 @@ export const paymentApplications = accounting.table("payment_applications", {
   currency: char("currency", { length: 3 }).notNull().default("USD"),
   ...timestamps(),
 });
+
+export const invoiceAdjustments = accounting.table(
+  "invoice_adjustments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    invoiceId: uuid("invoice_id").notNull(),
+    kind: invoiceAdjustmentKind("kind").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("USD"),
+    reason: text("reason").notNull(),
+    recordedBy: uuid("recorded_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.organizationId, table.invoiceId],
+      foreignColumns: [invoices.organizationId, invoices.id],
+      name: "invoice_adjustments_organization_id_invoice_id_invoices_fk",
+    }),
+  ],
+);
+
+export const paymentPlans = accounting.table(
+  "payment_plans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organizationId: text("organization_id").notNull().default("DEFAULT"),
+    customerId: uuid("customer_id").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    currency: char("currency", { length: 3 }).notNull().default("USD"),
+    frequency: paymentPlanFrequency("frequency").notNull(),
+    startsOn: date("starts_on", { mode: "date" }).notNull(),
+    note: text("note"),
+    endedAt: timestamp("ended_at", { withTimezone: true, mode: "date" }),
+    createdBy: uuid("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("payment_plans_organization_id_customer_id_active_unique")
+      .on(table.organizationId, table.customerId)
+      .where(sql`${table.endedAt} is null`),
+    foreignKey({
+      columns: [table.organizationId, table.customerId],
+      foreignColumns: [customers.organizationId, customers.id],
+      name: "payment_plans_organization_id_customer_id_customers_fk",
+    }),
+  ],
+);
