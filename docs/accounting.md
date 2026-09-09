@@ -70,6 +70,8 @@ No stored balances. Open balance, status, aging, and stats are **projections** (
 
 Let `asOf` default to now; the business-wide page may pass a past date.
 
+**As-of rule.** Every projection below ignores rows dated after `asOf`: invoices with `postedAt > asOf`, payments with `received_at > asOf` (and their applications), adjustments with `created_at > asOf`. Voids are corrections, not events: a voided payment is ignored at every `asOf`. "Today" and "MTD" on the business-wide page mean the `asOf` day and its calendar month, not wall-clock.
+
 | Number | Definition |
 |---|---|
 | **applied(invoice)** | Σ `payment_applications.amount` where the parent payment is **not voided** |
@@ -181,14 +183,21 @@ Follows `work-dashboard-design-spec.md` §12–13 (FieldRow, one control height,
 
 ## 11. Surface: business-wide `/accounting`
 
-Replaces the placeholder page.
+Replaces the placeholder page. Job: *who owes us, who is late, what came in*; with a past `asOf`, *what AR looked like at month-end*. **Read-only.** Every row hands off to the customer Accounting tab (§10), which owns Record Payment, Reallocate, Void, Adjust, and Plan. SoloView has no equivalent screen we have seen (§13).
+
+`ExplorerView` like Customers; `RouterTabs` like `purchasing-2-workspace.tsx`. `asOf` is a URL param shared by every section and preserved across tabs.
 
 | Section | Content |
 |---|---|
-| **Header** | Total open AR, unapplied credit total, MTD write-offs, **as-of date** picker (defaults today; aging and balances recompute) |
-| **Aging** | Same buckets, all customers |
-| **Customers with a balance** | Customer, open balance, past-due amount, oldest due date, credit limit, plan indicator. Default sort past-due desc. Row → that customer's Accounting tab |
-| **Payments received** | Today / MTD toggle: date, customer, amount, method, reference |
+| **Header** | `PageHeader` "Accounting" / "Accounts receivable". Compact `DateInput` for **as-of** (default today) with a *Today* reset |
+| **KPI strip** | Four `StatTile`s: Total open AR · **Past due** (amount and % of open) · Unapplied credit · MTD write-offs |
+| **Aging strip** | Seven buckets (§3) as one row, all customers. Clicking a bucket filters the Balances table to customers with money in it (`bucket` URL param) |
+| **Balances** tab (`/accounting`) | `DataTable`: Customer, Open balance, Past due, Oldest due, Days past due, Credit limit, Available credit, Plan chip. Default sort past-due desc. `DataTable.Search` on customer name / number. Row → `/customers/:id?tab=accounting` |
+| **Payments** tab (`/accounting/payments`) | `DataTable`: Received, Customer, Amount, Method, Reference, Applied / Unapplied, Voided chip. Range chips **Today** · **MTD** · **Custom** (`DateRangeInput`), relative to `asOf`. Row → customer Accounting tab |
+
+Two tall tables do not stack on one scroll; hence tabs. Per-customer aging buckets stay on the customer tab, not on the Balances row (§13 if David wants them here). No write actions on this page in v1.
+
+**Layout prototype (2026-09-08):** mock-data variants on branch [`prototype/accounting-ar-tab`](https://github.com/adamhinckley/dc-inventory/tree/prototype/accounting-ar-tab) at `/accounting?variant=A|B` — A tabs (this spec), B single scroll. To show David; see ADA-364.
 
 ---
 
@@ -206,7 +215,11 @@ Reuse `internal-invoices.ts` patterns and `schemas.ts` response shapes. All unde
 | `POST /payments/:id/void` | `VoidPayment` |
 | `POST /invoices/:id/adjustments` | `AdjustInvoice` |
 | `PUT /customers/:id/payment-plan`, `DELETE …` | create / end plan |
-| `GET /accounting/summary?asOf=` | business-wide totals, aging, customers with balance, payments received |
+| `GET /accounting/summary?asOf=` | `GetAccountingSummary` — totals (open AR, past due, unapplied credit, MTD write-offs) and the aging row. Small payload, no rows |
+| `GET /accounting/customer-balances?asOf=&bucket=` | `ListCustomerBalances` — `x-table` list (server sort / page / search) for the Balances tab |
+| `GET /accounting/payments?from=&to=` | `ListPaymentsReceived` — `x-table` list for the Payments tab |
+
+The business-wide page is three resources, not one blob: `DataTable` drives from `x-table` list endpoints, and customers-with-balance can be hundreds of rows.
 
 Existing `GET /invoices/:id` and `POST /invoices/:id/record-payment` stay. OpenAPI changes run `pnpm gen:api`; frontends use Orval hooks only.
 
@@ -223,6 +236,10 @@ Existing `GET /invoices/:id` and `POST /invoices/:id/record-payment` stay. OpenA
 | RMA / replacement selection | Deferred |
 | Today's Summary (orders report) | Sales reporting, separate packet |
 | History import of SoloView invoices / payments | L7 in the 2026-09-07 highlights; not this spec |
+| SoloView **Accounting** module — what David opens for total AR / aging today | Ask David for a screenshot. The three we have (customer tab, Today's Summary, GL totals) show no business-wide AR screen |
+| Per-customer aging bucket columns on the `/accounting` Balances row | Not in v1 (row stays narrow); decide after David sees the prototype |
+| **Record Payment** entry point on `/accounting` (pick customer → tab with `?action=record-payment`) | v1.1 candidate; adds an `action` param contract to the customer tab (ADA-363) |
+| AR aging **CSV export** as of a date, for David's accountant | Later; pattern is `catalog-csv-download-button.tsx` |
 
 ---
 
@@ -232,7 +249,7 @@ Payment/AR is owner-gated (AG5, AG6): failing tests are reviewed by the owner be
 
 1. **Domain + use cases (in-memory).** Owner tests for §3–§6: derived status precedence, aging buckets, `RecordCustomerPayment` (allocation bounds, remainder flag, idempotency), reallocate, void, adjustments, plan math. Ports extended on `IInvoiceRepository` / `IAccountingUnitOfWork`; `IOpenOrderExposureReadPort` declared. No schema, no HTTP.
 2. **Schema + Drizzle.** Migration: `payments` columns, `invoice_adjustments`, `payment_plans`, drop `invoice_tax_lines` / `tax_total_cents`. `DrizzleInvoiceRepository` implements the new port methods. Postgres integration tests for idempotency race on customer payment.
-3. **Read model.** SQL projections for the customer summary and business-wide summary with `asOf`; Sales exposure adapter.
+3. **Read model.** SQL projections for the customer summary and the business-wide summary, customer-balances list, and payments-received list with `asOf` (§3 as-of rule); Sales exposure adapter.
 4. **Identity.** `accounting` role, `ar_adjust`, `payment_plans_manage`, `credit_limit_manage`; G8 table and static policy change together.
 5. **HTTP + OpenAPI.** §12 routes, `pnpm gen:api`.
 6. **Internal UI — customer tab.** §10, Orval hooks only.
