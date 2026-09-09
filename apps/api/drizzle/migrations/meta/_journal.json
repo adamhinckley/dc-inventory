@@ -283,10 +283,15 @@
       "breakpoints": true
     },
     {
-      "idx": 41,
+      "idx": 42,
       "version": "7",
+<<<<<<< HEAD
       "when": 1790755600000,
       "tag": "0041_sales_orders_multi_cart",
+=======
+      "when": 1790855600000,
+      "tag": "0042_ar_payments_adjustments_plans_drop_tax",
+>>>>>>> 583fa07 (fix(accounting): transactional UoW, idempotency payload, migration 0042 (ADA-359 review))
       "breakpoints": true
     }
   ]

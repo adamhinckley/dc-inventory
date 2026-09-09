@@ -36,6 +36,7 @@ import {
   paymentApplications,
   paymentPlans,
   payments,
+  type StoredIdempotencyApplication,
 } from "../persistence/schema.js";
 
 export type AccountingDrizzle = PostgresJsDatabase;
@@ -121,7 +122,29 @@ function toPaymentPlan(row: typeof paymentPlans.$inferSelect): PaymentPlan {
   };
 }
 
-function paymentInsertValues(payment: Payment): typeof payments.$inferInsert {
+function toStoredIdempotencyApplications(
+  applications: readonly PaymentApplicationSpec[],
+): readonly StoredIdempotencyApplication[] {
+  return applications.map((row) => ({
+    invoiceId: String(row.invoiceId),
+    amountCents: row.amountCents,
+  }));
+}
+
+function fromStoredIdempotencyApplications(
+  stored: readonly StoredIdempotencyApplication[],
+): readonly PaymentApplicationSpec[] {
+  return stored.map((row) => ({
+    invoiceId: InvoiceId.parse(row.invoiceId),
+    amountCents: row.amountCents,
+  }));
+}
+
+function paymentInsertValues(
+  payment: Payment,
+  applications: readonly PaymentApplicationSpec[],
+  holdRemainderAsCredit: boolean,
+): typeof payments.$inferInsert {
   return {
     id: payment.id,
     organizationId: payment.organizationId,
@@ -138,17 +161,16 @@ function paymentInsertValues(payment: Payment): typeof payments.$inferInsert {
     voidedAt: payment.voidedAt ?? null,
     voidedBy: payment.voidedBy ?? null,
     voidReason: payment.voidReason ?? null,
+    holdRemainderAsCredit,
+    idempotencyApplications: toStoredIdempotencyApplications(applications),
   };
 }
 
 function toIdempotencyRecord(
   payment: Payment,
   applications: readonly PaymentApplicationSpec[],
+  holdRemainderAsCredit: boolean,
 ): PaymentIdempotencyRecord {
-  const appliedTotal = applications.reduce((sum, row) => sum + row.amountCents, 0);
-  const holdRemainderAsCredit =
-    appliedTotal < payment.amount.amountMinor ||
-    (applications.length === 0 && payment.amount.amountMinor > 0);
   const firstApplication = applications[0];
   return {
     payment,
@@ -352,15 +374,12 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
       return null;
     }
     const payment = toPayment(paymentRow);
-    const applicationRows = await this.db
-      .select()
-      .from(paymentApplications)
-      .where(eq(paymentApplications.paymentId, paymentRow.id));
-    const applications = applicationRows.map((row) => ({
-      invoiceId: InvoiceId.parse(row.invoiceId),
-      amountCents: row.amountCents,
-    }));
-    return toIdempotencyRecord(payment, applications);
+    const applications = fromStoredIdempotencyApplications(paymentRow.idempotencyApplications);
+    return toIdempotencyRecord(
+      payment,
+      applications,
+      paymentRow.holdRemainderAsCredit,
+    );
   }
 
   async insertPaymentWithApplication(
@@ -380,7 +399,9 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
     applications: readonly PaymentApplicationSpec[],
     holdRemainderAsCredit: boolean,
   ): Promise<void> {
-    await this.db.insert(payments).values(paymentInsertValues(payment));
+    await this.db.insert(payments).values(
+      paymentInsertValues(payment, applications, holdRemainderAsCredit),
+    );
     for (const spec of applications) {
       await this.db.insert(paymentApplications).values({
         id: PaymentApplicationId.parse(newUuid()),
@@ -391,7 +412,6 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
         createdAt: payment.createdAt,
       });
     }
-    void holdRemainderAsCredit;
   }
 
   async updatePayment(payment: Payment): Promise<void> {
@@ -407,7 +427,9 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
         voidedBy: payment.voidedBy ?? null,
         voidReason: payment.voidReason ?? null,
       })
-      .where(eq(payments.id, payment.id));
+      .where(
+        and(eq(payments.id, payment.id), eq(payments.organizationId, payment.organizationId)),
+      );
   }
 
   async insertApplication(application: PaymentApplication): Promise<void> {
@@ -423,10 +445,16 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
 
   async listAdjustments(invoiceId: InvoiceId): Promise<readonly InvoiceAdjustment[]> {
     const rows = await this.db
-      .select()
+      .select({ adjustment: invoiceAdjustments })
       .from(invoiceAdjustments)
-      .where(eq(invoiceAdjustments.invoiceId, invoiceId));
-    return rows.map(toAdjustment);
+      .innerJoin(invoices, eq(invoiceAdjustments.invoiceId, invoices.id))
+      .where(
+        and(
+          eq(invoiceAdjustments.invoiceId, invoiceId),
+          eq(invoiceAdjustments.organizationId, invoices.organizationId),
+        ),
+      );
+    return rows.map((row) => toAdjustment(row.adjustment));
   }
 
   async insertAdjustment(adjustment: InvoiceAdjustment): Promise<void> {
@@ -491,10 +519,24 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
   }
 
   async endPaymentPlan(planId: PaymentPlanId, endedAt: Date): Promise<void> {
+    const rows = await this.db
+      .select({ organizationId: paymentPlans.organizationId })
+      .from(paymentPlans)
+      .where(eq(paymentPlans.id, planId))
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      throw new Error(`Payment plan ${planId} not found`);
+    }
     await this.db
       .update(paymentPlans)
       .set({ endedAt })
-      .where(eq(paymentPlans.id, planId));
+      .where(
+        and(
+          eq(paymentPlans.id, planId),
+          eq(paymentPlans.organizationId, row.organizationId),
+        ),
+      );
   }
 
   async listPaymentsByCustomer(

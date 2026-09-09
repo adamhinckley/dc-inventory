@@ -1,9 +1,11 @@
 import {
   bigint,
+  boolean,
   char,
   date,
   foreignKey,
   integer,
+  jsonb,
   pgSchema,
   text,
   timestamp,
@@ -41,6 +43,11 @@ export const paymentPlanFrequency = accounting.enum("payment_plan_frequency", [
   "weekly",
   "monthly",
 ]);
+
+export type StoredIdempotencyApplication = {
+  invoiceId: string;
+  amountCents: number;
+};
 
 function timestamps() {
   return {
@@ -121,6 +128,11 @@ export const payments = accounting.table(
     voidedAt: timestamp("voided_at", { withTimezone: true, mode: "date" }),
     voidedBy: uuid("voided_by"),
     voidReason: text("void_reason"),
+    holdRemainderAsCredit: boolean("hold_remainder_as_credit").notNull().default(false),
+    idempotencyApplications: jsonb("idempotency_applications")
+      .$type<readonly StoredIdempotencyApplication[]>()
+      .notNull()
+      .default([]),
     ...timestamps(),
   },
   (table) => [
@@ -183,7 +195,6 @@ export const paymentPlans = accounting.table(
     currency: char("currency", { length: 3 }).notNull().default("USD"),
     frequency: paymentPlanFrequency("frequency").notNull(),
     startsOn: date("starts_on", { mode: "date" }).notNull(),
-    note: text("note"),
     endedAt: timestamp("ended_at", { withTimezone: true, mode: "date" }),
     createdBy: uuid("created_by").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
