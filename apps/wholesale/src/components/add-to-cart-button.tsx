@@ -16,6 +16,7 @@ import {
   parseCartQty,
   toReplaceLines,
 } from "../lib/cart-line-qty";
+import { trackCartReplaceEnd, trackCartReplaceStart } from "../lib/cart-mutation-gate";
 import { wholesaleShortageErrorMessage } from "../lib/confirm-shortage-message";
 import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
 import {
@@ -167,6 +168,7 @@ export function AddToCartButton({
         buildOptimisticDraftOrder(draft, lines, new Map([[productId, lineMeta()]])),
       );
       setPending(true);
+      trackCartReplaceStart(draft.id);
       try {
         const response = await replaceLines.mutateAsync({
           id: draft.id,
@@ -183,6 +185,7 @@ export function AddToCartButton({
         }
         setMessage(wholesaleShortageErrorMessage(error, "Could not update cart"));
       } finally {
+        trackCartReplaceEnd(draft.id);
         setPending(false);
       }
       return;

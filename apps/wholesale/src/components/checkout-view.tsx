@@ -3,7 +3,6 @@
 import {
   useConfirmWholesaleSalesOrder,
   useListWholesaleShipTos,
-  useReplaceWholesaleSalesOrderLines,
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -18,6 +17,7 @@ import {
   CHECKOUT_EMPTY_SHIP_TOS_MESSAGE,
 } from "../lib/checkout-empty-copy";
 import { formatMoneyMinorUnits } from "../lib/format-money";
+import { flushCartPendingChanges, useCartMutationGate } from "../lib/cart-mutation-gate";
 import { useActiveCart } from "../lib/use-active-cart";
 import { removeDraftCartOrder } from "../lib/wholesale-cart-cache";
 
@@ -33,11 +33,11 @@ export function CheckoutView() {
   const requestedCartId = searchParams.get("cart");
   const [selectedShipToId, setSelectedShipToId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const activeCart = useActiveCart();
   const shipTos = useListWholesaleShipTos();
   const confirmOrder = useConfirmWholesaleSalesOrder();
-  const replaceLines = useReplaceWholesaleSalesOrderLines();
 
   const shipToPayload = shipTos.data?.data;
 
@@ -45,6 +45,7 @@ export function CheckoutView() {
     requestedCartId !== null
       ? activeCart.drafts.find((item) => item.id === requestedCartId)
       : activeCart.activeDraft;
+  const cartMutation = useCartMutationGate(draft?.id);
   const shipToItems =
     shipToPayload && "items" in shipToPayload ? shipToPayload.items : [];
 
@@ -72,7 +73,9 @@ export function CheckoutView() {
     draft.lines.length > 0 &&
     selectedShipToId.length > 0 &&
     !confirmOrder.isPending &&
-    !replaceLines.isPending;
+    !confirming &&
+    !cartMutation.pending &&
+    !cartMutation.dirty;
 
   if (activeCart.isPending || shipTos.isPending) {
     return <p className="text-ink-muted">Loading checkout…</p>;
@@ -203,30 +206,43 @@ export function CheckoutView() {
             setErrorMessage(null);
             const confirmedId = draft.id;
             const wasActive = activeCart.activeDraft?.id === confirmedId;
-            confirmOrder.mutate(
-              {
-                id: confirmedId,
-                data: {
-                  idempotencyKey: `checkout-${confirmedId}`,
-                  shipToId: selectedShipToId,
+            setConfirming(true);
+            void flushCartPendingChanges(confirmedId).then((ok) => {
+              if (!ok) {
+                setConfirming(false);
+                setErrorMessage("Could not save cart changes. Try again.");
+                return;
+              }
+              confirmOrder.mutate(
+                {
+                  id: confirmedId,
+                  data: {
+                    idempotencyKey: `checkout-${confirmedId}`,
+                    shipToId: selectedShipToId,
+                  },
                 },
-              },
-              {
-                onSuccess: () => {
-                  removeDraftCartOrder(queryClient, confirmedId);
-                  if (wasActive) {
-                    activeCart.clearActiveCart();
-                  }
-                  router.push("/orders");
+                {
+                  onSuccess: () => {
+                    removeDraftCartOrder(queryClient, confirmedId);
+                    if (wasActive) {
+                      activeCart.clearActiveCart();
+                    }
+                    router.push("/orders");
+                  },
+                  onError: (error) => {
+                    setConfirming(false);
+                    setErrorMessage(wholesaleConfirmErrorMessage(error));
+                  },
                 },
-                onError: (error) => {
-                  setErrorMessage(wholesaleConfirmErrorMessage(error));
-                },
-              },
-            );
+              );
+            });
           }}
         >
-          {confirmOrder.isPending ? "Confirming…" : "Confirm Order"}
+          {confirming || cartMutation.pending || cartMutation.dirty
+            ? "Saving…"
+            : confirmOrder.isPending
+              ? "Confirming…"
+              : "Confirm Order"}
         </button>
       </div>
     </div>

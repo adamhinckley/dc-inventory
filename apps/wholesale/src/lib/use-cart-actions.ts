@@ -2,7 +2,15 @@
 
 import { useReplaceWholesaleSalesOrderLines } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import {
+  acquireDraftMutationState,
+  flushCartPendingChanges,
+  setCartQtyDirty,
+  trackCartReplaceEnd,
+  trackCartReplaceStart,
+  useCartMutationGate,
+} from "./cart-mutation-gate";
 import {
   linesForReplace,
   remainingDraftLines,
@@ -10,7 +18,6 @@ import {
   type DraftCartLine,
 } from "./cart-line-qty";
 import { wholesaleShortageErrorMessage } from "./confirm-shortage-message";
-import { createDebouncedTask } from "./debounce-task";
 import { lookupWholesaleProductId } from "./lookup-wholesale-product-id";
 import {
   buildOptimisticDraftOrder,
@@ -19,12 +26,8 @@ import {
   removeDraftCartOrder,
   wholesaleDraftCartQueryKey,
   writeDraftCartOrder,
-  type WholesaleDraftCartListResult,
   type WholesaleDraftCartOrder,
 } from "./wholesale-cart-cache";
-
-/** Quiet period before a +/- stepper PATCH. Latest qty wins. */
-export const CART_QTY_DEBOUNCE_MS = 400;
 
 type ReplacePayload = Array<{ productId: string; qty: number }>;
 
@@ -48,43 +51,37 @@ export type CartActions = {
 /**
  * Every cart surface (drawer, /cart/[id]) mutates a draft the same way:
  * optimistic cache write, one PATCH, roll back on failure. Sibling carts untouched.
+ * Debounce and persist gates are shared per draft id so drawer and cart page agree.
  */
 export function useCartActions(draft: WholesaleDraftCartOrder | undefined): CartActions {
   const queryClient = useQueryClient();
   const replaceLines = useReplaceWholesaleSalesOrderLines();
   const [message, setMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [qtyDirty, setQtyDirty] = useState(false);
   const draftRef = useRef(draft);
   draftRef.current = draft;
-  const burstPreviousRef = useRef<WholesaleDraftCartListResult | undefined>(undefined);
-  const persistQtyRef = useRef<(lines: ReplacePayload) => Promise<void>>(async () => undefined);
-  const qtyTaskRef = useRef<ReturnType<typeof createDebouncedTask<ReplacePayload>> | undefined>(
-    undefined,
-  );
-  const lastFlushOkRef = useRef(true);
-  const persistGate = useRef(Promise.resolve());
-  const queuedPersist = useRef<{
-    lines: ReplacePayload | null;
-    failMessage: string;
-    label?: string | null;
-  } | null>(null);
+  const mutationGate = useCartMutationGate(draft?.id);
+  const draftId = draft?.id;
+  const mutationState = draftId === undefined ? undefined : acquireDraftMutationState(draftId);
+  const persistQtyRef = useRef<(lines: ReplacePayload) => Promise<boolean>>(async () => true);
 
   async function persist(
     lines: ReplacePayload | null,
     failMessage: string,
     label?: string | null,
   ): Promise<boolean> {
-    queuedPersist.current = { lines, failMessage, label };
-    const run = persistGate.current.then(async () => {
-      const next = queuedPersist.current;
-      queuedPersist.current = null;
+    if (mutationState === undefined || draftId === undefined) {
+      return false;
+    }
+    mutationState.queuedPersist = { lines, failMessage, label };
+    const run = mutationState.persistGate.then(async () => {
+      const next = mutationState.queuedPersist;
+      mutationState.queuedPersist = null;
       if (next === null) {
         return true;
       }
       return persistNow(next.lines, next.failMessage, next.label);
     });
-    persistGate.current = run.then(
+    mutationState.persistGate = run.then(
       () => undefined,
       () => undefined,
     );
@@ -97,17 +94,16 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
     label?: string | null,
   ): Promise<boolean> {
     const currentDraft = draftRef.current;
-    if (currentDraft === undefined) {
+    if (currentDraft === undefined || draftId === undefined || mutationState === undefined) {
       return false;
     }
     if (lines === null) {
       setMessage(failMessage);
       return false;
     }
-    setSaving(true);
     setMessage(null);
-    const previous = burstPreviousRef.current ?? readDraftCartList(queryClient);
-    burstPreviousRef.current = undefined;
+    const previous = mutationState.burstPrevious ?? readDraftCartList(queryClient);
+    mutationState.burstPrevious = undefined;
     if (lines.length === 0) {
       removeDraftCartOrder(queryClient, currentDraft.id);
     } else {
@@ -121,6 +117,7 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
             : { ...optimistic, label },
       );
     }
+    trackCartReplaceStart(draftId);
     try {
       const response = await replaceLines.mutateAsync({
         id: currentDraft.id,
@@ -131,36 +128,21 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       }
       return true;
     } catch (error) {
-      qtyTaskRef.current?.cancel();
+      mutationState.qtyTask.cancel();
       if (previous !== undefined) {
         queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
       }
       setMessage(wholesaleShortageErrorMessage(error, failMessage));
       return false;
     } finally {
-      setSaving(false);
+      trackCartReplaceEnd(draftId);
     }
   }
 
-  persistQtyRef.current = async (lines) => {
-    try {
-      lastFlushOkRef.current = await persist(lines, "Could not update item");
-    } finally {
-      setQtyDirty(false);
-    }
-  };
-  if (qtyTaskRef.current === undefined) {
-    qtyTaskRef.current = createDebouncedTask(async (lines) => {
-      await persistQtyRef.current(lines);
-    }, CART_QTY_DEBOUNCE_MS);
+  persistQtyRef.current = async (lines) => persist(lines, "Could not update item");
+  if (mutationState !== undefined) {
+    mutationState.persistQtyHandler = async (lines) => persistQtyRef.current(lines);
   }
-
-  useEffect(() => {
-    const task = qtyTaskRef.current;
-    return () => {
-      void task?.flush();
-    };
-  }, []);
 
   async function toPayload(lines: readonly DraftCartLine[]): Promise<ReplacePayload | null> {
     return linesForReplace(lines) ?? (await toReplaceLines(lines, lookupWholesaleProductId));
@@ -176,28 +158,31 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
 
   function writeOptimisticQty(lines: ReplacePayload): void {
     const currentDraft = draftRef.current;
-    if (currentDraft === undefined) {
+    if (currentDraft === undefined || mutationState === undefined) {
       return;
     }
-    if (burstPreviousRef.current === undefined) {
-      burstPreviousRef.current = readDraftCartList(queryClient);
+    if (mutationState.burstPrevious === undefined) {
+      mutationState.burstPrevious = readDraftCartList(queryClient);
     }
     writeDraftCartOrder(queryClient, buildOptimisticDraftOrder(currentDraft, lines));
   }
 
   return {
-    pending: saving || replaceLines.isPending,
-    dirty: qtyDirty || (qtyTaskRef.current?.hasPending() ?? false),
+    pending: mutationGate.pending,
+    dirty: mutationGate.dirty,
     message,
     setMessage,
     async flushPendingChanges() {
-      lastFlushOkRef.current = true;
-      await qtyTaskRef.current?.flush();
-      await persistGate.current;
-      return lastFlushOkRef.current;
+      if (draftId === undefined) {
+        return false;
+      }
+      return flushCartPendingChanges(draftId);
     },
     async setLineQty(lineId, qty) {
-      await qtyTaskRef.current?.flush();
+      if (mutationState === undefined) {
+        return false;
+      }
+      await mutationState.qtyTask.flush();
       const current = latestDraft();
       if (current === undefined) {
         return false;
@@ -212,6 +197,9 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       return persist(await toPayload(next), "Could not update item");
     },
     async adjustLineQty(lineId, delta) {
+      if (mutationState === undefined || draftId === undefined) {
+        return false;
+      }
       const current = latestDraft();
       if (current === undefined) {
         return false;
@@ -222,27 +210,30 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       }
       const qty = line.qty + delta;
       if (qty <= 0) {
-        qtyTaskRef.current?.cancel();
-        setQtyDirty(false);
+        mutationState.qtyTask.cancel();
+        setCartQtyDirty(draftId, false);
         return persist(
           await toPayload(remainingDraftLines(current.lines, lineId)),
           "Could not remove item",
         );
       }
-      const next = current.lines.map((item) => (item.id === lineId ? { ...item, qty } : item));
+      const next = current.lines.map((item) => (item.id === lineId ? { ...item, qty } : line));
       const payload = await toPayload(next);
       if (payload === null) {
         setMessage("Could not update item");
         return false;
       }
       writeOptimisticQty(payload);
-      qtyTaskRef.current?.schedule(payload);
-      setQtyDirty(true);
+      mutationState.qtyTask.schedule(payload);
+      setCartQtyDirty(draftId, true);
       return true;
     },
     async removeLine(lineId) {
-      qtyTaskRef.current?.cancel();
-      setQtyDirty(false);
+      if (mutationState === undefined || draftId === undefined) {
+        return false;
+      }
+      mutationState.qtyTask.cancel();
+      setCartQtyDirty(draftId, false);
       const current = latestDraft();
       if (current === undefined) {
         return false;
@@ -254,7 +245,10 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       return persist(payload, "Could not remove item");
     },
     async rename(label) {
-      await qtyTaskRef.current?.flush();
+      if (mutationState === undefined) {
+        return false;
+      }
+      await mutationState.qtyTask.flush();
       const current = latestDraft();
       if (current === undefined) {
         return false;
@@ -262,7 +256,10 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       return persist(await toPayload(current.lines), "Could not rename cart", label);
     },
     async deleteCart() {
-      qtyTaskRef.current?.cancel();
+      if (mutationState === undefined) {
+        return false;
+      }
+      mutationState.qtyTask.cancel();
       return persist([], "Could not delete cart");
     },
   };

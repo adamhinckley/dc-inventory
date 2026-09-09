@@ -9,6 +9,7 @@ import {
   cartLineCount,
   cartSubtotalCents,
 } from "../lib/active-cart";
+import { flushCartPendingChanges } from "../lib/cart-mutation-gate";
 import { closeCartDrawer, useCartDrawerOpen } from "../lib/cart-drawer-store";
 import { formatMoneyMinorUnits } from "../lib/format-money";
 import { PRODUCT_PLACEHOLDER_SRC } from "../lib/product-image";
@@ -72,15 +73,34 @@ export function CartDrawer() {
     actions.dirty ||
     checkoutNavigating;
 
+  function closeDrawerAndFlush(): void {
+    const draftId = draft?.id;
+    closeCartDrawer();
+    if (draftId !== undefined) {
+      void flushCartPendingChanges(draftId);
+    }
+  }
+
+  function navigateFromDrawer(href: string): void {
+    const draftId = draft?.id;
+    void (async () => {
+      if (draftId !== undefined) {
+        await flushCartPendingChanges(draftId);
+      }
+      closeCartDrawer();
+      router.push(href);
+    })();
+  }
+
   return (
     <dialog
       ref={dialogRef}
       aria-label="Cart"
       className="shop-drawer"
-      onClose={closeCartDrawer}
+      onClose={closeDrawerAndFlush}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
-          closeCartDrawer();
+          closeDrawerAndFlush();
         }
       }}
     >
@@ -98,7 +118,7 @@ export function CartDrawer() {
           </div>
           <button
             type="button"
-            onClick={closeCartDrawer}
+            onClick={closeDrawerAndFlush}
             aria-label="Close cart"
             className="inline-flex size-10 cursor-pointer items-center justify-center rounded-full border border-line text-ink hover:bg-canvas"
           >
@@ -122,7 +142,10 @@ export function CartDrawer() {
               </p>
               <Link
                 href="/products"
-                onClick={closeCartDrawer}
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigateFromDrawer("/products");
+                }}
                 className="shop-button-secondary inline-flex items-center px-5 text-sm"
               >
                 Browse Products
@@ -147,7 +170,10 @@ export function CartDrawer() {
                     {line.productId !== undefined ? (
                       <Link
                         href={`/products/${line.productId}`}
-                        onClick={closeCartDrawer}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          navigateFromDrawer(`/products/${line.productId}`);
+                        }}
                         className="line-clamp-2 text-sm font-semibold leading-snug text-ink hover:text-accent"
                       >
                         {line.name}
@@ -217,13 +243,15 @@ export function CartDrawer() {
             </p>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <Link
-              href={draft === undefined ? "/cart" : `/cart/${draft.id}`}
-              onClick={closeCartDrawer}
+            <button
+              type="button"
+              onClick={() => {
+                navigateFromDrawer(draft === undefined ? "/cart" : `/cart/${draft.id}`);
+              }}
               className="shop-button-secondary inline-flex items-center justify-center text-sm"
             >
               {draft === undefined ? "All Carts" : "View Cart"}
-            </Link>
+            </button>
             <button
               type="button"
               disabled={checkoutBlocked}

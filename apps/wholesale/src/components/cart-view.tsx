@@ -19,6 +19,7 @@ import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
 import { PRODUCT_PLACEHOLDER_SRC } from "../lib/product-image";
 import { shopDisplayAvailableQty } from "../lib/shop-availability";
 import { useActiveCart } from "../lib/use-active-cart";
+import { flushCartPendingChanges } from "../lib/cart-mutation-gate";
 import { useCartActions } from "../lib/use-cart-actions";
 
 function TrashIcon() {
@@ -156,6 +157,10 @@ export function CartView({ cartId }: { cartId: string }) {
   const [labelInput, setLabelInput] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [checkoutNavigating, setCheckoutNavigating] = useState(false);
+
+  useEffect(() => {
+    void flushCartPendingChanges(cartId);
+  }, [cartId]);
 
   useEffect(() => {
     const dialog = qtyDialogRef.current;
