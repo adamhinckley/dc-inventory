@@ -32,13 +32,22 @@ export class InMemoryCustomerArProfileReadPort implements ICustomerArProfileRead
   }
 
   async listAll(organizationId: OrganizationId): Promise<readonly CustomerArProfile[]> {
-    const page = await this.customers.list({
-      organizationId,
-      page: 1,
-      pageSize: 10_000,
-      sortBy: "name",
-      sortOrder: "asc",
-    });
-    return page.items.map(toProfile);
+    const items: CustomerArProfile[] = [];
+    const pageSize = 500;
+    let page = 1;
+    let total = 0;
+    do {
+      const result = await this.customers.list({
+        organizationId,
+        page,
+        pageSize,
+        sortBy: "name",
+        sortOrder: "asc",
+      });
+      items.push(...result.items.map(toProfile));
+      total = result.total;
+      page += 1;
+    } while (items.length < total);
+    return items;
   }
 }

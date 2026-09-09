@@ -1,10 +1,10 @@
-import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
-import type { IArCustomerReadPort } from "../domain/ports/ar-customer-read-port.js";
+import type { CustomerId } from "@dc-inventory/shared-kernel";
 import type {
   CustomerBalancesListPage,
   CustomerBalancesListQuery,
   ICustomerBalancesListQuery,
 } from "../domain/ports/customer-balances-list-query.js";
+import type { IArOrgReadPort } from "../domain/ports/ar-org-read-port.js";
 import type { ICustomerArProfileReadPort } from "../domain/ports/customer-ar-profile-read.js";
 import type { IOpenOrderExposureReadPort } from "../domain/ports/open-order-exposure-read.js";
 import { projectCustomerArBalance } from "../domain/ar-projection.js";
@@ -16,21 +16,24 @@ import {
 
 export class InMemoryCustomerBalancesListQuery implements ICustomerBalancesListQuery {
   constructor(
-    private readonly arCustomerRead: IArCustomerReadPort,
+    private readonly arOrgRead: IArOrgReadPort,
     private readonly customerProfiles: ICustomerArProfileReadPort,
     private readonly openOrderExposure: IOpenOrderExposureReadPort,
   ) {}
 
   async list(query: CustomerBalancesListQuery): Promise<CustomerBalancesListPage> {
-    const profiles = await this.customerProfiles.listAll(query.organizationId);
+    const [profiles, allCustomerData] = await Promise.all([
+      this.customerProfiles.listAll(query.organizationId),
+      this.arOrgRead.loadAllCustomerData(query.organizationId),
+    ]);
     const rows = [];
     const agingByCustomerId = new Map<CustomerId, Readonly<Record<string, number>>>();
 
     for (const profile of profiles) {
-      const loaded = await this.arCustomerRead.loadCustomerData(
-        query.organizationId,
-        profile.customerId,
-      );
+      const loaded = allCustomerData.get(profile.customerId);
+      if (loaded === undefined) {
+        continue;
+      }
       const projection = projectCustomerArBalance(profile.customerId, loaded, query.asOf);
       if (!shouldIncludeCustomerBalance(projection)) {
         continue;

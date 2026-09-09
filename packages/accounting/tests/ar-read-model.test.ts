@@ -15,6 +15,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryArCustomerReadPort } from "../src/adapters/in-memory-ar-customer-read-port.js";
+import { InMemoryArOrgReadPort } from "../src/adapters/in-memory-ar-org-read-port.js";
 import { InMemoryCustomerArProfileReadPort } from "../src/adapters/in-memory-customer-ar-profile-read.js";
 import { InMemoryCustomerBalancesListQuery } from "../src/adapters/in-memory-customer-balances-list-query.js";
 import { InMemoryLastOrderDateReadPort } from "../src/adapters/in-memory-last-order-date-read.js";
@@ -25,6 +26,7 @@ import {
   AdjustInvoiceUseCase,
   GetAccountingSummaryUseCase,
   GetCustomerAccountingSummaryUseCase,
+  InvoiceAdjustmentId,
   ListCustomerBalancesQuery,
   ListPaymentsReceivedQuery,
   RecordCustomerPaymentUseCase,
@@ -51,10 +53,11 @@ async function readHarness() {
   const salesOrders = new InMemorySalesOrderRepository();
   const arCustomerRead = new InMemoryArCustomerReadPort(uow.invoices);
   const customerProfiles = new InMemoryCustomerArProfileReadPort(customers);
+  const arOrgRead = new InMemoryArOrgReadPort(uow.invoices, customerProfiles);
   const openOrderExposure = new InMemoryOpenOrderExposureReadAdapter(salesOrders);
   const lastOrderDate = new InMemoryLastOrderDateReadPort();
   const customerBalancesList = new InMemoryCustomerBalancesListQuery(
-    arCustomerRead,
+    arOrgRead,
     customerProfiles,
     openOrderExposure,
   );
@@ -77,11 +80,7 @@ async function readHarness() {
       openOrderExposure,
       lastOrderDate,
     ),
-    getAccountingSummary: new GetAccountingSummaryUseCase(
-      arCustomerRead,
-      customerProfiles,
-      openOrderExposure,
-    ),
+    getAccountingSummary: new GetAccountingSummaryUseCase(arOrgRead),
     listCustomerBalances: new ListCustomerBalancesQuery(customerBalancesList),
     listPaymentsReceived: new ListPaymentsReceivedQuery(paymentsReceivedList),
     lastOrderDate,
@@ -420,6 +419,62 @@ describe("AR read model (ADA-360)", () => {
     expect(creditSummary.openBalanceCents).toBe(-900);
   });
 
+  it("past asOf excludes invoices posted after asOf and adjustments created after asOf", async () => {
+    const h = await readHarness();
+    await seedCustomer(h.customers, {
+      id: CUSTOMER_OPEN,
+      name: "As-Of Invoice Flowers",
+      number: "100098",
+      creditLimitCents: 10_000,
+    });
+    const futureInvoiceId = await seedInvoice(h, {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb098",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc98",
+      customerId: CUSTOMER_OPEN,
+      totalCents: 500,
+      dueDate: new Date("2026-10-01T00:00:00.000Z"),
+      postedAt: new Date("2026-09-15T00:00:00.000Z"),
+    });
+    const currentInvoiceId = await seedInvoice(h, {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb097",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc97",
+      customerId: CUSTOMER_OPEN,
+      totalCents: 800,
+      dueDate: new Date("2026-08-01T00:00:00.000Z"),
+      postedAt: new Date("2026-08-01T00:00:00.000Z"),
+    });
+    await h.adjustInvoice.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId: currentInvoiceId,
+      kind: "credit_memo",
+      amountCents: 100,
+      reason: "future credit",
+    });
+    await h.uow.invoices.insertAdjustment({
+      id: InvoiceAdjustmentId.parse("ffffffff-ffff-4fff-8fff-fffffffffff1"),
+      organizationId: DEFAULT_ORG,
+      invoiceId: currentInvoiceId,
+      kind: "credit_memo",
+      amountCents: 200,
+      currency: "USD",
+      reason: "backdated credit",
+      createdAt: new Date("2026-08-15T00:00:00.000Z"),
+      createdBy: STAFF_ID,
+    });
+
+    const asOf = new Date("2026-09-01T00:00:00.000Z");
+    const summary = await h.getCustomerSummary.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_OPEN,
+      asOf,
+    });
+    expect(summary.openInvoices).toHaveLength(1);
+    expect(summary.openInvoices[0]?.invoice.id).toBe(currentInvoiceId);
+    expect(summary.openInvoices[0]?.remainingCents).toBe(600);
+    expect(summary.openInvoices.map((row) => row.invoice.id)).not.toContain(futureInvoiceId);
+  });
+
   it("past asOf excludes a payment received after asOf", async () => {
     const h = await readHarness();
     await seedCustomer(h.customers, {
@@ -503,6 +558,47 @@ describe("AR read model (ADA-360)", () => {
     });
     expect(search.items).toHaveLength(1);
     expect(search.items[0]?.customerNumber).toBe("100007");
+  });
+
+  it("business summary MTD write-offs include customers cleared by write-off", async () => {
+    const h = await readHarness();
+    const clearedCustomer = CustomerId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa08");
+    await seedCustomer(h.customers, {
+      id: clearedCustomer,
+      name: "Cleared By Write-Off",
+      number: "100008",
+      creditLimitCents: 10_000,
+    });
+    const invoiceId = await seedInvoice(h, {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbb008",
+      orderId: "cccccccc-cccc-4ccc-8ccc-cccccccccc08",
+      customerId: clearedCustomer,
+      totalCents: 1500,
+      dueDate: new Date("2026-09-01T00:00:00.000Z"),
+      postedAt: new Date("2026-09-01T00:00:00.000Z"),
+    });
+    await h.adjustInvoice.execute({
+      staffUserId: STAFF_ID,
+      organizationId: DEFAULT_ORG,
+      invoiceId,
+      kind: "write_off",
+      amountCents: 1500,
+      reason: "uncollectible",
+    });
+
+    const summary = await h.getAccountingSummary.execute({
+      organizationId: DEFAULT_ORG,
+      asOf: AS_OF,
+    });
+    expect(summary.mtdWriteOffsCents).toBe(1500);
+    expect(summary.totalOpenArCents).toBe(0);
+    const balances = await h.listCustomerBalances.execute({
+      organizationId: DEFAULT_ORG,
+      asOf: AS_OF,
+      page: 1,
+      pageSize: 20,
+    });
+    expect(balances.items.find((row) => row.customerId === clearedCustomer)).toBeUndefined();
   });
 
   it("payments received list returns applied, unapplied, and voided rows", async () => {

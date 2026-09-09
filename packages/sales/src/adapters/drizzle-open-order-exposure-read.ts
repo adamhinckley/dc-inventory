@@ -13,7 +13,7 @@ export class DrizzleOpenOrderExposureReadAdapter implements IOpenOrderExposureRe
   ): Promise<number> {
     const [row] = await this.db
       .select({
-        totalCents: sql<number>`coalesce(sum(${orderLines.qty} * ${orderLines.unitPriceCents}), 0)`,
+        totalCents: sql<number>`coalesce(sum((${orderLines.qty} * ${orderLines.unitPriceCents})::bigint), 0)::int`,
       })
       .from(orders)
       .innerJoin(orderLines, eq(orderLines.orderId, orders.id))

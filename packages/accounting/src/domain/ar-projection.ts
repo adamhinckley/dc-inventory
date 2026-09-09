@@ -55,18 +55,6 @@ export function collectVoidedPaymentIds(
   return new Set(payments.filter((payment) => isPaymentVoided(payment)).map((payment) => payment.id));
 }
 
-export function filterPaymentsForAsOf(
-  payments: readonly Payment[],
-  asOf: Date,
-): readonly Payment[] {
-  return payments.filter(
-    (payment) =>
-      payment.receivedAt !== undefined &&
-      payment.receivedAt <= asOf &&
-      !isPaymentVoided(payment),
-  );
-}
-
 export function filterCustomerArDataForAsOf(
   data: CustomerArLoadedData,
   asOf: Date,
