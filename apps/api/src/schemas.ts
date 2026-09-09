@@ -35,7 +35,9 @@ export const staffSessionResponseSchema = z.object({
   staffUserId: z.string().uuid(),
   email: z.string(),
   organizationId: z.string(),
-  roles: z.array(z.enum(["admin", "purchasing", "warehouse", "sales_support"])),
+  roles: z.array(
+    z.enum(["admin", "purchasing", "warehouse", "sales_support", "accounting"]),
+  ),
 });
 
 export const wholesaleSessionResponseSchema = z.object({

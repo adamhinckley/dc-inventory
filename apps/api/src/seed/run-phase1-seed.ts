@@ -95,7 +95,7 @@ async function upsertStaff(
     organizationId: OrganizationId.DEFAULT,
     email: PHASE1_STAFF_EMAIL,
     passwordHash: await ports.passwords.hash(password),
-    roles: existing?.roles ?? ["admin"],
+    roles: existing?.roles ?? ["admin", "accounting"],
   };
   await ports.staffUsers.save(staff);
   return staff;

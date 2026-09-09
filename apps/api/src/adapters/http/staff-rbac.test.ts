@@ -30,7 +30,7 @@ async function startRbacApp() {
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
 
   for (const [index, role] of (
-    ["admin", "purchasing", "warehouse", "sales_support"] as const
+    ["admin", "purchasing", "warehouse", "sales_support", "accounting"] as const
   ).entries()) {
     await staffUsers.save({
       id: StaffUserId.parse(`10000000-0000-4000-8000-00000000000${index}`),
@@ -236,5 +236,65 @@ describe("staff RBAC HTTP guard", () => {
       },
     });
     expect(allowedPayment.statusCode).toBe(404);
+
+    const accounting = await cookie("accounting");
+    const accountingPayment = await app.inject({
+      method: "POST",
+      url: `/internal/invoices/${RESOURCE_ID}/record-payment`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: {
+        amountCents: 100,
+        currency: "USD",
+        idempotencyKey: "payment-accounting",
+      },
+    });
+    expect(accountingPayment.statusCode).toBe(404);
+  });
+
+  it("requires credit_limit_manage to change customer credit limit", async () => {
+    const { app, cookie } = await startRbacApp();
+    const admin = await cookie("admin");
+    const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "RBAC Credit Customer",
+        creditLimitCents: 1_000_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    expectForbidden(
+      await app.inject({
+        method: "PATCH",
+        url: `/internal/customers/${customerId}`,
+        cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+        payload: { creditLimitCents: 2_000_000 },
+      }),
+    );
+
+    const allowedName = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+      payload: { name: "RBAC Credit Customer Updated" },
+    });
+    expect(allowedName.statusCode).toBe(200);
+
+    const allowedCredit = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: { creditLimitCents: 2_000_000 },
+    });
+    expect(allowedCredit.statusCode).toBe(200);
+    expect(allowedCredit.json()).toMatchObject({ creditLimitCents: 2_000_000 });
   });
 });

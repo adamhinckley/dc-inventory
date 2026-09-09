@@ -284,7 +284,7 @@ export async function runWriteStaticDemoBook(
     organizationId: OrganizationId.DEFAULT,
     email: plan.master.staffEmail,
     passwordHash: await ports.passwords.hash(staffPassword),
-    roles: existingStaff?.roles ?? ["admin"],
+    roles: existingStaff?.roles ?? ["admin", "accounting"],
   };
   await ports.staffUsers.save(staff);
 
