@@ -36,6 +36,18 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("listInternalCustomers");
     expect(specs.internal).toContain("x-table");
     expect(specs.internal).toContain("listInternalProducts");
+    expect(specs.internal).toContain("getInternalCustomerAccounting");
+    expect(specs.internal).toContain("listInternalCustomerInvoices");
+    expect(specs.internal).toContain("listInternalCustomerPayments");
+    expect(specs.internal).toContain("recordInternalCustomerPayment");
+    expect(specs.internal).toContain("reallocateInternalPayment");
+    expect(specs.internal).toContain("voidInternalPayment");
+    expect(specs.internal).toContain("adjustInternalInvoice");
+    expect(specs.internal).toContain("setInternalCustomerPaymentPlan");
+    expect(specs.internal).toContain("endInternalCustomerPaymentPlan");
+    expect(specs.internal).toContain("getInternalAccountingSummary");
+    expect(specs.internal).toContain("listInternalAccountingCustomerBalances");
+    expect(specs.internal).toContain("listInternalAccountingPayments");
     expect(specs.internal).toContain("draftInternalUncoveredPurchaseOrders");
     expect(specs.internal).toContain("/internal/uncovered-skus/draft-purchase-orders");
     expect(specs.internal).toContain("/internal/purchase-orders/sync-from-uncovered");
@@ -64,6 +76,8 @@ describe("OpenAPI stub export", () => {
       .filter((operation): operation is TableOperation => operation?.["x-table"] !== undefined);
 
     expect(tableOperations.map((operation) => operation.operationId).sort()).toEqual([
+      "listInternalAccountingCustomerBalances",
+      "listInternalAccountingPayments",
       "listInternalCustomers",
       "listInternalProducts",
       "listInternalPurchaseOrders",
@@ -75,7 +89,6 @@ describe("OpenAPI stub export", () => {
       "listInternalUncoveredSkus",
     ]);
 
-    const sharedParams = ["q", "page", "pageSize", "sortBy", "sortOrder"];
     for (const operation of tableOperations) {
       const queryParameters = (operation.parameters ?? []).filter(
         (parameter) => parameter.in === "query",
@@ -83,6 +96,13 @@ describe("OpenAPI stub export", () => {
       const byName = new Map(queryParameters.map((parameter) => [parameter.name, parameter]));
       const table = operation["x-table"];
       const paginationOnly = table.sort === undefined;
+      const sharedParams = [
+        ...(table.search === undefined ? [] : ["q"]),
+        "page",
+        "pageSize",
+        "sortBy",
+        "sortOrder",
+      ];
 
       if (paginationOnly) {
         expect([...byName.keys()], operation.operationId).toEqual(
@@ -98,7 +118,9 @@ describe("OpenAPI stub export", () => {
         expect.arrayContaining(sharedParams),
       );
 
-      expect(table.search?.param, operation.operationId).toBe("q");
+      if (table.search !== undefined) {
+        expect(table.search.param, operation.operationId).toBe("q");
+      }
       expect(byName.get("page")?.schema.default, operation.operationId).toBe(1);
       expect(byName.get("pageSize")?.schema.default, operation.operationId).toBe(25);
       expect(byName.get("sortBy")?.schema.enum, operation.operationId).toEqual(

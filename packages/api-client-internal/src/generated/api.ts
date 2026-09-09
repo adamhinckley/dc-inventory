@@ -19,6 +19,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdjustInternalInvoice200,
+  AdjustInternalInvoice400,
+  AdjustInternalInvoice401,
+  AdjustInternalInvoice403,
+  AdjustInternalInvoice404,
+  AdjustInternalInvoiceBody,
   AssignInternalSupplierProduct201,
   AssignInternalSupplierProduct400,
   AssignInternalSupplierProduct401,
@@ -134,6 +140,11 @@ import type {
   DraftInternalUncoveredPurchaseOrders403,
   DraftInternalUncoveredPurchaseOrders409,
   DraftInternalUncoveredPurchaseOrdersBody,
+  EndInternalCustomerPaymentPlan204,
+  EndInternalCustomerPaymentPlan401,
+  EndInternalCustomerPaymentPlan403,
+  EndInternalCustomerPaymentPlan404,
+  EndInternalCustomerPaymentPlan409,
   ExportInternalProducts400,
   ExportInternalProducts401,
   ExportInternalProducts403,
@@ -142,11 +153,20 @@ import type {
   ExportInternalPurchaseOrder403,
   ExportInternalPurchaseOrder404,
   ExportInternalPurchaseOrderParams,
+  GetInternalAccountingSummary200,
+  GetInternalAccountingSummary401,
+  GetInternalAccountingSummary403,
+  GetInternalAccountingSummaryParams,
   GetInternalCustomer200,
   GetInternalCustomer400,
   GetInternalCustomer401,
   GetInternalCustomer403,
   GetInternalCustomer404,
+  GetInternalCustomerAccounting200,
+  GetInternalCustomerAccounting401,
+  GetInternalCustomerAccounting403,
+  GetInternalCustomerAccounting404,
+  GetInternalCustomerAccountingParams,
   GetInternalCustomerBillTo200,
   GetInternalCustomerBillTo400,
   GetInternalCustomerBillTo401,
@@ -200,6 +220,16 @@ import type {
   ImportInternalProducts403,
   ImportInternalProductsBody,
   ImportInternalProductsParams,
+  ListInternalAccountingCustomerBalances200,
+  ListInternalAccountingCustomerBalances400,
+  ListInternalAccountingCustomerBalances401,
+  ListInternalAccountingCustomerBalances403,
+  ListInternalAccountingCustomerBalancesParams,
+  ListInternalAccountingPayments200,
+  ListInternalAccountingPayments400,
+  ListInternalAccountingPayments401,
+  ListInternalAccountingPayments403,
+  ListInternalAccountingPaymentsParams,
   ListInternalCategories200,
   ListInternalCategories401,
   ListInternalCategories403,
@@ -213,6 +243,16 @@ import type {
   ListInternalCustomerExemptionCertificates401,
   ListInternalCustomerExemptionCertificates403,
   ListInternalCustomerExemptionCertificates404,
+  ListInternalCustomerInvoices200,
+  ListInternalCustomerInvoices401,
+  ListInternalCustomerInvoices403,
+  ListInternalCustomerInvoices404,
+  ListInternalCustomerInvoicesParams,
+  ListInternalCustomerPayments200,
+  ListInternalCustomerPayments401,
+  ListInternalCustomerPayments403,
+  ListInternalCustomerPayments404,
+  ListInternalCustomerPaymentsParams,
   ListInternalCustomerShipTos200,
   ListInternalCustomerShipTos400,
   ListInternalCustomerShipTos401,
@@ -278,6 +318,13 @@ import type {
   LoginInternalBody,
   LogoutInternal200,
   LogoutInternal401,
+  ReallocateInternalPayment200,
+  ReallocateInternalPayment400,
+  ReallocateInternalPayment401,
+  ReallocateInternalPayment403,
+  ReallocateInternalPayment404,
+  ReallocateInternalPayment409,
+  ReallocateInternalPaymentBody,
   ReceiveInternalPurchaseOrder200,
   ReceiveInternalPurchaseOrder400,
   ReceiveInternalPurchaseOrder401,
@@ -285,6 +332,13 @@ import type {
   ReceiveInternalPurchaseOrder404,
   ReceiveInternalPurchaseOrder409,
   ReceiveInternalPurchaseOrderBody,
+  RecordInternalCustomerPayment200,
+  RecordInternalCustomerPayment400,
+  RecordInternalCustomerPayment401,
+  RecordInternalCustomerPayment403,
+  RecordInternalCustomerPayment404,
+  RecordInternalCustomerPayment409,
+  RecordInternalCustomerPaymentBody,
   RecordInternalInvoicePayment200,
   RecordInternalInvoicePayment400,
   RecordInternalInvoicePayment401,
@@ -311,6 +365,13 @@ import type {
   ReplaceInternalSalesOrderLines404,
   ReplaceInternalSalesOrderLines409,
   ReplaceInternalSalesOrderLinesBody,
+  SetInternalCustomerPaymentPlan200,
+  SetInternalCustomerPaymentPlan400,
+  SetInternalCustomerPaymentPlan401,
+  SetInternalCustomerPaymentPlan403,
+  SetInternalCustomerPaymentPlan404,
+  SetInternalCustomerPaymentPlan409,
+  SetInternalCustomerPaymentPlanBody,
   ShipInternalSalesOrder200,
   ShipInternalSalesOrder400,
   ShipInternalSalesOrder401,
@@ -393,7 +454,14 @@ import type {
   UpdateInternalSupplierProduct401,
   UpdateInternalSupplierProduct403,
   UpdateInternalSupplierProduct404,
-  UpdateInternalSupplierProductBody
+  UpdateInternalSupplierProductBody,
+  VoidInternalPayment200,
+  VoidInternalPayment400,
+  VoidInternalPayment401,
+  VoidInternalPayment403,
+  VoidInternalPayment404,
+  VoidInternalPayment409,
+  VoidInternalPaymentBody
 } from './model';
 
 import { customFetch } from '../custom-fetch';
@@ -7962,6 +8030,1379 @@ export const useRecordInternalInvoicePayment = <TError = RecordInternalInvoicePa
       > => {
       return useMutation(getRecordInternalInvoicePaymentMutationOptions(options));
     }
+
+export type getInternalCustomerAccountingResponse200 = {
+  data: GetInternalCustomerAccounting200
+  status: 200
+}
+
+export type getInternalCustomerAccountingResponse401 = {
+  data: GetInternalCustomerAccounting401
+  status: 401
+}
+
+export type getInternalCustomerAccountingResponse403 = {
+  data: GetInternalCustomerAccounting403
+  status: 403
+}
+
+export type getInternalCustomerAccountingResponse404 = {
+  data: GetInternalCustomerAccounting404
+  status: 404
+}
+
+export type getInternalCustomerAccountingResponseSuccess = (getInternalCustomerAccountingResponse200) & {
+  headers: Headers;
+};
+export type getInternalCustomerAccountingResponseError = (getInternalCustomerAccountingResponse401 | getInternalCustomerAccountingResponse403 | getInternalCustomerAccountingResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalCustomerAccountingResponse = (getInternalCustomerAccountingResponseSuccess | getInternalCustomerAccountingResponseError)
+
+export const getGetInternalCustomerAccountingUrl = (id: string,
+    params?: GetInternalCustomerAccountingParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/customers/${id}/accounting?${stringifiedParams}` : `/internal/customers/${id}/accounting`
+}
+
+/**
+ * @summary Get customer accounting summary
+ */
+export const getInternalCustomerAccounting = async (id: string,
+    params?: GetInternalCustomerAccountingParams, options?: Parameters<typeof customFetch>[1]): Promise<getInternalCustomerAccountingResponse> => {
+
+  return customFetch<getInternalCustomerAccountingResponse>(getGetInternalCustomerAccountingUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalCustomerAccountingQueryKey = (id: string,
+    params?: GetInternalCustomerAccountingParams,) => {
+    return [
+    `/internal/customers/${id}/accounting`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetInternalCustomerAccountingQueryOptions = <TData = Awaited<ReturnType<typeof getInternalCustomerAccounting>>, TError = GetInternalCustomerAccounting401 | GetInternalCustomerAccounting403 | GetInternalCustomerAccounting404>(id: string,
+    params?: GetInternalCustomerAccountingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerAccounting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalCustomerAccountingQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalCustomerAccounting>>> = ({ signal }) => getInternalCustomerAccounting(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerAccounting>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalCustomerAccountingQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalCustomerAccounting>>>
+export type GetInternalCustomerAccountingQueryError = GetInternalCustomerAccounting401 | GetInternalCustomerAccounting403 | GetInternalCustomerAccounting404
+
+
+/**
+ * @summary Get customer accounting summary
+ */
+
+export function useGetInternalCustomerAccounting<TData = Awaited<ReturnType<typeof getInternalCustomerAccounting>>, TError = GetInternalCustomerAccounting401 | GetInternalCustomerAccounting403 | GetInternalCustomerAccounting404>(
+ id: string,
+    params?: GetInternalCustomerAccountingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerAccounting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalCustomerAccountingQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listInternalCustomerInvoicesResponse200 = {
+  data: ListInternalCustomerInvoices200
+  status: 200
+}
+
+export type listInternalCustomerInvoicesResponse401 = {
+  data: ListInternalCustomerInvoices401
+  status: 401
+}
+
+export type listInternalCustomerInvoicesResponse403 = {
+  data: ListInternalCustomerInvoices403
+  status: 403
+}
+
+export type listInternalCustomerInvoicesResponse404 = {
+  data: ListInternalCustomerInvoices404
+  status: 404
+}
+
+export type listInternalCustomerInvoicesResponseSuccess = (listInternalCustomerInvoicesResponse200) & {
+  headers: Headers;
+};
+export type listInternalCustomerInvoicesResponseError = (listInternalCustomerInvoicesResponse401 | listInternalCustomerInvoicesResponse403 | listInternalCustomerInvoicesResponse404) & {
+  headers: Headers;
+};
+
+export type listInternalCustomerInvoicesResponse = (listInternalCustomerInvoicesResponseSuccess | listInternalCustomerInvoicesResponseError)
+
+export const getListInternalCustomerInvoicesUrl = (id: string,
+    params?: ListInternalCustomerInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/customers/${id}/invoices?${stringifiedParams}` : `/internal/customers/${id}/invoices`
+}
+
+/**
+ * @summary List customer invoices with derived status
+ */
+export const listInternalCustomerInvoices = async (id: string,
+    params?: ListInternalCustomerInvoicesParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalCustomerInvoicesResponse> => {
+
+  return customFetch<listInternalCustomerInvoicesResponse>(getListInternalCustomerInvoicesUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalCustomerInvoicesQueryKey = (id: string,
+    params?: ListInternalCustomerInvoicesParams,) => {
+    return [
+    `/internal/customers/${id}/invoices`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalCustomerInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof listInternalCustomerInvoices>>, TError = ListInternalCustomerInvoices401 | ListInternalCustomerInvoices403 | ListInternalCustomerInvoices404>(id: string,
+    params?: ListInternalCustomerInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalCustomerInvoicesQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalCustomerInvoices>>> = ({ signal }) => listInternalCustomerInvoices(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalCustomerInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalCustomerInvoices>>>
+export type ListInternalCustomerInvoicesQueryError = ListInternalCustomerInvoices401 | ListInternalCustomerInvoices403 | ListInternalCustomerInvoices404
+
+
+/**
+ * @summary List customer invoices with derived status
+ */
+
+export function useListInternalCustomerInvoices<TData = Awaited<ReturnType<typeof listInternalCustomerInvoices>>, TError = ListInternalCustomerInvoices401 | ListInternalCustomerInvoices403 | ListInternalCustomerInvoices404>(
+ id: string,
+    params?: ListInternalCustomerInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalCustomerInvoicesQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listInternalCustomerPaymentsResponse200 = {
+  data: ListInternalCustomerPayments200
+  status: 200
+}
+
+export type listInternalCustomerPaymentsResponse401 = {
+  data: ListInternalCustomerPayments401
+  status: 401
+}
+
+export type listInternalCustomerPaymentsResponse403 = {
+  data: ListInternalCustomerPayments403
+  status: 403
+}
+
+export type listInternalCustomerPaymentsResponse404 = {
+  data: ListInternalCustomerPayments404
+  status: 404
+}
+
+export type listInternalCustomerPaymentsResponseSuccess = (listInternalCustomerPaymentsResponse200) & {
+  headers: Headers;
+};
+export type listInternalCustomerPaymentsResponseError = (listInternalCustomerPaymentsResponse401 | listInternalCustomerPaymentsResponse403 | listInternalCustomerPaymentsResponse404) & {
+  headers: Headers;
+};
+
+export type listInternalCustomerPaymentsResponse = (listInternalCustomerPaymentsResponseSuccess | listInternalCustomerPaymentsResponseError)
+
+export const getListInternalCustomerPaymentsUrl = (id: string,
+    params?: ListInternalCustomerPaymentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/customers/${id}/payments?${stringifiedParams}` : `/internal/customers/${id}/payments`
+}
+
+/**
+ * @summary List customer payments with applications and void state
+ */
+export const listInternalCustomerPayments = async (id: string,
+    params?: ListInternalCustomerPaymentsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalCustomerPaymentsResponse> => {
+
+  return customFetch<listInternalCustomerPaymentsResponse>(getListInternalCustomerPaymentsUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalCustomerPaymentsQueryKey = (id: string,
+    params?: ListInternalCustomerPaymentsParams,) => {
+    return [
+    `/internal/customers/${id}/payments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalCustomerPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalCustomerPayments>>, TError = ListInternalCustomerPayments401 | ListInternalCustomerPayments403 | ListInternalCustomerPayments404>(id: string,
+    params?: ListInternalCustomerPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalCustomerPaymentsQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalCustomerPayments>>> = ({ signal }) => listInternalCustomerPayments(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerPayments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalCustomerPaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalCustomerPayments>>>
+export type ListInternalCustomerPaymentsQueryError = ListInternalCustomerPayments401 | ListInternalCustomerPayments403 | ListInternalCustomerPayments404
+
+
+/**
+ * @summary List customer payments with applications and void state
+ */
+
+export function useListInternalCustomerPayments<TData = Awaited<ReturnType<typeof listInternalCustomerPayments>>, TError = ListInternalCustomerPayments401 | ListInternalCustomerPayments403 | ListInternalCustomerPayments404>(
+ id: string,
+    params?: ListInternalCustomerPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalCustomerPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalCustomerPaymentsQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type recordInternalCustomerPaymentResponse200 = {
+  data: RecordInternalCustomerPayment200
+  status: 200
+}
+
+export type recordInternalCustomerPaymentResponse400 = {
+  data: RecordInternalCustomerPayment400
+  status: 400
+}
+
+export type recordInternalCustomerPaymentResponse401 = {
+  data: RecordInternalCustomerPayment401
+  status: 401
+}
+
+export type recordInternalCustomerPaymentResponse403 = {
+  data: RecordInternalCustomerPayment403
+  status: 403
+}
+
+export type recordInternalCustomerPaymentResponse404 = {
+  data: RecordInternalCustomerPayment404
+  status: 404
+}
+
+export type recordInternalCustomerPaymentResponse409 = {
+  data: RecordInternalCustomerPayment409
+  status: 409
+}
+
+export type recordInternalCustomerPaymentResponseSuccess = (recordInternalCustomerPaymentResponse200) & {
+  headers: Headers;
+};
+export type recordInternalCustomerPaymentResponseError = (recordInternalCustomerPaymentResponse400 | recordInternalCustomerPaymentResponse401 | recordInternalCustomerPaymentResponse403 | recordInternalCustomerPaymentResponse404 | recordInternalCustomerPaymentResponse409) & {
+  headers: Headers;
+};
+
+export type recordInternalCustomerPaymentResponse = (recordInternalCustomerPaymentResponseSuccess | recordInternalCustomerPaymentResponseError)
+
+export const getRecordInternalCustomerPaymentUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/payments`
+}
+
+/**
+ * @summary Record a customer payment with explicit applications
+ */
+export const recordInternalCustomerPayment = async (id: string,
+    recordInternalCustomerPaymentBody: RecordInternalCustomerPaymentBody, options?: Parameters<typeof customFetch>[1]): Promise<recordInternalCustomerPaymentResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<recordInternalCustomerPaymentResponse>(getRecordInternalCustomerPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(recordInternalCustomerPaymentBody)
+  }
+);}
+
+
+
+
+
+export const getRecordInternalCustomerPaymentMutationOptions = <TError = RecordInternalCustomerPayment400 | RecordInternalCustomerPayment401 | RecordInternalCustomerPayment403 | RecordInternalCustomerPayment404 | RecordInternalCustomerPayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordInternalCustomerPayment>>, TError,{id: string;data: RecordInternalCustomerPaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordInternalCustomerPayment>>, TError,{id: string;data: RecordInternalCustomerPaymentBody}, TContext> => {
+
+const mutationKey = ['recordInternalCustomerPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordInternalCustomerPayment>>, {id: string;data: RecordInternalCustomerPaymentBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordInternalCustomerPayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordInternalCustomerPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof recordInternalCustomerPayment>>>
+    export type RecordInternalCustomerPaymentMutationBody = RecordInternalCustomerPaymentBody
+    export type RecordInternalCustomerPaymentMutationError = RecordInternalCustomerPayment400 | RecordInternalCustomerPayment401 | RecordInternalCustomerPayment403 | RecordInternalCustomerPayment404 | RecordInternalCustomerPayment409
+
+    /**
+ * @summary Record a customer payment with explicit applications
+ */
+export const useRecordInternalCustomerPayment = <TError = RecordInternalCustomerPayment400 | RecordInternalCustomerPayment401 | RecordInternalCustomerPayment403 | RecordInternalCustomerPayment404 | RecordInternalCustomerPayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordInternalCustomerPayment>>, TError,{id: string;data: RecordInternalCustomerPaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordInternalCustomerPayment>>,
+        TError,
+        {id: string;data: RecordInternalCustomerPaymentBody},
+        TContext
+      > => {
+      return useMutation(getRecordInternalCustomerPaymentMutationOptions(options));
+    }
+
+export type reallocateInternalPaymentResponse200 = {
+  data: ReallocateInternalPayment200
+  status: 200
+}
+
+export type reallocateInternalPaymentResponse400 = {
+  data: ReallocateInternalPayment400
+  status: 400
+}
+
+export type reallocateInternalPaymentResponse401 = {
+  data: ReallocateInternalPayment401
+  status: 401
+}
+
+export type reallocateInternalPaymentResponse403 = {
+  data: ReallocateInternalPayment403
+  status: 403
+}
+
+export type reallocateInternalPaymentResponse404 = {
+  data: ReallocateInternalPayment404
+  status: 404
+}
+
+export type reallocateInternalPaymentResponse409 = {
+  data: ReallocateInternalPayment409
+  status: 409
+}
+
+export type reallocateInternalPaymentResponseSuccess = (reallocateInternalPaymentResponse200) & {
+  headers: Headers;
+};
+export type reallocateInternalPaymentResponseError = (reallocateInternalPaymentResponse400 | reallocateInternalPaymentResponse401 | reallocateInternalPaymentResponse403 | reallocateInternalPaymentResponse404 | reallocateInternalPaymentResponse409) & {
+  headers: Headers;
+};
+
+export type reallocateInternalPaymentResponse = (reallocateInternalPaymentResponseSuccess | reallocateInternalPaymentResponseError)
+
+export const getReallocateInternalPaymentUrl = (id: string,) => {
+
+
+
+
+  return `/internal/payments/${id}/reallocate`
+}
+
+/**
+ * @summary Reallocate payment amounts across invoices
+ */
+export const reallocateInternalPayment = async (id: string,
+    reallocateInternalPaymentBody: ReallocateInternalPaymentBody, options?: Parameters<typeof customFetch>[1]): Promise<reallocateInternalPaymentResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<reallocateInternalPaymentResponse>(getReallocateInternalPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reallocateInternalPaymentBody)
+  }
+);}
+
+
+
+
+
+export const getReallocateInternalPaymentMutationOptions = <TError = ReallocateInternalPayment400 | ReallocateInternalPayment401 | ReallocateInternalPayment403 | ReallocateInternalPayment404 | ReallocateInternalPayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reallocateInternalPayment>>, TError,{id: string;data: ReallocateInternalPaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reallocateInternalPayment>>, TError,{id: string;data: ReallocateInternalPaymentBody}, TContext> => {
+
+const mutationKey = ['reallocateInternalPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reallocateInternalPayment>>, {id: string;data: ReallocateInternalPaymentBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reallocateInternalPayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReallocateInternalPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof reallocateInternalPayment>>>
+    export type ReallocateInternalPaymentMutationBody = ReallocateInternalPaymentBody
+    export type ReallocateInternalPaymentMutationError = ReallocateInternalPayment400 | ReallocateInternalPayment401 | ReallocateInternalPayment403 | ReallocateInternalPayment404 | ReallocateInternalPayment409
+
+    /**
+ * @summary Reallocate payment amounts across invoices
+ */
+export const useReallocateInternalPayment = <TError = ReallocateInternalPayment400 | ReallocateInternalPayment401 | ReallocateInternalPayment403 | ReallocateInternalPayment404 | ReallocateInternalPayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reallocateInternalPayment>>, TError,{id: string;data: ReallocateInternalPaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reallocateInternalPayment>>,
+        TError,
+        {id: string;data: ReallocateInternalPaymentBody},
+        TContext
+      > => {
+      return useMutation(getReallocateInternalPaymentMutationOptions(options));
+    }
+
+export type voidInternalPaymentResponse200 = {
+  data: VoidInternalPayment200
+  status: 200
+}
+
+export type voidInternalPaymentResponse400 = {
+  data: VoidInternalPayment400
+  status: 400
+}
+
+export type voidInternalPaymentResponse401 = {
+  data: VoidInternalPayment401
+  status: 401
+}
+
+export type voidInternalPaymentResponse403 = {
+  data: VoidInternalPayment403
+  status: 403
+}
+
+export type voidInternalPaymentResponse404 = {
+  data: VoidInternalPayment404
+  status: 404
+}
+
+export type voidInternalPaymentResponse409 = {
+  data: VoidInternalPayment409
+  status: 409
+}
+
+export type voidInternalPaymentResponseSuccess = (voidInternalPaymentResponse200) & {
+  headers: Headers;
+};
+export type voidInternalPaymentResponseError = (voidInternalPaymentResponse400 | voidInternalPaymentResponse401 | voidInternalPaymentResponse403 | voidInternalPaymentResponse404 | voidInternalPaymentResponse409) & {
+  headers: Headers;
+};
+
+export type voidInternalPaymentResponse = (voidInternalPaymentResponseSuccess | voidInternalPaymentResponseError)
+
+export const getVoidInternalPaymentUrl = (id: string,) => {
+
+
+
+
+  return `/internal/payments/${id}/void`
+}
+
+/**
+ * @summary Void a payment
+ */
+export const voidInternalPayment = async (id: string,
+    voidInternalPaymentBody: VoidInternalPaymentBody, options?: Parameters<typeof customFetch>[1]): Promise<voidInternalPaymentResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<voidInternalPaymentResponse>(getVoidInternalPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(voidInternalPaymentBody)
+  }
+);}
+
+
+
+
+
+export const getVoidInternalPaymentMutationOptions = <TError = VoidInternalPayment400 | VoidInternalPayment401 | VoidInternalPayment403 | VoidInternalPayment404 | VoidInternalPayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voidInternalPayment>>, TError,{id: string;data: VoidInternalPaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof voidInternalPayment>>, TError,{id: string;data: VoidInternalPaymentBody}, TContext> => {
+
+const mutationKey = ['voidInternalPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof voidInternalPayment>>, {id: string;data: VoidInternalPaymentBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  voidInternalPayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VoidInternalPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof voidInternalPayment>>>
+    export type VoidInternalPaymentMutationBody = VoidInternalPaymentBody
+    export type VoidInternalPaymentMutationError = VoidInternalPayment400 | VoidInternalPayment401 | VoidInternalPayment403 | VoidInternalPayment404 | VoidInternalPayment409
+
+    /**
+ * @summary Void a payment
+ */
+export const useVoidInternalPayment = <TError = VoidInternalPayment400 | VoidInternalPayment401 | VoidInternalPayment403 | VoidInternalPayment404 | VoidInternalPayment409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voidInternalPayment>>, TError,{id: string;data: VoidInternalPaymentBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof voidInternalPayment>>,
+        TError,
+        {id: string;data: VoidInternalPaymentBody},
+        TContext
+      > => {
+      return useMutation(getVoidInternalPaymentMutationOptions(options));
+    }
+
+export type adjustInternalInvoiceResponse200 = {
+  data: AdjustInternalInvoice200
+  status: 200
+}
+
+export type adjustInternalInvoiceResponse400 = {
+  data: AdjustInternalInvoice400
+  status: 400
+}
+
+export type adjustInternalInvoiceResponse401 = {
+  data: AdjustInternalInvoice401
+  status: 401
+}
+
+export type adjustInternalInvoiceResponse403 = {
+  data: AdjustInternalInvoice403
+  status: 403
+}
+
+export type adjustInternalInvoiceResponse404 = {
+  data: AdjustInternalInvoice404
+  status: 404
+}
+
+export type adjustInternalInvoiceResponseSuccess = (adjustInternalInvoiceResponse200) & {
+  headers: Headers;
+};
+export type adjustInternalInvoiceResponseError = (adjustInternalInvoiceResponse400 | adjustInternalInvoiceResponse401 | adjustInternalInvoiceResponse403 | adjustInternalInvoiceResponse404) & {
+  headers: Headers;
+};
+
+export type adjustInternalInvoiceResponse = (adjustInternalInvoiceResponseSuccess | adjustInternalInvoiceResponseError)
+
+export const getAdjustInternalInvoiceUrl = (id: string,) => {
+
+
+
+
+  return `/internal/invoices/${id}/adjustments`
+}
+
+/**
+ * @summary Adjust an invoice balance
+ */
+export const adjustInternalInvoice = async (id: string,
+    adjustInternalInvoiceBody: AdjustInternalInvoiceBody, options?: Parameters<typeof customFetch>[1]): Promise<adjustInternalInvoiceResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<adjustInternalInvoiceResponse>(getAdjustInternalInvoiceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(adjustInternalInvoiceBody)
+  }
+);}
+
+
+
+
+
+export const getAdjustInternalInvoiceMutationOptions = <TError = AdjustInternalInvoice400 | AdjustInternalInvoice401 | AdjustInternalInvoice403 | AdjustInternalInvoice404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adjustInternalInvoice>>, TError,{id: string;data: AdjustInternalInvoiceBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adjustInternalInvoice>>, TError,{id: string;data: AdjustInternalInvoiceBody}, TContext> => {
+
+const mutationKey = ['adjustInternalInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adjustInternalInvoice>>, {id: string;data: AdjustInternalInvoiceBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adjustInternalInvoice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdjustInternalInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adjustInternalInvoice>>>
+    export type AdjustInternalInvoiceMutationBody = AdjustInternalInvoiceBody
+    export type AdjustInternalInvoiceMutationError = AdjustInternalInvoice400 | AdjustInternalInvoice401 | AdjustInternalInvoice403 | AdjustInternalInvoice404
+
+    /**
+ * @summary Adjust an invoice balance
+ */
+export const useAdjustInternalInvoice = <TError = AdjustInternalInvoice400 | AdjustInternalInvoice401 | AdjustInternalInvoice403 | AdjustInternalInvoice404,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adjustInternalInvoice>>, TError,{id: string;data: AdjustInternalInvoiceBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adjustInternalInvoice>>,
+        TError,
+        {id: string;data: AdjustInternalInvoiceBody},
+        TContext
+      > => {
+      return useMutation(getAdjustInternalInvoiceMutationOptions(options));
+    }
+
+export type setInternalCustomerPaymentPlanResponse200 = {
+  data: SetInternalCustomerPaymentPlan200
+  status: 200
+}
+
+export type setInternalCustomerPaymentPlanResponse400 = {
+  data: SetInternalCustomerPaymentPlan400
+  status: 400
+}
+
+export type setInternalCustomerPaymentPlanResponse401 = {
+  data: SetInternalCustomerPaymentPlan401
+  status: 401
+}
+
+export type setInternalCustomerPaymentPlanResponse403 = {
+  data: SetInternalCustomerPaymentPlan403
+  status: 403
+}
+
+export type setInternalCustomerPaymentPlanResponse404 = {
+  data: SetInternalCustomerPaymentPlan404
+  status: 404
+}
+
+export type setInternalCustomerPaymentPlanResponse409 = {
+  data: SetInternalCustomerPaymentPlan409
+  status: 409
+}
+
+export type setInternalCustomerPaymentPlanResponseSuccess = (setInternalCustomerPaymentPlanResponse200) & {
+  headers: Headers;
+};
+export type setInternalCustomerPaymentPlanResponseError = (setInternalCustomerPaymentPlanResponse400 | setInternalCustomerPaymentPlanResponse401 | setInternalCustomerPaymentPlanResponse403 | setInternalCustomerPaymentPlanResponse404 | setInternalCustomerPaymentPlanResponse409) & {
+  headers: Headers;
+};
+
+export type setInternalCustomerPaymentPlanResponse = (setInternalCustomerPaymentPlanResponseSuccess | setInternalCustomerPaymentPlanResponseError)
+
+export const getSetInternalCustomerPaymentPlanUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/payment-plan`
+}
+
+/**
+ * @summary Create a customer payment plan
+ */
+export const setInternalCustomerPaymentPlan = async (id: string,
+    setInternalCustomerPaymentPlanBody: SetInternalCustomerPaymentPlanBody, options?: Parameters<typeof customFetch>[1]): Promise<setInternalCustomerPaymentPlanResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<setInternalCustomerPaymentPlanResponse>(getSetInternalCustomerPaymentPlanUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(setInternalCustomerPaymentPlanBody)
+  }
+);}
+
+
+
+
+
+export const getSetInternalCustomerPaymentPlanMutationOptions = <TError = SetInternalCustomerPaymentPlan400 | SetInternalCustomerPaymentPlan401 | SetInternalCustomerPaymentPlan403 | SetInternalCustomerPaymentPlan404 | SetInternalCustomerPaymentPlan409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setInternalCustomerPaymentPlan>>, TError,{id: string;data: SetInternalCustomerPaymentPlanBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setInternalCustomerPaymentPlan>>, TError,{id: string;data: SetInternalCustomerPaymentPlanBody}, TContext> => {
+
+const mutationKey = ['setInternalCustomerPaymentPlan'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setInternalCustomerPaymentPlan>>, {id: string;data: SetInternalCustomerPaymentPlanBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setInternalCustomerPaymentPlan(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetInternalCustomerPaymentPlanMutationResult = NonNullable<Awaited<ReturnType<typeof setInternalCustomerPaymentPlan>>>
+    export type SetInternalCustomerPaymentPlanMutationBody = SetInternalCustomerPaymentPlanBody
+    export type SetInternalCustomerPaymentPlanMutationError = SetInternalCustomerPaymentPlan400 | SetInternalCustomerPaymentPlan401 | SetInternalCustomerPaymentPlan403 | SetInternalCustomerPaymentPlan404 | SetInternalCustomerPaymentPlan409
+
+    /**
+ * @summary Create a customer payment plan
+ */
+export const useSetInternalCustomerPaymentPlan = <TError = SetInternalCustomerPaymentPlan400 | SetInternalCustomerPaymentPlan401 | SetInternalCustomerPaymentPlan403 | SetInternalCustomerPaymentPlan404 | SetInternalCustomerPaymentPlan409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setInternalCustomerPaymentPlan>>, TError,{id: string;data: SetInternalCustomerPaymentPlanBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setInternalCustomerPaymentPlan>>,
+        TError,
+        {id: string;data: SetInternalCustomerPaymentPlanBody},
+        TContext
+      > => {
+      return useMutation(getSetInternalCustomerPaymentPlanMutationOptions(options));
+    }
+
+export type endInternalCustomerPaymentPlanResponse204 = {
+  data: EndInternalCustomerPaymentPlan204
+  status: 204
+}
+
+export type endInternalCustomerPaymentPlanResponse401 = {
+  data: EndInternalCustomerPaymentPlan401
+  status: 401
+}
+
+export type endInternalCustomerPaymentPlanResponse403 = {
+  data: EndInternalCustomerPaymentPlan403
+  status: 403
+}
+
+export type endInternalCustomerPaymentPlanResponse404 = {
+  data: EndInternalCustomerPaymentPlan404
+  status: 404
+}
+
+export type endInternalCustomerPaymentPlanResponse409 = {
+  data: EndInternalCustomerPaymentPlan409
+  status: 409
+}
+
+export type endInternalCustomerPaymentPlanResponseSuccess = (endInternalCustomerPaymentPlanResponse204) & {
+  headers: Headers;
+};
+export type endInternalCustomerPaymentPlanResponseError = (endInternalCustomerPaymentPlanResponse401 | endInternalCustomerPaymentPlanResponse403 | endInternalCustomerPaymentPlanResponse404 | endInternalCustomerPaymentPlanResponse409) & {
+  headers: Headers;
+};
+
+export type endInternalCustomerPaymentPlanResponse = (endInternalCustomerPaymentPlanResponseSuccess | endInternalCustomerPaymentPlanResponseError)
+
+export const getEndInternalCustomerPaymentPlanUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}/payment-plan`
+}
+
+/**
+ * @summary End the active customer payment plan
+ */
+export const endInternalCustomerPaymentPlan = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<endInternalCustomerPaymentPlanResponse> => {
+
+  return customFetch<endInternalCustomerPaymentPlanResponse>(getEndInternalCustomerPaymentPlanUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getEndInternalCustomerPaymentPlanMutationOptions = <TError = EndInternalCustomerPaymentPlan401 | EndInternalCustomerPaymentPlan403 | EndInternalCustomerPaymentPlan404 | EndInternalCustomerPaymentPlan409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof endInternalCustomerPaymentPlan>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof endInternalCustomerPaymentPlan>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['endInternalCustomerPaymentPlan'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof endInternalCustomerPaymentPlan>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  endInternalCustomerPaymentPlan(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EndInternalCustomerPaymentPlanMutationResult = NonNullable<Awaited<ReturnType<typeof endInternalCustomerPaymentPlan>>>
+
+    export type EndInternalCustomerPaymentPlanMutationError = EndInternalCustomerPaymentPlan401 | EndInternalCustomerPaymentPlan403 | EndInternalCustomerPaymentPlan404 | EndInternalCustomerPaymentPlan409
+
+    /**
+ * @summary End the active customer payment plan
+ */
+export const useEndInternalCustomerPaymentPlan = <TError = EndInternalCustomerPaymentPlan401 | EndInternalCustomerPaymentPlan403 | EndInternalCustomerPaymentPlan404 | EndInternalCustomerPaymentPlan409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof endInternalCustomerPaymentPlan>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof endInternalCustomerPaymentPlan>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getEndInternalCustomerPaymentPlanMutationOptions(options));
+    }
+
+export type getInternalAccountingSummaryResponse200 = {
+  data: GetInternalAccountingSummary200
+  status: 200
+}
+
+export type getInternalAccountingSummaryResponse401 = {
+  data: GetInternalAccountingSummary401
+  status: 401
+}
+
+export type getInternalAccountingSummaryResponse403 = {
+  data: GetInternalAccountingSummary403
+  status: 403
+}
+
+export type getInternalAccountingSummaryResponseSuccess = (getInternalAccountingSummaryResponse200) & {
+  headers: Headers;
+};
+export type getInternalAccountingSummaryResponseError = (getInternalAccountingSummaryResponse401 | getInternalAccountingSummaryResponse403) & {
+  headers: Headers;
+};
+
+export type getInternalAccountingSummaryResponse = (getInternalAccountingSummaryResponseSuccess | getInternalAccountingSummaryResponseError)
+
+export const getGetInternalAccountingSummaryUrl = (params?: GetInternalAccountingSummaryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/accounting/summary?${stringifiedParams}` : `/internal/accounting/summary`
+}
+
+/**
+ * @summary Get business-wide AR summary totals and aging
+ */
+export const getInternalAccountingSummary = async (params?: GetInternalAccountingSummaryParams, options?: Parameters<typeof customFetch>[1]): Promise<getInternalAccountingSummaryResponse> => {
+
+  return customFetch<getInternalAccountingSummaryResponse>(getGetInternalAccountingSummaryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalAccountingSummaryQueryKey = (params?: GetInternalAccountingSummaryParams,) => {
+    return [
+    `/internal/accounting/summary`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetInternalAccountingSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getInternalAccountingSummary>>, TError = GetInternalAccountingSummary401 | GetInternalAccountingSummary403>(params?: GetInternalAccountingSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalAccountingSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalAccountingSummaryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalAccountingSummary>>> = ({ signal }) => getInternalAccountingSummary(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalAccountingSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalAccountingSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalAccountingSummary>>>
+export type GetInternalAccountingSummaryQueryError = GetInternalAccountingSummary401 | GetInternalAccountingSummary403
+
+
+/**
+ * @summary Get business-wide AR summary totals and aging
+ */
+
+export function useGetInternalAccountingSummary<TData = Awaited<ReturnType<typeof getInternalAccountingSummary>>, TError = GetInternalAccountingSummary401 | GetInternalAccountingSummary403>(
+ params?: GetInternalAccountingSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalAccountingSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalAccountingSummaryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listInternalAccountingCustomerBalancesResponse200 = {
+  data: ListInternalAccountingCustomerBalances200
+  status: 200
+}
+
+export type listInternalAccountingCustomerBalancesResponse400 = {
+  data: ListInternalAccountingCustomerBalances400
+  status: 400
+}
+
+export type listInternalAccountingCustomerBalancesResponse401 = {
+  data: ListInternalAccountingCustomerBalances401
+  status: 401
+}
+
+export type listInternalAccountingCustomerBalancesResponse403 = {
+  data: ListInternalAccountingCustomerBalances403
+  status: 403
+}
+
+export type listInternalAccountingCustomerBalancesResponseSuccess = (listInternalAccountingCustomerBalancesResponse200) & {
+  headers: Headers;
+};
+export type listInternalAccountingCustomerBalancesResponseError = (listInternalAccountingCustomerBalancesResponse400 | listInternalAccountingCustomerBalancesResponse401 | listInternalAccountingCustomerBalancesResponse403) & {
+  headers: Headers;
+};
+
+export type listInternalAccountingCustomerBalancesResponse = (listInternalAccountingCustomerBalancesResponseSuccess | listInternalAccountingCustomerBalancesResponseError)
+
+export const getListInternalAccountingCustomerBalancesUrl = (params?: ListInternalAccountingCustomerBalancesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/accounting/customer-balances?${stringifiedParams}` : `/internal/accounting/customer-balances`
+}
+
+/**
+ * @summary List customer AR balances
+ */
+export const listInternalAccountingCustomerBalances = async (params?: ListInternalAccountingCustomerBalancesParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalAccountingCustomerBalancesResponse> => {
+
+  return customFetch<listInternalAccountingCustomerBalancesResponse>(getListInternalAccountingCustomerBalancesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalAccountingCustomerBalancesQueryKey = (params?: ListInternalAccountingCustomerBalancesParams,) => {
+    return [
+    `/internal/accounting/customer-balances`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalAccountingCustomerBalancesQueryOptions = <TData = Awaited<ReturnType<typeof listInternalAccountingCustomerBalances>>, TError = ListInternalAccountingCustomerBalances400 | ListInternalAccountingCustomerBalances401 | ListInternalAccountingCustomerBalances403>(params?: ListInternalAccountingCustomerBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalAccountingCustomerBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalAccountingCustomerBalancesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalAccountingCustomerBalances>>> = ({ signal }) => listInternalAccountingCustomerBalances(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalAccountingCustomerBalances>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalAccountingCustomerBalancesQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalAccountingCustomerBalances>>>
+export type ListInternalAccountingCustomerBalancesQueryError = ListInternalAccountingCustomerBalances400 | ListInternalAccountingCustomerBalances401 | ListInternalAccountingCustomerBalances403
+
+
+/**
+ * @summary List customer AR balances
+ */
+
+export function useListInternalAccountingCustomerBalances<TData = Awaited<ReturnType<typeof listInternalAccountingCustomerBalances>>, TError = ListInternalAccountingCustomerBalances400 | ListInternalAccountingCustomerBalances401 | ListInternalAccountingCustomerBalances403>(
+ params?: ListInternalAccountingCustomerBalancesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalAccountingCustomerBalances>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalAccountingCustomerBalancesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listInternalAccountingPaymentsResponse200 = {
+  data: ListInternalAccountingPayments200
+  status: 200
+}
+
+export type listInternalAccountingPaymentsResponse400 = {
+  data: ListInternalAccountingPayments400
+  status: 400
+}
+
+export type listInternalAccountingPaymentsResponse401 = {
+  data: ListInternalAccountingPayments401
+  status: 401
+}
+
+export type listInternalAccountingPaymentsResponse403 = {
+  data: ListInternalAccountingPayments403
+  status: 403
+}
+
+export type listInternalAccountingPaymentsResponseSuccess = (listInternalAccountingPaymentsResponse200) & {
+  headers: Headers;
+};
+export type listInternalAccountingPaymentsResponseError = (listInternalAccountingPaymentsResponse400 | listInternalAccountingPaymentsResponse401 | listInternalAccountingPaymentsResponse403) & {
+  headers: Headers;
+};
+
+export type listInternalAccountingPaymentsResponse = (listInternalAccountingPaymentsResponseSuccess | listInternalAccountingPaymentsResponseError)
+
+export const getListInternalAccountingPaymentsUrl = (params: ListInternalAccountingPaymentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/accounting/payments?${stringifiedParams}` : `/internal/accounting/payments`
+}
+
+/**
+ * @summary List payments received in a date range
+ */
+export const listInternalAccountingPayments = async (params: ListInternalAccountingPaymentsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalAccountingPaymentsResponse> => {
+
+  return customFetch<listInternalAccountingPaymentsResponse>(getListInternalAccountingPaymentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalAccountingPaymentsQueryKey = (params?: ListInternalAccountingPaymentsParams,) => {
+    return [
+    `/internal/accounting/payments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalAccountingPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalAccountingPayments>>, TError = ListInternalAccountingPayments400 | ListInternalAccountingPayments401 | ListInternalAccountingPayments403>(params: ListInternalAccountingPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalAccountingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalAccountingPaymentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalAccountingPayments>>> = ({ signal }) => listInternalAccountingPayments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalAccountingPayments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalAccountingPaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalAccountingPayments>>>
+export type ListInternalAccountingPaymentsQueryError = ListInternalAccountingPayments400 | ListInternalAccountingPayments401 | ListInternalAccountingPayments403
+
+
+/**
+ * @summary List payments received in a date range
+ */
+
+export function useListInternalAccountingPayments<TData = Awaited<ReturnType<typeof listInternalAccountingPayments>>, TError = ListInternalAccountingPayments400 | ListInternalAccountingPayments401 | ListInternalAccountingPayments403>(
+ params: ListInternalAccountingPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalAccountingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalAccountingPaymentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type listInternalLicensingSubscriptionsResponse200 = {
   data: ListInternalLicensingSubscriptions200

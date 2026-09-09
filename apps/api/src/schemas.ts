@@ -1447,3 +1447,349 @@ export const overpayResponseSchema = z.object({
 export const wrongCurrencyResponseSchema = z.object({
   error: z.literal("wrong_currency"),
 });
+
+export const paymentMethodSchema = z.enum(["check", "card", "ach", "cash", "other"]);
+
+export const arInvoiceStatusSchema = z.enum(["paid", "past_due", "partial", "open"]);
+
+export const agingBucketSchema = z.enum([
+  "current",
+  "1-15",
+  "16-30",
+  "31-45",
+  "46-60",
+  "61-90",
+  "90+",
+]);
+
+export const invoiceAdjustmentKindSchema = z.enum(["write_off", "credit_memo"]);
+
+export const paymentPlanFrequencySchema = z.enum(["weekly", "monthly"]);
+
+export const customerAccountingQuerySchema = z.object({
+  asOf: z.coerce.date().optional(),
+});
+
+export const customerInvoicesQuerySchema = z.object({
+  includePaid: optionalBooleanQuery,
+  asOf: z.coerce.date().optional(),
+});
+
+export const customerArInvoiceItemSchema = z.object({
+  id: z.string().uuid(),
+  orderId: z.string().uuid(),
+  documentNumber: z.string(),
+  postedAt: z.coerce.date().nullable(),
+  dueDate: z.coerce.date().nullable(),
+  terms: z.string().nullable(),
+  totalCents: z.number().int(),
+  remainingCents: z.number().int(),
+  currency: z.string().length(3),
+  status: arInvoiceStatusSchema,
+});
+
+export const customerArInvoiceListResponseSchema = z.object({
+  items: z.array(customerArInvoiceItemSchema),
+});
+
+export const customerPaymentApplicationItemSchema = z.object({
+  id: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  amountCents: z.number().int(),
+  currency: z.string().length(3),
+  createdAt: z.coerce.date(),
+});
+
+export const customerPaymentItemSchema = z.object({
+  id: z.string().uuid(),
+  amountCents: z.number().int(),
+  currency: z.string().length(3),
+  method: paymentMethodSchema,
+  reference: z.string().nullable(),
+  note: z.string().nullable(),
+  receivedAt: z.coerce.date(),
+  appliedCents: z.number().int(),
+  unappliedCents: z.number().int(),
+  voided: z.boolean(),
+  applications: z.array(customerPaymentApplicationItemSchema),
+});
+
+export const customerPaymentListResponseSchema = z.object({
+  items: z.array(customerPaymentItemSchema),
+});
+
+export const customerArStatsSchema = z.object({
+  highestInvoiceCents: z.number().int(),
+  avgInvoiceCents: z.number().int(),
+  openInvoiceCount: z.number().int(),
+  totalOpenInvoiceAmountCents: z.number().int(),
+  creditMemoCount: z.number().int(),
+  totalCreditMemoCents: z.number().int(),
+  totalWriteOffsCents: z.number().int(),
+  openBalanceCents: z.number().int(),
+  creditLimitCents: z.number().int(),
+  availableCreditCents: z.number().int(),
+  unappliedCreditCents: z.number().int(),
+  dateOfFirstShipment: z.coerce.date().nullable(),
+  dateOfLastShipment: z.coerce.date().nullable(),
+  dateOfLastOrder: z.coerce.date().nullable(),
+  avgDaysToPay: z.number().nullable(),
+  lastYtdSalesCents: z.number().int(),
+  ytdSalesCents: z.number().int(),
+  lytdVsYtdPercent: z.number().nullable(),
+  lastYearSalesCents: z.number().int(),
+  totalSalesCents: z.number().int(),
+});
+
+export const paymentPlanItemSchema = z.object({
+  id: z.string().uuid(),
+  frequency: paymentPlanFrequencySchema,
+  installmentAmountCents: z.number().int(),
+  currency: z.string().length(3),
+  startsOn: z.coerce.date(),
+  endedAt: z.coerce.date().nullable(),
+  createdAt: z.coerce.date(),
+});
+
+export const paymentPlanExpectationsSchema = z.object({
+  nextExpectedOn: z.coerce.date().nullable(),
+  estimatedEndOn: z.coerce.date().nullable(),
+  installmentsReceived: z.number().int(),
+  installmentsExpectedSoFar: z.number().int(),
+  missedInstallments: z.number().int(),
+  complete: z.boolean(),
+});
+
+export const agingBucketsSchema = z.object({
+  current: z.number().int(),
+  "1-15": z.number().int(),
+  "16-30": z.number().int(),
+  "31-45": z.number().int(),
+  "46-60": z.number().int(),
+  "61-90": z.number().int(),
+  "90+": z.number().int(),
+});
+
+export const customerAccountingSummarySchema = z.object({
+  asOf: z.coerce.date(),
+  aging: agingBucketsSchema,
+  unappliedCreditCents: z.number().int(),
+  openBalanceCents: z.number().int(),
+  openBalanceOwedCents: z.number().int(),
+  exposureCents: z.number().int(),
+  availableCreditCents: z.number().int(),
+  stats: customerArStatsSchema,
+  plan: paymentPlanItemSchema.nullable(),
+  planExpectations: paymentPlanExpectationsSchema.nullable(),
+});
+
+export const recordCustomerPaymentApplicationBodySchema = z.object({
+  invoiceId: z.string().uuid(),
+  amountCents: z.number().int().positive(),
+});
+
+export const recordCustomerPaymentBodySchema = z.object({
+  amountCents: z.number().int().positive(),
+  currency: z.string().length(3),
+  method: paymentMethodSchema,
+  reference: z.string().optional().nullable(),
+  note: z.string().optional().nullable(),
+  receivedAt: z.coerce.date().optional(),
+  idempotencyKey: z.string().min(1),
+  holdRemainderAsCredit: z.boolean(),
+  applications: z.array(recordCustomerPaymentApplicationBodySchema),
+});
+
+export const recordCustomerPaymentResponseSchema = z.object({
+  paymentId: z.string().uuid(),
+  unappliedCents: z.number().int(),
+  remainingByInvoiceId: z.record(z.string(), z.number().int()),
+});
+
+export const reallocatePaymentApplicationBodySchema = z.object({
+  invoiceId: z.string().uuid(),
+  deltaCents: z.number().int().refine((value) => value !== 0, "deltaCents must be non-zero"),
+});
+
+export const reallocatePaymentBodySchema = z.object({
+  applications: z.array(reallocatePaymentApplicationBodySchema).min(1),
+});
+
+export const reallocatePaymentResponseSchema = z.object({
+  unappliedCents: z.number().int(),
+});
+
+export const voidPaymentBodySchema = z.object({
+  voidReason: z.string().min(1),
+});
+
+export const voidPaymentResponseSchema = z.object({
+  unappliedCents: z.number().int(),
+});
+
+export const adjustInvoiceBodySchema = z.object({
+  kind: invoiceAdjustmentKindSchema,
+  amountCents: z.number().int().refine((value) => value !== 0, "amountCents must be non-zero"),
+  reason: z.string().min(1),
+});
+
+export const adjustInvoiceResponseSchema = z.object({
+  remainingCents: z.number().int(),
+});
+
+export const setPaymentPlanBodySchema = z.object({
+  frequency: paymentPlanFrequencySchema,
+  installmentAmountCents: z.number().int().positive(),
+  currency: z.string().length(3),
+  startsOn: z.coerce.date(),
+});
+
+export const accountingSummaryQuerySchema = z.object({
+  asOf: z.coerce.date().optional(),
+});
+
+export const accountingSummaryResponseSchema = z.object({
+  asOf: z.coerce.date(),
+  totalOpenArCents: z.number().int(),
+  pastDuePercent: z.number().int(),
+  pastDueCents: z.number().int(),
+  unappliedCreditCents: z.number().int(),
+  mtdWriteOffsCents: z.number().int(),
+  aging: agingBucketsSchema,
+});
+
+export const customerBalancesSortByValues = [
+  "pastDueCents",
+  "openBalanceCents",
+  "name",
+  "customerNumber",
+  "oldestDueDate",
+  "daysPastDue",
+  "creditLimitCents",
+  "availableCreditCents",
+] as const;
+
+export const customerBalancesListQuerySchema = z.object({
+  asOf: z
+    .string()
+    .optional()
+    .refine((value) => value === undefined || !Number.isNaN(new Date(value).getTime()), {
+      message: "Invalid date",
+    }),
+  bucket: agingBucketSchema.optional(),
+  q: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(customerBalancesSortByValues).default("pastDueCents"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export const customerBalanceItemSchema = z.object({
+  customerId: z.string().uuid(),
+  customerNumber: z.string(),
+  name: z.string(),
+  openBalanceCents: z.number().int(),
+  pastDueCents: z.number().int(),
+  oldestDueDate: z.coerce.date().nullable(),
+  daysPastDue: z.number().int(),
+  creditLimitCents: z.number().int(),
+  availableCreditCents: z.number().int(),
+  hasActivePlan: z.boolean(),
+});
+
+export const customerBalancesListResponseSchema = z.object({
+  items: z.array(customerBalanceItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const customerBalancesListTable = {
+  rowId: "customerId",
+  columns: [
+    { field: "name", label: "Customer" },
+    { field: "customerNumber", label: "Customer #" },
+    { field: "openBalanceCents", label: "Open balance" },
+    { field: "pastDueCents", label: "Past due" },
+    { field: "oldestDueDate", label: "Oldest due" },
+    { field: "daysPastDue", label: "Days past due" },
+    { field: "creditLimitCents", label: "Credit limit" },
+    { field: "availableCreditCents", label: "Available credit" },
+    { field: "hasActivePlan", label: "Plan" },
+  ],
+  search: {
+    param: "q",
+    fields: ["name", "customerNumber"],
+    placeholder: "Search customer name or #",
+  },
+  filters: [
+    { param: "asOf", control: "date" },
+    { param: "bucket", control: "select" },
+  ],
+  sort: {
+    defaultBy: "pastDueCents",
+    defaultOrder: "desc",
+    fields: [...customerBalancesSortByValues],
+  },
+};
+
+export const paymentsReceivedSortByValues = [
+  "receivedAt",
+  "amountCents",
+  "customerName",
+] as const;
+
+export const paymentsReceivedListQuerySchema = z.object({
+  from: z.string().min(1),
+  to: z.string().min(1),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(paymentsReceivedSortByValues).default("receivedAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+});
+
+export const paymentReceivedItemSchema = z.object({
+  paymentId: z.string().uuid(),
+  receivedAt: z.coerce.date(),
+  customerId: z.string().uuid(),
+  customerNumber: z.string(),
+  customerName: z.string(),
+  amountCents: z.number().int(),
+  currency: z.string().length(3),
+  method: paymentMethodSchema,
+  reference: z.string().nullable(),
+  appliedCents: z.number().int(),
+  unappliedCents: z.number().int(),
+  voided: z.boolean(),
+});
+
+export const paymentsReceivedListResponseSchema = z.object({
+  items: z.array(paymentReceivedItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const paymentsReceivedListTable = {
+  rowId: "paymentId",
+  filters: [{ param: "from", control: "dateRange", rangePair: "to" }],
+  columns: [
+    { field: "receivedAt", label: "Received" },
+    { field: "customerName", label: "Customer" },
+    { field: "amountCents", label: "Amount" },
+    { field: "method", label: "Method" },
+    { field: "reference", label: "Reference" },
+    { field: "appliedCents", label: "Applied" },
+    { field: "unappliedCents", label: "Unapplied" },
+    { field: "voided", label: "Voided" },
+  ],
+  sort: {
+    defaultBy: "receivedAt",
+    defaultOrder: "desc",
+    fields: [...paymentsReceivedSortByValues],
+  },
+};
+
+export const paymentIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});

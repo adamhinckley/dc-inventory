@@ -11963,6 +11963,2144 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+  /internal/customers/{id}/accounting:
+    get:
+      operationId: getInternalCustomerAccounting
+      summary: Get customer accounting summary
+      tags:
+        - internal
+      parameters:
+        - schema: {}
+          in: query
+          name: asOf
+          required: false
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  asOf:
+                    type: string
+                    format: date-time
+                  aging:
+                    type: object
+                    properties:
+                      current:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      1-15:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      16-30:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      31-45:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      46-60:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      61-90:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      90+:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - current
+                      - 1-15
+                      - 16-30
+                      - 31-45
+                      - 46-60
+                      - 61-90
+                      - 90+
+                    additionalProperties: false
+                  unappliedCreditCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  openBalanceCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  openBalanceOwedCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  exposureCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  availableCreditCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  stats:
+                    type: object
+                    properties:
+                      highestInvoiceCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      avgInvoiceCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      openInvoiceCount:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      totalOpenInvoiceAmountCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      creditMemoCount:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      totalCreditMemoCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      totalWriteOffsCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      openBalanceCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      creditLimitCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      availableCreditCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      unappliedCreditCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      dateOfFirstShipment:
+                        nullable: true
+                        type: string
+                        format: date-time
+                      dateOfLastShipment:
+                        nullable: true
+                        type: string
+                        format: date-time
+                      dateOfLastOrder:
+                        nullable: true
+                        type: string
+                        format: date-time
+                      avgDaysToPay:
+                        nullable: true
+                        type: number
+                      lastYtdSalesCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      ytdSalesCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      lytdVsYtdPercent:
+                        nullable: true
+                        type: number
+                      lastYearSalesCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      totalSalesCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - highestInvoiceCents
+                      - avgInvoiceCents
+                      - openInvoiceCount
+                      - totalOpenInvoiceAmountCents
+                      - creditMemoCount
+                      - totalCreditMemoCents
+                      - totalWriteOffsCents
+                      - openBalanceCents
+                      - creditLimitCents
+                      - availableCreditCents
+                      - unappliedCreditCents
+                      - dateOfFirstShipment
+                      - dateOfLastShipment
+                      - dateOfLastOrder
+                      - avgDaysToPay
+                      - lastYtdSalesCents
+                      - ytdSalesCents
+                      - lytdVsYtdPercent
+                      - lastYearSalesCents
+                      - totalSalesCents
+                    additionalProperties: false
+                  plan:
+                    nullable: true
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      frequency:
+                        type: string
+                        enum:
+                          - weekly
+                          - monthly
+                      installmentAmountCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      currency:
+                        type: string
+                        minLength: 3
+                        maxLength: 3
+                      startsOn:
+                        type: string
+                        format: date-time
+                      endedAt:
+                        nullable: true
+                        type: string
+                        format: date-time
+                      createdAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - id
+                      - frequency
+                      - installmentAmountCents
+                      - currency
+                      - startsOn
+                      - endedAt
+                      - createdAt
+                    additionalProperties: false
+                  planExpectations:
+                    nullable: true
+                    type: object
+                    properties:
+                      nextExpectedOn:
+                        nullable: true
+                        type: string
+                        format: date-time
+                      estimatedEndOn:
+                        nullable: true
+                        type: string
+                        format: date-time
+                      installmentsReceived:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      installmentsExpectedSoFar:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      missedInstallments:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      complete:
+                        type: boolean
+                    required:
+                      - nextExpectedOn
+                      - estimatedEndOn
+                      - installmentsReceived
+                      - installmentsExpectedSoFar
+                      - missedInstallments
+                      - complete
+                    additionalProperties: false
+                required:
+                  - asOf
+                  - aging
+                  - unappliedCreditCents
+                  - openBalanceCents
+                  - openBalanceOwedCents
+                  - exposureCents
+                  - availableCreditCents
+                  - stats
+                  - plan
+                  - planExpectations
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/customers/{id}/invoices:
+    get:
+      operationId: listInternalCustomerInvoices
+      summary: List customer invoices with derived status
+      tags:
+        - internal
+      parameters:
+        - schema:
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: includePaid
+          required: false
+        - schema: {}
+          in: query
+          name: asOf
+          required: false
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        orderId:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        documentNumber:
+                          type: string
+                        postedAt:
+                          nullable: true
+                          type: string
+                          format: date-time
+                        dueDate:
+                          nullable: true
+                          type: string
+                          format: date-time
+                        terms:
+                          nullable: true
+                          type: string
+                        totalCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        remainingCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        currency:
+                          type: string
+                          minLength: 3
+                          maxLength: 3
+                        status:
+                          type: string
+                          enum:
+                            - paid
+                            - past_due
+                            - partial
+                            - open
+                      required:
+                        - id
+                        - orderId
+                        - documentNumber
+                        - postedAt
+                        - dueDate
+                        - terms
+                        - totalCents
+                        - remainingCents
+                        - currency
+                        - status
+                      additionalProperties: false
+                required:
+                  - items
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/customers/{id}/payments:
+    get:
+      operationId: listInternalCustomerPayments
+      summary: List customer payments with applications and void state
+      tags:
+        - internal
+      parameters:
+        - schema: {}
+          in: query
+          name: asOf
+          required: false
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        amountCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        currency:
+                          type: string
+                          minLength: 3
+                          maxLength: 3
+                        method:
+                          type: string
+                          enum:
+                            - check
+                            - card
+                            - ach
+                            - cash
+                            - other
+                        reference:
+                          nullable: true
+                          type: string
+                        note:
+                          nullable: true
+                          type: string
+                        receivedAt:
+                          type: string
+                          format: date-time
+                        appliedCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        unappliedCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        voided:
+                          type: boolean
+                        applications:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                format: uuid
+                                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                              invoiceId:
+                                type: string
+                                format: uuid
+                                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                              amountCents:
+                                type: integer
+                                minimum: -9007199254740991
+                                maximum: 9007199254740991
+                              currency:
+                                type: string
+                                minLength: 3
+                                maxLength: 3
+                              createdAt:
+                                type: string
+                                format: date-time
+                            required:
+                              - id
+                              - invoiceId
+                              - amountCents
+                              - currency
+                              - createdAt
+                            additionalProperties: false
+                      required:
+                        - id
+                        - amountCents
+                        - currency
+                        - method
+                        - reference
+                        - note
+                        - receivedAt
+                        - appliedCents
+                        - unappliedCents
+                        - voided
+                        - applications
+                      additionalProperties: false
+                required:
+                  - items
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+    post:
+      operationId: recordInternalCustomerPayment
+      summary: Record a customer payment with explicit applications
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amountCents:
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                method:
+                  type: string
+                  enum:
+                    - check
+                    - card
+                    - ach
+                    - cash
+                    - other
+                reference:
+                  nullable: true
+                  type: string
+                note:
+                  nullable: true
+                  type: string
+                receivedAt: {}
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+                holdRemainderAsCredit:
+                  type: boolean
+                applications:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      invoiceId:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      amountCents:
+                        type: integer
+                        minimum: 0
+                        exclusiveMinimum: true
+                        maximum: 9007199254740991
+                    required:
+                      - invoiceId
+                      - amountCents
+              required:
+                - amountCents
+                - currency
+                - method
+                - idempotencyKey
+                - holdRemainderAsCredit
+                - applications
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  unappliedCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  remainingByInvoiceId:
+                    type: object
+                    additionalProperties:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                required:
+                  - paymentId
+                  - unappliedCents
+                  - remainingByInvoiceId
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_request
+                      message:
+                        type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
+                    required:
+                      - error
+                      - message
+                      - requestId
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - wrong_currency
+                    required:
+                      - error
+                    additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - conflict
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - overpay
+                    required:
+                      - error
+                    additionalProperties: false
+  /internal/payments/{id}/reallocate:
+    post:
+      operationId: reallocateInternalPayment
+      summary: Reallocate payment amounts across invoices
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applications:
+                  minItems: 1
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      invoiceId:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      deltaCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - invoiceId
+                      - deltaCents
+              required:
+                - applications
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unappliedCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - unappliedCents
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_request
+                      message:
+                        type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
+                    required:
+                      - error
+                      - message
+                      - requestId
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - wrong_currency
+                    required:
+                      - error
+                    additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - conflict
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - overpay
+                    required:
+                      - error
+                    additionalProperties: false
+  /internal/payments/{id}/void:
+    post:
+      operationId: voidInternalPayment
+      summary: Void a payment
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                voidReason:
+                  type: string
+                  minLength: 1
+              required:
+                - voidReason
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unappliedCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - unappliedCents
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_request
+                      message:
+                        type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
+                    required:
+                      - error
+                      - message
+                      - requestId
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - conflict
+                required:
+                  - error
+                additionalProperties: false
+  /internal/invoices/{id}/adjustments:
+    post:
+      operationId: adjustInternalInvoice
+      summary: Adjust an invoice balance
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kind:
+                  type: string
+                  enum:
+                    - write_off
+                    - credit_memo
+                amountCents:
+                  type: integer
+                  minimum: -9007199254740991
+                  maximum: 9007199254740991
+                reason:
+                  type: string
+                  minLength: 1
+              required:
+                - kind
+                - amountCents
+                - reason
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  remainingCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - remainingCents
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_request
+                      message:
+                        type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
+                    required:
+                      - error
+                      - message
+                      - requestId
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+  /internal/customers/{id}/payment-plan:
+    put:
+      operationId: setInternalCustomerPaymentPlan
+      summary: Create a customer payment plan
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                frequency:
+                  type: string
+                  enum:
+                    - weekly
+                    - monthly
+                installmentAmountCents:
+                  type: integer
+                  minimum: 0
+                  exclusiveMinimum: true
+                  maximum: 9007199254740991
+                currency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                startsOn: {}
+              required:
+                - frequency
+                - installmentAmountCents
+                - currency
+                - startsOn
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  frequency:
+                    type: string
+                    enum:
+                      - weekly
+                      - monthly
+                  installmentAmountCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  currency:
+                    type: string
+                    minLength: 3
+                    maxLength: 3
+                  startsOn:
+                    type: string
+                    format: date-time
+                  endedAt:
+                    nullable: true
+                    type: string
+                    format: date-time
+                  createdAt:
+                    type: string
+                    format: date-time
+                required:
+                  - id
+                  - frequency
+                  - installmentAmountCents
+                  - currency
+                  - startsOn
+                  - endedAt
+                  - createdAt
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_request
+                      message:
+                        type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
+                    required:
+                      - error
+                      - message
+                      - requestId
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - conflict
+                required:
+                  - error
+                additionalProperties: false
+    delete:
+      operationId: endInternalCustomerPaymentPlan
+      summary: End the active customer payment plan
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "204":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: string
+                nullable: true
+                enum:
+                  - null
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - conflict
+                required:
+                  - error
+                additionalProperties: false
+  /internal/accounting/summary:
+    get:
+      operationId: getInternalAccountingSummary
+      summary: Get business-wide AR summary totals and aging
+      tags:
+        - internal
+      parameters:
+        - schema: {}
+          in: query
+          name: asOf
+          required: false
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  asOf:
+                    type: string
+                    format: date-time
+                  totalOpenArCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  pastDuePercent:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  pastDueCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  unappliedCreditCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  mtdWriteOffsCents:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  aging:
+                    type: object
+                    properties:
+                      current:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      1-15:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      16-30:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      31-45:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      46-60:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      61-90:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      90+:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - current
+                      - 1-15
+                      - 16-30
+                      - 31-45
+                      - 46-60
+                      - 61-90
+                      - 90+
+                    additionalProperties: false
+                required:
+                  - asOf
+                  - totalOpenArCents
+                  - pastDuePercent
+                  - pastDueCents
+                  - unappliedCreditCents
+                  - mtdWriteOffsCents
+                  - aging
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+  /internal/accounting/customer-balances:
+    get:
+      operationId: listInternalAccountingCustomerBalances
+      summary: List customer AR balances
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: asOf
+          required: false
+        - schema:
+            type: string
+            enum:
+              - current
+              - 1-15
+              - 16-30
+              - 31-45
+              - 46-60
+              - 61-90
+              - 90+
+          in: query
+          name: bucket
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: q
+          required: false
+        - schema:
+            default: 1
+            type: integer
+            minimum: 1
+            maximum: 9007199254740991
+          in: query
+          name: page
+          required: false
+        - schema:
+            default: 25
+            type: integer
+            minimum: 1
+            maximum: 100
+          in: query
+          name: pageSize
+          required: false
+        - schema:
+            default: pastDueCents
+            type: string
+            enum:
+              - pastDueCents
+              - openBalanceCents
+              - name
+              - customerNumber
+              - oldestDueDate
+              - daysPastDue
+              - creditLimitCents
+              - availableCreditCents
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: desc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
+          required: false
+      x-table:
+        rowId: customerId
+        columns:
+          - field: name
+            label: Customer
+          - field: customerNumber
+            label: "Customer #"
+          - field: openBalanceCents
+            label: Open balance
+          - field: pastDueCents
+            label: Past due
+          - field: oldestDueDate
+            label: Oldest due
+          - field: daysPastDue
+            label: Days past due
+          - field: creditLimitCents
+            label: Credit limit
+          - field: availableCreditCents
+            label: Available credit
+          - field: hasActivePlan
+            label: Plan
+        search:
+          param: q
+          fields:
+            - name
+            - customerNumber
+          placeholder: "Search customer name or #"
+        filters:
+          - param: asOf
+            control: date
+          - param: bucket
+            control: select
+        sort:
+          defaultBy: pastDueCents
+          defaultOrder: desc
+          fields:
+            - pastDueCents
+            - openBalanceCents
+            - name
+            - customerNumber
+            - oldestDueDate
+            - daysPastDue
+            - creditLimitCents
+            - availableCreditCents
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        customerId:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        customerNumber:
+                          type: string
+                        name:
+                          type: string
+                        openBalanceCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        pastDueCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        oldestDueDate:
+                          nullable: true
+                          type: string
+                          format: date-time
+                        daysPastDue:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        creditLimitCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        availableCreditCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        hasActivePlan:
+                          type: boolean
+                      required:
+                        - customerId
+                        - customerNumber
+                        - name
+                        - openBalanceCents
+                        - pastDueCents
+                        - oldestDueDate
+                        - daysPastDue
+                        - creditLimitCents
+                        - availableCreditCents
+                        - hasActivePlan
+                      additionalProperties: false
+                  page:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  pageSize:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  total:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - items
+                  - page
+                  - pageSize
+                  - total
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
+  /internal/accounting/payments:
+    get:
+      operationId: listInternalAccountingPayments
+      summary: List payments received in a date range
+      tags:
+        - internal
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: from
+          required: true
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: to
+          required: true
+        - schema:
+            default: 1
+            type: integer
+            minimum: 1
+            maximum: 9007199254740991
+          in: query
+          name: page
+          required: false
+        - schema:
+            default: 25
+            type: integer
+            minimum: 1
+            maximum: 100
+          in: query
+          name: pageSize
+          required: false
+        - schema:
+            default: receivedAt
+            type: string
+            enum:
+              - receivedAt
+              - amountCents
+              - customerName
+          in: query
+          name: sortBy
+          required: false
+        - schema:
+            default: desc
+            type: string
+            enum:
+              - asc
+              - desc
+          in: query
+          name: sortOrder
+          required: false
+      x-table:
+        rowId: paymentId
+        filters:
+          - param: from
+            control: dateRange
+            rangePair: to
+        columns:
+          - field: receivedAt
+            label: Received
+          - field: customerName
+            label: Customer
+          - field: amountCents
+            label: Amount
+          - field: method
+            label: Method
+          - field: reference
+            label: Reference
+          - field: appliedCents
+            label: Applied
+          - field: unappliedCents
+            label: Unapplied
+          - field: voided
+            label: Voided
+        sort:
+          defaultBy: receivedAt
+          defaultOrder: desc
+          fields:
+            - receivedAt
+            - amountCents
+            - customerName
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        paymentId:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        receivedAt:
+                          type: string
+                          format: date-time
+                        customerId:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        customerNumber:
+                          type: string
+                        customerName:
+                          type: string
+                        amountCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        currency:
+                          type: string
+                          minLength: 3
+                          maxLength: 3
+                        method:
+                          type: string
+                          enum:
+                            - check
+                            - card
+                            - ach
+                            - cash
+                            - other
+                        reference:
+                          nullable: true
+                          type: string
+                        appliedCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        unappliedCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        voided:
+                          type: boolean
+                      required:
+                        - paymentId
+                        - receivedAt
+                        - customerId
+                        - customerNumber
+                        - customerName
+                        - amountCents
+                        - currency
+                        - method
+                        - reference
+                        - appliedCents
+                        - unappliedCents
+                        - voided
+                      additionalProperties: false
+                  page:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  pageSize:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                  total:
+                    type: integer
+                    minimum: -9007199254740991
+                    maximum: 9007199254740991
+                required:
+                  - items
+                  - page
+                  - pageSize
+                  - total
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - feature_disabled
+                required:
+                  - error
+                additionalProperties: false
   /internal/licensing/subscriptions:
     get:
       operationId: listInternalLicensingSubscriptions
