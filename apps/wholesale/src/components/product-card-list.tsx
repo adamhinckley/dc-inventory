@@ -371,6 +371,7 @@ export function ProductCardList() {
 
   return (
     <section className="flex flex-col gap-6">
+      <h1 className="sr-only">{category ?? "Products"}</h1>
       <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
         {category === undefined ? (
           <span className="text-ink">Products</span>
@@ -388,10 +389,6 @@ export function ProductCardList() {
           </>
         )}
       </nav>
-      <header>
-        <p className="section-title">Catalog</p>
-        <h1 className="page-title mt-2">{category ?? "Products"}</h1>
-      </header>
     <div className="lg:grid lg:grid-cols-[16rem_1fr] lg:gap-10">
       <aside className="hidden lg:block lg:self-start">
         <div className="sticky top-[calc(var(--space-nav-height)+1.5rem)] flex max-h-[calc(100dvh-var(--space-nav-height)-4rem)] flex-col overflow-hidden">

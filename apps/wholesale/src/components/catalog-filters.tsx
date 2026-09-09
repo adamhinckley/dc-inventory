@@ -28,10 +28,7 @@ export function CatalogFilters({
 
   return (
     <div className="flex min-h-0 flex-col gap-8">
-      <section aria-labelledby={`${idPrefix}-availability`} className="shrink-0">
-        <h2 id={`${idPrefix}-availability`} className="section-title mb-3">
-          Availability
-        </h2>
+      <section aria-label="Availability" className="shrink-0">
         <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink hover:bg-canvas-muted">
           <input
             type="checkbox"
