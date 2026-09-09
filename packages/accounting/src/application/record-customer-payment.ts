@@ -76,7 +76,7 @@ export class RecordCustomerPaymentUseCase {
 
     const currency = input.currency.trim().toUpperCase();
     const createdAt = this.clock?.now() ?? new Date();
-    const receivedAt = input.receivedAt ?? createdAt;
+    const receivedAtForPayment = input.receivedAt ?? createdAt;
     const reference = input.reference?.trim() ? input.reference.trim() : null;
     const note = input.note?.trim() ? input.note.trim() : null;
     const payload: CustomerPaymentPayload = {
@@ -86,7 +86,7 @@ export class RecordCustomerPaymentUseCase {
       method: input.method,
       reference,
       note,
-      receivedAt,
+      ...(input.receivedAt !== undefined ? { receivedAt: input.receivedAt } : {}),
       holdRemainderAsCredit: input.holdRemainderAsCredit,
       applications: input.applications.map((row) => ({
         invoiceId: row.invoiceId,
@@ -169,7 +169,7 @@ export class RecordCustomerPaymentUseCase {
         amount: Money.fromMinorUnits(input.amountCents, currency),
         method: input.method,
         reference,
-        receivedAt,
+        receivedAt: receivedAtForPayment,
         note,
         recordedBy: input.staffUserId,
         idempotencyKey: key,

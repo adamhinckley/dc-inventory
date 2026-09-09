@@ -10,7 +10,7 @@ export type CustomerPaymentPayload = {
   readonly method: PaymentMethod;
   readonly reference: string | null;
   readonly note: string | null;
-  readonly receivedAt: Date;
+  readonly receivedAt?: Date;
   readonly holdRemainderAsCredit: boolean;
   readonly applications: readonly PaymentApplicationSpec[];
 };
@@ -52,12 +52,14 @@ export function sameCustomerPaymentPayload(
   if ((existing.payment.note ?? null) !== next.note) {
     return false;
   }
-  const existingReceivedAt = existing.payment.receivedAt;
-  if (
-    existingReceivedAt === undefined ||
-    existingReceivedAt.getTime() !== next.receivedAt.getTime()
-  ) {
-    return false;
+  if (next.receivedAt !== undefined) {
+    const existingReceivedAt = existing.payment.receivedAt;
+    if (
+      existingReceivedAt === undefined ||
+      existingReceivedAt.getTime() !== next.receivedAt.getTime()
+    ) {
+      return false;
+    }
   }
   const existingApplications = normalizePaymentApplications(existing);
   if (existingApplications.length !== next.applications.length) {
