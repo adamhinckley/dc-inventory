@@ -239,7 +239,14 @@ export class InMemoryInvoiceRepository implements IAccountingRepository {
     return [...(this.applicationsByInvoice.get(invoiceId) ?? [])];
   }
 
-  async listApplicationsByPayment(paymentId: PaymentId): Promise<readonly PaymentApplication[]> {
+  async listApplicationsByPayment(
+    organizationId: OrganizationId,
+    paymentId: PaymentId,
+  ): Promise<readonly PaymentApplication[]> {
+    const payment = this.paymentsById.get(paymentId);
+    if (payment === undefined || payment.organizationId !== organizationId) {
+      return [];
+    }
     return [...(this.applicationsByPayment.get(paymentId) ?? [])];
   }
 

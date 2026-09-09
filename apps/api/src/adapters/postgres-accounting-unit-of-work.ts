@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   DrizzleInvoiceRepository,
   type AccountingDrizzle,
@@ -10,41 +11,38 @@ import {
   retryAfterIdempotencyRace,
 } from "./postgres-idempotency-race.js";
 
+const activeInvoicesStore = new AsyncLocalStorage<IAccountingRepository>();
+
 /**
  * Postgres-backed accounting unit of work for payment recording.
  * Each callback runs in its own transaction. ADA-357 use cases read
- * `this.unitOfWork.invoices` inside `run()`, so `activeInvoices` is set to the
- * transaction-scoped repository for the duration of the callback.
+ * `this.unitOfWork.invoices` inside `run()`, so the transaction-scoped
+ * repository is bound per async context (safe for singleton UoW instances).
  */
 export class PostgresAccountingUnitOfWork implements AccountingUnitOfWorkWithCustomerPayments {
   private readonly poolInvoices: IAccountingRepository;
-  private activeInvoices: IAccountingRepository | null = null;
 
   constructor(private readonly db: AppDrizzle) {
     this.poolInvoices = new DrizzleInvoiceRepository(this.db as unknown as AccountingDrizzle);
   }
 
   get invoices(): IAccountingRepository {
-    return this.activeInvoices ?? this.poolInvoices;
+    return activeInvoicesStore.getStore() ?? this.poolInvoices;
   }
 
   run<T>(work: (uow: AccountingUnitOfWorkWithCustomerPayments) => Promise<T>): Promise<T> {
     return retryAfterIdempotencyRace(
       () =>
         this.db.transaction(async (tx) => {
-          const previous = this.activeInvoices;
           const txInvoices = new DrizzleInvoiceRepository(tx as unknown as AccountingDrizzle);
-          this.activeInvoices = txInvoices;
-          try {
+          return activeInvoicesStore.run(txInvoices, async () => {
             const scope: AccountingUnitOfWorkWithCustomerPayments = {
               invoices: txInvoices,
               run: (innerWork) =>
                 this.runOnTransaction(tx as unknown as AccountingDrizzle, innerWork),
             };
             return await work(scope);
-          } finally {
-            this.activeInvoices = previous;
-          }
+          });
         }),
       PAYMENT_IDEMPOTENCY_CONSTRAINTS,
     );

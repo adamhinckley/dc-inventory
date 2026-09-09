@@ -336,13 +336,20 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
   }
 
   async listApplicationsByPayment(
+    organizationId: OrganizationId,
     paymentId: PaymentId,
   ): Promise<readonly PaymentApplication[]> {
     const rows = await this.db
-      .select()
+      .select({ application: paymentApplications })
       .from(paymentApplications)
-      .where(eq(paymentApplications.paymentId, paymentId));
-    return rows.map(toApplication);
+      .innerJoin(payments, eq(paymentApplications.paymentId, payments.id))
+      .where(
+        and(
+          eq(paymentApplications.paymentId, paymentId),
+          eq(payments.organizationId, organizationId),
+        ),
+      );
+    return rows.map((row) => toApplication(row.application));
   }
 
   async findPaymentById(

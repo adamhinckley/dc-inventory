@@ -145,7 +145,7 @@ async function loadCustomerArState(
   const applicationsByPaymentId = new Map<PaymentId, readonly PaymentApplication[]>(
     await Promise.all(
       payments.map(async (payment) => {
-        const applications = await h.uow.invoices.listApplicationsByPayment(payment.id);
+        const applications = await h.uow.invoices.listApplicationsByPayment(DEFAULT_ORG, payment.id);
         return [payment.id, applications] as const;
       }),
     ),
@@ -311,7 +311,7 @@ describe("AR customer payments (ADA-357 Done criteria)", () => {
 
     const payment = await h.uow.invoices.findPaymentById(DEFAULT_ORG, recorded.paymentId);
     expect(payment).not.toBeNull();
-    const applications = await h.uow.invoices.listApplicationsByPayment(recorded.paymentId);
+    const applications = await h.uow.invoices.listApplicationsByPayment(DEFAULT_ORG, recorded.paymentId);
     expect(computeUnappliedCents(payment!, applications)).toBe(500);
   });
 
@@ -398,6 +398,7 @@ describe("AR customer payments (ADA-357 Done criteria)", () => {
     }
 
     const beforeVoidApplications = await h.uow.invoices.listApplicationsByPayment(
+      DEFAULT_ORG,
       recorded.paymentId,
     );
     const paymentBefore = (await h.uow.invoices.findPaymentById(
@@ -428,7 +429,7 @@ describe("AR customer payments (ADA-357 Done criteria)", () => {
       DEFAULT_ORG,
       recorded.paymentId,
     ))!;
-    const afterApplications = await h.uow.invoices.listApplicationsByPayment(recorded.paymentId);
+    const afterApplications = await h.uow.invoices.listApplicationsByPayment(DEFAULT_ORG, recorded.paymentId);
     expect(computeUnappliedCents(paymentAfter, afterApplications)).toBe(0);
   });
 
@@ -1031,12 +1032,12 @@ describe("AR customer payments (ADA-357 Done criteria)", () => {
     const voidedIds = new Set<PaymentId>([recorded.paymentId]);
 
     expect(computeRemainingCents(invoice, applications, voidedIds)).toBe(1000);
-    expect(computeUnappliedCents(payment, await h.uow.invoices.listApplicationsByPayment(recorded.paymentId))).toBe(0);
+    expect(computeUnappliedCents(payment, await h.uow.invoices.listApplicationsByPayment(DEFAULT_ORG, recorded.paymentId))).toBe(0);
 
     const applicationsByInvoiceId = new Map([[invoiceId, applications]]);
     const adjustmentsByInvoiceId = new Map([[invoiceId, []]]);
     const applicationsByPaymentId = new Map([
-      [recorded.paymentId, await h.uow.invoices.listApplicationsByPayment(recorded.paymentId)],
+      [recorded.paymentId, await h.uow.invoices.listApplicationsByPayment(DEFAULT_ORG, recorded.paymentId)],
     ]);
     expect(
       computeOpenBalanceCents(
@@ -1330,7 +1331,7 @@ describe("AR prototype walkthroughs (ADA-357)", () => {
       return;
     }
 
-    const beforeRows = await h.uow.invoices.listApplicationsByPayment(recorded.paymentId);
+    const beforeRows = await h.uow.invoices.listApplicationsByPayment(DEFAULT_ORG, recorded.paymentId);
     expect(beforeRows).toHaveLength(1);
 
     const tooMuch = await h.reallocate.execute({
@@ -1358,7 +1359,7 @@ describe("AR prototype walkthroughs (ADA-357)", () => {
     const payment = await h.uow.invoices.findPaymentById(DEFAULT_ORG, recorded.paymentId);
     expect(payment?.amount.amountMinor).toBe(180_000);
 
-    const afterRows = await h.uow.invoices.listApplicationsByPayment(recorded.paymentId);
+    const afterRows = await h.uow.invoices.listApplicationsByPayment(DEFAULT_ORG, recorded.paymentId);
     expect(afterRows).toHaveLength(3);
     expect(afterRows[0]!.amount.amountMinor).toBe(180_000);
     expect(afterRows[1]!.amount.amountMinor).toBe(-180_000);
