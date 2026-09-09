@@ -6,6 +6,7 @@ import { PurchaseOrderLineId, type PurchaseOrder } from "@dc-inventory/purchasin
 import { PurchaseOrderId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
+  supplierPoPrefixMissingResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
   purchaseOrderCommandBodySchema,
@@ -184,6 +185,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
+          409: supplierPoPrefixMissingResponseSchema,
         },
       },
     },
@@ -205,6 +207,9 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         if (result.reason === "empty_order") {
           return sendInvalid(reply);
+        }
+        if (result.reason === "supplier_po_prefix_missing") {
+          return reply.code(409).send({ error: "supplier_po_prefix_missing" as const });
         }
         return sendInvalid(reply);
       }
@@ -476,6 +481,47 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           return sendConflict(reply);
         }
         return sendInvalid(reply);
+      }
+      return mapPurchaseOrder(result.purchaseOrder);
+    },
+  );
+
+  routes.post(
+    "/purchase-orders/:id/unconfirm",
+    {
+      schema: {
+        operationId: "unconfirmInternalPurchaseOrder",
+        tags: ["internal"],
+        summary: "Return a zero-received confirmed purchase order to draft",
+        params: purchaseOrderIdParamsSchema,
+        body: purchaseOrderCommandBodySchema,
+        response: {
+          200: purchaseOrderItemSchema,
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: conflictResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.purchasing.unconfirmPurchaseOrder.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        purchaseOrderId: PurchaseOrderId.parse(request.params.id),
+        idempotencyKey: request.body.idempotencyKey,
+      });
+      if (!result.ok) {
+        if (result.reason === "not_found") {
+          return sendNotFound(reply);
+        }
+        if (
+          result.reason === "illegal_transition" ||
+          result.reason === "idempotency_conflict" ||
+          result.reason === "inventory_conflict"
+        ) {
+          return sendConflict(reply);
+        }
+        return sendNotFound(reply);
       }
       return mapPurchaseOrder(result.purchaseOrder);
     },

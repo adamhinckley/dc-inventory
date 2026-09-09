@@ -231,6 +231,7 @@ export class InMemoryDemoBookLoader implements IDemoBookReader {
         id: row.id,
         vendorNumber: row.vendorNumber,
         name: row.name,
+        poPrefix: row.poPrefix ?? "",
       })),
       supplierProducts: supplierProducts.map((row) => ({
         supplierId: row.supplierId,

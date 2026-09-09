@@ -34,6 +34,7 @@ import { InMemoryCatalogSkuLookupPort } from "@dc-inventory/purchasing";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SUPPLIER_ID = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+const SUPPLIER_NO_PREFIX_ID = SupplierId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
 const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const SKU_A = Sku.parse("SHORT-A");
 const SKU_B = Sku.parse("SHORT-B");
@@ -64,6 +65,14 @@ async function startPurchasingApp() {
     organizationId: OrganizationId.DEFAULT,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
+    poPrefix: "HF",
+  });
+  await unitOfWork.suppliers.save({
+    id: SUPPLIER_NO_PREFIX_ID,
+    organizationId: OrganizationId.DEFAULT,
+    vendorNumber: "NO-PFX",
+    name: "No Prefix Supplier",
+    poPrefix: null,
   });
 
   await staffUsers.save({
@@ -106,6 +115,22 @@ describe("internal purchase orders HTTP", () => {
     const response = await app.inject({ method: "GET", url: "/internal/purchase-orders" });
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("returns 409 when creating a PO for a supplier without poPrefix", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_NO_PREFIX_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(409);
+    expect(created.json()).toEqual({ error: "supplier_po_prefix_missing" });
   });
 
   it("gets a purchase order by exact document number", async () => {
@@ -259,7 +284,7 @@ describe("internal purchase orders HTTP", () => {
     });
     expect(created.statusCode).toBe(201);
     const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
-    expect(po.documentNumber).toBe("PO-00001");
+    expect(po.documentNumber).toBe("PO-HF-00001");
     expect(created.json()).toMatchObject({ shipDate: null, cancelDate: null });
     expect(created.json()).toMatchObject({
       lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt from Catalog", qty: 5 }],
@@ -301,6 +326,91 @@ describe("internal purchase orders HTTP", () => {
     });
     expect(received.statusCode).toBe(200);
     expect(received.json()).toMatchObject({ status: "received" });
+  });
+
+  it("unconfirms a zero-received confirmed purchase order and blocks after receive", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 8 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string; documentNumber: string; lines: Array<{ id: string }> };
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-confirm" },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const unconfirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/unconfirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm" },
+    });
+    expect(unconfirmed.statusCode).toBe(200);
+    expect(unconfirmed.json()).toMatchObject({
+      status: "draft",
+      documentNumber: po.documentNumber,
+    });
+
+    const blockedDraft = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/unconfirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-draft" },
+    });
+    expect(blockedDraft.statusCode).toBe(409);
+    expect(blockedDraft.json()).toEqual({ error: "conflict" });
+
+    const receivePo = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "WASHER-SS", name: "Washer", qty: 6 }],
+      },
+    });
+    expect(receivePo.statusCode).toBe(201);
+    const receivedTarget = receivePo.json() as { id: string; lines: Array<{ id: string }> };
+
+    await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${receivedTarget.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-receive-confirm" },
+    });
+
+    const received = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${receivedTarget.id}/receive`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        idempotencyKey: "http-unconfirm-receive",
+        lines: [{ lineId: receivedTarget.lines[0]!.id, quantity: 1 }],
+      },
+    });
+    expect(received.statusCode).toBe(200);
+
+    const blocked = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${receivedTarget.id}/unconfirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-unconfirm-blocked" },
+    });
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json()).toEqual({ error: "conflict" });
   });
 
   it("replaces lines on a draft purchase order and rejects confirmed", async () => {
@@ -458,7 +568,7 @@ describe("internal purchase orders HTTP", () => {
     expect(exported.headers["content-type"]).toBe(
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
-    expect(exported.headers["content-disposition"]).toMatch(/PO-00001\.xlsx/);
+    expect(exported.headers["content-disposition"]).toMatch(/PO-HF-00001\.xlsx/);
     expect(exported.rawPayload.length).toBeGreaterThan(0);
 
     const factorySend = await app.inject({
@@ -522,6 +632,7 @@ describe("internal purchase orders HTTP", () => {
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
+          poPrefix: "HF",
     });
 
     for (const [index, role] of (
@@ -676,6 +787,7 @@ describe("internal purchase orders HTTP", () => {
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
+          poPrefix: "HF",
     });
     await customerRepo.save({
       id: CUSTOMER_ID,

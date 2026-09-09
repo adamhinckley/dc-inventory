@@ -8,6 +8,7 @@ import {
   PHASE2_SUPPLIER_NAME,
   PHASE2_SUPPLIER_VENDOR_NUMBER,
 } from "@dc-inventory/inventory";
+import { plannedSupplierPoPrefix } from "./planner/master-data.js";
 import { LocationId, OrganizationId, SupplierId } from "@dc-inventory/shared-kernel";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import type { DemoSeedDeadline } from "./demo-seed-deadline.js";
@@ -121,6 +122,7 @@ function staticSeedPortsForDemo(): StaticDemoSeedPorts & {
           organizationId: OrganizationId.DEFAULT,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
+          poPrefix: plannedSupplierPoPrefix(PHASE2_SUPPLIER_VENDOR_NUMBER),
         });
         return { id, vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER };
       },

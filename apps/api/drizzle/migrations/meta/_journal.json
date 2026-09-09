@@ -267,6 +267,20 @@
       "when": 1790455600000,
       "tag": "0038_inventory_sell_windows",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790555600000,
+      "tag": "0039_supplier_po_prefix",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1790655600000,
+      "tag": "0040_supplier_po_document_number_counters",
+      "breakpoints": true
     }
   ]
 }

@@ -10,4 +10,9 @@ export type UpdateInternalSupplier200 = {
   id: string;
   vendorNumber: string;
   name: string;
+  /**
+     * @nullable
+     * @pattern ^[A-Z0-9]{2,4}$
+     */
+  poPrefix: string | null;
 };

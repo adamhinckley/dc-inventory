@@ -2,7 +2,7 @@ import { listInternalPurchaseOrdersTable } from "@dc-inventory/api-client-intern
 import type { TableMeta } from "@dc-inventory/ui-internal";
 
 /**
- * Confirmed inbound PO list for Receiving. Same Orval hook as purchasing lists,
+ * Issued inbound PO list for Receiving. Same Orval hook as purchasing lists,
  * but only merchandising columns staff need at the dock.
  */
 export const receivingListTable = {

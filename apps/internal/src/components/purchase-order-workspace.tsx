@@ -53,6 +53,7 @@ function PurchaseOrderEditWorkspace({
         supplierId={po.supplierId}
         shipDate={po.shipDate}
         cancelDate={po.cancelDate}
+        lines={po.lines}
       />
     );
   }

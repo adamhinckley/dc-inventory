@@ -97,6 +97,7 @@ async function upsertSupplier(
     organizationId: OrganizationId.DEFAULT,
     vendorNumber: planned.vendorNumber,
     name: planned.name,
+    poPrefix: existing?.poPrefix ?? planned.poPrefix,
   };
   await ports.suppliers.save(supplier);
   return supplier;

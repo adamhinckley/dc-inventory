@@ -10,9 +10,14 @@ function vendorKey(organizationId: OrganizationId, vendorNumber: string): string
   return `${organizationId}:${vendorNumber}`;
 }
 
+function poPrefixKey(organizationId: OrganizationId, poPrefix: string): string {
+  return `${organizationId}:${poPrefix}`;
+}
+
 export class InMemorySupplierRepository implements ISupplierRepository {
   private readonly byId = new Map<SupplierId, Supplier>();
   private readonly byVendorNumber = new Map<string, Supplier>();
+  private readonly byPoPrefix = new Map<string, Supplier>();
 
   async list(query: ListSuppliersQuery): Promise<SupplierListPage> {
     const needle = query.q?.trim().toLowerCase() ?? "";
@@ -85,12 +90,20 @@ export class InMemorySupplierRepository implements ISupplierRepository {
     return result;
   }
 
+  async findByPoPrefix(
+    organizationId: OrganizationId,
+    poPrefix: string,
+  ): Promise<Supplier | null> {
+    return this.byPoPrefix.get(poPrefixKey(organizationId, poPrefix)) ?? null;
+  }
+
   async save(supplier: Supplier): Promise<void> {
     const normalized: Supplier = {
       id: SupplierId.parse(supplier.id),
       organizationId: OrganizationId.parse(supplier.organizationId),
       vendorNumber: supplier.vendorNumber,
       name: supplier.name,
+      poPrefix: supplier.poPrefix,
     };
     const previous = this.byId.get(normalized.id);
     if (
@@ -100,8 +113,18 @@ export class InMemorySupplierRepository implements ISupplierRepository {
     ) {
       this.byVendorNumber.delete(vendorKey(previous.organizationId, previous.vendorNumber));
     }
+    if (
+      previous !== undefined &&
+      previous.poPrefix !== null &&
+      previous.poPrefix !== normalized.poPrefix
+    ) {
+      this.byPoPrefix.delete(poPrefixKey(previous.organizationId, previous.poPrefix));
+    }
     this.byId.set(normalized.id, normalized);
     this.byVendorNumber.set(vendorKey(normalized.organizationId, normalized.vendorNumber), normalized);
+    if (normalized.poPrefix !== null) {
+      this.byPoPrefix.set(poPrefixKey(normalized.organizationId, normalized.poPrefix), normalized);
+    }
   }
 
   async listAll(): Promise<readonly Supplier[]> {

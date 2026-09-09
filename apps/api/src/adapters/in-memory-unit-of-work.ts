@@ -22,8 +22,17 @@ import { SalesInvoiceAccountingCommandAdapter } from "./sales-accounting-command
  * In-memory composition-root unit of work for purchasing, sales, and inventory tests.
  */
 export class InMemoryUnitOfWork implements IUnitOfWork {
-  readonly purchaseOrders = new InMemoryPurchaseOrderRepository();
   readonly suppliers = new InMemorySupplierRepository();
+  readonly purchaseOrders = new InMemoryPurchaseOrderRepository(
+    async (organizationId, supplierId) => {
+      const supplier = await this.suppliers.findById(organizationId, supplierId);
+      return supplier?.name ?? "";
+    },
+    async (organizationId, supplierId) => {
+      const supplier = await this.suppliers.findById(organizationId, supplierId);
+      return supplier?.poPrefix ?? null;
+    },
+  );
   readonly salesOrders = new InMemorySalesOrderRepository();
   readonly invoices = new InMemoryInvoiceRepository();
   private readonly inventoryUow: InMemoryInventoryUnitOfWork;

@@ -32,6 +32,7 @@ async function harness() {
     organizationId: DEFAULT_ORG,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
+    poPrefix: "HF",
   });
 
   return {
@@ -59,7 +60,7 @@ describe("Purchasing seed clock (in-memory)", () => {
     if (!created.ok) {
       return;
     }
-    expect(created.purchaseOrder.documentNumber).toBe("PO-00001");
+    expect(created.purchaseOrder.documentNumber).toBe("PO-HF-00001");
 
     const confirmed = await h.confirm.execute({
       organizationId: DEFAULT_ORG,

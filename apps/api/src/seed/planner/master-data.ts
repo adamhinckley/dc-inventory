@@ -109,12 +109,22 @@ export function planProducts(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS
   return products;
 }
 
+export function plannedSupplierPoPrefix(vendorNumber: string): string {
+  const match = /^VEND-(\d+)$/.exec(vendorNumber);
+  if (match === null) {
+    throw new Error(`unsupported vendor number for po prefix: ${vendorNumber}`);
+  }
+  const sequence = Number.parseInt(match[1]!, 10);
+  return `V${String(sequence).padStart(2, "0")}`;
+}
+
 export function planSuppliers(rng: SeededRandom, counts: DemoCounts = DEMO_COUNTS): PlannedSupplier[] {
   const suppliers: PlannedSupplier[] = [
     {
       key: "vend-001",
       vendorNumber: "VEND-001",
       name: "Demo Supplier",
+      poPrefix: plannedSupplierPoPrefix("VEND-001"),
     },
   ];
   const suffixes = rng.shuffle([...SUPPLIER_MILL_SUFFIXES]);
@@ -133,6 +143,7 @@ export function planSuppliers(rng: SeededRandom, counts: DemoCounts = DEMO_COUNT
       key: `vend-${String(index).padStart(3, "0")}`,
       vendorNumber: `VEND-${String(index).padStart(3, "0")}`,
       name,
+      poPrefix: plannedSupplierPoPrefix(`VEND-${String(index).padStart(3, "0")}`),
     });
   }
   return suppliers;

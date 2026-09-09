@@ -1,7 +1,8 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
+import { formatDocumentNumber, parseDocumentNumber } from "../domain/document-number.js";
+import { SupplierPoPrefixMissingError } from "../domain/errors.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
   IPurchaseOrderRepository,
@@ -12,9 +13,9 @@ import type {
 } from "../domain/ports/purchase-order-repository.js";
 import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
 import {
-  documentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
+  supplierPoDocumentNumberCounters,
   suppliers,
 } from "../persistence/schema.js";
 
@@ -188,41 +189,67 @@ function toOrder(
   };
 }
 
+async function loadSupplierPoPrefix(
+  db: PurchasingDrizzle,
+  organizationId: OrganizationId,
+  supplierId: SupplierId,
+): Promise<string> {
+  const rows = await db
+    .select({ poPrefix: suppliers.poPrefix })
+    .from(suppliers)
+    .where(and(eq(suppliers.id, supplierId), eq(suppliers.organizationId, organizationId)))
+    .limit(1);
+  const poPrefix = rows[0]?.poPrefix?.trim();
+  if (poPrefix === undefined || poPrefix.length === 0) {
+    throw new SupplierPoPrefixMissingError();
+  }
+  return poPrefix;
+}
+
 async function allocateDocumentNumber(
   db: PurchasingDrizzle,
   organizationId: OrganizationId,
+  supplierId: SupplierId,
+  poPrefix: string,
 ): Promise<string> {
   const rows = await db
-    .insert(documentNumberCounters)
-    .values({ organizationId, lastValue: 1 })
+    .insert(supplierPoDocumentNumberCounters)
+    .values({ organizationId, supplierId, lastValue: 1 })
     .onConflictDoUpdate({
-      target: documentNumberCounters.organizationId,
-      set: { lastValue: sql`${documentNumberCounters.lastValue} + 1` },
+      target: [
+        supplierPoDocumentNumberCounters.organizationId,
+        supplierPoDocumentNumberCounters.supplierId,
+      ],
+      set: { lastValue: sql`${supplierPoDocumentNumberCounters.lastValue} + 1` },
     })
-    .returning({ sequence: documentNumberCounters.lastValue });
+    .returning({ sequence: supplierPoDocumentNumberCounters.lastValue });
   const sequence = rows[0]?.sequence;
   if (sequence === undefined) {
     throw new Error("Failed to allocate purchase order document number");
   }
-  return formatDocumentNumber(sequence);
+  return formatDocumentNumber(poPrefix, sequence);
 }
 
 async function advanceCounter(
   db: PurchasingDrizzle,
   organizationId: OrganizationId,
+  supplierId: SupplierId,
   documentNumber: string,
 ): Promise<void> {
-  const sequence = parseDocumentSequence(documentNumber);
-  if (sequence === null || sequence < 1) {
+  const parsed = parseDocumentNumber(documentNumber);
+  if (parsed === null) {
     return;
   }
   await db
-    .insert(documentNumberCounters)
-    .values({ organizationId, lastValue: sequence })
+    .insert(supplierPoDocumentNumberCounters)
+    .values({ organizationId, supplierId, lastValue: parsed.sequence })
     .onConflictDoUpdate({
-      target: documentNumberCounters.organizationId,
+      target: [
+        supplierPoDocumentNumberCounters.organizationId,
+        supplierPoDocumentNumberCounters.supplierId,
+      ],
       set: {
-        lastValue: sql`greatest(${documentNumberCounters.lastValue}, ${sequence})`,
+        lastValue: sql`greatest(${supplierPoDocumentNumberCounters.lastValue}, ${parsed.sequence})`,
       },
     });
 }
@@ -323,6 +350,7 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
       await advanceCounter(
         transactionalDb,
         order.organizationId,
+        order.supplierId,
         order.documentNumber,
       );
       await persistPurchaseOrder(transactionalDb, order);
@@ -334,9 +362,16 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
   ): Promise<PurchaseOrder> {
     return this.db.transaction(async (tx) => {
       const transactionalDb = tx as PurchasingDrizzle;
+      const poPrefix = await loadSupplierPoPrefix(
+        transactionalDb,
+        order.organizationId,
+        order.supplierId,
+      );
       const documentNumber = await allocateDocumentNumber(
         transactionalDb,
         order.organizationId,
+        order.supplierId,
+        poPrefix,
       );
       const numbered = { ...order, documentNumber };
       await persistPurchaseOrder(transactionalDb, numbered);

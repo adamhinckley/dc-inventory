@@ -62,6 +62,10 @@ import {
   formatSupplierProductQtyDisplay,
 } from "../lib/supplier-product-by-sku";
 import { useSupplierProductsBySku } from "../lib/use-supplier-products-by-sku";
+import {
+  createPurchaseOrderErrorMessage,
+  issuePurchaseOrderErrorMessage,
+} from "../lib/purchase-order-action-errors";
 import type { PurchaseOrderLineDraft } from "../lib/purchase-order-types";
 import {
   DashboardTopbarPortal,
@@ -546,7 +550,7 @@ export function PurchaseOrderDraftWorkspace({
           return;
         }
         setSaveState("error");
-        setActionError("Could not create draft purchase order.");
+        setActionError(createPurchaseOrderErrorMessage(result));
         lastPersistSucceededRef.current = false;
       } catch {
         setSaveState("error");
@@ -720,7 +724,7 @@ export function PurchaseOrderDraftWorkspace({
     return persistReplace(linesRef.current, force);
   }, [persistReplace, purchaseOrderId]);
 
-  const finalize = useCallback(async () => {
+  const issuePo = useCallback(async () => {
     if (!purchaseOrderId) {
       return;
     }
@@ -733,7 +737,7 @@ export function PurchaseOrderDraftWorkspace({
         saved,
       )
     ) {
-      setActionError("Could not save latest lines before finalize.");
+      setActionError("Could not save latest lines before issuing.");
       return;
     }
     try {
@@ -751,9 +755,9 @@ export function PurchaseOrderDraftWorkspace({
         router.refresh();
         return;
       }
-      setActionError("Finalize failed.");
+      setActionError(issuePurchaseOrderErrorMessage(result));
     } catch {
-      setActionError("Finalize failed.");
+      setActionError("Issue failed.");
     }
   }, [
     confirmMutation,
@@ -837,7 +841,7 @@ export function PurchaseOrderDraftWorkspace({
       <header>
         <h1 className="page-title">{title}</h1>
         <p className="page-description mt-2">
-          Pick a vendor, add lines from that vendor&apos;s catalog, then finalize or
+          Pick a vendor, add lines from that vendor&apos;s catalog, then issue or
           download XLS. Lines autosave after the first create.
         </p>
         {activeSupplierId ? <SupplierName supplierId={activeSupplierId} /> : null}
@@ -898,7 +902,7 @@ export function PurchaseOrderDraftWorkspace({
           </LabeledField>
           <DevComment>
             Should these be required on every purchase order to be able to
-            finalize?
+            issue?
           </DevComment>
         </div>
         {purchaseOrderId ? (
@@ -927,10 +931,10 @@ export function PurchaseOrderDraftWorkspace({
                 isCreating ||
                 !purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current)
               }
-              onClick={() => void finalize()}
+              onClick={() => void issuePo()}
             >
               <CircleCheck className="size-icon-lg" aria-hidden />
-              {confirmMutation.isPending ? "Finalizing…" : "Finalize"}
+              {confirmMutation.isPending ? "Issuing…" : "Issue PO"}
             </Button>
           </div>
         ) : null}
@@ -964,7 +968,7 @@ export function PurchaseOrderDraftWorkspace({
   );
 }
 
-export function draftFinalizeDisabled(
+export function draftIssueDisabled(
   lines: readonly PurchaseOrderLineDraft[],
   lastSaved: readonly PurchaseOrderLineDraft[],
   saveState: "idle" | "saving" | "saved" | "error",

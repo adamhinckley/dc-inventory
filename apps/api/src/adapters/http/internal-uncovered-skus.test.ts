@@ -71,6 +71,7 @@ afterEach(async () => {
 async function startUncoveredApp(options?: {
   withDraftSuppliers?: boolean;
   withAmbiguousSku?: boolean;
+  withoutPoPrefix?: boolean;
 }) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
@@ -159,12 +160,14 @@ async function startUncoveredApp(options?: {
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: "V-A",
       name: "Factory A",
+      poPrefix: options?.withoutPoPrefix ? null : "FA",
     });
     await unitOfWork.suppliers.save({
       id: SUPPLIER_B,
       organizationId: OrganizationId.DEFAULT,
       vendorNumber: "V-B",
       name: "Factory B",
+      poPrefix: options?.withoutPoPrefix ? null : "FB",
     });
     const catalog = new InMemoryCatalogSkuLookupPort();
     catalog.set(OrganizationId.DEFAULT, SKU.value, "Uncovered widget");
@@ -363,6 +366,7 @@ describe("internal uncovered SKUs HTTP", () => {
       purchaseOrders: Array<{
         supplierId: string;
         status: string;
+        documentNumber: string;
         lines: Array<{ sku: string; qty: number }>;
       }>;
       unmappedSkus: string[];
@@ -370,6 +374,8 @@ describe("internal uncovered SKUs HTTP", () => {
     expect(body.unmappedSkus).toEqual([SKU_UNMAPPED.value]);
     expect(body.purchaseOrders).toHaveLength(2);
     const bySupplier = new Map(body.purchaseOrders.map((po) => [po.supplierId, po]));
+    expect(bySupplier.get(SUPPLIER_A)?.documentNumber).toBe("PO-FA-00001");
+    expect(bySupplier.get(SUPPLIER_B)?.documentNumber).toBe("PO-FB-00001");
     expect(bySupplier.get(SUPPLIER_A)?.status).toBe("draft");
     expect(bySupplier.get(SUPPLIER_B)?.status).toBe("draft");
     expect(
@@ -509,6 +515,7 @@ describe("internal uncovered SKUs HTTP", () => {
     const draftBody = drafted.json() as {
       purchaseOrders: Array<{ id: string; documentNumber: string }>;
     };
+    expect(draftBody.purchaseOrders[0]?.documentNumber).toBe("PO-FA-00001");
 
     const bySupplier = await app.inject({
       method: "GET",
@@ -652,6 +659,19 @@ describe("internal uncovered SKUs HTTP", () => {
     expect(
       syncedB?.lines.map((line) => ({ sku: line.sku, qty: line.qty })),
     ).toEqual([{ sku: SKU_B.value, qty: suggestedDraftPoQty(40, null) }]);
+  });
+
+  it("returns 409 when drafting POs for suppliers without poPrefix", async () => {
+    const app = await startUncoveredApp({ withDraftSuppliers: true, withoutPoPrefix: true });
+    const cookie = await staffCookie(app);
+    const drafted = await app.inject({
+      method: "POST",
+      url: "/internal/uncovered-skus/draft-purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { skus: [SKU.value] },
+    });
+    expect(drafted.statusCode).toBe(409);
+    expect(drafted.json()).toEqual({ error: "supplier_po_prefix_missing" });
   });
 
   it("requires staff_session to sync draft purchase orders from uncovered", async () => {

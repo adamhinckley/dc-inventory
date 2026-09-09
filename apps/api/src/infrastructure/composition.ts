@@ -152,6 +152,7 @@ import {
   ReplacePurchaseOrderLinesUseCase,
   SyncDraftPurchaseOrdersFromUncoveredUseCase,
   UnlinkSupplierProductUseCase,
+  UnconfirmPurchaseOrderUseCase,
   UpdateSupplierProductUseCase,
   UpdateSupplierUseCase,
   type ICatalogSkuLookupPort,
@@ -343,6 +344,7 @@ export type PurchasingHttpServices = {
   getPurchaseOrderShortReadout: GetPurchaseOrderShortReadoutUseCase;
   cancelPurchaseOrder: CancelPurchaseOrderUseCase;
   cancelRemainingPurchaseOrder: CancelRemainingPurchaseOrderUseCase;
+  unconfirmPurchaseOrder: UnconfirmPurchaseOrderUseCase;
   listSuppliers: ListSuppliersUseCase;
   createSupplier: CreateSupplierUseCase;
   getSupplier: GetSupplierUseCase;
@@ -716,6 +718,7 @@ function purchasingServices(
     ),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
     cancelRemainingPurchaseOrder: new CancelRemainingPurchaseOrderUseCase(unitOfWork.purchasing),
+    unconfirmPurchaseOrder: new UnconfirmPurchaseOrderUseCase(unitOfWork.purchasing),
     listSuppliers: new ListSuppliersUseCase(supplierRepo),
     createSupplier: new CreateSupplierUseCase(supplierRepo),
     getSupplier: new GetSupplierUseCase(supplierRepo),

@@ -71,6 +71,7 @@ async function startPhase2ManualFlowApp() {
     organizationId: OrganizationId.DEFAULT,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
+          poPrefix: "HF",
   });
 
   await customerRepo.save({
@@ -372,7 +373,7 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
       documentNumber: string;
       lines: Array<{ id: string }>;
     };
-    expect(po.documentNumber).toBe("PO-00001");
+    expect(po.documentNumber).toBe("PO-HF-00001");
 
     const confirmedPo = await app.inject({
       method: "POST",

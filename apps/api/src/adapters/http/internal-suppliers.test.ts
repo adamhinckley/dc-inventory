@@ -125,4 +125,41 @@ describe("internal suppliers HTTP", () => {
     expect(listed.statusCode).toBe(200);
     expect(listed.json()).toMatchObject({ total: 1, items: [{ id: supplier.id }] });
   });
+
+  it("creates and patches suppliers with poPrefix and rejects duplicates", async () => {
+    const app = await startSuppliersApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/suppliers",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { name: "Heritage Fabrics", vendorNumber: "HF-100", poPrefix: "HF" },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({
+      name: "Heritage Fabrics",
+      vendorNumber: "HF-100",
+      poPrefix: "HF",
+    });
+
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/internal/suppliers",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { name: "Other", vendorNumber: "HF-200", poPrefix: "HF" },
+    });
+    expect(duplicate.statusCode).toBe(409);
+    expect(duplicate.json()).toEqual({ error: "duplicate_po_prefix" });
+
+    const supplier = created.json() as { id: string };
+    const cleared = await app.inject({
+      method: "PATCH",
+      url: `/internal/suppliers/${supplier.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { poPrefix: null },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).toMatchObject({ poPrefix: null });
+  });
 });

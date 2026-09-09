@@ -22,6 +22,7 @@ export type DemoSupplierRow = {
   id: string;
   vendorNumber: string;
   name: string;
+  poPrefix: string;
 };
 
 export type DemoSupplierProductRow = {

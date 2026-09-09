@@ -221,8 +221,14 @@ Full narrative: [`customers.md`](./customers.md).
 | A4 | Payment application and AR balance are owner-gated. Agents do not invent AR rules or use float cash. |
 | A5 | Invoice PDF is a projection of our aggregates, same as PO PDF. |
 | A6 | Wholesale may download **their** invoices/order PDFs only if the wholesale spec includes the operation. |
+| A7 | Invoice status (`open` / `partial` / `past_due` / `paid`), remaining, open balance, aging, available credit, and the stats block are **projections** computed on read. No stored balance or status column. Definitions: [`accounting.md`](./accounting.md) §3. |
+| A8 | A payment is **customer-level** and may be applied across several invoices. Allocation is explicit per invoice; the UI prefills oldest due date first. A remainder is allowed only with an explicit hold-as-credit flag and becomes **unapplied credit**; it is never auto-applied at ship in v1. |
+| A9 | Payment amount is never edited. Fixes are **void** (`voided_at`, reason; ignored by every projection) or **reallocate** (append-only compensating applications). |
+| A10 | `invoice_adjustments` (`write_off` \| `credit_memo`, signed amount, required reason) is the only way to reduce remaining without cash. No RMA, replacement, or restock in v1. |
+| A11 | Payment plan is record-only: one active per customer, expectations computed on read, missed installments shown, nothing blocked, no auto-charge. |
+| A12 | Statements are a PDF projection sent through `IEmailSender` later. No second invoice type. |
 
-A `SoftwarePayment` is not an Accounting payment.
+A `SoftwarePayment` is not an Accounting payment. Full AR spec: [`accounting.md`](./accounting.md).
 
 ---
 
@@ -479,9 +485,7 @@ Still decide:
 
 ### G6. Credit-limit formula
 
-Credit is named as a use-case invariant but not specified.
-
-**Close:** what counts against the limit at confirm — e.g. `open AR (invoiced unpaid) + this order total + confirmed-uninvoiced orders` vs invoices only. Same currency as `Money`. Fail the whole confirm (like locked `availableToSell`). Customers CRUD only stores the limit; it does not enforce it.
+**Closed (2026-09-08, [ADA-328](https://linear.app/adamhinckley/issue/ADA-328/a1-what-ar-jobs-does-the-customer-accounting-screen-own)):** `available = creditLimit − (open invoice remaining + confirmed-but-unshipped order totals − unapplied credit)`. `$0` limit = no credit, not unlimited. Confirm **blocks** when `available < order total`; staff placing on behalf get a loud override confirm; warn-only is not an option. Enforcement lives in the Sales confirm use case via `ICreditCheckPort` (U2) in its own packet; Customers CRUD only stores the limit. Spec: [`accounting.md`](./accounting.md) §7.
 
 ### G7. Invoice on confirm vs on ship
 
@@ -489,22 +493,26 @@ Credit is named as a use-case invariant but not specified.
 
 ### G8. Staff RBAC matrix
 
-**Closed for v1:** Identity defines four staff roles and a static action policy. Any listed
-role may read internal catalog, customer, purchasing, stock, sales, and invoice data.
+**Closed for v1 (amended 2026-09-08 for AR):** Identity defines five staff roles and a static action policy. Any listed
+role may read internal catalog, customer, purchasing, stock, sales, and invoice / AR data.
 Commands use this matrix:
 
-| Action | admin | purchasing | warehouse | sales support |
-|---|---|---|---|---|
-| Manage catalog / customers | yes | yes | no | no |
-| Manage suppliers; create, edit, confirm, or cancel PO | yes | yes | no | no |
-| Receive PO, adjust stock, or ship order | yes | no | yes | no |
-| Create, confirm, or cancel order for customer | yes | no | no | yes |
-| Apply payment | yes | no | no | no |
+| Action | admin | purchasing | warehouse | sales support | accounting |
+|---|---|---|---|---|---|
+| Manage catalog / customers (`master_data_manage`) | yes | yes | no | no | no |
+| Manage suppliers; create, edit, confirm, or cancel PO | yes | yes | no | no | no |
+| Receive PO, adjust stock, or ship order | yes | no | yes | no | no |
+| Create, confirm, or cancel order for customer | yes | no | no | yes | no |
+| Record payment, apply credit, reallocate (`payments_apply`) | yes | no | no | no | yes |
+| Write-off, credit memo, void payment (`ar_adjust`) | yes | no | no | no | yes |
+| Create / end payment plan (`payment_plans_manage`) | yes | no | no | no | yes |
+| Edit customer credit limit (`credit_limit_manage`) | yes | no | no | no | yes |
 
 Users may hold more than one role and authorization succeeds if any role grants the
 action. Empty or unknown role sets grant no commands. `sales_support` is the code value
-for sales support. New roles or actions require this table and the static policy to change
-together. v1 has no permission CMS, per-user grants, or feature-flag replacement for RBAC.
+for sales support; `accounting` is the AR role ([`accounting.md`](./accounting.md) §8). Editing the credit-limit field moves out of
+`master_data_manage`. New roles or actions require this table and the static policy to change
+together. v1 has no permission CMS, per-user grants, per-amount thresholds, or feature-flag replacement for RBAC.
 
 ### G9. Purchasing state machine (cancel, over/under receive)
 
@@ -518,11 +526,9 @@ together. v1 has no permission CMS, per-user grants, or feature-flag replacement
 
 ### G10. Payment application rules
 
-`payment_applications` exists; rules do not.
+**Closed (2026-09-08, [ADA-328](https://linear.app/adamhinckley/issue/ADA-328/a1-what-ar-jobs-does-the-customer-accounting-screen-own)):** payment amount > 0, integer cents, currency matches the invoice. A payment is customer-level with explicit per-invoice applications; each application ≤ that invoice's remaining; Σ applications ≤ payment amount. A remainder is accepted only with `holdRemainderAsCredit: true` and becomes unapplied credit (A8). Fixes are void or append-only reallocate; the amount is never edited (A9). Idempotency: key required; same key + same payload is a no-op success, same key + different payload is `conflict`. Write-off and credit memo exist as `invoice_adjustments` with a required reason (A10). Full rules: [`accounting.md`](./accounting.md) §4–§5.
 
-**Close:** payment amount > 0; cannot apply more than invoice remaining; overpay rejected (no automatic credit memo in v1); unapplied payment remainder allowed or not; reverse/void vs compensating application; idempotency on “record payment.”
-
-Credit memos, RMA, and blanket POs are already an open stakeholder question — **explicitly defer** in the plan if they are not day one, so agents do not add them as “helpful” Accounting types.
+RMA, replacement selection, and blanket POs stay **deferred** — agents do not add them as “helpful” Accounting types.
 
 ### G11. Cross-context transaction boundary
 
@@ -553,7 +559,7 @@ Still open elsewhere (do not invent defaults):
 | Default terms / credit limit at create | Ask David — [`customers.md`](./customers.md) §12 |
 | Which contact receives confirmation / invoice email | Product call — [`customers.md`](./customers.md) §12 |
 | Confirmation email (`IEmailSender`) | Deferred send-job; port on confirm use case when built |
-| Statement | Deferred — do not overload Invoice |
+| Statement | PDF projection + `IEmailSender`, after the email provider — [`accounting.md`](./accounting.md) §9. Do not overload Invoice |
 | Tracking | Explicitly deferred |
 | Account request + wholesale agreement (SoloView: staff approve, then PandaDoc sign) | Observed 2026-09 — [`customers.md`](./customers.md) §15. Not header **terms**. Do not invent gates |
 
@@ -644,7 +650,7 @@ These are the failing tests the architecture already says the owner writes; they
 1. **Inventory:** movement effects, `available = on_hand − allocated`, locked `availableToSell = on_hand + on_order − committed`, open SKU has no sellability cap, first `InboundFromPo` locks, sell window can lock with no PO (injected clock), reject locked oversell under concurrent confirms (in-memory lock/serial), cover FIFO on receive, adjustment sign, compensating decommit/deallocate.
 2. **Sales confirm:** all-or-nothing `availableToSell` on locked lines, credit formula, session `customerId` overwrite, snapshot price frozen, draft not commitable twice. Ship only against `Allocated`.
 3. **Purchasing receive:** `GoodsReceived` vs remaining `on_order`, cancel-compensates inbound (does not reopen), over-receive rejected, FIFO cover of committed qty.
-4. **Accounting:** invoice on ship, partial payment, cannot over-apply, `Money` integer-only; invoice total is merchandise (no sales tax).
+4. **Accounting:** invoice on ship, customer-level payment across invoices, cannot over-apply, remainder only with hold-as-credit, void ignored by projections, derived status precedence, aging buckets, `Money` integer-only; invoice total is merchandise (no sales tax).
 5. **Tax:** none — reject any slice that adds quote/commit, tax lines, or `price * rate`.
 6. **Identity:** wholesale cookie rejected on `/internal`, `customerId` in body ignored, 404 for another customer’s order.
 7. **Licensing:** paid flag false without grant; operator force-off wins; business owner cannot write overrides; duplicate `provider_ref` does not double-grant; Accounting tests never read `software_payments`.

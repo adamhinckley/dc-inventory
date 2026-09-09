@@ -6829,6 +6829,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - supplier_po_prefix_missing
+                required:
+                  - error
+                additionalProperties: false
   /internal/purchase-orders/sync-from-uncovered:
     post:
       operationId: syncInternalPurchaseOrdersFromUncovered
@@ -8040,6 +8054,166 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/purchase-orders/{id}/unconfirm:
+    post:
+      operationId: unconfirmInternalPurchaseOrder
+      summary: Return a zero-received confirmed purchase order to draft
+      tags:
+        - internal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+              required:
+                - idempotencyKey
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          in: path
+          name: id
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  supplierId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  documentNumber:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - confirmed
+                      - received
+                      - cancelled
+                  shipDate:
+                    nullable: true
+                    type: string
+                  cancelDate:
+                    nullable: true
+                    type: string
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        sku:
+                          type: string
+                        name:
+                          type: string
+                        qty:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        receivedQty:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                      required:
+                        - id
+                        - sku
+                        - name
+                        - qty
+                        - receivedQty
+                      additionalProperties: false
+                required:
+                  - id
+                  - supplierId
+                  - documentNumber
+                  - status
+                  - shipDate
+                  - cancelDate
+                  - lines
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - forbidden
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - conflict
+                required:
+                  - error
+                additionalProperties: false
   /internal/purchase-orders/{id}/receive:
     post:
       operationId: receiveInternalPurchaseOrder
@@ -8725,6 +8899,20 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - supplier_po_prefix_missing
+                required:
+                  - error
+                additionalProperties: false
   /internal/suppliers:
     get:
       operationId: listInternalSuppliers
@@ -8778,6 +8966,8 @@ paths:
             label: "Vendor #"
           - field: name
             label: Name
+          - field: poPrefix
+            label: PO prefix
         search:
           param: q
           fields:
@@ -8812,10 +9002,15 @@ paths:
                           type: string
                         name:
                           type: string
+                        poPrefix:
+                          nullable: true
+                          type: string
+                          pattern: ^[A-Z0-9]{2,4}$
                       required:
                         - id
                         - vendorNumber
                         - name
+                        - poPrefix
                       additionalProperties: false
                   page:
                     type: integer
@@ -8903,6 +9098,10 @@ paths:
                 vendorNumber:
                   type: string
                   minLength: 1
+                poPrefix:
+                  nullable: true
+                  type: string
+                  pattern: ^[A-Z0-9]{2,4}$
               required:
                 - name
                 - vendorNumber
@@ -8922,10 +9121,15 @@ paths:
                     type: string
                   name:
                     type: string
+                  poPrefix:
+                    nullable: true
+                    type: string
+                    pattern: ^[A-Z0-9]{2,4}$
                 required:
                   - id
                   - vendorNumber
                   - name
+                  - poPrefix
                 additionalProperties: false
         "400":
           description: Default Response
@@ -8984,15 +9188,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - duplicate_vendor_number
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_vendor_number
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_po_prefix
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/suppliers/{id}:
     get:
       operationId: getInternalSupplier
@@ -9023,10 +9237,15 @@ paths:
                     type: string
                   name:
                     type: string
+                  poPrefix:
+                    nullable: true
+                    type: string
+                    pattern: ^[A-Z0-9]{2,4}$
                 required:
                   - id
                   - vendorNumber
                   - name
+                  - poPrefix
                 additionalProperties: false
         "400":
           description: Default Response
@@ -9102,6 +9321,10 @@ paths:
                 vendorNumber:
                   type: string
                   minLength: 1
+                poPrefix:
+                  nullable: true
+                  type: string
+                  pattern: ^[A-Z0-9]{2,4}$
       parameters:
         - schema:
             type: string
@@ -9126,10 +9349,15 @@ paths:
                     type: string
                   name:
                     type: string
+                  poPrefix:
+                    nullable: true
+                    type: string
+                    pattern: ^[A-Z0-9]{2,4}$
                 required:
                   - id
                   - vendorNumber
                   - name
+                  - poPrefix
                 additionalProperties: false
         "400":
           description: Default Response
@@ -9202,15 +9430,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - duplicate_vendor_number
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_vendor_number
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_po_prefix
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/suppliers/{id}/products:
     get:
       operationId: listInternalSupplierProducts

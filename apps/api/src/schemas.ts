@@ -1101,10 +1101,16 @@ export const supplierListQuerySchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
 });
 
+export const supplierPoPrefixSchema = z
+  .string()
+  .regex(/^[A-Z0-9]{2,4}$/)
+  .nullable();
+
 export const supplierItemSchema = z.object({
   id: z.string().uuid(),
   vendorNumber: z.string(),
   name: z.string(),
+  poPrefix: supplierPoPrefixSchema,
 });
 
 export const supplierListResponseSchema = z.object({
@@ -1117,11 +1123,13 @@ export const supplierListResponseSchema = z.object({
 export const supplierWriteBodySchema = z.object({
   name: z.string().min(1),
   vendorNumber: z.string().min(1),
+  poPrefix: supplierPoPrefixSchema.optional(),
 });
 
 export const supplierPatchBodySchema = z.object({
   name: z.string().min(1).optional(),
   vendorNumber: z.string().min(1).optional(),
+  poPrefix: supplierPoPrefixSchema.optional(),
 });
 
 export const supplierIdParamsSchema = z.object({
@@ -1132,11 +1140,20 @@ export const duplicateVendorNumberResponseSchema = z.object({
   error: z.literal("duplicate_vendor_number"),
 });
 
+export const duplicatePoPrefixResponseSchema = z.object({
+  error: z.literal("duplicate_po_prefix"),
+});
+
+export const supplierPoPrefixMissingResponseSchema = z.object({
+  error: z.literal("supplier_po_prefix_missing"),
+});
+
 export const suppliersListTable = {
   rowId: "id",
   columns: [
     { field: "vendorNumber", label: "Vendor #" },
     { field: "name", label: "Name" },
+    { field: "poPrefix", label: "PO prefix" },
   ],
   search: {
     param: "q",

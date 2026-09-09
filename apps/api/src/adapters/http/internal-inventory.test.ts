@@ -34,10 +34,16 @@ const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const PO_ID = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440010");
 const SKU_A = Sku.parse("REOPEN-HTTP-A");
 const SKU_B = Sku.parse("REOPEN-HTTP-B");
-const WINDOW_OPENS = "2026-07-15T00:00:00.000Z";
-const WINDOW_CLOSES = "2026-08-01T00:00:00.000Z";
-const INSIDE_WINDOW = new Date("2026-07-15T12:00:00.000Z");
-const AFTER_WINDOW = new Date("2026-09-01T12:00:00.000Z");
+
+function daysFromNow(days: number): Date {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
+
+/** Relative sell-window bounds so calendar-based sellState stays stable over time. */
+const INSIDE_WINDOW = daysFromNow(-1);
+const WINDOW_OPENS = INSIDE_WINDOW.toISOString();
+const WINDOW_CLOSES = daysFromNow(30).toISOString();
+const AFTER_WINDOW = daysFromNow(60);
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
@@ -108,6 +114,7 @@ async function startReopenApp() {
   }
 
   const sellWindowRepo = new InMemorySellWindowRepository();
+  const clock = new InMemoryClock(INSIDE_WINDOW);
 
   const postgresLikeUnitOfWork: IUnitOfWork = {
     inventory: {
@@ -123,7 +130,7 @@ async function startReopenApp() {
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),
-    clock: new InMemoryClock(INSIDE_WINDOW),
+    clock,
     staffUsers,
     sessions,
     passwords,
@@ -132,7 +139,11 @@ async function startReopenApp() {
     productPackagingRepo: packagingRepo,
     unitOfWork: postgresLikeUnitOfWork,
     sellWindowRepo,
-    qtyRead: new InventoryReadModelQtyReadAdapter(unitOfWork.inventory.readModel),
+    qtyRead: new InventoryReadModelQtyReadAdapter(
+      unitOfWork.inventory.readModel,
+      sellWindowRepo,
+      clock,
+    ),
   });
   apps.push(app);
   return app;
@@ -410,7 +421,11 @@ describe("POST /internal/inventory/close-skus", () => {
       productPackagingRepo: packagingRepo,
       unitOfWork: postgresLikeUnitOfWork,
       sellWindowRepo,
-      qtyRead: new InventoryReadModelQtyReadAdapter(unitOfWork.inventory.readModel),
+      qtyRead: new InventoryReadModelQtyReadAdapter(
+        unitOfWork.inventory.readModel,
+        sellWindowRepo,
+        clock,
+      ),
     });
     apps.push(app);
     const session = await staffCookie(app);
@@ -539,6 +554,9 @@ describe("POST /internal/inventory/close-skus", () => {
       run: (work) => unitOfWork.run(work),
     };
 
+    const reopenWindowOpens = AFTER_WINDOW.toISOString();
+    const reopenWindowCloses = daysFromNow(90).toISOString();
+
     const app = await buildApp({
       logger: false,
       database: new InMemoryDatabase(),
@@ -551,7 +569,11 @@ describe("POST /internal/inventory/close-skus", () => {
       productPackagingRepo: packagingRepo,
       unitOfWork: postgresLikeUnitOfWork,
       sellWindowRepo,
-      qtyRead: new InventoryReadModelQtyReadAdapter(unitOfWork.inventory.readModel),
+      qtyRead: new InventoryReadModelQtyReadAdapter(
+        unitOfWork.inventory.readModel,
+        sellWindowRepo,
+        clock,
+      ),
     });
     apps.push(app);
     const session = await staffCookie(app);
@@ -563,8 +585,8 @@ describe("POST /internal/inventory/close-skus", () => {
       payload: {
         name: "Reopen before close",
         skus: [SKU_A.value, SKU_B.value],
-        windowOpensAt: WINDOW_OPENS,
-        windowClosesAt: WINDOW_CLOSES,
+        windowOpensAt: reopenWindowOpens,
+        windowClosesAt: reopenWindowCloses,
       },
     });
     expect(reopen.statusCode).toBe(200);

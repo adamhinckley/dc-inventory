@@ -26,6 +26,7 @@ import { DrizzleSupplierRepository } from "@dc-inventory/purchasing";
 import { SupplierId } from "@dc-inventory/shared-kernel";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import { DEMO_SEED_ORGANIZATION_ID } from "./demo-seed-organization.js";
+import { plannedSupplierPoPrefix } from "./planner/master-data.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import { DrizzleProductImageSeedRepository } from "./ports/drizzle-product-image-seed.js";
 import { DrizzleSupplierProductSeedRepository } from "./ports/drizzle-supplier-product-seed.js";
@@ -100,6 +101,7 @@ export async function runWriteStaticDemoBookOnDb(
           organizationId: DEMO_SEED_ORGANIZATION_ID,
           vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
           name: PHASE2_SUPPLIER_NAME,
+          poPrefix: plannedSupplierPoPrefix(PHASE2_SUPPLIER_VENDOR_NUMBER),
         });
         return { id, vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER };
       },

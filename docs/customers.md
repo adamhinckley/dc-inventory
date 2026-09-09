@@ -54,7 +54,7 @@ Sales and Accounting hold `CustomerId`, not a Customer aggregate (C4–C5). Cred
 |---|---|---|
 | **Business name** | Yes | Commercial identity |
 | **Terms** | Yes | Payment clock; copied to invoice due date at ship (A2). Free text in v1; Net 30/60/90 enum is still open — see §12 |
-| **Credit limit** | Yes | `Money`; `$0` is valid. Formula for what counts against the limit stays G6 (owner-gated) |
+| **Credit limit** | Yes | `Money`; `$0` is valid and means **no credit** (card / prepay only). Formula: [`accounting.md`](./accounting.md) §7. Editing it is the `credit_limit_manage` action (G8) |
 | **Customer number** | No (see §3) | Always present after save |
 | **Tax ID** | No | Optional reseller identifier on the account |
 | **Account status** | No (defaults `active`) | `active` \| `on hold` \| `inactive` — see §8 |
@@ -200,8 +200,8 @@ Exact wholesale write scope for contacts/addresses follows [`api-contract.md`](.
 | Terms free text vs Net 30/60/90 enum | Product call (G13 successor) |
 | Which contact gets confirmation / invoice email | Product call |
 | Confirmation email send (`IEmailSender`) | Deferred send-job; confirm use case owns the port when built |
-| Statements | Deferred; do not overload Invoice |
-| Credit-limit **formula** (G6) | Owner tests — not this master spec |
+| Statements | PDF projection + `IEmailSender` later — [`accounting.md`](./accounting.md) §9; do not overload Invoice |
+| Credit-limit **formula** (G6) | **Closed** — [`accounting.md`](./accounting.md) §7; enforcement is a Sales packet |
 | Bulk customer import | Out of scope |
 | Implementation migration, OpenAPI, demo seed | Separate work packet after this spec |
 | **Account request + wholesale agreement** (observed on live SoloView, 2026-09) | Owner grill — see §15. Not U5–U14. Do not treat header **terms** (payment clock) as this document |

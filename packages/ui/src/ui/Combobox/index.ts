@@ -15,4 +15,8 @@
  *   Server-driven typeahead — not yet supported; surface as a follow-up.
  * @variants density (comfortable | compact)
  */
-export { Combobox, type ComboboxProps } from './Combobox'
+export {
+  Combobox,
+  filterComboboxOptionsForQuery,
+  type ComboboxProps,
+} from './Combobox'

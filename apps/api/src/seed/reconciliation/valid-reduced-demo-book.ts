@@ -22,6 +22,10 @@ function daysAgo(days: number): Date {
   return new Date(SEED_TODAY.getTime() - days * 86_400_000);
 }
 
+function poPad(poPrefix: string, n: number): string {
+  return `PO-${poPrefix}-${String(n).padStart(5, "0")}`;
+}
+
 function pad(prefix: string, n: number): string {
   return `${prefix}-${String(n).padStart(5, "0")}`;
 }
@@ -100,9 +104,9 @@ export function buildValidReducedDemoBook(): DemoBook {
   }));
 
   const suppliers = [
-    { id: "sup-001", vendorNumber: "VEND-001", name: "Demo Supplier" },
-    { id: "sup-002", vendorNumber: "VEND-002", name: "Northern mill" },
-    { id: "sup-003", vendorNumber: "VEND-003", name: "Summit mill" },
+    { id: "sup-001", vendorNumber: "VEND-001", name: "Demo Supplier", poPrefix: "V01" },
+    { id: "sup-002", vendorNumber: "VEND-002", name: "Northern mill", poPrefix: "V02" },
+    { id: "sup-003", vendorNumber: "VEND-003", name: "Summit mill", poPrefix: "V03" },
   ];
 
   const supplierProducts = [
@@ -217,18 +221,34 @@ export function buildValidReducedDemoBook(): DemoBook {
     "DEM-00003": "sup-003",
   };
 
+  const supplierPoPrefixById: Record<string, string> = {
+    "sup-001": "V01",
+    "sup-002": "V02",
+    "sup-003": "V03",
+  };
+  const supplierPoSeq = new Map<string, number>();
+  const nextPoDocumentNumber = (supplierId: string): string => {
+    const poPrefix = supplierPoPrefixById[supplierId];
+    if (poPrefix === undefined) {
+      throw new Error(`missing PO prefix for supplier ${supplierId}`);
+    }
+    const next = (supplierPoSeq.get(supplierId) ?? 0) + 1;
+    supplierPoSeq.set(supplierId, next);
+    return poPad(poPrefix, next);
+  };
+
   const purchaseOrders: DemoBook["purchaseOrders"] = receivedSkus.map((sku, index) => ({
     id: `po-${String(index + 1)}`,
     supplierId: supplierForSku[sku] ?? "sup-001",
     status: "received" as const,
-    documentNumber: pad("PO", index + 1),
+    documentNumber: nextPoDocumentNumber(supplierForSku[sku] ?? "sup-001"),
     createdAt: daysAgo(200 - index),
   }));
   purchaseOrders.push({
     id: "po-10",
     supplierId: "sup-003",
     status: "confirmed",
-    documentNumber: pad("PO", 10),
+    documentNumber: nextPoDocumentNumber("sup-003"),
     createdAt: LEFTOVER_DAY_SEVEN,
   });
 

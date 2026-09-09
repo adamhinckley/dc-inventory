@@ -15,10 +15,10 @@ export {
   products,
 } from "@dc-inventory/catalog/schema";
 export {
-  documentNumberCounters as purchasingDocumentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
   purchasing,
+  supplierPoDocumentNumberCounters,
   supplierProducts,
   suppliers,
 } from "@dc-inventory/purchasing/schema";
@@ -108,9 +108,9 @@ import {
   products,
 } from "@dc-inventory/catalog/schema";
 import {
-  documentNumberCounters as purchasingDocumentNumberCounters,
   purchaseOrderLines,
   purchaseOrders,
+  supplierPoDocumentNumberCounters,
   supplierProducts,
   suppliers,
 } from "@dc-inventory/purchasing/schema";
@@ -168,7 +168,7 @@ export const schema = {
   productImages,
   suppliers,
   supplierProducts,
-  purchasingDocumentNumberCounters,
+  supplierPoDocumentNumberCounters,
   purchaseOrders,
   purchaseOrderLines,
   locations,

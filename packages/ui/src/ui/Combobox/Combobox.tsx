@@ -66,6 +66,16 @@ const inputVariants = cva(
 const chromeButtonClass =
   'inline-flex size-5 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
 
+/** Filters options for minQueryLength / virtualize popup empty-state checks. */
+export function filterComboboxOptionsForQuery<T>(
+  options: readonly T[],
+  query: string,
+  filter: (item: T, q: string) => boolean,
+): readonly T[] {
+  const trimmed = query.trim()
+  return options.filter((option) => filter(option, trimmed))
+}
+
 // Async resolver hook — runs the async loader on mount, tracks internal
 // loading state, surfaces resolved options. For static arrays, returns
 // the array as-is. The resource-system dispatchers don't use this path —
@@ -256,8 +266,11 @@ export function Combobox({
   const filterFn = (item: Option, q: string) => collator.contains(item, q, (o: Option) => o.label)
   const trimmedQuery = query.trim()
   const needsQuery = minQueryLength > 0 && trimmedQuery.length < minQueryLength
-  const virtualItems = virtualize ? resolved.filter((o) => filterFn(o, trimmedQuery)) : resolved
   const trackQuery = virtualize || minQueryLength > 0
+  const queryFilteredItems =
+    trackQuery && !needsQuery
+      ? filterComboboxOptionsForQuery(resolved, trimmedQuery, filterFn)
+      : resolved
   const hint = helperText && helperText.length > 0 ? helperText : undefined
   const generatedId = useId()
   const id = idProp ?? (hint ? generatedId : undefined)
@@ -390,12 +403,12 @@ export function Combobox({
               <div className="item-padding text-xs text-fg-tertiary">Loading...</div>
             ) : needsQuery ? (
               <div className="item-padding text-xs text-fg-tertiary">Type to search</div>
-            ) : (virtualize ? virtualItems : resolved).length === 0 ? (
+            ) : queryFilteredItems.length === 0 ? (
               <div className="item-padding text-xs text-fg-tertiary">No options</div>
             ) : virtualize ? (
               <BaseCombobox.List>
                 <ComboboxVirtualList
-                  items={virtualItems}
+                  items={queryFilteredItems}
                   open={open}
                   virtualizerRef={virtualizerRef}
                   data-testid={testid}

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   char,
@@ -5,9 +6,11 @@ import {
   integer,
   pgEnum,
   pgSchema,
+  primaryKey,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -39,9 +42,15 @@ export const suppliers = purchasing.table(
     organizationId: text("organization_id").notNull().default("DEFAULT"),
     vendorNumber: text("vendor_number").notNull(),
     name: text("name").notNull(),
+    poPrefix: text("po_prefix"),
     ...timestamps(),
   },
-  (table) => [unique().on(table.organizationId, table.vendorNumber)],
+  (table) => [
+    unique().on(table.organizationId, table.vendorNumber),
+    uniqueIndex("suppliers_organization_id_po_prefix_unique")
+      .on(table.organizationId, table.poPrefix)
+      .where(sql`${table.poPrefix} is not null`),
+  ],
 );
 
 export const supplierProducts = purchasing.table(
@@ -79,10 +88,17 @@ export const purchaseOrders = purchasing.table(
   (table) => [unique().on(table.organizationId, table.documentNumber)],
 );
 
-export const documentNumberCounters = purchasing.table("document_number_counters", {
-  organizationId: text("organization_id").primaryKey(),
-  lastValue: integer("last_value").notNull(),
-});
+export const supplierPoDocumentNumberCounters = purchasing.table(
+  "supplier_po_document_number_counters",
+  {
+    organizationId: text("organization_id").notNull(),
+    supplierId: uuid("supplier_id")
+      .notNull()
+      .references(() => suppliers.id),
+    lastValue: integer("last_value").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.organizationId, table.supplierId] })],
+);
 
 /** Frozen sku/name + qty. No live catalog FK. */
 export const purchaseOrderLines = purchasing.table("purchase_order_lines", {

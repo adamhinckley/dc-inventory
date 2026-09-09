@@ -24,6 +24,7 @@ import {
   ListPurchaseOrdersUseCase,
   ReceivePurchaseOrderUseCase,
   ReplacePurchaseOrderLinesUseCase,
+  UnconfirmPurchaseOrderUseCase,
 } from "../src/index.js";
 
 const SKU = Sku.parse("PO-TEST-SKU");
@@ -43,6 +44,7 @@ async function harness() {
     organizationId: DEFAULT_ORG,
     vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
     name: PHASE2_SUPPLIER_NAME,
+    poPrefix: "HF",
   });
 
   return {
@@ -55,13 +57,14 @@ async function harness() {
     receive: new ReceivePurchaseOrderUseCase(uow),
     cancel: new CancelPurchaseOrderUseCase(uow),
     cancelRemaining: new CancelRemainingPurchaseOrderUseCase(uow),
+    unconfirm: new UnconfirmPurchaseOrderUseCase(uow),
     replaceLines: new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders, catalog),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
   };
 }
 
 describe("Purchasing (in-memory)", () => {
-  it("assigns PO-00001 document numbers with gaps allowed after cancel", async () => {
+  it("assigns PO-{poPrefix}-{#####} document numbers with gaps allowed after cancel", async () => {
     const h = await harness();
     const first = await h.create.execute({
       organizationId: DEFAULT_ORG,
@@ -73,7 +76,7 @@ describe("Purchasing (in-memory)", () => {
     if (!first.ok) {
       return;
     }
-    expect(first.purchaseOrder.documentNumber).toBe("PO-00001");
+    expect(first.purchaseOrder.documentNumber).toBe("PO-HF-00001");
 
     await h.cancel.execute({
       organizationId: DEFAULT_ORG,
@@ -92,7 +95,7 @@ describe("Purchasing (in-memory)", () => {
     if (!second.ok) {
       return;
     }
-    expect(second.purchaseOrder.documentNumber).toBe("PO-00002");
+    expect(second.purchaseOrder.documentNumber).toBe("PO-HF-00002");
 
     const sorted = await h.list.execute({
       organizationId: DEFAULT_ORG,
@@ -115,7 +118,87 @@ describe("Purchasing (in-memory)", () => {
       status: "draft",
       supplierId: h.supplierId,
     });
-    expect(searched.items.map((order) => order.documentNumber)).toEqual(["PO-00002"]);
+    expect(searched.items.map((order) => order.documentNumber)).toEqual(["PO-HF-00002"]);
+  });
+
+  it("returns supplier_po_prefix_missing when supplier has no PO prefix", async () => {
+    const h = await harness();
+    const missingPrefixId = SupplierId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
+    await h.uow.suppliers.save({
+      id: missingPrefixId,
+      organizationId: DEFAULT_ORG,
+      vendorNumber: "NO-PREFIX",
+      name: "No Prefix Supplier",
+      poPrefix: null,
+    });
+
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: missingPrefixId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+    });
+    expect(created).toEqual({ ok: false, reason: "supplier_po_prefix_missing" });
+  });
+
+  it("allows updating existing POs after supplier poPrefix is cleared", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 5 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const supplier = await h.uow.suppliers.findById(DEFAULT_ORG, h.supplierId);
+    expect(supplier).not.toBeNull();
+    if (supplier === null) {
+      return;
+    }
+    await h.uow.suppliers.save({ ...supplier, poPrefix: null });
+
+    const cancelled = await h.cancel.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "cancel-after-prefix-cleared",
+    });
+    expect(cancelled.ok).toBe(true);
+  });
+
+  it("allocates independent PO sequences per supplier", async () => {
+    const h = await harness();
+    const otherSupplierId = SupplierId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+    await h.uow.suppliers.save({
+      id: otherSupplierId,
+      organizationId: DEFAULT_ORG,
+      vendorNumber: "VEND-002",
+      name: "Other Supplier",
+      poPrefix: "OS",
+    });
+
+    const first = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+    });
+    const other = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: otherSupplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+    });
+    expect(first.ok && other.ok).toBe(true);
+    if (!first.ok || !other.ok) {
+      return;
+    }
+    expect(first.purchaseOrder.documentNumber).toBe("PO-HF-00001");
+    expect(other.purchaseOrder.documentNumber).toBe("PO-OS-00001");
   });
 
   it("sorts listed purchase orders by ship date and remaining qty", async () => {
@@ -461,7 +544,7 @@ describe("Purchasing (in-memory)", () => {
       id: purchaseOrderId,
       organizationId: DEFAULT_ORG,
       supplierId: h.supplierId,
-      documentNumber: "PO-00001",
+      documentNumber: "PO-HF-00001",
       status: "draft",
       shipDate: null,
       cancelDate: null,
@@ -712,6 +795,7 @@ describe("Purchasing (in-memory)", () => {
       organizationId: DEFAULT_ORG,
       vendorNumber: PHASE2_SUPPLIER_VENDOR_NUMBER,
       name: PHASE2_SUPPLIER_NAME,
+    poPrefix: "HF",
     });
 
     let cancelCalls = 0;
@@ -837,6 +921,96 @@ describe("Purchasing (in-memory)", () => {
     expect(snap.onOrder).toBe(0);
   });
 
+  it("unconfirms a zero-received confirmed purchase order back to draft", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 12 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const documentNumber = created.purchaseOrder.documentNumber;
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-unconfirm",
+    });
+
+    let snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
+    expect(snap.onOrder).toBe(12);
+
+    const unconfirmed = await h.unconfirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "unconfirm-zero-received",
+    });
+    expect(unconfirmed.ok).toBe(true);
+    if (!unconfirmed.ok) {
+      return;
+    }
+    expect(unconfirmed.purchaseOrder.status).toBe("draft");
+    expect(unconfirmed.purchaseOrder.documentNumber).toBe(documentNumber);
+
+    snap = await h.snapshot.execute({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
+    expect(snap.onOrder).toBe(0);
+
+    const movements = await h.uow.inventoryReadModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku: SKU,
+      locationId: DEFAULT,
+    });
+    expect(movements.filter((movement) => movement.movementType === "InboundCancelled")).toHaveLength(1);
+    expect(movements.find((movement) => movement.movementType === "InboundCancelled")?.quantity).toBe(12);
+  });
+
+  it("rejects unconfirm when any line has received quantity", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 10 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-block-unconfirm",
+    });
+
+    const lineId = created.purchaseOrder.lines[0]!.id;
+    await h.receive.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "receive-block-unconfirm",
+      lines: [{ lineId, quantity: 1 }],
+    });
+
+    const blocked = await h.unconfirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "unconfirm-blocked",
+    });
+    expect(blocked).toEqual({ ok: false, reason: "illegal_transition" });
+
+    const saved = await h.uow.purchaseOrders.findById(DEFAULT_ORG, created.purchaseOrder.id);
+    expect(saved?.status).toBe("confirmed");
+  });
+
   it("scopes purchase orders by organizationId and allows duplicate vendor numbers and PO numbers across orgs", async () => {
     const h = await harness();
     const acmeSupplierId = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
@@ -847,12 +1021,14 @@ describe("Purchasing (in-memory)", () => {
       organizationId: BETA_ORG,
       vendorNumber: "V-1",
       name: "Beta vendor",
+      poPrefix: "HF",
     });
     await h.uow.suppliers.save({
       id: acmeSupplierId,
       organizationId: DEFAULT_ORG,
       vendorNumber: "V-1",
       name: "Acme vendor",
+      poPrefix: "HF",
     });
 
     const acmePoId = PurchaseOrderId.parse(newUuid());

@@ -7,6 +7,7 @@ import {
   draftUncoveredPurchaseOrdersResponseSchema,
   featureDisabledResponseSchema,
   invalidResponseSchema,
+  supplierPoPrefixMissingResponseSchema,
   inventoryStockParamsSchema,
   inventoryStockSnapshotSchema,
   notFoundResponseSchema,
@@ -419,6 +420,7 @@ export function registerInternalUncoveredSkusDraftPurchaseOrderRoutes(
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
           403: featureDisabledResponseSchema,
+          409: supplierPoPrefixMissingResponseSchema,
         },
       },
     },
@@ -430,6 +432,9 @@ export function registerInternalUncoveredSkusDraftPurchaseOrderRoutes(
         skus: body.skus,
       });
       if (!result.ok) {
+        if (result.reason === "supplier_po_prefix_missing") {
+          return reply.code(409).send({ error: "supplier_po_prefix_missing" as const });
+        }
         return sendInvalid(reply);
       }
       return reply.code(201).send({

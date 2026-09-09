@@ -20,6 +20,7 @@ export type PlannedSupplier = {
   key: string;
   vendorNumber: string;
   name: string;
+  poPrefix: string;
 };
 
 export type PlannedSupplierProduct = {
