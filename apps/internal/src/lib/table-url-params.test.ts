@@ -218,6 +218,15 @@ describe("shouldStripStaffTableUrlOnNavigate", () => {
     );
   });
 
+  it("keeps accounting list keys when moving between balances and payments", () => {
+    expect(
+      shouldStripStaffTableUrlOnNavigate("/accounting", "/accounting/payments"),
+    ).toBe(false);
+    expect(
+      shouldStripStaffTableUrlOnNavigate("/accounting/payments", "/accounting"),
+    ).toBe(false);
+  });
+
   it("clears list keys when leaving inventory for catalog", () => {
     expect(shouldStripStaffTableUrlOnNavigate("/inventory", "/catalog")).toBe(true);
     expect(shouldStripStaffTableUrlOnNavigate("/inventory/reopen", "/catalog")).toBe(

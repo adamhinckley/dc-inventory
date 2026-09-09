@@ -1,10 +1,14 @@
-import { DashboardPlaceholder } from "../../../components/dashboard-placeholder";
+import { AccountingBalancesTable } from "../../../components/accounting-balances-table";
+import { accountingBalancesInitialParams } from "../../../lib/accounting-url-params";
 
-export default function AccountingPage() {
-  return (
-    <DashboardPlaceholder
-      title="Accounting"
-      body="Placeholder accounting. Invoices and AR stay out of Licensing subscription money."
-    />
-  );
+type AccountingSearchParams = Record<string, string | string[] | undefined>;
+
+export default async function AccountingPage({
+  searchParams,
+}: {
+  searchParams: Promise<AccountingSearchParams>;
+}) {
+  const initialParams = accountingBalancesInitialParams(await searchParams);
+
+  return <AccountingBalancesTable initialParams={initialParams} />;
 }
