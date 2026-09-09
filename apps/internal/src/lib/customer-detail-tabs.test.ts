@@ -8,13 +8,14 @@ import {
 } from "./customer-detail-tabs";
 
 describe("customer detail tabs", () => {
-  it("defines the five tab query keys", () => {
+  it("defines the six tab query keys", () => {
     expect(CUSTOMER_DETAIL_TAB_KEYS).toEqual([
       "ship-tos",
       "bill-to",
       "contacts",
       "certificates",
       "orders",
+      "accounting",
     ]);
   });
 
