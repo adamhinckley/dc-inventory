@@ -4,6 +4,7 @@ import {
   useGetInternalCustomerAccounting,
   useListInternalCustomerInvoices,
   useListInternalCustomerPayments,
+  useListInternalSalesOrders,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -12,14 +13,7 @@ import {
   DescriptionList,
   formatMoneyMinorUnits,
 } from "@dc-inventory/ui";
-import {
-  ArrowLeftRight,
-  Ban,
-  CalendarClock,
-  FileMinus,
-  HandCoins,
-  Plus,
-} from "lucide-react";
+import { ArrowLeftRight, Ban, FileMinus, HandCoins, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 import type { AllocationInvoice } from "../lib/customer-accounting-allocation";
@@ -37,8 +31,10 @@ import type {
   CustomerInvoiceRow,
   CustomerPaymentRow,
 } from "../lib/customer-accounting-types";
+import { useStaffAccountingActions } from "../lib/staff-accounting-actions";
 import {
   CustomerAccountingAdjustDialog,
+  CustomerAccountingApplyCreditPickerDialog,
   CustomerAccountingEndPlanButton,
   CustomerAccountingPlanDialog,
   CustomerAccountingReallocateDialog,
@@ -51,10 +47,14 @@ type DrawerTab = "payments" | "plan" | "stats";
 function InvoiceGrid({
   rows,
   currency,
+  orderNumbers,
+  canArAdjust,
   onAdjust,
 }: {
   rows: CustomerInvoiceRow[];
   currency: string;
+  orderNumbers: ReadonlyMap<string, string>;
+  canArAdjust: boolean;
   onAdjust: (invoice: CustomerInvoiceRow) => void;
 }) {
   return (
@@ -114,9 +114,9 @@ function InvoiceGrid({
               <td className="px-section-content-x py-section-content-y text-body-sm">
                 <Link
                   href={`/sales/${invoice.orderId}`}
-                  className="text-link hover:text-link-hover"
+                  className="text-link hover:text-link-hover tabular-nums"
                 >
-                  View Order
+                  {orderNumbers.get(invoice.orderId) ?? invoice.orderId}
                 </Link>
               </td>
               <td className="px-section-content-x py-section-content-y text-right text-body-sm tabular-nums">
@@ -137,15 +137,17 @@ function InvoiceGrid({
                 </Chip>
               </td>
               <td className="px-section-content-x py-section-content-y text-right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onAdjust(invoice)}
-                >
-                  <FileMinus className="size-icon-sm" aria-hidden />
-                  Adjust Invoice
-                </Button>
+                {canArAdjust ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onAdjust(invoice)}
+                  >
+                    <FileMinus className="size-icon-sm" aria-hidden />
+                    Adjust Invoice
+                  </Button>
+                ) : null}
               </td>
             </tr>
           );
@@ -159,12 +161,16 @@ function PaymentsTable({
   payments,
   currency,
   invoiceNumbers,
+  canApplyPayments,
+  canArAdjust,
   onReallocate,
   onVoid,
 }: {
   payments: CustomerPaymentRow[];
   currency: string;
   invoiceNumbers: ReadonlyMap<string, string>;
+  canApplyPayments: boolean;
+  canArAdjust: boolean;
   onReallocate: (payment: CustomerPaymentRow) => void;
   onVoid: (payment: CustomerPaymentRow) => void;
 }) {
@@ -229,26 +235,30 @@ function PaymentsTable({
                   : "—"}
               </td>
               <td className="px-section-content-x py-section-content-y text-right">
-                {payment.voided ? null : (
+                {payment.voided || (!canApplyPayments && !canArAdjust) ? null : (
                   <span className="flex justify-end gap-action">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onReallocate(payment)}
-                    >
-                      <ArrowLeftRight className="size-icon-sm" aria-hidden />
-                      Reallocate
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onVoid(payment)}
-                    >
-                      <Ban className="size-icon-sm" aria-hidden />
-                      Void
-                    </Button>
+                    {canApplyPayments ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onReallocate(payment)}
+                      >
+                        <ArrowLeftRight className="size-icon-sm" aria-hidden />
+                        Reallocate
+                      </Button>
+                    ) : null}
+                    {canArAdjust ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onVoid(payment)}
+                      >
+                        <Ban className="size-icon-sm" aria-hidden />
+                        Void
+                      </Button>
+                    ) : null}
                   </span>
                 )}
               </td>
@@ -320,6 +330,8 @@ function StatsBlock({
 }
 
 export function CustomerAccountingPanel({ customerId }: { customerId: string }) {
+  const { canApplyPayments, canArAdjust, canManagePaymentPlans } =
+    useStaffAccountingActions();
   const [showPaid, setShowPaid] = useState(false);
   const [drawer, setDrawer] = useState<DrawerTab>("payments");
   const [adjustInvoice, setAdjustInvoice] = useState<CustomerInvoiceRow | null>(null);
@@ -328,8 +340,16 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
   const [voidPayment, setVoidPayment] = useState<CustomerPaymentRow | null>(null);
   const [planOpen, setPlanOpen] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
+  const [applyCreditPickerOpen, setApplyCreditPickerOpen] = useState(false);
 
   const summaryQuery = useGetInternalCustomerAccounting(customerId);
+  const salesOrdersQuery = useListInternalSalesOrders({
+    customerId,
+    page: 1,
+    pageSize: 100,
+    sortBy: "documentNumber",
+    sortOrder: "desc",
+  });
   const invoicesQuery = useListInternalCustomerInvoices(customerId, {
     includePaid: showPaid,
   });
@@ -358,8 +378,8 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
       })),
     [openInvoices],
   );
-  const creditPayment = useMemo(
-    () => payments.find((payment) => !payment.voided && payment.unappliedCents > 0),
+  const creditPayments = useMemo(
+    () => payments.filter((payment) => !payment.voided && payment.unappliedCents > 0),
     [payments],
   );
   const pastDueCents = summary ? sumPastDueCents(summary.aging) : 0;
@@ -367,6 +387,13 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     () => new Map(invoices.map((invoice) => [invoice.id, invoice.documentNumber])),
     [invoices],
   );
+  const orderNumbers = useMemo(() => {
+    const items =
+      salesOrdersQuery.data?.status === 200
+        ? salesOrdersQuery.data.data.items
+        : [];
+    return new Map(items.map((order) => [order.id, order.documentNumber]));
+  }, [salesOrdersQuery.data]);
 
   const loading =
     summaryQuery.isLoading || invoicesQuery.isLoading || paymentsQuery.isLoading;
@@ -413,14 +440,23 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
             </span>
           ) : null}
           <span className="ml-auto flex flex-wrap items-center gap-action">
-            {summary.unappliedCreditCents > 0 && creditPayment ? (
+            {canApplyPayments &&
+            summary.unappliedCreditCents > 0 &&
+            creditPayments.length > 0 ? (
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
                 onClick={() => {
-                  setReallocatePayment(creditPayment);
-                  setApplyCreditOpen(true);
+                  if (creditPayments.length === 1) {
+                    const payment = creditPayments[0];
+                    if (payment) {
+                      setReallocatePayment(payment);
+                      setApplyCreditOpen(true);
+                    }
+                    return;
+                  }
+                  setApplyCreditPickerOpen(true);
                 }}
               >
                 <HandCoins className="size-icon" aria-hidden />
@@ -459,6 +495,8 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
           <InvoiceGrid
             rows={invoices}
             currency={currency}
+            orderNumbers={orderNumbers}
+            canArAdjust={canArAdjust}
             onAdjust={setAdjustInvoice}
           />
         </div>
@@ -492,6 +530,8 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
                 payments={payments}
                 currency={currency}
                 invoiceNumbers={invoiceNumbers}
+                canApplyPayments={canApplyPayments}
+                canArAdjust={canArAdjust}
                 onReallocate={(payment) => {
                   setReallocatePayment(payment);
                   setApplyCreditOpen(false);
@@ -533,22 +573,26 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
                         </div>
                       ) : null}
                     </div>
-                    <CustomerAccountingEndPlanButton customerId={customerId} />
+                    {canManagePaymentPlans ? (
+                      <CustomerAccountingEndPlanButton customerId={customerId} />
+                    ) : null}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-field sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-body-sm text-fg-secondary">
                       No active payment plan for this customer.
                     </p>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      onClick={() => setPlanOpen(true)}
-                    >
-                      <Plus className="size-icon" aria-hidden />
-                      New Plan
-                    </Button>
+                    {canManagePaymentPlans ? (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => setPlanOpen(true)}
+                      >
+                        <Plus className="size-icon" aria-hidden />
+                        New Plan
+                      </Button>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -564,6 +608,7 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
         customerId={customerId}
         openInvoices={allocationInvoices}
         currency={currency}
+        canApplyPayments={canApplyPayments}
       />
 
       <CustomerAccountingAdjustDialog
@@ -599,7 +644,28 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
       />
       <CustomerAccountingReallocateDialog
         customerId={customerId}
-        payment={creditPayment ?? null}
+        payment={reallocatePayment}
+        openInvoices={openInvoices}
+        open={reallocatePayment !== null && !applyCreditOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReallocatePayment(null);
+          }
+        }}
+      />
+      <CustomerAccountingApplyCreditPickerDialog
+        payments={creditPayments}
+        currency={currency}
+        open={applyCreditPickerOpen}
+        onOpenChange={setApplyCreditPickerOpen}
+        onSelect={(payment) => {
+          setReallocatePayment(payment);
+          setApplyCreditOpen(true);
+        }}
+      />
+      <CustomerAccountingReallocateDialog
+        customerId={customerId}
+        payment={reallocatePayment}
         openInvoices={openInvoices}
         open={applyCreditOpen}
         onOpenChange={(open) => {
@@ -610,12 +676,14 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
         }}
         title="Apply Credit"
       />
-      <CustomerAccountingPlanDialog
-        customerId={customerId}
-        currency={currency}
-        open={planOpen}
-        onOpenChange={setPlanOpen}
-      />
+      {canManagePaymentPlans ? (
+        <CustomerAccountingPlanDialog
+          customerId={customerId}
+          currency={currency}
+          open={planOpen}
+          onOpenChange={setPlanOpen}
+        />
+      ) : null}
     </section>
   );
 }

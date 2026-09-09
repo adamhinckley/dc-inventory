@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allocationRemainderCents,
+  allocationsExceedInvoiceRemaining,
   prefillAllocationsOldestFirst,
   recordPaymentSubmitDisabled,
   sortInvoicesOldestDueFirst,
@@ -96,5 +97,29 @@ describe("customer accounting allocation", () => {
         b: 300_00,
       }),
     ).toBe(1_000_00);
+  });
+
+  it("blocks submit when any apply cell exceeds that invoice remaining", () => {
+    expect(
+      allocationsExceedInvoiceRemaining(
+        { oldest: 45_50, middle: 50_00 },
+        invoices,
+      ),
+    ).toBe(false);
+    expect(
+      allocationsExceedInvoiceRemaining(
+        { oldest: 45_50, middle: 2_000_00 },
+        invoices,
+      ),
+    ).toBe(true);
+    expect(
+      recordPaymentSubmitDisabled({
+        amountCents: 3_545_50,
+        allocatedCents: 3_545_50,
+        holdRemainderAsCredit: false,
+        allocations: { oldest: 45_50, middle: 2_000_00, newer: 1_500_00 },
+        invoices,
+      }),
+    ).toBe(true);
   });
 });

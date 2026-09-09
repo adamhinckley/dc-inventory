@@ -58,10 +58,28 @@ export type AllocationFooterState = {
   amountCents: number;
   allocatedCents: number;
   holdRemainderAsCredit: boolean;
+  allocations?: Record<string, number>;
+  invoices?: readonly Pick<AllocationInvoice, "id" | "remainingCents">[];
 };
 
 export function allocationRemainderCents(state: AllocationFooterState): number {
   return state.amountCents - state.allocatedCents;
+}
+
+export function allocationsExceedInvoiceRemaining(
+  allocations: Record<string, number>,
+  invoices: readonly Pick<AllocationInvoice, "id" | "remainingCents">[],
+): boolean {
+  const remainingById = new Map(
+    invoices.map((invoice) => [invoice.id, invoice.remainingCents]),
+  );
+  return Object.entries(allocations).some(([invoiceId, amountCents]) => {
+    if (amountCents <= 0) {
+      return false;
+    }
+    const remainingCents = remainingById.get(invoiceId);
+    return remainingCents === undefined || amountCents > remainingCents;
+  });
 }
 
 export function recordPaymentSubmitDisabled(state: AllocationFooterState): boolean {
@@ -70,6 +88,13 @@ export function recordPaymentSubmitDisabled(state: AllocationFooterState): boole
     return true;
   }
   if (remainder < 0) {
+    return true;
+  }
+  if (
+    state.allocations &&
+    state.invoices &&
+    allocationsExceedInvoiceRemaining(state.allocations, state.invoices)
+  ) {
     return true;
   }
   if (remainder === 0) {

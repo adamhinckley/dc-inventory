@@ -6,10 +6,12 @@ import {
 import {
   Button,
   Checkbox,
+  DateInput,
   FieldRow,
   Input,
   Label,
   LabeledField,
+  Select,
   formatMoneyMinorUnits,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,6 +22,7 @@ import {
   mergeAllocations,
   prefillAllocationsOldestFirst,
   recordPaymentSubmitDisabled,
+  sortInvoicesOldestDueFirst,
   sumAllocations,
   type AllocationInvoice,
 } from "../lib/customer-accounting-allocation";
@@ -46,10 +49,12 @@ export function CustomerAccountingRecordPayment({
   customerId,
   openInvoices,
   currency,
+  canApplyPayments,
 }: {
   customerId: string;
   openInvoices: AllocationInvoice[];
   currency: string;
+  canApplyPayments: boolean;
 }) {
   const queryClient = useQueryClient();
   const { mutateAsync: recordPayment, isPending } = useRecordInternalCustomerPayment();
@@ -63,6 +68,7 @@ export function CustomerAccountingRecordPayment({
   const [applyOverrides, setApplyOverrides] = useState<Record<string, number>>({});
   const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitFailed, setSubmitFailed] = useState(false);
 
   const amountCents = parseDollarsToCents(amountInput);
   const prefill = useMemo(
@@ -80,12 +86,22 @@ export function CustomerAccountingRecordPayment({
     holdRemainderAsCredit,
   });
   const submitDisabled =
+    !canApplyPayments ||
     isPending ||
     recordPaymentSubmitDisabled({
       amountCents,
       allocatedCents,
       holdRemainderAsCredit,
+      allocations,
+      invoices: openInvoices,
     });
+
+  const rotateIdempotencyKeyAfterFailure = useCallback(() => {
+    if (submitFailed) {
+      setIdempotencyKey(createIdempotencyKey());
+      setSubmitFailed(false);
+    }
+  }, [submitFailed]);
 
   useEffect(() => {
     if (remainderCents <= 0) {
@@ -94,23 +110,33 @@ export function CustomerAccountingRecordPayment({
   }, [remainderCents]);
 
   const resetAllocations = useCallback(() => {
-    setApplyOverrides({});
-  }, []);
-
-  const handleAmountChange = useCallback((value: string) => {
-    setAmountInput(value);
+    rotateIdempotencyKeyAfterFailure();
     setApplyOverrides({});
     setSubmitError(null);
-  }, []);
+  }, [rotateIdempotencyKeyAfterFailure]);
 
-  const handleApplyChange = useCallback((invoiceId: string, value: string) => {
-    const cents = parseDollarsToCents(value);
-    setApplyOverrides((current) => ({
-      ...current,
-      [invoiceId]: cents,
-    }));
-    setSubmitError(null);
-  }, []);
+  const handleAmountChange = useCallback(
+    (value: string) => {
+      rotateIdempotencyKeyAfterFailure();
+      setAmountInput(value);
+      setApplyOverrides({});
+      setSubmitError(null);
+    },
+    [rotateIdempotencyKeyAfterFailure],
+  );
+
+  const handleApplyChange = useCallback(
+    (invoiceId: string, value: string) => {
+      rotateIdempotencyKeyAfterFailure();
+      const cents = parseDollarsToCents(value);
+      setApplyOverrides((current) => ({
+        ...current,
+        [invoiceId]: cents,
+      }));
+      setSubmitError(null);
+    },
+    [rotateIdempotencyKeyAfterFailure],
+  );
 
   const handleSubmit = useCallback(async () => {
     setSubmitError(null);
@@ -137,6 +163,7 @@ export function CustomerAccountingRecordPayment({
         },
       });
       if (response.status !== 200) {
+        setSubmitFailed(true);
         setSubmitError("Could not record payment. Check the amounts and try again.");
         return;
       }
@@ -147,8 +174,10 @@ export function CustomerAccountingRecordPayment({
       setReceivedDate(todayIsoDate());
       setHoldRemainderAsCredit(false);
       setApplyOverrides({});
+      setSubmitFailed(false);
       setIdempotencyKey(createIdempotencyKey());
     } catch {
+      setSubmitFailed(true);
       setSubmitError("Could not record payment. Check the amounts and try again.");
     }
   }, [
@@ -167,14 +196,13 @@ export function CustomerAccountingRecordPayment({
   ]);
 
   const sortedInvoices = useMemo(
-    () =>
-      [...openInvoices].sort((left, right) => {
-        const leftDue = left.dueDate ?? "";
-        const rightDue = right.dueDate ?? "";
-        return leftDue < rightDue ? -1 : leftDue > rightDue ? 1 : 0;
-      }),
+    () => sortInvoicesOldestDueFirst(openInvoices),
     [openInvoices],
   );
+
+  if (!canApplyPayments) {
+    return null;
+  }
 
   return (
     <aside className="lg:sticky lg:top-canvas lg:self-start">
@@ -196,37 +224,44 @@ export function CustomerAccountingRecordPayment({
           </LabeledField>
           <LabeledField>
             <Label htmlFor="record-payment-method">Method</Label>
-            <select
+            <Select
               id="record-payment-method"
               value={method}
-              onChange={(event) =>
-                setMethod(event.target.value as typeof PAYMENT_METHOD_OPTIONS[number]["value"])
-              }
-              className="text-input min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-base px-input-x"
-            >
-              {PAYMENT_METHOD_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              onChange={(next) => {
+                rotateIdempotencyKeyAfterFailure();
+                if (next) {
+                  setMethod(next);
+                }
+              }}
+              options={[...PAYMENT_METHOD_OPTIONS]}
+            />
           </LabeledField>
           <LabeledField>
             <Label htmlFor="record-payment-reference">Reference</Label>
             <Input
               id="record-payment-reference"
               value={reference}
-              onChange={(event) => setReference(event.target.value)}
+              onChange={(event) => {
+                rotateIdempotencyKeyAfterFailure();
+                setReference(event.target.value);
+                setSubmitError(null);
+              }}
               placeholder="Check #"
             />
           </LabeledField>
           <LabeledField>
             <Label htmlFor="record-payment-received">Received</Label>
-            <Input
+            <DateInput
               id="record-payment-received"
-              type="date"
               value={receivedDate}
-              onChange={(event) => setReceivedDate(event.target.value)}
+              onChange={(value) => {
+                rotateIdempotencyKeyAfterFailure();
+                setReceivedDate(value);
+                setSubmitError(null);
+              }}
+              yearNavigation
+              min="2020-01-01"
+              max="2040-12-31"
             />
           </LabeledField>
           <LabeledField className="sm:col-span-2">
@@ -234,7 +269,11 @@ export function CustomerAccountingRecordPayment({
             <Input
               id="record-payment-note"
               value={note}
-              onChange={(event) => setNote(event.target.value)}
+              onChange={(event) => {
+                rotateIdempotencyKeyAfterFailure();
+                setNote(event.target.value);
+                setSubmitError(null);
+              }}
             />
           </LabeledField>
         </div>
@@ -311,7 +350,11 @@ export function CustomerAccountingRecordPayment({
           <label className="mt-tight flex items-center gap-icon text-body-sm">
             <Checkbox
               checked={holdRemainderAsCredit}
-              onChange={setHoldRemainderAsCredit}
+              onChange={(checked) => {
+                rotateIdempotencyKeyAfterFailure();
+                setHoldRemainderAsCredit(checked);
+                setSubmitError(null);
+              }}
             />
             Hold {formatMoneyMinorUnits(remainderCents, currency)} as credit on account
           </label>

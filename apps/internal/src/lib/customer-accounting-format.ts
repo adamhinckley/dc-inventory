@@ -30,12 +30,21 @@ export function sumPastDueCents(
   );
 }
 
-export function parseDollarsToCents(value: string): number {
-  const parsed = Number.parseFloat(value.replace(/,/g, "").trim());
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+export function parseSignedDollarsToCents(value: string): number {
+  const normalized = value.replace(/,/g, "").trim();
+  if (!normalized) {
+    return 0;
+  }
+  const parsed = Number.parseFloat(normalized);
+  if (!Number.isFinite(parsed) || parsed === 0) {
     return 0;
   }
   return Math.round(parsed * 100);
+}
+
+export function parseDollarsToCents(value: string): number {
+  const cents = parseSignedDollarsToCents(value);
+  return cents > 0 ? cents : 0;
 }
 
 export function formatCentsInputValue(cents: number): string {

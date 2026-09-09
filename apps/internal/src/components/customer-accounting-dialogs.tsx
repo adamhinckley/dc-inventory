@@ -16,6 +16,7 @@ import {
   Input,
   Label,
   LabeledField,
+  formatMoneyMinorUnits,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, FileMinus } from "lucide-react";
@@ -23,7 +24,9 @@ import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
 import {
   formatCentsInputValue,
+  formatNullableDate,
   parseDollarsToCents,
+  parseSignedDollarsToCents,
   todayIsoDate,
 } from "../lib/customer-accounting-format";
 import { invalidateCustomerAccountingQueries } from "../lib/customer-accounting-queries";
@@ -80,7 +83,7 @@ export function CustomerAccountingAdjustDialog({
           id: invoice.id,
           data: {
             kind: data.kind,
-            amountCents: parseDollarsToCents(data.amountDollars),
+            amountCents: parseSignedDollarsToCents(data.amountDollars),
             reason: data.reason.trim(),
           },
         });
@@ -265,7 +268,7 @@ export function CustomerAccountingReallocateDialog({
       Object.entries(targets)
         .map(([invoiceId, value]) => ({
           invoiceId,
-          deltaCents: parseDollarsToCents(value),
+          deltaCents: parseSignedDollarsToCents(value),
         }))
         .filter((row) => row.deltaCents !== 0),
     [targets],
@@ -444,23 +447,151 @@ export function CustomerAccountingEndPlanButton({
 }) {
   const queryClient = useQueryClient();
   const { mutateAsync, isPending } = useEndInternalCustomerPaymentPlan();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConfirm = useCallback(async () => {
+    setError(null);
+    try {
+      const response = await mutateAsync({ id: customerId });
+      if (response.status !== 204) {
+        setError("Could not end payment plan.");
+        return;
+      }
+      await invalidateCustomerAccountingQueries(queryClient, customerId);
+      setOpen(false);
+    } catch {
+      setError("Could not end payment plan.");
+    }
+  }, [customerId, mutateAsync, queryClient]);
 
   return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      disabled={isPending}
-      onClick={() =>
-        void mutateAsync({ id: customerId }).then(async (response) => {
-          if (response.status === 204) {
-            await invalidateCustomerAccountingQueries(queryClient, customerId);
-          }
-        })
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        disabled={isPending}
+        onClick={() => {
+          setError(null);
+          setOpen(true);
+        }}
+      >
+        <CalendarClock className="size-icon" aria-hidden />
+        End Plan
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog.Content size="sm" data-testid="customer-accounting-end-plan-dialog">
+          <Dialog.Header>
+            <Dialog.Title>End Payment Plan</Dialog.Title>
+            <Dialog.Close />
+          </Dialog.Header>
+          <Dialog.Body>
+            <Dialog.Description>
+              End the active payment plan for this customer? Installments already
+              received stay on the ledger.
+            </Dialog.Description>
+            {error ? <p className="mt-tight text-body-sm text-error">{error}</p> : null}
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={isPending}
+              onClick={() => void handleConfirm()}
+            >
+              <CalendarClock className="size-icon" aria-hidden />
+              End Plan
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog>
+    </>
+  );
+}
+
+export function CustomerAccountingApplyCreditPickerDialog({
+  payments,
+  currency,
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  payments: CustomerPaymentRow[];
+  currency: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (payment: CustomerPaymentRow) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        setSelectedId(null);
       }
-    >
-      <CalendarClock className="size-icon" aria-hidden />
-      End Plan
-    </Button>
+      onOpenChange(next);
+    },
+    [onOpenChange],
+  );
+
+  const selectedPayment =
+    payments.find((payment) => payment.id === selectedId) ?? null;
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <Dialog.Content size="sm" data-testid="customer-accounting-apply-credit-picker">
+        <Dialog.Header>
+          <Dialog.Title>Apply Credit</Dialog.Title>
+          <Dialog.Close />
+        </Dialog.Header>
+        <Dialog.Body>
+          <p className="text-body-sm text-fg-secondary">
+            Choose which payment&apos;s unapplied credit to apply.
+          </p>
+          <div className="mt-field flex flex-col gap-tight">
+            {payments.map((payment) => (
+              <label
+                key={payment.id}
+                className="flex cursor-pointer items-center gap-icon rounded-interactable border border-border px-item-x py-item-y"
+              >
+                <input
+                  type="radio"
+                  name="apply-credit-payment"
+                  checked={selectedId === payment.id}
+                  onChange={() => setSelectedId(payment.id)}
+                />
+                <span className="text-body-sm">
+                  {formatNullableDate(payment.receivedAt)} ·{" "}
+                  {formatMoneyMinorUnits(payment.unappliedCents, currency)} unapplied
+                  {payment.reference ? ` · ${payment.reference}` : ""}
+                </span>
+              </label>
+            ))}
+          </div>
+        </Dialog.Body>
+        <Dialog.Footer>
+          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={!selectedPayment}
+            onClick={() => {
+              if (selectedPayment) {
+                onSelect(selectedPayment);
+                handleOpenChange(false);
+              }
+            }}
+          >
+            Continue
+          </Button>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog>
   );
 }

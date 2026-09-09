@@ -22,6 +22,7 @@ export {
 export { AppShell, useAppShellContext } from "./shells/AppShell";
 
 export { Combobox, type ComboboxProps } from "./ui/Combobox";
+export { Select, type SelectProps } from "./ui/Select";
 export { Chip, type ChipProps } from "./ui/Chip";
 export { Table, useTable, type TableColumnDef, type TableTooltip } from "./ui/Table";
 export {
