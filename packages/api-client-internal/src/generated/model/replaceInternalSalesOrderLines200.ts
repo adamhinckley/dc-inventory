@@ -15,6 +15,7 @@ export type ReplaceInternalSalesOrderLines200 = {
   customerName?: string;
   documentNumber: string;
   status: ReplaceInternalSalesOrderLines200Status;
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

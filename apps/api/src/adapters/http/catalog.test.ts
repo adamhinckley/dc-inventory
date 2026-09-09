@@ -513,13 +513,19 @@ describe("catalog HTTP", () => {
   });
 
   it("requires wholesale_session on the shop catalog and hides non-shop SKUs", async () => {
-    const app = await startCatalogApp();
+    const productRepo = new InMemoryProductRepository();
+    const app = await startCatalogApp(productRepo);
     const missing = await app.inject({ method: "GET", url: "/wholesale/catalog" });
     expect(missing.statusCode).toBe(401);
     expect(missing.json()).toEqual({ error: "unauthorized" });
+    const missingCategories = await app.inject({
+      method: "GET",
+      url: "/wholesale/catalog/categories",
+    });
+    expect(missingCategories.statusCode).toBe(401);
 
     const staff = await staffCookie(app);
-    await app.inject({
+    const visible = await app.inject({
       method: "POST",
       url: "/internal/products",
       cookies: { [STAFF_SESSION_COOKIE]: staff },
@@ -547,6 +553,8 @@ describe("catalog HTTP", () => {
     });
     expect(hidden.statusCode).toBe(201);
     const hiddenId = hidden.json().id as string;
+    productRepo.setCategories(visible.json().id as string, ["Hardware"]);
+    productRepo.setCategories(hiddenId, ["Staff only"]);
 
     const wholesale = await wholesaleCookie(app);
     const listed = await app.inject({
@@ -557,12 +565,22 @@ describe("catalog HTTP", () => {
     expect(listed.statusCode).toBe(200);
     expect(listed.json().total).toBe(1);
     expect(listed.json().items[0]).toMatchObject({
+      sku: "HEX-BOLT-GALV",
       name: "Galvanized hex bolt",
+      description: null,
       imageUrl: null,
       wholesalePrice: 1250,
       currency: "USD",
       available: 0,
     });
+
+    const shopCategories = await app.inject({
+      method: "GET",
+      url: "/wholesale/catalog/categories",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
+    });
+    expect(shopCategories.statusCode).toBe(200);
+    expect(shopCategories.json()).toEqual({ items: [{ name: "Hardware" }] });
 
     const hiddenGet = await app.inject({
       method: "GET",

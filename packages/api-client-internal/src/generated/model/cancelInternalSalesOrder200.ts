@@ -15,6 +15,7 @@ export type CancelInternalSalesOrder200 = {
   customerName?: string;
   documentNumber: string;
   status: CancelInternalSalesOrder200Status;
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

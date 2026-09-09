@@ -179,7 +179,9 @@ export const catalogQuerySchema = z.object({
 
 export const catalogItemSchema = z.object({
   id: z.string().uuid(),
+  sku: z.string(),
   name: z.string(),
+  description: z.string().nullable(),
   imageUrl: z.string().nullable(),
   wholesalePrice: z.number().int(),
   currency: z.string(),
@@ -1297,6 +1299,7 @@ export const salesOrderItemSchema = z.object({
   customerName: z.string().optional(),
   documentNumber: z.string(),
   status: salesOrderStatusSchema,
+  label: z.string().optional(),
   shipLine1: z.string().optional(),
   shipLine2: z.string().nullable().optional(),
   shipCity: z.string().optional(),
@@ -1347,15 +1350,21 @@ export const salesOrderWriteBodySchema = z.object({
   ...salesOrderAddressSchema,
 });
 
+/** Buyer-chosen cart name; blanks are dropped server-side. */
+const salesOrderLabelSchema = z.string().trim().max(80);
+
 export const wholesaleSalesOrderWriteBodySchema = z.object({
   lines: z
     .array(salesOrderLineInputSchema)
     .min(1),
+  label: salesOrderLabelSchema.optional(),
   ...salesOrderAddressSchema,
 });
 
 export const salesOrderReplaceLinesBodySchema = z.object({
   lines: z.array(salesOrderLineInputSchema),
+  /** Omit to keep the cart name; null clears it. */
+  label: salesOrderLabelSchema.nullable().optional(),
   ...salesOrderAddressSchema,
 });
 

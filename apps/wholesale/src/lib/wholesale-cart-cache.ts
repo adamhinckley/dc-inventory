@@ -21,21 +21,57 @@ export function readDraftCartList(
   return queryClient.getQueryData<WholesaleDraftCartListResult>(wholesaleDraftCartQueryKey);
 }
 
-export function writeDraftCartOrder(
+function writeDraftCartItems(
   queryClient: QueryClient,
-  order: WholesaleDraftCartOrder | null,
+  items: readonly WholesaleDraftCartOrder[],
 ): void {
   const previous = readDraftCartList(queryClient);
   queryClient.setQueryData<WholesaleDraftCartListResult>(wholesaleDraftCartQueryKey, {
     data: {
-      items: order === null ? [] : [order],
+      items: [...items],
       page: previous?.data.page ?? wholesaleDraftCartParams.page,
       pageSize: previous?.data.pageSize ?? wholesaleDraftCartParams.pageSize,
-      total: order === null ? 0 : 1,
+      total: items.length,
     },
     status: 200,
     headers: previous?.headers ?? new Headers(),
   });
+}
+
+/**
+ * Upsert one cart inside the cached open-carts list. A new draft goes first
+ * (the list is newest-first); a cancelled or emptied draft drops out.
+ * Sibling carts are left alone — that is what makes multi-cart surfaces agree.
+ */
+export function writeDraftCartOrder(
+  queryClient: QueryClient,
+  order: WholesaleDraftCartOrder,
+): void {
+  if (order.status !== "draft" || order.lines.length === 0) {
+    removeDraftCartOrder(queryClient, order.id);
+    return;
+  }
+  const items = readDraftCartList(queryClient)?.data.items ?? [];
+  const exists = items.some((item) => item.id === order.id);
+  writeDraftCartItems(
+    queryClient,
+    exists ? items.map((item) => (item.id === order.id ? order : item)) : [order, ...items],
+  );
+}
+
+export function removeDraftCartOrder(queryClient: QueryClient, orderId: string): void {
+  const items = readDraftCartList(queryClient)?.data.items ?? [];
+  writeDraftCartItems(
+    queryClient,
+    items.filter((item) => item.id !== orderId),
+  );
+}
+
+export function readDraftCartOrder(
+  queryClient: QueryClient,
+  orderId: string,
+): WholesaleDraftCartOrder | undefined {
+  return readDraftCartList(queryClient)?.data.items.find((item) => item.id === orderId);
 }
 
 export type OptimisticLineMeta = {

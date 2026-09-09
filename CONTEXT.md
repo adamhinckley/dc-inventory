@@ -131,8 +131,8 @@ _Avoid_: Customer note, internal-only as the only note, comment
 ### Sales
 
 **Cart**:
-The wholesale buyer's in-progress order. One draft sales order per organization and customer — not a separate carts table or second HTTP resource. Add-to-cart creates or updates that draft; clearing the last line cancels it.
-_Avoid_: Shopping cart entity, client-only cart as source of truth, multiple active drafts per customer
+The wholesale buyer's in-progress order. Each cart is a draft sales order — not a separate carts table or second HTTP resource. A customer may hold many open carts at once, each with an optional buyer-chosen `label`; the shop remembers which one is *active* on the device and Add to Cart PATCHes that draft (or POSTs a new one). Clearing the last line cancels that cart only.
+_Avoid_: Shopping cart entity, client-only cart as source of truth, "one draft per customer" (retired Sep 2026)
 
 **Sales order**:
 The commercial document for a wholesale purchase. Draft while the buyer is still building the cart; confirmed after checkout; shipped when fulfilled. Lines freeze catalog price at write time.

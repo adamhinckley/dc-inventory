@@ -8,6 +8,11 @@ import type { ReplaceInternalSalesOrderLinesBodyLinesItem } from './replaceInter
 
 export type ReplaceInternalSalesOrderLinesBody = {
   lines: ReplaceInternalSalesOrderLinesBodyLinesItem[];
+  /**
+     * @maxLength 80
+     * @nullable
+     */
+  label?: string | null;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

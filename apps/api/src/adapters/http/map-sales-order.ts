@@ -56,6 +56,7 @@ export async function mapSalesOrder(
     ...(customerName !== null ? { customerName } : {}),
     documentNumber: order.documentNumber,
     status: order.status,
+    ...(order.label !== undefined ? { label: order.label } : {}),
     shipLine1: order.shipLine1,
     shipLine2: order.shipLine2,
     shipCity: order.shipCity,

@@ -4,6 +4,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Product } from "../domain/product.js";
 import { emptyProductCatalogAttributes } from "../domain/product-catalog-attributes.js";
 import type {
+  CategoryNamesMatch,
   IProductRepository,
   ListedProduct,
   ProductListMatch,
@@ -140,11 +141,33 @@ export function buildProductListQuery(
 export class DrizzleProductRepository implements IProductRepository {
   constructor(private readonly db: CatalogDrizzle) {}
 
-  async listCategoryNames(organizationId: OrganizationId): Promise<string[]> {
+  async listCategoryNames(
+    organizationId: OrganizationId,
+    match: CategoryNamesMatch = {},
+  ): Promise<string[]> {
+    if (match.shopVisibleOnly !== true) {
+      const rows = await this.db
+        .select({ name: categories.name })
+        .from(categories)
+        .where(eq(categories.organizationId, organizationId))
+        .orderBy(categories.name);
+      return rows.map((row) => row.name);
+    }
+    // Same predicate as shopVisibleOnly in buildProductListQuery.
     const rows = await this.db
-      .select({ name: categories.name })
+      .selectDistinct({ name: categories.name })
       .from(categories)
-      .where(eq(categories.organizationId, organizationId))
+      .innerJoin(productCategories, eq(productCategories.categoryId, categories.id))
+      .innerJoin(products, eq(products.id, productCategories.productId))
+      .where(
+        and(
+          eq(categories.organizationId, organizationId),
+          eq(products.organizationId, organizationId),
+          eq(products.webWholesale, true),
+          eq(products.inactive, false),
+          eq(products.discontinued, false),
+        ),
+      )
       .orderBy(categories.name);
     return rows.map((row) => row.name);
   }

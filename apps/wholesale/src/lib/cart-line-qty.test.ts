@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   findDraftCartLine,
   linesForReplace,
+  mapDraftLineQty,
   remainingDraftLines,
   toReplaceLines,
   cartQtyCapMessage,
@@ -172,5 +173,19 @@ describe("linesForReplace", () => {
     expect(
       linesForReplace([{ sku: "L1", name: "Lantern", qty: 2 }]),
     ).toBeNull();
+  });
+});
+
+describe("mapDraftLineQty", () => {
+  it("updates only the targeted line on multi-line carts", () => {
+    const lines = [
+      { id: "line-a", productId: "p1", sku: "SKU1", name: "One", qty: 1 },
+      { id: "line-b", productId: "p2", sku: "SKU2", name: "Two", qty: 2 },
+    ];
+
+    expect(mapDraftLineQty(lines, "line-b", 3)).toEqual([
+      lines[0],
+      { ...lines[1], qty: 3 },
+    ]);
   });
 });

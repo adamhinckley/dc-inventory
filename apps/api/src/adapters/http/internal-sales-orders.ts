@@ -249,6 +249,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         staffUserId: staffUserId(request),
         salesOrderId: OrderId.parse(request.params.id),
         lines: request.body.lines,
+        label: request.body.label,
         shipLine1: request.body.shipLine1,
         shipLine2: request.body.shipLine2,
         shipCity: request.body.shipCity,

@@ -527,7 +527,12 @@ paths:
                           type: string
                           format: uuid
                           pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        sku:
+                          type: string
                         name:
+                          type: string
+                        description:
+                          nullable: true
                           type: string
                         imageUrl:
                           nullable: true
@@ -558,7 +563,9 @@ paths:
                           maximum: 9007199254740991
                       required:
                         - id
+                        - sku
                         - name
+                        - description
                         - imageUrl
                         - wholesalePrice
                         - currency
@@ -584,6 +591,81 @@ paths:
                   - page
                   - pageSize
                   - total
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - anyOf:
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - needs_customer
+                        required:
+                          - error
+                        additionalProperties: false
+                      - type: object
+                        properties:
+                          error:
+                            type: string
+                            enum:
+                              - feature_disabled
+                        required:
+                          - error
+                        additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - feature_disabled
+                    required:
+                      - error
+                    additionalProperties: false
+  /wholesale/catalog/categories:
+    get:
+      operationId: listWholesaleCategories
+      summary: List category names that have shop-visible products
+      tags:
+        - wholesale
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                      required:
+                        - name
+                      additionalProperties: false
+                required:
+                  - items
                 additionalProperties: false
         "401":
           description: Default Response
@@ -659,7 +741,12 @@ paths:
                     type: string
                     format: uuid
                     pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  sku:
+                    type: string
                   name:
+                    type: string
+                  description:
+                    nullable: true
                     type: string
                   imageUrl:
                     nullable: true
@@ -690,7 +777,9 @@ paths:
                     maximum: 9007199254740991
                 required:
                   - id
+                  - sku
                   - name
+                  - description
                   - imageUrl
                   - wholesalePrice
                   - currency
@@ -1911,6 +2000,8 @@ paths:
                             - confirmed
                             - shipped
                             - cancelled
+                        label:
+                          type: string
                         shipLine1:
                           type: string
                         shipLine2:
@@ -2068,6 +2159,9 @@ paths:
                     required:
                       - productId
                       - qty
+                label:
+                  type: string
+                  maxLength: 80
                 shipLine1:
                   type: string
                 shipLine2:
@@ -2110,6 +2204,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -2320,6 +2416,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -2450,6 +2548,10 @@ paths:
                     required:
                       - productId
                       - qty
+                label:
+                  nullable: true
+                  type: string
+                  maxLength: 80
                 shipLine1:
                   type: string
                 shipLine2:
@@ -2500,6 +2602,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -2727,6 +2831,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:

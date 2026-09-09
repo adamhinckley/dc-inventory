@@ -2,12 +2,13 @@
 
 import {
   useConfirmWholesaleSalesOrder,
-  useListWholesaleSalesOrders,
   useListWholesaleShipTos,
 } from "@dc-inventory/api-client-wholesale";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { cartDisplayName } from "../lib/active-cart";
 import { initialCheckoutShipToId } from "../lib/checkout-ship-to";
 import { wholesaleConfirmErrorMessage } from "../lib/confirm-shortage-message";
 import {
@@ -16,26 +17,35 @@ import {
   CHECKOUT_EMPTY_SHIP_TOS_MESSAGE,
 } from "../lib/checkout-empty-copy";
 import { formatMoneyMinorUnits } from "../lib/format-money";
-import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
+import { flushCartPendingChanges, useCartMutationGate } from "../lib/cart-mutation-gate";
+import { useActiveCart } from "../lib/use-active-cart";
+import { removeDraftCartOrder } from "../lib/wholesale-cart-cache";
 
 function lineSubtotalCents(qty: number, unitPriceCents: number): number {
   return qty * unitPriceCents;
 }
 
+/** `?cart=<id>` picks the draft to confirm; without it, the active cart. */
 export function CheckoutView() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const requestedCartId = searchParams.get("cart");
   const [selectedShipToId, setSelectedShipToId] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
-  const cart = useListWholesaleSalesOrders(wholesaleDraftCartParams);
+  const activeCart = useActiveCart();
   const shipTos = useListWholesaleShipTos();
   const confirmOrder = useConfirmWholesaleSalesOrder();
 
-  const cartPayload = cart.data?.data;
   const shipToPayload = shipTos.data?.data;
 
   const draft =
-    cartPayload && "items" in cartPayload ? cartPayload.items[0] : undefined;
+    requestedCartId !== null
+      ? activeCart.drafts.find((item) => item.id === requestedCartId)
+      : activeCart.activeDraft;
+  const cartMutation = useCartMutationGate(draft?.id);
   const shipToItems =
     shipToPayload && "items" in shipToPayload ? shipToPayload.items : [];
 
@@ -62,13 +72,16 @@ export function CheckoutView() {
     draft !== undefined &&
     draft.lines.length > 0 &&
     selectedShipToId.length > 0 &&
-    !confirmOrder.isPending;
+    !confirmOrder.isPending &&
+    !confirming &&
+    !cartMutation.pending &&
+    !cartMutation.dirty;
 
-  if (cart.isPending || shipTos.isPending) {
+  if (activeCart.isPending || shipTos.isPending) {
     return <p className="text-ink-muted">Loading checkout…</p>;
   }
 
-  if (cart.isError || shipTos.isError || draft === undefined) {
+  if (activeCart.isError || shipTos.isError || draft === undefined) {
     return (
       <div className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-8">
         <p className="text-ink-muted">No draft order to confirm.</p>
@@ -76,7 +89,7 @@ export function CheckoutView() {
           href="/cart"
           className="inline-flex w-fit rounded-full border border-line bg-card px-5 py-2.5 text-sm font-semibold text-ink hover:bg-canvas"
         >
-          Back To Cart
+          All Carts
         </Link>
       </div>
     );
@@ -164,7 +177,11 @@ export function CheckoutView() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-card px-5 py-4">
-        <p className="text-sm text-ink-muted">Draft {draft.documentNumber}</p>
+        <p className="text-sm text-ink-muted">
+          <span className="font-semibold text-ink">{cartDisplayName(draft)}</span>
+          {" · "}
+          {draft.documentNumber}
+        </p>
         <p className="text-lg font-semibold text-ink">
           Subtotal {formatMoneyMinorUnits(subtotalCents, currency)}
         </p>
@@ -176,7 +193,7 @@ export function CheckoutView() {
 
       <div className="flex flex-wrap gap-3">
         <Link
-          href="/cart"
+          href={`/cart/${draft.id}`}
           className="inline-flex rounded-full border border-line bg-card px-5 py-2.5 text-sm font-semibold text-ink hover:bg-canvas"
         >
           Back To Cart
@@ -184,29 +201,48 @@ export function CheckoutView() {
         <button
           type="button"
           disabled={!canConfirm}
-          className="inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           onClick={() => {
             setErrorMessage(null);
-            confirmOrder.mutate(
-              {
-                id: draft.id,
-                data: {
-                  idempotencyKey: `checkout-${draft.id}`,
-                  shipToId: selectedShipToId,
+            const confirmedId = draft.id;
+            const wasActive = activeCart.activeDraft?.id === confirmedId;
+            setConfirming(true);
+            void flushCartPendingChanges(confirmedId).then((ok) => {
+              if (!ok) {
+                setConfirming(false);
+                setErrorMessage("Could not save cart changes. Try again.");
+                return;
+              }
+              confirmOrder.mutate(
+                {
+                  id: confirmedId,
+                  data: {
+                    idempotencyKey: `checkout-${confirmedId}`,
+                    shipToId: selectedShipToId,
+                  },
                 },
-              },
-              {
-                onSuccess: () => {
-                  router.push("/orders");
+                {
+                  onSuccess: () => {
+                    removeDraftCartOrder(queryClient, confirmedId);
+                    if (wasActive) {
+                      activeCart.clearActiveCart();
+                    }
+                    router.push("/orders");
+                  },
+                  onError: (error) => {
+                    setConfirming(false);
+                    setErrorMessage(wholesaleConfirmErrorMessage(error));
+                  },
                 },
-                onError: (error) => {
-                  setErrorMessage(wholesaleConfirmErrorMessage(error));
-                },
-              },
-            );
+              );
+            });
           }}
         >
-          {confirmOrder.isPending ? "Confirming…" : "Confirm Order"}
+          {confirming || cartMutation.pending || cartMutation.dirty
+            ? "Saving…"
+            : confirmOrder.isPending
+              ? "Confirming…"
+              : "Confirm Order"}
         </button>
       </div>
     </div>

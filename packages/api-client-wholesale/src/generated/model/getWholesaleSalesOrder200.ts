@@ -15,6 +15,7 @@ export type GetWholesaleSalesOrder200 = {
   customerName?: string;
   documentNumber: string;
   status: GetWholesaleSalesOrder200Status;
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

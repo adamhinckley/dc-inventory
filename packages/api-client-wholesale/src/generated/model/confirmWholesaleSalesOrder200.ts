@@ -15,6 +15,7 @@ export type ConfirmWholesaleSalesOrder200 = {
   customerName?: string;
   documentNumber: string;
   status: ConfirmWholesaleSalesOrder200Status;
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

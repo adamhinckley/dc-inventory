@@ -39,6 +39,7 @@ function toOrder(order: SalesOrder): SalesOrder {
     status: order.status,
     createdAt: new Date(order.createdAt.getTime()),
     lines: order.lines.map(toLine),
+    ...(order.label !== undefined ? { label: order.label } : {}),
     ...(order.placedByStaffUserId !== undefined
       ? { placedByStaffUserId: StaffUserId.parse(order.placedByStaffUserId) }
       : {}),
@@ -54,7 +55,6 @@ function toOrder(order: SalesOrder): SalesOrder {
 export class InMemorySalesOrderRepository implements ISalesOrderRepository {
   private readonly byId = new Map<OrderId, Stored>();
   private readonly nextSequenceByOrg = new Map<string, number>();
-  private readonly draftCustomerLockTails = new Map<string, Promise<void>>();
 
   snapshot(): {
     byId: Map<OrderId, Stored>;
@@ -114,65 +114,6 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
       return null;
     }
     return row.order;
-  }
-
-  async findDraftByCustomer(
-    organizationId: OrganizationId,
-    customerId: CustomerId,
-  ): Promise<SalesOrder | null> {
-    return this.findDraftByCustomerForUpdate(organizationId, customerId);
-  }
-
-  async findDraftByCustomerForUpdate(
-    organizationId: OrganizationId,
-    customerId: CustomerId,
-  ): Promise<SalesOrder | null> {
-    for (const row of this.byId.values()) {
-      if (
-        row.order.organizationId === organizationId &&
-        row.order.customerId === customerId &&
-        row.order.status === "draft"
-      ) {
-        return row.order;
-      }
-    }
-    return null;
-  }
-
-  async runDraftCustomerTransaction<T>(
-    organizationId: OrganizationId,
-    customerId: CustomerId,
-    work: (repo: ISalesOrderRepository) => Promise<T>,
-  ): Promise<T> {
-    return this.withDraftCustomerLock(organizationId, customerId, () => work(this));
-  }
-
-  private draftCustomerLockKey(organizationId: OrganizationId, customerId: CustomerId): string {
-    return `${organizationId}:${customerId}`;
-  }
-
-  private async withDraftCustomerLock<T>(
-    organizationId: OrganizationId,
-    customerId: CustomerId,
-    work: () => Promise<T>,
-  ): Promise<T> {
-    const key = this.draftCustomerLockKey(organizationId, customerId);
-    const previous = this.draftCustomerLockTails.get(key) ?? Promise.resolve();
-    let release!: () => void;
-    const current = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const tail = previous.then(() => current);
-    this.draftCustomerLockTails.set(key, tail);
-    await previous;
-    try {
-      return await work();
-    } finally {
-      release();
-      if (this.draftCustomerLockTails.get(key) === tail) {
-        this.draftCustomerLockTails.delete(key);
-      }
-    }
   }
 
   async findByDocumentNumber(

@@ -9,6 +9,8 @@ import type { CreateWholesaleSalesOrderBodyLinesItem } from './createWholesaleSa
 export type CreateWholesaleSalesOrderBody = {
   /** @minItems 1 */
   lines: CreateWholesaleSalesOrderBodyLinesItem[];
+  /** @maxLength 80 */
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

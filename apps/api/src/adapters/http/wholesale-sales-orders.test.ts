@@ -386,7 +386,7 @@ describe("wholesale sales orders (ADA-272)", () => {
     });
   });
 
-  it("second create returns the same draft for the session customer", async () => {
+  it("second create opens a second labelled draft; both list as open carts", async () => {
     const { app } = await startApp();
     const staffInternal = await loginStaffInternal(app);
     const cookie = await loginStaffActing(app);
@@ -398,9 +398,10 @@ describe("wholesale sales orders (ADA-272)", () => {
       method: "POST",
       url: "/wholesale/sales-orders",
       cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
-      payload: { lines: [{ productId, qty: 1 }] },
+      payload: { lines: [{ productId, qty: 1 }], label: "  Spring reorder " },
     });
     expect(first.statusCode).toBe(201);
+    expect(first.json().label).toBe("Spring reorder");
     const firstId = first.json().id as string;
 
     const second = await app.inject({
@@ -410,8 +411,39 @@ describe("wholesale sales orders (ADA-272)", () => {
       payload: { lines: [{ productId, qty: 2 }] },
     });
     expect(second.statusCode).toBe(201);
-    expect(second.json().id).toBe(firstId);
-    expect(second.json().lines[0]?.qty).toBe(3);
+    expect(second.json().id).not.toBe(firstId);
+    expect(second.json().lines[0]?.qty).toBe(2);
+    expect(second.json()).not.toHaveProperty("label");
+
+    const drafts = await app.inject({
+      method: "GET",
+      url: "/wholesale/sales-orders?status=draft&sortBy=documentNumber&sortOrder=desc",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(drafts.statusCode).toBe(200);
+    expect(drafts.json().total).toBe(2);
+    expect(drafts.json().items.map((item: { id: string }) => item.id)).toEqual([
+      second.json().id,
+      firstId,
+    ]);
+
+    const renamed = await app.inject({
+      method: "PATCH",
+      url: `/wholesale/sales-orders/${firstId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }], label: "Spring 2027" },
+    });
+    expect(renamed.statusCode).toBe(200);
+    expect(renamed.json().label).toBe("Spring 2027");
+
+    const cleared = await app.inject({
+      method: "PATCH",
+      url: `/wholesale/sales-orders/${firstId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }], label: null },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).not.toHaveProperty("label");
   });
 
   it("replace-lines cancels the draft when lines are empty", async () => {

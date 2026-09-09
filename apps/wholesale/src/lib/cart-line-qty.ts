@@ -68,6 +68,14 @@ export type DraftCartLine = CartLineForReplace & {
   sku: string;
 };
 
+export function mapDraftLineQty<T extends DraftCartLine>(
+  lines: readonly T[],
+  lineId: string,
+  qty: number,
+): T[] {
+  return lines.map((item) => (item.id === lineId ? { ...item, qty } : item));
+}
+
 export async function toReplaceLines(
   lines: readonly DraftCartLine[],
   lookupProductId: (sku: string, name: string) => Promise<string | null>,

@@ -173,7 +173,7 @@ Wholesale **order history** may be a simple paginated list (`page` / `pageSize`)
 | Query / table (internal) | `GET …` with list protocol | `x-table` required | `DataTable` + Orval query hook |
 | Report / chart (internal) | `GET /internal/reports/…` | Series + optional KPI DTO; optional `x-chart` | Recharts (or wrapper) on Orval hook |
 | Shop browse (wholesale) | `GET /wholesale/catalog` | Shop filters (`q`, category, sort) — **no** `x-table` | Product grid |
-| Cart / checkout | `GET/POST /wholesale/cart`, `POST /wholesale/checkout` | Command + cart DTO | Cart and checkout pages |
+| Cart / checkout | `GET/POST/PATCH /wholesale/sales-orders`, `POST /wholesale/sales-orders/:id/confirm` | Sales order DTO (`status: draft` = cart, optional `label`) | Cart drawer, `/cart`, `/cart/[id]`, checkout |
 | Export | `GET …/export?format=csv\|xlsx` **plus the same list filters** (no `page` / `pageSize`, documented row cap) | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` / `text/csv` | Orval **blob**; internal `DataTable` export button |
 | Import template | `GET …/import-template?format=xlsx` | blob | Download link |
 | Import dry-run | `POST …/import?dryRun=true` multipart file | JSON `{ rowsOk, errors[] }` | File picker + error table |
@@ -205,9 +205,12 @@ The wholesale spec is an **ordering API**, not a cut-down admin:
 | Operation | Role |
 |---|---|
 | `GET /wholesale/catalog` | Browse: `q`, category, pagination, sort (shop-relevant). Default `availableOnly=true` lists sellable SKUs only (open: every open SKU; locked: `availableToSell` > 0). Response includes image URLs, wholesale price, `available`, `availableToSell`, and `sellState` for shop sellability display. |
-| `GET /wholesale/catalog/:id` | Product detail |
-| `GET/PATCH /wholesale/cart` | Cart lines; qty changes; merchandise totals only. |
-| `POST /wholesale/checkout` | Place order (Sales confirm + Inventory allocate). |
+| `GET /wholesale/catalog/categories` | Category names that have at least one shop-visible product (sidebar, header dropdown). |
+| `GET /wholesale/catalog/:id` | Product detail (`sku`, `description` included on list and detail DTOs) |
+| `GET /wholesale/sales-orders?status=draft` | The customer's open carts. Every draft is a cart; the shop keeps the *active* one client-side. |
+| `POST /wholesale/sales-orders` | Always opens a **new** draft (`lines`, optional `label` ≤ 80 chars). No find-or-create. |
+| `PATCH /wholesale/sales-orders/:id` | Replace lines; `label` omitted keeps, `null` clears, string renames. Empty `lines` cancels that cart only. |
+| `POST /wholesale/sales-orders/:id/confirm` | Place order (Sales confirm + Inventory allocate). |
 | `GET /wholesale/orders` | Own order history (paginated) |
 | `GET /wholesale/orders/:id` | Own order detail |
 

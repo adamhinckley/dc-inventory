@@ -27,6 +27,7 @@ export { ImportProductBrowserUseCase } from "./application/import-product-browse
 export { ListStaffCategoriesUseCase } from "./application/list-staff-categories.js";
 export { ListStaffProductsUseCase } from "./application/list-staff-products.js";
 export { ListWholesaleCatalogUseCase } from "./application/list-wholesale-catalog.js";
+export { ListWholesaleCategoriesUseCase } from "./application/list-wholesale-categories.js";
 export {
   dollarsToCents,
   mapProductBrowserRow,
@@ -59,6 +60,7 @@ export type {
   ICatalogListQuery,
 } from "./domain/ports/catalog-list-query.js";
 export type {
+  CategoryNamesMatch,
   IProductRepository,
   ProductListMatch,
 } from "./domain/ports/product-repository.js";

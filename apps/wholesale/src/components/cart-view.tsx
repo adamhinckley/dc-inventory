@@ -3,36 +3,24 @@
 import {
   getGetWholesaleCatalogProductQueryKey,
   useGetWholesaleCatalogProduct,
-  useListWholesaleSalesOrders,
-  useReplaceWholesaleSalesOrderLines,
 } from "@dc-inventory/api-client-wholesale";
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
-  cartQtyCapMessage,
-  cartQtyOverCap,
-  linesForReplace,
-  parseCartQty,
-  remainingDraftLines,
-  toReplaceLines,
-} from "../lib/cart-line-qty";
-import { wholesaleShortageErrorMessage } from "../lib/confirm-shortage-message";
-import { shopDisplayAvailableQty } from "../lib/shop-availability";
-import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
+  cartCurrency,
+  cartDisplayName,
+  cartLineCount,
+  cartSubtotalCents,
+} from "../lib/active-cart";
+import { cartQtyCapMessage, cartQtyOverCap, parseCartQty } from "../lib/cart-line-qty";
 import { formatMoneyMinorUnits } from "../lib/format-money";
-import {
-  buildOptimisticDraftOrder,
-  readDraftCartList,
-  wholesaleDraftCartQueryKey,
-  writeDraftCartOrder,
-} from "../lib/wholesale-cart-cache";
-import { wholesaleDraftCartParams } from "../lib/wholesale-draft-cart";
-
-function lineSubtotalCents(qty: number, unitPriceCents: number): number {
-  return qty * unitPriceCents;
-}
+import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
+import { PRODUCT_PLACEHOLDER_SRC } from "../lib/product-image";
+import { shopDisplayAvailableQty } from "../lib/shop-availability";
+import { useActiveCart } from "../lib/use-active-cart";
+import { flushCartPendingChanges } from "../lib/cart-mutation-gate";
+import { useCartActions } from "../lib/use-cart-actions";
 
 function TrashIcon() {
   return (
@@ -154,17 +142,25 @@ type DraftLine = {
   currency: string;
 };
 
-export function CartView() {
-  const queryClient = useQueryClient();
+/** /cart/[id] — one open cart: lines, rename, delete, make active, checkout. */
+export function CartView({ cartId }: { cartId: string }) {
   const router = useRouter();
-  const cart = useListWholesaleSalesOrders(wholesaleDraftCartParams);
-  const replaceLines = useReplaceWholesaleSalesOrderLines();
+  const activeCart = useActiveCart();
+  const draft = activeCart.drafts.find((item) => item.id === cartId);
+  const actions = useCartActions(draft);
   const qtyDialogRef = useRef<HTMLDialogElement>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [removingLineId, setRemovingLineId] = useState<string | null>(null);
   const [editingLine, setEditingLine] = useState<DraftLine | null>(null);
   const [qtyInput, setQtyInput] = useState("1");
+  const [renaming, setRenaming] = useState(false);
+  const [labelInput, setLabelInput] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [checkoutNavigating, setCheckoutNavigating] = useState(false);
+
+  useEffect(() => {
+    void flushCartPendingChanges(cartId);
+  }, [cartId]);
 
   useEffect(() => {
     const dialog = qtyDialogRef.current;
@@ -182,12 +178,23 @@ export function CartView() {
     }
   }, [editingLine]);
 
-  if (cart.isPending) {
+  useEffect(() => {
+    const dialog = deleteDialogRef.current;
+    if (dialog === null) {
+      return;
+    }
+    if (confirmingDelete && !dialog.open) {
+      dialog.showModal();
+    } else if (!confirmingDelete && dialog.open) {
+      dialog.close();
+    }
+  }, [confirmingDelete]);
+
+  if (activeCart.isPending) {
     return <p className="text-ink-muted">Loading cart…</p>;
   }
 
-  const payload = cart.data?.data;
-  if (cart.isError || !payload || !("items" in payload)) {
+  if (activeCart.isError) {
     return (
       <p className="text-sold-out" role="alert">
         Cart is unavailable. Start the API with `pnpm dev:api` and reload.
@@ -195,95 +202,31 @@ export function CartView() {
     );
   }
 
-  const draft = payload.items[0];
-  if (draft === undefined || draft.lines.length === 0) {
+  if (draft === undefined) {
     return (
       <div className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-8">
-        <p className="text-ink-muted">Your cart is empty.</p>
+        <p className="text-ink-muted">
+          This cart is no longer open — it was checked out or deleted.
+        </p>
         <Link
-          href="/products"
-          className="inline-flex w-fit rounded-full border border-line bg-card px-5 py-2.5 text-sm font-semibold text-ink hover:bg-canvas"
+          href="/cart"
+          className="shop-button-secondary inline-flex w-fit items-center px-5 text-sm"
         >
-          Browse Products
+          All Carts
         </Link>
       </div>
     );
   }
 
   const cartDraft = draft;
-
-  const draftId = cartDraft.id;
   const draftLines = cartDraft.lines;
-  const currency = draftLines[0]?.currency ?? "USD";
-  const subtotalCents = draftLines.reduce(
-    (sum, line) => sum + lineSubtotalCents(line.qty, line.unitPriceCents),
-    0,
-  );
-  const pending = replaceLines.isPending || saving;
+  const isActive = activeCart.activeDraft?.id === cartDraft.id;
+  const pending = actions.pending;
 
   function openQtyEditor(line: DraftLine) {
-    setMessage(null);
+    actions.setMessage(null);
     setQtyInput(String(line.qty));
     setEditingLine(line);
-  }
-
-  async function persistLines(
-    currentDraft: typeof cartDraft,
-    lines: Awaited<ReturnType<typeof toReplaceLines>>,
-    failMessage: string,
-    onSettled: () => void,
-  ) {
-    if (lines === null) {
-      onSettled();
-      setMessage(failMessage);
-      return;
-    }
-
-    setSaving(true);
-    const previous = readDraftCartList(queryClient);
-    if (lines.length === 0) {
-      writeDraftCartOrder(queryClient, null);
-    } else {
-      writeDraftCartOrder(
-        queryClient,
-        buildOptimisticDraftOrder(currentDraft, lines),
-      );
-    }
-
-    try {
-      const response = await replaceLines.mutateAsync({
-        id: draftId,
-        data: { lines },
-      });
-      if (response.status === 200) {
-        if (response.data.status === "cancelled" || response.data.lines.length === 0) {
-          writeDraftCartOrder(queryClient, null);
-        } else {
-          writeDraftCartOrder(queryClient, response.data);
-        }
-      }
-      onSettled();
-    } catch (error) {
-      if (previous !== undefined) {
-        queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
-      }
-      onSettled();
-      setMessage(wholesaleShortageErrorMessage(error, failMessage));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function removeLine(lineId: string) {
-    setMessage(null);
-    setRemovingLineId(lineId);
-    const remaining = remainingDraftLines(draftLines, lineId);
-    const lines =
-      linesForReplace(remaining) ??
-      (await toReplaceLines(remaining, lookupWholesaleProductId));
-    persistLines(cartDraft, lines, "Could not remove item", () => {
-      setRemovingLineId(null);
-    });
   }
 
   async function saveEditedQty(maxQty: number | null) {
@@ -292,123 +235,263 @@ export function CartView() {
     }
     const qty = parseCartQty(qtyInput);
     if (qty === null || qty < 1) {
-      setMessage("Enter a quantity of 1 or more");
+      actions.setMessage("Enter a quantity of 1 or more");
       return;
     }
     if (maxQty !== null && cartQtyOverCap(qty, maxQty)) {
-      setMessage(cartQtyCapMessage(maxQty));
+      actions.setMessage(cartQtyCapMessage(maxQty));
       return;
     }
-    setMessage(null);
-    const next = draftLines.map((line) =>
-      line.id === editingLine.id ? { ...line, qty } : line,
-    );
-    const lines =
-      linesForReplace(next) ?? (await toReplaceLines(next, lookupWholesaleProductId));
-    persistLines(cartDraft, lines, "Could not update item", () => {
-      setEditingLine(null);
+    await actions.setLineQty(editingLine.id, qty);
+    setEditingLine(null);
+  }
+
+  function removeLine(lineId: string) {
+    setRemovingLineId(lineId);
+    void actions.removeLine(lineId).finally(() => {
+      setRemovingLineId((current) => (current === lineId ? null : current));
     });
   }
 
+  async function saveLabel() {
+    const ok = await actions.rename(labelInput.trim().length === 0 ? null : labelInput);
+    if (ok) {
+      setRenaming(false);
+    }
+  }
+
+  async function deleteCart() {
+    const ok = await actions.deleteCart();
+    setConfirmingDelete(false);
+    if (ok) {
+      if (isActive) {
+        activeCart.clearActiveCart();
+      }
+      router.push("/cart");
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="overflow-hidden rounded-2xl border border-line bg-card">
-        <ul className="divide-y divide-line">
-          {draftLines.map((line) => (
-            <li
-              key={line.id}
-              className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+    <section className="flex flex-col gap-8">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
+            <Link href="/cart" className="hover:text-accent">
+              Carts
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="text-ink">{cartDraft.documentNumber}</span>
+          </nav>
+          {renaming ? (
+            <form
+              className="mt-2 flex flex-wrap items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveLabel();
+              }}
             >
-              <div className="min-w-0">
-                <p className="font-semibold text-ink">{line.name}</p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                  <p className="text-ink-muted">Qty {line.qty}</p>
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => openQtyEditor(line)}
-                    className="cursor-pointer font-semibold text-accent hover:text-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Edit
-                  </button>
-                  {line.productId !== undefined ? (
-                    <Link
-                      href={`/products/${line.productId}`}
-                      className="font-semibold text-accent hover:text-accent-hover"
-                    >
-                      Details
-                    </Link>
-                  ) : (
+              <label htmlFor="cart-label" className="sr-only">
+                Cart name
+              </label>
+              <input
+                id="cart-label"
+                type="text"
+                maxLength={80}
+                autoFocus
+                value={labelInput}
+                disabled={pending}
+                placeholder={`Cart ${cartDraft.documentNumber}`}
+                onChange={(event) => setLabelInput(event.target.value)}
+                className="shop-input w-72 max-w-full"
+              />
+              <button
+                type="submit"
+                disabled={pending}
+                className="shop-button-primary cursor-pointer px-5 text-sm disabled:opacity-50"
+              >
+                {pending ? "Saving…" : "Save Name"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => setRenaming(false)}
+                className="shop-button-secondary cursor-pointer px-5 text-sm"
+              >
+                Cancel
+              </button>
+            </form>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <h1 className="page-title">{cartDisplayName(cartDraft)}</h1>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => {
+                  setLabelInput(cartDraft.label ?? "");
+                  setRenaming(true);
+                }}
+                className="cursor-pointer text-sm font-semibold text-accent hover:text-accent-hover disabled:opacity-50"
+              >
+                Rename
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {isActive ? (
+            <span className="rounded-full bg-accent px-3 py-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] text-on-accent">
+              Active cart
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => activeCart.setActiveCart(cartDraft.id)}
+              className="shop-button-secondary inline-flex min-h-10 cursor-pointer items-center px-4 text-sm"
+            >
+              Make Active
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setConfirmingDelete(true)}
+            className="inline-flex min-h-10 cursor-pointer items-center rounded-full border border-line px-4 text-sm font-semibold text-sold-out hover:bg-canvas disabled:opacity-50"
+          >
+            Delete Cart
+          </button>
+        </div>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_20rem] lg:items-start">
+        <div className="overflow-hidden rounded-2xl border border-line bg-card">
+          <ul className="divide-y divide-line">
+            {draftLines.map((line) => (
+              <li key={line.id} className="grid grid-cols-[4rem_minmax(0,1fr)_auto] items-start gap-4 px-5 py-4">
+                <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-canvas-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={PRODUCT_PLACEHOLDER_SRC} alt="" className="h-full w-full object-contain" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+                    {line.sku}
+                  </p>
+                  <p className="font-semibold text-ink">{line.name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <p className="text-ink-muted">
+                      Qty {line.qty} · {formatMoneyMinorUnits(line.unitPriceCents, line.currency)} each
+                    </p>
                     <button
                       type="button"
-                      disabled={pending}
-                      onClick={() => {
-                        void (async () => {
-                          setMessage(null);
-                          const productId = await lookupWholesaleProductId(
-                            line.sku,
-                            line.name,
-                          );
-                          if (productId === null) {
-                            setMessage("Product details unavailable");
-                            return;
-                          }
-                          router.push(`/products/${productId}`);
-                        })();
-                      }}
-                      className="cursor-pointer font-semibold text-accent hover:text-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => openQtyEditor(line)}
+                      className="cursor-pointer font-semibold text-accent hover:text-accent-hover"
                     >
-                      Details
+                      Edit
                     </button>
-                  )}
+                    {line.productId !== undefined ? (
+                      <Link
+                        href={`/products/${line.productId}`}
+                        className="font-semibold text-accent hover:text-accent-hover"
+                      >
+                        Details
+                      </Link>
+                    ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void (async () => {
+                              actions.setMessage(null);
+                              const productId = await lookupWholesaleProductId(line.sku, line.name);
+                              if (productId === null) {
+                                actions.setMessage("Product details unavailable");
+                                return;
+                              }
+                              router.push(`/products/${productId}`);
+                            })();
+                          }}
+                          className="cursor-pointer font-semibold text-accent hover:text-accent-hover"
+                        >
+                        Details
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-base font-medium text-ink">
-                  {formatMoneyMinorUnits(
-                    lineSubtotalCents(line.qty, line.unitPriceCents),
-                    line.currency,
-                  )}
-                </p>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() => removeLine(line.id)}
-                  className="inline-flex size-10 cursor-pointer items-center justify-center rounded-full border border-line bg-card text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <span className="sr-only">
-                    {removingLineId === line.id ? "Removing" : "Remove"}
-                  </span>
-                  <TrashIcon />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="flex shrink-0 items-center gap-3">
+                  <p className="text-right text-base font-medium tabular-nums text-ink">
+                    {formatMoneyMinorUnits(line.qty * line.unitPriceCents, line.currency)}
+                  </p>
+                    <button
+                      type="button"
+                      disabled={removingLineId === line.id}
+                      onClick={() => {
+                        removeLine(line.id);
+                      }}
+                      className="inline-flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-card text-ink hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                    <span className="sr-only">
+                      {removingLineId === line.id ? "Removing" : "Remove"}
+                    </span>
+                    <TrashIcon />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <aside className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 lg:sticky lg:top-[calc(var(--space-nav-height)+1.5rem)]">
+          <p className="section-title">Summary</p>
+          <dl className="flex flex-col gap-2 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-ink-muted">Cart</dt>
+              <dd className="text-ink">{cartDraft.documentNumber}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-ink-muted">Lines</dt>
+              <dd className="tabular-nums text-ink">{cartLineCount(cartDraft)}</dd>
+            </div>
+            <div className="flex justify-between border-t border-line pt-2 text-base">
+              <dt className="font-semibold text-ink">Subtotal</dt>
+              <dd className="font-semibold tabular-nums text-ink">
+                {formatMoneyMinorUnits(cartSubtotalCents(cartDraft), cartCurrency(cartDraft))}
+              </dd>
+            </div>
+          </dl>
+          <p className="min-h-5 text-sm leading-5 text-ink-muted" role="status" aria-live="polite">
+            {actions.message ?? "\u00a0"}
+          </p>
+          <button
+            type="button"
+            disabled={
+              actions.pending ||
+              actions.dirty ||
+              checkoutNavigating ||
+              cartDraft.lines.length === 0
+            }
+            onClick={() => {
+              setCheckoutNavigating(true);
+              void actions.flushPendingChanges().then((ok) => {
+                setCheckoutNavigating(false);
+                if (!ok) {
+                  return;
+                }
+                router.push(`/checkout?cart=${cartDraft.id}`);
+              });
+            }}
+            className="shop-button-primary inline-flex items-center justify-center text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {checkoutNavigating || actions.pending || actions.dirty
+              ? "Saving…"
+              : "Checkout This Cart"}
+          </button>
+          <Link
+            href="/products"
+            className="shop-button-secondary inline-flex items-center justify-center text-sm"
+          >
+            Continue Shopping
+          </Link>
+        </aside>
       </div>
-      <p className="min-h-5 text-sm leading-5 text-ink-muted" role="status" aria-live="polite">
-        {message ?? "\u00a0"}
-      </p>
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-card px-5 py-4">
-        <p className="text-sm text-ink-muted">Draft {draft.documentNumber}</p>
-        <p className="text-lg font-semibold text-ink">
-          Subtotal {formatMoneyMinorUnits(subtotalCents, currency)}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/products"
-          className="inline-flex rounded-full border border-line bg-card px-5 py-2.5 text-sm font-semibold text-ink hover:bg-canvas"
-        >
-          Continue Shopping
-        </Link>
-        <Link
-          href="/checkout"
-          className="inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink hover:opacity-90"
-        >
-          Checkout
-        </Link>
-      </div>
+
       <dialog
         ref={qtyDialogRef}
         className="shop-dialog w-[min(28rem,calc(100vw-2rem))] rounded-2xl border border-line bg-overlay p-6 text-ink shadow-sm"
@@ -432,6 +515,39 @@ export function CartView() {
           />
         ) : null}
       </dialog>
-    </div>
+
+      <dialog
+        ref={deleteDialogRef}
+        className="shop-dialog w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-line bg-overlay p-6 text-ink shadow-sm"
+        onClose={() => setConfirmingDelete(false)}
+      >
+        <h2 className="text-lg font-semibold text-ink">Delete this cart?</h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          {cartDisplayName(cartDraft)} and its {cartLineCount(cartDraft)}{" "}
+          {cartLineCount(cartDraft) === 1 ? "line" : "lines"} will be removed. Other carts stay
+          open.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setConfirmingDelete(false)}
+            className="shop-button-secondary cursor-pointer px-5 text-sm"
+          >
+            Keep Cart
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              void deleteCart();
+            }}
+            className="inline-flex min-h-12 cursor-pointer items-center rounded-full bg-sold-out px-5 text-sm font-semibold text-on-accent hover:opacity-90 disabled:opacity-50"
+          >
+            {pending ? "Deleting…" : "Delete Cart"}
+          </button>
+        </div>
+      </dialog>
+    </section>
   );
 }

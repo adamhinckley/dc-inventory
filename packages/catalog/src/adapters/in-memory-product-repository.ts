@@ -2,6 +2,7 @@ import type { OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel
 import type { Product } from "../domain/product.js";
 import { isShopVisible } from "../domain/product.js";
 import type {
+  CategoryNamesMatch,
   IProductRepository,
   ListedProduct,
   ProductListMatch,
@@ -83,11 +84,17 @@ export class InMemoryProductRepository implements IProductRepository {
     this.primarySupplierIdByProductId.set(productId, supplierId);
   }
 
-  async listCategoryNames(organizationId: OrganizationId): Promise<string[]> {
+  async listCategoryNames(
+    organizationId: OrganizationId,
+    match: CategoryNamesMatch = {},
+  ): Promise<string[]> {
     const names = new Set<string>();
     for (const [productId, categories] of this.categoriesByProductId) {
       const row = this.byId.get(productId);
       if (row === undefined || row.product.organizationId !== organizationId) {
+        continue;
+      }
+      if (match.shopVisibleOnly === true && !isShopVisible(row.product)) {
         continue;
       }
       for (const name of categories) {
