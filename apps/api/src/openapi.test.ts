@@ -36,6 +36,16 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("listInternalCustomers");
     expect(specs.internal).toContain("x-table");
     expect(specs.internal).toContain("listInternalProducts");
+    expect(specs.internal).toContain("getInternalCustomerAccounting");
+    expect(specs.internal).toContain("recordInternalCustomerPayment");
+    expect(specs.internal).toContain("reallocateInternalPayment");
+    expect(specs.internal).toContain("voidInternalPayment");
+    expect(specs.internal).toContain("adjustInternalInvoice");
+    expect(specs.internal).toContain("setInternalCustomerPaymentPlan");
+    expect(specs.internal).toContain("endInternalCustomerPaymentPlan");
+    expect(specs.internal).toContain("getInternalAccountingSummary");
+    expect(specs.internal).toContain("listInternalAccountingCustomerBalances");
+    expect(specs.internal).toContain("listInternalAccountingPayments");
     expect(specs.internal).toContain("draftInternalUncoveredPurchaseOrders");
     expect(specs.internal).toContain("/internal/uncovered-skus/draft-purchase-orders");
     expect(specs.internal).toContain("/internal/purchase-orders/sync-from-uncovered");
@@ -64,6 +74,8 @@ describe("OpenAPI stub export", () => {
       .filter((operation): operation is TableOperation => operation?.["x-table"] !== undefined);
 
     expect(tableOperations.map((operation) => operation.operationId).sort()).toEqual([
+      "listInternalAccountingCustomerBalances",
+      "listInternalAccountingPayments",
       "listInternalCustomers",
       "listInternalProducts",
       "listInternalPurchaseOrders",

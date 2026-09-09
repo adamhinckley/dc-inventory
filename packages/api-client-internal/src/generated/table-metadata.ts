@@ -21,6 +21,142 @@ export type InternalTableMetadata = {
   readonly import?: { readonly template: boolean };
 };
 
+export const listInternalAccountingCustomerBalancesTable = {
+  "rowId": "customerId",
+  "columns": [
+    {
+      "field": "name",
+      "label": "Customer"
+    },
+    {
+      "field": "customerNumber",
+      "label": "Customer #"
+    },
+    {
+      "field": "openBalanceCents",
+      "label": "Open balance"
+    },
+    {
+      "field": "pastDueCents",
+      "label": "Past due"
+    },
+    {
+      "field": "oldestDueDate",
+      "label": "Oldest due"
+    },
+    {
+      "field": "daysPastDue",
+      "label": "Days past due"
+    },
+    {
+      "field": "creditLimitCents",
+      "label": "Credit limit"
+    },
+    {
+      "field": "availableCreditCents",
+      "label": "Available credit"
+    },
+    {
+      "field": "hasActivePlan",
+      "label": "Plan"
+    }
+  ],
+  "search": {
+    "param": "q",
+    "fields": [
+      "name",
+      "customerNumber"
+    ],
+    "placeholder": "Search customer name or #"
+  },
+  "filters": [
+    {
+      "param": "asOf",
+      "control": "date"
+    },
+    {
+      "param": "bucket",
+      "control": "select"
+    }
+  ],
+  "sort": {
+    "defaultBy": "pastDueCents",
+    "defaultOrder": "desc",
+    "fields": [
+      "pastDueCents",
+      "openBalanceCents",
+      "name",
+      "customerNumber",
+      "oldestDueDate",
+      "daysPastDue",
+      "creditLimitCents",
+      "availableCreditCents"
+    ]
+  }
+} as const satisfies InternalTableMetadata;
+
+export const listInternalAccountingPaymentsTable = {
+  "rowId": "paymentId",
+  "columns": [
+    {
+      "field": "receivedAt",
+      "label": "Received"
+    },
+    {
+      "field": "customerName",
+      "label": "Customer"
+    },
+    {
+      "field": "amountCents",
+      "label": "Amount"
+    },
+    {
+      "field": "method",
+      "label": "Method"
+    },
+    {
+      "field": "reference",
+      "label": "Reference"
+    },
+    {
+      "field": "appliedCents",
+      "label": "Applied"
+    },
+    {
+      "field": "unappliedCents",
+      "label": "Unapplied"
+    },
+    {
+      "field": "voided",
+      "label": "Voided"
+    }
+  ],
+  "search": {
+    "param": "q",
+    "fields": [
+      "customerName",
+      "customerNumber"
+    ],
+    "placeholder": "Search customer"
+  },
+  "filters": [
+    {
+      "param": "from",
+      "control": "dateRange",
+      "rangePair": "to"
+    }
+  ],
+  "sort": {
+    "defaultBy": "receivedAt",
+    "defaultOrder": "desc",
+    "fields": [
+      "receivedAt",
+      "amountCents",
+      "customerName"
+    ]
+  }
+} as const satisfies InternalTableMetadata;
+
 export const listInternalCustomersTable = {
   "rowId": "id",
   "columns": [
@@ -456,6 +592,8 @@ export const listInternalUncoveredSkusTable = {
 } as const satisfies InternalTableMetadata;
 
 export const internalTableMetadata = {
+  listInternalAccountingCustomerBalances: listInternalAccountingCustomerBalancesTable,
+  listInternalAccountingPayments: listInternalAccountingPaymentsTable,
   listInternalCustomers: listInternalCustomersTable,
   listInternalProducts: listInternalProductsTable,
   listInternalPurchaseOrders: listInternalPurchaseOrdersTable,

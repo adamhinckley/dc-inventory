@@ -170,12 +170,31 @@ import {
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
+  AdjustInvoiceUseCase,
   CustomerTermsReadAdapter,
   DrizzleInvoiceRepository,
+  EndPaymentPlanUseCase,
+  GetAccountingSummaryUseCase,
+  GetCustomerAccountingSummaryUseCase,
   GetInvoiceUseCase,
   InMemoryAccountingUnitOfWork,
+  InMemoryArCustomerReadPort,
+  InMemoryArOrgReadPort,
+  InMemoryCustomerArProfileReadPort,
+  InMemoryCustomerBalancesListQuery,
+  InMemoryPaymentsReceivedListQuery,
+  ListCustomerBalancesQuery,
+  ListPaymentsReceivedQuery,
+  RecordCustomerPaymentUseCase,
   RecordPaymentUseCase,
+  ReallocatePaymentUseCase,
+  SetPaymentPlanUseCase,
+  supportsAccountingRepository,
+  VoidPaymentUseCase,
   type AccountingDrizzle,
+  type AccountingUnitOfWorkWithCustomerPayments,
+  type IAccountingRepository,
+  type IArCustomerReadPort,
   type IInvoiceRepository,
 } from "@dc-inventory/accounting";
 import {
@@ -189,6 +208,10 @@ import {
   InMemorySalesOrderRepository,
   ListSalesOrdersUseCase,
   ReplaceSalesOrderLinesUseCase,
+  DrizzleLastOrderDateReadAdapter,
+  DrizzleOpenOrderExposureReadAdapter,
+  InMemoryLastOrderDateReadAdapter,
+  InMemoryOpenOrderExposureReadAdapter,
   ShipSalesOrderUseCase,
   type ICatalogProductPort,
   type ICustomerBillToSnapshotReadPort,
@@ -228,6 +251,10 @@ import {
 import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { readFeaturesAllCoreOn } from "./features-all-core-on.js";
+import { createArOrgReadPort } from "../adapters/accounting-ar-org-read.js";
+import { createCustomerBalancesListQuery } from "../adapters/accounting-customer-balances-list-query.js";
+import { DrizzleCustomerArProfileReadPort } from "../adapters/accounting-customer-ar-profile-read.js";
+import { DrizzlePaymentsReceivedListQuery } from "../adapters/accounting-payments-received-list-query.js";
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { CatalogInventoryListQuery } from "../adapters/catalog-inventory-list-query.js";
@@ -372,6 +399,17 @@ export type SalesHttpServices = {
 export type AccountingHttpServices = {
   getInvoice: GetInvoiceUseCase;
   recordPayment: RecordPaymentUseCase;
+  getCustomerAccountingSummary: GetCustomerAccountingSummaryUseCase;
+  getAccountingSummary: GetAccountingSummaryUseCase;
+  listCustomerBalances: ListCustomerBalancesQuery;
+  listPaymentsReceived: ListPaymentsReceivedQuery;
+  recordCustomerPayment: RecordCustomerPaymentUseCase;
+  reallocatePayment: ReallocatePaymentUseCase;
+  voidPayment: VoidPaymentUseCase;
+  adjustInvoice: AdjustInvoiceUseCase;
+  setPaymentPlan: SetPaymentPlanUseCase;
+  endPaymentPlan: EndPaymentPlanUseCase;
+  arCustomerRead: IArCustomerReadPort;
 };
 
 export type LicensingHttpServices = {
@@ -809,14 +847,70 @@ function salesServices(
   };
 }
 
-function accountingServices(
-  invoiceRepo: IInvoiceRepository,
-  accountingUnitOfWork: import("@dc-inventory/accounting").IAccountingUnitOfWork,
-  clock: import("@dc-inventory/accounting").IClock,
-): AccountingHttpServices {
+type AccountingServicesInput = {
+  invoiceRepo: IInvoiceRepository;
+  accountingUnitOfWork: import("@dc-inventory/accounting").IAccountingUnitOfWork;
+  clock: import("@dc-inventory/accounting").IClock;
+  customerRepo: ICustomerRepository;
+  salesOrderRepo: ISalesOrderRepository;
+  appDb?: AppDrizzle;
+};
+
+function accountingServices(input: AccountingServicesInput): AccountingHttpServices {
+  const { invoiceRepo, accountingUnitOfWork, clock, customerRepo, salesOrderRepo, appDb } = input;
+  const accountingRepository = supportsAccountingRepository(accountingUnitOfWork.invoices)
+    ? (accountingUnitOfWork.invoices as IAccountingRepository)
+    : (invoiceRepo as IAccountingRepository);
+  const customerProfiles =
+    appDb !== undefined
+      ? new DrizzleCustomerArProfileReadPort(appDb)
+      : new InMemoryCustomerArProfileReadPort(customerRepo);
+  const arOrgRead =
+    appDb !== undefined
+      ? createArOrgReadPort(appDb)
+      : new InMemoryArOrgReadPort(accountingRepository, customerProfiles);
+  const arCustomerRead = new InMemoryArCustomerReadPort(accountingRepository);
+  const openOrderExposure =
+    appDb !== undefined
+      ? new DrizzleOpenOrderExposureReadAdapter(appDb as unknown as SalesDrizzle)
+      : new InMemoryOpenOrderExposureReadAdapter(salesOrderRepo);
+  const lastOrderDate =
+    appDb !== undefined
+      ? new DrizzleLastOrderDateReadAdapter(appDb as unknown as SalesDrizzle)
+      : new InMemoryLastOrderDateReadAdapter(salesOrderRepo);
+  const customerBalancesList =
+    appDb !== undefined
+      ? createCustomerBalancesListQuery(appDb)
+      : new InMemoryCustomerBalancesListQuery(arOrgRead, customerProfiles, openOrderExposure);
+  const paymentsReceivedList =
+    appDb !== undefined
+      ? new DrizzlePaymentsReceivedListQuery(appDb)
+      : new InMemoryPaymentsReceivedListQuery(accountingRepository, customerProfiles);
+  if (!supportsAccountingRepository(accountingUnitOfWork.invoices)) {
+    throw new Error("Accounting HTTP services require IAccountingRepository");
+  }
+  const customerPaymentsUnitOfWork =
+    accountingUnitOfWork as AccountingUnitOfWorkWithCustomerPayments;
+
   return {
     getInvoice: new GetInvoiceUseCase(invoiceRepo),
     recordPayment: new RecordPaymentUseCase(accountingUnitOfWork, clock),
+    getCustomerAccountingSummary: new GetCustomerAccountingSummaryUseCase(
+      arCustomerRead,
+      customerProfiles,
+      openOrderExposure,
+      lastOrderDate,
+    ),
+    getAccountingSummary: new GetAccountingSummaryUseCase(arOrgRead),
+    listCustomerBalances: new ListCustomerBalancesQuery(customerBalancesList),
+    listPaymentsReceived: new ListPaymentsReceivedQuery(paymentsReceivedList),
+    recordCustomerPayment: new RecordCustomerPaymentUseCase(customerPaymentsUnitOfWork, clock),
+    reallocatePayment: new ReallocatePaymentUseCase(customerPaymentsUnitOfWork, clock),
+    voidPayment: new VoidPaymentUseCase(customerPaymentsUnitOfWork, clock),
+    adjustInvoice: new AdjustInvoiceUseCase(customerPaymentsUnitOfWork, clock),
+    setPaymentPlan: new SetPaymentPlanUseCase(customerPaymentsUnitOfWork, clock),
+    endPaymentPlan: new EndPaymentPlanUseCase(customerPaymentsUnitOfWork, clock),
+    arCustomerRead,
   };
 }
 
@@ -1315,7 +1409,14 @@ export function composeAppServices(
       readPorts.shipToSnapshot,
       readPorts.accountStatus,
     ),
-    accounting: accountingServices(invoiceRepo, accountingUnitOfWork, clock),
+    accounting: accountingServices({
+      invoiceRepo,
+      accountingUnitOfWork,
+      clock,
+      customerRepo,
+      salesOrderRepo,
+      appDb,
+    }),
     licensing: licensingServices(licensingRepository),
     inventory: inventoryServices(
       unitOfWork,

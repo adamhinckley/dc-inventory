@@ -86,6 +86,12 @@ const ACTION_BY_OPERATION: Readonly<
   confirmInternalSalesOrder: "sales_orders_manage",
   cancelInternalSalesOrder: "sales_orders_manage",
   recordInternalInvoicePayment: "payments_apply",
+  recordInternalCustomerPayment: "payments_apply",
+  reallocateInternalPayment: "payments_apply",
+  voidInternalPayment: "ar_adjust",
+  adjustInternalInvoice: "ar_adjust",
+  setInternalCustomerPaymentPlan: "payment_plans_manage",
+  endInternalCustomerPaymentPlan: "payment_plans_manage",
 };
 
 type OperationSchema = FastifySchema & {
