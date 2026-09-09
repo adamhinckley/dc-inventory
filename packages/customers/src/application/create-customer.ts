@@ -13,7 +13,7 @@ export type CreateCustomerRequest = {
   organizationId: OrganizationId;
   staffUserId: StaffUserId;
   name: string;
-  creditLimitCents: number;
+  creditLimitCents?: number;
   currency?: string;
   terms: string;
   customerNumber?: string | null;
@@ -68,7 +68,7 @@ export class CreateCustomerUseCase {
         organizationId: input.organizationId,
         name,
         customerNumber,
-        creditLimit: Money.fromMinorUnits(input.creditLimitCents, input.currency ?? "USD"),
+        creditLimit: Money.fromMinorUnits(input.creditLimitCents ?? 0, input.currency ?? "USD"),
         terms,
         taxId: optionalText(input.taxId),
         accountStatus: input.accountStatus ?? "active",

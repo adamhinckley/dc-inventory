@@ -14,7 +14,7 @@ import {
   LoginWholesaleUseCase,
   ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS,
 } from "@dc-inventory/identity";
-import { OrganizationId } from "@dc-inventory/shared-kernel";
+import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import {
   PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS,
@@ -103,6 +103,25 @@ describe("Phase 1 seed (in-memory)", () => {
     if (wholesaleLogin.ok) {
       expect(wholesaleLogin.customerId).toBe(first.customer.id);
     }
+  });
+
+  it("upgrades existing demo staff roles to include accounting", async () => {
+    const ports = seedPorts();
+    await ports.organizations.save({ id: OrganizationId.DEFAULT, slug: PHASE1_ORGANIZATION_SLUG });
+    await ports.staffUsers.save({
+      id: StaffUserId.parse("11111111-1111-4111-8111-111111111111"),
+      organizationId: OrganizationId.DEFAULT,
+      email: PHASE1_STAFF_EMAIL,
+      passwordHash: await ports.passwords.hash("staff-placeholder"),
+      roles: ["admin"],
+    });
+
+    const seeded = await runPhase1Seed(ports, {
+      staffPassword: "staff-placeholder",
+      wholesalePassword: "wholesale-placeholder",
+    });
+
+    expect(seeded.staff.roles).toEqual(["admin", "accounting"]);
   });
 
   it("rejects empty passwords and does not invent a sixth SKU", async () => {

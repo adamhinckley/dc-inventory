@@ -14,6 +14,7 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import { withDemoStaffRoles } from "./demo-staff-roles.js";
 import {
   PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS,
   PHASE1_CUSTOMER_CURRENCY,
@@ -95,7 +96,7 @@ async function upsertStaff(
     organizationId: OrganizationId.DEFAULT,
     email: PHASE1_STAFF_EMAIL,
     passwordHash: await ports.passwords.hash(password),
-    roles: existing?.roles ?? ["admin", "accounting"],
+    roles: withDemoStaffRoles(existing?.roles),
   };
   await ports.staffUsers.save(staff);
   return staff;

@@ -13,7 +13,7 @@ export type CreateInternalCustomerBody = {
      * @minimum -9007199254740991
      * @maximum 9007199254740991
      */
-  creditLimitCents: number;
+  creditLimitCents?: number;
   /**
      * @minLength 3
      * @maxLength 3

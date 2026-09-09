@@ -11,7 +11,7 @@ import type {
 } from "fastify";
 import { forbiddenResponseSchema } from "../../schemas.js";
 
-type CustomerPatchBody = {
+type CustomerWriteBody = {
   creditLimitCents?: number;
   currency?: string;
   name?: string;
@@ -20,14 +20,23 @@ type CustomerPatchBody = {
   accountStatus?: string;
   customerNote?: string | null;
   staffNote?: string | null;
+  customerNumber?: string | null;
 };
 
-function updateInternalCustomerActions(request: FastifyRequest): readonly StaffAction[] {
-  const body = request.body as CustomerPatchBody | undefined;
-  const actions: StaffAction[] = [];
+function customerCreditActions(body: CustomerWriteBody | undefined): StaffAction[] {
   if (body?.creditLimitCents !== undefined || body?.currency !== undefined) {
-    actions.push("credit_limit_manage");
+    return ["credit_limit_manage"];
   }
+  return [];
+}
+
+function createInternalCustomerActions(request: FastifyRequest): readonly StaffAction[] {
+  return ["master_data_manage", ...customerCreditActions(request.body as CustomerWriteBody | undefined)];
+}
+
+function updateInternalCustomerActions(request: FastifyRequest): readonly StaffAction[] {
+  const body = request.body as CustomerWriteBody | undefined;
+  const actions: StaffAction[] = [...customerCreditActions(body)];
   const touchesOtherFields =
     body !== undefined &&
     Object.keys(body).some((key) => key !== "creditLimitCents" && key !== "currency");
@@ -44,7 +53,7 @@ const ACTION_BY_OPERATION: Readonly<
   createInternalProduct: "master_data_manage",
   updateInternalProduct: "master_data_manage",
   updateInternalProductBySku: "master_data_manage",
-  createInternalCustomer: ["master_data_manage", "credit_limit_manage"],
+  createInternalCustomer: createInternalCustomerActions,
   updateInternalCustomer: updateInternalCustomerActions,
   createInternalCustomerContact: "master_data_manage",
   updateInternalCustomerContact: "master_data_manage",

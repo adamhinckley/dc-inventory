@@ -399,10 +399,26 @@ describe("staff RBAC HTTP guard", () => {
     });
   });
 
-  it("requires credit_limit_manage to set initial credit limit on create", async () => {
+  it("gates customer create credit fields separately from master data", async () => {
     const { app, cookie } = await startRbacApp();
     const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
     const admin = await cookie("admin");
+
+    const purchasingCreate = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+      payload: {
+        name: "Purchasing Create Customer",
+        terms: "Net 30",
+      },
+    });
+    expect(purchasingCreate.statusCode).toBe(201);
+    expect(purchasingCreate.json()).toMatchObject({
+      name: "Purchasing Create Customer",
+      creditLimitCents: 0,
+    });
 
     expectForbidden(
       await app.inject({
@@ -410,7 +426,7 @@ describe("staff RBAC HTTP guard", () => {
         url: "/internal/customers",
         cookies: { [STAFF_SESSION_COOKIE]: purchasing },
         payload: {
-          name: "Purchasing Create Customer",
+          name: "Purchasing Create With Credit",
           creditLimitCents: 500_000,
           currency: "USD",
           terms: "Net 30",
@@ -418,17 +434,43 @@ describe("staff RBAC HTTP guard", () => {
       }),
     );
 
-    const allowedAdmin = await app.inject({
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: "/internal/customers",
+        cookies: { [STAFF_SESSION_COOKIE]: accounting },
+        payload: {
+          name: "Accounting Create Customer",
+          terms: "Net 30",
+        },
+      }),
+    );
+
+    const accountingCreateWithCredit = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: {
+        name: "Accounting Create With Credit",
+        creditLimitCents: 750_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(accountingCreateWithCredit.statusCode).toBe(403);
+
+    const adminCreateWithCredit = await app.inject({
       method: "POST",
       url: "/internal/customers",
       cookies: { [STAFF_SESSION_COOKIE]: admin },
       payload: {
-        name: "Admin Create Customer",
+        name: "Admin Create With Credit",
         creditLimitCents: 500_000,
         currency: "USD",
         terms: "Net 30",
       },
     });
-    expect(allowedAdmin.statusCode).toBe(201);
+    expect(adminCreateWithCredit.statusCode).toBe(201);
+    expect(adminCreateWithCredit.json()).toMatchObject({ creditLimitCents: 500_000 });
   });
 });

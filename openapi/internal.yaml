@@ -445,7 +445,6 @@ paths:
                   type: string
               required:
                 - name
-                - creditLimitCents
                 - terms
       responses:
         "201":

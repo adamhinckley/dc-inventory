@@ -570,7 +570,7 @@ export const customersListTable = {
 
 export const customerWriteBodySchema = z.object({
   name: z.string().min(1),
-  creditLimitCents: z.number().int(),
+  creditLimitCents: z.number().int().optional(),
   currency: z.string().length(3).optional(),
   terms: z.string().min(1),
   customerNumber: z.string().min(1).optional().nullable(),
