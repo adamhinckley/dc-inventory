@@ -45,6 +45,11 @@ export class ReallocatePaymentUseCase {
 
       const existingApplications = await invoices.listApplicationsByPayment(payment.id);
       const currency = payment.amount.currency;
+      const appliedTotal = existingApplications.reduce(
+        (sum, row) => sum + row.amount.amountMinor,
+        0,
+      );
+      const unappliedCents = payment.amount.amountMinor - appliedTotal;
       let deltaTotal = 0;
 
       for (const change of input.applications) {
@@ -86,7 +91,18 @@ export class ReallocatePaymentUseCase {
         }
       }
 
-      if (deltaTotal !== 0) {
+      if (input.applications.length === 1) {
+        const singleChange = input.applications[0]!;
+        if (singleChange.deltaCents > 0) {
+          if (singleChange.deltaCents > unappliedCents) {
+            return { ok: false, reason: "invalid" };
+          }
+        } else if (-singleChange.deltaCents > existingApplications
+          .filter((row) => row.invoiceId === singleChange.invoiceId)
+          .reduce((sum, row) => sum + row.amount.amountMinor, 0)) {
+          return { ok: false, reason: "invalid" };
+        }
+      } else if (deltaTotal !== 0) {
         return { ok: false, reason: "invalid" };
       }
 

@@ -28,11 +28,7 @@ export class AdjustInvoiceUseCase {
 
   async execute(input: AdjustInvoiceRequest): Promise<AdjustInvoiceResult> {
     const reason = input.reason.trim();
-    if (
-      reason.length === 0 ||
-      !Number.isInteger(input.amountCents) ||
-      input.amountCents <= 0
-    ) {
+    if (reason.length === 0 || !Number.isInteger(input.amountCents) || input.amountCents === 0) {
       return { ok: false, reason: "invalid" };
     }
 

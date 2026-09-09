@@ -331,7 +331,7 @@ export function computeUnappliedCreditCents(
   }, 0);
 }
 
-export function computeOpenBalanceCents(
+export function computeSumRemainingCents(
   invoices: readonly Invoice[],
   applicationsByInvoiceId: ReadonlyMap<
     import("@dc-inventory/shared-kernel").InvoiceId,
@@ -341,8 +341,6 @@ export function computeOpenBalanceCents(
     import("@dc-inventory/shared-kernel").InvoiceId,
     readonly InvoiceAdjustment[]
   >,
-  payments: readonly Payment[],
-  applicationsByPaymentId: ReadonlyMap<PaymentId, readonly PaymentApplication[]>,
   voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
   asOfContext?: ArAsOfContext,
 ): number {
@@ -365,8 +363,49 @@ export function computeOpenBalanceCents(
       sumRemaining += remaining;
     }
   }
+  return sumRemaining;
+}
+
+export function computeOpenBalanceCents(
+  invoices: readonly Invoice[],
+  applicationsByInvoiceId: ReadonlyMap<
+    import("@dc-inventory/shared-kernel").InvoiceId,
+    readonly PaymentApplication[]
+  >,
+  adjustmentsByInvoiceId: ReadonlyMap<
+    import("@dc-inventory/shared-kernel").InvoiceId,
+    readonly InvoiceAdjustment[]
+  >,
+  payments: readonly Payment[],
+  applicationsByPaymentId: ReadonlyMap<PaymentId, readonly PaymentApplication[]>,
+  voidedPaymentIds: ReadonlySet<PaymentId> = new Set(),
+  asOfContext?: ArAsOfContext,
+): number {
+  const asOf = asOfContext?.asOf;
+  const sumRemaining = computeSumRemainingCents(
+    invoices,
+    applicationsByInvoiceId,
+    adjustmentsByInvoiceId,
+    voidedPaymentIds,
+    asOfContext,
+  );
   const unappliedCredit = computeUnappliedCreditCents(payments, applicationsByPaymentId, asOf);
   return sumRemaining - unappliedCredit;
+}
+
+export function computeExposureCents(
+  sumRemainingCents: number,
+  confirmedUnshippedCents: number,
+  unappliedCreditCents: number,
+): number {
+  return sumRemainingCents + confirmedUnshippedCents - unappliedCreditCents;
+}
+
+export function computeAvailableCreditCents(
+  creditLimitCents: number,
+  exposureCents: number,
+): number {
+  return creditLimitCents - exposureCents;
 }
 
 export function prefillPaymentApplicationsOldestDueFirst(
