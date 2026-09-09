@@ -40,9 +40,9 @@ function daysFromNow(days: number): Date {
 }
 
 /** Relative sell-window bounds so calendar-based sellState stays stable over time. */
-const WINDOW_OPENS = daysFromNow(-7).toISOString();
-const WINDOW_CLOSES = daysFromNow(30).toISOString();
 const INSIDE_WINDOW = daysFromNow(-1);
+const WINDOW_OPENS = INSIDE_WINDOW.toISOString();
+const WINDOW_CLOSES = daysFromNow(30).toISOString();
 const AFTER_WINDOW = daysFromNow(60);
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
@@ -114,6 +114,7 @@ async function startReopenApp() {
   }
 
   const sellWindowRepo = new InMemorySellWindowRepository();
+  const clock = new InMemoryClock(INSIDE_WINDOW);
 
   const postgresLikeUnitOfWork: IUnitOfWork = {
     inventory: {
@@ -129,7 +130,7 @@ async function startReopenApp() {
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),
-    clock: new InMemoryClock(INSIDE_WINDOW),
+    clock,
     staffUsers,
     sessions,
     passwords,
@@ -138,7 +139,11 @@ async function startReopenApp() {
     productPackagingRepo: packagingRepo,
     unitOfWork: postgresLikeUnitOfWork,
     sellWindowRepo,
-    qtyRead: new InventoryReadModelQtyReadAdapter(unitOfWork.inventory.readModel),
+    qtyRead: new InventoryReadModelQtyReadAdapter(
+      unitOfWork.inventory.readModel,
+      sellWindowRepo,
+      clock,
+    ),
   });
   apps.push(app);
   return app;
@@ -258,7 +263,26 @@ describe("POST /internal/inventory/reopen-skus", () => {
       },
     });
     expect(reopen.statusCode).toBe(400);
-    expect(reopen.json()).toEqual({ error: "invalid" });
+    expect(reopen.json()).toEqual({ error: "invalid_sell_window" });
+  });
+
+  it("returns invalid_sell_window when the open date is before UTC today", async () => {
+    const app = await startReopenApp();
+    const session = await staffCookie(app);
+
+    const reopen = await app.inject({
+      method: "POST",
+      url: "/internal/inventory/reopen-skus",
+      headers: { cookie: `${STAFF_SESSION_COOKIE}=${session}` },
+      payload: {
+        name: "Past open",
+        skus: [SKU_A.value],
+        windowOpensAt: daysFromNow(-2).toISOString(),
+        windowClosesAt: WINDOW_CLOSES,
+      },
+    });
+    expect(reopen.statusCode).toBe(400);
+    expect(reopen.json()).toEqual({ error: "invalid_sell_window" });
   });
 });
 
@@ -416,7 +440,11 @@ describe("POST /internal/inventory/close-skus", () => {
       productPackagingRepo: packagingRepo,
       unitOfWork: postgresLikeUnitOfWork,
       sellWindowRepo,
-      qtyRead: new InventoryReadModelQtyReadAdapter(unitOfWork.inventory.readModel),
+      qtyRead: new InventoryReadModelQtyReadAdapter(
+        unitOfWork.inventory.readModel,
+        sellWindowRepo,
+        clock,
+      ),
     });
     apps.push(app);
     const session = await staffCookie(app);
@@ -545,6 +573,9 @@ describe("POST /internal/inventory/close-skus", () => {
       run: (work) => unitOfWork.run(work),
     };
 
+    const reopenWindowOpens = AFTER_WINDOW.toISOString();
+    const reopenWindowCloses = daysFromNow(90).toISOString();
+
     const app = await buildApp({
       logger: false,
       database: new InMemoryDatabase(),
@@ -557,7 +588,11 @@ describe("POST /internal/inventory/close-skus", () => {
       productPackagingRepo: packagingRepo,
       unitOfWork: postgresLikeUnitOfWork,
       sellWindowRepo,
-      qtyRead: new InventoryReadModelQtyReadAdapter(unitOfWork.inventory.readModel),
+      qtyRead: new InventoryReadModelQtyReadAdapter(
+        unitOfWork.inventory.readModel,
+        sellWindowRepo,
+        clock,
+      ),
     });
     apps.push(app);
     const session = await staffCookie(app);
@@ -569,8 +604,8 @@ describe("POST /internal/inventory/close-skus", () => {
       payload: {
         name: "Reopen before close",
         skus: [SKU_A.value, SKU_B.value],
-        windowOpensAt: WINDOW_OPENS,
-        windowClosesAt: WINDOW_CLOSES,
+        windowOpensAt: reopenWindowOpens,
+        windowClosesAt: reopenWindowCloses,
       },
     });
     expect(reopen.statusCode).toBe(200);

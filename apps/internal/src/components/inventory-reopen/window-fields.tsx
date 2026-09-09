@@ -1,4 +1,11 @@
-import { DateInput } from "@dc-inventory/ui";
+"use client";
+
+import { DateRangeInput, Label, LabeledField } from "@dc-inventory/ui";
+import {
+  isIsoCalendarDate,
+  sellWindowDateRangeMessage,
+  utcTodayISO,
+} from "../../lib/inventory-reopen-workflow";
 
 export function WindowFields({
   opensAt,
@@ -6,35 +13,53 @@ export function WindowFields({
   onOpensAt,
   onClosesAt,
   readOnly = false,
+  constrainToFuture = false,
 }: {
   opensAt: string;
   closesAt: string;
   onOpensAt: (value: string) => void;
   onClosesAt: (value: string) => void;
   readOnly?: boolean;
+  constrainToFuture?: boolean;
 }) {
+  const today = utcTodayISO();
+  const rangeError = constrainToFuture
+    ? sellWindowDateRangeMessage(opensAt, closesAt)
+    : opensAt !== "" && closesAt !== "" && closesAt < opensAt
+      ? "Close date must be on or after the open date"
+      : null;
+  const showError = constrainToFuture
+    ? opensAt !== "" && closesAt !== "" && rangeError !== null
+    : rangeError !== null;
+
   return (
-    <div className="flex shrink-0 items-center gap-tight">
-      <DateInput
+    <LabeledField className="w-64 shrink-0">
+      <Label htmlFor="sell-window-dates">Sell window</Label>
+      <DateRangeInput
+        id="sell-window-dates"
         density="compact"
-        className="w-40"
-        value={opensAt}
-        onChange={onOpensAt}
-        yearNavigation
+        value={{
+          from: opensAt === "" ? undefined : opensAt,
+          to: closesAt === "" ? undefined : closesAt,
+        }}
+        onChange={(next) => {
+          onOpensAt(isIsoCalendarDate(next.from) ? next.from : "");
+          onClosesAt(isIsoCalendarDate(next.to) ? next.to : "");
+        }}
+        min={constrainToFuture && !readOnly ? today : undefined}
+        max="2040-12-31"
+        showHint={false}
+        showPresets={false}
         disabled={readOnly}
-        placeholder="Window Opens"
-        aria-label="Window Opens"
+        placeholder="Open – Close"
+        data-testid="sell-window-dates"
+        data-invalid={showError || undefined}
       />
-      <DateInput
-        density="compact"
-        className="w-40"
-        value={closesAt}
-        onChange={onClosesAt}
-        yearNavigation
-        disabled={readOnly}
-        placeholder="Window Closes"
-        aria-label="Window Closes"
-      />
-    </div>
+      {showError ? (
+        <p className="text-body-sm text-error" role="alert">
+          {rangeError}
+        </p>
+      ) : null}
+    </LabeledField>
   );
 }

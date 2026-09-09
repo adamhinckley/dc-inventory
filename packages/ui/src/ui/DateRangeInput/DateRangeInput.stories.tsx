@@ -36,6 +36,26 @@ export const LastSevenDays: Story = {
   },
 }
 
+export const FutureRangeNoPresets: Story = {
+  render: function FutureStory() {
+    const [value, setValue] = useState<DateRangeValue>({})
+    return (
+      <div className="w-80">
+        <DateRangeInput
+          showHint={false}
+          showPresets={false}
+          min="2026-09-08"
+          max="2040-12-31"
+          value={value}
+          onChange={setValue}
+          placeholder="Open – Close"
+          data-testid="story-date-range-future"
+        />
+      </div>
+    )
+  },
+}
+
 export const CompactNoHint: Story = {
   render: function CompactStory() {
     const [value, setValue] = useState<DateRangeValue>({})

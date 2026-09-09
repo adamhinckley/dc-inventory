@@ -25,9 +25,10 @@ const STAFF = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const PO_ID = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440010");
 const REOPEN_A = Sku.parse("REOPEN-UC-A");
 const REOPEN_B = Sku.parse("REOPEN-UC-B");
-const WINDOW_OPENS = new Date("2026-07-01T00:00:00.000Z");
+const WINDOW_OPENS = new Date("2026-07-15T00:00:00.000Z");
 const WINDOW_CLOSES = new Date("2026-08-01T00:00:00.000Z");
 const INSIDE_WINDOW = new Date("2026-07-15T12:00:00.000Z");
+const SCHEDULED_OPENS = new Date("2026-07-01T00:00:00.000Z");
 
 async function lockSku(
   h: ReturnType<typeof demandModelHarness>,
@@ -53,6 +54,7 @@ function reopenUseCase(h: ReturnType<typeof demandModelHarness>) {
     useCase: new RecordReopenSkusForPresellUseCase(
       h.uow.ledger,
       new CreateSellWindowUseCase(sellWindowRepo, clock),
+      clock,
     ),
     list: new ListSellWindowsUseCase(sellWindowRepo, clock),
     get: new GetSellWindowUseCase(sellWindowRepo, clock),
@@ -158,6 +160,22 @@ describe("RecordReopenSkusForPresellUseCase", () => {
     expect(result.reason).toBe("invalid_sell_window");
   });
 
+  it("rejects a window that opens before today", async () => {
+    const h = demandModelHarness(INSIDE_WINDOW);
+    await lockSku(h, REOPEN_A, "reopen-uc-past");
+    const { useCase } = reopenUseCase(h);
+    const result = await useCase.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF,
+      name: "Past open",
+      filterSnapshot: {},
+      skus: [REOPEN_A],
+      windowOpensAt: SCHEDULED_OPENS,
+      windowClosesAt: WINDOW_CLOSES,
+    });
+    expect(result).toEqual({ ok: false, reason: "invalid_sell_window" });
+  });
+
   it("rejects an empty SKU list", async () => {
     const h = demandModelHarness();
     const { useCase } = reopenUseCase(h);
@@ -186,6 +204,7 @@ describe("RecordReopenSkusForPresellUseCase", () => {
             new FailingSellWindowRepository(sellWindowRepo),
             clock,
           ),
+          clock,
         ).execute({
           organizationId: DEFAULT_ORG,
           staffUserId: STAFF,
@@ -217,6 +236,7 @@ describe("RecordReopenSkusForPresellUseCase", () => {
     const useCase = new RecordReopenSkusForPresellUseCase(
       h.uow.ledger,
       new CreateSellWindowUseCase(sellWindowRepo, new InMemoryClock(beforeOpens)),
+      new InMemoryClock(beforeOpens),
     );
     const result = await useCase.execute({
       organizationId: DEFAULT_ORG,
@@ -224,7 +244,7 @@ describe("RecordReopenSkusForPresellUseCase", () => {
       name: "Future block",
       filterSnapshot: {},
       skus: [REOPEN_A],
-      windowOpensAt: WINDOW_OPENS,
+      windowOpensAt: SCHEDULED_OPENS,
       windowClosesAt: WINDOW_CLOSES,
     });
     expect(result.ok).toBe(true);

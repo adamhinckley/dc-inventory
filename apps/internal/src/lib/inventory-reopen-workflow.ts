@@ -107,6 +107,15 @@ export function filterSnapshotToListParams(
   return params;
 }
 
+/** Clone hydration: keep exclude-factory and other visible filters; drop hidden include-factory. */
+export function filterSnapshotToCloneListParams(
+  snapshot: SellWindowFilterSnapshot,
+): ListQueryParams {
+  const params = filterSnapshotToListParams(snapshot);
+  params.supplierId = [];
+  return params;
+}
+
 export function listParamsToFilterSnapshot(
   params: ListQueryParams,
 ): SellWindowFilterSnapshot {
@@ -132,6 +141,26 @@ export function listParamsToFilterSnapshot(
 
 export function isEligibleForSellWindowApply(row: InventoryMatchRow): boolean {
   return !row.inactive && !row.discontinued;
+}
+
+/**
+ * Checked / matching totals for the sell-window review line.
+ * `matchTotal` is the list API `total` for the current filters (first page).
+ * Unloaded rows are treated as checked, same as Save.
+ */
+export function sellWindowMatchCheckSummary(input: {
+  matchTotal: number;
+  loaded: readonly InventoryMatchRow[];
+  checkedSkus: Readonly<Record<string, boolean>>;
+}): { checked: number; total: number } {
+  const skippedLoaded = input.loaded.filter(
+    (row) =>
+      !isEligibleForSellWindowApply(row) || input.checkedSkus[row.sku] === false,
+  ).length;
+  return {
+    checked: Math.max(0, input.matchTotal - skippedLoaded),
+    total: input.matchTotal,
+  };
 }
 
 export function shouldPrefetchInventoryMatches(input: {
@@ -226,7 +255,9 @@ export async function fetchRemainingInventoryMatches(
   return items;
 }
 
-export function parseOptionalWindowInstant(date: string): string | null {
+function parseLocalDateParts(
+  date: string,
+): { year: number; month: number; day: number } | null {
   const trimmed = date.trim();
   if (trimmed === "") {
     return null;
@@ -239,8 +270,71 @@ export function parseOptionalWindowInstant(date: string): string | null {
   if (!year || !month || !day) {
     return null;
   }
-  return new Date(year, month - 1, day).toISOString();
+  return { year, month, day };
 }
+
+/** UTC calendar day key — matches inventory `isSellWindowOpenInThePast`. */
+function utcDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+export function parseOptionalWindowInstant(date: string): string | null {
+  const parts = parseLocalDateParts(date);
+  if (parts === null) {
+    return null;
+  }
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).toISOString();
+}
+
+/** Close instant is the end of the UTC calendar day so same-day ranges are valid. */
+export function parseWindowCloseInstant(date: string): string | null {
+  const parts = parseLocalDateParts(date);
+  if (parts === null) {
+    return null;
+  }
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 23, 59, 59, 999)).toISOString();
+}
+
+export function utcTodayISO(now: Date = new Date()): string {
+  return utcDateKey(now);
+}
+
+/** @deprecated Use {@link utcTodayISO} — sell-window dates follow UTC calendar days. */
+export function localTodayISO(now: Date = new Date()): string {
+  return utcTodayISO(now);
+}
+
+export function isSellWindowOpenDateInThePast(openDate: string, now: Date = new Date()): boolean {
+  const instant = parseOptionalWindowInstant(openDate);
+  if (instant === null) {
+    return false;
+  }
+  return utcDateKey(new Date(instant)) < utcDateKey(now);
+}
+
+export function isIsoCalendarDate(value: string | undefined): value is string {
+  return value !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+export function sellWindowDateRangeMessage(
+  from: string,
+  to: string,
+  now: Date = new Date(),
+): string | null {
+  if (from.trim() === "" || to.trim() === "") {
+    return "Open and close dates are required";
+  }
+  const today = utcTodayISO(now);
+  if (from < today || isSellWindowOpenDateInThePast(from, now)) {
+    return "Window cannot start in the past";
+  }
+  if (to < from) {
+    return "Close date must be on or after the open date";
+  }
+  return null;
+}
+
+export const SELL_WINDOW_PAST_OPEN_MESSAGE = "Window cannot start in the past";
 
 export function instantToDateInput(value: string | null | undefined): string {
   if (value == null || value === "") {
@@ -250,9 +344,9 @@ export function instantToDateInput(value: string | null | undefined): string {
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -263,7 +357,11 @@ export function buildInventoryReopenCommand(
   filterParams: ListQueryParams,
   name: string = "Sell Window",
 ): InventoryReopenCommand {
-  const windowClosesAt = parseOptionalWindowInstant(closesAt);
+  const rangeError = sellWindowDateRangeMessage(opensAt, closesAt);
+  if (rangeError !== null) {
+    throw new Error(rangeError);
+  }
+  const windowClosesAt = parseWindowCloseInstant(closesAt);
   if (windowClosesAt === null) {
     throw new Error("window close date is required");
   }
@@ -292,7 +390,11 @@ export function buildSellWindowOpenCommand(input: {
   opensAt: string;
   closesAt: string;
 }): InventoryReopenCommand {
-  const windowClosesAt = parseOptionalWindowInstant(input.closesAt);
+  const rangeError = sellWindowDateRangeMessage(input.opensAt, input.closesAt);
+  if (rangeError !== null) {
+    throw new Error(rangeError);
+  }
+  const windowClosesAt = parseWindowCloseInstant(input.closesAt);
   if (windowClosesAt === null) {
     throw new Error("window close date is required");
   }

@@ -55,6 +55,21 @@ export function isSellWindowInvalid(
   return false;
 }
 
+function utcDateKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** New windows may not open on a UTC calendar day before `now`. */
+export function isSellWindowOpenInThePast(
+  windowOpensAt: Date | null,
+  now: Date,
+): boolean {
+  if (windowOpensAt === null) {
+    return false;
+  }
+  return utcDateKey(windowOpensAt) < utcDateKey(now);
+}
+
 /** Persist sticky lock when a write observes the sell window has closed. */
 export function observeWindowClose(
   state: DemandPersistedState,

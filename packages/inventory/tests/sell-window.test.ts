@@ -17,6 +17,7 @@ const STAFF = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const SKU_A = Sku.parse("SW-A");
 const SKU_B = Sku.parse("SW-B");
 const OPENS = new Date("2026-07-01T00:00:00.000Z");
+const TODAY_OPENS = new Date("2026-07-15T00:00:00.000Z");
 const CLOSES = new Date("2026-08-01T00:00:00.000Z");
 const INSIDE = new Date("2026-07-15T12:00:00.000Z");
 const BEFORE = new Date("2026-06-15T12:00:00.000Z");
@@ -46,7 +47,7 @@ describe("SellWindow repository ports", () => {
         q: "hat",
         supplierId: ["550e8400-e29b-41d4-a716-446655440001"],
       },
-      windowOpensAt: OPENS,
+      windowOpensAt: TODAY_OPENS,
       windowClosesAt: CLOSES,
       skus: [SKU_A, SKU_B],
     });

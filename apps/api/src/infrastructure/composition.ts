@@ -848,6 +848,7 @@ function inventoryServices(
           return new RecordReopenSkusForPresellUseCase(
             scope.inventory.ledger,
             new CreateSellWindowUseCase(txSellWindows, clock),
+            clock,
           ).execute(input);
         }),
     },

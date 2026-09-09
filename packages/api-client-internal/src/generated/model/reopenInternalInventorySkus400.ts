@@ -4,8 +4,9 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ReopenInternalInventorySkus400Error } from './reopenInternalInventorySkus400Error';
 
 export type ReopenInternalInventorySkus400 = {
-  error: ReopenInternalInventorySkus400Error;
+  error: 'invalid';
+} | {
+  error: 'invalid_sell_window';
 };

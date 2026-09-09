@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
+import { z } from "zod";
 import type { PurchaseOrder } from "@dc-inventory/purchasing";
 import { Sku, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
@@ -7,6 +8,7 @@ import {
   draftUncoveredPurchaseOrdersResponseSchema,
   featureDisabledResponseSchema,
   invalidResponseSchema,
+  invalidSellWindowResponseSchema,
   supplierPoPrefixMissingResponseSchema,
   inventoryStockParamsSchema,
   inventoryStockSnapshotSchema,
@@ -57,6 +59,10 @@ function mapPurchaseOrder(order: PurchaseOrder) {
 
 function sendInvalid(reply: FastifyReply) {
   return reply.code(400).send({ error: "invalid" as const });
+}
+
+function sendInvalidSellWindow(reply: FastifyReply) {
+  return reply.code(400).send({ error: "invalid_sell_window" as const });
 }
 
 function parseWindowInstant(value: string | null | undefined): Date | null | undefined {
@@ -149,7 +155,7 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
         body: reopenInventorySkusBodySchema,
         response: {
           200: reopenInventorySkusResponseSchema,
-          400: invalidResponseSchema,
+          400: z.union([invalidResponseSchema, invalidSellWindowResponseSchema]),
           401: unauthorizedResponseSchema,
           403: featureDisabledResponseSchema,
         },
@@ -179,7 +185,9 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
         windowClosesAt,
       });
       if (!result.ok) {
-        return sendInvalid(reply);
+        return result.reason === "invalid_sell_window"
+          ? sendInvalidSellWindow(reply)
+          : sendInvalid(reply);
       }
       return reply.code(200).send({
         reopenedCount: result.reopenedCount,

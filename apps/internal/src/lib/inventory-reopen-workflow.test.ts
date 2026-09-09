@@ -1,21 +1,26 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildInventoryReopenCommand,
   buildSellWindowOpenCommand,
   enrichSellWindowSkuRows,
   fetchInventoryMatchPages,
   fetchRemainingInventoryMatches,
+  filterSnapshotToCloneListParams,
   filterSnapshotToListParams,
   instantToDateInput,
   INVENTORY_MATCH_PAGE_SIZE,
   isEligibleForSellWindowApply,
+  isSellWindowOpenDateInThePast,
   listAllInternalSellWindows,
+  sellWindowDateRangeMessage,
+  sellWindowMatchCheckSummary,
   listParamsToFilterSnapshot,
   type InventoryMatchListFn,
   parseOptionalWindowInstant,
   sellWindowReadOnly,
   shouldPrefetchInventoryMatches,
   type SellWindowListFn,
+  utcTodayISO,
 } from "./inventory-reopen-workflow";
 
 const sampleRow = {
@@ -30,19 +35,23 @@ const sampleRow = {
 };
 
 describe("inventory reopen workflow", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("maps blank window dates to null instants", () => {
     expect(parseOptionalWindowInstant("")).toBeNull();
     expect(parseOptionalWindowInstant("2027-01-15")).toBe(
-      new Date(2027, 0, 15).toISOString(),
+      new Date(Date.UTC(2027, 0, 15)).toISOString(),
     );
   });
 
-  it("formats instants for DateInput using local calendar days", () => {
-    expect(instantToDateInput(new Date(2027, 0, 15).toISOString())).toBe("2027-01-15");
+  it("formats instants for DateInput using UTC calendar days", () => {
+    expect(instantToDateInput(new Date(Date.UTC(2027, 0, 15)).toISOString())).toBe("2027-01-15");
     expect(instantToDateInput(null)).toBe("");
   });
 
-  it("round-trips local DateInput values through parse and format", () => {
+  it("round-trips UTC DateInput values through parse and format", () => {
     expect(instantToDateInput(parseOptionalWindowInstant("2029-08-20"))).toBe("2029-08-20");
   });
 
@@ -71,10 +80,62 @@ describe("inventory reopen workflow", () => {
     });
   });
 
+  it("rejects past opens and inverted close dates", () => {
+    const now = new Date("2026-09-08T12:00:00.000Z");
+    expect(sellWindowDateRangeMessage("2026-09-07", "2026-12-01", now)).toBe(
+      "Window cannot start in the past",
+    );
+    expect(sellWindowDateRangeMessage("2026-12-02", "2026-12-01", now)).toBe(
+      "Close date must be on or after the open date",
+    );
+    expect(sellWindowDateRangeMessage("2026-09-08", "2026-09-08", now)).toBeNull();
+  });
+
+  it("rejects an open date before UTC today when local calendar is still yesterday", () => {
+    vi.useFakeTimers();
+    const now = new Date("2026-09-09T00:30:00.000Z");
+    vi.setSystemTime(now);
+    expect(utcTodayISO(now)).toBe("2026-09-09");
+    expect(isSellWindowOpenDateInThePast("2026-09-08", now)).toBe(true);
+    expect(sellWindowDateRangeMessage("2026-09-08", "2026-09-15", now)).toBe(
+      "Window cannot start in the past",
+    );
+  });
+
+  it("drops hidden include-factory filters when cloning a sell window snapshot", () => {
+    expect(
+      filterSnapshotToCloneListParams({
+        q: "hat",
+        category: ["Hats"],
+        supplierId: ["00000000-0000-0000-0000-000000000001"],
+        excludeSupplierId: ["00000000-0000-0000-0000-000000000002"],
+      }),
+    ).toEqual({
+      q: "hat",
+      category: ["Hats"],
+      supplierId: [],
+      excludeSupplierId: ["00000000-0000-0000-0000-000000000002"],
+    });
+  });
+
   it("skips inactive and discontinued rows for bulk apply", () => {
     expect(isEligibleForSellWindowApply(sampleRow)).toBe(true);
     expect(isEligibleForSellWindowApply({ ...sampleRow, inactive: true })).toBe(false);
     expect(isEligibleForSellWindowApply({ ...sampleRow, discontinued: true })).toBe(false);
+  });
+
+  it("uses the list total for matching and treats unloaded rows as checked", () => {
+    expect(
+      sellWindowMatchCheckSummary({
+        matchTotal: 1_499,
+        loaded: [
+          sampleRow,
+          { ...sampleRow, sku: "STYLE-B", inactive: true },
+          { ...sampleRow, sku: "STYLE-C" },
+        ],
+        checkedSkus: { "STYLE-A": true, "STYLE-C": false },
+      }),
+    ).toEqual({ checked: 1_497, total: 1_499 });
   });
 
   it("builds a reopen command for eligible filtered matches", () => {
@@ -102,8 +163,8 @@ describe("inventory reopen workflow", () => {
       name: "Spring Hats",
       filterSnapshot: { q: "hat" },
       skus: ["STYLE-A"],
-      windowOpensAt: new Date(2027, 0, 15).toISOString(),
-      windowClosesAt: new Date(2027, 1, 15).toISOString(),
+      windowOpensAt: new Date(Date.UTC(2027, 0, 15)).toISOString(),
+      windowClosesAt: new Date(Date.UTC(2027, 1, 15, 23, 59, 59, 999)).toISOString(),
     });
   });
 
@@ -120,15 +181,15 @@ describe("inventory reopen workflow", () => {
       name: "Spring Hats",
       filterSnapshot: { category: ["Hats"] },
       skus: ["STYLE-A", "STYLE-B"],
-      windowOpensAt: new Date(2027, 0, 15).toISOString(),
-      windowClosesAt: new Date(2029, 5, 1).toISOString(),
+      windowOpensAt: new Date(Date.UTC(2027, 0, 15)).toISOString(),
+      windowClosesAt: new Date(Date.UTC(2029, 5, 1, 23, 59, 59, 999)).toISOString(),
     });
   });
 
   it("requires a close date when building the reopen command", () => {
     expect(() =>
       buildInventoryReopenCommand([sampleRow], "", "", {}, "Spring Hats"),
-    ).toThrow("window close date is required");
+    ).toThrow("Open and close dates are required");
   });
 
   it("marks manually closed windows read-only", () => {
@@ -251,8 +312,10 @@ describe("inventory reopen workflow", () => {
     expect(command.skus).toHaveLength(total);
     expect(command.skus[0]).toBe("SKU-1");
     expect(command.skus.at(-1)).toBe(`SKU-${total}`);
-    expect(command.windowOpensAt).toBe(new Date(2027, 0, 15).toISOString());
-    expect(command.windowClosesAt).toBe(new Date(2027, 1, 15).toISOString());
+    expect(command.windowOpensAt).toBe(new Date(Date.UTC(2027, 0, 15)).toISOString());
+    expect(command.windowClosesAt).toBe(
+      new Date(Date.UTC(2027, 1, 15, 23, 59, 59, 999)).toISOString(),
+    );
   });
 
   it("loads every sell window page until total is covered", async () => {

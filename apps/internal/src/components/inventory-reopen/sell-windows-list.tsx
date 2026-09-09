@@ -25,10 +25,10 @@ export function SellWindowsList() {
         <div className="min-w-0">
           <h2 className="text-heading-sm">Sell Windows</h2>
           <p className="text-body-sm text-fg-secondary">
-            Saved infinity seasons. Open a window to review SKUs or close early.
+            Open a window to review SKUs or close early.
           </p>
         </div>
-        <Link href="/inventory/reopen/new" className={cn(buttonVariants({ variant: "primary" }))}>
+        <Link href="/inventory/reopen/new" className={cn(buttonVariants({ variant: "primary", size: "sm" }))}>
           <Plus className="size-icon" aria-hidden />
           New Window
         </Link>

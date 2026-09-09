@@ -66,6 +66,30 @@ const inputVariants = cva(
 const chromeButtonClass =
   'inline-flex size-5 shrink-0 items-center justify-center border-0 bg-transparent p-0 text-fg-tertiary hover:text-fg transition-colors'
 
+/** Filters options for minQueryLength / virtualize popup empty-state checks. */
+export function filterComboboxOptionsForQuery<T>(
+  options: readonly T[],
+  query: string,
+  filter: (item: T, q: string) => boolean,
+): readonly T[] {
+  const trimmed = query.trim()
+  return options.filter((option) => filter(option, trimmed))
+}
+
+export type ComboboxPopupBranch = 'loading' | 'needs-query' | 'no-options' | 'list'
+
+/** Popup body branch for loading, type-to-search, empty, or list states. */
+export function resolveComboboxPopupBranch(
+  loading: boolean,
+  needsQuery: boolean,
+  queryFilteredItems: readonly unknown[],
+): ComboboxPopupBranch {
+  if (loading) return 'loading'
+  if (needsQuery) return 'needs-query'
+  if (queryFilteredItems.length === 0) return 'no-options'
+  return 'list'
+}
+
 // Async resolver hook — runs the async loader on mount, tracks internal
 // loading state, surfaces resolved options. For static arrays, returns
 // the array as-is. The resource-system dispatchers don't use this path —
@@ -146,6 +170,12 @@ export interface ComboboxProps
    * virtualized consumer or story yet; verify before combining.
    */
   virtualize?: boolean
+  /**
+   * Hide the option list until the typed query is at least this long.
+   * Use for large constrained lists so the field behaves like
+   * autocomplete (type to search) instead of dumping every option.
+   */
+  minQueryLength?: number
   /** Optional override of the auto-derived form/filter name. */
   name?: string
   /** Show a clear button when the input has a value. */
@@ -199,6 +229,7 @@ export function Combobox({
   density,
   clearable = false,
   virtualize = false,
+  minQueryLength = 0,
   disabled,
   className,
   ref,
@@ -247,7 +278,14 @@ export function Combobox({
     value: multiple ? undefined : (baseValue as Option | null),
   })
   const filterFn = (item: Option, q: string) => collator.contains(item, q, (o: Option) => o.label)
-  const virtualItems = virtualize ? resolved.filter((o) => filterFn(o, query.trim())) : resolved
+  const trimmedQuery = query.trim()
+  const needsQuery = minQueryLength > 0 && trimmedQuery.length < minQueryLength
+  const trackQuery = virtualize || minQueryLength > 0
+  const queryFilteredItems =
+    trackQuery && !needsQuery
+      ? filterComboboxOptionsForQuery(resolved, trimmedQuery, filterFn)
+      : resolved
+  const popupBranch = resolveComboboxPopupBranch(loading, needsQuery, queryFilteredItems)
   const hint = helperText && helperText.length > 0 ? helperText : undefined
   const generatedId = useId()
   const id = idProp ?? (hint ? generatedId : undefined)
@@ -271,14 +309,18 @@ export function Combobox({
       }}
       multiple={multiple as never}
       disabled={disabled}
+      {...(trackQuery
+        ? {
+            onInputValueChange: (next: string) => {
+              setQuery(next)
+            },
+          }
+        : {})}
       {...(virtualize
         ? {
             virtualized: true,
             open,
             onOpenChange: setOpen,
-            onInputValueChange: (next: string) => {
-              setQuery(next)
-            },
             filter: filterFn as never,
             // Keyboard navigation across unmounted rows: mirror Base UI's
             // virtualized demo — scroll on programmatic highlights and on
@@ -372,14 +414,16 @@ export function Combobox({
               pii && PII_MASK_CLASS,
             )}
           >
-            {loading ? (
+            {popupBranch === 'loading' ? (
               <div className="item-padding text-xs text-fg-tertiary">Loading...</div>
-            ) : (virtualize ? virtualItems : resolved).length === 0 ? (
+            ) : popupBranch === 'needs-query' ? (
+              <div className="item-padding text-xs text-fg-tertiary">Type to search</div>
+            ) : popupBranch === 'no-options' ? (
               <div className="item-padding text-xs text-fg-tertiary">No options</div>
             ) : virtualize ? (
               <BaseCombobox.List>
                 <ComboboxVirtualList
-                  items={virtualItems}
+                  items={queryFilteredItems}
                   open={open}
                   virtualizerRef={virtualizerRef}
                   data-testid={testid}
@@ -422,7 +466,7 @@ export function Combobox({
 
 interface ComboboxVirtualListProps {
   /** The FILTERED options — must be the same list Base UI's indices track. */
-  items: Option[]
+  items: readonly Option[]
   /** Popup open state — the virtualizer only runs while open. */
   open: boolean
   /** Receives the live virtualizer so Root's `onItemHighlighted` can scroll. */
