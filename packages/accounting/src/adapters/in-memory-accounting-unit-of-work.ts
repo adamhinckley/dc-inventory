@@ -1,11 +1,14 @@
-import type { IAccountingUnitOfWork, IInvoiceRepository } from "../domain/ports/invoice-repository.js";
+import type {
+  IAccountingRepository,
+  IAccountingUnitOfWork,
+} from "../domain/ports/invoice-repository.js";
 import { InMemoryInvoiceRepository } from "./in-memory-invoice-repository.js";
 
 export class InMemoryAccountingUnitOfWork implements IAccountingUnitOfWork {
-  readonly invoices: IInvoiceRepository;
+  readonly invoices: IAccountingRepository;
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(invoices?: IInvoiceRepository) {
+  constructor(invoices?: IAccountingRepository) {
     this.invoices = invoices ?? new InMemoryInvoiceRepository();
   }
 

@@ -1,6 +1,8 @@
 import { InvoiceId, OrganizationId } from "@dc-inventory/shared-kernel";
 import { computeRemainingCents } from "../domain/invoice.js";
 import type { IInvoiceRepository } from "../domain/ports/invoice-repository.js";
+import { supportsAccountingRepository } from "../domain/ports/invoice-repository.js";
+import { collectVoidedPaymentIds } from "./customer-payment-support.js";
 
 export type GetInvoiceRequest = {
   staffUserId: import("@dc-inventory/shared-kernel").StaffUserId;
@@ -36,7 +38,21 @@ export class GetInvoiceUseCase {
       return { ok: false, reason: "not_found" };
     }
     const applications = await this.invoices.listApplications(invoice.id);
-    const remainingCents = computeRemainingCents(invoice, applications);
+    let remainingCents = computeRemainingCents(invoice, applications);
+    if (supportsAccountingRepository(this.invoices)) {
+      const adjustments = await this.invoices.listAdjustments(invoice.id);
+      const voidedPaymentIds = await collectVoidedPaymentIds(
+        this.invoices,
+        input.organizationId,
+        applications.map((row) => row.paymentId),
+      );
+      remainingCents = computeRemainingCents(
+        invoice,
+        applications,
+        voidedPaymentIds,
+        adjustments,
+      );
+    }
     return {
       ok: true,
       invoice: {
