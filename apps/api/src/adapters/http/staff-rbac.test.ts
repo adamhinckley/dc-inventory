@@ -30,7 +30,7 @@ async function startRbacApp() {
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
 
   for (const [index, role] of (
-    ["admin", "purchasing", "warehouse", "sales_support"] as const
+    ["admin", "purchasing", "warehouse", "sales_support", "accounting"] as const
   ).entries()) {
     await staffUsers.save({
       id: StaffUserId.parse(`10000000-0000-4000-8000-00000000000${index}`),
@@ -236,5 +236,241 @@ describe("staff RBAC HTTP guard", () => {
       },
     });
     expect(allowedPayment.statusCode).toBe(404);
+
+    const accounting = await cookie("accounting");
+    const accountingPayment = await app.inject({
+      method: "POST",
+      url: `/internal/invoices/${RESOURCE_ID}/record-payment`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: {
+        amountCents: 100,
+        currency: "USD",
+        idempotencyKey: "payment-accounting",
+      },
+    });
+    expect(accountingPayment.statusCode).toBe(404);
+  });
+
+  it("requires credit_limit_manage to change customer credit limit", async () => {
+    const { app, cookie } = await startRbacApp();
+    const admin = await cookie("admin");
+    const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "RBAC Credit Customer",
+        creditLimitCents: 1_000_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    expectForbidden(
+      await app.inject({
+        method: "PATCH",
+        url: `/internal/customers/${customerId}`,
+        cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+        payload: { creditLimitCents: 2_000_000 },
+      }),
+    );
+
+    const allowedName = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+      payload: { name: "RBAC Credit Customer Updated" },
+    });
+    expect(allowedName.statusCode).toBe(200);
+
+    const allowedCredit = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: { creditLimitCents: 2_000_000 },
+    });
+    expect(allowedCredit.statusCode).toBe(200);
+    expect(allowedCredit.json()).toMatchObject({ creditLimitCents: 2_000_000 });
+  });
+
+  it("allows sparse Save Changes bodies for purchasing and accounting-only staff", async () => {
+    const { app, cookie } = await startRbacApp();
+    const admin = await cookie("admin");
+    const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Sparse Patch Customer",
+        creditLimitCents: 1_000_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    const purchasingNameOnly = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+      payload: { name: "Sparse Patch Customer Renamed" },
+    });
+    expect(purchasingNameOnly.statusCode).toBe(200);
+    expect(purchasingNameOnly.json()).toMatchObject({
+      name: "Sparse Patch Customer Renamed",
+      creditLimitCents: 1_000_000,
+    });
+
+    const accountingCreditOnly = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: { creditLimitCents: 2_500_000 },
+    });
+    expect(accountingCreditOnly.statusCode).toBe(200);
+    expect(accountingCreditOnly.json()).toMatchObject({
+      name: "Sparse Patch Customer Renamed",
+      creditLimitCents: 2_500_000,
+    });
+  });
+
+  it("requires both actions when credit and master-data fields are patched together", async () => {
+    const { app, cookie } = await startRbacApp();
+    const admin = await cookie("admin");
+    const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Dual Action Customer",
+        creditLimitCents: 1_000_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    const mixedPayload = {
+      name: "Dual Action Customer Updated",
+      creditLimitCents: 3_000_000,
+    };
+
+    expectForbidden(
+      await app.inject({
+        method: "PATCH",
+        url: `/internal/customers/${customerId}`,
+        cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+        payload: mixedPayload,
+      }),
+    );
+
+    expectForbidden(
+      await app.inject({
+        method: "PATCH",
+        url: `/internal/customers/${customerId}`,
+        cookies: { [STAFF_SESSION_COOKIE]: accounting },
+        payload: mixedPayload,
+      }),
+    );
+
+    const allowedAdmin = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: mixedPayload,
+    });
+    expect(allowedAdmin.statusCode).toBe(200);
+    expect(allowedAdmin.json()).toMatchObject({
+      name: "Dual Action Customer Updated",
+      creditLimitCents: 3_000_000,
+    });
+  });
+
+  it("gates customer create credit fields separately from master data", async () => {
+    const { app, cookie } = await startRbacApp();
+    const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
+    const admin = await cookie("admin");
+
+    const purchasingCreate = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+      payload: {
+        name: "Purchasing Create Customer",
+        terms: "Net 30",
+      },
+    });
+    expect(purchasingCreate.statusCode).toBe(201);
+    expect(purchasingCreate.json()).toMatchObject({
+      name: "Purchasing Create Customer",
+      creditLimitCents: 0,
+    });
+
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: "/internal/customers",
+        cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+        payload: {
+          name: "Purchasing Create With Credit",
+          creditLimitCents: 500_000,
+          currency: "USD",
+          terms: "Net 30",
+        },
+      }),
+    );
+
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: "/internal/customers",
+        cookies: { [STAFF_SESSION_COOKIE]: accounting },
+        payload: {
+          name: "Accounting Create Customer",
+          terms: "Net 30",
+        },
+      }),
+    );
+
+    const accountingCreateWithCredit = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: {
+        name: "Accounting Create With Credit",
+        creditLimitCents: 750_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(accountingCreateWithCredit.statusCode).toBe(403);
+
+    const adminCreateWithCredit = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Admin Create With Credit",
+        creditLimitCents: 500_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(adminCreateWithCredit.statusCode).toBe(201);
+    expect(adminCreateWithCredit.json()).toMatchObject({ creditLimitCents: 500_000 });
   });
 });

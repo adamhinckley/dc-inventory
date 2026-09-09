@@ -18,7 +18,7 @@ Do not edit `invariants.md` §18 or tick `open-questions.md` because of this fil
 
 - Better Auth is **deferred**. Phase 1 uses opaque staff and wholesale sessions (HttpOnly cookies), not Better Auth `user` / `session` / `account` / `verification` tables.
 - Phase 0 migrate still lands on **empty** Postgres. Phase 1 local/demo rows come from `pnpm db:seed:phase1` (not a migration, not CSV). The Phase 3 `pnpm seed:demo` command fills the full stakeholder bench independently.
-- **Staff acting:** `staff@local.test` (admin) can wholesale-login with `PHASE1_STAFF_PASSWORD`, list picker customers, select one, then use shop data routes. The demo seeds `wholesale@local.test` on Acme Wholesale and `northstar@local.test` on Northstar Big Box so picker smoke and buyer isolation tests have two shop customers with wholesale logins.
+- **Staff acting:** `staff@local.test` (`admin` + `accounting`) can wholesale-login with `PHASE1_STAFF_PASSWORD`, list picker customers, select one, then use shop data routes. The demo seeds `wholesale@local.test` on Acme Wholesale and `northstar@local.test` on Northstar Big Box so picker smoke and buyer isolation tests have two shop customers with wholesale logins.
 - Catalog image **upload** against MinIO. MinIO boots so the box is complete; `IFileStorage` is not wired.
 - Neon / production hosting and production secrets.
 - Software-payment UI. Licensing and operator_bridge rows exist after migrate; they are not shown on ops/internal/wholesale screens in Phase 0. `IOperatorPlatform` stays no-op.

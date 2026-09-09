@@ -11,15 +11,50 @@ import type {
 } from "fastify";
 import { forbiddenResponseSchema } from "../../schemas.js";
 
+type CustomerWriteBody = {
+  creditLimitCents?: number;
+  currency?: string;
+  name?: string;
+  terms?: string;
+  taxId?: string | null;
+  accountStatus?: string;
+  customerNote?: string | null;
+  staffNote?: string | null;
+  customerNumber?: string | null;
+};
+
+function customerCreditActions(body: CustomerWriteBody | undefined): StaffAction[] {
+  if (body?.creditLimitCents !== undefined || body?.currency !== undefined) {
+    return ["credit_limit_manage"];
+  }
+  return [];
+}
+
+function createInternalCustomerActions(request: FastifyRequest): readonly StaffAction[] {
+  return ["master_data_manage", ...customerCreditActions(request.body as CustomerWriteBody | undefined)];
+}
+
+function updateInternalCustomerActions(request: FastifyRequest): readonly StaffAction[] {
+  const body = request.body as CustomerWriteBody | undefined;
+  const actions: StaffAction[] = [...customerCreditActions(body)];
+  const touchesOtherFields =
+    body !== undefined &&
+    Object.keys(body).some((key) => key !== "creditLimitCents" && key !== "currency");
+  if (touchesOtherFields) {
+    actions.push("master_data_manage");
+  }
+  return actions;
+}
+
 const ACTION_BY_OPERATION: Readonly<
-  Record<string, StaffAction | readonly StaffAction[]>
+  Record<string, StaffAction | readonly StaffAction[] | ((request: FastifyRequest) => readonly StaffAction[])>
 > = {
   importInternalProducts: "master_data_manage",
   createInternalProduct: "master_data_manage",
   updateInternalProduct: "master_data_manage",
   updateInternalProductBySku: "master_data_manage",
-  createInternalCustomer: "master_data_manage",
-  updateInternalCustomer: "master_data_manage",
+  createInternalCustomer: createInternalCustomerActions,
+  updateInternalCustomer: updateInternalCustomerActions,
   createInternalCustomerContact: "master_data_manage",
   updateInternalCustomerContact: "master_data_manage",
   createInternalCustomerShipTo: "master_data_manage",
@@ -64,14 +99,23 @@ function operationId(schema: FastifySchema | undefined): string | undefined {
   return (schema as OperationSchema | undefined)?.operationId;
 }
 
-function asActions(mapped: StaffAction | readonly StaffAction[]): readonly StaffAction[] {
+function asActions(
+  mapped: StaffAction | readonly StaffAction[] | ((request: FastifyRequest) => readonly StaffAction[]),
+  request: FastifyRequest,
+): readonly StaffAction[] {
+  if (typeof mapped === "function") {
+    return mapped(request);
+  }
   if (Array.isArray(mapped)) {
     return mapped;
   }
   return [mapped as StaffAction];
 }
 
-function actionsFor(schema: FastifySchema | undefined): readonly StaffAction[] | undefined {
+function actionsFor(
+  schema: FastifySchema | undefined,
+  request: FastifyRequest,
+): readonly StaffAction[] | undefined {
   const id = operationId(schema);
   if (id === undefined) {
     return undefined;
@@ -80,12 +124,12 @@ function actionsFor(schema: FastifySchema | undefined): readonly StaffAction[] |
   if (mapped === undefined) {
     return undefined;
   }
-  return asActions(mapped);
+  return asActions(mapped, request);
 }
 
-function actionFor(schema: FastifySchema | undefined): StaffAction | undefined {
-  const actions = actionsFor(schema);
-  return actions === undefined ? undefined : actions[0];
+function hasStaffActionMapping(schema: FastifySchema | undefined): boolean {
+  const id = operationId(schema);
+  return id !== undefined && ACTION_BY_OPERATION[id] !== undefined;
 }
 
 function sendForbidden(reply: FastifyReply) {
@@ -98,8 +142,7 @@ export function registerStaffActionGuard(app: FastifyInstance): void {
     if (!methods.some((method) => WRITE_METHODS.has(method))) {
       return;
     }
-    const action = actionFor(route.schema);
-    if (action === undefined) {
+    if (!hasStaffActionMapping(route.schema)) {
       throw new Error(
         `Internal write operation ${operationId(route.schema) ?? route.url} has no staff action`,
       );
@@ -112,7 +155,7 @@ export function registerStaffActionGuard(app: FastifyInstance): void {
   });
 
   app.addHook("preHandler", async (request: FastifyRequest, reply) => {
-    const actions = actionsFor(request.routeOptions.schema);
+    const actions = actionsFor(request.routeOptions.schema, request);
     if (actions === undefined) {
       return;
     }

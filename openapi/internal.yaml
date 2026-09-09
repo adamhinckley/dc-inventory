@@ -56,6 +56,7 @@ paths:
                         - purchasing
                         - warehouse
                         - sales_support
+                        - accounting
                 required:
                   - staffUserId
                   - email
@@ -162,6 +163,7 @@ paths:
                         - purchasing
                         - warehouse
                         - sales_support
+                        - accounting
                 required:
                   - staffUserId
                   - email
@@ -443,7 +445,6 @@ paths:
                   type: string
               required:
                 - name
-                - creditLimitCents
                 - terms
       responses:
         "201":

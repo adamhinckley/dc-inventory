@@ -13,4 +13,5 @@ export const GetInternalSession200RolesItem = {
   purchasing: 'purchasing',
   warehouse: 'warehouse',
   sales_support: 'sales_support',
+  accounting: 'accounting',
 } as const;

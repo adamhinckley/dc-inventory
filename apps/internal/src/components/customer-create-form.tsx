@@ -30,7 +30,7 @@ export function CustomerCreateForm() {
         data: {
           name: data.name,
           terms: data.terms,
-          creditLimitCents: data.creditLimitCents,
+          ...(data.creditLimitCents !== 0 ? { creditLimitCents: data.creditLimitCents } : {}),
           customerNumber:
             data.customerNumber !== undefined && data.customerNumber.trim().length > 0
               ? data.customerNumber.trim()

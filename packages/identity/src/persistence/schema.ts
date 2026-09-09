@@ -41,6 +41,7 @@ export const staffRole = identity.enum("staff_role", [
   "purchasing",
   "warehouse",
   "sales_support",
+  "accounting",
 ]);
 
 function timestamps() {

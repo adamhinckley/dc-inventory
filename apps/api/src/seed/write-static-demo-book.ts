@@ -15,6 +15,7 @@ import {
   SupplierId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import { withDemoStaffRoles } from "./demo-staff-roles.js";
 import type { DemoBookPlan } from "./planner/types.js";
 import { DEMO_NAMED_CUSTOMERS } from "./reconciliation/expectations.js";
 import { Phase1SeedError, type Phase1SeedSecrets } from "./run-phase1-seed.js";
@@ -284,7 +285,7 @@ export async function runWriteStaticDemoBook(
     organizationId: OrganizationId.DEFAULT,
     email: plan.master.staffEmail,
     passwordHash: await ports.passwords.hash(staffPassword),
-    roles: existingStaff?.roles ?? ["admin"],
+    roles: withDemoStaffRoles(existingStaff?.roles),
   };
   await ports.staffUsers.save(staff);
 

@@ -35,7 +35,9 @@ export const staffSessionResponseSchema = z.object({
   staffUserId: z.string().uuid(),
   email: z.string(),
   organizationId: z.string(),
-  roles: z.array(z.enum(["admin", "purchasing", "warehouse", "sales_support"])),
+  roles: z.array(
+    z.enum(["admin", "purchasing", "warehouse", "sales_support", "accounting"]),
+  ),
 });
 
 export const wholesaleSessionResponseSchema = z.object({
@@ -568,7 +570,7 @@ export const customersListTable = {
 
 export const customerWriteBodySchema = z.object({
   name: z.string().min(1),
-  creditLimitCents: z.number().int(),
+  creditLimitCents: z.number().int().optional(),
   currency: z.string().length(3).optional(),
   terms: z.string().min(1),
   customerNumber: z.string().min(1).optional().nullable(),
