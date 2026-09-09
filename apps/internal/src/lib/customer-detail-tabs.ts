@@ -4,6 +4,7 @@ export const CUSTOMER_DETAIL_TAB_KEYS = [
   "contacts",
   "certificates",
   "orders",
+  "accounting",
 ] as const;
 
 export type CustomerDetailTabKey = (typeof CUSTOMER_DETAIL_TAB_KEYS)[number];
@@ -16,6 +17,7 @@ export const CUSTOMER_DETAIL_TAB_LABELS: Record<CustomerDetailTabKey, string> = 
   contacts: "Contacts",
   certificates: "Certificates",
   orders: "Orders",
+  accounting: "Accounting",
 };
 
 export function customerDetailTabHref(

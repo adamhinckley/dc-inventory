@@ -23,6 +23,7 @@ import { CustomerBillToPanel } from "./customer-bill-to-panel";
 import { CustomerCertificatesPanel } from "./customer-certificates-panel";
 import { CustomerContactsPanel } from "./customer-contacts-panel";
 import { CustomerEditForm } from "./customer-edit-form";
+import { CustomerAccountingPanel } from "./customer-accounting-panel";
 import { CustomerOrdersPanel } from "./customer-orders-panel";
 import { CustomerShipTosPanel } from "./customer-ship-tos-panel";
 
@@ -91,6 +92,8 @@ function CustomerDetailTabPanel({
           initialParams={ordersInitialParams}
         />
       );
+    case "accounting":
+      return <CustomerAccountingPanel customerId={customerId} />;
   }
 }
 
