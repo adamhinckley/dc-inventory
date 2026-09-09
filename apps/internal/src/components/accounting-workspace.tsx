@@ -1,15 +1,17 @@
 "use client";
 
 import { RouterTabs } from "@dc-inventory/ui";
-import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { accountingTabHref } from "../lib/accounting-url-params";
+import {
+  ACCOUNTING_BALANCES_PATH,
+  ACCOUNTING_PAYMENTS_PATH,
+} from "../lib/accounting-url-params";
+import { useAccountingUrl } from "../lib/use-accounting-url";
 
-export { accountingTabHref };
+export { accountingTabHref } from "../lib/accounting-url-params";
 
 export function AccountingWorkspace({ children }: { children: ReactNode }) {
-  const searchParams = useSearchParams();
-  const search = searchParams.toString();
+  const { tabHref } = useAccountingUrl();
 
   return (
     <RouterTabs
@@ -17,12 +19,10 @@ export function AccountingWorkspace({ children }: { children: ReactNode }) {
       data-testid="accounting-page-router-tabs"
     >
       <RouterTabs.List>
-        <RouterTabs.Trigger href={accountingTabHref("/accounting", search)} exact>
+        <RouterTabs.Trigger href={tabHref(ACCOUNTING_BALANCES_PATH)} exact>
           Balances
         </RouterTabs.Trigger>
-        <RouterTabs.Trigger
-          href={accountingTabHref("/accounting/payments", search)}
-        >
+        <RouterTabs.Trigger href={tabHref(ACCOUNTING_PAYMENTS_PATH)}>
           Payments
         </RouterTabs.Trigger>
       </RouterTabs.List>

@@ -7,25 +7,30 @@ import {
 import {
   Button,
   Chip,
-  DateInput,
+  DateRangeInput,
   formatMoneyMinorUnits,
 } from "@dc-inventory/ui";
+import { CalendarRange } from "lucide-react";
 import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
 import Link from "next/link";
-import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
 import {
   accountingAppliedUnappliedLabel,
   accountingPaymentMethodLabel,
 } from "../lib/accounting-display";
+import { accountingPaymentsListTable } from "../lib/accounting-list-table";
 import type { AccountingPaymentRow } from "../lib/accounting-types";
 import {
+  accountingAsOfFromSearchParams,
   accountingPaymentDateRange,
-  replaceAccountingSharedParams,
-  replaceAccountingTableUrlParams,
+  accountingPaymentRangeFromSearchParams,
   type AccountingPaymentRange,
 } from "../lib/accounting-url-params";
+import { useAccountingUrl } from "../lib/use-accounting-url";
 import { formatNullableDate } from "../lib/customer-accounting-format";
 import { customerDetailTabHref } from "../lib/customer-detail-tabs";
+import { searchParamsToRecord } from "../lib/table-url-params";
 
 type PaymentsListParams = NonNullable<
   Parameters<typeof useListInternalAccountingPayments>[0]
@@ -33,34 +38,31 @@ type PaymentsListParams = NonNullable<
 
 function PaymentsRangeToolbar({
   asOf,
-  initialRange,
-  initialFrom,
-  initialTo,
+  range,
+  from,
+  to,
 }: {
   asOf: string;
-  initialRange: AccountingPaymentRange;
-  initialFrom: string;
-  initialTo: string;
+  range: AccountingPaymentRange;
+  from: string;
+  to: string;
 }) {
-  const [range, setRange] = useState(initialRange);
-  const [from, setFrom] = useState(initialFrom);
-  const [to, setTo] = useState(initialTo);
+  const { setSharedParams } = useAccountingUrl();
 
   const setRangeMode = (next: AccountingPaymentRange) => {
-    setRange(next);
     if (next === "custom") {
-      replaceAccountingSharedParams({ range: "custom" });
-      replaceAccountingTableUrlParams(listInternalAccountingPaymentsTable, {
+      setSharedParams({
+        range: "custom",
         from,
         to,
       });
       return;
     }
-    replaceAccountingSharedParams({ range: next === "mtd" ? null : next });
-    const computed = accountingPaymentDateRange(asOf, next, { from, to });
-    setFrom(computed.from);
-    setTo(computed.to);
-    replaceAccountingTableUrlParams(listInternalAccountingPaymentsTable, computed);
+    setSharedParams({
+      range: next === "mtd" ? null : next,
+      from: null,
+      to: null,
+    });
   };
 
   return (
@@ -83,41 +85,27 @@ function PaymentsRangeToolbar({
             size="sm"
             onClick={() => setRangeMode(value)}
           >
+            <CalendarRange className="size-icon-sm" aria-hidden />
             {label}
           </Button>
         ))}
       </div>
       {range === "custom" ? (
-        <div className="flex items-center gap-action">
-          <DateInput
-            density="compact"
-            value={from}
-            max={to}
-            className="w-40 shrink-0"
-            onChange={(value) => {
-              setFrom(value);
-              replaceAccountingTableUrlParams(listInternalAccountingPaymentsTable, {
-                from: value,
-                to,
-              });
-            }}
-          />
-          <span className="text-fg-tertiary">to</span>
-          <DateInput
-            density="compact"
-            value={to}
-            min={from}
-            max={asOf}
-            className="w-40 shrink-0"
-            onChange={(value) => {
-              setTo(value);
-              replaceAccountingTableUrlParams(listInternalAccountingPaymentsTable, {
-                from,
-                to: value,
-              });
-            }}
-          />
-        </div>
+        <DateRangeInput
+          density="compact"
+          showHint={false}
+          showPresets={false}
+          className="w-64 shrink-0"
+          value={{ from, to }}
+          max={asOf}
+          onChange={(next) => {
+            setSharedParams({
+              range: "custom",
+              from: next.from ?? from,
+              to: next.to ?? to,
+            });
+          }}
+        />
       ) : null}
     </div>
   );
@@ -126,19 +114,30 @@ function PaymentsRangeToolbar({
 export function AccountingPaymentsTable({
   initialParams,
   asOf,
-  initialRange,
-  initialFrom,
-  initialTo,
 }: {
   initialParams?: ListQueryParams;
   asOf: string;
-  initialRange: AccountingPaymentRange;
-  initialFrom: string;
-  initialTo: string;
 }) {
-  const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceAccountingTableUrlParams(listInternalAccountingPaymentsTable, params);
-  }, []);
+  const { setTableParams } = useAccountingUrl();
+  const searchParams = useSearchParams();
+  const searchRecord = useMemo(
+    () => searchParamsToRecord(searchParams),
+    [searchParams],
+  );
+  const range = accountingPaymentRangeFromSearchParams(searchRecord);
+  const { from, to } = accountingPaymentDateRange(asOf, range, searchRecord);
+  const remountKey = useMemo(
+    () =>
+      `${searchParams.get("asOf") ?? ""}:${searchParams.get("range") ?? "mtd"}:${searchParams.get("from") ?? ""}:${searchParams.get("to") ?? ""}`,
+    [searchParams],
+  );
+
+  const onParamsChange = useCallback(
+    (params: ListQueryParams) => {
+      setTableParams(listInternalAccountingPaymentsTable, params);
+    },
+    [setTableParams],
+  );
 
   const getRowHref = useCallback(
     (row: AccountingPaymentRow) =>
@@ -157,7 +156,8 @@ export function AccountingPaymentsTable({
 
   return (
     <DataTable.Root<PaymentsListParams, AccountingPaymentRow>
-      meta={listInternalAccountingPaymentsTable}
+      key={remountKey}
+      meta={accountingPaymentsListTable}
       queryHook={
         useListInternalAccountingPayments as ListQueryHook<
           PaymentsListParams,
@@ -196,7 +196,6 @@ export function AccountingPaymentsTable({
             })}
           </span>
         ),
-        unappliedCents: () => null,
         voided: (row) =>
           row.voided ? (
             <Chip
@@ -212,12 +211,7 @@ export function AccountingPaymentsTable({
       idPrefix="accounting-payments"
     >
       <DataTable.Toolbar>
-        <PaymentsRangeToolbar
-          asOf={asOf}
-          initialRange={initialRange}
-          initialFrom={initialFrom}
-          initialTo={initialTo}
-        />
+        <PaymentsRangeToolbar asOf={asOf} range={range} from={from} to={to} />
       </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />

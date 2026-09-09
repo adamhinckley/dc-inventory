@@ -4,22 +4,19 @@ import { useGetInternalAccountingSummary } from "@dc-inventory/api-client-intern
 import type { AccountingAgingBucket } from "../lib/accounting-types";
 import { Button, DateInput, ExplorerView } from "@dc-inventory/ui";
 import { CalendarDays } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { useCallback, type ReactNode } from "react";
 import {
   accountingAsOfFromSearchParams,
   accountingBucketFromSearchParams,
-  replaceAccountingSharedParams,
 } from "../lib/accounting-url-params";
 import { todayIsoDate } from "../lib/customer-accounting-format";
-import { searchParamsToRecord } from "../lib/table-url-params";
+import { useAccountingUrl } from "../lib/use-accounting-url";
 import { AccountingAgingStrip } from "./accounting-aging-strip";
 import { AccountingKpiStrip } from "./accounting-kpi-strip";
 import { AccountingWorkspace } from "./accounting-workspace";
 
 export function AccountingExplorer({ children }: { children: ReactNode }) {
-  const searchParams = useSearchParams();
-  const searchRecord = searchParamsToRecord(searchParams);
+  const { searchRecord, setSharedParams } = useAccountingUrl();
   const asOf = accountingAsOfFromSearchParams(searchRecord);
   const activeBucket = accountingBucketFromSearchParams(searchRecord);
   const today = todayIsoDate();
@@ -31,18 +28,18 @@ export function AccountingExplorer({ children }: { children: ReactNode }) {
 
   const onAsOfChange = useCallback(
     (value: string) => {
-      replaceAccountingSharedParams({
+      setSharedParams({
         asOf: value === today ? null : value,
       });
     },
-    [today],
+    [setSharedParams, today],
   );
 
   const onBucketChange = useCallback(
     (bucket: AccountingAgingBucket | null) => {
-      replaceAccountingSharedParams({ bucket });
+      setSharedParams({ bucket });
     },
-    [],
+    [setSharedParams],
   );
 
   return (

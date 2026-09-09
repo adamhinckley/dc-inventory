@@ -26,9 +26,10 @@ export function AccountingAgingStrip({
 
   return (
     <div
-      className="grid grid-cols-7 gap-tight"
+      className="overflow-x-auto"
       data-testid="accounting-aging-strip"
     >
+      <div className="grid min-w-[52rem] grid-cols-7 gap-tight">
       {AGING_BUCKET_KEYS.map((key, index) => {
         const amount = aging[key];
         const isActive = activeBucket === key;
@@ -67,6 +68,7 @@ export function AccountingAgingStrip({
           </button>
         );
       })}
+      </div>
     </div>
   );
 }

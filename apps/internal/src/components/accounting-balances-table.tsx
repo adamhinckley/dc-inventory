@@ -7,10 +7,12 @@ import {
 import { Chip, formatMoneyMinorUnits } from "@dc-inventory/ui";
 import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
 import Link from "next/link";
-import { useCallback, type CSSProperties, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
 import { accountingCreditLimitLabel } from "../lib/accounting-display";
-import { replaceAccountingTableUrlParams } from "../lib/accounting-url-params";
+import { accountingBalancesListTable } from "../lib/accounting-list-table";
 import type { AccountingBalanceRow } from "../lib/accounting-types";
+import { useAccountingUrl } from "../lib/use-accounting-url";
 import { formatNullableDate } from "../lib/customer-accounting-format";
 import { customerDetailTabHref } from "../lib/customer-detail-tabs";
 
@@ -25,14 +27,23 @@ export function AccountingBalancesTable({
 }: {
   initialParams?: ListQueryParams;
 }) {
-  const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceAccountingTableUrlParams(
-      listInternalAccountingCustomerBalancesTable,
-      params,
-    );
-  }, []);
+  const { setTableParams } = useAccountingUrl();
+  const searchParams = useSearchParams();
+  const remountKey = useMemo(
+    () =>
+      `${searchParams.get("asOf") ?? ""}:${searchParams.get("bucket") ?? ""}`,
+    [searchParams],
+  );
 
-  const getRowHref = useCallback((row: AccountingBalanceRow) =>
+  const onParamsChange = useCallback(
+    (params: ListQueryParams) => {
+      setTableParams(listInternalAccountingCustomerBalancesTable, params);
+    },
+    [setTableParams],
+  );
+
+  const getRowHref = useCallback(
+    (row: AccountingBalanceRow) =>
       customerDetailTabHref(row.customerId, "accounting"),
     [],
   );
@@ -48,7 +59,8 @@ export function AccountingBalancesTable({
 
   return (
     <DataTable.Root<BalancesListParams, AccountingBalanceRow>
-      meta={listInternalAccountingCustomerBalancesTable}
+      key={remountKey}
+      meta={accountingBalancesListTable}
       queryHook={
         useListInternalAccountingCustomerBalances as ListQueryHook<
           BalancesListParams,

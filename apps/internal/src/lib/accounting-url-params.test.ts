@@ -1,24 +1,153 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACCOUNTING_BALANCES_PATH,
+  ACCOUNTING_PAYMENTS_PATH,
   accountingAsOfFromSearchParams,
   accountingBalancesInitialParams,
   accountingPaymentDateRange,
   accountingPaymentsInitialParams,
   accountingPaymentRangeFromSearchParams,
+  accountingSearchQueryString,
   accountingTabHref,
+  accountingUrlParamsForPath,
+  applyAccountingSharedPatch,
+  applyAccountingTableParams,
   formatPastDuePercentLabel,
   monthStartIsoDate,
 } from "./accounting-url-params";
+import { listInternalAccountingCustomerBalancesTable } from "@dc-inventory/api-client-internal";
 
 describe("accountingTabHref", () => {
-  it("carries the current query onto the sibling tab", () => {
+  it("carries as-of onto the sibling tab without balances list keys", () => {
     expect(
-      accountingTabHref("/accounting/payments", "asOf=2026-08-01&range=mtd"),
-    ).toBe("/accounting/payments?asOf=2026-08-01&range=mtd");
+      accountingTabHref(ACCOUNTING_PAYMENTS_PATH, {
+        asOf: "2026-08-01",
+        q: "al's",
+        page: "2",
+        sortBy: "pastDueCents",
+        bucket: "31-45",
+      }),
+    ).toBe("/accounting/payments?asOf=2026-08-01");
+  });
+
+  it("carries as-of and bucket onto balances without payments range keys", () => {
+    expect(
+      accountingTabHref(ACCOUNTING_BALANCES_PATH, {
+        asOf: "2026-08-01",
+        range: "custom",
+        from: "2026-08-01",
+        to: "2026-08-15",
+        page: "3",
+      }),
+    ).toBe("/accounting?asOf=2026-08-01");
   });
 
   it("stays a bare path when the query is empty", () => {
-    expect(accountingTabHref("/accounting", "")).toBe("/accounting");
+    expect(accountingTabHref(ACCOUNTING_BALANCES_PATH, {})).toBe(
+      ACCOUNTING_BALANCES_PATH,
+    );
+  });
+});
+
+describe("applyAccountingSharedPatch", () => {
+  it("writes as-of for summary and table hooks", () => {
+    expect(
+      applyAccountingSharedPatch({}, { asOf: "2026-07-15" }, ACCOUNTING_BALANCES_PATH),
+    ).toEqual({ asOf: "2026-07-15" });
+  });
+
+  it("clears bucket when toggled off", () => {
+    expect(
+      applyAccountingSharedPatch(
+        { bucket: "1-15", asOf: "2026-07-15" },
+        { bucket: null },
+        ACCOUNTING_BALANCES_PATH,
+      ),
+    ).toEqual({ asOf: "2026-07-15" });
+  });
+
+  it("sets custom payment range without leaking balances q", () => {
+    expect(
+      applyAccountingSharedPatch(
+        { q: "flowers", range: "mtd" },
+        {
+          range: "custom",
+          from: "2026-08-01",
+          to: "2026-08-15",
+        },
+        ACCOUNTING_PAYMENTS_PATH,
+      ),
+    ).toEqual({
+      range: "custom",
+      from: "2026-08-01",
+      to: "2026-08-15",
+    });
+  });
+
+  it("drops custom from/to when switching to MTD", () => {
+    expect(
+      applyAccountingSharedPatch(
+        {
+          range: "custom",
+          from: "2026-08-01",
+          to: "2026-08-15",
+        },
+        { range: null },
+        ACCOUNTING_PAYMENTS_PATH,
+      ),
+    ).toEqual({});
+  });
+});
+
+describe("applyAccountingTableParams", () => {
+  it("writes balances table keys without reintroducing payments range", () => {
+    expect(
+      applyAccountingTableParams(
+        {
+          range: "custom",
+          from: "2026-08-01",
+          to: "2026-08-15",
+          asOf: "2026-08-01",
+        },
+        ACCOUNTING_BALANCES_PATH,
+        listInternalAccountingCustomerBalancesTable,
+        {
+          q: "al's",
+          sortBy: "pastDueCents",
+          sortOrder: "desc",
+          asOf: "2026-08-01",
+        },
+      ),
+    ).toMatchObject({
+      asOf: "2026-08-01",
+      q: "al's",
+    });
+    expect(
+      applyAccountingTableParams(
+        {
+          range: "custom",
+          from: "2026-08-01",
+          to: "2026-08-15",
+          asOf: "2026-08-01",
+        },
+        ACCOUNTING_BALANCES_PATH,
+        listInternalAccountingCustomerBalancesTable,
+        {
+          q: "al's",
+          sortBy: "pastDueCents",
+          sortOrder: "desc",
+          asOf: "2026-08-01",
+        },
+      ).range,
+    ).toBeUndefined();
+  });
+});
+
+describe("accountingUrlParamsForPath", () => {
+  it("omits today as-of from the URL", () => {
+    expect(
+      accountingSearchQueryString(ACCOUNTING_BALANCES_PATH, {}),
+    ).toBe("");
   });
 });
 
@@ -99,5 +228,17 @@ describe("accountingAsOfFromSearchParams", () => {
     expect(accountingAsOfFromSearchParams({ asOf: "2026-07-15" })).toBe(
       "2026-07-15",
     );
+  });
+});
+
+describe("accountingUrlParamsForPath isolation", () => {
+  it("drops sibling-tab keys when building payments params", () => {
+    expect(
+      accountingUrlParamsForPath(ACCOUNTING_PAYMENTS_PATH, {
+        q: "100076",
+        bucket: "90+",
+        sortBy: "name",
+      }),
+    ).toEqual({});
   });
 });
