@@ -24,6 +24,20 @@ export const PaymentApplicationId = {
   },
 };
 
+export type InvoiceAdjustmentId = Brand<string, "InvoiceAdjustmentId">;
+export const InvoiceAdjustmentId = {
+  parse(value: string): InvoiceAdjustmentId {
+    return parseUuid("InvoiceAdjustmentId", value);
+  },
+};
+
+export type PaymentPlanId = Brand<string, "PaymentPlanId">;
+export const PaymentPlanId = {
+  parse(value: string): PaymentPlanId {
+    return parseUuid("PaymentPlanId", value);
+  },
+};
+
 export function newUuid(): string {
   return crypto.randomUUID();
 }
