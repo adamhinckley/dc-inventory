@@ -25,6 +25,8 @@ import { CustomerContactsPanel } from "./customer-contacts-panel";
 import { CustomerEditForm } from "./customer-edit-form";
 import { CustomerOrdersPanel } from "./customer-orders-panel";
 import { CustomerShipTosPanel } from "./customer-ship-tos-panel";
+// PROTOTYPE — throwaway; see customer-accounting-tab.prototype.tsx
+import { CustomerAccountingTabPrototype } from "./customer-accounting-tab.prototype";
 
 function CustomerSummary({ customer }: { customer: CustomerDetail }) {
   return (
@@ -91,6 +93,8 @@ function CustomerDetailTabPanel({
           initialParams={ordersInitialParams}
         />
       );
+    case "accounting":
+      return <CustomerAccountingTabPrototype />;
   }
 }
 

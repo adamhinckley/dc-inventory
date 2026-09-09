@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PROTOTYPE — AR payment model (docs/accounting.md)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { --ink:#161616; --muted:#6f6f6f; --line:#e0e0e0; --accent:#0f62fe; --bad:#da1e28; --ok:#24a148; --warn:#b28600; --bg:#f4f4f4; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:#fff; border-bottom:1px solid var(--line); padding:20px 28px; }
+  header h1 { margin:0 0 6px; font-size:20px; }
+  header p { margin:0; color:var(--muted); max-width:900px; }
+  .tag { display:inline-block; font-size:11px; letter-spacing:.06em; text-transform:uppercase; background:#fff1c9; color:#6d5400; padding:2px 8px; border-radius:999px; margin-bottom:8px; }
+  main { display:grid; grid-template-columns: 1fr 420px; gap:20px; padding:20px 28px; align-items:start; }
+  section.card { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; }
+  h2 { font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 12px; }
+  h3 { font-size:14px; margin:14px 0 6px; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  td.num, th.num { text-align:right; }
+  .kpis { display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; }
+  .kpi { border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .kpi .l { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  .kpi .v { font-size:20px; font-weight:600; font-variant-numeric: tabular-nums; }
+  .kpi.bad .v { color:var(--bad); } .kpi.ok .v { color:var(--ok); }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; font-size:11px; font-weight:600; border:1px solid var(--line); }
+  .pill.open{color:#0043ce} .pill.partial{color:var(--warn)} .pill.past_due{color:var(--bad);border-color:var(--bad)} .pill.paid{color:var(--ok)} .pill.void{color:var(--muted);text-decoration:line-through}
+  .aging { display:grid; grid-template-columns: repeat(7,1fr); gap:6px; }
+  .aging div { border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-size:12px; }
+  .aging b { display:block; font-size:15px; }
+  .aging .hot { border-color:var(--bad); }
+  .log { font-size:13px; padding:10px 12px; border-left:3px solid var(--accent); background:#eef4ff; border-radius:0 6px 6px 0; margin-bottom:12px; white-space:pre-wrap; }
+  .log.err { border-color:var(--bad); background:#fff1f1; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0; }
+  label { font-size:12px; color:var(--muted); }
+  input, select { font:inherit; font-size:13px; padding:5px 8px; border:1px solid #8d8d8d; border-radius:6px; min-width:0; }
+  input[type=number] { width:96px; } input[type=date]{ width:150px; } select{ max-width:180px; }
+  button { font:inherit; font-size:13px; font-weight:600; padding:7px 12px; border-radius:6px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.secondary { background:#fff; color:var(--accent); }
+  button.ghost { background:transparent; border-color:var(--line); color:var(--ink); }
+  button.danger { background:#fff; border-color:var(--bad); color:var(--bad); }
+  button:disabled { opacity:.45; cursor:default; }
+  fieldset { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin:0 0 10px; }
+  legend { font-size:12px; font-weight:600; padding:0 4px; }
+  .tabs { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+  .tabs button { background:#fff; color:var(--ink); border-color:var(--line); font-weight:500; padding:5px 10px; }
+  .tabs button.active { border-color:var(--accent); color:var(--accent); font-weight:600; }
+  .steps li { margin:6px 0; }
+  .steps li.done { color:var(--muted); text-decoration:line-through; }
+  .steps li.current button { outline:2px solid var(--accent); outline-offset:2px; }
+  .steps button { font-weight:500; }
+  .muted { color:var(--muted); } .small { font-size:12px; }
+  .alloc td input { width:90px; }
+  @media (max-width: 1100px){ main{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <div class="tag">Prototype — throwaway</div>
+  <h1>AR payment model — does it hold up when pushed?</h1>
+  <p><strong>Question.</strong> <code>docs/accounting.md</code> says a payment belongs to the <em>customer</em>, is applied to invoices explicitly (prefilled oldest due first), a leftover only exists if staff say “hold as credit”, mistakes are fixed by <em>void</em> or <em>reallocate</em> (never by editing the amount), bad debt leaves through a write-off, and every number on the screen (remaining, status, aging, available credit) is computed, never stored. Press the buttons and see whether anything feels wrong. All money is whole cents; dates are relative to the <em>as-of</em> date at the top.</p>
+</header>
+
+<main>
+<div>
+  <section class="card">
+    <h2>Current state</h2>
+    <div id="log" class="log">Ready. Pick a walkthrough on the right, or use the free-play controls.</div>
+    <div class="kpis" id="kpis"></div>
+    <h3>Aging (days past due, as of <span id="asof-label"></span>)</h3>
+    <div class="aging" id="aging"></div>
+    <h3>Invoices</h3>
+    <table id="invoices"></table>
+    <h3>Payments</h3>
+    <table id="payments"></table>
+    <h3>Adjustments</h3>
+    <table id="adjustments"></table>
+    <h3>Payment plan</h3>
+    <div id="plan" class="small"></div>
+    <h3>Stats block (subset)</h3>
+    <table id="stats"></table>
+  </section>
+</div>
+
+<div>
+  <section class="card">
+    <h2>Guided walkthroughs</h2>
+    <div class="tabs" id="scenario-tabs"></div>
+    <p id="scenario-text" class="small"></p>
+    <ol class="steps" id="scenario-steps"></ol>
+  </section>
+
+  <section class="card">
+    <h2>Free play</h2>
+
+    <fieldset><legend>As-of date &amp; credit</legend>
+      <div class="row">
+        <label>As of <input id="fp-asof" type="date"></label>
+        <button class="ghost" data-act="asof+7">+7 days</button>
+        <button class="ghost" data-act="asof+30">+30 days</button>
+      </div>
+      <div class="row">
+        <label>Credit limit $ <input id="fp-limit" type="number" step="1"></label>
+        <label>Confirmed, unshipped $ <input id="fp-unshipped" type="number" step="1"></label>
+        <button class="ghost" data-act="credit">Set</button>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Ship an order (creates an invoice)</legend>
+      <div class="row">
+        <label>Total $ <input id="fp-ship-total" type="number" value="1200"></label>
+        <label>Shipped <input id="fp-ship-ago" type="number" value="0"> days ago</label>
+        <label>Terms <select id="fp-ship-terms"><option>Net 30</option><option>Net 60</option><option>Net 90</option><option>Due on receipt</option></select></label>
+        <button data-act="ship">Ship</button>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Record a payment</legend>
+      <div class="row">
+        <label>Amount $ <input id="fp-pay-amount" type="number" value="1000"></label>
+        <label>Method <select id="fp-pay-method"><option>check</option><option>card</option><option>ach</option><option>cash</option><option>other</option></select></label>
+        <label>Reference <input id="fp-pay-ref" type="text" placeholder="check #" style="width:90px"></label>
+      </div>
+      <div class="row">
+        <button class="secondary" data-act="prefill">Prefill oldest due first</button>
+        <label><input id="fp-hold" type="checkbox"> Hold remainder as credit</label>
+      </div>
+      <table class="alloc" id="alloc"></table>
+      <div class="row"><span id="alloc-summary" class="small muted"></span></div>
+      <div class="row"><button data-act="pay">Record Payment</button></div>
+    </fieldset>
+
+    <fieldset><legend>Fix a payment</legend>
+      <div class="row">
+        <label>Payment <select id="fp-fix-payment"></select></label>
+        <button class="danger" data-act="void">Void</button>
+      </div>
+      <div class="row">
+        <label>Move $ <input id="fp-move-amount" type="number" value="100"></label>
+        <label>from <select id="fp-move-from"></select></label>
+        <label>to <select id="fp-move-to"></select></label>
+        <button class="secondary" data-act="reallocate">Reallocate</button>
+      </div>
+      <p class="small muted" style="margin:4px 0 0">“Credit” means this payment’s unapplied remainder. Reallocate never changes the payment total.</p>
+    </fieldset>
+
+    <fieldset><legend>Adjust an invoice</legend>
+      <div class="row">
+        <label>Invoice <select id="fp-adj-invoice"></select></label>
+        <label>Kind <select id="fp-adj-kind"><option value="write_off">Write-off</option><option value="credit_memo">Credit memo</option></select></label>
+        <label>$ <input id="fp-adj-amount" type="number" value="50"></label>
+      </div>
+      <div class="row">
+        <label>Reason <input id="fp-adj-reason" type="text" placeholder="required" style="width:200px"></label>
+        <button class="secondary" data-act="adjust">Adjust</button>
+      </div>
+    </fieldset>
+
+    <fieldset><legend>Payment plan</legend>
+      <div class="row">
+        <label>$ <input id="fp-plan-amount" type="number" value="1000"></label>
+        <label><select id="fp-plan-freq"><option>monthly</option><option>weekly</option></select></label>
+        <label>starts <input id="fp-plan-start" type="date"></label>
+        <button class="secondary" data-act="plan">Set plan</button>
+        <button class="ghost" data-act="endplan">End plan</button>
+      </div>
+    </fieldset>
+
+    <div class="row"><button class="ghost" data-act="reset">Reset to empty account</button></div>
+  </section>
+</div>
+</main>
+
+<script>
+// =====================================================================
+// PURE MODULE — liftable. No DOM in here. Cents everywhere. Dates are
+// ISO yyyy-mm-dd strings; day math is whole days in UTC.
+// Mirrors docs/accounting.md §3–§7.
+// =====================================================================
+const ARModel = (() => {
+  const DAY = 86400000;
+  const toDate = (s) => new Date(s + "T00:00:00Z");
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const addDays = (s, n) => iso(new Date(toDate(s).getTime() + n * DAY));
+  const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / DAY);
+  const termsDays = { "Net 30": 30, "Net 60": 60, "Net 90": 90, "Due on receipt": 0 };
+
+  function initialState(asOf) {
+    return {
+      asOf, creditLimit: 0, confirmedUnshipped: 0, seq: 0,
+      invoices: [], payments: [], applications: [], adjustments: [], plan: null,
+    };
+  }
+  const nextId = (s, prefix) => { s.seq += 1; return `${prefix}-${String(s.seq).padStart(3, "0")}`; };
+  const clone = (s) => JSON.parse(JSON.stringify(s));
+
+  // ---- projections -------------------------------------------------
+  function applied(s, invoiceId) {
+    const voided = new Set(s.payments.filter(p => p.voidedAt).map(p => p.id));
+    return s.applications.filter(a => a.invoiceId === invoiceId && !voided.has(a.paymentId))
+      .reduce((n, a) => n + a.amount, 0);
+  }
+  const adjusted = (s, invoiceId) => s.adjustments.filter(a => a.invoiceId === invoiceId).reduce((n, a) => n + a.amount, 0);
+  const remaining = (s, inv) => inv.total - applied(s, inv.id) - adjusted(s, inv.id);
+  function status(s, inv) {
+    const rem = remaining(s, inv);
+    if (rem === 0) return "paid";
+    if (daysBetween(inv.dueDate, s.asOf) > 0) return "past_due";
+    if (applied(s, inv.id) + adjusted(s, inv.id) > 0) return "partial";
+    return "open";
+  }
+  const unapplied = (s, p) => p.voidedAt ? 0 : p.amount - s.applications.filter(a => a.paymentId === p.id).reduce((n, a) => n + a.amount, 0);
+  const unappliedCredit = (s) => s.payments.reduce((n, p) => n + unapplied(s, p), 0);
+  const openInvoices = (s) => s.invoices.filter(i => remaining(s, i) > 0);
+  const sumRemaining = (s) => openInvoices(s).reduce((n, i) => n + remaining(s, i), 0);
+  const openBalance = (s) => sumRemaining(s) - unappliedCredit(s);
+  const exposure = (s) => sumRemaining(s) + s.confirmedUnshipped - unappliedCredit(s);
+  const availableCredit = (s) => s.creditLimit - exposure(s);
+
+  const BUCKETS = [["Current", -Infinity, 0], ["1–15", 1, 15], ["16–30", 16, 30], ["31–45", 31, 45], ["46–60", 46, 60], ["61–90", 61, 90], ["90+", 91, Infinity]];
+  function aging(s) {
+    const out = BUCKETS.map(([label]) => ({ label, amount: 0 }));
+    for (const inv of openInvoices(s)) {
+      const d = daysBetween(inv.dueDate, s.asOf);
+      const idx = BUCKETS.findIndex(([, lo, hi]) => d >= lo && d <= hi);
+      out[idx].amount += remaining(s, inv);
+    }
+    return out;
+  }
+  const pastDueTotal = (s) => aging(s).slice(1).reduce((n, b) => n + b.amount, 0);
+
+  function prefillOldestFirst(s, amount) {
+    const order = openInvoices(s).slice().sort((a, b) => a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : a.postedAt < b.postedAt ? -1 : 1);
+    let left = amount; const apps = [];
+    for (const inv of order) { const take = Math.min(left, remaining(s, inv)); if (take > 0) { apps.push({ invoiceId: inv.id, amount: take }); left -= take; } }
+    return { applications: apps, remainder: left };
+  }
+
+  function planExpectations(s) {
+    if (!s.plan || s.plan.endedAt) return null;
+    const p = s.plan; const bal = openBalance(s);
+    const step = p.frequency === "weekly" ? 7 : 30; // prototype: 30-day months
+    const periods = bal <= 0 ? 0 : Math.ceil(bal / p.amount);
+    const received = s.payments.filter(x => !x.voidedAt && x.receivedAt >= p.startsOn).length;
+    const elapsed = Math.max(0, Math.floor(daysBetween(p.startsOn, s.asOf) / step) + (s.asOf >= p.startsOn ? 1 : 0));
+    return {
+      nextExpected: addDays(p.startsOn, received * step),
+      estimatedEnd: addDays(p.startsOn, Math.max(0, periods - 1) * step),
+      installmentsReceived: received, installmentsExpectedSoFar: elapsed,
+      missed: Math.max(0, elapsed - received), complete: bal <= 0,
+    };
+  }
+
+  function stats(s) {
+    const paidInv = s.invoices.filter(i => remaining(s, i) === 0 && i.total > 0);
+    const daysToPay = paidInv.map(inv => {
+      const apps = s.applications.filter(a => a.invoiceId === inv.id).map(a => ({ ...a, p: s.payments.find(p => p.id === a.paymentId) })).filter(a => a.p && !a.p.voidedAt);
+      const last = apps.map(a => a.p.receivedAt).sort().pop();
+      return last ? daysBetween(inv.postedAt, last) : null;
+    }).filter(x => x !== null);
+    const cms = s.adjustments.filter(a => a.kind === "credit_memo");
+    return {
+      openInvoiceCount: openInvoices(s).length,
+      highestInvoice: Math.max(0, ...s.invoices.map(i => i.total)),
+      totalInvoiced: s.invoices.reduce((n, i) => n + i.total, 0),
+      creditMemoCount: cms.length, totalCreditMemo: cms.reduce((n, a) => n + a.amount, 0),
+      totalWriteoffs: s.adjustments.filter(a => a.kind === "write_off").reduce((n, a) => n + a.amount, 0),
+      avgDaysToPay: daysToPay.length ? Math.round(daysToPay.reduce((a, b) => a + b, 0) / daysToPay.length) : null,
+    };
+  }
+
+  // ---- commands: (state, input) => { state, event } | { error } -------
+  function shipOrder(s0, { total, daysAgo, terms }) {
+    if (!(Number.isInteger(total) && total > 0)) return { error: "Order total must be whole cents > 0." };
+    const s = clone(s0); const postedAt = addDays(s.asOf, -daysAgo);
+    const inv = { id: nextId(s, "INV"), postedAt, terms, dueDate: addDays(postedAt, termsDays[terms] ?? 30), total };
+    s.invoices.push(inv);
+    return { state: s, event: `Shipped order → ${inv.id} for ${fmt(total)}, ${terms}, due ${inv.dueDate}.` };
+  }
+
+  function recordPayment(s0, { amount, method, reference, receivedAt, applications, holdRemainderAsCredit }) {
+    if (!(Number.isInteger(amount) && amount > 0)) return { error: "Payment amount must be whole cents > 0." };
+    const s = clone(s0);
+    let sum = 0;
+    for (const a of applications) {
+      const inv = s.invoices.find(i => i.id === a.invoiceId);
+      if (!inv) return { error: `${a.invoiceId} is not this customer's invoice.` };
+      if (!(Number.isInteger(a.amount) && a.amount >= 0)) return { error: `Application to ${a.invoiceId} must be whole cents ≥ 0.` };
+      if (a.amount > remaining(s, inv)) return { error: `Cannot apply ${fmt(a.amount)} to ${inv.id}: only ${fmt(remaining(s, inv))} remaining. (No overpaying an invoice.)` };
+      sum += a.amount;
+    }
+    if (sum > amount) return { error: `Applications (${fmt(sum)}) exceed the payment (${fmt(amount)}).` };
+    const remainder = amount - sum;
+    if (remainder > 0 && !holdRemainderAsCredit) return { error: `${fmt(remainder)} is unallocated. Tick “Hold remainder as credit” or allocate it. (A remainder is never silent.)` };
+    const p = { id: nextId(s, "PAY"), amount, method, reference, receivedAt: receivedAt ?? s.asOf, voidedAt: null, voidReason: null };
+    s.payments.push(p);
+    for (const a of applications) if (a.amount > 0) s.applications.push({ paymentId: p.id, invoiceId: a.invoiceId, amount: a.amount });
+    return { state: s, event: `Recorded ${p.id} ${fmt(amount)} (${method}${reference ? " " + reference : ""}) → ${applications.filter(a => a.amount > 0).map(a => `${a.invoiceId} ${fmt(a.amount)}`).join(", ") || "nothing applied"}${remainder > 0 ? `; ${fmt(remainder)} held as credit` : ""}.` };
+  }
+
+  function voidPayment(s0, { paymentId, reason }) {
+    const s = clone(s0); const p = s.payments.find(x => x.id === paymentId);
+    if (!p) return { error: "No such payment." };
+    if (p.voidedAt) return { error: `${p.id} is already void.` };
+    p.voidedAt = s.asOf; p.voidReason = reason || "wrong amount";
+    return { state: s, event: `Voided ${p.id} (${fmt(p.amount)}). Its applications and any held credit no longer count. The row stays for history.` };
+  }
+
+  // moves: [{from: invoiceId|"credit", to: invoiceId|"credit", amount}]
+  function reallocate(s0, { paymentId, from, to, amount }) {
+    const s = clone(s0); const p = s.payments.find(x => x.id === paymentId);
+    if (!p) return { error: "No such payment." };
+    if (p.voidedAt) return { error: `${p.id} is void; nothing to move.` };
+    if (!(Number.isInteger(amount) && amount > 0)) return { error: "Move amount must be whole cents > 0." };
+    if (from === to) return { error: "From and to are the same." };
+    const appliedBy = (invId) => s.applications.filter(a => a.paymentId === p.id && a.invoiceId === invId).reduce((n, a) => n + a.amount, 0);
+    if (from === "credit") { if (unapplied(s, p) < amount) return { error: `${p.id} only has ${fmt(unapplied(s, p))} unapplied.` }; }
+    else { if (appliedBy(from) < amount) return { error: `${p.id} only has ${fmt(appliedBy(from))} on ${from}.` }; }
+    if (to !== "credit") {
+      const inv = s.invoices.find(i => i.id === to); if (!inv) return { error: "No such invoice." };
+      if (remaining(s, inv) < amount) return { error: `${to} only has ${fmt(remaining(s, inv))} remaining.` };
+    }
+    if (from !== "credit") s.applications.push({ paymentId: p.id, invoiceId: from, amount: -amount });
+    if (to !== "credit") s.applications.push({ paymentId: p.id, invoiceId: to, amount });
+    return { state: s, event: `Reallocated ${fmt(amount)} of ${p.id}: ${from} → ${to}. Payment total unchanged (${fmt(p.amount)}); the ledger gained ${from !== "credit" && to !== "credit" ? "two" : "one"} append-only row(s).` };
+  }
+
+  function adjust(s0, { invoiceId, kind, amount, reason }) {
+    const s = clone(s0); const inv = s.invoices.find(i => i.id === invoiceId);
+    if (!inv) return { error: "No such invoice." };
+    if (!reason || !reason.trim()) return { error: "A reason is required for every write-off or credit memo." };
+    if (!Number.isInteger(amount) || amount === 0) return { error: "Adjustment must be non-zero whole cents (negative reverses)." };
+    const after = remaining(s, inv) - amount;
+    if (after < 0 || after > inv.total) return { error: `That would leave ${inv.id} at ${fmt(after)} remaining; must stay within 0 and ${fmt(inv.total)}.` };
+    s.adjustments.push({ id: nextId(s, "ADJ"), invoiceId, kind, amount, reason, at: s.asOf });
+    return { state: s, event: `${kind === "write_off" ? "Wrote off" : "Credit memo"} ${fmt(amount)} on ${inv.id} — “${reason}”. Remaining now ${fmt(after)}.` };
+  }
+
+  function setPlan(s0, { amount, frequency, startsOn }) {
+    const s = clone(s0);
+    if (s.plan && !s.plan.endedAt) return { error: "One active plan per customer. End the current plan first." };
+    if (!(Number.isInteger(amount) && amount > 0)) return { error: "Plan amount must be > 0." };
+    s.plan = { amount, frequency, startsOn, endedAt: null };
+    return { state: s, event: `Plan set: ${fmt(amount)} ${frequency} from ${startsOn}. Nothing is enforced; expectations are computed on read.` };
+  }
+  function endPlan(s0) { const s = clone(s0); if (!s.plan || s.plan.endedAt) return { error: "No active plan." }; s.plan.endedAt = s.asOf; return { state: s, event: "Plan ended by staff." }; }
+  function setAsOf(s0, asOf) { const s = clone(s0); s.asOf = asOf; return { state: s, event: `As-of date is now ${asOf}. Aging and status recomputed; nothing was written.` }; }
+  function setCredit(s0, { creditLimit, confirmedUnshipped }) { const s = clone(s0); s.creditLimit = creditLimit; s.confirmedUnshipped = confirmedUnshipped; return { state: s, event: `Credit limit ${fmt(creditLimit)}; confirmed-unshipped orders ${fmt(confirmedUnshipped)}.` }; }
+
+  function fmt(c) { const neg = c < 0; const v = Math.abs(c); return (neg ? "−" : "") + "$" + (v / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  return { initialState, shipOrder, recordPayment, voidPayment, reallocate, adjust, setPlan, endPlan, setAsOf, setCredit,
+    remaining, status, applied, adjusted, unapplied, unappliedCredit, openBalance, exposure, availableCredit, aging, pastDueTotal, prefillOldestFirst, planExpectations, stats, fmt, addDays, daysBetween };
+})();
+
+// =====================================================================
+// PAGE SHELL — throwaway. Calls into ARModel; nothing flows back.
+// =====================================================================
+const M = ARModel;
+const TODAY = new Date().toISOString().slice(0, 10);
+let state = M.initialState(TODAY);
+let allocDraft = []; // [{invoiceId, amount}]
+let scenario = null, stepIdx = 0;
+const $ = (id) => document.getElementById(id);
+const dollars = (id) => Math.round(parseFloat($(id).value || "0") * 100);
+
+function apply(result) {
+  const log = $("log");
+  if (result.error) { log.className = "log err"; log.textContent = "✗ " + result.error; }
+  else { state = result.state; log.className = "log"; log.textContent = "✓ " + result.event; }
+  render();
+}
+
+function render() {
+  const s = state;
+  $("asof-label").textContent = s.asOf;
+  $("fp-asof").value = s.asOf; $("fp-limit").value = (s.creditLimit / 100); $("fp-unshipped").value = (s.confirmedUnshipped / 100);
+  if (!$("fp-plan-start").value) $("fp-plan-start").value = s.asOf;
+
+  const ob = M.openBalance(s), uc = M.unappliedCredit(s), pd = M.pastDueTotal(s), av = M.availableCredit(s);
+  $("kpis").innerHTML = [
+    ["Open balance", ob, ob > 0 ? "" : "ok"], ["Past due", pd, pd > 0 ? "bad" : ""], ["Unapplied credit", uc, uc > 0 ? "ok" : ""],
+    ["Exposure", M.exposure(s), ""], ["Available credit", av, av < 0 ? "bad" : "ok"],
+  ].map(([l, v, c]) => `<div class="kpi ${c}"><div class="l">${l}</div><div class="v">${M.fmt(v)}</div></div>`).join("");
+
+  $("aging").innerHTML = M.aging(s).map((b, i) => `<div class="${i > 0 && b.amount > 0 ? "hot" : ""}">${b.label}<b>${M.fmt(b.amount)}</b></div>`).join("");
+
+  $("invoices").innerHTML = `<tr><th>Invoice</th><th>Posted</th><th>Due</th><th>Terms</th><th class="num">Total</th><th class="num">Applied</th><th class="num">Adjusted</th><th class="num">Remaining</th><th>Status</th><th class="num">Days past due</th></tr>` +
+    (s.invoices.length ? s.invoices.map(inv => { const st = M.status(s, inv); const d = M.daysBetween(inv.dueDate, s.asOf); return `<tr><td>${inv.id}</td><td>${inv.postedAt}</td><td>${inv.dueDate}</td><td>${inv.terms}</td><td class="num">${M.fmt(inv.total)}</td><td class="num">${M.fmt(M.applied(s, inv.id))}</td><td class="num">${M.fmt(M.adjusted(s, inv.id))}</td><td class="num"><b>${M.fmt(M.remaining(s, inv))}</b></td><td><span class="pill ${st}">${st.replace("_", " ")}</span></td><td class="num">${st === "paid" ? "—" : d > 0 ? d : "not due"}</td></tr>`; }).join("") : `<tr><td colspan="10" class="muted">No invoices. Ship an order.</td></tr>`);
+
+  $("payments").innerHTML = `<tr><th>Payment</th><th>Received</th><th>Method</th><th class="num">Amount</th><th>Applied to</th><th class="num">Unapplied</th><th>State</th></tr>` +
+    (s.payments.length ? s.payments.map(p => { const apps = {}; s.applications.filter(a => a.paymentId === p.id).forEach(a => apps[a.invoiceId] = (apps[a.invoiceId] || 0) + a.amount); const appTxt = Object.entries(apps).filter(([, v]) => v !== 0).map(([k, v]) => `${k} ${M.fmt(v)}`).join(", ") || "—"; return `<tr><td>${p.id}</td><td>${p.receivedAt}</td><td>${p.method}${p.reference ? " " + p.reference : ""}</td><td class="num">${M.fmt(p.amount)}</td><td>${appTxt}</td><td class="num">${M.fmt(M.unapplied(s, p))}</td><td>${p.voidedAt ? `<span class="pill void">void</span> <span class="small muted">${p.voidReason}</span>` : `<span class="pill paid">live</span>`}</td></tr>`; }).join("") : `<tr><td colspan="7" class="muted">No payments yet.</td></tr>`);
+
+  $("adjustments").innerHTML = `<tr><th>Adj</th><th>Invoice</th><th>Kind</th><th class="num">Amount</th><th>Reason</th><th>Date</th></tr>` +
+    (s.adjustments.length ? s.adjustments.map(a => `<tr><td>${a.id}</td><td>${a.invoiceId}</td><td>${a.kind.replace("_", " ")}</td><td class="num">${M.fmt(a.amount)}</td><td>${a.reason}</td><td>${a.at}</td></tr>`).join("") : `<tr><td colspan="6" class="muted">None.</td></tr>`);
+
+  const pe = M.planExpectations(s);
+  $("plan").innerHTML = s.plan && !s.plan.endedAt
+    ? `<b>${M.fmt(s.plan.amount)} ${s.plan.frequency}</b> from ${s.plan.startsOn} · installments received <b>${pe.installmentsReceived}</b> of ${pe.installmentsExpectedSoFar} expected so far${pe.missed ? ` · <span style="color:var(--bad)">${pe.missed} missed (shown only, nothing blocked)</span>` : ""} · next expected ${pe.nextExpected} · estimated end ${pe.estimatedEnd}${pe.complete ? " · <b style='color:var(--ok)'>Complete</b>" : ""}`
+    : `<span class="muted">No active plan${s.plan?.endedAt ? ` (last plan ended ${s.plan.endedAt})` : ""}.</span>`;
+
+  const st = M.stats(s);
+  $("stats").innerHTML = [["Open invoice count", st.openInvoiceCount], ["Highest invoice", M.fmt(st.highestInvoice)], ["Total invoice amount", M.fmt(st.totalInvoiced)], ["Credit memo count / total", `${st.creditMemoCount} / ${M.fmt(st.totalCreditMemo)}`], ["Total write-offs", M.fmt(st.totalWriteoffs)], ["Avg days to pay", st.avgDaysToPay ?? "—"], ["Credit limit", M.fmt(s.creditLimit)]]
+    .map(([k, v]) => `<tr><td class="muted">${k}</td><td class="num">${v}</td></tr>`).join("");
+
+  // selects
+  const live = s.payments.filter(p => !p.voidedAt);
+  $("fp-fix-payment").innerHTML = live.map(p => `<option value="${p.id}">${p.id} ${M.fmt(p.amount)}</option>`).join("") || `<option value="">(none)</option>`;
+  const invOpts = s.invoices.map(i => `<option value="${i.id}">${i.id} (${M.fmt(M.remaining(s, i))} left)</option>`).join("");
+  $("fp-move-from").innerHTML = `<option value="credit">credit</option>` + invOpts;
+  $("fp-move-to").innerHTML = invOpts + `<option value="credit">credit</option>`;
+  $("fp-adj-invoice").innerHTML = invOpts || `<option value="">(none)</option>`;
+
+  // allocation draft table
+  const open = s.invoices.filter(i => M.remaining(s, i) > 0);
+  allocDraft = allocDraft.filter(a => open.some(i => i.id === a.invoiceId));
+  $("alloc").innerHTML = `<tr><th>Invoice</th><th>Due</th><th class="num">Remaining</th><th class="num">Apply $</th></tr>` +
+    (open.length ? open.map(i => { const cur = allocDraft.find(a => a.invoiceId === i.id)?.amount ?? 0; return `<tr><td>${i.id}</td><td>${i.dueDate}</td><td class="num">${M.fmt(M.remaining(s, i))}</td><td class="num"><input type="number" step="0.01" data-alloc="${i.id}" value="${(cur / 100).toFixed(2)}"></td></tr>`; }).join("") : `<tr><td colspan="4" class="muted">No open invoices — a payment now can only be held as credit.</td></tr>`);
+  $("alloc").querySelectorAll("input[data-alloc]").forEach(inp => inp.addEventListener("input", () => { const id = inp.dataset.alloc; const amt = Math.round(parseFloat(inp.value || "0") * 100); const ex = allocDraft.find(a => a.invoiceId === id); if (ex) ex.amount = amt; else allocDraft.push({ invoiceId: id, amount: amt }); updateAllocSummary(); }));
+  updateAllocSummary();
+  renderScenario();
+}
+function updateAllocSummary() {
+  const amt = dollars("fp-pay-amount"); const sum = allocDraft.reduce((n, a) => n + a.amount, 0);
+  const rem = amt - sum;
+  $("alloc-summary").textContent = `Payment ${M.fmt(amt)} · allocated ${M.fmt(sum)} · remaining to allocate ${M.fmt(rem)}${rem > 0 ? ($("fp-hold").checked ? " → will be held as credit" : " → will be REJECTED unless held as credit") : rem < 0 ? " → over-allocated, will be rejected" : ""}`;
+}
+$("fp-pay-amount").addEventListener("input", updateAllocSummary); $("fp-hold").addEventListener("change", updateAllocSummary);
+
+// ---- free-play actions ---------------------------------------------
+const actions = {
+  "asof+7": () => apply(M.setAsOf(state, M.addDays(state.asOf, 7))),
+  "asof+30": () => apply(M.setAsOf(state, M.addDays(state.asOf, 30))),
+  credit: () => apply(M.setCredit(state, { creditLimit: dollars("fp-limit"), confirmedUnshipped: dollars("fp-unshipped") })),
+  ship: () => apply(M.shipOrder(state, { total: dollars("fp-ship-total"), daysAgo: parseInt($("fp-ship-ago").value || "0", 10), terms: $("fp-ship-terms").value })),
+  prefill: () => { const r = M.prefillOldestFirst(state, dollars("fp-pay-amount")); allocDraft = r.applications; render(); $("log").className = "log"; $("log").textContent = `Prefilled oldest due first. ${r.remainder > 0 ? `${M.fmt(r.remainder)} left over — tick “hold as credit” or it will be rejected.` : "Fully allocated."} Edit any Apply cell before recording.`; },
+  pay: () => { const r = M.recordPayment(state, { amount: dollars("fp-pay-amount"), method: $("fp-pay-method").value, reference: $("fp-pay-ref").value, receivedAt: state.asOf, applications: allocDraft, holdRemainderAsCredit: $("fp-hold").checked }); if (!r.error) { allocDraft = []; $("fp-hold").checked = false; } apply(r); },
+  void: () => apply(M.voidPayment(state, { paymentId: $("fp-fix-payment").value, reason: "entered wrong" })),
+  reallocate: () => apply(M.reallocate(state, { paymentId: $("fp-fix-payment").value, from: $("fp-move-from").value, to: $("fp-move-to").value, amount: dollars("fp-move-amount") })),
+  adjust: () => apply(M.adjust(state, { invoiceId: $("fp-adj-invoice").value, kind: $("fp-adj-kind").value, amount: dollars("fp-adj-amount"), reason: $("fp-adj-reason").value })),
+  plan: () => apply(M.setPlan(state, { amount: dollars("fp-plan-amount"), frequency: $("fp-plan-freq").value, startsOn: $("fp-plan-start").value || state.asOf })),
+  endplan: () => apply(M.endPlan(state)),
+  reset: () => { state = M.initialState(TODAY); allocDraft = []; scenario = null; $("log").className = "log"; $("log").textContent = "Reset."; render(); },
+};
+document.querySelectorAll("button[data-act]").forEach(b => b.addEventListener("click", () => actions[b.dataset.act]()));
+$("fp-asof").addEventListener("change", () => apply(M.setAsOf(state, $("fp-asof").value)));
+
+// ---- guided walkthroughs -------------------------------------------
+// Each step: { label, run: () => result }. Scenarios reset to a known start.
+const T = TODAY;
+function seedThreeInvoices() {
+  let s = M.initialState(T);
+  s = M.setCredit(s, { creditLimit: 750000, confirmedUnshipped: 0 }).state;
+  s = M.shipOrder(s, { total: 210000, daysAgo: 70, terms: "Net 30" }).state; // due 40 days ago
+  s = M.shipOrder(s, { total: 180000, daysAgo: 40, terms: "Net 30" }).state; // due 10 days ago
+  s = M.shipOrder(s, { total: 240000, daysAgo: 10, terms: "Net 30" }).state; // due in 20 days
+  return s;
+}
+const scenarios = [
+  { name: "$5,000 to oldest", text: "David's everyday case. Three open invoices ($2,100 due 40 days ago, $1,800 due 10 days ago, $2,400 not yet due). A $5,000 check arrives. Prefill oldest-due-first should pay the first two in full and leave $1,100 on the third. Watch Status flip and the aging row empty out.",
+    start: seedThreeInvoices,
+    steps: [
+      { label: "Prefill $5,000 oldest due first", run: () => { const r = M.prefillOldestFirst(state, 500000); allocDraft = r.applications; $("fp-pay-amount").value = "5000"; return { state, event: `Prefill: ${r.applications.map(a => `${a.invoiceId} ${M.fmt(a.amount)}`).join(", ")}; remainder ${M.fmt(r.remainder)}.` }; } },
+      { label: "Record the $5,000 check", run: () => { const r = M.recordPayment(state, { amount: 500000, method: "check", reference: "#4471", applications: allocDraft, holdRemainderAsCredit: false }); if (!r.error) allocDraft = []; return r; } },
+      { label: "Jump 30 days ahead", run: () => M.setAsOf(state, M.addDays(state.asOf, 30)) },
+    ] },
+  { name: "Overpayment → credit", text: "One $1,200 invoice; the customer sends $1,500. First try without the hold flag: rejected, because a leftover must never be silent. Then hold it: $300 becomes unapplied credit and open balance goes negative-ish (shown as $0 owed, $300 credit). Ship a new order and apply the credit by reallocating from “credit” to the new invoice.",
+    start: () => { let s = M.initialState(T); s = M.shipOrder(s, { total: 120000, daysAgo: 20, terms: "Net 30" }).state; return s; },
+    steps: [
+      { label: "Record $1,500 WITHOUT hold (should fail)", run: () => M.recordPayment(state, { amount: 150000, method: "check", applications: [{ invoiceId: "INV-001", amount: 120000 }], holdRemainderAsCredit: false }) },
+      { label: "Record $1,500 WITH hold as credit", run: () => M.recordPayment(state, { amount: 150000, method: "check", applications: [{ invoiceId: "INV-001", amount: 120000 }], holdRemainderAsCredit: true }) },
+      { label: "Ship a new $900 order (invoice is NOT auto-paid)", run: () => M.shipOrder(state, { total: 90000, daysAgo: 0, terms: "Net 30" }) },
+      { label: "Apply Credit: move $300 from credit → new invoice", run: () => M.reallocate(state, { paymentId: "PAY-002", from: "credit", to: "INV-003", amount: 30000 }) },
+    ] },
+  { name: "Wrong invoice → reallocate", text: "Staff applied an $1,800 check to the newest invoice when the customer meant the oldest. Fix without retyping the check: move the money. The payment total never changes; the ledger gets two compensating rows.",
+    start: seedThreeInvoices,
+    steps: [
+      { label: "Record $1,800 applied to INV-003 (the mistake)", run: () => M.recordPayment(state, { amount: 180000, method: "check", reference: "#4480", applications: [{ invoiceId: "INV-003", amount: 180000 }], holdRemainderAsCredit: false }) },
+      { label: "Try to move $2,000 (more than was applied — should fail)", run: () => M.reallocate(state, { paymentId: "PAY-004", from: "INV-003", to: "INV-001", amount: 200000 }) },
+      { label: "Move $1,800 INV-003 → INV-001", run: () => M.reallocate(state, { paymentId: "PAY-004", from: "INV-003", to: "INV-001", amount: 180000 }) },
+    ] },
+  { name: "Wrong amount → void", text: "A $500 card payment was keyed as $5,000. Amounts are never edited: void the payment (row stays, marked void, ignored everywhere) and re-enter $500. Notice the voided payment's applications vanish from Applied and its credit from Unapplied.",
+    start: seedThreeInvoices,
+    steps: [
+      { label: "Record $5,000 by mistake, oldest first", run: () => { const r = M.prefillOldestFirst(state, 500000); return M.recordPayment(state, { amount: 500000, method: "card", reference: "…4242", applications: r.applications, holdRemainderAsCredit: false }); } },
+      { label: "Void PAY-004", run: () => M.voidPayment(state, { paymentId: "PAY-004", reason: "keyed $5,000 instead of $500" }) },
+      { label: "Re-enter $500 to oldest", run: () => { const r = M.prefillOldestFirst(state, 50000); return M.recordPayment(state, { amount: 50000, method: "card", reference: "…4242", applications: r.applications, holdRemainderAsCredit: false }); } },
+      { label: "Try to void it twice (should fail)", run: () => M.voidPayment(state, { paymentId: "PAY-004", reason: "again" }) },
+    ] },
+  { name: "Bad debt write-off", text: "An old invoice has $45.50 left that will never come. Without a write-off it sits in the 90+ bucket forever. A write-off needs a reason, drives remaining to $0 (status paid), and shows in Total write-offs. Try one without a reason first.",
+    start: () => { let s = M.initialState(T); s = M.shipOrder(s, { total: 84550, daysAgo: 160, terms: "Net 30" }).state; s = M.recordPayment(s, { amount: 80000, method: "check", applications: [{ invoiceId: "INV-001", amount: 80000 }], holdRemainderAsCredit: false }).state; return s; },
+    steps: [
+      { label: "Write off $45.50 with no reason (should fail)", run: () => M.adjust(state, { invoiceId: "INV-001", kind: "write_off", amount: 4550, reason: "" }) },
+      { label: "Write off $60 (more than remaining — should fail)", run: () => M.adjust(state, { invoiceId: "INV-001", kind: "write_off", amount: 6000, reason: "bad debt" }) },
+      { label: "Write off $45.50 — “short pay, not worth chasing”", run: () => M.adjust(state, { invoiceId: "INV-001", kind: "write_off", amount: 4550, reason: "short pay, not worth chasing" }) },
+      { label: "Oops, reverse it (negative adjustment)", run: () => M.adjust(state, { invoiceId: "INV-001", kind: "write_off", amount: -4550, reason: "reversed: check arrived" }) },
+    ] },
+  { name: "Payment plan", text: "The customer owing $6,300 agrees to $1,000/month starting today. The plan enforces nothing; it computes expectations. Pay one installment, then jump 60 days: one installment is shown as missed. Nothing is blocked.",
+    start: seedThreeInvoices,
+    steps: [
+      { label: "Set plan $1,000 monthly from today", run: () => M.setPlan(state, { amount: 100000, frequency: "monthly", startsOn: state.asOf }) },
+      { label: "Pay the first $1,000 (ordinary payment)", run: () => { const r = M.prefillOldestFirst(state, 100000); return M.recordPayment(state, { amount: 100000, method: "card", applications: r.applications, holdRemainderAsCredit: false }); } },
+      { label: "Jump 60 days ahead", run: () => M.setAsOf(state, M.addDays(state.asOf, 60)) },
+      { label: "Try to set a second plan (should fail)", run: () => M.setPlan(state, { amount: 50000, frequency: "weekly", startsOn: state.asOf }) },
+    ] },
+  { name: "Credit limit", text: "Limit $7,500; $6,300 open; now a $1,500 order is confirmed but not shipped. Available credit goes negative (the Sales confirm would have blocked this). A held credit raises availability. Finally set the limit to $0: that means no credit at all, not unlimited.",
+    start: seedThreeInvoices,
+    steps: [
+      { label: "Confirm a $1,500 order (unshipped)", run: () => M.setCredit(state, { creditLimit: 750000, confirmedUnshipped: 150000 }) },
+      { label: "Customer prepays $1,000, held as credit", run: () => M.recordPayment(state, { amount: 100000, method: "ach", applications: [], holdRemainderAsCredit: true }) },
+      { label: "Set credit limit to $0", run: () => M.setCredit(state, { creditLimit: 0, confirmedUnshipped: 150000 }) },
+    ] },
+  { name: "Aging as-of", text: "Same three invoices, no payments. Step the as-of date and watch money slide across buckets: Current → 1–15 → 16–30 → … Nothing is written; this is what the business-wide page's date picker does.",
+    start: seedThreeInvoices,
+    steps: [
+      { label: "+7 days", run: () => M.setAsOf(state, M.addDays(state.asOf, 7)) },
+      { label: "+30 days", run: () => M.setAsOf(state, M.addDays(state.asOf, 30)) },
+      { label: "+30 days", run: () => M.setAsOf(state, M.addDays(state.asOf, 30)) },
+      { label: "Back to today", run: () => M.setAsOf(state, T) },
+    ] },
+];
+function startScenario(i) { scenario = scenarios[i]; stepIdx = 0; state = scenario.start(); allocDraft = []; $("log").className = "log"; $("log").textContent = `Walkthrough “${scenario.name}” reset to its starting state. Press step 1.`; render(); }
+function renderScenario() {
+  $("scenario-tabs").innerHTML = scenarios.map((sc, i) => `<button class="${scenario === sc ? "active" : ""}" data-sc="${i}">${sc.name}</button>`).join("");
+  $("scenario-tabs").querySelectorAll("button").forEach(b => b.addEventListener("click", () => startScenario(+b.dataset.sc)));
+  if (!scenario) { $("scenario-text").textContent = "Pick a scenario. Each one resets the account to a known starting point, then walks through the buttons in order."; $("scenario-steps").innerHTML = ""; return; }
+  $("scenario-text").textContent = scenario.text;
+  $("scenario-steps").innerHTML = scenario.steps.map((st, i) => `<li class="${i < stepIdx ? "done" : i === stepIdx ? "current" : ""}"><button class="secondary" data-step="${i}" ${i !== stepIdx ? "disabled" : ""}>${st.label}</button></li>`).join("") + (stepIdx >= scenario.steps.length ? `<li class="muted small">Done. Free-play from here, or pick another scenario.</li>` : "");
+  $("scenario-steps").querySelectorAll("button[data-step]").forEach(b => b.addEventListener("click", () => { const r = scenario.steps[+b.dataset.step].run(); stepIdx += 1; apply(r); }));
+}
+render();
+</script>
+</body>
+</html>

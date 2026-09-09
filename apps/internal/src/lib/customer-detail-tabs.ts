@@ -4,6 +4,8 @@ export const CUSTOMER_DETAIL_TAB_KEYS = [
   "contacts",
   "certificates",
   "orders",
+  // PROTOTYPE — real tab lands with ADA-363; remove this comment then.
+  "accounting",
 ] as const;
 
 export type CustomerDetailTabKey = (typeof CUSTOMER_DETAIL_TAB_KEYS)[number];
@@ -16,6 +18,7 @@ export const CUSTOMER_DETAIL_TAB_LABELS: Record<CustomerDetailTabKey, string> = 
   contacts: "Contacts",
   certificates: "Certificates",
   orders: "Orders",
+  accounting: "Accounting",
 };
 
 export function customerDetailTabHref(
