@@ -110,6 +110,7 @@ export class RecordCustomerPaymentUseCase {
           input.applications.map((row) => row.invoiceId),
         );
         const paymentApplications = await invoices.listApplicationsByPayment(
+          input.organizationId,
           existingPayment.payment.id,
         );
         return {

@@ -3,7 +3,7 @@ import {
   RecordInboundFromPoUseCase,
   type IClock,
 } from "@dc-inventory/inventory";
-import { RecordPaymentUseCase } from "@dc-inventory/accounting";
+import { RecordCustomerPaymentUseCase, RecordPaymentUseCase } from "@dc-inventory/accounting";
 import {
   CustomerId,
   InvoiceId,
@@ -35,7 +35,10 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
     const organizationSlug = `ada-200-${organizationId}`;
     const customerId = CustomerId.parse(randomUUID());
     const orderId = OrderId.parse(randomUUID());
-    const invoiceId = InvoiceId.parse(randomUUID());
+    const customerPaymentOrderId = OrderId.parse(randomUUID());
+    const recordPaymentOrderId = OrderId.parse(randomUUID());
+    const customerPaymentInvoiceId = InvoiceId.parse(randomUUID());
+    const recordPaymentInvoiceId = InvoiceId.parse(randomUUID());
     const staffUserId = StaffUserId.parse(randomUUID());
 
     beforeAll(async () => {
@@ -60,7 +63,8 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
         insert into sales.orders
           (id, organization_id, customer_id, status, document_number)
         values
-          (${orderId}, ${organizationId}, ${customerId}, 'shipped', ${`SO-${organizationId}`})
+          (${customerPaymentOrderId}, ${organizationId}, ${customerId}, 'shipped', ${`SO-CUST-${organizationId}`}),
+          (${recordPaymentOrderId}, ${organizationId}, ${customerId}, 'shipped', ${`SO-PAY-${organizationId}`})
       `;
       await first.sql`
         insert into accounting.invoices
@@ -73,21 +77,31 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
             status,
             posted_at,
             subtotal_cents,
-            tax_total_cents,
             total_cents,
             currency
           )
         values
           (
-            ${invoiceId},
+            ${customerPaymentInvoiceId},
             ${organizationId},
-            ${orderId},
+            ${customerPaymentOrderId},
             ${customerId},
-            ${`INV-${organizationId}`},
+            ${`INV-CUST-${organizationId}`},
             'posted',
             ${clock.now().toISOString()},
             1000,
-            0,
+            1000,
+            'USD'
+          ),
+          (
+            ${recordPaymentInvoiceId},
+            ${organizationId},
+            ${recordPaymentOrderId},
+            ${customerId},
+            ${`INV-PAY-${organizationId}`},
+            'posted',
+            ${clock.now().toISOString()},
+            1000,
             1000,
             'USD'
           )
@@ -149,7 +163,7 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       await first.sql.unsafe(
         "drop function if exists accounting.ada_200_payment_race_barrier()",
       );
-      await first.sql`delete from accounting.payment_applications where invoice_id = ${invoiceId}`;
+      await first.sql`delete from accounting.payment_applications where invoice_id in (${customerPaymentInvoiceId}, ${recordPaymentInvoiceId})`;
       await first.sql`delete from accounting.payments where organization_id = ${organizationId}`;
       await first.sql`delete from accounting.invoices where organization_id = ${organizationId}`;
       await first.sql`delete from sales.orders where organization_id = ${organizationId}`;
@@ -242,6 +256,45 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       ]);
     });
 
+    it("replays concurrent RecordCustomerPayment with the same idempotency key", async () => {
+      const firstUseCase = new RecordCustomerPaymentUseCase(
+        new PostgresAccountingUnitOfWork(first.db),
+        clock,
+      );
+      const secondUseCase = new RecordCustomerPaymentUseCase(
+        new PostgresAccountingUnitOfWork(second.db),
+        clock,
+      );
+      const idempotencyKey = `ada-200-customer-payment-${randomUUID()}`;
+      const request = {
+        organizationId,
+        staffUserId,
+        customerId,
+        amountCents: 500,
+        currency: "USD",
+        method: "check" as const,
+        idempotencyKey,
+        holdRemainderAsCredit: true,
+        applications: [{ invoiceId: customerPaymentInvoiceId, amountCents: 200 }],
+      };
+
+      const replayResults = await Promise.all([
+        firstUseCase.execute(request),
+        secondUseCase.execute(request),
+      ]);
+      expect(replayResults.every((result) => result.ok)).toBe(true);
+      if (replayResults[0]?.ok && replayResults[1]?.ok) {
+        expect(replayResults[0].paymentId).toBe(replayResults[1].paymentId);
+      }
+      const paymentRows = await first.sql`
+        select id
+        from accounting.payments
+        where organization_id = ${organizationId}
+          and idempotency_key = ${idempotencyKey}
+      `;
+      expect(paymentRows).toHaveLength(1);
+    });
+
     it("replays a payment retry and maps a competing payload to conflict", async () => {
       const firstUseCase = new RecordPaymentUseCase(
         new PostgresAccountingUnitOfWork(first.db),
@@ -255,7 +308,7 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       const request = {
         organizationId,
         staffUserId,
-        invoiceId,
+        invoiceId: recordPaymentInvoiceId,
         amountCents: 200,
         currency: "USD",
         idempotencyKey,

@@ -288,6 +288,13 @@
       "when": 1790755600000,
       "tag": "0041_sales_orders_multi_cart",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1790855600000,
+      "tag": "0042_ar_payments_adjustments_plans_drop_tax",
+      "breakpoints": true
     }
   ]
 }

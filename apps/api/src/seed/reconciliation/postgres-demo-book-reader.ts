@@ -1,10 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import {
-  invoiceTaxLines,
-  invoices,
-  paymentApplications,
-  payments,
-} from "@dc-inventory/accounting/schema";
+import { invoices, paymentApplications, payments } from "@dc-inventory/accounting/schema";
 import { productImages, products } from "@dc-inventory/catalog/schema";
 import {
   contacts,
@@ -74,7 +69,6 @@ export class PostgresDemoBookReader implements IDemoBookReader {
       salesOrderRows,
       salesOrderLineRows,
       invoiceRows,
-      invoiceTaxLineRows,
       paymentRows,
       paymentApplicationRows,
       taxCommitRows,
@@ -247,17 +241,9 @@ export class PostgresDemoBookReader implements IDemoBookReader {
           documentNumber: invoices.documentNumber,
           postedAt: invoices.postedAt,
           subtotalCents: invoices.subtotalCents,
-          taxTotalCents: invoices.taxTotalCents,
           totalCents: invoices.totalCents,
         })
         .from(invoices)
-        .where(eq(invoices.organizationId, DEMO_SEED_ORGANIZATION_ID)),
-      this.db
-        .select({
-          invoiceId: invoiceTaxLines.invoiceId,
-        })
-        .from(invoiceTaxLines)
-        .innerJoin(invoices, eq(invoiceTaxLines.invoiceId, invoices.id))
         .where(eq(invoices.organizationId, DEMO_SEED_ORGANIZATION_ID)),
       this.db
         .select({
@@ -342,8 +328,8 @@ export class PostgresDemoBookReader implements IDemoBookReader {
       })),
       salesOrders: salesOrderRows,
       salesOrderLines: salesOrderLineRows,
-      invoices: invoiceRows,
-      invoiceTaxLines: invoiceTaxLineRows,
+      invoices: invoiceRows.map((row) => ({ ...row, taxTotalCents: 0 })),
+      invoiceTaxLines: [],
       payments: paymentRows,
       paymentApplications: paymentApplicationRows,
       taxCommits: taxCommitRows,

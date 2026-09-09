@@ -54,7 +54,10 @@ export type IInvoiceRepository = {
 
 export type IAccountingRepository = IInvoiceRepository & {
   findPaymentById(organizationId: OrganizationId, paymentId: PaymentId): Promise<Payment | null>;
-  listApplicationsByPayment(paymentId: PaymentId): Promise<readonly PaymentApplication[]>;
+  listApplicationsByPayment(
+    organizationId: OrganizationId,
+    paymentId: PaymentId,
+  ): Promise<readonly PaymentApplication[]>;
   insertPaymentWithApplications(
     payment: Payment,
     applications: readonly PaymentApplicationSpec[],

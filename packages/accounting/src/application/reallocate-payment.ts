@@ -42,7 +42,10 @@ export class ReallocatePaymentUseCase {
         return { ok: false, reason: "not_found" };
       }
 
-      const existingApplications = await invoices.listApplicationsByPayment(payment.id);
+      const existingApplications = await invoices.listApplicationsByPayment(
+        input.organizationId,
+        payment.id,
+      );
       const currency = payment.amount.currency;
       const appliedTotal = existingApplications.reduce(
         (sum, row) => sum + row.amount.amountMinor,
@@ -124,7 +127,10 @@ export class ReallocatePaymentUseCase {
         await invoices.insertApplication(application);
       }
 
-      const updatedApplications = await invoices.listApplicationsByPayment(payment.id);
+      const updatedApplications = await invoices.listApplicationsByPayment(
+        input.organizationId,
+        payment.id,
+      );
       const applied = updatedApplications.reduce((sum, row) => sum + row.amount.amountMinor, 0);
       return {
         ok: true,

@@ -70,10 +70,14 @@ export {
 export {
   accounting,
   documentNumberCounters as accountingDocumentNumberCounters,
+  invoiceAdjustmentKind,
+  invoiceAdjustments,
   invoiceStatus,
   invoices,
-  invoiceTaxLines,
   paymentApplications,
+  paymentMethod,
+  paymentPlanFrequency,
+  paymentPlans,
   payments,
 } from "@dc-inventory/accounting/schema";
 export {
@@ -146,9 +150,10 @@ import {
 import { taxCommitLines, taxCommits } from "./schema/tax.js";
 import {
   documentNumberCounters as accountingDocumentNumberCounters,
+  invoiceAdjustments,
   invoices,
-  invoiceTaxLines,
   paymentApplications,
+  paymentPlans,
   payments,
 } from "@dc-inventory/accounting/schema";
 import {
@@ -196,9 +201,10 @@ export const schema = {
   taxCommitLines,
   invoices,
   accountingDocumentNumberCounters,
-  invoiceTaxLines,
+  invoiceAdjustments,
   payments,
   paymentApplications,
+  paymentPlans,
   subscriptions,
   addOnGrants,
   flagOverrides,

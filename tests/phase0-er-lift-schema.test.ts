@@ -60,7 +60,8 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     expect(barrel).toMatch(/taxCommits|tax_commits/);
     expect(barrel).toMatch(/taxCommitLines|tax_commit_lines/);
     expect(barrel).toMatch(/invoices/);
-    expect(barrel).toMatch(/invoiceTaxLines|invoice_tax_lines/);
+    expect(barrel).toMatch(/invoiceAdjustments|invoice_adjustments/);
+    expect(barrel).toMatch(/paymentPlans|payment_plans/);
     expect(barrel).toMatch(/payments/);
     expect(barrel).toMatch(/paymentApplications|payment_applications/);
     expect(existsSync(resolve(root, "packages/db"))).toBe(false);
@@ -148,7 +149,7 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     expect(salesTables).not.toMatch(/jsonb/i);
   });
 
-  it("defines tax commits plus frozen invoice tax lines with no live tax FK", () => {
+  it("defines tax commits and drops frozen invoice tax lines (TX2)", () => {
     const sql = listSqlMigrations().join("\n");
 
     expect(sql).toMatch(/tax_commits/);
@@ -161,15 +162,8 @@ describe("Phase 0 identity / customers / sales / tax / accounting schemas (ADA-5
     expect(sql).toMatch(/rate_bps/);
     expect(sql).toMatch(/taxable_base_cents/);
     expect(sql).toMatch(/invoice_tax_lines/);
-
-    const invoiceTaxSql = [
-      sql.match(/CREATE TABLE "accounting"\."invoice_tax_lines" \([\s\S]*?\);/)?.[0],
-      ...sql.match(
-        /ALTER TABLE "accounting"\."invoice_tax_lines"[\s\S]*?;/g,
-      ) ?? [],
-    ].join("\n");
-    expect(invoiceTaxSql).toMatch(/invoice_tax_lines/);
-    expect(invoiceTaxSql).not.toMatch(/REFERENCES "tax"\./);
+    expect(sql).toMatch(/DROP TABLE IF EXISTS "accounting"\."invoice_tax_lines"/);
+    expect(sql).toMatch(/DROP COLUMN IF EXISTS "tax_total_cents"/);
   });
 
   it("defines accounting invoices, payments, and partial applications without Stripe or PAN", () => {
