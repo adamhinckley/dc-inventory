@@ -297,4 +297,138 @@ describe("staff RBAC HTTP guard", () => {
     expect(allowedCredit.statusCode).toBe(200);
     expect(allowedCredit.json()).toMatchObject({ creditLimitCents: 2_000_000 });
   });
+
+  it("allows sparse Save Changes bodies for purchasing and accounting-only staff", async () => {
+    const { app, cookie } = await startRbacApp();
+    const admin = await cookie("admin");
+    const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Sparse Patch Customer",
+        creditLimitCents: 1_000_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    const purchasingNameOnly = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+      payload: { name: "Sparse Patch Customer Renamed" },
+    });
+    expect(purchasingNameOnly.statusCode).toBe(200);
+    expect(purchasingNameOnly.json()).toMatchObject({
+      name: "Sparse Patch Customer Renamed",
+      creditLimitCents: 1_000_000,
+    });
+
+    const accountingCreditOnly = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: { creditLimitCents: 2_500_000 },
+    });
+    expect(accountingCreditOnly.statusCode).toBe(200);
+    expect(accountingCreditOnly.json()).toMatchObject({
+      name: "Sparse Patch Customer Renamed",
+      creditLimitCents: 2_500_000,
+    });
+  });
+
+  it("requires both actions when credit and master-data fields are patched together", async () => {
+    const { app, cookie } = await startRbacApp();
+    const admin = await cookie("admin");
+    const purchasing = await cookie("purchasing");
+    const accounting = await cookie("accounting");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Dual Action Customer",
+        creditLimitCents: 1_000_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    const mixedPayload = {
+      name: "Dual Action Customer Updated",
+      creditLimitCents: 3_000_000,
+    };
+
+    expectForbidden(
+      await app.inject({
+        method: "PATCH",
+        url: `/internal/customers/${customerId}`,
+        cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+        payload: mixedPayload,
+      }),
+    );
+
+    expectForbidden(
+      await app.inject({
+        method: "PATCH",
+        url: `/internal/customers/${customerId}`,
+        cookies: { [STAFF_SESSION_COOKIE]: accounting },
+        payload: mixedPayload,
+      }),
+    );
+
+    const allowedAdmin = await app.inject({
+      method: "PATCH",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: mixedPayload,
+    });
+    expect(allowedAdmin.statusCode).toBe(200);
+    expect(allowedAdmin.json()).toMatchObject({
+      name: "Dual Action Customer Updated",
+      creditLimitCents: 3_000_000,
+    });
+  });
+
+  it("requires credit_limit_manage to set initial credit limit on create", async () => {
+    const { app, cookie } = await startRbacApp();
+    const purchasing = await cookie("purchasing");
+    const admin = await cookie("admin");
+
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: "/internal/customers",
+        cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+        payload: {
+          name: "Purchasing Create Customer",
+          creditLimitCents: 500_000,
+          currency: "USD",
+          terms: "Net 30",
+        },
+      }),
+    );
+
+    const allowedAdmin = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Admin Create Customer",
+        creditLimitCents: 500_000,
+        currency: "USD",
+        terms: "Net 30",
+      },
+    });
+    expect(allowedAdmin.statusCode).toBe(201);
+  });
 });

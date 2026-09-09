@@ -34,7 +34,7 @@ function updateInternalCustomerActions(request: FastifyRequest): readonly StaffA
   if (touchesOtherFields) {
     actions.push("master_data_manage");
   }
-  return actions.length > 0 ? actions : ["master_data_manage"];
+  return actions;
 }
 
 const ACTION_BY_OPERATION: Readonly<
@@ -44,7 +44,7 @@ const ACTION_BY_OPERATION: Readonly<
   createInternalProduct: "master_data_manage",
   updateInternalProduct: "master_data_manage",
   updateInternalProductBySku: "master_data_manage",
-  createInternalCustomer: "master_data_manage",
+  createInternalCustomer: ["master_data_manage", "credit_limit_manage"],
   updateInternalCustomer: updateInternalCustomerActions,
   createInternalCustomerContact: "master_data_manage",
   updateInternalCustomerContact: "master_data_manage",
