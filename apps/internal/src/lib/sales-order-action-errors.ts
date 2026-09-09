@@ -36,10 +36,34 @@ export function replaceSalesOrderLinesErrorMessage(result: {
   return "Autosave failed.";
 }
 
+type CreditExceededBody = ActionErrorBody & {
+  availableCreditCents?: number;
+  orderTotalCents?: number;
+};
+
+export function formatCreditExceededMessage(data: CreditExceededBody): string {
+  if (data.availableCreditCents !== undefined && data.orderTotalCents !== undefined) {
+    const available = (data.availableCreditCents / 100).toFixed(2);
+    const total = (data.orderTotalCents / 100).toFixed(2);
+    return `Available credit is $${available}; this order totals $${total}.`;
+  }
+  return "This order exceeds the customer's available credit.";
+}
+
+export function isCreditExceededConfirmError(result: {
+  status: number;
+  data?: ActionErrorBody;
+}): boolean {
+  return result.status === 409 && result.data?.error === "credit_exceeded";
+}
+
 export function confirmSalesOrderErrorMessage(result: {
   status: number;
   data?: ActionErrorBody;
 }): string {
+  if (result.status === 409 && result.data?.error === "credit_exceeded") {
+    return formatCreditExceededMessage(result.data);
+  }
   if (result.status === 409 && result.data?.error === "insufficient_atp") {
     return (
       formatShortage(result.data) ??

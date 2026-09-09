@@ -1302,6 +1302,7 @@ export const salesOrderItemSchema = z.object({
   documentNumber: z.string(),
   status: salesOrderStatusSchema,
   label: z.string().optional(),
+  creditLimitOverriddenByStaffUserId: z.string().uuid().optional(),
   shipLine1: z.string().optional(),
   shipLine2: z.string().nullable().optional(),
   shipCity: z.string().optional(),
@@ -1378,12 +1379,22 @@ export const salesOrderConfirmBodySchema = salesOrderCommandBodySchema.extend({
   shipToId: z.string().uuid(),
 });
 
+export const salesOrderStaffConfirmBodySchema = salesOrderConfirmBodySchema.extend({
+  overrideCredit: z.boolean().optional(),
+});
+
 export const insufficientAtpResponseSchema = z.object({
   error: z.literal("insufficient_atp"),
   sku: z.string().optional(),
   name: z.string().optional(),
   requestedQty: z.number().int().optional(),
   availableQty: z.number().int().optional(),
+});
+
+export const creditExceededResponseSchema = z.object({
+  error: z.literal("credit_exceeded"),
+  availableCreditCents: z.number().int().optional(),
+  orderTotalCents: z.number().int().optional(),
 });
 
 export const salesOrdersListTable = {

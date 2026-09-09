@@ -13,6 +13,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryCatalogProductPort } from "../src/adapters/in-memory-catalog-product-port.js";
+import { InMemoryCreditCheckPort } from "../src/adapters/in-memory-credit-check.js";
 import { InMemoryCustomerShipToSnapshotReadPort } from "../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import { ConfirmSalesOrderUseCase, CreateSalesOrderUseCase } from "../src/index.js";
@@ -60,7 +61,7 @@ async function harness() {
   return {
     uow,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog),
-    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot),
+    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot, new InMemoryCreditCheckPort()),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
     shipToId: TEST_SHIP_TO_ID,

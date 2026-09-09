@@ -284,7 +284,7 @@ A repository persists and reconstitutes an aggregate. It does not orchestrate ot
 | `ISalesOrderRepository` | Sales | Postgres, in-memory |
 | `ICatalogProductPort` | Sales / Purchasing (ACL) | In-process Catalog adapter, later HTTP if split |
 | `ICustomerRepository` | Customers | Postgres, in-memory |
-| `ICreditCheckPort` | Sales | In-process Customers adapter |
+| `ICreditCheckPort` | Sales | In-process Accounting adapter (`SalesCreditCheckAdapter` over `GetCustomerAccountingSummary`) |
 | `IInvoiceRepository` | Accounting | Postgres, in-memory |
 | `IFeatures` | Licensing (read) | Postgres projection, in-memory |
 | `IEntitlementRepository` | Licensing | Postgres, in-memory |

@@ -70,6 +70,7 @@ export type ReplayDemoOrdersPorts = {
   products: Pick<IProductRepository, "findById" | "findByIds" | "findBySku">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
   billToSnapshot: ICustomerBillToSnapshotReadPort;
+  creditCheck: import("@dc-inventory/sales").ICreditCheckPort;
 };
 
 export type ReplayDemoOrdersInput = {
@@ -243,6 +244,7 @@ export async function runReplayDemoOrders(
     ports.sales,
     demoCustomerLookup(ports.customers),
     shipToSnapshot,
+    ports.creditCheck,
   );
   const shipSo = new ShipSalesOrderUseCase(ports.sales, ports.billToSnapshot);
 

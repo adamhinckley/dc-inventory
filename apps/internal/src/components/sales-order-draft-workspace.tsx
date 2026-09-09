@@ -15,6 +15,7 @@ import {
   Button,
   Chip,
   Combobox,
+  Dialog,
   FieldRow,
   formatMoneyMinorUnits,
   Input,
@@ -36,8 +37,10 @@ import {
   type CSSProperties,
 } from "react";
 import {
-  confirmSalesOrderErrorMessage,
   cancelSalesOrderErrorMessage,
+  confirmSalesOrderErrorMessage,
+  formatCreditExceededMessage,
+  isCreditExceededConfirmError,
   replaceSalesOrderLinesErrorMessage,
 } from "../lib/sales-order-action-errors";
 import {
@@ -238,6 +241,8 @@ export function SalesOrderDraftWorkspace({
     "idle" | "saving" | "saved" | "error"
   >("idle");
   const [actionError, setActionError] = useState<string | null>(null);
+  const [creditOverrideDialogOpen, setCreditOverrideDialogOpen] = useState(false);
+  const [creditOverrideMessage, setCreditOverrideMessage] = useState<string | null>(null);
 
   const lastSavedLinesRef = useRef(lines);
   const linesRef = useRef(lines);
@@ -511,37 +516,48 @@ export function SalesOrderDraftWorkspace({
     cancelPending: cancelMutation.isPending,
   });
 
-  const confirmOrder = useCallback(async () => {
-    setActionError(null);
-    const saved = await flushAutosave(true);
-    if (!saved) {
-      return;
-    }
-    try {
-      const result = await confirmMutation.mutateAsync({
-        id: salesOrderId,
-        data: {
-          idempotencyKey: `confirm-${salesOrderId}`,
-          shipToId: selectedShipToId,
-        },
-      });
-      if (result.status !== 200) {
-        setActionError(confirmSalesOrderErrorMessage(result));
+  const confirmOrder = useCallback(
+    async (overrideCredit = false) => {
+      setActionError(null);
+      const saved = await flushAutosave(true);
+      if (!saved) {
         return;
       }
-      await invalidateOrder();
-      router.refresh();
-    } catch {
-      setActionError("Could not confirm this sales order.");
-    }
-  }, [
-    confirmMutation,
-    flushAutosave,
-    invalidateOrder,
-    router,
-    salesOrderId,
-    selectedShipToId,
-  ]);
+      try {
+        const result = await confirmMutation.mutateAsync({
+          id: salesOrderId,
+          data: {
+            idempotencyKey: `confirm-${salesOrderId}`,
+            shipToId: selectedShipToId,
+            ...(overrideCredit ? { overrideCredit: true } : {}),
+          },
+        });
+        if (result.status !== 200) {
+          if (!overrideCredit && isCreditExceededConfirmError(result)) {
+            setCreditOverrideMessage(formatCreditExceededMessage(result.data ?? {}));
+            setCreditOverrideDialogOpen(true);
+            return;
+          }
+          setActionError(confirmSalesOrderErrorMessage(result));
+          return;
+        }
+        setCreditOverrideDialogOpen(false);
+        setCreditOverrideMessage(null);
+        await invalidateOrder();
+        router.refresh();
+      } catch {
+        setActionError("Could not confirm this sales order.");
+      }
+    },
+    [
+      confirmMutation,
+      flushAutosave,
+      invalidateOrder,
+      router,
+      salesOrderId,
+      selectedShipToId,
+    ],
+  );
 
   const cancelOrder = useCallback(async () => {
     setActionError(null);
@@ -696,6 +712,53 @@ export function SalesOrderDraftWorkspace({
           Subtotal {formatMoneyMinorUnits(subtotalCents, currency)}
         </p>
       </div>
+
+      <Dialog
+        open={creditOverrideDialogOpen}
+        onOpenChange={(open) => {
+          setCreditOverrideDialogOpen(open);
+          if (!open) {
+            setCreditOverrideMessage(null);
+          }
+        }}
+      >
+        <Dialog.Content
+          size="sm"
+          className="overlay border-error"
+          data-testid="sales-order-credit-override-dialog"
+        >
+          <Dialog.Header>
+            <Dialog.Title>Credit Limit Exceeded</Dialog.Title>
+            <Dialog.Close />
+          </Dialog.Header>
+          <Dialog.Body>
+            <Dialog.Description className="text-error">
+              {creditOverrideMessage ??
+                "This order exceeds the customer&apos;s available credit."}{" "}
+              Confirm only if you intend to place it anyway.
+            </Dialog.Description>
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Dialog.Close
+              render={
+                <Button type="button" variant="ghost" size="sm">
+                  Cancel
+                </Button>
+              }
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={confirmMutation.isPending}
+              onClick={() => void confirmOrder(true)}
+            >
+              <CircleCheck className="size-icon" aria-hidden />
+              {confirmMutation.isPending ? "Confirming…" : "Confirm Anyway"}
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog>
     </section>
   );
 }

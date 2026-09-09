@@ -33,7 +33,9 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startSalesApp(options: { productInactive?: boolean } = {}) {
+async function startSalesApp(
+  options: { productInactive?: boolean; creditLimitCents?: number } = {},
+) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
@@ -51,7 +53,7 @@ async function startSalesApp(options: { productInactive?: boolean } = {}) {
     id: CUSTOMER_ID,
     organizationId: OrganizationId.DEFAULT,
     name: "Acme Wholesale",
-    creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+    creditLimit: Money.fromMinorUnits(options.creditLimitCents ?? 1_000_000, "USD"),
     terms: "Net 30",
     createdAt: new Date("2026-08-24T03:30:00.000Z"),
   });
@@ -367,6 +369,70 @@ describe("internal sales orders HTTP", () => {
     });
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("returns credit_exceeded when confirm exceeds available credit", async () => {
+    const { app } = await startSalesApp({ creditLimitCents: 0 });
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-credit-block", shipToId: API_TEST_SHIP_TO_ID },
+    });
+    expect(confirmed.statusCode).toBe(409);
+    expect(confirmed.json()).toEqual({
+      error: "credit_exceeded",
+      availableCreditCents: 0,
+      orderTotalCents: 250,
+    });
+  });
+
+  it("staff override confirms and stamps creditLimitOverriddenByStaffUserId", async () => {
+    const { app } = await startSalesApp({ creditLimitCents: 0 });
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        idempotencyKey: "http-credit-override",
+        shipToId: API_TEST_SHIP_TO_ID,
+        overrideCredit: true,
+      },
+    });
+    expect(confirmed.statusCode).toBe(200);
+    expect(confirmed.json()).toMatchObject({
+      id: orderId,
+      status: "confirmed",
+      creditLimitOverriddenByStaffUserId: STAFF_ID,
+    });
   });
 
   it("replace-lines updates qty on a draft order", async () => {

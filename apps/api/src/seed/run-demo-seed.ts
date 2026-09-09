@@ -34,6 +34,7 @@ import {
   currencyBySkuFromPlan,
   customerIdByKeyFromPlan,
   permissiveDemoBillToSnapshotPort,
+  permissiveDemoCreditCheckPort,
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
 import { runReplayDemoOrders } from "./replay-demo-orders.js";
@@ -174,6 +175,7 @@ export async function runDemoSeedInMemory(
       products: staticPorts.products,
       invoices: uow.invoices,
       billToSnapshot: permissiveDemoBillToSnapshotPort(),
+      creditCheck: permissiveDemoCreditCheckPort(),
     },
     {
       plan: input.plan,

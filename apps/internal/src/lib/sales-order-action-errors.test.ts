@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   confirmSalesOrderErrorMessage,
+  isCreditExceededConfirmError,
   replaceSalesOrderLinesErrorMessage,
   shipSalesOrderErrorMessage,
 } from "./sales-order-action-errors";
@@ -25,6 +26,21 @@ describe("sales order action errors", () => {
     expect(
       confirmSalesOrderErrorMessage({ status: 409, data: { error: "conflict" } }),
     ).toMatch(/conflict/i);
+  });
+
+  it("flags credit exceeded confirm failures for override handling", () => {
+    const creditExceeded = {
+      status: 409,
+      data: {
+        error: "credit_exceeded",
+        availableCreditCents: 2500,
+        orderTotalCents: 5000,
+      },
+    };
+    expect(isCreditExceededConfirmError(creditExceeded)).toBe(true);
+    expect(confirmSalesOrderErrorMessage(creditExceeded)).toBe(
+      "Available credit is $25.00; this order totals $50.00.",
+    );
   });
 
   it("maps replace and ship failures to distinct copy", () => {

@@ -6,11 +6,12 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
 import type { ICustomerShipToSnapshotReadPort } from "../domain/ports/customer-ship-to-snapshot-read.js";
+import type { ICreditCheckPort } from "../domain/ports/credit-check.js";
 import type {
   ICustomerLookupPort,
   ISalesUnitOfWork,
 } from "../domain/ports/sales-order-repository.js";
-import type { SalesOrder } from "../domain/sales-order.js";
+import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
 import { confirmAccountStatusGate } from "./account-status-gate.js";
 
 export type ConfirmSalesOrderRequest = {
@@ -21,6 +22,8 @@ export type ConfirmSalesOrderRequest = {
   shipToId: string;
   /** When set, the order must belong to this customer (wholesale session gate). */
   customerId?: CustomerId;
+  /** Staff-only: confirm when available credit is below the order total. */
+  overrideCredit?: boolean;
 };
 
 export type ConfirmSalesOrderShortage = {
@@ -43,9 +46,16 @@ export type ConfirmSalesOrderResult =
         | "customer_on_hold"
         | "customer_inactive"
         | "customer_not_found"
-        | "ship_to_not_found";
+        | "ship_to_not_found"
+        | "credit_exceeded";
+      availableCreditCents?: number;
+      orderTotalCents?: number;
     }
   | { ok: false; reason: "insufficient_atp"; shortage?: ConfirmSalesOrderShortage };
+
+function computeOrderTotalCents(lines: readonly SalesOrderLine[]): number {
+  return lines.reduce((sum, line) => sum + line.qty * line.unitPrice.amountMinor, 0);
+}
 
 function applyShipToSnapshot(
   order: SalesOrder,
@@ -74,10 +84,10 @@ export class ConfirmSalesOrderUseCase {
     private readonly uow: ISalesUnitOfWork,
     private readonly customers: ICustomerLookupPort,
     private readonly shipTos: ICustomerShipToSnapshotReadPort,
+    private readonly creditCheck: ICreditCheckPort,
   ) {}
 
   async execute(input: ConfirmSalesOrderRequest): Promise<ConfirmSalesOrderResult> {
-    void input.staffUserId;
     try {
       return await this.uow.run(async (scope) => {
         const existing = await scope.salesOrders.findById(
@@ -133,6 +143,22 @@ export class ConfirmSalesOrderUseCase {
           return { ok: false, reason: "ship_to_not_found" };
         }
 
+        const orderTotalCents = computeOrderTotalCents(existing.lines);
+        if (!input.overrideCredit) {
+          const availableCreditCents = await this.creditCheck.availableCredit(
+            input.organizationId,
+            existing.customerId,
+          );
+          if (availableCreditCents < orderTotalCents) {
+            return {
+              ok: false,
+              reason: "credit_exceeded",
+              availableCreditCents,
+              orderTotalCents,
+            };
+          }
+        }
+
         await scope.inventory.lockSnapshots(
           existing.lines.map((line) => ({
             organizationId: existing.organizationId,
@@ -167,7 +193,13 @@ export class ConfirmSalesOrderUseCase {
         }
 
         const updated: SalesOrder = applyShipToSnapshot(
-          { ...existing, status: "confirmed" },
+          {
+            ...existing,
+            status: "confirmed",
+            ...(input.overrideCredit
+              ? { creditLimitOverriddenByStaffUserId: input.staffUserId }
+              : {}),
+          },
           shipToSnapshot,
         );
         await scope.salesOrders.save(updated);

@@ -14,6 +14,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { InMemoryCatalogProductPort } from "../src/adapters/in-memory-catalog-product-port.js";
+import { InMemoryCreditCheckPort } from "../src/adapters/in-memory-credit-check.js";
 import { InMemoryCustomerShipToSnapshotReadPort } from "../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import {
@@ -76,7 +77,7 @@ async function harness() {
     uow,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog, clock),
     get: new GetSalesOrderUseCase(uow.salesOrders),
-    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot),
+    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot, new InMemoryCreditCheckPort()),
     ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),

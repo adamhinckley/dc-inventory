@@ -5,7 +5,9 @@ import { CustomerShipToSnapshotReadAdapter } from "@dc-inventory/customers";
 import {
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
+  InMemoryCreditCheckPort,
   ShipSalesOrderUseCase,
+  type ICreditCheckPort,
   type ICustomerBillToSnapshotReadPort,
   type IClock,
   type ICustomerLookupPort,
@@ -40,7 +42,12 @@ export type ReplaySalesOrdersPorts = {
   products: Pick<IProductRepository, "findById" | "findByIds" | "findBySku">;
   invoices: Pick<IInvoiceRepository, "findByOrderId">;
   billToSnapshot: ICustomerBillToSnapshotReadPort;
+  creditCheck: ICreditCheckPort;
 };
+
+export function permissiveDemoCreditCheckPort(): ICreditCheckPort {
+  return new InMemoryCreditCheckPort();
+}
 
 export type ReplaySalesOrdersInput = {
   plan: DemoBookPlan;
@@ -151,6 +158,7 @@ export async function runReplaySalesOrders(
     ports.uow,
     demoCustomerLookup(ports.customers),
     shipToSnapshot,
+    ports.creditCheck,
   );
   const ship = new ShipSalesOrderUseCase(ports.uow, ports.billToSnapshot);
   const shipInstantBySalesOrderKey = new Map(

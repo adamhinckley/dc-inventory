@@ -43,6 +43,7 @@ afterEach(async () => {
 async function startApp(options?: {
   customerAStatus?: "active" | "on_hold" | "inactive";
   customerBStatus?: "active" | "on_hold" | "inactive";
+  customerACreditLimitCents?: number;
 }) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
@@ -59,13 +60,14 @@ async function startApp(options?: {
     name: string,
     customerNumber: string,
     accountStatus: "active" | "on_hold" | "inactive",
+    creditLimitCents = options?.customerACreditLimitCents ?? 1_000_000,
   ) {
     await customerRepo.save({
       id,
       organizationId: OrganizationId.DEFAULT,
       name,
       customerNumber,
-      creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+      creditLimit: Money.fromMinorUnits(creditLimitCents, "USD"),
       terms: "NET30",
       accountStatus,
       customerNote: `Note for ${name}`,
@@ -595,6 +597,114 @@ describe("wholesale sales orders (ADA-272)", () => {
       shipRegion: "WA",
       shipPostal: "98101",
       shipCountry: "US",
+    });
+  });
+
+  it("buyer confirm returns credit_exceeded and ignores overrideCredit", async () => {
+    const { app } = await startApp({ customerACreditLimitCents: 0 });
+    const staffInternal = await loginStaffInternal(app);
+    const buyerCookie = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "wholesale@local.test",
+        password: "wholesale-secret",
+      },
+    }).then((res) => wholesaleCookie(res));
+    const productId = await createProduct(app, staffInternal, "CREDIT-BLOCK-SKU");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerCookie },
+      payload: { lines: [{ productId, qty: 2 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const blocked = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${orderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerCookie },
+      payload: {
+        idempotencyKey: "buyer-credit-block",
+        shipToId: API_TEST_SHIP_TO_ID,
+      },
+    });
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json()).toEqual({
+      error: "credit_exceeded",
+      availableCreditCents: 0,
+      orderTotalCents: 200,
+    });
+
+    const ignoredOverride = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${orderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerCookie },
+      payload: {
+        idempotencyKey: "buyer-credit-override-ignored",
+        shipToId: API_TEST_SHIP_TO_ID,
+        overrideCredit: true,
+      },
+    });
+    expect(ignoredOverride.statusCode).toBe(409);
+    expect(ignoredOverride.json()).toEqual({
+      error: "credit_exceeded",
+      availableCreditCents: 0,
+      orderTotalCents: 200,
+    });
+  });
+
+  it("staff acting override confirms and stamps creditLimitOverriddenByStaffUserId", async () => {
+    const { app } = await startApp({ customerACreditLimitCents: 0 });
+    const staffInternal = await loginStaffInternal(app);
+    const actingCookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "CREDIT-OVERRIDE-SKU");
+
+    await selectCustomer(app, actingCookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const blocked = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${orderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+      payload: {
+        idempotencyKey: "acting-credit-block",
+        shipToId: API_TEST_SHIP_TO_ID,
+      },
+    });
+    expect(blocked.statusCode).toBe(409);
+    expect(blocked.json()).toEqual({
+      error: "credit_exceeded",
+      availableCreditCents: 0,
+      orderTotalCents: 100,
+    });
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${orderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+      payload: {
+        idempotencyKey: "acting-credit-override",
+        shipToId: API_TEST_SHIP_TO_ID,
+        overrideCredit: true,
+      },
+    });
+    expect(confirmed.statusCode).toBe(200);
+    expect(confirmed.json()).toMatchObject({
+      id: orderId,
+      status: "confirmed",
+      creditLimitOverriddenByStaffUserId: STAFF_ID,
     });
   });
 

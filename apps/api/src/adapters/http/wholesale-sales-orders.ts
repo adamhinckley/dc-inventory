@@ -8,14 +8,15 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { mapSalesOrder, toInsufficientAtpBody } from "./map-sales-order.js";
+import { mapSalesOrder, toCreditExceededBody, toInsufficientAtpBody } from "./map-sales-order.js";
 import {
   conflictResponseSchema,
+  creditExceededResponseSchema,
   insufficientAtpResponseSchema,
   invalidResponseSchema,
   needsCustomerResponseSchema,
   notFoundResponseSchema,
-  salesOrderConfirmBodySchema,
+  salesOrderStaffConfirmBodySchema,
   salesOrderIdParamsSchema,
   salesOrderItemSchema,
   salesOrderListQuerySchema,
@@ -326,19 +327,24 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         tags: ["wholesale"],
         summary: "Confirm draft sales order for session customer",
         params: salesOrderIdParamsSchema,
-        body: salesOrderConfirmBodySchema,
+        body: salesOrderStaffConfirmBodySchema,
         response: {
           200: salesOrderItemSchema,
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
           403: needsCustomerResponseSchema,
           404: notFoundResponseSchema,
-          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
+          409: z.union([
+            conflictResponseSchema,
+            insufficientAtpResponseSchema,
+            creditExceededResponseSchema,
+          ]),
         },
       },
     },
     async (request, reply) => {
       const actor = wholesaleCreateInput(request);
+      const staffActing = request.wholesaleAuth?.mode === "staff_acting";
       const result = await request.server.sales.confirmSalesOrder.execute({
         organizationId: wholesaleOrganizationId(request),
         staffUserId: wholesaleStaffUserId(request),
@@ -346,6 +352,9 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         salesOrderId: OrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
         shipToId: request.body.shipToId,
+        ...(staffActing && request.body.overrideCredit === true
+          ? { overrideCredit: true }
+          : {}),
       });
       if (!result.ok) {
         if (
@@ -357,6 +366,9 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         }
         if (result.reason === "insufficient_atp") {
           return sendInsufficientAtp(reply, result);
+        }
+        if (result.reason === "credit_exceeded") {
+          return reply.code(409).send(toCreditExceededBody(result));
         }
         if (
           result.reason === "illegal_transition" ||

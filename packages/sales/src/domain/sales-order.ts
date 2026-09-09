@@ -61,6 +61,8 @@ export type SalesOrder = {
   readonly label?: string;
   /** Set when staff created the order while acting on the wholesale shop. */
   readonly placedByStaffUserId?: import("@dc-inventory/shared-kernel").StaffUserId;
+  /** Set when staff confirmed despite insufficient available credit. */
+  readonly creditLimitOverriddenByStaffUserId?: import("@dc-inventory/shared-kernel").StaffUserId;
 } & SalesOrderShipSnapshot;
 
 /** Confirmed lines that still have live demand (not pulled via line-level decommit). */

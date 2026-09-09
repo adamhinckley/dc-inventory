@@ -1,5 +1,18 @@
 import type { ConfirmSalesOrderShortage, SalesOrder } from "@dc-inventory/sales";
 
+export function toCreditExceededBody(result: {
+  availableCreditCents?: number;
+  orderTotalCents?: number;
+}) {
+  return {
+    error: "credit_exceeded" as const,
+    ...(result.availableCreditCents !== undefined
+      ? { availableCreditCents: result.availableCreditCents }
+      : {}),
+    ...(result.orderTotalCents !== undefined ? { orderTotalCents: result.orderTotalCents } : {}),
+  };
+}
+
 export function toInsufficientAtpBody(result: {
   shortage?: ConfirmSalesOrderShortage;
 }) {
@@ -57,6 +70,9 @@ export async function mapSalesOrder(
     documentNumber: order.documentNumber,
     status: order.status,
     ...(order.label !== undefined ? { label: order.label } : {}),
+    ...(order.creditLimitOverriddenByStaffUserId !== undefined
+      ? { creditLimitOverriddenByStaffUserId: order.creditLimitOverriddenByStaffUserId }
+      : {}),
     shipLine1: order.shipLine1,
     shipLine2: order.shipLine2,
     shipCity: order.shipCity,

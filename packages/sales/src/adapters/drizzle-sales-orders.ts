@@ -64,6 +64,13 @@ function toOrder(header: typeof orders.$inferSelect, lines: SalesOrderLine[]): S
     ...(header.placedByStaffUserId !== null
       ? { placedByStaffUserId: StaffUserId.parse(header.placedByStaffUserId) }
       : {}),
+    ...(header.creditLimitOverriddenByStaffUserId !== null
+      ? {
+          creditLimitOverriddenByStaffUserId: StaffUserId.parse(
+            header.creditLimitOverriddenByStaffUserId,
+          ),
+        }
+      : {}),
     shipLine1: header.shipLine1 ?? undefined,
     shipLine2: header.shipLine2,
     shipCity: header.shipCity ?? undefined,
@@ -230,6 +237,7 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         label: order.label ?? null,
         createdAt: order.createdAt,
         placedByStaffUserId: order.placedByStaffUserId ?? null,
+        creditLimitOverriddenByStaffUserId: order.creditLimitOverriddenByStaffUserId ?? null,
         shipLine1: order.shipLine1,
         shipLine2: order.shipLine2,
         shipCity: order.shipCity,
@@ -249,6 +257,7 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         documentNumber: order.documentNumber,
         label: order.label ?? null,
         placedByStaffUserId: order.placedByStaffUserId ?? null,
+        creditLimitOverriddenByStaffUserId: order.creditLimitOverriddenByStaffUserId ?? null,
         shipLine1: order.shipLine1,
         shipLine2: order.shipLine2,
         shipCity: order.shipCity,

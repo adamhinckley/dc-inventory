@@ -10290,6 +10290,10 @@ paths:
                             - cancelled
                         label:
                           type: string
+                        creditLimitOverriddenByStaffUserId:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                         shipLine1:
                           type: string
                         shipLine2:
@@ -10496,6 +10500,10 @@ paths:
                       - cancelled
                   label:
                     type: string
+                  creditLimitOverriddenByStaffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   shipLine1:
                     type: string
                   shipLine2:
@@ -10761,6 +10769,10 @@ paths:
                       - cancelled
                   label:
                     type: string
+                  creditLimitOverriddenByStaffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   shipLine1:
                     type: string
                   shipLine2:
@@ -10982,6 +10994,10 @@ paths:
                       - cancelled
                   label:
                     type: string
+                  creditLimitOverriddenByStaffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   shipLine1:
                     type: string
                   shipLine2:
@@ -11103,6 +11119,8 @@ paths:
                   type: string
                   format: uuid
                   pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                overrideCredit:
+                  type: boolean
               required:
                 - idempotencyKey
                 - shipToId
@@ -11143,6 +11161,10 @@ paths:
                       - cancelled
                   label:
                     type: string
+                  creditLimitOverriddenByStaffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   shipLine1:
                     type: string
                   shipLine2:
@@ -11304,6 +11326,23 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - credit_exceeded
+                      availableCreditCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      orderTotalCents:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/sales-orders/{id}/cancel:
     post:
       operationId: cancelInternalSalesOrder
@@ -11359,6 +11398,10 @@ paths:
                       - cancelled
                   label:
                     type: string
+                  creditLimitOverriddenByStaffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   shipLine1:
                     type: string
                   shipLine2:
@@ -11539,6 +11582,10 @@ paths:
                       - cancelled
                   label:
                     type: string
+                  creditLimitOverriddenByStaffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
                   shipLine1:
                     type: string
                   shipLine2:

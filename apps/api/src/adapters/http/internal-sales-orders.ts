@@ -4,14 +4,15 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import type { SalesOrder } from "@dc-inventory/sales";
 import { CustomerId, OrderId, StaffUserId } from "@dc-inventory/shared-kernel";
-import { mapSalesOrder, toInsufficientAtpBody } from "./map-sales-order.js";
+import { mapSalesOrder, toCreditExceededBody, toInsufficientAtpBody } from "./map-sales-order.js";
 import {
   conflictResponseSchema,
+  creditExceededResponseSchema,
   insufficientAtpResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
   salesOrderCommandBodySchema,
-  salesOrderConfirmBodySchema,
+  salesOrderStaffConfirmBodySchema,
   salesOrderIdParamsSchema,
   salesOrderItemSchema,
   salesOrderListQuerySchema,
@@ -318,13 +319,17 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         tags: ["internal"],
         summary: "Confirm sales order and allocate inventory",
         params: salesOrderIdParamsSchema,
-        body: salesOrderConfirmBodySchema,
+        body: salesOrderStaffConfirmBodySchema,
         response: {
           200: salesOrderItemSchema,
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
+          409: z.union([
+            conflictResponseSchema,
+            insufficientAtpResponseSchema,
+            creditExceededResponseSchema,
+          ]),
         },
       },
     },
@@ -335,6 +340,7 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         salesOrderId: OrderId.parse(request.params.id),
         idempotencyKey: request.body.idempotencyKey,
         shipToId: request.body.shipToId,
+        overrideCredit: request.body.overrideCredit,
       });
       if (!result.ok) {
         if (
@@ -346,6 +352,9 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         }
         if (result.reason === "insufficient_atp") {
           return sendInsufficientAtp(reply, result);
+        }
+        if (result.reason === "credit_exceeded") {
+          return reply.code(409).send(toCreditExceededBody(result));
         }
         if (
           result.reason === "illegal_transition" ||
