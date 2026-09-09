@@ -1,10 +1,5 @@
-import { DashboardPlaceholder } from "../../../components/dashboard-placeholder";
+import { AccountingBalancesTable } from "../../../components/accounting-balances-table";
 
 export default function AccountingPage() {
-  return (
-    <DashboardPlaceholder
-      title="Accounting"
-      body="Placeholder accounting. Invoices and AR stay out of Licensing subscription money."
-    />
-  );
+  return <AccountingBalancesTable />;
 }

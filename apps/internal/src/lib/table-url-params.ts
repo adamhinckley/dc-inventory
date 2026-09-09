@@ -224,6 +224,7 @@ export function tableSearchFromParams(
  */
 const SHARED_STAFF_TABLE_URL_PATHS: readonly (readonly string[])[] = [
   ["/inventory", "/inventory/reopen"],
+  ["/accounting", "/accounting/payments"],
 ];
 
 export function staffTableUrlFamily(pathname: string): string {
