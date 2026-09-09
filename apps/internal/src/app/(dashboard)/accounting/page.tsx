@@ -1,10 +1,11 @@
-import { DashboardPlaceholder } from "../../../components/dashboard-placeholder";
+import { Suspense } from "react";
+import { AccountingPagePrototype } from "../../../components/accounting-page.prototype";
 
+// PROTOTYPE branch only — main keeps the DashboardPlaceholder here until AR 7.
 export default function AccountingPage() {
   return (
-    <DashboardPlaceholder
-      title="Accounting"
-      body="Placeholder accounting. Invoices and AR stay out of Licensing subscription money."
-    />
+    <Suspense>
+      <AccountingPagePrototype />
+    </Suspense>
   );
 }
