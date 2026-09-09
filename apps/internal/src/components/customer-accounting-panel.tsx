@@ -4,7 +4,6 @@ import {
   useGetInternalCustomerAccounting,
   useListInternalCustomerInvoices,
   useListInternalCustomerPayments,
-  useListInternalSalesOrders,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -31,6 +30,7 @@ import type {
   CustomerInvoiceRow,
   CustomerPaymentRow,
 } from "../lib/customer-accounting-types";
+import { useCustomerAccountingOrderNumbers } from "../lib/customer-accounting-order-numbers";
 import { useStaffAccountingActions } from "../lib/staff-accounting-actions";
 import {
   CustomerAccountingAdjustDialog,
@@ -343,13 +343,6 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
   const [applyCreditPickerOpen, setApplyCreditPickerOpen] = useState(false);
 
   const summaryQuery = useGetInternalCustomerAccounting(customerId);
-  const salesOrdersQuery = useListInternalSalesOrders({
-    customerId,
-    page: 1,
-    pageSize: 100,
-    sortBy: "documentNumber",
-    sortOrder: "desc",
-  });
   const invoicesQuery = useListInternalCustomerInvoices(customerId, {
     includePaid: showPaid,
   });
@@ -387,13 +380,9 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     () => new Map(invoices.map((invoice) => [invoice.id, invoice.documentNumber])),
     [invoices],
   );
-  const orderNumbers = useMemo(() => {
-    const items =
-      salesOrdersQuery.data?.status === 200
-        ? salesOrdersQuery.data.data.items
-        : [];
-    return new Map(items.map((order) => [order.id, order.documentNumber]));
-  }, [salesOrdersQuery.data]);
+  const orderNumbers = useCustomerAccountingOrderNumbers(
+    invoices.map((invoice) => invoice.orderId),
+  );
 
   const loading =
     summaryQuery.isLoading || invoicesQuery.isLoading || paymentsQuery.isLoading;
@@ -628,17 +617,6 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
         onOpenChange={(open) => {
           if (!open) {
             setVoidPayment(null);
-          }
-        }}
-      />
-      <CustomerAccountingReallocateDialog
-        customerId={customerId}
-        payment={reallocatePayment}
-        openInvoices={openInvoices}
-        open={reallocatePayment !== null && !applyCreditOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setReallocatePayment(null);
           }
         }}
       />

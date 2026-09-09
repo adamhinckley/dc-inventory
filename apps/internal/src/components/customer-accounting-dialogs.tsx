@@ -434,7 +434,12 @@ export function CustomerAccountingPlanDialog({
         name="startsOn"
         label="Starts on"
         required
-        form={{ kind: "text" }}
+        form={{
+          kind: "date",
+          yearNavigation: true,
+          min: "2020-01-01",
+          max: "2040-12-31",
+        }}
       />
     </FormDialog>
   );
