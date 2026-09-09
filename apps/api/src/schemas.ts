@@ -1670,7 +1670,12 @@ export const customerBalancesSortByValues = [
 ] as const;
 
 export const customerBalancesListQuerySchema = z.object({
-  asOf: z.string().optional(),
+  asOf: z
+    .string()
+    .optional()
+    .refine((value) => value === undefined || !Number.isNaN(new Date(value).getTime()), {
+      message: "Invalid date",
+    }),
   bucket: agingBucketSchema.optional(),
   q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -1737,7 +1742,6 @@ export const paymentsReceivedSortByValues = [
 export const paymentsReceivedListQuerySchema = z.object({
   from: z.string().min(1),
   to: z.string().min(1),
-  q: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(paymentsReceivedSortByValues).default("receivedAt"),
@@ -1769,11 +1773,6 @@ export const paymentsReceivedListResponseSchema = z.object({
 export const paymentsReceivedListTable = {
   rowId: "paymentId",
   filters: [{ param: "from", control: "dateRange", rangePair: "to" }],
-  search: {
-    param: "q",
-    fields: ["customerName", "customerNumber"],
-    placeholder: "Search customer",
-  },
   columns: [
     { field: "receivedAt", label: "Received" },
     { field: "customerName", label: "Customer" },

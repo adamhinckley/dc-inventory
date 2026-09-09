@@ -131,14 +131,6 @@ export const listInternalAccountingPaymentsTable = {
       "label": "Voided"
     }
   ],
-  "search": {
-    "param": "q",
-    "fields": [
-      "customerName",
-      "customerNumber"
-    ],
-    "placeholder": "Search customer"
-  },
   "filters": [
     {
       "param": "from",

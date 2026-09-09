@@ -16,7 +16,6 @@ from: string;
  * @minLength 1
  */
 to: string;
-q?: string;
 /**
  * @minimum 1
  * @maximum 9007199254740991

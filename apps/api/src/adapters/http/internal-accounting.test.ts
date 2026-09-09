@@ -10,6 +10,7 @@ import {
   CreateInvoiceUseCase,
   InMemoryAccountingUnitOfWork,
   PaymentId,
+  RecordCustomerPaymentUseCase,
 } from "@dc-inventory/accounting";
 import {
   CustomerId,
@@ -32,6 +33,7 @@ const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const OTHER_CUSTOMER_ID = CustomerId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
 const ORDER_ID = OrderId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddddd");
 const SECOND_ORDER_ID = OrderId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee");
+const THIRD_ORDER_ID = OrderId.parse("ffffffff-ffff-4fff-8fff-ffffffffffff");
 const AS_OF = new Date("2026-09-09T00:00:00.000Z");
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
@@ -109,8 +111,32 @@ async function startAccountingApp() {
     subtotalCents: 500,
     currency: "USD",
   });
-  if (!openInvoice.ok || !paidInvoice.ok) {
+  const eurInvoice = await createInvoice.execute({
+    staffUserId: STAFF_ID,
+    organizationId: OrganizationId.DEFAULT,
+    orderId: THIRD_ORDER_ID,
+    customerId: CUSTOMER_ID,
+    subtotalCents: 300,
+    currency: "EUR",
+  });
+  if (!openInvoice.ok || !paidInvoice.ok || !eurInvoice.ok) {
     throw new Error("expected invoice seed");
+  }
+
+  const recordPayment = new RecordCustomerPaymentUseCase(accountingUow, clock);
+  const paidOff = await recordPayment.execute({
+    staffUserId: STAFF_ID,
+    organizationId: OrganizationId.DEFAULT,
+    customerId: CUSTOMER_ID,
+    amountCents: 500,
+    currency: "USD",
+    method: "check",
+    idempotencyKey: "seed-paid-invoice",
+    holdRemainderAsCredit: false,
+    applications: [{ invoiceId: paidInvoice.invoice.id, amountCents: 500 }],
+  });
+  if (!paidOff.ok) {
+    throw new Error("expected paid invoice seed");
   }
 
   const app = await buildApp({
@@ -131,6 +157,7 @@ async function startAccountingApp() {
     app,
     openInvoice: openInvoice.invoice,
     paidInvoice: paidInvoice.invoice,
+    eurInvoice: eurInvoice.invoice,
   };
 }
 
@@ -146,7 +173,7 @@ async function staffCookie(app: Awaited<ReturnType<typeof buildApp>>) {
 
 describe("internal accounting HTTP", () => {
   it("reads customer accounting summary and invoice/payment lists", async () => {
-    const { app, openInvoice } = await startAccountingApp();
+    const { app, openInvoice, paidInvoice } = await startAccountingApp();
     const cookie = await staffCookie(app);
 
     const summary = await app.inject({
@@ -156,7 +183,7 @@ describe("internal accounting HTTP", () => {
     });
     expect(summary.statusCode).toBe(200);
     expect(summary.json()).toMatchObject({
-      openBalanceOwedCents: 1500,
+      openBalanceOwedCents: 1300,
       stats: { openInvoiceCount: 2 },
     });
 
@@ -167,7 +194,7 @@ describe("internal accounting HTTP", () => {
     });
     expect(invoices.statusCode).toBe(200);
     expect(invoices.json().items).toHaveLength(2);
-    expect(invoices.json().items[0]?.id).toBe(openInvoice.id);
+    expect(invoices.json().items.map((row: { id: string }) => row.id)).toContain(openInvoice.id);
 
     const withPaid = await app.inject({
       method: "GET",
@@ -175,7 +202,10 @@ describe("internal accounting HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
     expect(withPaid.statusCode).toBe(200);
-    expect(withPaid.json().items).toHaveLength(2);
+    const paidIds = withPaid.json().items.map((row: { id: string }) => row.id);
+    expect(withPaid.json().items).toHaveLength(3);
+    expect(paidIds).toContain(openInvoice.id);
+    expect(paidIds).toContain(paidInvoice.id);
 
     const payments = await app.inject({
       method: "GET",
@@ -183,7 +213,7 @@ describe("internal accounting HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
     expect(payments.statusCode).toBe(200);
-    expect(payments.json().items).toEqual([]);
+    expect(payments.json().items).toHaveLength(1);
   });
 
   it("returns 404 for unknown customer accounting routes", async () => {
@@ -199,7 +229,7 @@ describe("internal accounting HTTP", () => {
   });
 
   it("records customer payment with success and error mapping", async () => {
-    const { app, openInvoice } = await startAccountingApp();
+    const { app, openInvoice, paidInvoice } = await startAccountingApp();
     const cookie = await staffCookie(app);
     const base = {
       method: "POST" as const,
@@ -254,6 +284,20 @@ describe("internal accounting HTTP", () => {
     expect(notFound.statusCode).toBe(404);
     expect(notFound.json()).toEqual({ error: "not_found" });
 
+    const wrongCurrency = await app.inject({
+      ...base,
+      payload: {
+        amountCents: 100,
+        currency: "EUR",
+        method: "check",
+        idempotencyKey: "wrong-currency",
+        holdRemainderAsCredit: false,
+        applications: [{ invoiceId: openInvoice.id, amountCents: 100 }],
+      },
+    });
+    expect(wrongCurrency.statusCode).toBe(400);
+    expect(wrongCurrency.json()).toEqual({ error: "wrong_currency" });
+
     const success = await app.inject({
       ...base,
       payload: {
@@ -288,7 +332,7 @@ describe("internal accounting HTTP", () => {
   });
 
   it("reallocates, voids, and adjusts with error mapping", async () => {
-    const { app, openInvoice } = await startAccountingApp();
+    const { app, openInvoice, eurInvoice } = await startAccountingApp();
     const cookie = await staffCookie(app);
 
     const payment = await app.inject({
@@ -337,6 +381,17 @@ describe("internal accounting HTTP", () => {
     });
     expect(reallocate.statusCode).toBe(200);
     expect(reallocate.json()).toMatchObject({ unappliedCents: 0 });
+
+    const wrongCurrencyReallocate = await app.inject({
+      method: "POST",
+      url: `/internal/payments/${paymentId}/reallocate`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        applications: [{ invoiceId: eurInvoice.id, deltaCents: 100 }],
+      },
+    });
+    expect(wrongCurrencyReallocate.statusCode).toBe(400);
+    expect(wrongCurrencyReallocate.json()).toEqual({ error: "wrong_currency" });
 
     const invalidAdjust = await app.inject({
       method: "POST",
@@ -411,6 +466,15 @@ describe("internal accounting HTTP", () => {
       },
     });
     expect(missingReallocate.statusCode).toBe(404);
+
+    const missingVoid = await app.inject({
+      method: "POST",
+      url: `/internal/payments/${PaymentId.parse("99999999-9999-4999-8999-999999999999")}/void`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { voidReason: "missing payment" },
+    });
+    expect(missingVoid.statusCode).toBe(404);
+    expect(missingVoid.json()).toEqual({ error: "not_found" });
   });
 
   it("manages payment plans with success and error mapping", async () => {
@@ -487,8 +551,8 @@ describe("internal accounting HTTP", () => {
     });
     expect(summary.statusCode).toBe(200);
     expect(summary.json()).toMatchObject({
-      totalOpenArCents: 1500,
-      aging: { current: 1500 },
+      totalOpenArCents: 1300,
+      aging: { current: 1300 },
     });
 
     const balances = await app.inject({
@@ -499,12 +563,19 @@ describe("internal accounting HTTP", () => {
     expect(balances.statusCode).toBe(200);
     expect(balances.json().items.length).toBeGreaterThan(0);
 
+    const badAsOf = await app.inject({
+      method: "GET",
+      url: "/internal/accounting/customer-balances?asOf=not-a-date&page=1&pageSize=25",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(badAsOf.statusCode).toBe(400);
+
     const payments = await app.inject({
       method: "GET",
       url: `/internal/accounting/payments?from=2026-01-01T00:00:00.000Z&to=2026-12-31T00:00:00.000Z&page=1&pageSize=25`,
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
     expect(payments.statusCode).toBe(200);
-    expect(payments.json()).toMatchObject({ total: 0, page: 1, pageSize: 25 });
+    expect(payments.json()).toMatchObject({ total: 1, page: 1, pageSize: 25 });
   });
 });

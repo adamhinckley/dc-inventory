@@ -251,6 +251,130 @@ describe("staff RBAC HTTP guard", () => {
     expect(accountingPayment.statusCode).toBe(404);
   });
 
+  it("gates AR payment, adjustment, and payment-plan commands", async () => {
+    const { app, cookie } = await startRbacApp();
+    const salesSupport = await cookie("sales_support");
+    const accounting = await cookie("accounting");
+    const admin = await cookie("admin");
+
+    const customerPaymentPayload = {
+      amountCents: 100,
+      currency: "USD",
+      method: "check" as const,
+      idempotencyKey: "rbac-customer-payment",
+      holdRemainderAsCredit: false,
+      applications: [] as Array<{ invoiceId: string; amountCents: number }>,
+    };
+
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: `/internal/customers/${RESOURCE_ID}/payments`,
+        cookies: { [STAFF_SESSION_COOKIE]: salesSupport },
+        payload: customerPaymentPayload,
+      }),
+    );
+    const allowedCustomerPayment = await app.inject({
+      method: "POST",
+      url: `/internal/customers/${RESOURCE_ID}/payments`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: customerPaymentPayload,
+    });
+    expect(allowedCustomerPayment.statusCode).toBe(404);
+
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: `/internal/payments/${RESOURCE_ID}/reallocate`,
+        cookies: { [STAFF_SESSION_COOKIE]: salesSupport },
+        payload: { applications: [{ invoiceId: RESOURCE_ID, deltaCents: 100 }] },
+      }),
+    );
+    const allowedReallocate = await app.inject({
+      method: "POST",
+      url: `/internal/payments/${RESOURCE_ID}/reallocate`,
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: { applications: [{ invoiceId: RESOURCE_ID, deltaCents: 100 }] },
+    });
+    expect(allowedReallocate.statusCode).toBe(404);
+
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: `/internal/payments/${RESOURCE_ID}/void`,
+        cookies: { [STAFF_SESSION_COOKIE]: salesSupport },
+        payload: { voidReason: "forbidden" },
+      }),
+    );
+    const allowedVoid = await app.inject({
+      method: "POST",
+      url: `/internal/payments/${RESOURCE_ID}/void`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: { voidReason: "allowed" },
+    });
+    expect(allowedVoid.statusCode).toBe(404);
+
+    expectForbidden(
+      await app.inject({
+        method: "POST",
+        url: `/internal/invoices/${RESOURCE_ID}/adjustments`,
+        cookies: { [STAFF_SESSION_COOKIE]: salesSupport },
+        payload: {
+          kind: "credit_memo",
+          amountCents: 100,
+          reason: "forbidden",
+        },
+      }),
+    );
+    const allowedAdjust = await app.inject({
+      method: "POST",
+      url: `/internal/invoices/${RESOURCE_ID}/adjustments`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+      payload: {
+        kind: "credit_memo",
+        amountCents: 100,
+        reason: "allowed",
+      },
+    });
+    expect(allowedAdjust.statusCode).toBe(404);
+
+    const planPayload = {
+      frequency: "monthly" as const,
+      installmentAmountCents: 500,
+      currency: "USD",
+      startsOn: "2026-09-01T00:00:00.000Z",
+    };
+    expectForbidden(
+      await app.inject({
+        method: "PUT",
+        url: `/internal/customers/${RESOURCE_ID}/payment-plan`,
+        cookies: { [STAFF_SESSION_COOKIE]: salesSupport },
+        payload: planPayload,
+      }),
+    );
+    const allowedPlan = await app.inject({
+      method: "PUT",
+      url: `/internal/customers/${RESOURCE_ID}/payment-plan`,
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: planPayload,
+    });
+    expect(allowedPlan.statusCode).toBe(404);
+
+    expectForbidden(
+      await app.inject({
+        method: "DELETE",
+        url: `/internal/customers/${RESOURCE_ID}/payment-plan`,
+        cookies: { [STAFF_SESSION_COOKIE]: salesSupport },
+      }),
+    );
+    const allowedEndPlan = await app.inject({
+      method: "DELETE",
+      url: `/internal/customers/${RESOURCE_ID}/payment-plan`,
+      cookies: { [STAFF_SESSION_COOKIE]: accounting },
+    });
+    expect(allowedEndPlan.statusCode).toBe(404);
+  });
+
   it("requires credit_limit_manage to change customer credit limit", async () => {
     const { app, cookie } = await startRbacApp();
     const admin = await cookie("admin");

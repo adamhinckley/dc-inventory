@@ -37,6 +37,8 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("x-table");
     expect(specs.internal).toContain("listInternalProducts");
     expect(specs.internal).toContain("getInternalCustomerAccounting");
+    expect(specs.internal).toContain("listInternalCustomerInvoices");
+    expect(specs.internal).toContain("listInternalCustomerPayments");
     expect(specs.internal).toContain("recordInternalCustomerPayment");
     expect(specs.internal).toContain("reallocateInternalPayment");
     expect(specs.internal).toContain("voidInternalPayment");
@@ -87,7 +89,6 @@ describe("OpenAPI stub export", () => {
       "listInternalUncoveredSkus",
     ]);
 
-    const sharedParams = ["q", "page", "pageSize", "sortBy", "sortOrder"];
     for (const operation of tableOperations) {
       const queryParameters = (operation.parameters ?? []).filter(
         (parameter) => parameter.in === "query",
@@ -95,6 +96,13 @@ describe("OpenAPI stub export", () => {
       const byName = new Map(queryParameters.map((parameter) => [parameter.name, parameter]));
       const table = operation["x-table"];
       const paginationOnly = table.sort === undefined;
+      const sharedParams = [
+        ...(table.search === undefined ? [] : ["q"]),
+        "page",
+        "pageSize",
+        "sortBy",
+        "sortOrder",
+      ];
 
       if (paginationOnly) {
         expect([...byName.keys()], operation.operationId).toEqual(
@@ -110,7 +118,9 @@ describe("OpenAPI stub export", () => {
         expect.arrayContaining(sharedParams),
       );
 
-      expect(table.search?.param, operation.operationId).toBe("q");
+      if (table.search !== undefined) {
+        expect(table.search.param, operation.operationId).toBe("q");
+      }
       expect(byName.get("page")?.schema.default, operation.operationId).toBe(1);
       expect(byName.get("pageSize")?.schema.default, operation.operationId).toBe(25);
       expect(byName.get("sortBy")?.schema.enum, operation.operationId).toEqual(

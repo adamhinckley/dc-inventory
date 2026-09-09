@@ -13898,11 +13898,6 @@ paths:
           name: to
           required: true
         - schema:
-            type: string
-          in: query
-          name: q
-          required: false
-        - schema:
             default: 1
             type: integer
             minimum: 1
@@ -13943,12 +13938,6 @@ paths:
           - param: from
             control: dateRange
             rangePair: to
-        search:
-          param: q
-          fields:
-            - customerName
-            - customerNumber
-          placeholder: Search customer
         columns:
           - field: receivedAt
             label: Received

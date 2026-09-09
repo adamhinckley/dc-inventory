@@ -4,14 +4,19 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   computeRemainingCents,
   deriveInvoiceStatus,
+  filterAdjustmentsForAsOf,
+  isInvoicePostedAsOf,
+  isPaymentVoided,
   PaymentId,
   PaymentPlanId,
+  type ArAsOfContext,
   type CustomerBalancesSortBy,
   type CustomerArLoadedData,
   type CustomerArStats,
   type Invoice,
   type Payment,
   type PaymentApplication,
+  type InvoiceAdjustment,
   type PaymentPlan,
   type PaymentPlanExpectations,
   type PaymentsReceivedSortBy,
@@ -219,25 +224,105 @@ function mapCustomerPaymentRow(input: {
   };
 }
 
+function buildArAsOfContext(
+  payments: readonly Payment[],
+  asOf: Date,
+): ArAsOfContext {
+  return {
+    asOf,
+    paymentsById: new Map(payments.map((payment) => [payment.id, payment])),
+  };
+}
+
+function collectVoidedPaymentIds(payments: readonly Payment[]): ReadonlySet<PaymentId> {
+  return new Set(payments.filter(isPaymentVoided).map((payment) => payment.id));
+}
+
+function filterCustomerArDataForAsOf(
+  data: CustomerArLoadedData,
+  asOf: Date,
+): CustomerArLoadedData {
+  const invoices = data.invoices.filter((invoice) => isInvoicePostedAsOf(invoice, asOf));
+  const payments = data.payments.filter(
+    (payment) => payment.receivedAt !== undefined && payment.receivedAt <= asOf,
+  );
+  const invoiceIds = new Set(invoices.map((invoice) => invoice.id));
+  const paymentIds = new Set(payments.map((payment) => payment.id));
+
+  const applicationsByInvoiceId = new Map<
+    InvoiceId,
+    readonly PaymentApplication[]
+  >();
+  for (const [invoiceId, applications] of data.applicationsByInvoiceId) {
+    if (!invoiceIds.has(invoiceId)) {
+      continue;
+    }
+    applicationsByInvoiceId.set(
+      invoiceId,
+      applications.filter((application) => paymentIds.has(application.paymentId)),
+    );
+  }
+
+  const adjustmentsByInvoiceId = new Map<InvoiceId, readonly InvoiceAdjustment[]>();
+  for (const [invoiceId, adjustments] of data.adjustmentsByInvoiceId) {
+    if (!invoiceIds.has(invoiceId)) {
+      continue;
+    }
+    adjustmentsByInvoiceId.set(
+      invoiceId,
+      filterAdjustmentsForAsOf(adjustments, asOf),
+    );
+  }
+
+  const applicationsByPaymentId = new Map<
+    PaymentId,
+    readonly PaymentApplication[]
+  >();
+  for (const [paymentId, applications] of data.applicationsByPaymentId) {
+    if (!paymentIds.has(paymentId)) {
+      continue;
+    }
+    applicationsByPaymentId.set(
+      paymentId,
+      applications.filter((application) => invoiceIds.has(application.invoiceId)),
+    );
+  }
+
+  const activePlan =
+    data.activePlan !== null &&
+    (data.activePlan.endedAt === null || data.activePlan.endedAt > asOf)
+      ? data.activePlan
+      : null;
+
+  return {
+    invoices,
+    applicationsByInvoiceId,
+    adjustmentsByInvoiceId,
+    payments,
+    applicationsByPaymentId,
+    activePlan,
+  };
+}
+
 function listCustomerInvoiceRows(
   data: CustomerArLoadedData,
   asOf: Date,
   includePaid: boolean,
 ) {
-  const voidedPaymentIds = new Set(
-    data.payments.filter((payment) => payment.voidedAt != null).map((payment) => payment.id),
-  );
+  const filtered = filterCustomerArDataForAsOf(data, asOf);
+  const voidedPaymentIds = collectVoidedPaymentIds(filtered.payments);
+  const asOfContext = buildArAsOfContext(filtered.payments, asOf);
 
-  return data.invoices
-    .filter((invoice) => invoice.postedAt !== null && invoice.postedAt <= asOf)
+  return filtered.invoices
     .map((invoice) => {
-      const applications = data.applicationsByInvoiceId.get(invoice.id) ?? [];
-      const adjustments = data.adjustmentsByInvoiceId.get(invoice.id) ?? [];
+      const applications = filtered.applicationsByInvoiceId.get(invoice.id) ?? [];
+      const adjustments = filtered.adjustmentsByInvoiceId.get(invoice.id) ?? [];
       const remainingCents = computeRemainingCents(
         invoice,
         applications,
         voidedPaymentIds,
         adjustments,
+        asOfContext,
       );
       if (!includePaid && remainingCents <= 0) {
         return null;
@@ -245,7 +330,14 @@ function listCustomerInvoiceRows(
       return mapInvoiceRow(
         invoice,
         remainingCents,
-        deriveInvoiceStatus(invoice, applications, asOf, voidedPaymentIds, adjustments),
+        deriveInvoiceStatus(
+          invoice,
+          applications,
+          asOf,
+          voidedPaymentIds,
+          adjustments,
+          asOfContext,
+        ),
       );
     })
     .filter((row): row is NonNullable<typeof row> => row !== null);
@@ -348,12 +440,24 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
         return;
       }
       const asOf = resolveAsOf(query.asOf, new Date());
+      const result = await request.server.accounting.getCustomerAccountingSummary.execute({
+        organizationId: staffOrganizationId(request),
+        customerId,
+        asOf,
+      });
+      if (query.includePaid !== true) {
+        return {
+          items: result.openInvoices.map((row) =>
+            mapInvoiceRow(row.invoice, row.remainingCents, row.status),
+          ),
+        };
+      }
       const data = await request.server.accounting.arCustomerRead.loadCustomerData(
         staffOrganizationId(request),
         customerId,
       );
       return {
-        items: listCustomerInvoiceRows(data, asOf, query.includePaid === true),
+        items: listCustomerInvoiceRows(data, asOf, true),
       };
     },
   );
