@@ -22,6 +22,11 @@ export type ProductSnapshot = {
   hasActiveSellWindowMembership?: boolean;
 };
 
+export type CatalogProductLookupOptions = {
+  /** When false, skip available-to-sell / sell-window snapshots. Default true. */
+  includeQty?: boolean;
+};
+
 export interface ICatalogProductPort {
   findById(
     organizationId: OrganizationId,
@@ -30,6 +35,7 @@ export interface ICatalogProductPort {
   findByIds(
     organizationId: OrganizationId,
     productIds: readonly ProductId[],
+    options?: CatalogProductLookupOptions,
   ): Promise<ReadonlyMap<string, ProductSnapshot>>;
   findBySku(
     organizationId: OrganizationId,

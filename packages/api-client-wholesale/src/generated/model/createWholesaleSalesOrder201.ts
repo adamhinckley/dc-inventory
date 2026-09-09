@@ -15,6 +15,7 @@ export type CreateWholesaleSalesOrder201 = {
   customerName?: string;
   documentNumber: string;
   status: CreateWholesaleSalesOrder201Status;
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

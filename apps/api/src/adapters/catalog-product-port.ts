@@ -90,6 +90,7 @@ export function catalogProductPort(
     findByIds: async (
       organizationId: OrganizationId,
       productIds: readonly ProductId[],
+      options?: { includeQty?: boolean },
     ): Promise<ReadonlyMap<string, ProductSnapshot>> => {
       if (productIds.length === 0) {
         return new Map();
@@ -98,7 +99,7 @@ export function catalogProductPort(
       if (loaded.size === 0) {
         return new Map();
       }
-      if (qtyRead === undefined) {
+      if (qtyRead === undefined || options?.includeQty === false) {
         return snapshotsFromProducts(loaded, new Map(), undefined);
       }
       const skus = [...loaded.values()].map((product) => product.sku);

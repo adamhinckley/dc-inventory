@@ -30,6 +30,25 @@ export type SalesOrderShipSnapshot = {
   readonly shipCountry?: string;
 };
 
+export const SALES_ORDER_LABEL_MAX_LENGTH = 80;
+
+/** Trim, drop blanks, cap length. `null` means "clear"; `undefined` means "not given". */
+export function normalizeSalesOrderLabel(
+  label: string | null | undefined,
+): string | null | undefined {
+  if (label === undefined) {
+    return undefined;
+  }
+  if (label === null) {
+    return null;
+  }
+  const trimmed = label.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  return trimmed.slice(0, SALES_ORDER_LABEL_MAX_LENGTH);
+}
+
 export type SalesOrder = {
   readonly id: import("@dc-inventory/shared-kernel").OrderId;
   readonly organizationId: import("@dc-inventory/shared-kernel").OrganizationId;
@@ -38,6 +57,8 @@ export type SalesOrder = {
   readonly status: SalesOrderStatus;
   readonly createdAt: Date;
   readonly lines: readonly SalesOrderLine[];
+  /** Buyer-chosen cart name. A customer may hold many open drafts; this tells them apart. */
+  readonly label?: string;
   /** Set when staff created the order while acting on the wholesale shop. */
   readonly placedByStaffUserId?: import("@dc-inventory/shared-kernel").StaffUserId;
 } & SalesOrderShipSnapshot;

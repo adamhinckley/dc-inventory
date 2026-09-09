@@ -15,6 +15,7 @@ export type ListInternalSalesOrders200ItemsItem = {
   customerName?: string;
   documentNumber: string;
   status: ListInternalSalesOrders200ItemsItemStatus;
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

@@ -10287,6 +10287,8 @@ paths:
                             - confirmed
                             - shipped
                             - cancelled
+                        label:
+                          type: string
                         shipLine1:
                           type: string
                         shipLine2:
@@ -10491,6 +10493,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -10700,6 +10704,10 @@ paths:
                     required:
                       - productId
                       - qty
+                label:
+                  nullable: true
+                  type: string
+                  maxLength: 80
                 shipLine1:
                   type: string
                 shipLine2:
@@ -10750,6 +10758,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -10969,6 +10979,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -11128,6 +11140,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -11342,6 +11356,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:
@@ -11520,6 +11536,8 @@ paths:
                       - confirmed
                       - shipped
                       - cancelled
+                  label:
+                    type: string
                   shipLine1:
                     type: string
                   shipLine2:

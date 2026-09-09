@@ -73,6 +73,9 @@ import type {
   ListWholesaleCatalog401,
   ListWholesaleCatalog403,
   ListWholesaleCatalogParams,
+  ListWholesaleCategories200,
+  ListWholesaleCategories401,
+  ListWholesaleCategories403,
   ListWholesaleContacts200,
   ListWholesaleContacts401,
   ListWholesaleContacts403,
@@ -827,6 +830,107 @@ export function useListWholesaleCatalog<TData = Awaited<ReturnType<typeof listWh
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListWholesaleCatalogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listWholesaleCategoriesResponse200 = {
+  data: ListWholesaleCategories200
+  status: 200
+}
+
+export type listWholesaleCategoriesResponse401 = {
+  data: ListWholesaleCategories401
+  status: 401
+}
+
+export type listWholesaleCategoriesResponse403 = {
+  data: ListWholesaleCategories403
+  status: 403
+}
+
+export type listWholesaleCategoriesResponseSuccess = (listWholesaleCategoriesResponse200) & {
+  headers: Headers;
+};
+export type listWholesaleCategoriesResponseError = (listWholesaleCategoriesResponse401 | listWholesaleCategoriesResponse403) & {
+  headers: Headers;
+};
+
+export type listWholesaleCategoriesResponse = (listWholesaleCategoriesResponseSuccess | listWholesaleCategoriesResponseError)
+
+export const getListWholesaleCategoriesUrl = () => {
+
+
+
+
+  return `/wholesale/catalog/categories`
+}
+
+/**
+ * @summary List category names that have shop-visible products
+ */
+export const listWholesaleCategories = async ( options?: Parameters<typeof customFetch>[1]): Promise<listWholesaleCategoriesResponse> => {
+
+  return customFetch<listWholesaleCategoriesResponse>(getListWholesaleCategoriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWholesaleCategoriesQueryKey = () => {
+    return [
+    `/wholesale/catalog/categories`
+    ] as const;
+    }
+
+
+export const getListWholesaleCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof listWholesaleCategories>>, TError = ListWholesaleCategories401 | ListWholesaleCategories403>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWholesaleCategoriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWholesaleCategories>>> = ({ signal }) => listWholesaleCategories({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWholesaleCategories>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWholesaleCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listWholesaleCategories>>>
+export type ListWholesaleCategoriesQueryError = ListWholesaleCategories401 | ListWholesaleCategories403
+
+
+/**
+ * @summary List category names that have shop-visible products
+ */
+
+export function useListWholesaleCategories<TData = Awaited<ReturnType<typeof listWholesaleCategories>>, TError = ListWholesaleCategories401 | ListWholesaleCategories403>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWholesaleCategories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWholesaleCategoriesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

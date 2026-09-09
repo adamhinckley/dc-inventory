@@ -9,7 +9,10 @@ import type { ListWholesaleCatalog200ItemsItemSellState } from './listWholesaleC
 export type ListWholesaleCatalog200ItemsItem = {
   /** @pattern ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$ */
   id: string;
+  sku: string;
   name: string;
+  /** @nullable */
+  description: string | null;
   /** @nullable */
   imageUrl: string | null;
   /**

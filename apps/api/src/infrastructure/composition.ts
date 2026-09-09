@@ -16,6 +16,7 @@ import {
   ListStaffCategoriesUseCase,
   ListStaffProductsUseCase,
   ListWholesaleCatalogUseCase,
+  ListWholesaleCategoriesUseCase,
   UpdateProductUseCase,
   type CatalogDrizzle,
   type ICatalogListQuery,
@@ -292,6 +293,7 @@ export type CatalogHttpServices = {
   updateProduct: UpdateProductUseCase;
   importProductBrowser: ImportProductBrowserUseCase;
   listWholesaleCatalog: ListWholesaleCatalogUseCase;
+  listWholesaleCategories: ListWholesaleCategoriesUseCase;
   getWholesaleProduct: GetWholesaleProductUseCase;
   lookupProductIdBySku: (
     organizationId: OrganizationId,
@@ -524,6 +526,7 @@ function catalogServices(
       importReorderPolicies,
     ),
     listWholesaleCatalog: new ListWholesaleCatalogUseCase(catalogListQuery),
+    listWholesaleCategories: new ListWholesaleCategoriesUseCase(productRepo),
     getWholesaleProduct: new GetWholesaleProductUseCase(productRepo, qtyRead, () => clock.now()),
     lookupProductIdBySku: async (organizationId, sku) => {
       try {

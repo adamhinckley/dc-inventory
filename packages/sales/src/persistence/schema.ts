@@ -14,7 +14,8 @@ import { sql } from "drizzle-orm";
 import { customers } from "@dc-inventory/customers/schema";
 
 /**
- * Sales persistence models. Cart is a draft order — no carts table.
+ * Sales persistence models. Cart is a draft order — no carts table. A customer
+ * may hold many open drafts at once (multi-cart); `label` tells them apart.
  * Ship-to is a typed snapshot (no live ship_to_id). Lines freeze MP.
  */
 export const sales = pgSchema("sales");
@@ -45,6 +46,7 @@ export const orders = sales.table(
     customerId: uuid("customer_id").notNull(),
     status: orderStatus("status").notNull().default("draft"),
     documentNumber: text("document_number").notNull(),
+    label: text("label"),
     shipLine1: text("ship_line_1"),
     shipLine2: text("ship_line_2"),
     shipCity: text("ship_city"),
@@ -60,9 +62,6 @@ export const orders = sales.table(
       table.organizationId,
       table.documentNumber,
     ),
-    uniqueIndex("orders_organization_id_customer_id_draft_unique")
-      .on(table.organizationId, table.customerId)
-      .where(sql`${table.status} = 'draft'`),
     foreignKey({
       columns: [table.organizationId, table.customerId],
       foreignColumns: [customers.organizationId, customers.id],

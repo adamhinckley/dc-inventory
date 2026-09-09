@@ -12,7 +12,7 @@ Lives in `apps/wholesale` (not `packages/ui` / AppShell). Tokens: cream canvas, 
 
 | Surface | Notes |
 | --- | --- |
-| Header | Logged out: About, Contact, Register, Sign in. Logged in (buyer): Products, Orders, Cart, Account, Sign out. Staff acting: no Account link. Wordmark from `public/brand/logo.png`. See [`customer-account.md`](./customer-account.md). |
+| Header | Logged out: About, Contact, Register, Sign in. Logged in (buyer): Products, Orders, Cart, Account, Sign out, plus a cart icon whose badge is the active cart's line count and which opens the cart drawer. Staff acting: no Account link. Wordmark from `public/brand/logo.png`. See [`customer-account.md`](./customer-account.md). |
 | Home | Hero carousel (`public/brand/carousel-{1,2,3}.jpg`), about excerpt |
 | Contact / register | UI only today. Feedback uses mailto. Register asks customer service to enable web access. Live SoloView is a three-step **New Account Registration** modal (primary info, business credentials, main business address), then **staff approval**, then **PandaDoc** — see [`customers.md`](../customers.md) §15 and [Wholesale screenshots](https://app.notion.com/p/3d00df01ce2e803f9131d35c9666cc9e). Header **terms** are payment clock, not that document. |
 | Legal | Privacy, payment terms, claims — HTML pages; wording taken from the live-site PDFs |
@@ -21,10 +21,10 @@ Lives in `apps/wholesale` (not `packages/ui` / AppShell). Tokens: cream canvas, 
 
 | Feature | What it is |
 | --- | --- |
-| Browse catalog | Search, category, sort, page — product **grid**, not a staff table |
-| Product detail page | |
-| Cart (view and change quantities) | Separate cart vs draft order is still an open question |
-| Checkout | Confirm order and allocate stock |
+| Browse catalog | Shopify-style collection page at `/products`: breadcrumb and title at the top of the page, filter sidebar (categories from `GET /wholesale/catalog/categories`, in-stock toggle; a Filter drawer below `lg`), sticky toolbar (count, search, sort, 24/48/96 per page), dense 2–6 column grid with square placeholder image, overlaid availability pill, SKU, and name — not a staff table. Qty and Add to Cart live on the product detail page. URL params: `q`, `category`, `sort`, `pageSize`, `page`, `availableOnly`. |
+| Product detail page | Two-column: sticky image left; item #, name, price, availability, qty + Add to Cart, description right. Breadcrumb returns to the category it was reached from (`?category=`). |
+| Carts | Many open carts per customer; each is a draft sales order with an optional label. `/cart` lists them (Open / Make Active / Start New Cart); `/cart/[id]` edits lines, renames, deletes; a right-side cart drawer (header icon) shows the active cart with a cart switcher. Add / Update Cart on the PDP stays on the product. Continue Shopping is always on the PDP (back to the catalog or the category they came from). |
+| Checkout | `/checkout?cart=<id>` confirms one cart (falls back to the active cart) and allocates stock |
 | Order history | Paginated; scoped to this customer |
 | Order detail | |
 | Download own order / invoice PDF | Only if listed on the wholesale API |

@@ -15,6 +15,7 @@ export type ConfirmInternalSalesOrder200 = {
   customerName?: string;
   documentNumber: string;
   status: ConfirmInternalSalesOrder200Status;
+  label?: string;
   shipLine1?: string;
   /** @nullable */
   shipLine2?: string | null;

@@ -281,6 +281,13 @@
       "when": 1790655600000,
       "tag": "0040_supplier_po_document_number_counters",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1790755600000,
+      "tag": "0041_sales_orders_multi_cart",
+      "breakpoints": true
     }
   ]
 }

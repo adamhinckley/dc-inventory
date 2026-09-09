@@ -326,20 +326,26 @@ describe("Phase 2 manual staff flow (PO to payment)", () => {
 
     expect(internal.statusCode).toBe(201);
     expect(wholesaleOrder.statusCode).toBe(201);
-    expect(wholesaleOrder.json()).toMatchObject({
+    expect(internal.json()).toMatchObject({
       customerId: CUSTOMER_ID,
       documentNumber: "SO-00001",
+      lines: [{ sku: SKU.value, qty: 1 }],
+    });
+    // Multi-cart: the shop create opens its own draft instead of merging into the staff one.
+    expect(wholesaleOrder.json()).toMatchObject({
+      customerId: CUSTOMER_ID,
+      documentNumber: "SO-00002",
       lines: [
         {
           sku: SKU.value,
           name: "Galvanized hex bolt",
-          qty: 3,
+          qty: 2,
           unitPriceCents: UNIT_PRICE_CENTS,
           currency: "USD",
         },
       ],
     });
-    expect(wholesaleOrder.json().id).toBe(internal.json().id);
+    expect(wholesaleOrder.json().id).not.toBe(internal.json().id);
   });
 
   it("drives PO receive, sales ship, invoice, and payment with reconciled quantities", async () => {

@@ -6,6 +6,7 @@ import {
   catalogListResponseSchema,
   catalogQuerySchema,
   catalogItemSchema,
+  categoryListResponseSchema,
   needsCustomerResponseSchema,
   notFoundResponseSchema,
   productIdParamsSchema,
@@ -21,7 +22,9 @@ function mapCatalogItem(product: Product, qty: ProductQty) {
   const price = wholesaleUnitPrice(product);
   return {
     id: product.id,
+    sku: product.sku.value,
     name: product.name,
+    description: product.description,
     imageUrl: null,
     wholesalePrice: price.amountMinor,
     currency: price.currency,
@@ -71,6 +74,31 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
         page: result.page,
         pageSize: result.pageSize,
         total: result.total,
+      };
+    },
+  );
+
+  routes.get(
+    "/catalog/categories",
+    {
+      schema: {
+        operationId: "listWholesaleCategories",
+        tags: ["wholesale"],
+        summary: "List category names that have shop-visible products",
+        response: {
+          200: categoryListResponseSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+        },
+      },
+    },
+    async (request) => {
+      const result = await request.server.catalog.listWholesaleCategories.execute({
+        organizationId: wholesaleOrganizationId(request),
+        customerId: wholesaleCustomerId(request),
+      });
+      return {
+        items: result.items.map((name) => ({ name })),
       };
     },
   );

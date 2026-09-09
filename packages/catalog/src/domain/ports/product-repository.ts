@@ -16,9 +16,17 @@ export type ListedProduct = {
   createdAt: Date;
 };
 
+export type CategoryNamesMatch = {
+  /** Only categories with at least one shop-visible product (wholesale nav). */
+  shopVisibleOnly?: boolean;
+};
+
 export interface IProductRepository {
   listMatching(query: ProductListMatch): Promise<ListedProduct[]>;
-  listCategoryNames(organizationId: OrganizationId): Promise<string[]>;
+  listCategoryNames(
+    organizationId: OrganizationId,
+    match?: CategoryNamesMatch,
+  ): Promise<string[]>;
   findById(organizationId: OrganizationId, id: ProductId): Promise<Product | null>;
   findByIds(
     organizationId: OrganizationId,

@@ -37,6 +37,7 @@ export type {
 export type { IClock } from "./domain/clock.js";
 export { SalesOrderLineId } from "./domain/ids.js";
 export type {
+  CatalogProductLookupOptions,
   ICatalogProductPort,
   ProductSnapshot,
 } from "./domain/ports/catalog-product.js";

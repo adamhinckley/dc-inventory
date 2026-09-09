@@ -11,6 +11,7 @@ import type {
   ISalesOrderRepository,
 } from "../domain/ports/sales-order-repository.js";
 import type { SalesOrder } from "../domain/sales-order.js";
+import { normalizeSalesOrderLabel } from "../domain/sales-order.js";
 import { createDraftAccountStatusGate } from "./account-status-gate.js";
 import {
   buildSalesOrderLines,
@@ -23,6 +24,8 @@ export type ReplaceSalesOrderLinesRequest = {
   customerId?: CustomerId;
   salesOrderId: OrderId;
   lines: readonly SalesOrderLineInput[];
+  /** undefined keeps the current cart name; null clears it; string renames. */
+  label?: string | null;
   shipLine1?: string;
   shipLine2?: string | null;
   shipCity?: string;
@@ -62,6 +65,17 @@ export type ReplaceSalesOrderLinesResult =
         | "insufficient_atp";
       shortage?: ConfirmSalesOrderShortage;
     };
+
+function applyLabel(
+  existing: string | undefined,
+  requested: string | null | undefined,
+): string | undefined {
+  const normalized = normalizeSalesOrderLabel(requested);
+  if (normalized === undefined) {
+    return existing;
+  }
+  return normalized === null ? undefined : normalized;
+}
 
 export class ReplaceSalesOrderLinesUseCase {
   constructor(
@@ -118,13 +132,17 @@ export class ReplaceSalesOrderLinesUseCase {
       this.catalogProducts,
       input.lines,
       existingQtyBySku,
+      existing.lines,
     );
     if (!built.ok) {
       return built;
     }
 
+    const { label: existingLabel, ...existingWithoutLabel } = existing;
+    const nextLabel = applyLabel(existingLabel, input.label);
     const salesOrder: SalesOrder = {
-      ...existing,
+      ...existingWithoutLabel,
+      ...(nextLabel !== undefined ? { label: nextLabel } : {}),
       lines: built.lines,
       shipLine1: input.shipLine1 ?? existing.shipLine1,
       shipLine2: input.shipLine2 ?? existing.shipLine2,

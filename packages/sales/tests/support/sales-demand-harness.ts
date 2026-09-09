@@ -227,6 +227,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     ledger,
     readModel,
     accountStatus,
+    catalog,
     create,
     replaceLines,
     confirm,

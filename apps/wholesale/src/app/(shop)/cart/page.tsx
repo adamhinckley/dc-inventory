@@ -1,4 +1,4 @@
-import { CartView } from "../../../components/cart-view";
+import { CartsList } from "../../../components/carts-list";
 import { ShopPage } from "../../../components/shop-page";
 
 export default function CartPage() {
@@ -7,13 +7,13 @@ export default function CartPage() {
       <section className="flex flex-col gap-8">
         <header className="max-w-2xl">
           <p className="section-title">Cart</p>
-          <h1 className="page-title mt-2">Your Cart</h1>
+          <h1 className="page-title mt-2">Your Carts</h1>
           <p className="mt-3 text-ink-muted">
-            One draft sales order per account. Quantities and availability stay on
-            the server.
+            Keep as many carts open as you like — one per season, store, or buyer.
+            Each is a draft order until you check it out.
           </p>
         </header>
-        <CartView />
+        <CartsList />
       </section>
     </ShopPage>
   );

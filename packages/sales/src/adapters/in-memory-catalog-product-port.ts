@@ -27,6 +27,7 @@ export class InMemoryCatalogProductPort implements ICatalogProductPort {
   async findByIds(
     _organizationId: OrganizationId,
     productIds: readonly ProductId[],
+    _options?: { includeQty?: boolean },
   ): Promise<ReadonlyMap<string, ProductSnapshot>> {
     const result = new Map<string, ProductSnapshot>();
     for (const productId of productIds) {
