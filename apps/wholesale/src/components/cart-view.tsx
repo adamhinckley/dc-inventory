@@ -155,6 +155,7 @@ export function CartView({ cartId }: { cartId: string }) {
   const [renaming, setRenaming] = useState(false);
   const [labelInput, setLabelInput] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [checkoutNavigating, setCheckoutNavigating] = useState(false);
 
   useEffect(() => {
     const dialog = qtyDialogRef.current;
@@ -453,12 +454,30 @@ export function CartView({ cartId }: { cartId: string }) {
           <p className="min-h-5 text-sm leading-5 text-ink-muted" role="status" aria-live="polite">
             {actions.message ?? "\u00a0"}
           </p>
-          <Link
-            href={`/checkout?cart=${cartDraft.id}`}
-            className="shop-button-primary inline-flex items-center justify-center text-sm"
+          <button
+            type="button"
+            disabled={
+              actions.pending ||
+              actions.dirty ||
+              checkoutNavigating ||
+              cartDraft.lines.length === 0
+            }
+            onClick={() => {
+              setCheckoutNavigating(true);
+              void actions.flushPendingChanges().then((ok) => {
+                setCheckoutNavigating(false);
+                if (!ok) {
+                  return;
+                }
+                router.push(`/checkout?cart=${cartDraft.id}`);
+              });
+            }}
+            className="shop-button-primary inline-flex items-center justify-center text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Checkout This Cart
-          </Link>
+            {checkoutNavigating || actions.pending || actions.dirty
+              ? "Saving…"
+              : "Checkout This Cart"}
+          </button>
           <Link
             href="/products"
             className="shop-button-secondary inline-flex items-center justify-center text-sm"

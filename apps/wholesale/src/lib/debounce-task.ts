@@ -6,6 +6,7 @@ export function createDebouncedTask<T>(
   schedule: (value: T) => void;
   flush: () => Promise<void>;
   cancel: () => void;
+  hasPending: () => boolean;
 } {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let queued: { value: T } | undefined;
@@ -51,6 +52,9 @@ export function createDebouncedTask<T>(
     cancel() {
       clearTimer();
       queued = undefined;
+    },
+    hasPending() {
+      return timer !== undefined || queued !== undefined || inFlight !== undefined;
     },
   };
 }

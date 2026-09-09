@@ -3,6 +3,7 @@
 import {
   useConfirmWholesaleSalesOrder,
   useListWholesaleShipTos,
+  useReplaceWholesaleSalesOrderLines,
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -36,6 +37,7 @@ export function CheckoutView() {
   const activeCart = useActiveCart();
   const shipTos = useListWholesaleShipTos();
   const confirmOrder = useConfirmWholesaleSalesOrder();
+  const replaceLines = useReplaceWholesaleSalesOrderLines();
 
   const shipToPayload = shipTos.data?.data;
 
@@ -69,7 +71,8 @@ export function CheckoutView() {
     draft !== undefined &&
     draft.lines.length > 0 &&
     selectedShipToId.length > 0 &&
-    !confirmOrder.isPending;
+    !confirmOrder.isPending &&
+    !replaceLines.isPending;
 
   if (activeCart.isPending || shipTos.isPending) {
     return <p className="text-ink-muted">Loading checkout…</p>;

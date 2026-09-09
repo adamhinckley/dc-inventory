@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   cartCurrency,
   cartDisplayName,
@@ -36,9 +37,11 @@ function CloseIcon() {
  * and after every Add to Cart.
  */
 export function CartDrawer() {
+  const router = useRouter();
   const signedIn = useWholesaleSignedIn();
   const open = useCartDrawerOpen();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [checkoutNavigating, setCheckoutNavigating] = useState(false);
   const activeCart = useActiveCart();
   const draft = activeCart.activeDraft;
   const actions = useCartActions(draft);
@@ -62,6 +65,12 @@ export function CartDrawer() {
   const lines = draft?.lines ?? [];
   const subtotal = draft === undefined ? 0 : cartSubtotalCents(draft);
   const currency = draft === undefined ? "USD" : cartCurrency(draft);
+  const checkoutBlocked =
+    draft === undefined ||
+    lines.length === 0 ||
+    actions.pending ||
+    actions.dirty ||
+    checkoutNavigating;
 
   return (
     <dialog
@@ -215,16 +224,27 @@ export function CartDrawer() {
             >
               {draft === undefined ? "All Carts" : "View Cart"}
             </Link>
-            <Link
-              href={draft === undefined ? "/products" : `/checkout?cart=${draft.id}`}
-              onClick={closeCartDrawer}
-              aria-disabled={draft === undefined || lines.length === 0}
-              className={`shop-button-primary inline-flex items-center justify-center text-sm ${
-                draft === undefined || lines.length === 0 ? "pointer-events-none opacity-50" : ""
-              }`}
+            <button
+              type="button"
+              disabled={checkoutBlocked}
+              onClick={() => {
+                if (draft === undefined) {
+                  return;
+                }
+                setCheckoutNavigating(true);
+                void actions.flushPendingChanges().then((ok) => {
+                  setCheckoutNavigating(false);
+                  if (!ok) {
+                    return;
+                  }
+                  closeCartDrawer();
+                  router.push(`/checkout?cart=${draft.id}`);
+                });
+              }}
+              className="shop-button-primary inline-flex items-center justify-center text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Checkout
-            </Link>
+              {checkoutNavigating || actions.pending || actions.dirty ? "Saving…" : "Checkout"}
+            </button>
           </div>
         </footer>
       </div>

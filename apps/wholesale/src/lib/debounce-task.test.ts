@@ -38,6 +38,30 @@ describe("createDebouncedTask", () => {
     expect(run).toHaveBeenCalledWith(5);
   });
 
+  it("reports pending work while scheduled or in flight", async () => {
+    let finishFirst: (() => void) | undefined;
+    const run = vi
+      .fn<(value: number) => Promise<void>>()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishFirst = () => resolve();
+          }),
+      )
+      .mockResolvedValue(undefined);
+    const task = createDebouncedTask(run, 400);
+
+    expect(task.hasPending()).toBe(false);
+    task.schedule(2);
+    expect(task.hasPending()).toBe(true);
+
+    const flushPromise = task.flush();
+    expect(task.hasPending()).toBe(true);
+    finishFirst?.();
+    await flushPromise;
+    expect(task.hasPending()).toBe(false);
+  });
+
   it("flushes the latest value immediately", async () => {
     const run = vi.fn(async () => undefined);
     const task = createDebouncedTask(run, 400);

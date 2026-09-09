@@ -166,25 +166,25 @@ export function AddToCartButton({
         queryClient,
         buildOptimisticDraftOrder(draft, lines, new Map([[productId, lineMeta()]])),
       );
-      setQtyTouched(false);
-      setMessage(qty === 0 ? "Removed from cart" : inCart ? "Updated cart" : "Added to cart");
-
-      void replaceLines
-        .mutateAsync({
+      setPending(true);
+      try {
+        const response = await replaceLines.mutateAsync({
           id: draft.id,
           data: { lines },
-        })
-        .then((response) => {
-          if (response.status === 200) {
-            writeDraftCartOrder(queryClient, response.data);
-          }
-        })
-        .catch((error: unknown) => {
-          if (previous !== undefined) {
-            queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
-          }
-          setMessage(wholesaleShortageErrorMessage(error, "Could not update cart"));
         });
+        if (response.status === 200) {
+          writeDraftCartOrder(queryClient, response.data);
+        }
+        setQtyTouched(false);
+        setMessage(qty === 0 ? "Removed from cart" : inCart ? "Updated cart" : "Added to cart");
+      } catch (error: unknown) {
+        if (previous !== undefined) {
+          queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
+        }
+        setMessage(wholesaleShortageErrorMessage(error, "Could not update cart"));
+      } finally {
+        setPending(false);
+      }
       return;
     }
 

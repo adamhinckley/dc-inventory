@@ -30,8 +30,12 @@ type ReplacePayload = Array<{ productId: string; qty: number }>;
 
 export type CartActions = {
   pending: boolean;
+  /** Debounced qty edits not yet PATCHed to the server. */
+  dirty: boolean;
   message: string | null;
   setMessage: (message: string | null) => void;
+  /** Flush debounced qty edits and wait for any in-flight PATCH before checkout. */
+  flushPendingChanges: () => Promise<boolean>;
   setLineQty: (lineId: string, qty: number) => Promise<boolean>;
   /** Stepper: increment from the latest cached qty and debounce the PATCH. */
   adjustLineQty: (lineId: string, delta: number) => Promise<boolean>;
@@ -50,6 +54,7 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
   const replaceLines = useReplaceWholesaleSalesOrderLines();
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [qtyDirty, setQtyDirty] = useState(false);
   const draftRef = useRef(draft);
   draftRef.current = draft;
   const burstPreviousRef = useRef<WholesaleDraftCartListResult | undefined>(undefined);
@@ -57,6 +62,7 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
   const qtyTaskRef = useRef<ReturnType<typeof createDebouncedTask<ReplacePayload>> | undefined>(
     undefined,
   );
+  const lastFlushOkRef = useRef(true);
   const persistGate = useRef(Promise.resolve());
   const queuedPersist = useRef<{
     lines: ReplacePayload | null;
@@ -137,7 +143,11 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
   }
 
   persistQtyRef.current = async (lines) => {
-    await persist(lines, "Could not update item");
+    try {
+      lastFlushOkRef.current = await persist(lines, "Could not update item");
+    } finally {
+      setQtyDirty(false);
+    }
   };
   if (qtyTaskRef.current === undefined) {
     qtyTaskRef.current = createDebouncedTask(async (lines) => {
@@ -177,8 +187,15 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
 
   return {
     pending: saving || replaceLines.isPending,
+    dirty: qtyDirty || (qtyTaskRef.current?.hasPending() ?? false),
     message,
     setMessage,
+    async flushPendingChanges() {
+      lastFlushOkRef.current = true;
+      await qtyTaskRef.current?.flush();
+      await persistGate.current;
+      return lastFlushOkRef.current;
+    },
     async setLineQty(lineId, qty) {
       await qtyTaskRef.current?.flush();
       const current = latestDraft();
@@ -206,6 +223,7 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       const qty = line.qty + delta;
       if (qty <= 0) {
         qtyTaskRef.current?.cancel();
+        setQtyDirty(false);
         return persist(
           await toPayload(remainingDraftLines(current.lines, lineId)),
           "Could not remove item",
@@ -219,10 +237,12 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       }
       writeOptimisticQty(payload);
       qtyTaskRef.current?.schedule(payload);
+      setQtyDirty(true);
       return true;
     },
     async removeLine(lineId) {
       qtyTaskRef.current?.cancel();
+      setQtyDirty(false);
       const current = latestDraft();
       if (current === undefined) {
         return false;
