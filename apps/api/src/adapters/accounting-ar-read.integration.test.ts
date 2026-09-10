@@ -45,6 +45,15 @@ type CapturedQuery = {
   parameters: unknown[];
 };
 
+function stripSqlQuotes(query: string): string {
+  return query.replace(/"/g, "");
+}
+
+function isInvoiceSelectQuery(query: string): boolean {
+  const normalized = stripSqlQuotes(query);
+  return /\bfrom\s+accounting\.invoices\b/i.test(normalized);
+}
+
 function invoiceWhereClause(query: string): string {
   const whereIndex = query.search(/\bwhere\b/i);
   return whereIndex < 0 ? "" : query.slice(whereIndex);
@@ -55,11 +64,48 @@ function assertCustomerScopedInvoiceQuery(
   customerId: CustomerId,
 ): void {
   const where = invoiceWhereClause(entry.text);
+  const normalizedWhere = stripSqlQuotes(where);
   expect(where.length).toBeGreaterThan(0);
-  expect(where).toMatch(/customer_id\s*=\s*\$/);
-  expect(where).not.toMatch(/organization_id\s*=\s*\$\d+\s*;?\s*$/);
+  expect(normalizedWhere).toMatch(/customer_id\s*=\s*\$/);
+  expect(normalizedWhere).not.toMatch(/organization_id\s*=\s*\$\d+\s*;?\s*$/);
   expect(entry.parameters.map(String)).toContain(String(customerId));
 }
+
+describe("AR read SQL capture helpers", () => {
+  const drizzleInvoiceSelect =
+    `select "id", "organization_id", "customer_id" from "accounting"."invoices" ` +
+    `where ("accounting"."invoices"."organization_id" = $1 and "accounting"."invoices"."customer_id" = $2)`;
+
+  it("detects Drizzle quoted invoice selects", () => {
+    expect(isInvoiceSelectQuery(drizzleInvoiceSelect)).toBe(true);
+    expect(isInvoiceSelectQuery(`select "id" from "accounting"."payments"`)).toBe(false);
+    expect(isInvoiceSelectQuery(`select id from accounting.invoices`)).toBe(true);
+  });
+
+  it("asserts customer_id bind in Drizzle WHERE clauses", () => {
+    const customerId = CustomerId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    assertCustomerScopedInvoiceQuery(
+      {
+        text: drizzleInvoiceSelect,
+        parameters: ["DEFAULT", customerId],
+      },
+      customerId,
+    );
+  });
+
+  it("rejects org-wide invoice selects without customer_id bind", () => {
+    const customerId = CustomerId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+    expect(() =>
+      assertCustomerScopedInvoiceQuery(
+        {
+          text: `select "id" from "accounting"."invoices" where "accounting"."invoices"."organization_id" = $1`,
+          parameters: ["DEFAULT"],
+        },
+        customerId,
+      ),
+    ).toThrow();
+  });
+});
 
 // Runs in required CI via scripts/ci-compose-migrate-ready.sh (AR_READ_INTEGRATION=1).
 describe.skipIf(!integrationEnabled || !databaseUrl)(
@@ -352,9 +398,7 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       await tracedCustomerRead.loadCustomerData(organizationId, customerId);
       await tracedSql.end({ timeout: 5 });
 
-      const invoiceQueries = capturedQueries.filter((entry) =>
-        entry.text.includes("accounting.invoices"),
-      );
+      const invoiceQueries = capturedQueries.filter((entry) => isInvoiceSelectQuery(entry.text));
       expect(invoiceQueries.length).toBeGreaterThan(0);
       for (const entry of invoiceQueries) {
         assertCustomerScopedInvoiceQuery(entry, customerId);
