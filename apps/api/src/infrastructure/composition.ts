@@ -243,6 +243,7 @@ import {
   type RecordReopenSkusForPresellRequest,
 } from "@dc-inventory/inventory";
 import { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { createActingCustomerHeaderReadPort } from "../adapters/acting-customer-header-read-port.js";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
 import { SalesCreditCheckAdapter } from "../adapters/sales-credit-check.js";
 import {
@@ -655,51 +656,6 @@ function wholesaleLoginAccountStatusReadPort(
   return {
     getAccountStatus: (organizationId, linkedPartyId) =>
       accountStatus.getAccountStatus(organizationId, linkedPartyId),
-  };
-}
-
-function actingCustomerHeaderReadPort(
-  customerRepo: ICustomerRepository,
-): IActingCustomerHeaderReadPort {
-  return {
-    async list(organizationId) {
-      const pageSize = 100;
-      let page = 1;
-      const headers = [];
-      while (true) {
-        const result = await customerRepo.list({
-          organizationId,
-          page,
-          pageSize,
-          sortBy: "name",
-          sortOrder: "asc",
-        });
-        headers.push(
-          ...result.items.map((customer) => ({
-            customerId: customer.id,
-            businessName: customer.name,
-            customerNumber: customer.customerNumber,
-          })),
-        );
-        const offset = (page - 1) * pageSize + result.items.length;
-        if (offset >= result.total || result.items.length < pageSize) {
-          break;
-        }
-        page += 1;
-      }
-      return headers;
-    },
-    async findById(organizationId, customerId) {
-      const customer = await customerRepo.findById(organizationId, customerId);
-      if (customer === null) {
-        return null;
-      }
-      return {
-        customerId: customer.id,
-        businessName: customer.name,
-        customerNumber: customer.customerNumber,
-      };
-    },
   };
 }
 
@@ -1265,7 +1221,11 @@ export function composeAppServices(
         : defaultInMemoryAccountingUow.invoices);
 
   const wholesaleAccountStatus = wholesaleLoginAccountStatusReadPort(readPorts.accountStatus);
-  const actingCustomerHeaders = actingCustomerHeaderReadPort(customerRepo);
+  const actingCustomerHeaders = createActingCustomerHeaderReadPort(
+    customerRepo,
+    wholesaleUsers,
+    appDb,
+  );
 
   const uncoveredList =
     overrides.uncoveredList ??
@@ -1366,9 +1326,7 @@ export function composeAppServices(
       listActingCustomers: new ListActingCustomersUseCase(
         sessions,
         staffUsers,
-        wholesaleUsers,
         actingCustomerHeaders,
-        wholesaleAccountStatus,
         clock,
       ),
       selectActingCustomer: new SelectActingCustomerUseCase(

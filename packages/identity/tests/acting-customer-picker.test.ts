@@ -15,6 +15,7 @@ import { SelectActingCustomerUseCase } from "../src/application/select-acting-cu
 import type { WholesaleLoginAccountStatus } from "../src/domain/account-status.js";
 import type {
   ActingCustomerHeader,
+  ActingCustomerPickerRow,
   IActingCustomerHeaderReadPort,
 } from "../src/domain/ports/acting-customer-header-read.js";
 import type { IWholesaleLoginAccountStatusReadPort } from "../src/domain/ports/wholesale-login-account-status-read.js";
@@ -31,10 +32,32 @@ const OTHER_ORG_ID = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099"
 class InMemoryActingCustomerHeaderReadPort implements IActingCustomerHeaderReadPort {
   constructor(
     private readonly headersByOrg: ReadonlyMap<OrganizationId, readonly ActingCustomerHeader[]>,
+    private readonly wholesaleUsers: InMemoryWholesaleUserRepository,
+    private readonly accountStatuses: ReadonlyMap<CustomerId, WholesaleLoginAccountStatus | null>,
   ) {}
 
-  async list(organizationId: OrganizationId): Promise<readonly ActingCustomerHeader[]> {
-    return this.headersByOrg.get(organizationId) ?? [];
+  async listPickerItems(organizationId: OrganizationId): Promise<readonly ActingCustomerPickerRow[]> {
+    const headers = this.headersByOrg.get(organizationId) ?? [];
+    const wholesaleCustomerIds = new Set(
+      await this.wholesaleUsers.listCustomerIdsWithWholesaleUsers(organizationId),
+    );
+    const items: ActingCustomerPickerRow[] = [];
+    for (const header of headers) {
+      if (!wholesaleCustomerIds.has(header.customerId)) {
+        continue;
+      }
+      const status = this.accountStatuses.get(header.customerId) ?? null;
+      if (status === null || status === "inactive") {
+        continue;
+      }
+      items.push({
+        customerId: header.customerId,
+        businessName: header.businessName,
+        customerNumber: header.customerNumber,
+        accountStatus: status,
+      });
+    }
+    return items;
   }
 
   async findById(
@@ -109,19 +132,23 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
-  const customerHeaders = new InMemoryActingCustomerHeaderReadPort(HEADERS_BY_ORG);
+  const customerHeaders = new InMemoryActingCustomerHeaderReadPort(
+    HEADERS_BY_ORG,
+    wholesaleUsers,
+    ACCOUNT_STATUSES,
+  );
   const accountStatus = new ConfigurableAccountStatusReadPort(ACCOUNT_STATUSES);
   return {
     clock,
     staffUsers,
     wholesaleUsers,
     sessions,
+    customerHeaders,
+    accountStatus,
     listActingCustomers: new ListActingCustomersUseCase(
       sessions,
       staffUsers,
-      wholesaleUsers,
       customerHeaders,
-      accountStatus,
       clock,
     ),
     selectActingCustomer: new SelectActingCustomerUseCase(

@@ -1,4 +1,5 @@
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
+import type { WholesaleLoginAccountStatus } from "../account-status.js";
 
 export type ActingCustomerHeader = {
   customerId: CustomerId;
@@ -6,8 +7,12 @@ export type ActingCustomerHeader = {
   customerNumber: string;
 };
 
+export type ActingCustomerPickerRow = ActingCustomerHeader & {
+  accountStatus: WholesaleLoginAccountStatus;
+};
+
 export interface IActingCustomerHeaderReadPort {
-  list(organizationId: OrganizationId): Promise<readonly ActingCustomerHeader[]>;
+  listPickerItems(organizationId: OrganizationId): Promise<readonly ActingCustomerPickerRow[]>;
   findById(
     organizationId: OrganizationId,
     customerId: CustomerId,
