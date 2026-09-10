@@ -74,11 +74,12 @@ function harness() {
   const h = demandModelHarness();
   const supplierMapping = new TestSupplierSkuMappingReadPort();
   const openDraftPurchaseOrders = new InMemoryUncoveredSkuDraftPurchaseOrderReadPort();
+  const suppliers = new InMemoryUncoveredSkuSupplierReadPort();
   const uncoveredList = new InMemoryUncoveredListQuery(h.readModel, {
     supplierMapping,
+    suppliers,
     openDraftPurchaseOrders,
   });
-  const suppliers = new InMemoryUncoveredSkuSupplierReadPort();
   suppliers.set(DEFAULT_ORG, {
     supplierId: SUPPLIER_A,
     supplierNumber: "V-A",

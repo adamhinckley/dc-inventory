@@ -220,14 +220,13 @@ export class UncoveredInventoryListQuery implements IUncoveredListQuery {
     }
 
     const { uncovered } = this.uncoveredExpr();
-    const mappingCount = this.supplierMappingCountSql(organizationId);
     const offset = (query.page - 1) * query.pageSize;
 
     const uncoveredSkus = this.db.$with("uncovered_skus").as(
       this.db
         .select({
           sku: stockSnapshots.sku,
-          uncovered,
+          uncovered: uncovered.as("uncovered"),
         })
         .from(stockSnapshots)
         .where(
@@ -288,7 +287,7 @@ export class UncoveredInventoryListQuery implements IUncoveredListQuery {
       this.db
         .with(uncoveredSkus)
         .select({
-          supplierId: sql<string | null>`null`.as("supplier_id"),
+          supplierId: sql<string | null>`cast(null as uuid)`.as("supplier_id"),
           productCount: sql<number>`count(*)::int`.as("product_count"),
           totalUncoveredUnits: sql<number>`coalesce(sum(${uncoveredSkus.uncovered}), 0)::int`.as(
             "total_uncovered_units",
@@ -354,7 +353,7 @@ export class UncoveredInventoryListQuery implements IUncoveredListQuery {
             .unionAll(
               this.db
                 .select({
-                  supplierId: sql<string | null>`${needsMappingRollup.supplierId}`.as("supplier_id"),
+                  supplierId: sql<string | null>`cast(null as uuid)`.as("supplier_id"),
                   productCount: needsMappingRollup.productCount,
                   totalUncoveredUnits: needsMappingRollup.totalUncoveredUnits,
                   needsMapping: needsMappingRollup.needsMapping,
@@ -380,7 +379,7 @@ export class UncoveredInventoryListQuery implements IUncoveredListQuery {
             .unionAll(
               this.db
                 .select({
-                  supplierId: sql<string | null>`${needsMappingRollup.supplierId}`.as("supplier_id"),
+                  supplierId: sql<string | null>`cast(null as uuid)`.as("supplier_id"),
                   productCount: needsMappingRollup.productCount,
                   totalUncoveredUnits: needsMappingRollup.totalUncoveredUnits,
                   needsMapping: needsMappingRollup.needsMapping,
@@ -421,7 +420,7 @@ export class UncoveredInventoryListQuery implements IUncoveredListQuery {
           supplierId: row.supplierId === null ? null : SupplierId.parse(row.supplierId),
           productCount: Number(row.productCount),
           totalUncoveredUnits: Number(row.totalUncoveredUnits),
-          needsMapping: Boolean(row.needsMapping),
+          needsMapping: row.needsMapping,
         }),
       ),
     };

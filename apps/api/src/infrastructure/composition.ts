@@ -1267,13 +1267,6 @@ export function composeAppServices(
   const wholesaleAccountStatus = wholesaleLoginAccountStatusReadPort(readPorts.accountStatus);
   const actingCustomerHeaders = actingCustomerHeaderReadPort(customerRepo);
 
-  const uncoveredList =
-    overrides.uncoveredList ??
-    (appDb
-      ? new UncoveredInventoryListQuery(appDb)
-      : new InMemoryUncoveredListQuery(
-          unitOfWork.inventory.readModel as InMemoryInventoryReadModel,
-        ));
   const uncoveredCaseQty =
     overrides.uncoveredCaseQtyRead ??
     (productRepo && productPackagingRepo
@@ -1294,6 +1287,18 @@ export function composeAppServices(
   const uncoveredSkuDraftPurchaseOrder = uncoveredSkuDraftPurchaseOrderReadPort(
     openDraftPurchaseOrderRead,
   );
+  const uncoveredList =
+    overrides.uncoveredList ??
+    (appDb
+      ? new UncoveredInventoryListQuery(appDb)
+      : new InMemoryUncoveredListQuery(
+          unitOfWork.inventory.readModel as InMemoryInventoryReadModel,
+          {
+            supplierMapping: uncoveredSkuSupplierMapping,
+            openDraftPurchaseOrders: uncoveredSkuDraftPurchaseOrder,
+            suppliers: uncoveredSkuSupplier,
+          },
+        ));
   const listUncoveredSkus = new ListUncoveredSkusUseCase(
     uncoveredList,
     uncoveredCaseQty,

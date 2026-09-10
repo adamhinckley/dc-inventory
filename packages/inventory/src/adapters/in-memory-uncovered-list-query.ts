@@ -15,6 +15,7 @@ import type {
 import type {
   IUncoveredSkuDraftPurchaseOrderReadPort,
   IUncoveredSkuSupplierMappingReadPort,
+  IUncoveredSkuSupplierReadPort,
   UncoveredSkuSupplierMapping,
 } from "../domain/ports/uncovered-sku-enrichment.js";
 import { uncoveredSkuDraftKey } from "../domain/ports/uncovered-sku-enrichment.js";
@@ -40,6 +41,7 @@ function matchesFilter(
 
 export type InMemoryUncoveredListQueryDeps = Readonly<{
   supplierMapping: IUncoveredSkuSupplierMappingReadPort;
+  suppliers?: IUncoveredSkuSupplierReadPort;
   openDraftPurchaseOrders?: IUncoveredSkuDraftPurchaseOrderReadPort;
 }>;
 
@@ -159,6 +161,11 @@ export class InMemoryUncoveredListQuery implements IUncoveredListQuery {
       needsMappingUnits += row.uncovered;
     }
 
+    const supplierIds = [...bySupplier.keys()];
+    const supplierInfo =
+      this.deps?.suppliers === undefined
+        ? new Map()
+        : await this.deps.suppliers.findByIds(organizationId, supplierIds);
     let factoryRows: UncoveredFactoryCoreRow[] = [...bySupplier.entries()].map(
       ([supplierId, aggregate]) =>
         Object.freeze({
@@ -168,7 +175,13 @@ export class InMemoryUncoveredListQuery implements IUncoveredListQuery {
           needsMapping: false,
         }),
     );
-    factoryRows.sort((left, right) => left.supplierId!.localeCompare(right.supplierId!));
+    factoryRows.sort((left, right) => {
+      const leftName =
+        supplierInfo.get(left.supplierId!)?.supplierName ?? left.supplierId!;
+      const rightName =
+        supplierInfo.get(right.supplierId!)?.supplierName ?? right.supplierId!;
+      return leftName.localeCompare(rightName);
+    });
 
     if (needsMappingProductCount > 0) {
       factoryRows.push(
