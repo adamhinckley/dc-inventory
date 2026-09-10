@@ -10,11 +10,21 @@ import {
   Checkbox,
   Chip,
   DescriptionList,
+  Table,
   formatMoneyMinorUnits,
+  useTable,
+  type TableColumnDef,
 } from "@dc-inventory/ui";
-import { ArrowLeftRight, Ban, FileMinus, HandCoins, Plus } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Ban,
+  CircleDollarSign,
+  FileMinus,
+  HandCoins,
+  Plus,
+} from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import type { AllocationInvoice } from "../lib/customer-accounting-allocation";
 import {
   AGING_BUCKET_KEYS,
@@ -46,120 +56,151 @@ type DrawerTab = "payments" | "plan" | "stats";
 
 function InvoiceGrid({
   rows,
-  currency,
   orderNumbers,
   pendingOrderIds,
   canArAdjust,
   onAdjust,
 }: {
   rows: CustomerInvoiceRow[];
-  currency: string;
   orderNumbers: ReadonlyMap<string, string>;
   pendingOrderIds: ReadonlySet<string>;
   canArAdjust: boolean;
   onAdjust: (invoice: CustomerInvoiceRow) => void;
 }) {
-  return (
-    <table className="w-full border-separate border-spacing-0">
-      <thead>
-        <tr className="border-b border-border">
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-left">
-            Invoice
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-left">
-            Date
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-left">
-            Due
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-left">
-            Order
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-right">
-            Amount
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-right">
-            Remaining
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-left">
-            Terms
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-left">
-            Status
-          </th>
-          <th className="section-content-column-header px-section-content-x py-section-content-y text-right">
-            {""}
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((invoice) => {
-          const status = customerInvoiceStatusPresentation(invoice.status);
-          return (
-            <tr
-              key={invoice.id}
-              className="border-b border-border-subtle hover:bg-surface-raised"
+  const columns = useMemo<TableColumnDef<CustomerInvoiceRow>[]>(
+    () => [
+      {
+        id: "documentNumber",
+        label: "Invoice",
+        sort: "documentNumber",
+        render: ({ record }) => record.documentNumber,
+      },
+      {
+        id: "postedAt",
+        label: "Date",
+        sort: "postedAt",
+        render: ({ record }) => (
+          <span className="tabular-nums">{formatNullableDate(record.postedAt)}</span>
+        ),
+      },
+      {
+        id: "dueDate",
+        label: "Due",
+        sort: "dueDate",
+        render: ({ record }) => (
+          <span
+            className={`tabular-nums ${record.status === "past_due" ? "text-error" : ""}`}
+          >
+            {formatNullableDate(record.dueDate)}
+          </span>
+        ),
+      },
+      {
+        id: "orderId",
+        label: "Order",
+        sort: "orderId",
+        accessor: (record) =>
+          orderNumbers.get(record.orderId) ?? record.orderId,
+        render: ({ record }) =>
+          pendingOrderIds.has(record.orderId) ? (
+            <span className="text-fg-tertiary">…</span>
+          ) : (
+            <Link
+              href={`/sales/${record.orderId}`}
+              className="text-link hover:text-link-hover tabular-nums"
             >
-              <td className="px-section-content-x py-section-content-y text-body-sm">
-                {invoice.documentNumber}
-              </td>
-              <td className="px-section-content-x py-section-content-y text-body-sm tabular-nums">
-                {formatNullableDate(invoice.postedAt)}
-              </td>
-              <td
-                className={`px-section-content-x py-section-content-y text-body-sm tabular-nums ${
-                  invoice.status === "past_due" ? "text-error" : ""
-                }`}
-              >
-                {formatNullableDate(invoice.dueDate)}
-              </td>
-              <td className="px-section-content-x py-section-content-y text-body-sm">
-                {pendingOrderIds.has(invoice.orderId) ? (
-                  <span className="text-fg-tertiary">…</span>
-                ) : (
-                  <Link
-                    href={`/sales/${invoice.orderId}`}
-                    className="text-link hover:text-link-hover tabular-nums"
-                  >
-                    {orderNumbers.get(invoice.orderId) ?? invoice.orderId}
-                  </Link>
-                )}
-              </td>
-              <td className="px-section-content-x py-section-content-y text-right text-body-sm tabular-nums">
-                {formatMoneyMinorUnits(invoice.totalCents, invoice.currency)}
-              </td>
-              <td className="px-section-content-x py-section-content-y text-right text-body-sm font-semibold tabular-nums">
-                {formatMoneyMinorUnits(invoice.remainingCents, invoice.currency)}
-              </td>
-              <td className="px-section-content-x py-section-content-y text-body-sm">
-                {invoice.terms ?? "—"}
-              </td>
-              <td className="px-section-content-x py-section-content-y text-body-sm">
-                <Chip
-                  icon={<Chip.Dot />}
-                  style={{ "--chip-color": status.color } as CSSProperties}
-                >
-                  {status.label}
-                </Chip>
-              </td>
-              <td className="px-section-content-x py-section-content-y text-right">
-                {canArAdjust ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onAdjust(invoice)}
-                  >
-                    <FileMinus className="size-icon-sm" aria-hidden />
-                    Adjust Invoice
-                  </Button>
-                ) : null}
-              </td>
-            </tr>
+              {orderNumbers.get(record.orderId) ?? record.orderId}
+            </Link>
+          ),
+      },
+      {
+        id: "totalCents",
+        label: "Amount",
+        sort: "totalCents",
+        align: "right",
+        render: ({ record }) => (
+          <span className="tabular-nums">
+            {formatMoneyMinorUnits(record.totalCents, record.currency)}
+          </span>
+        ),
+      },
+      {
+        id: "remainingCents",
+        label: "Remaining",
+        sort: "remainingCents",
+        align: "right",
+        render: ({ record }) => (
+          <span className="font-semibold tabular-nums">
+            {formatMoneyMinorUnits(record.remainingCents, record.currency)}
+          </span>
+        ),
+      },
+      {
+        id: "terms",
+        label: "Terms",
+        sort: "terms",
+        accessor: (record) => record.terms ?? "",
+        render: ({ record }) => record.terms ?? "—",
+      },
+      {
+        id: "status",
+        label: "Status",
+        sort: "status",
+        accessor: (record) => customerInvoiceStatusPresentation(record.status).label,
+        render: ({ record }) => {
+          const status = customerInvoiceStatusPresentation(record.status);
+          return (
+            <Chip
+              icon={<Chip.Dot />}
+              style={{ "--chip-color": status.color } as CSSProperties}
+            >
+              {status.label}
+            </Chip>
           );
-        })}
-      </tbody>
-    </table>
+        },
+      },
+    ],
+    [orderNumbers, pendingOrderIds],
+  );
+
+  const rowActions = useCallback(
+    (invoice: CustomerInvoiceRow) =>
+      canArAdjust ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => onAdjust(invoice)}
+        >
+          <FileMinus className="size-icon-sm" aria-hidden />
+          Adjust Invoice
+        </Button>
+      ) : null,
+    [canArAdjust, onAdjust],
+  );
+
+  const table = useTable({
+    data: rows,
+    columns,
+    getRowId: (row) => row.id,
+    fillColumn: "documentNumber",
+    enableSorting: true,
+    enableSelection: false,
+    enablePagination: false,
+    initialSort: { field: "documentNumber", direction: "asc" },
+    rowActions: canArAdjust ? rowActions : undefined,
+  });
+
+  return (
+    <Table
+      table={table}
+      className="rounded-section border border-border"
+      emptyMessage="No invoices."
+    >
+      <Table.Header />
+      <Table.Body />
+      <Table.Empty />
+    </Table>
   );
 }
 
@@ -338,7 +379,7 @@ function StatsBlock({
 export function CustomerAccountingPanel({ customerId }: { customerId: string }) {
   const { canApplyPayments, canArAdjust, canManagePaymentPlans } =
     useStaffAccountingActions();
-  const [showPaid, setShowPaid] = useState(false);
+  const [hidePaid, setHidePaid] = useState(false);
   const [drawer, setDrawer] = useState<DrawerTab>("payments");
   const [adjustInvoice, setAdjustInvoice] = useState<CustomerInvoiceRow | null>(null);
   const [reallocatePayment, setReallocatePayment] =
@@ -347,10 +388,11 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
   const [planOpen, setPlanOpen] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const [applyCreditPickerOpen, setApplyCreditPickerOpen] = useState(false);
+  const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
 
   const summaryQuery = useGetInternalCustomerAccounting(customerId);
   const invoicesQuery = useListInternalCustomerInvoices(customerId, {
-    includePaid: showPaid,
+    includePaid: !hidePaid,
   });
   const paymentsQuery = useListInternalCustomerPayments(customerId);
 
@@ -409,10 +451,9 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
 
   return (
     <section
-      className="grid gap-form-section lg:grid-cols-[minmax(0,3fr)_minmax(340px,2fr)]"
+      className="flex min-w-0 flex-col gap-form-section"
       data-testid="customer-accounting-panel"
     >
-      <div className="flex min-w-0 flex-col gap-form-section">
         <div className="flex flex-wrap items-baseline gap-region">
           <span className="text-title-sm">Open balance</span>
           <span className="section-content-stat-value">
@@ -435,6 +476,17 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
             </span>
           ) : null}
           <span className="ml-auto flex flex-wrap items-center gap-action">
+            {canApplyPayments ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => setRecordPaymentOpen(true)}
+              >
+                <CircleDollarSign className="size-icon" aria-hidden />
+                Record Payment
+              </Button>
+            ) : null}
             {canApplyPayments &&
             summary.unappliedCreditCents > 0 &&
             creditPayments.length > 0 ? (
@@ -459,8 +511,8 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
               </Button>
             ) : null}
             <label className="flex items-center gap-icon text-body-sm text-fg-secondary">
-              <Checkbox checked={showPaid} onChange={setShowPaid} />
-              Show Paid
+              <Checkbox checked={hidePaid} onChange={setHidePaid} />
+              Hide Paid
             </label>
           </span>
         </div>
@@ -486,16 +538,13 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
           })}
         </div>
 
-        <div className="overflow-x-auto rounded-section border border-border">
-          <InvoiceGrid
-            rows={invoices}
-            currency={currency}
-            orderNumbers={orderNumbers}
-            pendingOrderIds={pendingOrderIds}
-            canArAdjust={canArAdjust}
-            onAdjust={setAdjustInvoice}
-          />
-        </div>
+        <InvoiceGrid
+          rows={invoices}
+          orderNumbers={orderNumbers}
+          pendingOrderIds={pendingOrderIds}
+          canArAdjust={canArAdjust}
+          onAdjust={setAdjustInvoice}
+        />
 
         <div>
           <div className="flex gap-tight border-b border-border">
@@ -598,13 +647,14 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
             ) : null}
           </div>
         </div>
-      </div>
 
       <CustomerAccountingRecordPayment
         customerId={customerId}
         openInvoices={allocationInvoices}
         currency={currency}
         canApplyPayments={canApplyPayments}
+        open={recordPaymentOpen}
+        onOpenChange={setRecordPaymentOpen}
       />
 
       <CustomerAccountingAdjustDialog

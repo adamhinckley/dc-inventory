@@ -18,11 +18,7 @@ export function CustomersExplorer({
       <ExplorerView.Header>
         <header className="mt-2 flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-2xl">
-            <p className="text-label text-fg-secondary">Sales</p>
-            <h1 className="page-title mt-1">Customers</h1>
-            <p className="page-description mt-2">
-              Wholesale accounts, terms, and credit limits for sales orders.
-            </p>
+            <h1 className="page-title">Customers</h1>
           </div>
           {canManage ? (
             <div className="shrink-0">

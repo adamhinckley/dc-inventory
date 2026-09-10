@@ -18,7 +18,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Ban, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, type CSSProperties } from "react";
 import {
   cancelSalesOrderErrorMessage,
   shipSalesOrderErrorMessage,
@@ -33,6 +33,7 @@ import {
   salesOrderShipDisabled,
   salesOrderSubtotalCents,
 } from "../lib/sales-order-line-math";
+import { salesOrderStatusPresentation } from "../lib/sales-order-status-chip";
 import type { SalesOrderLineSnapshot } from "../lib/sales-order-types";
 import { useCatalogProductsBySku } from "../lib/use-catalog-products-by-sku";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
@@ -262,6 +263,7 @@ export function SalesOrderFrozenWorkspace({
     shipPending: shipMutation.isPending,
     cancelPending: cancelMutation.isPending,
   });
+  const statusPresentation = salesOrderStatusPresentation(status);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-form-section">
@@ -269,7 +271,16 @@ export function SalesOrderFrozenWorkspace({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-action">
             <h1 className="page-title">{documentNumber}</h1>
-            <Chip icon={<Chip.Dot />}>{status}</Chip>
+            <Chip
+              icon={<Chip.Dot />}
+              style={
+                statusPresentation
+                  ? ({ "--chip-color": statusPresentation.color } as CSSProperties)
+                  : undefined
+              }
+            >
+              {statusPresentation?.label ?? status}
+            </Chip>
           </div>
           <p className="page-description mt-2">
             Lines and prices are frozen for this {status} order.

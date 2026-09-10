@@ -13,6 +13,8 @@ describe("Chip", () => {
     expect(html).toContain("On order");
     expect(html).toContain("glassmorphic-chip");
     expect(html).toContain("rounded-full");
+    expect(html).toContain("w-fit");
+    expect(html).toContain("justify-self-start");
     expect(html).toContain("size-1.5");
   });
 

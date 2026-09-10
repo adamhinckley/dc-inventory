@@ -7,7 +7,7 @@ import {
   Button,
   Checkbox,
   DateInput,
-  FieldRow,
+  Dialog,
   Input,
   Label,
   LabeledField,
@@ -50,11 +50,15 @@ export function CustomerAccountingRecordPayment({
   openInvoices,
   currency,
   canApplyPayments,
+  open,
+  onOpenChange,
 }: {
   customerId: string;
   openInvoices: AllocationInvoice[];
   currency: string;
   canApplyPayments: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
   const { mutateAsync: recordPayment, isPending } = useRecordInternalCustomerPayment();
@@ -108,6 +112,29 @@ export function CustomerAccountingRecordPayment({
       setHoldRemainderAsCredit(false);
     }
   }, [remainderCents]);
+
+  const resetForm = useCallback(() => {
+    setAmountInput("");
+    setMethod("check");
+    setReference("");
+    setNote("");
+    setReceivedDate(todayIsoDate());
+    setHoldRemainderAsCredit(false);
+    setApplyOverrides({});
+    setSubmitFailed(false);
+    setSubmitError(null);
+    setIdempotencyKey(createIdempotencyKey());
+  }, []);
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        resetForm();
+      }
+      onOpenChange(next);
+    },
+    [onOpenChange, resetForm],
+  );
 
   const resetAllocations = useCallback(() => {
     rotateIdempotencyKeyAfterFailure();
@@ -168,14 +195,8 @@ export function CustomerAccountingRecordPayment({
         return;
       }
       await invalidateCustomerAccountingQueries(queryClient, customerId);
-      setAmountInput("");
-      setReference("");
-      setNote("");
-      setReceivedDate(todayIsoDate());
-      setHoldRemainderAsCredit(false);
-      setApplyOverrides({});
-      setSubmitFailed(false);
-      setIdempotencyKey(createIdempotencyKey());
+      resetForm();
+      onOpenChange(false);
     } catch {
       setSubmitFailed(true);
       setSubmitError("Could not record payment. Check the amounts and try again.");
@@ -189,10 +210,12 @@ export function CustomerAccountingRecordPayment({
     idempotencyKey,
     method,
     note,
+    onOpenChange,
     queryClient,
     receivedDate,
     recordPayment,
     reference,
+    resetForm,
   ]);
 
   const sortedInvoices = useMemo(
@@ -205,13 +228,14 @@ export function CustomerAccountingRecordPayment({
   }
 
   return (
-    <aside className="lg:sticky lg:top-canvas lg:self-start">
-      <div
-        className="rounded-section border border-accent-indicator bg-surface-card p-card"
-        data-testid="customer-accounting-record-payment"
-      >
-        <h2 className="text-title-sm">Record Payment</h2>
-        <div className="mt-field grid grid-cols-1 gap-field-group sm:grid-cols-2">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <Dialog.Content size="lg" data-testid="customer-accounting-record-payment">
+        <Dialog.Header>
+          <Dialog.Title>Record Payment</Dialog.Title>
+          <Dialog.Close />
+        </Dialog.Header>
+        <Dialog.Body>
+        <div className="grid grid-cols-1 gap-field-group sm:grid-cols-2">
           <LabeledField>
             <Label htmlFor="record-payment-amount">Amount</Label>
             <Input
@@ -370,11 +394,27 @@ export function CustomerAccountingRecordPayment({
           <p className="mt-tight text-body-sm text-error">{submitError}</p>
         ) : null}
 
-        <FieldRow className="mt-field-group">
+        <p className="mt-field text-caption text-fg-tertiary">
+          Prefilled oldest due first. Edit any Apply cell.
+        </p>
+        </Dialog.Body>
+        <Dialog.Footer>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mr-auto"
+            onClick={resetAllocations}
+          >
+            <RotateCcw className="size-icon-sm" aria-hidden />
+            Reset
+          </Button>
+          <Button type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             type="button"
             variant="primary"
-            className="w-full sm:w-auto"
             disabled={submitDisabled}
             onClick={() => void handleSubmit()}
             data-testid="customer-accounting-record-payment-submit"
@@ -382,16 +422,8 @@ export function CustomerAccountingRecordPayment({
             <CircleDollarSign className="size-icon" aria-hidden />
             Record {amountCents > 0 ? formatMoneyMinorUnits(amountCents, currency) : "Payment"}
           </Button>
-        </FieldRow>
-
-        <div className="mt-field flex items-center justify-between text-caption text-fg-tertiary">
-          <span>Prefilled oldest due first. Edit any Apply cell.</span>
-          <Button type="button" variant="ghost" size="sm" onClick={resetAllocations}>
-            <RotateCcw className="size-icon-sm" aria-hidden />
-            Reset
-          </Button>
-        </div>
-      </div>
-    </aside>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog>
   );
 }

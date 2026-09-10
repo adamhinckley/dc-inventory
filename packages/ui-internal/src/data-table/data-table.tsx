@@ -2,9 +2,9 @@
 
 import {
   Checkbox,
-  Input,
   Label,
   ResourceFilterBar,
+  Select,
   Table,
   TextInput,
   useTable,
@@ -168,23 +168,20 @@ function FilterControl({
 
   if (filter.control === "select") {
     return (
-      <div className="flex min-w-40 flex-col gap-2">
+      <div className="flex w-52 shrink-0 flex-col gap-2">
         <Label htmlFor={filterId}>{label}</Label>
-        <select
+        <Select
           id={filterId}
-          className="flex min-h-(--space-input-height) w-full rounded-interactable border border-border-field bg-surface-card px-input-x py-input-y text-input text-fg"
+          density="compact"
+          className="w-full"
+          options={[
+            { value: "", label: "All" },
+            ...(options ?? []),
+          ]}
           value={String(state.filters[filter.param] ?? "")}
-          onChange={(event) =>
-            setFilter(filter.param, event.target.value || undefined)
-          }
-        >
-          <option value="">All</option>
-          {(options ?? []).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          onChange={(next) => setFilter(filter.param, next || undefined)}
+          placeholder="All"
+        />
       </div>
     );
   }
@@ -217,27 +214,27 @@ function FilterControl({
     const toParam = filter.rangePair;
     return (
       <div className="flex flex-wrap gap-4">
-        <div className="flex min-w-40 flex-col gap-2">
+        <div className="flex w-52 shrink-0 flex-col gap-2">
           <Label htmlFor={filterId}>{label}</Label>
-          <Input
+          <TextInput
             id={filterId}
+            density="compact"
+            className="w-full"
             type="date"
             value={String(state.filters[filter.param] ?? "")}
-            onChange={(event) =>
-              setFilter(filter.param, event.target.value || undefined)
-            }
+            onChange={(value) => setFilter(filter.param, value || undefined)}
           />
         </div>
         {toParam ? (
-          <div className="flex min-w-40 flex-col gap-2">
+          <div className="flex w-52 shrink-0 flex-col gap-2">
             <Label htmlFor={`${idBase}-filter-${toParam}`}>{toParam}</Label>
-            <Input
+            <TextInput
               id={`${idBase}-filter-${toParam}`}
+              density="compact"
+              className="w-full"
               type="date"
               value={String(state.filters[toParam] ?? "")}
-              onChange={(event) =>
-                setFilter(toParam, event.target.value || undefined)
-              }
+              onChange={(value) => setFilter(toParam, value || undefined)}
             />
           </div>
         ) : null}
@@ -247,15 +244,15 @@ function FilterControl({
 
   const inputType = filter.control === "date" ? "date" : "text";
   return (
-    <div className="flex min-w-40 flex-col gap-2">
+    <div className="flex w-52 shrink-0 flex-col gap-2">
       <Label htmlFor={filterId}>{label}</Label>
-      <Input
+      <TextInput
         id={filterId}
+        density="compact"
+        className="w-full"
         type={inputType}
         value={String(state.filters[filter.param] ?? "")}
-        onChange={(event) =>
-          setFilter(filter.param, event.target.value || undefined)
-        }
+        onChange={(value) => setFilter(filter.param, value || undefined)}
       />
     </div>
   );
@@ -454,7 +451,10 @@ export function DataTableFilters() {
  * When to use: staff list pages that should match the kit explorer chrome.
  * When not to use: inventing filters that are not on `meta.filters`.
  */
-export function DataTableFilterBar({ resource }: { resource?: string } = {}) {
+export function DataTableFilterBar({
+  resource,
+  pinned,
+}: { resource?: string; pinned?: readonly string[] } = {}) {
   const {
     meta,
     state,
@@ -541,7 +541,7 @@ export function DataTableFilterBar({ resource }: { resource?: string } = {}) {
   return (
     <ResourceFilterBar filters={filters} data-testid="data-table-filter-bar">
       <ResourceFilterBar.Search placeholder={meta.search?.placeholder} />
-      <ResourceFilterBar.Chips fields={fields} resource={resource} />
+      <ResourceFilterBar.Chips fields={fields} resource={resource} pinned={pinned} />
     </ResourceFilterBar>
   );
 }

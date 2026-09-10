@@ -156,10 +156,13 @@ export function Select<T extends string | number | boolean = string>({
   // `display="label"` mode so the same primitive handles both UX modes
   // without forking.
   return (
-    <BaseSelect.Root<T>
+    <BaseSelect.Root<T | null>
       items={display === 'label' ? resolved : undefined}
-      value={value ?? undefined}
-      onValueChange={(next) => onChange(next as T | null)}
+      // Base UI treats `undefined` as uncontrolled and `null` as a controlled
+      // empty selection. Coercing null → undefined flips the Select from
+      // uncontrolled to controlled on first pick and logs a console error.
+      value={value}
+      onValueChange={(next) => onChange(next)}
       disabled={disabled}
       name={name}
     >

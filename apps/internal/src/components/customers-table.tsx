@@ -63,8 +63,7 @@ export function CustomersTable({
       }}
     >
       <DataTable.Toolbar>
-        <DataTable.Search />
-        <DataTable.Filters />
+        <DataTable.FilterBar resource="Customer" pinned={["accountStatus"]} />
       </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />
