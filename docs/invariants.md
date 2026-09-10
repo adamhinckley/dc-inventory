@@ -140,7 +140,7 @@ uncovered         = max(0, committed − on_hand − on_order)
 
 SoloView dump `on_order_qty` is `committed` (customers on order). Inbound is Qty On PO (`on_order`). Do not map that dump column onto `on_order`.
 
-`effectiveOpen` is persisted-open, inside the optional sell window, and not yet sticky-locked by a PO or by `windowClosesAt`. `uncovered` is the factory to-order list, not a shop number. The `on_hand` line assumes a **signed** adjustment convention that is not yet closed — see [G3](#g3-adjustment-sign-and-negative-stock).
+`effectiveOpen` is persisted-open, inside the optional sell window, and not yet sticky-locked by a PO or by `windowClosesAt`. **To Order** is the factory procurement gap per SKU (code/API: `uncovered` until ADA-373); the **Pre-order** worksheet lists those gaps — neither is a shop number. The `on_hand` line assumes a **signed** adjustment convention that is not yet closed — see [G3](#g3-adjustment-sign-and-negative-stock).
 
 ---
 
@@ -401,7 +401,7 @@ Do not sneak these into v1 modules. Naming them here keeps agents from “helpfu
 
 - Multiple warehouses / transfers / per-location ATP beyond `LocationId = DEFAULT`
 - Company-wide selling season as the infinity switch (open/locked and sell-window dates are per SKU; [ADR 0008](./adr/0008-available-to-sell-open-locked.md))
-- Zoho-style purchase-request document (demand-to-PO is `uncovered`, not a request queue)
+- Zoho-style purchase-request document (demand-to-PO is the To Order gap, not a request queue)
 - First-class factory-to-customer drop-ship (keep fake receive-then-invoice; SKU+X workaround is operational)
 - Season forecast from prior-year sales
 - Native Faire Partner API (Faire stays on Shopify’s sales channel — [ADR 0009](./adr/0009-shopify-channel-hub.md))

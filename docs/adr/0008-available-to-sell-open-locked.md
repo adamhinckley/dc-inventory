@@ -31,13 +31,15 @@ David Smith (David Christopher's) stays on SoloView because of availability math
 
 5. **Two-phase stock against a sales order.** Confirm records `Committed` (demand) in the same transaction as the order status change, with a row lock on the snapshot. `Allocated` is warehouse cover against `on_hand` only. Ship consumes `Allocated`. Cover as much as leftover `available` allows at confirm; cover the rest FIFO when `GoodsReceived` raises on-hand. Partial cover is expected. Partial **confirm** is not: reject the whole confirm if any locked line exceeds `availableToSell`.
 
-6. **Uncovered is the PO worksheet, not sellability.**
+6. **Pre-order / To Order is the PO worksheet, not sellability.**
+
+   **To Order** (gap per SKU; code/API still `uncovered` until ADA-373):
 
    ```
    uncovered = max(0, committed − on_hand − on_order)
    ```
 
-   That list is "you sold 1,200, nothing on hand, nothing on a PO, you need to order it." Do not show it as available to sell. Do not add a purchase-request document. Restock past the gap is a purchasing choice (order 700 to fill plus 1,200 for the floor). The worksheet does not invent the extra floor qty.
+   The **Pre-order** worksheet/tab lists SKUs with a To Order gap, grouped by factory. That list is "you sold 1,200, nothing on hand, nothing on a PO, you need to order it." Do not show it as available to sell. Do not add a purchase-request document. Restock past the gap is a purchasing choice (order 700 to fill plus 1,200 for the floor). The worksheet does not invent the extra floor qty.
 
 7. **Same ledger, additive schema.** Grain stays `(organization_id, sku, location_id)`. Add `committed`, `sell_state`, `windowOpensAt`, `windowClosesAt`, and derived `availableToSell` on the snapshot. Add `Committed` and `Decommitted` movement types. `available` stays a generated `on_hand − allocated`. Because cover can land in more than one movement (confirm leftover, then receive), `Allocated` is no longer once-only per `(ref_type, ref_id, sku)`. Idempotency keys distinguish cover chunks. Movements stay append-only.
 
