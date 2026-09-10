@@ -21,40 +21,79 @@ import {
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import { supplierProducts, suppliers } from "@dc-inventory/purchasing/schema";
 import { Money, OrganizationId, ProductId, Sku } from "@dc-inventory/shared-kernel";
-import { and, asc, count, desc, eq, gt, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNull,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
 import { normalizeCents } from "./normalize-cents.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
 
-const lastPoCostCents = sql<number | null>`(
-  select ${supplierProducts.lastPoCostCents}
-  from ${supplierProducts}
-  inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
-  where ${supplierProducts.sku} = ${products.sku}
-    and ${suppliers.organizationId} = ${products.organizationId}
-    and ${supplierProducts.lastPoCostCents} is not null
-  order by ${supplierProducts.updatedAt} desc
-  limit 1
-)`;
+/** Per-(organization_id, sku) supplier enrichment for staff catalog list/export. */
+export function staffCatalogSupplierBySkuSubqueries(db: AppDrizzle) {
+  const supplierLinks = db
+    .select({
+      organizationId: suppliers.organizationId,
+      sku: supplierProducts.sku,
+      name: suppliers.name,
+      supplierId: supplierProducts.supplierId,
+      lastPoCostCents: supplierProducts.lastPoCostCents,
+      updatedAt: supplierProducts.updatedAt,
+      id: supplierProducts.id,
+    })
+    .from(supplierProducts)
+    .innerJoin(suppliers, eq(suppliers.id, supplierProducts.supplierId))
+    .as("supplier_links");
 
-const supplierName = sql<string | null>`(
-  select string_agg(${suppliers.name}, ', ' order by ${suppliers.name})
-  from ${supplierProducts}
-  inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
-  where ${supplierProducts.sku} = ${products.sku}
-    and ${suppliers.organizationId} = ${products.organizationId}
-)`;
+  const supplierBySku = db
+    .select({
+      organizationId: supplierLinks.organizationId,
+      sku: supplierLinks.sku,
+      supplierName: sql<string | null>`string_agg(${supplierLinks.name}, ', ' order by ${supplierLinks.name})`.as(
+        "supplier_name",
+      ),
+      primarySupplierId: sql<string | null>`(array_agg(${supplierLinks.supplierId} order by ${supplierLinks.id}))[1]`.as(
+        "primary_supplier_id",
+      ),
+    })
+    .from(supplierLinks)
+    .groupBy(supplierLinks.organizationId, supplierLinks.sku)
+    .as("supplier_by_sku");
 
-const primarySupplierId = sql<string | null>`(
-  select ${supplierProducts.supplierId}
-  from ${supplierProducts}
-  inner join ${suppliers} on ${suppliers.id} = ${supplierProducts.supplierId}
-  where ${supplierProducts.sku} = ${products.sku}
-    and ${suppliers.organizationId} = ${products.organizationId}
-  limit 1
-)`;
+  const supplierLastPo = db
+    .selectDistinctOn([supplierLinks.organizationId, supplierLinks.sku], {
+      organizationId: supplierLinks.organizationId,
+      sku: supplierLinks.sku,
+      lastPoCostCents: supplierLinks.lastPoCostCents,
+    })
+    .from(supplierLinks)
+    .where(sql`${supplierLinks.lastPoCostCents} is not null`)
+    .orderBy(supplierLinks.organizationId, supplierLinks.sku, desc(supplierLinks.updatedAt))
+    .as("supplier_last_po");
+
+  const joinSupplierBySku = and(
+    eq(supplierBySku.organizationId, products.organizationId),
+    eq(supplierBySku.sku, products.sku),
+  );
+  const joinSupplierLastPo = and(
+    eq(supplierLastPo.organizationId, products.organizationId),
+    eq(supplierLastPo.sku, products.sku),
+  );
+
+  return { supplierBySku, supplierLastPo, joinSupplierBySku, joinSupplierLastPo };
+}
 
 function productFromRow(row: {
   id: string;
@@ -190,11 +229,15 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
     const excludeSupplierIds = (query.excludeSupplierId ?? [])
       .map((id) => id.trim())
       .filter((id) => id.length > 0);
-    if (excludeSupplierIds.length > 0) {
+    const includeSupplierEnrichment = query.shopVisibleOnly !== true;
+    const supplierSubqueries = includeSupplierEnrichment
+      ? staffCatalogSupplierBySkuSubqueries(this.db)
+      : null;
+    if (excludeSupplierIds.length > 0 && supplierSubqueries !== null) {
       clauses.push(
         or(
-          sql`(${primarySupplierId}) is null`,
-          notInArray(primarySupplierId, excludeSupplierIds),
+          isNull(supplierSubqueries.supplierBySku.primarySupplierId),
+          notInArray(supplierSubqueries.supplierBySku.primarySupplierId, excludeSupplierIds),
         )!,
       );
     }
@@ -288,70 +331,88 @@ export class CatalogInventoryListQuery implements ICatalogListQuery {
       eq(stockSnapshots.sku, products.sku),
       eq(stockSnapshots.locationId, locations.id),
     );
-    const countFrom =
+    const needsInventoryJoin =
       query.hideZeroInventory === true ||
       query.availableOnly === true ||
       query.hideBeforeOpen === true ||
-      query.sellState !== undefined
-        ? this.db
-            .select({ value: count() })
-            .from(products)
-            .leftJoin(locations, locationJoin)
-            .leftJoin(stockSnapshots, snapshotJoin)
-        : this.db.select({ value: count() }).from(products);
+      query.sellState !== undefined;
+    const countFrom = this.db.select({ value: count() }).from(products);
+    const countQuery = needsInventoryJoin
+      ? countFrom.leftJoin(locations, locationJoin).leftJoin(stockSnapshots, snapshotJoin)
+      : countFrom;
+    const countWithSuppliers =
+      supplierSubqueries === null
+        ? countQuery
+        : countQuery
+            .leftJoin(supplierSubqueries.supplierBySku, supplierSubqueries.joinSupplierBySku)
+            .leftJoin(supplierSubqueries.supplierLastPo, supplierSubqueries.joinSupplierLastPo);
+
+    const pageSelect = {
+      id: products.id,
+      organizationId: products.organizationId,
+      sku: products.sku,
+      name: products.name,
+      description: products.description,
+      uom: products.uom,
+      countryOfOrigin: products.countryOfOrigin,
+      material: products.material,
+      length: products.length,
+      width: products.width,
+      height: products.height,
+      diameter: products.diameter,
+      size: products.size,
+      weight: products.weight,
+      weightUom: products.weightUom,
+      memberPriceCents: products.memberPriceCents,
+      listPriceCents: products.listPriceCents,
+      originalWholesalePriceCents: products.originalWholesalePriceCents,
+      currency: products.currency,
+      catalogPage: products.catalogPage,
+      defaultOrderQty: products.defaultOrderQty,
+      defaultWeight: products.defaultWeight,
+      defaultWeightUom: products.defaultWeightUom,
+      inactive: products.inactive,
+      discontinued: products.discontinued,
+      nonStock: products.nonStock,
+      noExport: products.noExport,
+      webWholesale: products.webWholesale,
+      webRetail: products.webRetail,
+      taxCategoryCode: products.taxCategoryCode,
+      createdAt: products.createdAt,
+      onHand,
+      onOrder,
+      allocated,
+      available,
+      committed,
+      stickyLocked,
+      windowOpensAt: stockSnapshots.windowOpensAt,
+      windowClosesAt: stockSnapshots.windowClosesAt,
+      hasActiveSellWindowMembership: demandProjection.hasActiveSellWindowMembership,
+      caseQty: productPackaging.caseQty,
+      lastPoCostCents:
+        supplierSubqueries === null
+          ? sql<number | null>`null`
+          : supplierSubqueries.supplierLastPo.lastPoCostCents,
+      supplierName:
+        supplierSubqueries === null
+          ? sql<string | null>`null`
+          : supplierSubqueries.supplierBySku.supplierName,
+    };
+    let pageQuery = this.db
+      .select(pageSelect)
+      .from(products)
+      .leftJoin(locations, locationJoin)
+      .leftJoin(stockSnapshots, snapshotJoin)
+      .leftJoin(productPackaging, eq(productPackaging.productId, products.id));
+    if (supplierSubqueries !== null) {
+      pageQuery = pageQuery
+        .leftJoin(supplierSubqueries.supplierBySku, supplierSubqueries.joinSupplierBySku)
+        .leftJoin(supplierSubqueries.supplierLastPo, supplierSubqueries.joinSupplierLastPo);
+    }
 
     const [totalRows, rows] = await Promise.all([
-      countFrom.where(where),
-      this.db
-        .select({
-          id: products.id,
-          organizationId: products.organizationId,
-          sku: products.sku,
-          name: products.name,
-          description: products.description,
-          uom: products.uom,
-          countryOfOrigin: products.countryOfOrigin,
-          material: products.material,
-          length: products.length,
-          width: products.width,
-          height: products.height,
-          diameter: products.diameter,
-          size: products.size,
-          weight: products.weight,
-          weightUom: products.weightUom,
-          memberPriceCents: products.memberPriceCents,
-          listPriceCents: products.listPriceCents,
-          originalWholesalePriceCents: products.originalWholesalePriceCents,
-          currency: products.currency,
-          catalogPage: products.catalogPage,
-          defaultOrderQty: products.defaultOrderQty,
-          defaultWeight: products.defaultWeight,
-          defaultWeightUom: products.defaultWeightUom,
-          inactive: products.inactive,
-          discontinued: products.discontinued,
-          nonStock: products.nonStock,
-          noExport: products.noExport,
-          webWholesale: products.webWholesale,
-          webRetail: products.webRetail,
-          taxCategoryCode: products.taxCategoryCode,
-          createdAt: products.createdAt,
-          onHand,
-          onOrder,
-          allocated,
-          available,
-          committed,
-          stickyLocked,
-          windowOpensAt: stockSnapshots.windowOpensAt,
-          windowClosesAt: stockSnapshots.windowClosesAt,
-          hasActiveSellWindowMembership: demandProjection.hasActiveSellWindowMembership,
-          caseQty: productPackaging.caseQty,
-          lastPoCostCents,
-          supplierName,
-        })
-        .from(products)
-        .leftJoin(locations, locationJoin)
-        .leftJoin(stockSnapshots, snapshotJoin)
-        .leftJoin(productPackaging, eq(productPackaging.productId, products.id))
+      countWithSuppliers.where(where),
+      pageQuery
         .where(where)
         .orderBy(...orderBy)
         .limit(query.pageSize)

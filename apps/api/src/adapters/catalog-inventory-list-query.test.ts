@@ -11,7 +11,12 @@ import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { stockSnapshots } from "@dc-inventory/inventory/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { CatalogInventoryListQuery } from "./catalog-inventory-list-query.js";
+import {
+  CatalogInventoryListQuery,
+  staffCatalogSupplierBySkuSubqueries,
+} from "./catalog-inventory-list-query.js";
+import { supplierProducts, suppliers } from "@dc-inventory/purchasing/schema";
+import { products } from "@dc-inventory/catalog/schema";
 import { createCatalogListQueryPgliteHarness } from "./support/catalog-list-query-pglite.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
@@ -151,6 +156,27 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
 });
 
 describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
+  it("uses bounded supplier joins instead of per-row scalar subqueries", () => {
+    const db = drizzle.mock({ schema: { products, supplierProducts, suppliers } });
+    const { supplierBySku, supplierLastPo, joinSupplierBySku, joinSupplierLastPo } =
+      staffCatalogSupplierBySkuSubqueries(db);
+    const { sql: pageSql } = db
+      .select({
+        sku: products.sku,
+        lastPoCostCents: supplierLastPo.lastPoCostCents,
+        supplierName: supplierBySku.supplierName,
+      })
+      .from(products)
+      .leftJoin(supplierBySku, joinSupplierBySku)
+      .leftJoin(supplierLastPo, joinSupplierLastPo)
+      .toSQL();
+    expect(pageSql).toContain("supplier_by_sku");
+    expect(pageSql).toContain("supplier_last_po");
+    expect(pageSql).toContain("supplier_links");
+    const [selectList] = pageSql.split(/from\s+"catalog"\."products"/i);
+    expect(selectList).not.toMatch(/\(select/i);
+  });
+
   it("returns bigint last_po_cost_cents without int4 cast overflow", async () => {
     const harness = await createCatalogListQueryPgliteHarness();
     try {
@@ -418,6 +444,11 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
         postCloseSku,
       ]);
       expect(listed.items.some((row) => row.product.sku.value === scheduledSku)).toBe(false);
+      expect(
+        listed.items.every(
+          (row) => row.lastPoCostCents === null && row.supplierName === null,
+        ),
+      ).toBe(true);
     } finally {
       await harness.close();
     }
