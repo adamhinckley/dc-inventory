@@ -5,6 +5,7 @@ import {
   getGetInternalPurchaseOrderQueryKey,
   getListInternalPurchaseOrdersQueryKey,
   getListInternalSupplierProductsQueryKey,
+  useCancelInternalPurchaseOrder,
   useConfirmInternalPurchaseOrder,
   useGetInternalPurchaseOrderFactorySend,
   useCreateInternalPurchaseOrder,
@@ -26,7 +27,7 @@ import {
   useTable,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, Download, Package, Trash2 } from "lucide-react";
+import { Ban, CircleCheck, Download, Package, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import {
@@ -63,6 +64,7 @@ import {
 } from "../lib/supplier-product-by-sku";
 import { useSupplierProductsBySku } from "../lib/use-supplier-products-by-sku";
 import {
+  cancelPurchaseOrderErrorMessage,
   createPurchaseOrderErrorMessage,
   issuePurchaseOrderErrorMessage,
 } from "../lib/purchase-order-action-errors";
@@ -517,6 +519,7 @@ export function PurchaseOrderDraftWorkspace({
   const createMutation = useCreateInternalPurchaseOrder();
   const replaceMutation = useReplaceInternalPurchaseOrderLines();
   const confirmMutation = useConfirmInternalPurchaseOrder();
+  const cancelMutation = useCancelInternalPurchaseOrder();
 
   const persistCreate = useCallback(
     async (nextLines: PurchaseOrderLineDraft[], vendorId: string) => {
@@ -767,6 +770,32 @@ export function PurchaseOrderDraftWorkspace({
     router,
   ]);
 
+  const cancelPo = useCallback(async () => {
+    if (!purchaseOrderId) {
+      return;
+    }
+    setActionError(null);
+    try {
+      const result = await cancelMutation.mutateAsync({
+        id: purchaseOrderId,
+        data: { idempotencyKey: `cancel-${purchaseOrderId}` },
+      });
+      if (result.status !== 200) {
+        setActionError(cancelPurchaseOrderErrorMessage(result));
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: getGetInternalPurchaseOrderQueryKey(purchaseOrderId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: getListInternalPurchaseOrdersQueryKey(),
+      });
+      router.push("/procurement/purchase-orders");
+    } catch {
+      setActionError("Could not cancel this purchase order.");
+    }
+  }, [cancelMutation, purchaseOrderId, queryClient, router]);
+
   const downloadXlsx = useCallback(async () => {
     if (!purchaseOrderId || !initialDocumentNumber) {
       return;
@@ -838,13 +867,49 @@ export function PurchaseOrderDraftWorkspace({
           {saveLabel}
         </Chip>
       </DashboardTopbarPortal>
-      <header>
-        <h1 className="page-title">{title}</h1>
-        <p className="page-description mt-2">
-          Pick a vendor, add lines from that vendor&apos;s catalog, then issue or
-          download XLS. Lines autosave after the first create.
-        </p>
-        {activeSupplierId ? <SupplierName supplierId={activeSupplierId} /> : null}
+      <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="page-title">{title}</h1>
+          <p className="page-description mt-2">
+            Pick a vendor, add lines from that vendor&apos;s catalog, then issue or
+            download XLS. Lines autosave after the first create.
+          </p>
+          {activeSupplierId ? <SupplierName supplierId={activeSupplierId} /> : null}
+        </div>
+        {purchaseOrderId ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-action">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={draftCancelDisabled(
+                saveState,
+                isCreating,
+                confirmMutation.isPending,
+                cancelMutation.isPending,
+              )}
+              onClick={() => void cancelPo()}
+            >
+              <Ban className="size-icon-lg" aria-hidden />
+              {cancelMutation.isPending ? "Cancelling…" : "Cancel PO"}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={draftIssueDisabled(
+                lines,
+                lastSavedLinesRef.current,
+                saveState,
+                isCreating,
+                confirmMutation.isPending,
+                cancelMutation.isPending,
+              )}
+              onClick={() => void issuePo()}
+            >
+              <CircleCheck className="size-icon-lg" aria-hidden />
+              {confirmMutation.isPending ? "Issuing…" : "Issue PO"}
+            </Button>
+          </div>
+        ) : null}
       </header>
 
       <FieldRow>
@@ -921,21 +986,6 @@ export function PurchaseOrderDraftWorkspace({
               <Download className="size-icon-lg" aria-hidden />
               {exporting ? "Downloading…" : "Download XLS"}
             </Button>
-            <Button
-              type="button"
-              variant="primary"
-              disabled={
-                confirmMutation.isPending ||
-                lines.length === 0 ||
-                saveState === "saving" ||
-                isCreating ||
-                !purchaseOrderLineWritesEqual(lines, lastSavedLinesRef.current)
-              }
-              onClick={() => void issuePo()}
-            >
-              <CircleCheck className="size-icon-lg" aria-hidden />
-              {confirmMutation.isPending ? "Issuing…" : "Issue PO"}
-            </Button>
           </div>
         ) : null}
       </FieldRow>
@@ -968,15 +1018,26 @@ export function PurchaseOrderDraftWorkspace({
   );
 }
 
+export function draftCancelDisabled(
+  saveState: "idle" | "saving" | "saved" | "error",
+  isCreating: boolean,
+  confirmPending: boolean,
+  cancelPending: boolean,
+): boolean {
+  return saveState === "saving" || isCreating || confirmPending || cancelPending;
+}
+
 export function draftIssueDisabled(
   lines: readonly PurchaseOrderLineDraft[],
   lastSaved: readonly PurchaseOrderLineDraft[],
   saveState: "idle" | "saving" | "saved" | "error",
   isCreating: boolean,
   confirmPending: boolean,
+  cancelPending = false,
 ): boolean {
   return (
     confirmPending ||
+    cancelPending ||
     lines.length === 0 ||
     saveState === "saving" ||
     isCreating ||

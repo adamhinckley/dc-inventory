@@ -76,3 +76,16 @@ export function unissuePurchaseOrderErrorMessage(result: {
   }
   return "Unissue failed.";
 }
+
+export function cancelPurchaseOrderErrorMessage(result: {
+  status: number;
+  data?: ActionErrorBody;
+}): string {
+  if (result.status === 409) {
+    return "This purchase order could not be cancelled due to a conflict.";
+  }
+  if (result.status === 404) {
+    return "Cancel failed because the purchase order was not found.";
+  }
+  return "Could not cancel this purchase order.";
+}
