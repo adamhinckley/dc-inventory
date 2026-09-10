@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, unlinkSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   MissingDatabaseUrlError,
@@ -39,7 +38,7 @@ function runCommand(command: SyncLocalFromNeonCommand): void {
   if (result.error) {
     if ("code" in result.error && result.error.code === "ENOENT") {
       throw new SyncLocalFromNeonError(
-        `Missing ${bin}. Install PostgreSQL 18 client tools (pg_dump, pg_restore, dropdb, createdb).`,
+        `Missing ${bin}. Start Docker Desktop, then retry. This script uses the Compose postgres:18 service (pg_dump is not required on the host).`,
       );
     }
     throw result.error;
@@ -53,12 +52,20 @@ function runCommand(command: SyncLocalFromNeonCommand): void {
 
 loadLocalEnvFiles();
 
-const dumpPath = join(tmpdir(), "dc-inventory-neon-sync.dump");
+const composeFile = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../docker-compose.yml",
+);
 
 try {
-  const plan = planSyncLocalFromNeon(parseSyncLocalFromNeonUrls(), dumpPath);
+  if (!existsSync(composeFile)) {
+    throw new SyncLocalFromNeonError(
+      `docker-compose.yml is missing at ${composeFile}.`,
+    );
+  }
+  const plan = planSyncLocalFromNeon(parseSyncLocalFromNeonUrls(), composeFile);
   console.log(
-    `Dumping Neon (development) and replacing local database ${plan.localDatabaseName}.`,
+    `Dumping Neon (development) into Compose postgres and replacing ${plan.localDatabaseName}.`,
   );
   for (const command of plan.commands) {
     runCommand(command);
@@ -75,8 +82,4 @@ try {
     process.exit(1);
   }
   throw error;
-} finally {
-  if (existsSync(dumpPath)) {
-    unlinkSync(dumpPath);
-  }
 }

@@ -1,17 +1,25 @@
 import { isSuccessfulOrvalResponse } from "@dc-inventory/ui";
 
-type WriteErrorBody = {
-  error?: string;
+type WriteResult = {
+  status: number;
+  /** Orval unions the 2xx body with the error bodies, so read `error` structurally. */
+  data?: unknown;
 };
 
-export function supplierWriteErrorMessage(result: {
-  status: number;
-  data?: WriteErrorBody;
-}): string {
-  if (result.status === 409 && result.data?.error === "duplicate_vendor_number") {
+function errorCode(data: unknown): string | undefined {
+  if (typeof data !== "object" || data === null || !("error" in data)) {
+    return undefined;
+  }
+  const { error } = data as { error?: unknown };
+  return typeof error === "string" ? error : undefined;
+}
+
+export function supplierWriteErrorMessage(result: WriteResult): string {
+  const code = errorCode(result.data);
+  if (result.status === 409 && code === "duplicate_vendor_number") {
     return "Another supplier already uses this vendor number.";
   }
-  if (result.status === 409 && result.data?.error === "duplicate_po_prefix") {
+  if (result.status === 409 && code === "duplicate_po_prefix") {
     return "Another supplier already uses this PO prefix.";
   }
   if (result.status === 400) {
@@ -23,10 +31,7 @@ export function supplierWriteErrorMessage(result: {
   return "Could not save this supplier.";
 }
 
-export function throwIfSupplierWriteFailed(result: {
-  status: number;
-  data?: WriteErrorBody;
-}): void {
+export function throwIfSupplierWriteFailed(result: WriteResult): void {
   if (isSuccessfulOrvalResponse(result)) {
     return;
   }

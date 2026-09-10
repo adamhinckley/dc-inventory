@@ -107,31 +107,27 @@ function databaseNameFromUrl(url: string, label: string): string {
   return name;
 }
 
-function localClientEnv(url: string): Record<string, string> {
-  const parsed = parsePostgresUrl(url, "DATABASE_URL_LOCAL");
-  const password = decodeURIComponent(parsed.password);
-  if (password.length === 0) {
-    return {};
-  }
-  return { PGPASSWORD: password };
+const COMPOSE_POSTGRES_SERVICE = "postgres";
+const IN_CONTAINER_DUMP_PATH = "/tmp/dc-inventory-neon-sync.dump";
+
+function composeExec(composeFile: string, inner: string[]): string[] {
+  return [
+    "docker",
+    "compose",
+    "-f",
+    composeFile,
+    "exec",
+    "-T",
+    COMPOSE_POSTGRES_SERVICE,
+    ...inner,
+  ];
 }
 
-function localClientArgv(tool: "dropdb" | "createdb", url: string): string[] {
+function inContainerRestoreUrl(url: string): string {
   const parsed = parsePostgresUrl(url, "DATABASE_URL_LOCAL");
-  const host = normalizeHost(parsed.hostname);
-  const port = parsed.port.length > 0 ? parsed.port : "5432";
-  const user = decodeURIComponent(parsed.username);
-  const databaseName = databaseNameFromUrl(url, "DATABASE_URL_LOCAL");
-  const argv = [tool];
-  if (tool === "dropdb") {
-    argv.push("--if-exists", "--force");
-  }
-  argv.push("-h", host, "-p", port);
-  if (user.length > 0) {
-    argv.push("-U", user);
-  }
-  argv.push(databaseName);
-  return argv;
+  parsed.hostname = "127.0.0.1";
+  parsed.port = "5432";
+  return parsed.toString();
 }
 
 export function parseSyncLocalFromNeonUrls(
@@ -156,18 +152,25 @@ export function parseSyncLocalFromNeonUrls(
 
 export function planSyncLocalFromNeon(
   urls: SyncLocalFromNeonUrls,
-  dumpPath: string,
+  composeFile: string,
 ): SyncLocalFromNeonPlan {
   const localDatabaseName = databaseNameFromUrl(urls.localUrl, "DATABASE_URL_LOCAL");
-  const clientEnv = localClientEnv(urls.localUrl);
+  const restoreUrl = inContainerRestoreUrl(urls.localUrl);
+  const user = decodeURIComponent(
+    parsePostgresUrl(urls.localUrl, "DATABASE_URL_LOCAL").username,
+  );
+  const roleArgs = user.length > 0 ? (["-U", user] as const) : ([] as const);
 
   return {
     ...urls,
-    dumpPath,
+    dumpPath: IN_CONTAINER_DUMP_PATH,
     localDatabaseName,
     commands: [
       {
-        argv: [
+        argv: ["docker", "compose", "-f", composeFile, "up", "-d", COMPOSE_POSTGRES_SERVICE],
+      },
+      {
+        argv: composeExec(composeFile, [
           "pg_dump",
           "--no-owner",
           "--no-acl",
@@ -175,20 +178,30 @@ export function planSyncLocalFromNeon(
           "-d",
           urls.neonUrl,
           "-f",
-          dumpPath,
-        ],
+          IN_CONTAINER_DUMP_PATH,
+        ]),
       },
-      { argv: localClientArgv("dropdb", urls.localUrl), env: clientEnv },
-      { argv: localClientArgv("createdb", urls.localUrl), env: clientEnv },
       {
-        argv: [
+        argv: composeExec(composeFile, [
+          "dropdb",
+          "--if-exists",
+          "--force",
+          ...roleArgs,
+          localDatabaseName,
+        ]),
+      },
+      {
+        argv: composeExec(composeFile, ["createdb", ...roleArgs, localDatabaseName]),
+      },
+      {
+        argv: composeExec(composeFile, [
           "pg_restore",
           "--no-owner",
           "--no-acl",
           "-d",
-          urls.localUrl,
-          dumpPath,
-        ],
+          restoreUrl,
+          IN_CONTAINER_DUMP_PATH,
+        ]),
       },
     ],
   };

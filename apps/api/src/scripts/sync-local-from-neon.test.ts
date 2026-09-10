@@ -84,20 +84,35 @@ describe("parseSyncLocalFromNeonUrls", () => {
 });
 
 describe("planSyncLocalFromNeon", () => {
-  it("dumps Neon, recreates the local database, then restores", () => {
+  it("runs dump, drop, create, and restore inside Compose postgres:18", () => {
+    const composeFile = "/repo/docker-compose.yml";
     const plan = planSyncLocalFromNeon(
       { neonUrl: neonDevelopment, localUrl },
-      "/tmp/dc-inventory-neon-sync.dump",
+      composeFile,
     );
+    const execPrefix = [
+      "docker",
+      "compose",
+      "-f",
+      composeFile,
+      "exec",
+      "-T",
+      "postgres",
+    ];
 
     expect(plan.localDatabaseName).toBe("dc_inventory");
-    expect(plan.commands.map((command) => command.argv[0])).toEqual([
-      "pg_dump",
-      "dropdb",
-      "createdb",
-      "pg_restore",
-    ]);
+    expect(plan.dumpPath).toBe("/tmp/dc-inventory-neon-sync.dump");
     expect(plan.commands[0]?.argv).toEqual([
+      "docker",
+      "compose",
+      "-f",
+      composeFile,
+      "up",
+      "-d",
+      "postgres",
+    ]);
+    expect(plan.commands[1]?.argv).toEqual([
+      ...execPrefix,
       "pg_dump",
       "--no-owner",
       "--no-acl",
@@ -107,35 +122,29 @@ describe("planSyncLocalFromNeon", () => {
       "-f",
       "/tmp/dc-inventory-neon-sync.dump",
     ]);
-    expect(plan.commands[1]?.argv).toEqual([
+    expect(plan.commands[2]?.argv).toEqual([
+      ...execPrefix,
       "dropdb",
       "--if-exists",
       "--force",
-      "-h",
-      "localhost",
-      "-p",
-      "5432",
-      "-U",
-      "postgres",
-      "dc_inventory",
-    ]);
-    expect(plan.commands[1]?.env).toEqual({ PGPASSWORD: "postgres" });
-    expect(plan.commands[2]?.argv).toEqual([
-      "createdb",
-      "-h",
-      "localhost",
-      "-p",
-      "5432",
       "-U",
       "postgres",
       "dc_inventory",
     ]);
     expect(plan.commands[3]?.argv).toEqual([
+      ...execPrefix,
+      "createdb",
+      "-U",
+      "postgres",
+      "dc_inventory",
+    ]);
+    expect(plan.commands[4]?.argv).toEqual([
+      ...execPrefix,
       "pg_restore",
       "--no-owner",
       "--no-acl",
       "-d",
-      localUrl,
+      "postgres://postgres:postgres@127.0.0.1:5432/dc_inventory",
       "/tmp/dc-inventory-neon-sync.dump",
     ]);
   });
