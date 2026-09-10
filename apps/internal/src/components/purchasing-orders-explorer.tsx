@@ -33,7 +33,7 @@ export function PurchasingOrdersExplorer({
               className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
               <ClipboardList className="size-icon-lg" aria-hidden />
-              Uncovered
+              Pre-order
             </Link>
             <Link
               href="/procurement/suppliers"
