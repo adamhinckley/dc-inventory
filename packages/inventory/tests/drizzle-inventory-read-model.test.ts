@@ -1,4 +1,4 @@
-import { InvalidIdError, LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { InvalidIdError, LocationId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { DrizzleInventoryReadModel } from "../src/adapters/drizzle-inventory-read-model.js";
 
@@ -119,5 +119,62 @@ describe("DrizzleInventoryReadModel listMovements", () => {
     await expect(
       readModel.listMovements({ organizationId: DEFAULT_ORG }),
     ).rejects.toThrow(InvalidIdError);
+  });
+});
+
+describe("DrizzleInventoryReadModel findMovementByIdempotency", () => {
+  it("returns the movement keyed by organization, idempotency key, and sku", async () => {
+    const row = {
+      ...movementRow(DEFAULT_ORG, DEFAULT_LOCATION_UUID),
+      movementType: "Committed" as const,
+      qty: 25,
+      refType: "sales_order" as const,
+      refId: "550e8400-e29b-41d4-a716-446655440020",
+      idempotencyKey: "confirm-line-1",
+    };
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [row],
+          }),
+        }),
+      }),
+    };
+
+    const readModel = new DrizzleInventoryReadModel(db as never, async () => DEFAULT_LOCATION_UUID);
+    const movement = await readModel.findMovementByIdempotency(
+      DEFAULT_ORG,
+      "confirm-line-1",
+      Sku.parse("WIDGET-1"),
+    );
+
+    expect(movement).toMatchObject({
+      movementType: "Committed",
+      quantity: 25,
+      refType: "sales_order",
+      refId: "550e8400-e29b-41d4-a716-446655440020",
+      idempotencyKey: "confirm-line-1",
+    });
+  });
+
+  it("returns undefined when no movement matches the idempotency key", async () => {
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [],
+          }),
+        }),
+      }),
+    };
+
+    const readModel = new DrizzleInventoryReadModel(db as never, async () => DEFAULT_LOCATION_UUID);
+    const movement = await readModel.findMovementByIdempotency(
+      DEFAULT_ORG,
+      "missing-key",
+      Sku.parse("WIDGET-1"),
+    );
+    expect(movement).toBeUndefined();
   });
 });
