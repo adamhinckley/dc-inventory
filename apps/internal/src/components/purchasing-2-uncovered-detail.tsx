@@ -175,10 +175,10 @@ function SkuCell({ row }: { row: UncoveredRow }) {
 }
 
 const DETAIL_COLUMN_SPECS = [
-  { id: "uncovered", label: "Uncovered" },
+  { id: "uncovered", label: "To Order" },
   { id: "onHand", label: "On hand" },
   { id: "onOrder", label: "On order" },
-  { id: "committed", label: "Committed (pre-sold)" },
+  { id: "committed", label: "Pre-sold" },
   { id: "caseQty", label: "Master pack" },
   { id: "reorderMin", label: "Reorder min" },
   { id: "reorderMax", label: "Reorder max" },
@@ -339,7 +339,7 @@ export function Purchasing2UncoveredDetail({
     try {
       const skus = await collectUncoveredSkusForFactories([factoryId]);
       if (skus.length === 0) {
-        setStatusMessage("No uncovered SKUs found for this factory.");
+        setStatusMessage("No SKUs to order for this factory.");
         return;
       }
       const result = await draftMutation.mutateAsync({ data: { skus: [...skus] } });
@@ -372,7 +372,7 @@ export function Purchasing2UncoveredDetail({
       }
       router.push("/procurement/purchase-orders");
     } catch {
-      setActionError("Could not load uncovered SKUs for this factory.");
+      setActionError("Could not load SKUs to order for this factory.");
     } finally {
       creatingRef.current = false;
     }
@@ -392,7 +392,7 @@ export function Purchasing2UncoveredDetail({
       <p className="text-body-sm text-fg-secondary">
         Factory not found.{" "}
         <Link href="/procurement" className="text-link hover:text-link-hover">
-          Back to uncovered
+          Back to Pre-order
         </Link>
       </p>
     );
@@ -402,7 +402,7 @@ export function Purchasing2UncoveredDetail({
     <div className="flex min-h-0 flex-1 flex-col gap-form-section">
       <p className="text-body-sm text-fg-secondary">
         <Link href="/procurement" className="text-link hover:text-link-hover">
-          ← Uncovered without draft
+          ← Pre-order without draft
         </Link>
       </p>
 
@@ -415,13 +415,13 @@ export function Purchasing2UncoveredDetail({
                 <>
                   {factorySummary.productCount} product
                   {factorySummary.productCount === 1 ? "" : "s"} ·{" "}
-                  {factorySummary.totalUncoveredUnits} total uncovered units
+                  {factorySummary.totalUncoveredUnits} total units to order
                 </>
               ) : (
                 <>
                   {factorySummary.productCount} product
                   {factorySummary.productCount === 1 ? "" : "s"} ready for a first draft PO ·{" "}
-                  {factorySummary.totalUncoveredUnits} total uncovered units
+                  {factorySummary.totalUncoveredUnits} total units to order
                 </>
               )}
             </p>
@@ -465,7 +465,7 @@ export function Purchasing2UncoveredDetail({
         sticky
         className="min-h-0 flex-1"
         table={table}
-        emptyMessage="No uncovered SKUs for this factory"
+        emptyMessage="No SKUs to order for this factory"
       >
         <Table.Header />
         <Table.Body />

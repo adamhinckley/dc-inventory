@@ -166,7 +166,7 @@ export function Purchasing2UncoveredSummary() {
       },
       {
         id: "totalUncoveredUnits",
-        label: "Total uncovered",
+        label: "Total to order",
         sort: false,
         align: "right",
         render: ({ record }) => formatFactoryCell(record, "totalUncoveredUnits"),
@@ -245,7 +245,7 @@ export function Purchasing2UncoveredSummary() {
     try {
       const skus = await collectUncoveredSkusForFactories(factoryIds);
       if (skus.length === 0) {
-        setStatusMessage("No uncovered SKUs found for these factories.");
+        setStatusMessage("No SKUs to order for these factories.");
         return;
       }
       const result = await draftMutation.mutateAsync({ data: { skus: [...skus] } });
@@ -276,7 +276,7 @@ export function Purchasing2UncoveredSummary() {
       setBatchUnmappedNotice(next.unmappedNotice);
       setBatchModalOpen(true);
     } catch {
-      setActionError("Could not load uncovered SKUs for these factories.");
+      setActionError("Could not load SKUs to order for these factories.");
     } finally {
       creatingRef.current = false;
     }
@@ -294,7 +294,7 @@ export function Purchasing2UncoveredSummary() {
     <div className="flex min-h-0 flex-1 flex-col gap-form-section">
       <div className="flex flex-wrap items-start justify-between gap-action">
         <p className="text-body-sm text-fg-secondary">
-          Factories with uncovered demand that are not yet on an open draft purchase order.
+          Factories with units to order that are not yet on an open draft purchase order.
           {needsMappingCount > 0
             ? " The needs-mapping row is read-only until supplier products are assigned."
             : null}
