@@ -3,12 +3,9 @@ import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   deriveInvoiceStatus,
-  deriveCustomerInvoiceRows,
-  deriveCustomerPaymentRows,
   PaymentId,
   PaymentPlanId,
   type CustomerBalancesSortBy,
-  type CustomerArLoadedData,
   type CustomerArStats,
   type Invoice,
   type Payment,
@@ -251,30 +248,6 @@ function mapSummaryResponse(result: {
   };
 }
 
-function mapInvoiceRowsFromLoaded(
-  data: CustomerArLoadedData,
-  asOf: Date,
-  includePaid: boolean,
-) {
-  return deriveCustomerInvoiceRows(data, asOf, includePaid).map((row) =>
-    mapInvoiceRow(row.invoice, row.remainingCents, row.status),
-  );
-}
-
-function mapPaymentRowsFromLoaded(data: CustomerArLoadedData, asOf: Date) {
-  return deriveCustomerPaymentRows(data, asOf).map(mapCustomerPaymentRow);
-}
-
-async function loadCustomerArData(
-  request: FastifyRequest,
-  customerId: CustomerId,
-) {
-  return request.server.accounting.arCustomerRead.loadCustomerData(
-    staffOrganizationId(request),
-    customerId,
-  );
-}
-
 async function ensureCustomerExists(request: FastifyRequest, reply: FastifyReply, customerId: CustomerId) {
   const result = await request.server.customers.getCustomer.execute({
     organizationId: staffOrganizationId(request),
@@ -396,9 +369,16 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
         return;
       }
       const asOf = resolveAsOf(query.asOf, new Date());
-      const data = await loadCustomerArData(request, customerId);
+      const result = await request.server.accounting.listCustomerInvoices.execute({
+        organizationId: staffOrganizationId(request),
+        customerId,
+        asOf,
+        includePaid: query.includePaid === true,
+      });
       return {
-        items: mapInvoiceRowsFromLoaded(data, asOf, query.includePaid === true),
+        items: result.items.map((row) =>
+          mapInvoiceRow(row.invoice, row.remainingCents, row.status),
+        ),
       };
     },
   );
@@ -426,9 +406,13 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
         return;
       }
       const asOf = resolveAsOf(query.asOf, new Date());
-      const data = await loadCustomerArData(request, customerId);
+      const result = await request.server.accounting.listCustomerPayments.execute({
+        organizationId: staffOrganizationId(request),
+        customerId,
+        asOf,
+      });
       return {
-        items: mapPaymentRowsFromLoaded(data, asOf),
+        items: result.items.map(mapCustomerPaymentRow),
       };
     },
   );

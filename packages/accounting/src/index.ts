@@ -24,6 +24,8 @@ export { GetAccountingSummaryUseCase } from "./application/get-accounting-summar
 export { GetCustomerAccountingSummaryUseCase } from "./application/get-customer-accounting-summary.js";
 export { GetCustomerAccountingWorkspaceUseCase } from "./application/get-customer-accounting-workspace.js";
 export { ListCustomerBalancesQuery } from "./application/list-customer-balances.js";
+export { ListCustomerInvoicesUseCase } from "./application/list-customer-invoices.js";
+export { ListCustomerPaymentsUseCase } from "./application/list-customer-payments.js";
 export { ListPaymentsReceivedQuery } from "./application/list-payments-received.js";
 export { AdjustInvoiceUseCase } from "./application/adjust-invoice.js";
 export { CorrectPaymentUseCase } from "./application/correct-payment.js";

@@ -27,6 +27,7 @@ import {
   AdjustInvoiceUseCase,
   GetAccountingSummaryUseCase,
   GetCustomerAccountingSummaryUseCase,
+  GetCustomerAccountingWorkspaceUseCase,
   InvoiceAdjustmentId,
   ListCustomerBalancesQuery,
   ListPaymentsReceivedQuery,
@@ -81,6 +82,12 @@ async function readHarness() {
     voidPayment: new VoidPaymentUseCase(uow),
     setPaymentPlan: new SetPaymentPlanUseCase(uow),
     getCustomerSummary: new GetCustomerAccountingSummaryUseCase(
+      arCustomerRead,
+      customerProfiles,
+      openOrderExposure,
+      lastOrderDate,
+    ),
+    getCustomerWorkspace: new GetCustomerAccountingWorkspaceUseCase(
       arCustomerRead,
       customerProfiles,
       openOrderExposure,
@@ -452,6 +459,23 @@ describe("AR read model (ADA-360)", () => {
     expect(creditSummary.openInvoices).toHaveLength(0);
     expect(creditSummary.unappliedCreditCents).toBe(900);
     expect(creditSummary.openBalanceCents).toBe(-900);
+  });
+
+  it("customer accounting workspace bundles summary, invoices, and payments without re-deriving payments", async () => {
+    const h = await readHarness();
+    await seedReadModelFixture(h);
+
+    const workspace = await h.getCustomerWorkspace.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_PAID,
+      asOf: AS_OF,
+    });
+
+    expect(workspace.summary.openInvoices).toHaveLength(0);
+    expect(workspace.invoices).toHaveLength(1);
+    expect(workspace.invoices[0]?.remainingCents).toBe(0);
+    expect(workspace.payments).toBe(workspace.summary.recentPayments);
+    expect(workspace.payments[0]?.appliedCents).toBe(1500);
   });
 
   it("past asOf excludes invoices posted after asOf and adjustments created after asOf", async () => {

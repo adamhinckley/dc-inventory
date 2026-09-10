@@ -1,7 +1,6 @@
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 import {
   deriveCustomerInvoiceRows,
-  deriveCustomerPaymentRows,
 } from "../domain/ar-projection.js";
 import type { IArCustomerReadPort } from "../domain/ports/ar-customer-read-port.js";
 import type { ICustomerArProfileReadPort } from "../domain/ports/customer-ar-profile-read.js";
@@ -59,7 +58,7 @@ export class GetCustomerAccountingWorkspaceUseCase {
     return {
       summary,
       invoices: deriveCustomerInvoiceRows(loaded, input.asOf, true),
-      payments: deriveCustomerPaymentRows(loaded, input.asOf),
+      payments: summary.recentPayments,
     };
   }
 }
