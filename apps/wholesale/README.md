@@ -22,6 +22,18 @@ pnpm dev:wholesale
 
 `pnpm --filter @dc-inventory/wholesale dev` is the same shop command.
 
+### Local hostname (password managers)
+
+Add [`scripts/local-dev-hosts.txt`](../../scripts/local-dev-hosts.txt) to `/etc/hosts`, then:
+
+```bash
+pnpm dev:wholesale:local
+```
+
+Shop: [http://dc-wholesale.test:3002](http://dc-wholesale.test:3002)
+
+When using local hostnames for both apps, set `NEXT_PUBLIC_INTERNAL_APP_URL=http://dc-internal.test:3000` in `.env.local` so staff-acting links point at the dashboard hostname.
+
 ## What this shell includes
 
 | Route | Purpose |
