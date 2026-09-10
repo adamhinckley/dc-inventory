@@ -39,6 +39,8 @@ import { DrizzlePaymentsReceivedListQuery } from "./accounting-payments-received
 import {
   assertCustomerScopedInvoiceQuery,
   capturePostgresQuery,
+  isArBalancesBusinessQuery,
+  normalizeSql,
   referencesAccountingTable,
   type CapturedQuery,
 } from "./drizzle-sql-capture.js";
@@ -348,6 +350,154 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       expect(
         invoiceQueries.some((entry) => entry.parameters.map(String).includes(String(otherCustomerId))),
       ).toBe(false);
+    });
+  },
+);
+
+describe.skipIf(!integrationEnabled || !databaseUrl)(
+  "SQL AR balances list and summary aggregates (ADA-382)",
+  () => {
+    let connection!: DatabaseConnection;
+    const organizationId = OrganizationId.parse(randomUUID());
+    const organizationSlug = `ada-382-${organizationId}`;
+    const asOf = new Date("2026-09-09T00:00:00.000Z");
+    const pageSize = 25;
+    const seededCustomerCount = 40;
+
+    beforeAll(async () => {
+      connection = createDatabaseConnection(databaseUrl);
+
+      await connection.sql`
+        insert into identity.organizations (id, slug)
+        values (${organizationId}, ${organizationSlug})
+      `;
+
+      for (let index = 0; index < seededCustomerCount; index += 1) {
+        const customerId = randomUUID();
+        const orderId = randomUUID();
+        const invoiceId = randomUUID();
+        const dueDay = String((index % 28) + 1).padStart(2, "0");
+        const totalCents = 1000 + index;
+        await connection.sql`
+          insert into customers.customers
+            (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
+          values
+            (
+              ${customerId},
+              ${organizationId},
+              ${`ADA-382 customer ${index}`},
+              ${`C382-${String(index).padStart(4, "0")}`},
+              50000,
+              'USD',
+              'NET30'
+            )
+        `;
+        await connection.sql`
+          insert into sales.orders
+            (id, organization_id, customer_id, status, document_number, created_at)
+          values
+            (${orderId}, ${organizationId}, ${customerId}, 'shipped', ${`SO-${index}`}, ${"2026-08-01T00:00:00.000Z"})
+        `;
+        await connection.sql`
+          insert into accounting.invoices
+            (
+              id,
+              organization_id,
+              order_id,
+              customer_id,
+              document_number,
+              status,
+              posted_at,
+              due_date,
+              subtotal_cents,
+              total_cents,
+              currency
+            )
+          values
+            (
+              ${invoiceId},
+              ${organizationId},
+              ${orderId},
+              ${customerId},
+              ${`INV-${index}`},
+              'posted',
+              ${"2026-08-01T00:00:00.000Z"},
+              ${`2026-08-${dueDay}T00:00:00.000Z`},
+              ${totalCents},
+              ${totalCents},
+              'USD'
+            )
+        `;
+      }
+    });
+
+    afterAll(async () => {
+      await connection.sql.end({ timeout: 5 });
+    });
+
+    it("uses at most ten database statements for a balances page regardless of customer count", async () => {
+      const capturedQueries: CapturedQuery[] = [];
+      const tracedSql = postgres(databaseUrl, {
+        max: 1,
+        debug: (_connection, query, parameters) => {
+          capturedQueries.push(capturePostgresQuery(query, parameters));
+        },
+      });
+      const tracedDb = drizzle(tracedSql, { schema });
+      const tracedBalances = createCustomerBalancesListQuery(tracedDb);
+
+      await tracedSql`select 1`;
+      capturedQueries.length = 0;
+
+      await new ListCustomerBalancesQuery(tracedBalances).execute({
+        organizationId,
+        asOf,
+        page: 1,
+        pageSize,
+        sortBy: "pastDue",
+        sortOrder: "desc",
+      });
+      await tracedSql.end({ timeout: 5 });
+
+      const businessQueries = capturedQueries.filter((entry) =>
+        isArBalancesBusinessQuery(entry.text),
+      );
+
+      expect(businessQueries.length).toBeLessThanOrEqual(10);
+      expect(businessQueries.length).toBe(2);
+    });
+
+    it("uses at most four database statements for org summary aggregates", async () => {
+      const capturedQueries: CapturedQuery[] = [];
+      const tracedSql = postgres(databaseUrl, {
+        max: 1,
+        debug: (_connection, query, parameters) => {
+          capturedQueries.push(capturePostgresQuery(query, parameters));
+        },
+      });
+      const tracedDb = drizzle(tracedSql, { schema });
+      const tracedOrgRead = createArOrgReadPort(tracedDb);
+
+      await tracedSql`select 1`;
+      capturedQueries.length = 0;
+
+      await new GetAccountingSummaryUseCase(tracedOrgRead).execute({
+        organizationId,
+        asOf,
+      });
+      await tracedSql.end({ timeout: 5 });
+
+      const businessQueries = capturedQueries.filter((entry) =>
+        isArBalancesBusinessQuery(entry.text),
+      );
+
+      expect(businessQueries.length).toBeLessThanOrEqual(4);
+      expect(businessQueries.length).toBe(2);
+      expect(
+        businessQueries.every(
+          (entry) => !/select \* from accounting\.payments\b/i.test(normalizeSql(entry.text)),
+        ),
+      ).toBe(true);
     });
   },
 );

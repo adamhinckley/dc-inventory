@@ -18,6 +18,22 @@ export function referencesAccountingTable(query: string, table: "invoices" | "pa
   return new RegExp(`\\bfrom\\s+accounting\\.${table}\\b`).test(normalized);
 }
 
+export function referencesSalesTable(query: string, table: "orders" | "order_lines"): boolean {
+  const normalized = normalizeSql(query);
+  return new RegExp(`\\bfrom\\s+sales\\.${table}\\b`).test(normalized);
+}
+
+export function isArBalancesBusinessQuery(query: string): boolean {
+  const normalized = normalizeSql(query);
+  return (
+    normalized.includes("customer_balances") ||
+    referencesAccountingTable(query, "invoices") ||
+    referencesAccountingTable(query, "payments") ||
+    referencesSalesTable(query, "orders") ||
+    /invoice_adjustments|payment_plans|payment_applications/.test(normalized)
+  );
+}
+
 export function invoiceWhereClause(query: string): string {
   const whereIndex = query.search(/\bwhere\b/i);
   return whereIndex < 0 ? "" : query.slice(whereIndex);
