@@ -11,7 +11,10 @@ import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { stockSnapshots } from "@dc-inventory/inventory/schema";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { CatalogInventoryListQuery } from "./catalog-inventory-list-query.js";
+import {
+  CatalogInventoryListQuery,
+  staffCatalogListQuerySql,
+} from "./catalog-inventory-list-query.js";
 import { createCatalogListQueryPgliteHarness } from "./support/catalog-list-query-pglite.js";
 import { productQtyFromSnapshotRow } from "./product-qty-from-snapshot.js";
 
@@ -151,6 +154,61 @@ describe("CatalogInventoryListQuery demand projection sort keys", () => {
 });
 
 describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
+  it("uses org-scoped supplier CTEs on the list() query path without scalar subqueries", () => {
+    const db = drizzle.mock({ schema: { stockSnapshots } });
+    const { countSql, pageSql } = staffCatalogListQuerySql(
+      db as never,
+      {
+        organizationId: OrganizationId.DEFAULT,
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      },
+      NOW,
+    );
+    expect(pageSql.sql).toContain('with "supplier_links"');
+    expect(pageSql.sql).toContain("supplier_enrichment");
+    expect(pageSql.sql).toContain('"purchasing"."suppliers"."organization_id" = $1');
+    expect(countSql.sql).not.toContain("supplier_enrichment");
+    expect(countSql.sql).not.toContain("supplier_last_po");
+    const pageSelectList = pageSql.sql.split(/from\s+"catalog"\."products"/i).at(-1) ?? "";
+    expect(pageSelectList).not.toMatch(
+      /\(select[\s\S]*from[\s\S]*"purchasing"\."supplier_products"[\s\S]*where[\s\S]*"catalog"\."products"\."sku"/i,
+    );
+  });
+
+  it("joins supplier_by_sku on COUNT only when excludeSupplierId is set", () => {
+    const db = drizzle.mock({ schema: { stockSnapshots } });
+    const withoutExclude = staffCatalogListQuerySql(
+      db as never,
+      {
+        organizationId: OrganizationId.DEFAULT,
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      },
+      NOW,
+    );
+    expect(withoutExclude.countSql.sql).not.toContain("supplier_by_sku");
+
+    const withExclude = staffCatalogListQuerySql(
+      db as never,
+      {
+        organizationId: OrganizationId.DEFAULT,
+        excludeSupplierId: ["da209000-0000-4000-8000-000000000102"],
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      },
+      NOW,
+    );
+    expect(withExclude.countSql.sql).toContain("supplier_by_sku");
+    expect(withExclude.countSql.sql).not.toContain("supplier_last_po");
+  });
+
   it("returns bigint last_po_cost_cents without int4 cast overflow", async () => {
     const harness = await createCatalogListQueryPgliteHarness();
     try {
@@ -188,6 +246,63 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
         bothFactories.items.find((row) => row.product.sku.value === harness.sku)
           ?.supplierName,
       ).toBe("Acme Supply, Other Supply");
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("picks the latest non-null last_po_cost_cents when multiple supplier links exist", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      await harness.client.query(
+        `INSERT INTO purchasing.supplier_products
+          (id, supplier_id, sku, last_po_cost_cents, updated_at)
+         VALUES ($1, $2, $3, $4::bigint, $5)`,
+        [
+          "da209000-0000-4000-8000-000000000109",
+          harness.otherSupplierId,
+          harness.sku,
+          250,
+          "2026-09-01T12:00:00.000Z",
+        ],
+      );
+      await harness.client.query(
+        `UPDATE purchasing.supplier_products
+         SET updated_at = $1
+         WHERE id = $2`,
+        ["2026-09-02T12:00:00.000Z", "da209000-0000-4000-8000-000000000103"],
+      );
+
+      const listed = await harness.catalogListQuery.list({
+        organizationId: OrganizationId.DEFAULT,
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(
+        listed.items.find((row) => row.product.sku.value === harness.sku)?.lastPoCostCents,
+      ).toBe(500);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("ignores excludeSupplierId on wholesale shopVisibleOnly lists", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const listed = await harness.catalogListQuery.list({
+        organizationId: OrganizationId.DEFAULT,
+        shopVisibleOnly: true,
+        excludeSupplierId: [harness.supplierId],
+        availableOnly: false,
+        hideBeforeOpen: false,
+        page: 1,
+        pageSize: 25,
+        sortBy: "sku",
+        sortOrder: "asc",
+      });
+      expect(listed.items.map((row) => row.product.sku.value)).toContain(harness.sku);
     } finally {
       await harness.close();
     }
@@ -418,6 +533,11 @@ describe("CatalogInventoryListQuery supplier lastPoCostCents", () => {
         postCloseSku,
       ]);
       expect(listed.items.some((row) => row.product.sku.value === scheduledSku)).toBe(false);
+      expect(
+        listed.items.every(
+          (row) => row.lastPoCostCents === null && row.supplierName === null,
+        ),
+      ).toBe(true);
     } finally {
       await harness.close();
     }
