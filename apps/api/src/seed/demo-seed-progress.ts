@@ -7,7 +7,8 @@ export type DemoSeedStage =
   | "payment playback"
   | "reorder policies"
   | "reconciliation"
-  | "customer accounting playback";
+  | "customer accounting playback"
+  | "customer accounting showcase validation";
 
 export type DemoSeedProgressReporter = (stage: DemoSeedStage) => void;
 

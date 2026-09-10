@@ -1,6 +1,5 @@
 import {
   CustomerTermsReadAdapter,
-  GetCustomerAccountingSummaryUseCase,
   InMemoryAccountingUnitOfWork,
   InMemoryArCustomerReadPort,
   InMemoryCustomerArProfileReadPort,
@@ -13,6 +12,7 @@ import {
   InMemoryShipToRepository,
 } from "@dc-inventory/customers";
 import { InMemoryOpenOrderExposureReadAdapter } from "@dc-inventory/sales";
+import { assertCustomerAccountingShowcase } from "./assert-customer-accounting-showcase.js";
 import {
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
@@ -186,39 +186,19 @@ describe("runReplayCustomerAccounting", () => {
     expect(replay.showcaseCustomerId).toBe(customerIdByKey.get(CUSTOMER_ACCOUNTING_SHOWCASE_KEY));
     expect(replay.eventCount).toBe(7);
 
-    const arCustomerRead = new InMemoryArCustomerReadPort(uow.invoices);
-    const customerProfiles = new InMemoryCustomerArProfileReadPort(staticPorts.customers);
-    const openOrderExposure = new InMemoryOpenOrderExposureReadAdapter(uow.salesOrders);
-    const lastOrderDate = new InMemoryLastOrderDateReadPort();
-    const getCustomerSummary = new GetCustomerAccountingSummaryUseCase(
-      arCustomerRead,
-      customerProfiles,
-      openOrderExposure,
-      lastOrderDate,
+    const showcaseAssertion = await assertCustomerAccountingShowcase(
+      {
+        arCustomerRead: new InMemoryArCustomerReadPort(uow.invoices),
+        customerProfiles: new InMemoryCustomerArProfileReadPort(staticPorts.customers),
+        openOrderExposure: new InMemoryOpenOrderExposureReadAdapter(uow.salesOrders),
+        lastOrderDate: new InMemoryLastOrderDateReadPort(),
+      },
+      {
+        customerId: replay.showcaseCustomerId,
+        asOf: AS_OF,
+      },
     );
-
-    const summary = await getCustomerSummary.execute({
-      organizationId: OrganizationId.DEFAULT,
-      customerId: replay.showcaseCustomerId,
-      asOf: AS_OF,
-    });
-
-    const statuses = new Set(summary.openInvoices.map((row) => row.status));
-    expect(statuses.has("open")).toBe(true);
-    expect(statuses.has("past_due")).toBe(true);
-    expect(
-      summary.openInvoices.some(
-        (row) =>
-          row.remainingCents > 0 && row.remainingCents < row.invoice.total.amountMinor,
-      ),
-    ).toBe(true);
-
-    expect(summary.unappliedCreditCents).toBe(75_000);
-    expect(summary.plan).not.toBeNull();
-    expect(summary.planExpectations?.installmentsExpectedSoFar).toBeGreaterThan(0);
-    expect(summary.stats.creditMemoCount).toBe(1);
-    expect(summary.recentPayments.some((row) => row.voided)).toBe(true);
-    expect(summary.recentPayments.some((row) => row.unappliedCents > 0)).toBe(true);
+    expect(showcaseAssertion).toEqual({ ok: true });
 
     const idlePark = await staticPorts.customers.findByName(
       OrganizationId.DEFAULT,

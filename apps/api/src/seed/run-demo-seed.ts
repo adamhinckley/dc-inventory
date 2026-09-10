@@ -1,7 +1,11 @@
 import {
   CustomerTermsReadAdapter,
   InMemoryAccountingUnitOfWork,
+  InMemoryArCustomerReadPort,
+  InMemoryCustomerArProfileReadPort,
+  InMemoryLastOrderDateReadPort,
 } from "@dc-inventory/accounting";
+import { InMemoryOpenOrderExposureReadAdapter } from "@dc-inventory/sales";
 import { InMemoryClock, InMemorySupplierRepository, type ISupplierRepository } from "@dc-inventory/purchasing";
 import {
   PHASE2_DEFAULT_LOCATION_CODE,
@@ -38,6 +42,7 @@ import {
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
 import { runReplayDemoOrders } from "./replay-demo-orders.js";
+import { assertCustomerAccountingShowcase } from "./assert-customer-accounting-showcase.js";
 import { runReplayCustomerAccounting } from "./replay-customer-accounting.js";
 import { runReplayPayments } from "./replay-payments.js";
 import type { Phase1SeedSecrets } from "./run-phase1-seed.js";
@@ -260,7 +265,7 @@ export async function runDemoSeedInMemory(
   }
 
   tick(input, "customer accounting playback");
-  await runReplayCustomerAccounting(
+  const showcaseReplay = await runReplayCustomerAccounting(
     {
       accountingUow,
       clock,
@@ -273,6 +278,23 @@ export async function runDemoSeedInMemory(
       assertWithinBudget,
     },
   );
+
+  tick(input, "customer accounting showcase validation");
+  const showcaseAssertion = await assertCustomerAccountingShowcase(
+    {
+      arCustomerRead: new InMemoryArCustomerReadPort(uow.invoices),
+      customerProfiles: new InMemoryCustomerArProfileReadPort(staticPorts.customers),
+      openOrderExposure: new InMemoryOpenOrderExposureReadAdapter(uow.salesOrders),
+      lastOrderDate: new InMemoryLastOrderDateReadPort(),
+    },
+    {
+      customerId: showcaseReplay.showcaseCustomerId,
+      asOf: input.plan.seedToday,
+    },
+  );
+  if (!showcaseAssertion.ok) {
+    throw new Error(showcaseAssertion.message);
+  }
 
   input.deadline?.assertWithinBudget();
 

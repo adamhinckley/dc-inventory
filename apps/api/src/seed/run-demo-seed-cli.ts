@@ -69,7 +69,8 @@ try {
 
   console.log(
     `Demo seed (${config.profile}) succeeded in ${String(Math.ceil(result.elapsedMs / 1000))}s. ` +
-      `Customer Accounting showcase: ${DEMO_NAMED_CUSTOMERS.idlePark.name} (Customers → Accounting tab).`,
+      `Demo book reconciled; ${DEMO_NAMED_CUSTOMERS.idlePark.name} accounting showcase validated ` +
+      `(Customers → Accounting tab).`,
   );
 } catch (error) {
   if (
