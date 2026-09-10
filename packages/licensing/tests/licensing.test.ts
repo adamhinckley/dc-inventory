@@ -137,6 +137,46 @@ describe("Licensing application ports", () => {
     expect(getFeatureState).toHaveBeenCalledTimes(2);
   });
 
+  it("does not leak cached feature state across overlapping request scopes", async () => {
+    const store = new InMemoryLicensingStore();
+    store.createSubscription(DEFAULT_ORG, "core", "active");
+    store.createSubscription(BETA_ORG, "core", "active");
+    store.setFlagOverrides(BETA_ORG, [{ featureName: "catalog", direction: "force_off" }]);
+
+    let releaseDefaultFetch = () => {};
+    const defaultFetchGate = new Promise<void>((resolve) => {
+      releaseDefaultFetch = resolve;
+    });
+    let defaultFetchStarted = false;
+
+    vi.spyOn(store, "getFeatureState").mockImplementation(async (organizationId) => {
+      if (organizationId === DEFAULT_ORG && !defaultFetchStarted) {
+        defaultFetchStarted = true;
+        await defaultFetchGate;
+      }
+      return InMemoryLicensingStore.prototype.getFeatureState.call(store, organizationId);
+    });
+
+    const features = new LicensingFeatures(store);
+    const outcomes = new Map<OrganizationId, boolean>();
+
+    const defaultRequest = runWithLicensingFeatureStateCacheAsync(async () => {
+      outcomes.set(DEFAULT_ORG, await features.isEnabled(DEFAULT_ORG, "catalog"));
+    });
+
+    await Promise.resolve();
+
+    await runWithLicensingFeatureStateCacheAsync(async () => {
+      outcomes.set(BETA_ORG, await features.isEnabled(BETA_ORG, "catalog"));
+    });
+
+    releaseDefaultFetch();
+    await defaultRequest;
+
+    expect(outcomes.get(DEFAULT_ORG)).toBe(true);
+    expect(outcomes.get(BETA_ORG)).toBe(false);
+  });
+
   it("retains the all-core-on adapter for isolated unit tests", async () => {
     const features = new InMemoryFeatures();
 
