@@ -9,6 +9,7 @@ import type { OpsUserId } from "./ops-user.js";
 
 export const SESSION_IDLE_MS = 30 * 60 * 1000;
 export const SESSION_ABSOLUTE_MS = 8 * 60 * 60 * 1000;
+export const SESSION_TOUCH_DEBOUNCE_MS = 5 * 60 * 1000;
 
 export type SessionAudience = "staff" | "wholesale" | "ops";
 
@@ -28,4 +29,8 @@ export function isSessionExpired(session: Session, now: Date): boolean {
   const idle = now.getTime() - session.lastSeenAt.getTime() > SESSION_IDLE_MS;
   const absolute = now.getTime() - session.createdAt.getTime() > SESSION_ABSOLUTE_MS;
   return idle || absolute;
+}
+
+export function shouldTouchSessionLastSeen(session: Session, now: Date): boolean {
+  return now.getTime() - session.lastSeenAt.getTime() > SESSION_TOUCH_DEBOUNCE_MS;
 }

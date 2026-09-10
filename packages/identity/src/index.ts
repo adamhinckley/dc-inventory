@@ -77,7 +77,9 @@ export {
 export {
   SESSION_ABSOLUTE_MS,
   SESSION_IDLE_MS,
+  SESSION_TOUCH_DEBOUNCE_MS,
   isSessionExpired,
+  shouldTouchSessionLastSeen,
   type Session,
   type SessionAudience,
 } from "./domain/session.js";
