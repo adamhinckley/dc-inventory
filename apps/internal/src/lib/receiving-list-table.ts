@@ -15,6 +15,9 @@ export const receivingListTable = {
     { field: "remaining", label: "Remaining" },
   ],
   search: listInternalPurchaseOrdersTable.search,
+  filters: listInternalPurchaseOrdersTable.filters?.filter(
+    (filter) => filter.param === "status",
+  ),
   sort: {
     defaultBy: listInternalPurchaseOrdersTable.sort.defaultBy,
     defaultOrder: listInternalPurchaseOrdersTable.sort.defaultOrder,

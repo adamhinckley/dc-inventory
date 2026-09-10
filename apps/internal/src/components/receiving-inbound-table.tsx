@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { useCallback, useMemo, type ReactNode } from "react";
 import { purchaseOrderRemainingQty } from "../lib/purchase-order-line-math";
+import { purchaseOrderStatusFilterOptions } from "../lib/purchase-order-status-filter";
 import { receivingListTable } from "../lib/receiving-list-table";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
@@ -42,10 +43,7 @@ function withRemaining(row: Record<string, unknown>): InboundRow {
 const useReceivingInboundList: ListQueryHook<InboundListParams, InboundRow> = (
   params,
 ) => {
-  const query = useListInternalPurchaseOrders({
-    ...params,
-    status: "confirmed",
-  });
+  const query = useListInternalPurchaseOrders(params);
 
   const data = useMemo((): ListQueryResult<InboundRow>["data"] => {
     const envelope = unwrapListData(
@@ -94,6 +92,13 @@ export function ReceivingInboundTable({
 }: {
   initialParams?: ListQueryParams;
 }) {
+  const seededInitialParams = useMemo(() => {
+    if (initialParams?.status !== undefined) {
+      return initialParams;
+    }
+    return { ...initialParams, status: "confirmed" };
+  }, [initialParams]);
+
   const onParamsChange = useCallback((params: ListQueryParams) => {
     replaceTableUrlParams(receivingListTable, params);
   }, []);
@@ -115,15 +120,18 @@ export function ReceivingInboundTable({
     <DataTable.Root<InboundListParams, InboundRow>
       meta={receivingListTable}
       queryHook={useReceivingInboundList}
-      initialParams={initialParams}
+      initialParams={seededInitialParams}
       onParamsChange={onParamsChange}
       getRowHref={getRowHref}
       linkField="documentNumber"
       renderRowLink={renderRowLink}
+      filterOptions={{ status: purchaseOrderStatusFilterOptions }}
+      filterLabels={{ status: "Status" }}
       idPrefix="receiving-inbound"
     >
       <DataTable.Toolbar>
         <DataTable.Search />
+        <DataTable.Filters />
       </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />
