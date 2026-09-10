@@ -229,21 +229,8 @@ describe("Purchasing (in-memory)", () => {
       expect(created.ok).toBe(true);
     }
 
-    let findByIdCalls = 0;
-    let findByIdsCalls = 0;
-    const suppliers = {
-      ...h.uow.suppliers,
-      findById: async (organizationId: OrganizationId, id: SupplierId) => {
-        findByIdCalls += 1;
-        return h.uow.suppliers.findById(organizationId, id);
-      },
-      findByIds: async (organizationId: OrganizationId, ids: readonly SupplierId[]) => {
-        findByIdsCalls += 1;
-        return h.uow.suppliers.findByIds(organizationId, ids);
-      },
-    };
-    const list = new ListPurchaseOrdersUseCase(h.uow.purchaseOrders, suppliers);
-    const listed = await list.execute({
+    const findByIds = vi.spyOn(h.uow.suppliers, "findByIds");
+    const listed = await h.list.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       page: 1,
@@ -253,8 +240,8 @@ describe("Purchasing (in-memory)", () => {
     });
 
     expect(listed.items).toHaveLength(5);
-    expect(findByIdCalls).toBe(0);
-    expect(findByIdsCalls).toBe(1);
+    expect(findByIds).toHaveBeenCalledTimes(1);
+    expect(findByIds.mock.calls[0]?.[1]).toHaveLength(5);
     expect([...listed.supplierNames.values()].sort()).toEqual(
       ["Batch Supplier 0", "Batch Supplier 1", "Batch Supplier 2", "Batch Supplier 3", "Batch Supplier 4"].sort(),
     );

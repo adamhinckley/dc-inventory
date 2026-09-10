@@ -10,6 +10,7 @@ import { locations, reorderPolicies } from "@dc-inventory/inventory/schema";
 import { LocationId, type OrganizationId, type Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import { readCaseQtyBySkus } from "./catalog-case-qty-by-skus.js";
 
 const DEFAULT_LOCATION_CODE = "DEFAULT";
 
@@ -22,31 +23,8 @@ export function uncoveredCaseQtyReadPort(
   packaging: IProductPackagingRepository,
 ): IUncoveredCaseQtyReadPort {
   return {
-    async readBySkus(organizationId: OrganizationId, skus: readonly Sku[]) {
-      const values = uniqueSkus(skus);
-      const rows = new Map<string, { caseQty: number | null }>();
-      for (const sku of values) {
-        rows.set(sku.value, { caseQty: null });
-      }
-      if (values.length === 0) {
-        return rows;
-      }
-
-      const products = await productRepo.findBySkus(organizationId, values);
-      const productIds = [...new Set([...products.values()].map((product) => product.id))];
-      const packagingByProductId = await packaging.findByProductIds(productIds);
-
-      for (const sku of values) {
-        const product = products.get(sku.value);
-        if (product === undefined) {
-          continue;
-        }
-        rows.set(sku.value, {
-          caseQty: packagingByProductId.get(product.id)?.caseQty ?? null,
-        });
-      }
-      return rows;
-    },
+    readBySkus: (organizationId, skus) =>
+      readCaseQtyBySkus(organizationId, skus, productRepo, packaging),
   };
 }
 
