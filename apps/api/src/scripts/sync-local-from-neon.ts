@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import {
   MissingDatabaseUrlError,
   MissingNeonDatabaseUrlError,
@@ -63,8 +64,8 @@ function normalizeHost(hostname: string): string {
   return trimmed;
 }
 
-function assertDirectHost(url: string): void {
-  const host = normalizeHost(parsePostgresUrl(url, "DATABASE_URL").hostname);
+function assertDirectHost(url: string, label = "DATABASE_URL"): void {
+  const host = normalizeHost(parsePostgresUrl(url, label).hostname);
   if (host.includes("-pooler")) {
     throw new PooledDatabaseUrlError();
   }
@@ -150,8 +151,8 @@ export function parseSyncLocalFromNeonUrls(
     () => new MissingDatabaseUrlError(),
   );
 
-  assertDirectHost(neonUrl);
-  assertDirectHost(localUrl);
+  assertDirectHost(neonUrl, "DATABASE_URL_NEON");
+  assertDirectHost(localUrl, "DATABASE_URL_LOCAL");
   assertNeonSourceHost(neonUrl, env);
   assertLocalDestinationHost(localUrl);
 
@@ -175,7 +176,16 @@ export function planSyncLocalFromNeon(
     localDatabaseName,
     commands: [
       {
-        argv: ["docker", "compose", "-f", composeFile, "up", "-d", COMPOSE_POSTGRES_SERVICE],
+        argv: [
+          "docker",
+          "compose",
+          "-f",
+          composeFile,
+          "up",
+          "-d",
+          "--wait",
+          COMPOSE_POSTGRES_SERVICE,
+        ],
       },
       {
         argv: composeExec(composeFile, [
@@ -213,4 +223,28 @@ export function planSyncLocalFromNeon(
       },
     ],
   };
+}
+
+const COMPOSE_FILE_NAME = "docker-compose.yml";
+const COMPOSE_SEARCH_DEPTH = 8;
+
+export function resolveComposeFileFromHere(
+  startDir: string,
+  exists: (path: string) => boolean,
+): string {
+  let dir = resolve(startDir);
+  for (let i = 0; i < COMPOSE_SEARCH_DEPTH; i += 1) {
+    const candidate = resolve(dir, COMPOSE_FILE_NAME);
+    if (exists(candidate)) {
+      return candidate;
+    }
+    const parent = resolve(dir, "..");
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+  throw new SyncLocalFromNeonError(
+    `docker-compose.yml was not found walking up from ${resolve(startDir)}.`,
+  );
 }

@@ -7,6 +7,7 @@ import {
 import {
   parseSyncLocalFromNeonUrls,
   planSyncLocalFromNeon,
+  resolveComposeFileFromHere,
   SyncLocalFromNeonError,
 } from "./sync-local-from-neon.js";
 
@@ -137,6 +138,7 @@ describe("planSyncLocalFromNeon", () => {
       composeFile,
       "up",
       "-d",
+      "--wait",
       "postgres",
     ]);
     expect(plan.commands[1]?.argv).toEqual([
@@ -175,5 +177,22 @@ describe("planSyncLocalFromNeon", () => {
       "postgres://postgres:postgres@127.0.0.1:5432/dc_inventory",
       "/tmp/dc-inventory-neon-sync.dump",
     ]);
+  });
+});
+
+describe("resolveComposeFileFromHere", () => {
+  it("finds the repo-root compose file from apps/api/src/scripts", () => {
+    expect(
+      resolveComposeFileFromHere(
+        "/Users/adam/projects/dc-inventory/apps/api/src/scripts",
+        (path) => path === "/Users/adam/projects/dc-inventory/docker-compose.yml",
+      ),
+    ).toBe("/Users/adam/projects/dc-inventory/docker-compose.yml");
+  });
+
+  it("fails when compose is not in any parent directory", () => {
+    expect(() =>
+      resolveComposeFileFromHere("/Users/adam/projects/dc-inventory/apps/api/src/scripts", () => false),
+    ).toThrow(/was not found/);
   });
 });

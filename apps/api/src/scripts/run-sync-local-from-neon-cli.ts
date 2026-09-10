@@ -10,6 +10,7 @@ import {
 import {
   parseSyncLocalFromNeonUrls,
   planSyncLocalFromNeon,
+  resolveComposeFileFromHere,
   SyncLocalFromNeonError,
   type SyncLocalFromNeonCommand,
 } from "./sync-local-from-neon.js";
@@ -17,7 +18,7 @@ import {
 function loadLocalEnvFiles(): void {
   const here = dirname(fileURLToPath(import.meta.url));
   for (const envPath of [
-    resolve(here, "../../../.env"),
+    resolve(here, "../../../../.env"),
     resolve(here, "../../.env"),
   ]) {
     if (existsSync(envPath)) {
@@ -52,17 +53,11 @@ function runCommand(command: SyncLocalFromNeonCommand): void {
 
 loadLocalEnvFiles();
 
-const composeFile = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../docker-compose.yml",
-);
-
 try {
-  if (!existsSync(composeFile)) {
-    throw new SyncLocalFromNeonError(
-      `docker-compose.yml is missing at ${composeFile}.`,
-    );
-  }
+  const composeFile = resolveComposeFileFromHere(
+    dirname(fileURLToPath(import.meta.url)),
+    existsSync,
+  );
   const plan = planSyncLocalFromNeon(parseSyncLocalFromNeonUrls(), composeFile);
   console.log(
     `Dumping Neon (development) into Compose postgres and replacing ${plan.localDatabaseName}.`,
