@@ -1,5 +1,5 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, ne, notInArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   collectOccupiedDocumentPrefixes,
@@ -8,6 +8,7 @@ import {
   resolveDocumentPoPrefix,
 } from "../domain/document-number.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
+import { parsePoPrefix } from "../domain/supplier.js";
 import type {
   IPurchaseOrderRepository,
   ListNewestDraftsBySuppliersQuery,
@@ -211,13 +212,44 @@ async function loadSupplierPoPrefix(
   organizationId: OrganizationId,
   supplierId: SupplierId,
 ): Promise<string> {
-  const rows = await db
-    .select({ id: suppliers.id, poPrefix: suppliers.poPrefix })
+  const currentRows = await db
+    .select({ poPrefix: suppliers.poPrefix })
     .from(suppliers)
-    .where(eq(suppliers.organizationId, organizationId));
-  const current = rows.find((row) => row.id === supplierId);
-  const occupied = collectOccupiedDocumentPrefixes(rows, supplierId);
-  return resolveDocumentPoPrefix(current?.poPrefix, supplierId, occupied);
+    .where(and(eq(suppliers.organizationId, organizationId), eq(suppliers.id, supplierId)))
+    .limit(1);
+  const currentPrefix = currentRows[0]?.poPrefix;
+  const parsed = parsePoPrefix(currentPrefix);
+  if (parsed !== null && parsed !== "invalid") {
+    return parsed;
+  }
+
+  const [otherSuppliersWithPrefix, suppliersWithoutPrefix] = await Promise.all([
+    db
+      .select({ id: suppliers.id, poPrefix: suppliers.poPrefix })
+      .from(suppliers)
+      .where(
+        and(
+          eq(suppliers.organizationId, organizationId),
+          isNotNull(suppliers.poPrefix),
+          ne(suppliers.id, supplierId),
+        ),
+      ),
+    db
+      .select({ id: suppliers.id })
+      .from(suppliers)
+      .where(
+        and(
+          eq(suppliers.organizationId, organizationId),
+          isNull(suppliers.poPrefix),
+          ne(suppliers.id, supplierId),
+        ),
+      ),
+  ]);
+  const occupied = collectOccupiedDocumentPrefixes([
+    ...otherSuppliersWithPrefix.map((row) => ({ id: row.id, poPrefix: row.poPrefix })),
+    ...suppliersWithoutPrefix.map((row) => ({ id: row.id, poPrefix: null })),
+  ]);
+  return resolveDocumentPoPrefix(currentPrefix, supplierId, occupied);
 }
 
 async function allocateDocumentNumber(
@@ -268,14 +300,6 @@ async function advanceCounter(
     });
 }
 
-function remainingQtyExpr() {
-  return sql`coalesce((
-    select sum(${purchaseOrderLines.qty} - ${purchaseOrderLines.receivedQty})
-    from ${purchaseOrderLines}
-    where ${purchaseOrderLines.purchaseOrderId} = ${purchaseOrders.id}
-  ), 0)`;
-}
-
 function purchaseOrderListSortColumn(sortBy: PurchaseOrderListSortBy) {
   switch (sortBy) {
     case "status":
@@ -286,8 +310,6 @@ function purchaseOrderListSortColumn(sortBy: PurchaseOrderListSortBy) {
       return purchaseOrders.cancelDate;
     case "supplierName":
       return suppliers.name;
-    case "remaining":
-      return remainingQtyExpr();
     default:
       return purchaseOrders.documentNumber;
   }
@@ -331,19 +353,13 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
     }
     const where = and(...clauses);
     const offset = (query.page - 1) * query.pageSize;
-    const sortColumn = purchaseOrderListSortColumn(query.sortBy ?? "documentNumber");
-    const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
-    const [totalRows, headers] = await Promise.all([
-      this.db.select({ value: count() }).from(purchaseOrders).where(where),
-      this.db
-        .select({ header: purchaseOrders })
-        .from(purchaseOrders)
-        .leftJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
-        .where(where)
-        .orderBy(order, asc(purchaseOrders.id))
-        .limit(query.pageSize)
-        .offset(offset),
-    ]);
+    const sortBy = query.sortBy ?? "documentNumber";
+    const supplierJoin = eq(purchaseOrders.supplierId, suppliers.id);
+
+    const [totalRows, headers] =
+      sortBy === "remaining"
+        ? await this.listByRemainingQty(where, query, offset, supplierJoin)
+        : await this.listWithSortColumn(where, query, offset, supplierJoin, sortBy);
     const lines = await loadLinesByPurchaseOrderIds(
       this.db,
       headers.map((row) => row.header.id),
@@ -352,6 +368,62 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
       items: headers.map((row) => toOrder(row.header, lines.get(row.header.id) ?? [])),
       total: totalRows[0]?.value ?? 0,
     };
+  }
+
+  private async listWithSortColumn(
+    where: ReturnType<typeof and>,
+    query: ListPurchaseOrdersQuery,
+    offset: number,
+    supplierJoin: ReturnType<typeof eq>,
+    sortBy: PurchaseOrderListSortBy,
+  ) {
+    const sortColumn = purchaseOrderListSortColumn(sortBy);
+    const order = query.sortOrder === "desc" ? desc(sortColumn) : asc(sortColumn);
+    return Promise.all([
+      this.db.select({ value: count() }).from(purchaseOrders).where(where),
+      this.db
+        .select({ header: purchaseOrders })
+        .from(purchaseOrders)
+        .leftJoin(suppliers, supplierJoin)
+        .where(where)
+        .orderBy(order, asc(purchaseOrders.id))
+        .limit(query.pageSize)
+        .offset(offset),
+    ]);
+  }
+
+  private async listByRemainingQty(
+    where: ReturnType<typeof and>,
+    query: ListPurchaseOrdersQuery,
+    offset: number,
+    supplierJoin: ReturnType<typeof eq>,
+  ) {
+    const remainingByPo = this.db
+      .select({
+        purchaseOrderId: purchaseOrderLines.purchaseOrderId,
+        remainingQty: sql<number>`sum(${purchaseOrderLines.qty} - ${purchaseOrderLines.receivedQty})`.as(
+          "remaining_qty",
+        ),
+      })
+      .from(purchaseOrderLines)
+      .groupBy(purchaseOrderLines.purchaseOrderId)
+      .as("remaining_by_po");
+    const remainingOrder =
+      query.sortOrder === "desc"
+        ? desc(sql`coalesce(${remainingByPo.remainingQty}, 0)`)
+        : asc(sql`coalesce(${remainingByPo.remainingQty}, 0)`);
+    return Promise.all([
+      this.db.select({ value: count() }).from(purchaseOrders).where(where),
+      this.db
+        .select({ header: purchaseOrders })
+        .from(purchaseOrders)
+        .leftJoin(suppliers, supplierJoin)
+        .leftJoin(remainingByPo, eq(remainingByPo.purchaseOrderId, purchaseOrders.id))
+        .where(where)
+        .orderBy(remainingOrder, asc(purchaseOrders.id))
+        .limit(query.pageSize)
+        .offset(offset),
+    ]);
   }
 
   async findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null> {

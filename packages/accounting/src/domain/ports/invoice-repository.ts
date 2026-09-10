@@ -54,6 +54,20 @@ export type IInvoiceRepository = {
 
 export type IAccountingRepository = IInvoiceRepository & {
   findPaymentById(organizationId: OrganizationId, paymentId: PaymentId): Promise<Payment | null>;
+  findPaymentsByIds(
+    organizationId: OrganizationId,
+    paymentIds: readonly PaymentId[],
+  ): Promise<ReadonlyMap<PaymentId, Payment>>;
+  findByIdsForPayment(
+    organizationId: OrganizationId,
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, Invoice>>;
+  listApplicationsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly PaymentApplication[]>>;
+  listAdjustmentsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly InvoiceAdjustment[]>>;
   listApplicationsByPayment(
     organizationId: OrganizationId,
     paymentId: PaymentId,

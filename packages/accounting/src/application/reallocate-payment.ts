@@ -4,7 +4,7 @@ import { PaymentApplicationId } from "../domain/ids.js";
 import type { PaymentId } from "../domain/ids.js";
 import type { AccountingUnitOfWorkWithCustomerPayments } from "../domain/ports/invoice-repository.js";
 import type { PaymentApplication } from "../domain/invoice.js";
-import { remainingForInvoice } from "./customer-payment-support.js";
+import { remainingForInvoices } from "./customer-payment-support.js";
 
 export type ReallocatePaymentApplicationInput = {
   readonly invoiceId: InvoiceId;
@@ -54,6 +54,8 @@ export class ReallocatePaymentUseCase {
       const unappliedCents = payment.amount.amountMinor - appliedTotal;
       let deltaTotal = 0;
       const deltasByInvoice = new Map<InvoiceId, number>();
+      const invoiceIds = [...new Set(input.applications.map((change) => change.invoiceId))];
+      const invoiceMap = await invoices.findByIdsForPayment(input.organizationId, invoiceIds);
 
       for (const change of input.applications) {
         if (!Number.isInteger(change.deltaCents) || change.deltaCents === 0) {
@@ -61,11 +63,8 @@ export class ReallocatePaymentUseCase {
         }
         deltaTotal += change.deltaCents;
 
-        const invoice = await invoices.findByIdForPayment(
-          input.organizationId,
-          change.invoiceId,
-        );
-        if (invoice === null || invoice.customerId !== payment.customerId) {
+        const invoice = invoiceMap.get(change.invoiceId);
+        if (invoice === undefined || invoice.customerId !== payment.customerId) {
           return { ok: false, reason: "not_found" };
         }
         if (invoice.total.currency !== currency) {
@@ -78,6 +77,12 @@ export class ReallocatePaymentUseCase {
         );
       }
 
+      const remainingByInvoice = await remainingForInvoices(
+        invoices,
+        input.organizationId,
+        [...deltasByInvoice.keys()],
+        invoiceMap,
+      );
       for (const [invoiceId, combinedDelta] of deltasByInvoice) {
         const currentApplied = existingApplications
           .filter((row) => row.invoiceId === invoiceId)
@@ -87,12 +92,8 @@ export class ReallocatePaymentUseCase {
           return { ok: false, reason: "invalid" };
         }
 
-        const remaining = await remainingForInvoice(
-          invoices,
-          input.organizationId,
-          invoiceId,
-        );
-        if (remaining === null) {
+        const remaining = remainingByInvoice.get(invoiceId);
+        if (remaining === null || remaining === undefined) {
           return { ok: false, reason: "not_found" };
         }
         const remainingBeforeThisPayment = remaining + currentApplied;

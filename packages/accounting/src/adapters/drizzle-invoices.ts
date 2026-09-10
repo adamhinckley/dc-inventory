@@ -6,7 +6,7 @@ import {
   OrganizationId,
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentSequence } from "../domain/document-number.js";
 import {
@@ -274,6 +274,29 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
     return row === undefined ? null : toInvoice(row);
   }
 
+  async findByIdsForPayment(
+    organizationId: OrganizationId,
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, Invoice>> {
+    const uniqueIds = [...new Set(invoiceIds)];
+    const byId = new Map<InvoiceId, Invoice>();
+    if (uniqueIds.length === 0) {
+      return byId;
+    }
+    const rows = await this.db
+      .select()
+      .from(invoices)
+      .where(
+        and(eq(invoices.organizationId, organizationId), inArray(invoices.id, uniqueIds)),
+      )
+      .for("update");
+    for (const row of rows) {
+      const invoice = toInvoice(row);
+      byId.set(invoice.id, invoice);
+    }
+    return byId;
+  }
+
   async findByOrderId(
     organizationId: OrganizationId,
     orderId: OrderId,
@@ -335,6 +358,27 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
     return rows.map(toApplication);
   }
 
+  async listApplicationsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly PaymentApplication[]>> {
+    const uniqueIds = [...new Set(invoiceIds)];
+    const byInvoiceId = new Map<InvoiceId, PaymentApplication[]>();
+    if (uniqueIds.length === 0) {
+      return byInvoiceId;
+    }
+    const rows = await this.db
+      .select()
+      .from(paymentApplications)
+      .where(inArray(paymentApplications.invoiceId, uniqueIds));
+    for (const row of rows) {
+      const application = toApplication(row);
+      const invoiceRows = byInvoiceId.get(application.invoiceId) ?? [];
+      invoiceRows.push(application);
+      byInvoiceId.set(application.invoiceId, invoiceRows);
+    }
+    return byInvoiceId;
+  }
+
   async listApplicationsByPayment(
     organizationId: OrganizationId,
     paymentId: PaymentId,
@@ -363,6 +407,28 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
       .limit(1);
     const row = rows[0];
     return row === undefined ? null : toPayment(row);
+  }
+
+  async findPaymentsByIds(
+    organizationId: OrganizationId,
+    paymentIds: readonly PaymentId[],
+  ): Promise<ReadonlyMap<PaymentId, Payment>> {
+    const uniqueIds = [...new Set(paymentIds)];
+    const byId = new Map<PaymentId, Payment>();
+    if (uniqueIds.length === 0) {
+      return byId;
+    }
+    const rows = await this.db
+      .select()
+      .from(payments)
+      .where(
+        and(eq(payments.organizationId, organizationId), inArray(payments.id, uniqueIds)),
+      );
+    for (const row of rows) {
+      const payment = toPayment(row);
+      byId.set(payment.id, payment);
+    }
+    return byId;
   }
 
   async findPaymentByIdempotencyKey(
@@ -409,16 +475,19 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
     await this.db.insert(payments).values(
       paymentInsertValues(payment, applications, holdRemainderAsCredit),
     );
-    for (const spec of applications) {
-      await this.db.insert(paymentApplications).values({
+    if (applications.length === 0) {
+      return;
+    }
+    await this.db.insert(paymentApplications).values(
+      applications.map((spec) => ({
         id: PaymentApplicationId.parse(newUuid()),
         paymentId: payment.id,
         invoiceId: spec.invoiceId,
         amountCents: spec.amountCents,
         currency: payment.amount.currency,
         createdAt: payment.createdAt,
-      });
-    }
+      })),
+    );
   }
 
   async updatePayment(payment: Payment): Promise<void> {
@@ -462,6 +531,33 @@ export class DrizzleInvoiceRepository implements IAccountingRepository {
         ),
       );
     return rows.map((row) => toAdjustment(row.adjustment));
+  }
+
+  async listAdjustmentsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly InvoiceAdjustment[]>> {
+    const uniqueIds = [...new Set(invoiceIds)];
+    const byInvoiceId = new Map<InvoiceId, InvoiceAdjustment[]>();
+    if (uniqueIds.length === 0) {
+      return byInvoiceId;
+    }
+    const rows = await this.db
+      .select({ adjustment: invoiceAdjustments })
+      .from(invoiceAdjustments)
+      .innerJoin(invoices, eq(invoiceAdjustments.invoiceId, invoices.id))
+      .where(
+        and(
+          inArray(invoiceAdjustments.invoiceId, uniqueIds),
+          eq(invoiceAdjustments.organizationId, invoices.organizationId),
+        ),
+      );
+    for (const row of rows) {
+      const adjustment = toAdjustment(row.adjustment);
+      const invoiceRows = byInvoiceId.get(adjustment.invoiceId) ?? [];
+      invoiceRows.push(adjustment);
+      byInvoiceId.set(adjustment.invoiceId, invoiceRows);
+    }
+    return byInvoiceId;
   }
 
   async insertAdjustment(adjustment: InvoiceAdjustment): Promise<void> {

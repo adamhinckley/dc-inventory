@@ -251,6 +251,7 @@ class FakePurchasingDb {
   readonly supplierRows = new Map<string, SupplierRow>();
   readonly statements: string[] = [];
   lineSelectCount = 0;
+  supplierSelectCalls = 0;
   failNextLineInsert = false;
 
   constructor() {
@@ -289,6 +290,7 @@ class FakePurchasingDb {
               return [...self.orders.values()].filter((row) => rowMatches(row, clause));
             }
             if (table === suppliers) {
+              self.supplierSelectCalls += 1;
               return [...self.supplierRows.values()].filter((row) => rowMatches(row, clause));
             }
             self.lineSelectCount += 1;
@@ -350,8 +352,9 @@ class FakePurchasingDb {
         if (table === supplierPoDocumentNumberCounters) {
           this.statements.push("counter");
           return {
-            onConflictDoUpdate: async () => ({ sequence: 1 }),
-            returning: async () => [{ sequence: 1 }],
+            onConflictDoUpdate: () => ({
+              returning: async () => [{ sequence: 1 }],
+            }),
           };
         }
         const write = (upsert: boolean) => {
@@ -591,6 +594,33 @@ describe("DrizzlePurchaseOrderRepository.exists", () => {
     db.lineSelectCount = 0;
     await repo.findById(ORG, PO_ID);
     expect(db.lineSelectCount).toBeGreaterThan(0);
+  });
+});
+
+describe("DrizzlePurchaseOrderRepository.insertWithNextDocumentNumber", () => {
+  it("reads only the current supplier when it already has a PO prefix", async () => {
+    const db = new FakePurchasingDb();
+    const otherSupplierId = SupplierId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddd01");
+    db.supplierRows.set(otherSupplierId, {
+      id: otherSupplierId,
+      organizationId: ORG,
+      poPrefix: "OS",
+    });
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+
+    const created = await repo.insertWithNextDocumentNumber({
+      id: PurchaseOrderId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeee01"),
+      organizationId: ORG,
+      supplierId: SUPPLIER_ID,
+      status: "draft",
+      shipDate: null,
+      cancelDate: null,
+      createdAt: new Date("2026-08-28T00:00:00.000Z"),
+      lines: [line(LINE_A, SKU, "Bolt", 5)],
+    });
+
+    expect(created.documentNumber).toBe("PO-HF-00001");
+    expect(db.supplierSelectCalls).toBe(1);
   });
 });
 
