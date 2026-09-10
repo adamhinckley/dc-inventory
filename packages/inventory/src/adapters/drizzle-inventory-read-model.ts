@@ -15,7 +15,7 @@ import {
   type DemandStockFigures,
 } from "../domain/demand-model.js";
 import { MovementId } from "../domain/ids.js";
-import type { Movement, MovementRefType, MovementType } from "../domain/movement.js";
+import type { Movement } from "../domain/movement.js";
 import type {
   IInventoryReadModel,
   MovementListFilter,
@@ -177,51 +177,6 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
       }
     }
     return movements;
-  }
-
-  async findMovementByIdempotency(
-    organizationId: OrganizationId,
-    idempotencyKey: string,
-    sku: Sku,
-  ): Promise<Movement | undefined> {
-    const rows = await this.db
-      .select()
-      .from(stockMovements)
-      .where(
-        and(
-          eq(stockMovements.organizationId, organizationId),
-          eq(stockMovements.idempotencyKey, idempotencyKey),
-          eq(stockMovements.sku, sku.value),
-        ),
-      )
-      .limit(1);
-    const row = rows[0];
-    return row === undefined
-      ? undefined
-      : this.toMovement(row, LocationId.DEFAULT, organizationId);
-  }
-
-  async hasProvenance(
-    organizationId: OrganizationId,
-    refType: MovementRefType,
-    refId: string,
-    sku: Sku,
-    movementType: MovementType,
-  ): Promise<boolean> {
-    const rows = await this.db
-      .select({ id: stockMovements.id })
-      .from(stockMovements)
-      .where(
-        and(
-          eq(stockMovements.organizationId, organizationId),
-          eq(stockMovements.refType, refType),
-          eq(stockMovements.refId, refId),
-          eq(stockMovements.sku, sku.value),
-          eq(stockMovements.movementType, movementType),
-        ),
-      )
-      .limit(1);
-    return rows[0] !== undefined;
   }
 
   private toMovement(

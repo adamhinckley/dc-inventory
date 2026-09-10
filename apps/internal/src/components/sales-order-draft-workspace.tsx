@@ -519,7 +519,7 @@ export function SalesOrderDraftWorkspace({
   const confirmOrder = useCallback(
     async (overrideCredit = false) => {
       setActionError(null);
-      const saved = await flushAutosave(true);
+      const saved = await flushAutosave();
       if (!saved) {
         return;
       }

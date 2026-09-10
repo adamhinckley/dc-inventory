@@ -1,5 +1,5 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
-import { and, asc, count, desc, eq, ilike, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { formatDocumentNumber, parseDocumentNumber } from "../domain/document-number.js";
 import { SupplierPoPrefixMissingError } from "../domain/errors.js";
@@ -88,40 +88,66 @@ function purchaseOrderHeaderMatch(order: PurchaseOrder) {
   );
 }
 
-function purchaseOrderLineMatch(purchaseOrderId: string, lineId: string) {
-  return and(
-    eq(purchaseOrderLines.id, lineId),
-    eq(purchaseOrderLines.purchaseOrderId, purchaseOrderId),
-  );
+function headerValues(order: PurchaseOrder) {
+  return {
+    id: order.id,
+    organizationId: order.organizationId,
+    supplierId: order.supplierId,
+    status: order.status,
+    documentNumber: order.documentNumber,
+    shipDate: order.shipDate,
+    cancelDate: order.cancelDate,
+    createdAt: order.createdAt,
+  };
 }
 
-async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder): Promise<void> {
-  const existing = await findOrder(db, order.organizationId, order.id);
-  if (existing === null) {
-    await db.insert(purchaseOrders).values({
-      id: order.id,
-      organizationId: order.organizationId,
-      supplierId: order.supplierId,
-      status: order.status,
-      documentNumber: order.documentNumber,
-      shipDate: order.shipDate,
-      cancelDate: order.cancelDate,
-      createdAt: order.createdAt,
-    });
-    for (const line of order.lines) {
-      await db.insert(purchaseOrderLines).values({
-        id: line.id,
-        purchaseOrderId: order.id,
-        sku: line.sku.value,
-        name: line.name,
-        qty: line.qty,
-        receivedQty: line.receivedQty,
-      });
-    }
+function lineValues(order: PurchaseOrder) {
+  return order.lines.map((line) => ({
+    id: line.id,
+    purchaseOrderId: order.id,
+    sku: line.sku.value,
+    name: line.name,
+    qty: line.qty,
+    receivedQty: line.receivedQty,
+  }));
+}
+
+async function replacePurchaseOrderLines(
+  db: PurchasingDrizzle,
+  order: PurchaseOrder,
+): Promise<void> {
+  const nextLineIds = order.lines.map((line) => line.id);
+  if (nextLineIds.length === 0) {
+    await db.delete(purchaseOrderLines).where(eq(purchaseOrderLines.purchaseOrderId, order.id));
     return;
   }
 
   await db
+    .delete(purchaseOrderLines)
+    .where(
+      and(
+        eq(purchaseOrderLines.purchaseOrderId, order.id),
+        notInArray(purchaseOrderLines.id, nextLineIds),
+      ),
+    );
+
+  await db
+    .insert(purchaseOrderLines)
+    .values(lineValues(order))
+    .onConflictDoUpdate({
+      target: purchaseOrderLines.id,
+      set: {
+        sku: sql`excluded.sku`,
+        name: sql`excluded.name`,
+        qty: sql`excluded.qty`,
+        receivedQty: sql`excluded.received_qty`,
+        updatedAt: new Date(),
+      },
+    });
+}
+
+async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder): Promise<void> {
+  const updated = await db
     .update(purchaseOrders)
     .set({
       supplierId: order.supplierId,
@@ -131,45 +157,18 @@ async function persistPurchaseOrder(db: PurchasingDrizzle, order: PurchaseOrder)
       cancelDate: order.cancelDate,
       updatedAt: new Date(),
     })
-    .where(purchaseOrderHeaderMatch(order));
+    .where(purchaseOrderHeaderMatch(order))
+    .returning({ id: purchaseOrders.id });
 
-  const keepIds = new Set(order.lines.map((line) => line.id));
-  for (const stale of existing.lines) {
-    if (!keepIds.has(stale.id)) {
-      await db
-        .delete(purchaseOrderLines)
-        .where(purchaseOrderLineMatch(order.id, stale.id));
+  if (updated.length === 0) {
+    await db.insert(purchaseOrders).values(headerValues(order));
+    if (order.lines.length > 0) {
+      await db.insert(purchaseOrderLines).values(lineValues(order));
     }
+    return;
   }
 
-  for (const line of order.lines) {
-    const lineRows = await db
-      .select()
-      .from(purchaseOrderLines)
-      .where(purchaseOrderLineMatch(order.id, line.id))
-      .limit(1);
-    if (lineRows[0] === undefined) {
-      await db.insert(purchaseOrderLines).values({
-        id: line.id,
-        purchaseOrderId: order.id,
-        sku: line.sku.value,
-        name: line.name,
-        qty: line.qty,
-        receivedQty: line.receivedQty,
-      });
-    } else {
-      await db
-        .update(purchaseOrderLines)
-        .set({
-          sku: line.sku.value,
-          name: line.name,
-          qty: line.qty,
-          receivedQty: line.receivedQty,
-          updatedAt: new Date(),
-        })
-        .where(purchaseOrderLineMatch(order.id, line.id));
-    }
-  }
+  await replacePurchaseOrderLines(db, order);
 }
 
 function toOrder(
