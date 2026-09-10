@@ -200,15 +200,12 @@ export function AccountingPaymentsTable() {
   const openPaymentDetail = useCallback(
     async (row: AccountingPaymentRow) => {
       setActionCustomerId(row.customerId);
-      await Promise.all([
-        queryClient.prefetchQuery(
+      const [, customerPayments] = await Promise.all([
+        queryClient.fetchQuery(
           getListInternalCustomerInvoicesQueryOptions(row.customerId, { includePaid: true }),
         ),
-        queryClient.prefetchQuery(getListInternalCustomerPaymentsQueryOptions(row.customerId)),
+        queryClient.fetchQuery(getListInternalCustomerPaymentsQueryOptions(row.customerId)),
       ]);
-      const customerPayments = await queryClient.fetchQuery(
-        getListInternalCustomerPaymentsQueryOptions(row.customerId),
-      );
       const customerPayment =
         customerPayments.status === 200
           ? customerPayments.data.items.find((payment) => payment.id === row.paymentId)
