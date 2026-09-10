@@ -41,7 +41,8 @@ export type ListSalesOrdersQuery = {
 export interface ISalesOrderRepository {
   list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage>;
   findById(organizationId: OrganizationId, id: OrderId): Promise<SalesOrder | null>;
-  save(order: SalesOrder): Promise<void>;
+  /** When `existing` is provided, skip reloading the aggregate before persist. */
+  save(order: SalesOrder, existing?: SalesOrder | null): Promise<void>;
   insertWithNextDocumentNumber(order: UnnumberedSalesOrder): Promise<SalesOrder>;
   findByDocumentNumber(
     organizationId: OrganizationId,

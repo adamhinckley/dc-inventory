@@ -210,7 +210,7 @@ export class ConfirmSalesOrderUseCase {
           },
           shipToSnapshot,
         );
-        await scope.salesOrders.save(updated);
+        await scope.salesOrders.save(updated, existing);
         return { ok: true, salesOrder: updated };
       });
     } catch (error) {

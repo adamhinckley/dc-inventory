@@ -194,7 +194,7 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
     return toOrder(header, lines);
   }
 
-  async save(order: SalesOrder): Promise<void> {
+  async save(order: SalesOrder, existing?: SalesOrder | null): Promise<void> {
     await this.db.transaction(async (tx) => {
       const transactionalDb = tx as SalesDrizzle;
       await advanceCounter(
@@ -203,8 +203,11 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         order.documentNumber,
       );
       const repo = new DrizzleSalesOrderRepository(transactionalDb);
-      const existing = await repo.findById(order.organizationId, order.id);
-      await repo.persist(order, existing);
+      const prior =
+        existing !== undefined
+          ? existing
+          : await repo.findById(order.organizationId, order.id);
+      await repo.persist(order, prior);
     });
   }
 

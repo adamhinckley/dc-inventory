@@ -125,7 +125,7 @@ export class ShipSalesOrderUseCase {
         }
 
         const shipped: SalesOrder = { ...existing, status: "shipped" };
-        await scope.salesOrders.save(shipped);
+        await scope.salesOrders.save(shipped, existing);
         return { ok: true, salesOrder: shipped };
       });
     } catch (error) {

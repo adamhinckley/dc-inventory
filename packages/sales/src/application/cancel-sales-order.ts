@@ -41,7 +41,7 @@ export class CancelSalesOrderUseCase {
 
         if (existing.status === "draft") {
           const cancelled: SalesOrder = { ...existing, status: "cancelled" };
-          await scope.salesOrders.save(cancelled);
+          await scope.salesOrders.save(cancelled, existing);
           return { ok: true, salesOrder: cancelled };
         }
 
@@ -98,7 +98,7 @@ export class CancelSalesOrderUseCase {
         }
 
         const cancelled: SalesOrder = { ...existing, status: "cancelled" };
-        await scope.salesOrders.save(cancelled);
+        await scope.salesOrders.save(cancelled, existing);
         return { ok: true, salesOrder: cancelled };
       });
     } catch (error) {
