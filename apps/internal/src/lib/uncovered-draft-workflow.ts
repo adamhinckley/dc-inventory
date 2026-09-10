@@ -35,6 +35,12 @@ export function shouldDraftUncoveredSelection(selectedCount: number): boolean {
   return selectedCount > 0;
 }
 
+export function draftableUncoveredFactoryIds(
+  rows: readonly { id: string; needsMapping: boolean }[],
+): string[] {
+  return rows.filter((row) => !row.needsMapping).map((row) => row.id);
+}
+
 export function toUncoveredBatchDraftRows(
   purchaseOrders: readonly UncoveredDraftPurchaseOrder[],
   supplierNamesById: ReadonlyMap<string, string>,

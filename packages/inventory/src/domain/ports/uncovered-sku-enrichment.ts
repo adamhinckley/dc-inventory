@@ -16,6 +16,7 @@ export type UncoveredSkuSupplierInfo = Readonly<{
   supplierId: SupplierId;
   supplierNumber: string;
   supplierName: string;
+  poPrefix: string | null;
 }>;
 
 export type UncoveredSkuDraftPurchaseOrderRef = Readonly<{

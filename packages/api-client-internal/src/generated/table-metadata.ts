@@ -519,6 +519,10 @@ export const listInternalUncoveredFactoriesTable = {
       "label": "Factory #"
     },
     {
+      "field": "poPrefix",
+      "label": "Vendor prefix"
+    },
+    {
       "field": "productCount",
       "label": "Products"
     },

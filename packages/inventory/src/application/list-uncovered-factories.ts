@@ -20,6 +20,7 @@ export type UncoveredFactorySummaryRow = Readonly<{
   supplierId: SupplierId | null;
   supplierNumber: string | null;
   supplierName: string;
+  poPrefix: string | null;
   productCount: number;
   totalUncoveredUnits: number;
   needsMapping: boolean;
@@ -96,6 +97,7 @@ export class ListUncoveredFactoriesUseCase {
         supplierId,
         supplierNumber: supplier?.supplierNumber ?? null,
         supplierName: supplier?.supplierName ?? "Unknown factory",
+        poPrefix: supplier?.poPrefix ?? null,
         productCount: aggregate.productCount,
         totalUncoveredUnits: aggregate.totalUncoveredUnits,
         needsMapping: false,
@@ -109,6 +111,7 @@ export class ListUncoveredFactoriesUseCase {
         supplierId: null,
         supplierNumber: null,
         supplierName: "Needs mapping",
+        poPrefix: null,
         productCount: needsMappingProductCount,
         totalUncoveredUnits: needsMappingUnits,
         needsMapping: true,

@@ -10,11 +10,13 @@ export function UncoveredBatchDraftModal({
   drafts,
   unmappedNotice,
   onOpenChange,
+  purchaseOrderHref = (purchaseOrderId) => `/purchasing/${purchaseOrderId}`,
 }: {
   open: boolean;
   drafts: readonly UncoveredBatchDraftRow[];
   unmappedNotice: string | null;
   onOpenChange: (open: boolean) => void;
+  purchaseOrderHref?: (purchaseOrderId: string) => string;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -44,7 +46,7 @@ export function UncoveredBatchDraftModal({
                   </p>
                 </div>
                 <Link
-                  href={`/purchasing/${draft.purchaseOrderId}`}
+                  href={purchaseOrderHref(draft.purchaseOrderId)}
                   className="shrink-0"
                 >
                   <Button type="button" variant="secondary" size="sm">
