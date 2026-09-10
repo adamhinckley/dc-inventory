@@ -19,6 +19,7 @@ import { AssignSupplierProductUseCase } from "../src/application/assign-supplier
 import { CreatePurchaseOrderUseCase } from "../src/application/create-purchase-order.js";
 import { draftPoQtyFromUncovered } from "../src/application/draft-po-qty-from-uncovered.js";
 import { SyncDraftPurchaseOrdersFromUncoveredUseCase } from "../src/application/sync-draft-purchase-orders-from-uncovered.js";
+import type { IPurchasingUnitOfWork } from "../src/domain/ports/purchase-order-repository.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const DEFAULT_ORG = OrganizationId.DEFAULT;
@@ -68,6 +69,40 @@ class StubUncoveredListQuery implements IUncoveredListQuery {
 
   async listFactories() {
     return { items: [], total: 0 };
+  }
+}
+
+class GuardedPurchasingUnitOfWork implements IPurchasingUnitOfWork {
+  private insideRun = false;
+
+  constructor(private readonly inner: InMemoryPurchasingUnitOfWork) {}
+
+  get purchaseOrders() {
+    if (!this.insideRun) {
+      throw new Error("Access purchasing repositories inside unitOfWork.run");
+    }
+    return this.inner.purchaseOrders;
+  }
+
+  get suppliers() {
+    if (!this.insideRun) {
+      throw new Error("Access purchasing repositories inside unitOfWork.run");
+    }
+    return this.inner.suppliers;
+  }
+
+  get inventory() {
+    if (!this.insideRun) {
+      throw new Error("Access inventory commands inside unitOfWork.run");
+    }
+    return this.inner.inventory;
+  }
+
+  run<T>(work: (uow: IPurchasingUnitOfWork) => Promise<T>): Promise<T> {
+    this.insideRun = true;
+    return this.inner.run(work).finally(() => {
+      this.insideRun = false;
+    });
   }
 }
 
@@ -479,5 +514,81 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     });
     expect(uowRun).toHaveBeenCalledTimes(1);
     expect(getSkuMappings).toHaveBeenCalledTimes(1);
+  });
+
+  it("queries newest drafts inside unitOfWork.run like Postgres composition root", async () => {
+    const h = await harness();
+    const guardedUow = new GuardedPurchasingUnitOfWork(h.uow);
+    const syncDrafts = new SyncDraftPurchaseOrdersFromUncoveredUseCase(
+      guardedUow,
+      h.supplierMapping,
+      h.uncoveredList,
+      h.caseQty,
+      h.catalog,
+    );
+
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+    seedUncovered(h, [
+      { sku: SKU_A, uncovered: 12, committed: 12, onHand: 0, onOrder: 0 },
+    ]);
+    const created = await h.createPurchaseOrder.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      lines: [{ sku: SKU_A.value, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const result = await syncDrafts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.purchaseOrderIds).toEqual([created.purchaseOrder.id]);
+  });
+
+  it("does not re-fetch each draft with findById before saving lines", async () => {
+    const h = await harness();
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+    seedUncovered(h, [
+      { sku: SKU_A, uncovered: 12, committed: 12, onHand: 0, onOrder: 0 },
+    ]);
+    const created = await h.createPurchaseOrder.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      lines: [{ sku: SKU_A.value, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const findById = vi.spyOn(h.uow.purchaseOrders, "findById");
+
+    const result = await h.syncDrafts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(findById).not.toHaveBeenCalled();
   });
 });

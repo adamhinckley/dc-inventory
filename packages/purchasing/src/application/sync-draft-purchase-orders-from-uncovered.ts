@@ -11,7 +11,7 @@ import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-rep
 import type { ISupplierSkuMappingReadPort } from "../domain/ports/supplier-sku-mapping.js";
 import { draftPoQtyFromUncovered } from "./draft-po-qty-from-uncovered.js";
 import { groupUncoveredSkusBySupplier } from "./group-uncovered-skus-by-supplier.js";
-import { ReplacePurchaseOrderLinesUseCase } from "./replace-purchase-order-lines.js";
+import { resolveDraftPurchaseOrderLines } from "./resolve-draft-purchase-order-lines.js";
 
 export type SyncDraftPurchaseOrdersFromUncoveredRequest = {
   organizationId: OrganizationId;
@@ -73,27 +73,13 @@ export class SyncDraftPurchaseOrdersFromUncoveredUseCase {
         ? input.supplierIds
         : undefined;
 
-    const drafts = await this.uow.purchaseOrders.listNewestDraftsBySuppliers({
-      organizationId: input.organizationId,
-      supplierIds: supplierFilter,
-    });
-
-    if (drafts.length === 0) {
-      return {
-        ok: true,
-        purchaseOrderIds: [],
-        syncedSupplierIds: [],
-        clearedSupplierIds: [],
-        unmappedSkus: grouped.unmappedSkus,
-      };
-    }
-
     try {
       const result = await this.uow.run(async (scope) => {
-        const replaceLines = new ReplacePurchaseOrderLinesUseCase(
-          scope.purchaseOrders,
-          this.catalog,
-        );
+        const drafts = await scope.purchaseOrders.listNewestDraftsBySuppliers({
+          organizationId: input.organizationId,
+          supplierIds: supplierFilter,
+        });
+
         const purchaseOrderIds: PurchaseOrderId[] = [];
         const syncedSupplierIds: SupplierId[] = [];
         const clearedSupplierIds: SupplierId[] = [];
@@ -109,19 +95,21 @@ export class SyncDraftPurchaseOrdersFromUncoveredUseCase {
             continue;
           }
 
-          const replaced = await replaceLines.execute({
-            organizationId: input.organizationId,
-            staffUserId: input.staffUserId,
-            purchaseOrderId: draft.id,
-            lines: supplierLines.map((line) => ({
+          const resolved = await resolveDraftPurchaseOrderLines(
+            this.catalog,
+            input.organizationId,
+            supplierLines.map((line) => ({
               sku: line.sku.value,
               qty: line.qty,
             })),
-          });
-          if (!replaced.ok) {
+          );
+          if (!resolved.ok) {
             throw new DraftPurchaseOrdersAbortError("invalid", grouped.unmappedSkus);
           }
-          purchaseOrderIds.push(replaced.purchaseOrder.id);
+
+          const updated = { ...draft, lines: resolved.lines };
+          await scope.purchaseOrders.save(updated);
+          purchaseOrderIds.push(updated.id);
           syncedSupplierIds.push(draft.supplierId);
         }
 
