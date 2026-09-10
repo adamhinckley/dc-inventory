@@ -60,10 +60,13 @@ function boundSqlValuesFromSet(set: unknown): unknown[] {
 
 class CapturingIdentityDb {
   readonly conflictSets: unknown[] = [];
+  purgeDeleteCallCount = 0;
 
   delete() {
     return {
-      where: async () => undefined,
+      where: async () => {
+        this.purgeDeleteCallCount += 1;
+      },
     };
   }
 
@@ -84,6 +87,17 @@ class CapturingIdentityDb {
 }
 
 describe("DrizzleLoginThrottle", () => {
+  it("does not run a global purge on every failed attempt", async () => {
+    const db = new CapturingIdentityDb();
+    const throttle = new DrizzleLoginThrottle(db as never, new InMemoryClock(START));
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await throttle.attempt(STAFF_KEY);
+    }
+
+    expect(db.purgeDeleteCallCount).toBe(1);
+  });
+
   it("binds upsert window timestamps as ISO strings", async () => {
     const db = new CapturingIdentityDb();
     const throttle = new DrizzleLoginThrottle(db as never, new InMemoryClock(START));

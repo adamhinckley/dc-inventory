@@ -18,7 +18,12 @@ type CounterRow = {
   windowStartedAt: Date;
 };
 
+/** Global expired-row cleanup runs at most once per interval (not per login attempt). */
+const EXPIRED_ROW_PURGE_INTERVAL_MS = 60_000;
+
 export class DrizzleLoginThrottle implements ILoginThrottle {
+  private lastExpiredPurgeAtMs = 0;
+
   constructor(
     private readonly db: IdentityDrizzle,
     private readonly clock: IClock,
@@ -27,7 +32,7 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
   async attempt(key: LoginThrottleKey): Promise<LoginThrottleResult> {
     const at = this.clock.now();
     const expiredBefore = new Date(at.getTime() - LOGIN_THROTTLE_WINDOW_MS);
-    await this.purgeExpired(expiredBefore);
+    await this.maybePurgeExpired(expiredBefore, at);
 
     const sourceCounter = await this.upsertCounter(
       key.audience,
@@ -77,6 +82,15 @@ export class DrizzleLoginThrottle implements ILoginThrottle {
           ),
         ),
       );
+  }
+
+  private async maybePurgeExpired(expiredBefore: Date, at: Date): Promise<void> {
+    const atMs = at.getTime();
+    if (atMs - this.lastExpiredPurgeAtMs < EXPIRED_ROW_PURGE_INTERVAL_MS) {
+      return;
+    }
+    this.lastExpiredPurgeAtMs = atMs;
+    await this.purgeExpired(expiredBefore);
   }
 
   private async purgeExpired(expiredBefore: Date): Promise<void> {
