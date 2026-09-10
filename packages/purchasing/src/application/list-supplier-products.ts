@@ -66,21 +66,16 @@ export class ListSupplierProductsUseCase {
       sortBy: input.sortBy,
       sortOrder: input.sortOrder,
     });
-    const snapshots = await this.qty.readBySkus(
-      input.organizationId,
-      page.items.map((row) => row.sku),
-    );
-    const names = await Promise.all(
-      page.items.map((row) => this.catalog.findBySku(input.organizationId, row.sku)),
-    );
-    const packaging = await this.factorySendCatalog.readBySkus(
-      input.organizationId,
-      page.items.map((row) => row.sku),
-    );
-    const items: SupplierProductListRow[] = page.items.map((row, index) => ({
+    const pageSkus = page.items.map((row) => row.sku);
+    const [snapshots, names, packaging] = await Promise.all([
+      this.qty.readBySkus(input.organizationId, pageSkus),
+      this.catalog.findBySkus(input.organizationId, pageSkus),
+      this.factorySendCatalog.readBySkus(input.organizationId, pageSkus),
+    ]);
+    const items: SupplierProductListRow[] = page.items.map((row) => ({
       id: row.id,
       sku: row.sku.value,
-      catalogName: names[index]?.name ?? row.sku.value,
+      catalogName: names.get(row.sku.value)?.name ?? row.sku.value,
       supplierSku: row.supplierSku,
       minOrderQty: row.minOrderQty,
       minOrderAmountCents: row.minOrderAmountCents,

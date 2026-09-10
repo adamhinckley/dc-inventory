@@ -10,6 +10,7 @@ import type {
   ISupplierProductQtyReadPort,
 } from "@dc-inventory/purchasing";
 import type { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { readCaseQtyBySkus } from "./catalog-case-qty-by-skus.js";
 
 function toCatalogSnapshot(product: {
   sku: Sku;
@@ -67,19 +68,7 @@ export function factorySendCatalogPort(
   packaging: IProductPackagingRepository,
 ): IFactorySendCatalogPort {
   return {
-    async readBySkus(organizationId: OrganizationId, skus: readonly Sku[]) {
-      const uniqueSkus = [...new Map(skus.map((sku) => [sku.value, sku])).values()];
-      const rows = await Promise.all(
-        uniqueSkus.map(async (sku) => {
-          const product = await productRepo.findBySku(organizationId, sku);
-          if (product === null) {
-            return [sku.value, { caseQty: null }] as const;
-          }
-          const pack = await packaging.findByProductId(product.id);
-          return [sku.value, { caseQty: pack?.caseQty ?? null }] as const;
-        }),
-      );
-      return new Map(rows);
-    },
+    readBySkus: (organizationId, skus) =>
+      readCaseQtyBySkus(organizationId, skus, productRepo, packaging),
   };
 }

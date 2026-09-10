@@ -6,7 +6,7 @@ import {
   StaffUserId,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryPurchaseOrderRepository } from "../src/adapters/in-memory-purchase-order-repository.js";
 import { newUuid, PurchaseOrderLineId } from "../src/domain/ids.js";
 import type {
@@ -160,6 +160,61 @@ describe("GetPurchaseOrderShortReadoutUseCase", () => {
       affectedCustomers: [],
     });
     expect(committedCustomers.requestedSkus).toEqual([]);
+  });
+
+  it("loads uncovered values with one getUncoveredBySkus call per document", async () => {
+    const purchaseOrders = new InMemoryPurchaseOrderRepository(
+      async () => "",
+      async () => "HF",
+    );
+    const batchSkus = Array.from({ length: 25 }, (_, index) =>
+      Sku.parse(`BATCH-SHORT-READOUT-${String(index).padStart(3, "0")}`),
+    );
+    await purchaseOrders.save({
+      id: PO_ID,
+      organizationId: DEFAULT_ORG,
+      supplierId: SUPPLIER_ID,
+      documentNumber: "PO-HF-00001",
+      status: "confirmed",
+      shipDate: null,
+      cancelDate: null,
+      createdAt: new Date("2026-09-02T00:00:00.000Z"),
+      lines: batchSkus.map((sku) => ({
+        id: PurchaseOrderLineId.parse(newUuid()),
+        sku,
+        name: sku.value,
+        qty: 10,
+        receivedQty: 0,
+      })),
+    });
+
+    const inventoryUncovered = new StubUncoveredPort();
+    for (const sku of batchSkus) {
+      inventoryUncovered.set(sku.value, 5);
+    }
+    const getUncovered = vi.spyOn(inventoryUncovered, "getUncovered");
+    const getUncoveredBySkus = vi.spyOn(inventoryUncovered, "getUncoveredBySkus");
+    const committedCustomers = new StubCommittedCustomersPort();
+
+    const useCase = new GetPurchaseOrderShortReadoutUseCase(
+      purchaseOrders,
+      inventoryUncovered,
+      committedCustomers,
+    );
+    const result = await useCase.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: PO_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.uncovered).toHaveLength(25);
+    expect(getUncovered).not.toHaveBeenCalled();
+    expect(getUncoveredBySkus).toHaveBeenCalledTimes(1);
+    expect(getUncoveredBySkus.mock.calls[0]?.[1]).toHaveLength(25);
   });
 
   it("returns not_found when the purchase order is missing", async () => {

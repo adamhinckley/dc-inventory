@@ -11,7 +11,7 @@ import {
   StaffUserId,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
 import { newUuid, PurchaseOrderLineId } from "../src/domain/ids.js";
 import type { IPurchasingUnitOfWork } from "../src/domain/ports/purchase-order-repository.js";
@@ -203,6 +203,48 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(first.purchaseOrder.documentNumber).toBe("PO-HF-00001");
     expect(other.purchaseOrder.documentNumber).toBe("PO-OS-00001");
+  });
+
+  it("loads supplier names with one findByIds call per list page", async () => {
+    const h = await harness();
+    const supplierIds = Array.from({ length: 5 }, (_, index) =>
+      SupplierId.parse(
+        `${String(index).padStart(8, "0")}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`,
+      ),
+    );
+    for (const [index, supplierId] of supplierIds.entries()) {
+      await h.uow.suppliers.save({
+        id: supplierId,
+        organizationId: DEFAULT_ORG,
+        vendorNumber: `VEND-BATCH-${index}`,
+        name: `Batch Supplier ${index}`,
+        poPrefix: `B${index}`,
+      });
+      const created = await h.create.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        supplierId,
+        lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+      });
+      expect(created.ok).toBe(true);
+    }
+
+    const findByIds = vi.spyOn(h.uow.suppliers, "findByIds");
+    const listed = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "documentNumber",
+      sortOrder: "asc",
+    });
+
+    expect(listed.items).toHaveLength(5);
+    expect(findByIds).toHaveBeenCalledTimes(1);
+    expect(findByIds.mock.calls[0]?.[1]).toHaveLength(5);
+    expect([...listed.supplierNames.values()].sort()).toEqual(
+      ["Batch Supplier 0", "Batch Supplier 1", "Batch Supplier 2", "Batch Supplier 3", "Batch Supplier 4"].sort(),
+    );
   });
 
   it("sorts listed purchase orders by ship date and remaining qty", async () => {

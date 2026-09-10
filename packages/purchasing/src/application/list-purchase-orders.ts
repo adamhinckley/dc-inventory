@@ -1,4 +1,4 @@
-import type { OrganizationId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
+import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type {
   IPurchaseOrderRepository,
   ISupplierRepository,
@@ -48,12 +48,10 @@ async function supplierNamesById(
   orders: readonly PurchaseOrder[],
 ): Promise<ReadonlyMap<string, string>> {
   const uniqueIds = [...new Set(orders.map((order) => order.supplierId))];
+  const loaded = await suppliers.findByIds(organizationId, uniqueIds);
   const names = new Map<string, string>();
-  await Promise.all(
-    uniqueIds.map(async (supplierId: SupplierId) => {
-      const supplier = await suppliers.findById(organizationId, supplierId);
-      names.set(supplierId, supplier?.name ?? "");
-    }),
-  );
+  for (const supplierId of uniqueIds) {
+    names.set(supplierId, loaded.get(supplierId)?.name ?? "");
+  }
   return names;
 }

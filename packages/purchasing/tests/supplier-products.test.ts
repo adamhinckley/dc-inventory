@@ -1,5 +1,5 @@
 import { OrganizationId, Sku, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryCatalogSkuLookupPort } from "../src/adapters/in-memory-catalog-sku-lookup.js";
 import { InMemoryFactorySendCatalogPort } from "../src/adapters/in-memory-factory-send-catalog.js";
 import { InMemorySupplierProductQtyReadPort } from "../src/adapters/in-memory-supplier-product-qty-read.js";
@@ -336,6 +336,56 @@ describe("Supplier products use cases (in-memory)", () => {
         uncovered: 0,
       });
     }
+  });
+
+  it("loads catalog names with one findBySkus call per page", async () => {
+    const h = harness();
+    const created = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Acme Supply",
+      vendorNumber: "VEND-001",
+    });
+    if (!created.ok) {
+      throw new Error("expected supplier");
+    }
+
+    const batchSkus = Array.from({ length: 25 }, (_, index) =>
+      Sku.parse(`BATCH-SUPPLIER-PROD-${String(index).padStart(3, "0")}`),
+    );
+    for (const sku of batchSkus) {
+      h.catalog.set(DEFAULT_ORG, sku.value, `Widget ${sku.value}`);
+      const assigned = await h.assignSupplierProduct.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        supplierId: created.supplier.id,
+        sku: sku.value,
+      });
+      expect(assigned.ok).toBe(true);
+    }
+
+    const findBySkus = vi.spyOn(h.catalog, "findBySkus");
+    const readBySkus = vi.spyOn(h.factorySendCatalog, "readBySkus");
+
+    const listed = await h.listSupplierProducts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: created.supplier.id,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) {
+      return;
+    }
+    expect(listed.items).toHaveLength(25);
+    expect(findBySkus).toHaveBeenCalledTimes(1);
+    expect(readBySkus).toHaveBeenCalledTimes(1);
+    expect(findBySkus.mock.calls[0]?.[1]).toHaveLength(25);
+    expect(readBySkus.mock.calls[0]?.[1]).toHaveLength(25);
   });
 
   it("returns not_found for missing supplier or product", async () => {
