@@ -223,9 +223,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         }
         return actingRouteUnauthorized(reply, request, token, result.reason);
       }
-      const session = await request.server.identity.resolveWholesale.execute(token);
-      if (!session.ok) return unauthorized(reply, request, token);
-      return toWholesaleSessionBody(session);
+      return toWholesaleSessionBody(result);
     },
   );
 
