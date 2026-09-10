@@ -11,22 +11,29 @@ import {
   DataTable,
   type ListQueryHook,
   type ListQueryParams,
+  type TableMeta,
 } from "@dc-inventory/ui-internal";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ban } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { cancelPurchaseOrderErrorMessage } from "../lib/purchase-order-action-errors";
 import { purchaseOrderStatusPresentation } from "../lib/purchase-order-status-chip";
+import { purchaseOrderStatusFilterOptions } from "../lib/purchase-order-status-filter";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 
-function useDraftPurchaseOrdersList(
+/** Same `x-table` metadata; supplier UUID filter is not staff-facing on this tab. */
+const purchaseOrdersListTable = {
+  ...listInternalPurchaseOrdersTable,
+  filters: listInternalPurchaseOrdersTable.filters?.filter(
+    (filter) => filter.param !== "supplierId",
+  ),
+} as const satisfies TableMeta;
+
+function usePurchaseOrdersList(
   params?: Parameters<typeof useListInternalPurchaseOrders>[0],
 ) {
-  return useListInternalPurchaseOrders({
-    ...params,
-    status: "draft",
-  });
+  return useListInternalPurchaseOrders(params);
 }
 
 export function PurchaseOrdersTable({
@@ -39,8 +46,15 @@ export function PurchaseOrdersTable({
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  const seededInitialParams = useMemo(() => {
+    if (initialParams?.status !== undefined) {
+      return initialParams;
+    }
+    return { ...initialParams, status: "draft" };
+  }, [initialParams]);
+
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(listInternalPurchaseOrdersTable, params);
+    replaceTableUrlParams(purchaseOrdersListTable, params);
   }, []);
 
   const getRowHref = useCallback((row: { id?: string }) => {
@@ -116,16 +130,18 @@ export function PurchaseOrdersTable({
         </p>
       ) : null}
       <DataTable.Root
-        meta={listInternalPurchaseOrdersTable}
-        queryHook={useDraftPurchaseOrdersList as ListQueryHook<
+        meta={purchaseOrdersListTable}
+        queryHook={usePurchaseOrdersList as ListQueryHook<
           Parameters<typeof useListInternalPurchaseOrders>[0]
         >}
-        initialParams={initialParams}
+        initialParams={seededInitialParams}
         onParamsChange={onParamsChange}
         getRowHref={getRowHref}
         linkField="documentNumber"
         renderRowLink={renderRowLink}
         rowActions={rowActions}
+        filterOptions={{ status: purchaseOrderStatusFilterOptions }}
+        filterLabels={{ status: "Status" }}
         renderColumns={{
           status: (row) => {
             const presentation = purchaseOrderStatusPresentation(row.status);
@@ -142,8 +158,12 @@ export function PurchaseOrdersTable({
             );
           },
         }}
-        idPrefix="draft-purchase-orders"
+        idPrefix="purchase-orders"
       >
+        <DataTable.Toolbar>
+          <DataTable.Search />
+          <DataTable.Filters />
+        </DataTable.Toolbar>
         <DataTable.Table />
         <DataTable.Pagination />
       </DataTable.Root>
