@@ -1,4 +1,4 @@
-import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
+import { CustomerId, type OrganizationId } from "@dc-inventory/shared-kernel";
 import type { IOpenOrderExposureReadPort } from "../domain/ports/open-order-exposure-read.js";
 
 export class InMemoryOpenOrderExposureReadPort implements IOpenOrderExposureReadPort {
@@ -17,5 +17,19 @@ export class InMemoryOpenOrderExposureReadPort implements IOpenOrderExposureRead
     customerId: CustomerId,
   ): Promise<number> {
     return this.exposureByCustomer.get(`${organizationId}\0${customerId}`) ?? 0;
+  }
+
+  async listOpenOrderExposureCentsByCustomer(
+    organizationId: OrganizationId,
+  ): Promise<ReadonlyMap<CustomerId, number>> {
+    const prefix = `${organizationId}\0`;
+    const exposureByCustomer = new Map<CustomerId, number>();
+    for (const [key, exposureCents] of this.exposureByCustomer) {
+      if (!key.startsWith(prefix)) {
+        continue;
+      }
+      exposureByCustomer.set(CustomerId.parse(key.slice(prefix.length)), exposureCents);
+    }
+    return exposureByCustomer;
   }
 }

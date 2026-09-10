@@ -22,9 +22,10 @@ export class InMemoryCustomerBalancesListQuery implements ICustomerBalancesListQ
   ) {}
 
   async list(query: CustomerBalancesListQuery): Promise<CustomerBalancesListPage> {
-    const [profiles, allCustomerData] = await Promise.all([
+    const [profiles, allCustomerData, exposureByCustomer] = await Promise.all([
       this.customerProfiles.listAll(query.organizationId),
       this.arOrgRead.loadAllCustomerData(query.organizationId),
+      this.openOrderExposure.listOpenOrderExposureCentsByCustomer(query.organizationId),
     ]);
     const rows = [];
     const agingByCustomerId = new Map<CustomerId, Readonly<Record<string, number>>>();
@@ -38,10 +39,8 @@ export class InMemoryCustomerBalancesListQuery implements ICustomerBalancesListQ
       if (!shouldIncludeCustomerBalance(projection)) {
         continue;
       }
-      const confirmedUnshippedCents = await this.openOrderExposure.getOpenOrderExposureCents(
-        query.organizationId,
-        profile.customerId,
-      );
+      const confirmedUnshippedCents =
+        exposureByCustomer.get(profile.customerId) ?? 0;
       rows.push(buildCustomerBalanceRow(profile, projection, confirmedUnshippedCents));
       agingByCustomerId.set(profile.customerId, projection.aging);
     }
