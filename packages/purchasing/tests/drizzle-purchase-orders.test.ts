@@ -250,6 +250,7 @@ class FakePurchasingDb {
   readonly lines = new Map<string, LineRow>();
   readonly supplierRows = new Map<string, SupplierRow>();
   readonly statements: string[] = [];
+  lineSelectCount = 0;
   failNextLineInsert = false;
 
   constructor() {
@@ -290,6 +291,7 @@ class FakePurchasingDb {
             if (table === suppliers) {
               return [...self.supplierRows.values()].filter((row) => rowMatches(row, clause));
             }
+            self.lineSelectCount += 1;
             return [...self.lines.values()].filter((row) => rowMatches(row, clause));
           };
           const rows = rowsForTable();
@@ -573,6 +575,22 @@ describe("DrizzlePurchaseOrderRepository.listNewestDraftsBySuppliers", () => {
     });
 
     expect(drafts.map((order) => order.id)).toEqual([NEWER_DRAFT_ID]);
+  });
+});
+
+describe("DrizzlePurchaseOrderRepository.exists", () => {
+  it("returns whether a purchase order header exists without loading lines", async () => {
+    const db = new FakePurchasingDb();
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+    await repo.save(draft([line(LINE_A, SKU, "Bolt", 5), line(LINE_B, OTHER_SKU, "Washer", 2)]));
+
+    expect(await repo.exists(ORG, PO_ID)).toBe(true);
+    expect(await repo.exists(ORG, PurchaseOrderId.parse(FOREIGN_PO_ID))).toBe(false);
+    expect(db.lineSelectCount).toBe(0);
+
+    db.lineSelectCount = 0;
+    await repo.findById(ORG, PO_ID);
+    expect(db.lineSelectCount).toBeGreaterThan(0);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   Sku,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
+import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { RecordCloseSkusForPresellUseCase } from "../src/application/record-close-skus-for-presell.js";
 import { demandModelHarness } from "./support/demand-model-harness.js";
 
@@ -68,5 +69,33 @@ describe("RecordCloseSkusForPresellUseCase", () => {
       skus: [CLOSE_A],
     });
     expect(result).toEqual({ ok: true, closedCount: 0 });
+  });
+
+  it("preserves the original close instant when the window already elapsed", async () => {
+    const clock = new InMemoryClock(INSIDE_WINDOW);
+    const h = demandModelHarness(clock);
+    await lockSku(h, CLOSE_A, "close-uc-elapsed");
+
+    await h.reopenSkusForPresell({
+      organizationId: DEFAULT_ORG,
+      skus: [CLOSE_A],
+      windowOpensAt: WINDOW_OPENS,
+      windowClosesAt: WINDOW_CLOSES,
+    });
+
+    const afterWindow = new Date(WINDOW_CLOSES.getTime() + 60_000);
+    clock.advance(afterWindow.getTime() - INSIDE_WINDOW.getTime());
+
+    const useCase = new RecordCloseSkusForPresellUseCase(h.uow.ledger);
+    const result = await useCase.execute({
+      organizationId: DEFAULT_ORG,
+      skus: [CLOSE_A],
+    });
+    expect(result).toEqual({ ok: true, closedCount: 1 });
+
+    const closed = await h.demandSnapshot(CLOSE_A);
+    expect(closed.stickyLocked).toBe(true);
+    expect(closed.windowClosesAt?.toISOString()).toBe(WINDOW_CLOSES.toISOString());
+    expect(closed.windowClosesAt?.toISOString()).not.toBe(afterWindow.toISOString());
   });
 });

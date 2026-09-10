@@ -111,6 +111,11 @@ export const stockMovements = inventory.table(
       table.sku,
       table.locationId,
     ),
+    index("stock_movements_organization_id_ref_type_ref_id_idx").on(
+      table.organizationId,
+      table.refType,
+      table.refId,
+    ),
     uniqueIndex("stock_movements_organization_id_idempotency_key_sku").on(
       table.organizationId,
       table.idempotencyKey,

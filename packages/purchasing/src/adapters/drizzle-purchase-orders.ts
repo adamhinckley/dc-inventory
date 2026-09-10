@@ -68,6 +68,19 @@ async function loadLinesByPurchaseOrderIds(
   return byPurchaseOrderId;
 }
 
+async function orderExists(
+  db: PurchasingDrizzle,
+  organizationId: OrganizationId,
+  id: PurchaseOrderId,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: purchaseOrders.id })
+    .from(purchaseOrders)
+    .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.organizationId, organizationId)))
+    .limit(1);
+  return rows.length > 0;
+}
+
 async function findOrder(
   db: PurchasingDrizzle,
   organizationId: OrganizationId,
@@ -343,6 +356,10 @@ export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository 
 
   async findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null> {
     return findOrder(this.db, organizationId, id);
+  }
+
+  async exists(organizationId: OrganizationId, id: PurchaseOrderId): Promise<boolean> {
+    return orderExists(this.db, organizationId, id);
   }
 
   async findByDocumentNumber(

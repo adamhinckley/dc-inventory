@@ -56,6 +56,7 @@ export interface IPurchaseOrderRepository {
     query: ListNewestDraftsBySuppliersQuery,
   ): Promise<readonly PurchaseOrder[]>;
   findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null>;
+  exists(organizationId: OrganizationId, id: PurchaseOrderId): Promise<boolean>;
   save(order: PurchaseOrder): Promise<void>;
   insertWithNextDocumentNumber(order: UnnumberedPurchaseOrder): Promise<PurchaseOrder>;
   findByDocumentNumber(
