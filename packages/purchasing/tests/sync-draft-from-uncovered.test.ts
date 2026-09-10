@@ -83,6 +83,17 @@ class StubUncoveredPort implements IInventoryUncoveredReadPort {
   async getUncovered(_organizationId: OrganizationId, sku: Sku): Promise<number> {
     return this.values.get(sku.value) ?? 0;
   }
+
+  async getUncoveredBySkus(
+    _organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, number>> {
+    const rows = new Map<string, number>();
+    for (const sku of skus) {
+      rows.set(sku.value, this.values.get(sku.value) ?? 0);
+    }
+    return rows;
+  }
 }
 
 async function harness() {

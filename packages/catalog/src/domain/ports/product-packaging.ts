@@ -46,6 +46,9 @@ export function emptyProductPackaging(productId: ProductId): ProductPackaging {
 
 export interface IProductPackagingRepository {
   findByProductId(productId: ProductId): Promise<ProductPackaging | null>;
+  findByProductIds(
+    productIds: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, ProductPackaging>>;
   save(packaging: ProductPackaging): Promise<void>;
   saveMany(packaging: readonly ProductPackaging[]): Promise<void>;
 }

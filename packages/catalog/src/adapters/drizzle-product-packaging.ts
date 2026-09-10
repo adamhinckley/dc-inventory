@@ -1,5 +1,5 @@
 import { ProductId } from "@dc-inventory/shared-kernel";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { newUuid } from "../domain/ids.js";
 import type {
@@ -74,6 +74,20 @@ export class DrizzleProductPackagingRepository implements IProductPackagingRepos
       return null;
     }
     return rowToPackaging(row);
+  }
+
+  async findByProductIds(
+    productIds: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, ProductPackaging>> {
+    const unique = [...new Map(productIds.map((productId) => [productId, productId])).values()];
+    if (unique.length === 0) {
+      return new Map();
+    }
+    const rows = await this.db
+      .select()
+      .from(productPackaging)
+      .where(inArray(productPackaging.productId, unique));
+    return new Map(rows.map((row) => [row.productId, rowToPackaging(row)]));
   }
 
   async save(packaging: ProductPackaging): Promise<void> {

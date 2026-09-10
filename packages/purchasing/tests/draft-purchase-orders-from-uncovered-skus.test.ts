@@ -7,7 +7,7 @@ import {
   StaffUserId,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryCatalogSkuLookupPort } from "../src/adapters/in-memory-catalog-sku-lookup.js";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
 import { InMemorySupplierProductRepository } from "../src/adapters/in-memory-supplier-product-repository.js";
@@ -46,6 +46,17 @@ class StubUncoveredPort implements IInventoryUncoveredReadPort {
 
   async getUncovered(_organizationId: OrganizationId, sku: Sku): Promise<number> {
     return this.values.get(sku.value) ?? 0;
+  }
+
+  async getUncoveredBySkus(
+    _organizationId: OrganizationId,
+    skus: readonly Sku[],
+  ): Promise<ReadonlyMap<string, number>> {
+    const rows = new Map<string, number>();
+    for (const sku of skus) {
+      rows.set(sku.value, this.values.get(sku.value) ?? 0);
+    }
+    return rows;
   }
 }
 
@@ -95,6 +106,7 @@ async function harness() {
     uow,
     catalog,
     supplierProducts,
+    supplierMapping,
     uncovered,
     caseQty,
     assignProduct,
@@ -263,6 +275,48 @@ describe("DraftPurchaseOrdersFromUncoveredSkusUseCase", () => {
     }
     expect(result.unmappedSkus).toEqual([SKU_A.value]);
     expect(result.purchaseOrders).toEqual([]);
+  });
+
+  it("calls mapping, uncovered, and case-qty ports once for 20+ SKUs", async () => {
+    const h = await harness();
+    const batchSkus = Array.from({ length: 25 }, (_, index) =>
+      Sku.parse(`BATCH-DRAFT-${String(index).padStart(3, "0")}`),
+    );
+
+    for (const sku of batchSkus) {
+      h.catalog.set(DEFAULT_ORG, sku.value, `Widget ${sku.value}`);
+      await h.assignProduct.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        supplierId: SUPPLIER_A,
+        sku: sku.value,
+      });
+      h.uncovered.set(sku.value, 12);
+      h.caseQty.set(DEFAULT_ORG, sku.value, 48);
+    }
+
+    const getSkuMappings = vi.spyOn(h.supplierMapping, "getSkuMappings");
+    const getUncoveredBySkus = vi.spyOn(h.uncovered, "getUncoveredBySkus");
+    const readBySkus = vi.spyOn(h.caseQty, "readBySkus");
+
+    const result = await h.draftFromUncovered.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      skus: batchSkus.map((sku) => sku.value),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.purchaseOrders).toHaveLength(1);
+    expect(result.purchaseOrders[0]?.lines).toHaveLength(25);
+    expect(getSkuMappings).toHaveBeenCalledTimes(1);
+    expect(getUncoveredBySkus).toHaveBeenCalledTimes(1);
+    expect(readBySkus).toHaveBeenCalledTimes(1);
+    expect(getSkuMappings.mock.calls[0]?.[1]).toHaveLength(25);
+    expect(getUncoveredBySkus.mock.calls[0]?.[1]).toHaveLength(25);
+    expect(readBySkus.mock.calls[0]?.[1]).toHaveLength(25);
   });
 
   it("rolls back earlier drafts when a later supplier create fails", async () => {

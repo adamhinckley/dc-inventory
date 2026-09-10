@@ -11,8 +11,13 @@ import {
   Sku,
 } from "@dc-inventory/shared-kernel";
 import { SalesOrderLineId } from "@dc-inventory/sales";
+import { computeUncovered } from "@dc-inventory/inventory";
 import { describe, expect, it } from "vitest";
-import { committedCustomerNamesPort } from "./purchasing-short-readout-ports.js";
+import {
+  committedCustomerNamesPort,
+  inventoryUncoveredReadPort,
+} from "./purchasing-short-readout-ports.js";
+import { createCatalogListQueryPgliteHarness } from "./support/catalog-list-query-pglite.js";
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
 const SKU_A = Sku.parse("SHORT-A");
@@ -64,6 +69,67 @@ async function seedSalesOrder(
     ],
   });
 }
+
+describe("inventoryUncoveredReadPort", () => {
+  it("loads uncovered for multiple SKUs in one stock_snapshots IN query", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      const skuA = Sku.parse("UNCOVERED-BATCH-A");
+      const skuB = Sku.parse("UNCOVERED-BATCH-B");
+      await harness.client.query(
+        `INSERT INTO catalog.products
+          (id, organization_id, sku, name, uom, member_price_cents, list_price_cents, web_wholesale)
+         VALUES ($1, $2, $3, 'Uncovered A', 'EA', 100, 50, true),
+                ($4, $2, $5, 'Uncovered B', 'EA', 100, 50, true)`,
+        [
+          "da209000-0000-4000-8000-000000000801",
+          OrganizationId.DEFAULT,
+          skuA.value,
+          "da209000-0000-4000-8000-000000000802",
+          skuB.value,
+        ],
+      );
+      await harness.client.query(
+        `INSERT INTO inventory.stock_snapshots
+          (organization_id, sku, location_id, on_hand, on_order, committed)
+         VALUES ($1, $2, $3, 10, 5, 40),
+                ($1, $4, $3, 0, 0, 25)`,
+        [OrganizationId.DEFAULT, skuA.value, harness.locationId, skuB.value],
+      );
+
+      const port = inventoryUncoveredReadPort(harness.db);
+      const uncovered = await port.getUncoveredBySkus(OrganizationId.DEFAULT, [
+        skuA,
+        skuB,
+        Sku.parse("UNCOVERED-MISSING"),
+      ]);
+
+      expect(uncovered.get(skuA.value)).toBe(computeUncovered(40, 10, 5));
+      expect(uncovered.get(skuB.value)).toBe(computeUncovered(25, 0, 0));
+      expect(uncovered.get("UNCOVERED-MISSING")).toBe(0);
+    } finally {
+      await harness.close();
+    }
+  });
+
+  it("returns uncovered 0 for every SKU when DEFAULT location is missing", async () => {
+    const harness = await createCatalogListQueryPgliteHarness();
+    try {
+      await harness.client.query(`DELETE FROM inventory.stock_snapshots`);
+      await harness.client.query(`DELETE FROM inventory.locations WHERE organization_id = $1`, [
+        OrganizationId.DEFAULT,
+      ]);
+
+      const port = inventoryUncoveredReadPort(harness.db);
+      const sku = Sku.parse("NO-DEFAULT-LOC");
+      const uncovered = await port.getUncoveredBySkus(OrganizationId.DEFAULT, [sku]);
+
+      expect(uncovered.get(sku.value)).toBe(0);
+    } finally {
+      await harness.close();
+    }
+  });
+});
 
 describe("committedCustomerNamesPort", () => {
   it("includes confirmed orders with live lines on requested SKUs and resolves customer names", async () => {
