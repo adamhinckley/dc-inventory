@@ -18,7 +18,12 @@ type ArSqlScope = {
   readonly asOf: Date;
 };
 
+function asOfSqlBind(asOf: Date): string {
+  return asOf.toISOString();
+}
+
 function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
+  const asOfBound = asOfSqlBind(asOf);
   return sql`
     with invoice_totals as (
       select
@@ -39,7 +44,7 @@ function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
           i.due_date,
           greatest(0, (
             extract(epoch from (
-              date_trunc('day', ${asOf} at time zone 'UTC') -
+              date_trunc('day', ${asOfBound}::timestamptz at time zone 'UTC') -
               date_trunc('day', i.due_date at time zone 'UTC')
             )) / 86400
           )::int) as days_past_due,
@@ -55,7 +60,7 @@ function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
           inner join accounting.payments p on p.id = pa.payment_id
           where p.organization_id = ${organizationId}
             and p.voided_at is null
-            and p.received_at <= ${asOf}
+            and p.received_at <= ${asOfBound}::timestamptz
           group by pa.invoice_id
         ) applied on applied.invoice_id = i.id
         left join (
@@ -64,12 +69,12 @@ function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
             sum(ia.amount_cents)::int as adjustment_cents
           from accounting.invoice_adjustments ia
           where ia.organization_id = ${organizationId}
-            and ia.created_at <= ${asOf}
+            and ia.created_at <= ${asOfBound}::timestamptz
           group by ia.invoice_id
         ) adjusted on adjusted.invoice_id = i.id
         where i.organization_id = ${organizationId}
           and i.posted_at is not null
-          and i.posted_at <= ${asOf}
+          and i.posted_at <= ${asOfBound}::timestamptz
       ) invoice_rows
       group by customer_id
     ),
@@ -78,7 +83,7 @@ function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
         p.customer_id,
         coalesce(sum(
           case
-            when p.voided_at is null and p.received_at <= ${asOf}
+            when p.voided_at is null and p.received_at <= ${asOfBound}::timestamptz
               then p.amount_cents - coalesce(applied.applied_cents, 0)
             else 0
           end
@@ -163,6 +168,7 @@ function bucketColumnName(bucket: AgingBucket): string {
 }
 
 function sortExpression(sortBy: CustomerBalancesSortBy, asOf: Date): SQL {
+  const asOfBound = asOfSqlBind(asOf);
   switch (sortBy) {
     case "pastDue":
       return sql`past_due_cents`;
@@ -179,7 +185,7 @@ function sortExpression(sortBy: CustomerBalancesSortBy, asOf: Date): SQL {
         when oldest_due_date is null then 0
         else greatest(0, (
           extract(epoch from (
-            date_trunc('day', ${asOf} at time zone 'UTC') -
+            date_trunc('day', ${asOfBound}::timestamptz at time zone 'UTC') -
             date_trunc('day', oldest_due_date at time zone 'UTC')
           )) / 86400
         )::int)
@@ -300,6 +306,7 @@ export async function queryOrgSummaryAggregates(
   db: AppDrizzle,
   scope: ArSqlScope,
 ): Promise<OrgSummaryAggregates> {
+  const asOfBound = asOfSqlBind(scope.asOf);
   const [summaryResult, writeOffResult] = await Promise.all([
     db.execute<{
       total_open_ar_cents: number;
@@ -333,8 +340,8 @@ export async function queryOrgSummaryAggregates(
       where organization_id = ${scope.organizationId}
         and kind = 'write_off'
         and amount_cents > 0
-        and created_at >= date_trunc('month', ${scope.asOf} at time zone 'UTC')
-        and created_at <= ${scope.asOf}
+        and created_at >= date_trunc('month', ${asOfBound}::timestamptz at time zone 'UTC')
+        and created_at <= ${asOfBound}::timestamptz
     `),
   ]);
 
