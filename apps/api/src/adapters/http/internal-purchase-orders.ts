@@ -6,6 +6,7 @@ import { PurchaseOrderLineId, type PurchaseOrder } from "@dc-inventory/purchasin
 import { PurchaseOrderId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
   conflictResponseSchema,
+  confirmPurchaseOrderConflictResponseSchema,
   supplierPoPrefixMissingResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
@@ -457,7 +458,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: conflictResponseSchema,
+          409: confirmPurchaseOrderConflictResponseSchema,
         },
       },
     },
@@ -476,9 +477,15 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           result.reason === "illegal_transition" ||
           result.reason === "product_not_found" ||
           result.reason === "idempotency_conflict" ||
-          result.reason === "inventory_conflict"
+          result.reason === "inventory_conflict" ||
+          result.reason === "provenance_conflict" ||
+          result.reason === "invalid_quantity"
         ) {
-          return sendConflict(reply);
+          return reply.code(409).send({
+            error: result.reason,
+            ...(result.sku !== undefined ? { sku: result.sku } : {}),
+            ...(result.name !== undefined ? { name: result.name } : {}),
+          });
         }
         return sendInvalid(reply);
       }

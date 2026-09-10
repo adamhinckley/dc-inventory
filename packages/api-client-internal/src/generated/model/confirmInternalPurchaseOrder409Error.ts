@@ -9,5 +9,10 @@ export type ConfirmInternalPurchaseOrder409Error = typeof ConfirmInternalPurchas
 
 
 export const ConfirmInternalPurchaseOrder409Error = {
-  conflict: 'conflict',
+  illegal_transition: 'illegal_transition',
+  product_not_found: 'product_not_found',
+  inventory_conflict: 'inventory_conflict',
+  idempotency_conflict: 'idempotency_conflict',
+  provenance_conflict: 'provenance_conflict',
+  invalid_quantity: 'invalid_quantity',
 } as const;

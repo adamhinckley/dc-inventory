@@ -11,17 +11,23 @@ export type ConfirmPurchaseOrderRequest = {
   idempotencyKey: string;
 };
 
+export type ConfirmPurchaseOrderFailureReason =
+  | "not_found"
+  | "illegal_transition"
+  | "empty_order"
+  | "product_not_found"
+  | "inventory_conflict"
+  | "idempotency_conflict"
+  | "provenance_conflict"
+  | "invalid_quantity";
+
 export type ConfirmPurchaseOrderResult =
   | { ok: true; purchaseOrder: PurchaseOrder }
   | {
       ok: false;
-      reason:
-        | "not_found"
-        | "illegal_transition"
-        | "empty_order"
-        | "product_not_found"
-        | "inventory_conflict"
-        | "idempotency_conflict";
+      reason: ConfirmPurchaseOrderFailureReason;
+      sku?: string;
+      name?: string;
     };
 
 export class ConfirmPurchaseOrderUseCase {
@@ -77,7 +83,14 @@ export class ConfirmPurchaseOrderUseCase {
             if (result.reason === "idempotency_conflict") {
               throw new PurchasingTransactionError("idempotency_conflict");
             }
-            throw new PurchasingTransactionError("inventory_conflict");
+            const reason: ConfirmPurchaseOrderFailureReason =
+              result.reason === "provenance_conflict" || result.reason === "invalid_quantity"
+                ? result.reason
+                : "inventory_conflict";
+            throw new PurchasingTransactionError(reason, {
+              sku: line.sku.value,
+              name: line.name,
+            });
           }
         }
 
@@ -87,7 +100,12 @@ export class ConfirmPurchaseOrderUseCase {
       });
     } catch (error) {
       if (error instanceof PurchasingTransactionError) {
-        return { ok: false, reason: error.reason as ConfirmPurchaseOrderResult extends { ok: false; reason: infer R } ? R : never };
+        return {
+          ok: false,
+          reason: error.reason as ConfirmPurchaseOrderFailureReason,
+          sku: error.details.sku,
+          name: error.details.name,
+        };
       }
       throw error;
     }

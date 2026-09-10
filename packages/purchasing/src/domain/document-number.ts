@@ -1,7 +1,29 @@
+import { parsePoPrefix } from "./supplier.js";
+
 const DOCUMENT_PREFIX = "PO-";
 
 export function formatDocumentNumber(poPrefix: string, sequence: number): string {
   return `${DOCUMENT_PREFIX}${poPrefix}-${String(sequence).padStart(5, "0")}`;
+}
+
+/** Stable 4-character stand-in when a supplier has no PO prefix. */
+export function fallbackDocumentPoPrefix(supplierId: string): string {
+  const hex = supplierId.replace(/-/g, "").slice(-4).toUpperCase();
+  if (hex.length < 2) {
+    return "XX";
+  }
+  return hex;
+}
+
+export function resolveDocumentPoPrefix(
+  poPrefix: string | null | undefined,
+  supplierId: string,
+): string {
+  const parsed = parsePoPrefix(poPrefix);
+  if (parsed !== null && parsed !== "invalid") {
+    return parsed;
+  }
+  return fallbackDocumentPoPrefix(supplierId);
 }
 
 export type ParsedPurchaseOrderDocumentNumber = {

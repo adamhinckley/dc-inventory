@@ -8061,7 +8061,16 @@ paths:
                   error:
                     type: string
                     enum:
-                      - conflict
+                      - illegal_transition
+                      - product_not_found
+                      - inventory_conflict
+                      - idempotency_conflict
+                      - provenance_conflict
+                      - invalid_quantity
+                  sku:
+                    type: string
+                  name:
+                    type: string
                 required:
                   - error
                 additionalProperties: false

@@ -198,6 +198,37 @@ describe("DraftPurchaseOrdersFromUncoveredSkusUseCase", () => {
     expect(poB?.lines[0]?.qty).toBe(40);
   });
 
+  it("drafts a PO when the supplier has no PO prefix", async () => {
+    const h = await harness();
+    await h.uow.suppliers.save({
+      id: SUPPLIER_A,
+      organizationId: DEFAULT_ORG,
+      vendorNumber: "FA",
+      name: "Factory A",
+      poPrefix: null,
+    });
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+    h.uncovered.set(SKU_A.value, 12);
+
+    const result = await h.draftFromUncovered.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      skus: [SKU_A.value],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.purchaseOrders).toHaveLength(1);
+    expect(result.purchaseOrders[0]?.documentNumber).toBe("PO-AAAA-00001");
+  });
+
   it("treats ambiguous multi-supplier SKUs as unmapped without failing mapped drafts", async () => {
     const h = await harness();
     await h.assignProduct.execute({

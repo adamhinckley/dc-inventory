@@ -117,7 +117,7 @@ describe("internal purchase orders HTTP", () => {
     expect(response.json()).toEqual({ error: "unauthorized" });
   });
 
-  it("returns 409 when creating a PO for a supplier without poPrefix", async () => {
+  it("creates a PO with a fallback document number when the supplier has no poPrefix", async () => {
     const app = await startPurchasingApp();
     const cookie = await staffCookie(app);
     const created = await app.inject({
@@ -129,8 +129,12 @@ describe("internal purchase orders HTTP", () => {
         lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 1 }],
       },
     });
-    expect(created.statusCode).toBe(409);
-    expect(created.json()).toEqual({ error: "supplier_po_prefix_missing" });
+    expect(created.statusCode).toBe(201);
+    expect(created.json()).toMatchObject({
+      supplierId: SUPPLIER_NO_PREFIX_ID,
+      documentNumber: "PO-EEEE-00001",
+      status: "draft",
+    });
   });
 
   it("gets a purchase order by exact document number", async () => {
@@ -328,6 +332,40 @@ describe("internal purchase orders HTTP", () => {
     expect(received.json()).toMatchObject({ status: "received" });
   });
 
+  it("returns illegal_transition when issuing a purchase order that is not a draft", async () => {
+    const app = await startPurchasingApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/purchase-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        supplierId: SUPPLIER_ID,
+        lines: [{ sku: "HEX-BOLT-GALV", name: "Hex bolt", qty: 4 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const po = created.json() as { id: string };
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-confirm-once" },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const again = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-confirm-again" },
+    });
+    expect(again.statusCode).toBe(409);
+    expect(again.json()).toEqual({ error: "illegal_transition" });
+  });
+
   it("unconfirms a zero-received confirmed purchase order and blocks after receive", async () => {
     const app = await startPurchasingApp();
     const cookie = await staffCookie(app);
@@ -362,6 +400,19 @@ describe("internal purchase orders HTTP", () => {
     expect(unconfirmed.json()).toMatchObject({
       status: "draft",
       documentNumber: po.documentNumber,
+    });
+
+    const reissued = await app.inject({
+      method: "POST",
+      url: `/internal/purchase-orders/${po.id}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-confirm-after-unconfirm" },
+    });
+    expect(reissued.statusCode).toBe(409);
+    expect(reissued.json()).toEqual({
+      error: "provenance_conflict",
+      sku: "HEX-BOLT-GALV",
+      name: "Hex bolt from Catalog",
     });
 
     const blockedDraft = await app.inject({

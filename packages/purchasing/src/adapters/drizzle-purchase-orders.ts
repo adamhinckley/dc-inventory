@@ -1,8 +1,11 @@
 import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/shared-kernel";
 import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { formatDocumentNumber, parseDocumentNumber } from "../domain/document-number.js";
-import { SupplierPoPrefixMissingError } from "../domain/errors.js";
+import {
+  formatDocumentNumber,
+  parseDocumentNumber,
+  resolveDocumentPoPrefix,
+} from "../domain/document-number.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
   IPurchaseOrderRepository,
@@ -198,11 +201,7 @@ async function loadSupplierPoPrefix(
     .from(suppliers)
     .where(and(eq(suppliers.id, supplierId), eq(suppliers.organizationId, organizationId)))
     .limit(1);
-  const poPrefix = rows[0]?.poPrefix?.trim();
-  if (poPrefix === undefined || poPrefix.length === 0) {
-    throw new SupplierPoPrefixMissingError();
-  }
-  return poPrefix;
+  return resolveDocumentPoPrefix(rows[0]?.poPrefix, supplierId);
 }
 
 async function allocateDocumentNumber(
