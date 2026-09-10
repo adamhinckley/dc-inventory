@@ -6874,73 +6874,33 @@ paths:
               schema:
                 type: object
                 properties:
-                  purchaseOrders:
+                  purchaseOrderIds:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          format: uuid
-                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                        supplierId:
-                          type: string
-                          format: uuid
-                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                        documentNumber:
-                          type: string
-                        status:
-                          type: string
-                          enum:
-                            - draft
-                            - confirmed
-                            - received
-                            - cancelled
-                        shipDate:
-                          nullable: true
-                          type: string
-                        cancelDate:
-                          nullable: true
-                          type: string
-                        lines:
-                          type: array
-                          items:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                                format: uuid
-                                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                              sku:
-                                type: string
-                              name:
-                                type: string
-                              qty:
-                                type: integer
-                                minimum: -9007199254740991
-                                maximum: 9007199254740991
-                              receivedQty:
-                                type: integer
-                                minimum: -9007199254740991
-                                maximum: 9007199254740991
-                            required:
-                              - id
-                              - sku
-                              - name
-                              - qty
-                              - receivedQty
-                            additionalProperties: false
-                      required:
-                        - id
-                        - supplierId
-                        - documentNumber
-                        - status
-                        - shipDate
-                        - cancelDate
-                        - lines
-                      additionalProperties: false
+                      type: string
+                      format: uuid
+                      pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  syncedSupplierIds:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                      pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  clearedSupplierIds:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                      pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  unmappedSkus:
+                    type: array
+                    items:
+                      type: string
                 required:
-                  - purchaseOrders
+                  - purchaseOrderIds
+                  - syncedSupplierIds
+                  - clearedSupplierIds
+                  - unmappedSkus
                 additionalProperties: false
         "400":
           description: Default Response

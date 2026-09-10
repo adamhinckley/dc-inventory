@@ -924,7 +924,10 @@ export const syncDraftPurchaseOrdersFromUncoveredBodySchema = z.object({
 });
 
 export const syncDraftPurchaseOrdersFromUncoveredResponseSchema = z.object({
-  purchaseOrders: z.array(purchaseOrderItemSchema),
+  purchaseOrderIds: z.array(z.string().uuid()),
+  syncedSupplierIds: z.array(z.string().uuid()),
+  clearedSupplierIds: z.array(z.string().uuid()),
+  unmappedSkus: z.array(z.string()),
 });
 
 export const purchaseOrderListItemSchema = purchaseOrderItemSchema.extend({

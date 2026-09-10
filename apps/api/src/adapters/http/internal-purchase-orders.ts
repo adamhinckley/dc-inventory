@@ -167,7 +167,10 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         return sendInvalid(reply);
       }
       return {
-        purchaseOrders: result.purchaseOrders.map(mapPurchaseOrder),
+        purchaseOrderIds: result.purchaseOrderIds.map((id) => id),
+        syncedSupplierIds: result.syncedSupplierIds.map((id) => id),
+        clearedSupplierIds: result.clearedSupplierIds.map((id) => id),
+        unmappedSkus: [...result.unmappedSkus],
       };
     },
   );

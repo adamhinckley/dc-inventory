@@ -45,8 +45,16 @@ export type ListPurchaseOrdersQuery = {
   supplierId?: SupplierId;
 };
 
+export type ListNewestDraftsBySuppliersQuery = {
+  organizationId: OrganizationId;
+  supplierIds?: readonly SupplierId[];
+};
+
 export interface IPurchaseOrderRepository {
   list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage>;
+  listNewestDraftsBySuppliers(
+    query: ListNewestDraftsBySuppliersQuery,
+  ): Promise<readonly PurchaseOrder[]>;
   findById(organizationId: OrganizationId, id: PurchaseOrderId): Promise<PurchaseOrder | null>;
   save(order: PurchaseOrder): Promise<void>;
   insertWithNextDocumentNumber(order: UnnumberedPurchaseOrder): Promise<PurchaseOrder>;

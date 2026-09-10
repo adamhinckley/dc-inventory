@@ -10,6 +10,7 @@ import {
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
   IPurchaseOrderRepository,
+  ListNewestDraftsBySuppliersQuery,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
   PurchaseOrderListSortBy,
@@ -281,6 +282,28 @@ function purchaseOrderListSortColumn(sortBy: PurchaseOrderListSortBy) {
 
 export class DrizzlePurchaseOrderRepository implements IPurchaseOrderRepository {
   constructor(private readonly db: PurchasingDrizzle) {}
+
+  async listNewestDraftsBySuppliers(
+    query: ListNewestDraftsBySuppliersQuery,
+  ): Promise<readonly PurchaseOrder[]> {
+    const clauses = [
+      eq(purchaseOrders.organizationId, query.organizationId),
+      eq(purchaseOrders.status, "draft"),
+    ];
+    if (query.supplierIds !== undefined && query.supplierIds.length > 0) {
+      clauses.push(inArray(purchaseOrders.supplierId, [...query.supplierIds]));
+    }
+    const headers = await this.db
+      .selectDistinctOn([purchaseOrders.supplierId], { header: purchaseOrders })
+      .from(purchaseOrders)
+      .where(and(...clauses))
+      .orderBy(asc(purchaseOrders.supplierId), desc(purchaseOrders.createdAt));
+    const lines = await loadLinesByPurchaseOrderIds(
+      this.db,
+      headers.map((row) => row.header.id),
+    );
+    return headers.map((row) => toOrder(row.header, lines.get(row.header.id) ?? []));
+  }
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
     const clauses = [eq(purchaseOrders.organizationId, query.organizationId)];

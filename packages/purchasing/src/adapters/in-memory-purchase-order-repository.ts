@@ -13,6 +13,7 @@ import {
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
   IPurchaseOrderRepository,
+  ListNewestDraftsBySuppliersQuery,
   ListPurchaseOrdersQuery,
   PurchaseOrderListPage,
   PurchaseOrderListSortBy,
@@ -99,6 +100,32 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
       _organizationId: OrganizationId,
     ): Promise<readonly { id: SupplierId; poPrefix: string | null }[]> => [],
   ) {}
+
+  async listNewestDraftsBySuppliers(
+    query: ListNewestDraftsBySuppliersQuery,
+  ): Promise<readonly PurchaseOrder[]> {
+    const allowed =
+      query.supplierIds !== undefined && query.supplierIds.length > 0
+        ? new Set(query.supplierIds)
+        : null;
+    const newestBySupplier = new Map<SupplierId, Stored>();
+    for (const row of this.byId.values()) {
+      if (row.order.organizationId !== query.organizationId) {
+        continue;
+      }
+      if (row.order.status !== "draft") {
+        continue;
+      }
+      if (allowed !== null && !allowed.has(row.order.supplierId)) {
+        continue;
+      }
+      const existing = newestBySupplier.get(row.order.supplierId);
+      if (existing === undefined || row.order.createdAt > existing.order.createdAt) {
+        newestBySupplier.set(row.order.supplierId, row);
+      }
+    }
+    return [...newestBySupplier.values()].map((row) => row.order);
+  }
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
     const needle = query.q?.trim().toLowerCase() ?? "";
