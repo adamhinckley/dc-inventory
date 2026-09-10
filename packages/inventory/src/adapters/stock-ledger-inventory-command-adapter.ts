@@ -127,12 +127,11 @@ export class StockLedgerInventoryCommandAdapter implements IInventoryCommandPort
   }
 
   async matchesCommittedIdempotency(command: CommittedCommand): Promise<boolean> {
-    const movements = await this.readModel.listMovements({
-      organizationId: command.organizationId,
-      sku: command.sku,
-      locationId: LocationId.DEFAULT,
-    });
-    const existing = movements.find((movement) => movement.idempotencyKey === command.idempotencyKey);
+    const existing = await this.readModel.findMovementByIdempotency(
+      command.organizationId,
+      command.idempotencyKey,
+      command.sku,
+    );
     if (existing === undefined) {
       return false;
     }
@@ -158,12 +157,11 @@ export class StockLedgerInventoryCommandAdapter implements IInventoryCommandPort
   }
 
   async matchesDecommittedIdempotency(command: DecommittedCommand): Promise<boolean> {
-    const movements = await this.readModel.listMovements({
-      organizationId: command.organizationId,
-      sku: command.sku,
-      locationId: LocationId.DEFAULT,
-    });
-    const existing = movements.find((movement) => movement.idempotencyKey === command.idempotencyKey);
+    const existing = await this.readModel.findMovementByIdempotency(
+      command.organizationId,
+      command.idempotencyKey,
+      command.sku,
+    );
     if (existing === undefined) {
       return false;
     }

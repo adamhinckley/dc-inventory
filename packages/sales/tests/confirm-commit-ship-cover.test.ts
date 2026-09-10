@@ -1,6 +1,6 @@
 import { computeUncovered } from "@dc-inventory/inventory";
 import { OrderId } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   COVER_PRODUCT_ID,
   COVER_SKU,
@@ -477,6 +477,40 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
       const committedMovements = movements.filter((movement) => movement.movementType === "Committed");
       expect(committedMovements).toHaveLength(1);
       expect(committedMovements[0]?.quantity).toBe(100);
+    });
+
+    ownerIt("confirm replay uses keyed idempotency lookup instead of listing full SKU history", async () => {
+      const h = salesDemandHarness();
+      await seedOnHand(h, OPEN_SKU, 500, "confirm-replay-keyed-seed");
+      const draft = await h.createDraft(OPEN_PRODUCT_ID, 100);
+      expect(draft.ok).toBe(true);
+      if (!draft.ok) {
+        return;
+      }
+
+      const first = await h.confirm.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        salesOrderId: draft.salesOrderId,
+        idempotencyKey: "confirm-replay-keyed",
+        shipToId: h.shipToId,
+      });
+      expect(first.ok).toBe(true);
+
+      const listMovements = vi.spyOn(h.readModel, "listMovements");
+      const retry = await h.confirm.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        salesOrderId: draft.salesOrderId,
+        idempotencyKey: "confirm-replay-keyed",
+        shipToId: h.shipToId,
+      });
+      expect(retry.ok).toBe(true);
+
+      const skuHistoryCalls = listMovements.mock.calls.filter((call) => call[0]?.sku !== undefined);
+      expect(skuHistoryCalls).toHaveLength(0);
+
+      listMovements.mockRestore();
     });
   });
 });

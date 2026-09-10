@@ -160,11 +160,11 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
     }
   }
 
-  findMovementByIdempotency(
+  async findMovementByIdempotency(
     organizationId: OrganizationId,
     idempotencyKey: string,
     sku: Sku,
-  ): Movement | undefined {
+  ): Promise<Movement | undefined> {
     return this.byIdempotency.get(idempotencyIndexKey(organizationId, idempotencyKey, sku));
   }
 

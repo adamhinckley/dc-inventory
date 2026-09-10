@@ -124,6 +124,37 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
     return row === undefined ? ZERO_DEMAND_STATE : toDemandState(row);
   }
 
+  async findMovementByIdempotency(
+    organizationId: OrganizationId,
+    idempotencyKey: string,
+    sku: Sku,
+  ): Promise<Movement | undefined> {
+    const org = resolveOrganizationId(organizationId);
+    const rows = await this.db
+      .select()
+      .from(stockMovements)
+      .where(
+        and(
+          eq(stockMovements.organizationId, org),
+          eq(stockMovements.idempotencyKey, idempotencyKey),
+          eq(stockMovements.sku, sku.value),
+        ),
+      )
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      return undefined;
+    }
+    try {
+      return this.toMovement(row, LocationId.DEFAULT, OrganizationId.parse(row.organizationId));
+    } catch (error) {
+      if (error instanceof InvalidSkuError) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
   async listMovements(filter: MovementListFilter): Promise<readonly Movement[]> {
     const organizationId = resolveOrganizationId(filter.organizationId);
     const conditions = [eq(stockMovements.organizationId, organizationId)];

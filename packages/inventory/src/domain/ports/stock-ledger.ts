@@ -170,4 +170,9 @@ export interface IInventoryReadModel {
     organizationId: OrganizationId,
   ): Promise<DemandStockFigures>;
   listMovements(filter: MovementListFilter): Promise<readonly Movement[]>;
+  findMovementByIdempotency(
+    organizationId: OrganizationId,
+    idempotencyKey: string,
+    sku: Sku,
+  ): Promise<Movement | undefined>;
 }

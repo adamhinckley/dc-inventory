@@ -535,7 +535,7 @@ export class InMemoryStockLedger implements IStockLedger {
     return null;
   }
 
-  private applyRecord(
+  private async applyRecord(
     movementType: MovementType,
     command: StockCommandBase,
     bulkState?: BulkRecordState,
@@ -544,7 +544,7 @@ export class InMemoryStockLedger implements IStockLedger {
     const locationId = command.locationId ?? LocationId.DEFAULT;
 
     if (!isPositiveIntegerQuantity(command.quantity)) {
-      return Promise.resolve({ ok: false, reason: "invalid_quantity" });
+      return { ok: false, reason: "invalid_quantity" };
     }
 
     if (bulkState !== undefined) {
@@ -557,20 +557,20 @@ export class InMemoryStockLedger implements IStockLedger {
         locationId,
       );
       if (bulkConflict !== null) {
-        return Promise.resolve(bulkConflict);
+        return bulkConflict;
       }
     }
 
-    const existing = this.readModel.findMovementByIdempotency(
+    const existing = await this.readModel.findMovementByIdempotency(
       organizationId,
       command.idempotencyKey,
       command.sku,
     );
-    if (existing) {
+    if (existing !== undefined) {
       if (movementMatchesCommand(existing, movementType, command, locationId, organizationId)) {
-        return Promise.resolve({ ok: true, movement: existing });
+        return { ok: true, movement: existing };
       }
-      return Promise.resolve({ ok: false, reason: "idempotency_conflict" });
+      return { ok: false, reason: "idempotency_conflict" };
     }
 
     if (
@@ -583,7 +583,7 @@ export class InMemoryStockLedger implements IStockLedger {
         movementType,
       )
     ) {
-      return Promise.resolve({ ok: false, reason: "provenance_conflict" });
+      return { ok: false, reason: "provenance_conflict" };
     }
 
     const current = this.readModel.getSnapshotSync(command.sku, locationId, organizationId);
@@ -595,7 +595,7 @@ export class InMemoryStockLedger implements IStockLedger {
       demand.committed,
     );
     if (!deltaResult.ok) {
-      return Promise.resolve(deltaResult);
+      return deltaResult;
     }
 
     const movement: Movement = Object.freeze({
@@ -616,6 +616,6 @@ export class InMemoryStockLedger implements IStockLedger {
     if (bulkState !== undefined) {
       bulkState.pendingMovements.push(movement);
     }
-    return Promise.resolve({ ok: true, movement });
+    return { ok: true, movement };
   }
 }
