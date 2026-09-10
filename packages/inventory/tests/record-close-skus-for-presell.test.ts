@@ -69,4 +69,31 @@ describe("RecordCloseSkusForPresellUseCase", () => {
     });
     expect(result).toEqual({ ok: true, closedCount: 0 });
   });
+
+  it("preserves the original close instant when the window already elapsed", async () => {
+    const h = demandModelHarness(INSIDE_WINDOW);
+    await lockSku(h, CLOSE_A, "close-uc-elapsed");
+
+    await h.reopenSkusForPresell({
+      organizationId: DEFAULT_ORG,
+      skus: [CLOSE_A],
+      windowOpensAt: WINDOW_OPENS,
+      windowClosesAt: WINDOW_CLOSES,
+    });
+
+    const afterWindow = new Date(WINDOW_CLOSES.getTime() + 60_000);
+    h.clock.advance(afterWindow.getTime() - INSIDE_WINDOW.getTime());
+
+    const useCase = new RecordCloseSkusForPresellUseCase(h.uow.ledger);
+    const result = await useCase.execute({
+      organizationId: DEFAULT_ORG,
+      skus: [CLOSE_A],
+    });
+    expect(result).toEqual({ ok: true, closedCount: 1 });
+
+    const closed = await h.demandSnapshot(CLOSE_A);
+    expect(closed.stickyLocked).toBe(true);
+    expect(closed.windowClosesAt?.toISOString()).toBe(WINDOW_CLOSES.toISOString());
+    expect(closed.windowClosesAt?.toISOString()).not.toBe(afterWindow.toISOString());
+  });
 });

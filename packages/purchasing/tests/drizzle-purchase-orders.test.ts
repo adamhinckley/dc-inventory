@@ -250,6 +250,7 @@ class FakePurchasingDb {
   readonly lines = new Map<string, LineRow>();
   readonly supplierRows = new Map<string, SupplierRow>();
   readonly statements: string[] = [];
+  lineSelectCount = 0;
   failNextLineInsert = false;
 
   constructor() {
@@ -290,6 +291,7 @@ class FakePurchasingDb {
             if (table === suppliers) {
               return [...self.supplierRows.values()].filter((row) => rowMatches(row, clause));
             }
+            self.lineSelectCount += 1;
             return [...self.lines.values()].filter((row) => rowMatches(row, clause));
           };
           const rows = rowsForTable();
@@ -584,6 +586,11 @@ describe("DrizzlePurchaseOrderRepository.exists", () => {
 
     expect(await repo.exists(ORG, PO_ID)).toBe(true);
     expect(await repo.exists(ORG, PurchaseOrderId.parse(FOREIGN_PO_ID))).toBe(false);
+    expect(db.lineSelectCount).toBe(0);
+
+    db.lineSelectCount = 0;
+    await repo.findById(ORG, PO_ID);
+    expect(db.lineSelectCount).toBeGreaterThan(0);
   });
 });
 

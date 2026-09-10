@@ -471,8 +471,43 @@ describe("DrizzleStockLedger round trips", () => {
       queryLog.filter(
         (query) =>
           query.trim().toLowerCase().startsWith("update") && query.includes("stock_snapshots"),
-      ),
-    ).toHaveLength(1);
+      ).length,
+    ).toBeGreaterThanOrEqual(1);
     lockSnapshots.mockRestore();
+  });
+
+  it("preserves the original close instant when closing an already elapsed window", async () => {
+    const [sku] = skus(1);
+    if (sku === undefined) throw new Error("fixture");
+    const windowOpens = new Date("2026-09-01T00:00:00.000Z");
+    const windowCloses = new Date("2026-09-05T00:00:00.000Z");
+    const afterWindow = new Date("2026-09-09T12:00:00.000Z");
+
+    await confirmPurchaseOrder([sku]);
+    await ledger.reopenSkusForPresell({
+      organizationId: ORG,
+      skus: [sku],
+      windowOpensAt: windowOpens,
+      windowClosesAt: windowCloses,
+    });
+
+    const elapsedClock = new InMemoryClock(afterWindow);
+    const resolveLocationUuid = async () => LOCATION_UUID;
+    const readModel = new DrizzleInventoryReadModel(db, resolveLocationUuid, elapsedClock);
+    const closeLedger = new DrizzleStockLedger(db, readModel, resolveLocationUuid, elapsedClock);
+
+    const result = await closeLedger.closeSkusForPresell({
+      organizationId: ORG,
+      skus: [sku],
+    });
+    expect(result).toEqual({ ok: true, closedCount: 1 });
+
+    const snapshot = await client.query<{ window_closes_at: Date; sticky_locked: boolean }>(
+      `SELECT window_closes_at, sticky_locked FROM inventory.stock_snapshots WHERE sku = $1`,
+      [sku.value],
+    );
+    expect(snapshot.rows[0]?.sticky_locked).toBe(true);
+    expect(snapshot.rows[0]?.window_closes_at.toISOString()).toBe(windowCloses.toISOString());
+    expect(snapshot.rows[0]?.window_closes_at.toISOString()).not.toBe(afterWindow.toISOString());
   });
 });

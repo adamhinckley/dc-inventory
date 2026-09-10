@@ -381,7 +381,7 @@ export class DrizzleStockLedger implements IStockLedger {
     );
     const locationUuid = await this.resolveLocationUuid(organizationId, LocationId.DEFAULT);
 
-    const skusToClose: Sku[] = [];
+    const skusToClose: Array<{ sku: Sku; nextDemand: DemandPersistedState }> = [];
     for (const sku of uniqueSkus) {
       const row = this.lockedSnapshot(organizationId, sku, locationUuid);
       const demand = demandOf(row);
@@ -392,35 +392,12 @@ export class DrizzleStockLedger implements IStockLedger {
       if (!nextDemand.stickyLocked) {
         continue;
       }
-      skusToClose.push(sku);
+      skusToClose.push({ sku, nextDemand });
     }
 
-    if (skusToClose.length > 0) {
-      await this.db
-        .update(stockSnapshots)
-        .set({
-          stickyLocked: true,
-          windowClosesAt: now,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(stockSnapshots.organizationId, organizationId),
-            eq(stockSnapshots.locationId, locationUuid),
-            inArray(
-              stockSnapshots.sku,
-              skusToClose.map((sku) => sku.value),
-            ),
-          ),
-        );
-      for (const sku of skusToClose) {
-        const row = this.lockedSnapshot(organizationId, sku, locationUuid);
-        this.rememberRow(organizationId, sku, locationUuid, {
-          ...row,
-          stickyLocked: true,
-          windowClosesAt: now,
-        });
-      }
+    for (const { sku, nextDemand } of skusToClose) {
+      const row = this.lockedSnapshot(organizationId, sku, locationUuid);
+      await this.writeDemand(organizationId, sku, locationUuid, row, nextDemand);
     }
 
     return { ok: true, closedCount: skusToClose.length };
