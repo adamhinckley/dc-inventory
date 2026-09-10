@@ -9,6 +9,8 @@ export type InventoryCommandFailureReason =
   | "invalid_quantity"
   | "insufficient_on_hand"
   | "insufficient_available"
+  | "insufficient_allocated"
+  | "insufficient_committed"
   | "insufficient_available_to_sell"
   | "idempotency_conflict"
   | "provenance_conflict";

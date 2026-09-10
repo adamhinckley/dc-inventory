@@ -208,7 +208,11 @@ export class ConfirmSalesOrderUseCase {
     } catch (error) {
       if (error instanceof SalesTransactionError) {
         if (error.reason === "insufficient_atp") {
-          return { ok: false, reason: "insufficient_atp", shortage: error.shortage };
+          const shortage =
+            error.shortage !== undefined && "availableQty" in error.shortage
+              ? error.shortage
+              : undefined;
+          return { ok: false, reason: "insufficient_atp", shortage };
         }
         return {
           ok: false,

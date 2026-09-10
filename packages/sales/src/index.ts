@@ -27,7 +27,10 @@ export { ReplaceSalesOrderLinesUseCase } from "./application/replace-sales-order
 export { DecommitSalesOrderLineUseCase } from "./application/decommit-sales-order-line.js";
 export { GetSalesOrderUseCase } from "./application/get-sales-order.js";
 export { ListSalesOrdersUseCase } from "./application/list-sales-orders.js";
-export { ShipSalesOrderUseCase } from "./application/ship-sales-order.js";
+export {
+  ShipSalesOrderUseCase,
+  type ShipSalesOrderResult,
+} from "./application/ship-sales-order.js";
 export { formatDocumentNumber } from "./domain/document-number.js";
 export type {
   BillToAddressSnapshot,

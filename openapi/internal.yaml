@@ -11697,15 +11697,48 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - conflict
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - conflict
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - insufficient_cover
+                      sku:
+                        type: string
+                      name:
+                        type: string
+                      requestedQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                      coveredQty:
+                        type: integer
+                        minimum: -9007199254740991
+                        maximum: 9007199254740991
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - bill_to_missing
+                          - accounting_invalid
+                          - illegal_transition
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/invoices/{id}:
     get:
       operationId: getInternalInvoice

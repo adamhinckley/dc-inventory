@@ -4,8 +4,23 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { ShipInternalSalesOrder409Error } from './shipInternalSalesOrder409Error';
 
 export type ShipInternalSalesOrder409 = {
-  error: ShipInternalSalesOrder409Error;
+  error: 'conflict';
+} | {
+  error: 'insufficient_cover';
+  sku?: string;
+  name?: string;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  requestedQty?: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  coveredQty?: number;
+} | {
+  error: 'bill_to_missing' | 'accounting_invalid' | 'illegal_transition';
 };

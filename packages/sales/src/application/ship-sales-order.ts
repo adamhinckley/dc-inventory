@@ -1,5 +1,5 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
-import { SalesTransactionError } from "../domain/errors.js";
+import { SalesTransactionError, type CoverShortage } from "../domain/errors.js";
 import type { ICustomerBillToSnapshotReadPort } from "../domain/ports/customer-bill-to-snapshot-read.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
 import { liveSalesOrderLines, type SalesOrder } from "../domain/sales-order.js";
@@ -22,7 +22,8 @@ export type ShipSalesOrderResult =
         | "idempotency_conflict"
         | "accounting_invalid"
         | "bill_to_missing";
-    };
+    }
+  | { ok: false; reason: "insufficient_cover"; shortage?: CoverShortage };
 
 function computeSubtotalCents(lines: readonly SalesOrder["lines"][number][]): number {
   return lines.reduce((sum, line) => sum + line.qty * line.unitPrice.amountMinor, 0);
@@ -82,6 +83,23 @@ export class ShipSalesOrderUseCase {
             if (result.reason === "idempotency_conflict") {
               throw new SalesTransactionError("idempotency_conflict");
             }
+            if (
+              result.reason === "insufficient_allocated" ||
+              result.reason === "insufficient_committed" ||
+              result.reason === "insufficient_on_hand"
+            ) {
+              const covered = await scope.inventory.getOrderCoverQuantity({
+                organizationId: existing.organizationId,
+                sku: line.sku,
+                orderId: existing.id,
+              });
+              throw new SalesTransactionError("insufficient_cover", {
+                sku: line.sku.value,
+                name: line.name,
+                requestedQty: line.qty,
+                coveredQty: covered,
+              });
+            }
             throw new SalesTransactionError("inventory_conflict");
           }
         }
@@ -105,11 +123,19 @@ export class ShipSalesOrderUseCase {
       });
     } catch (error) {
       if (error instanceof SalesTransactionError) {
+        if (error.reason === "insufficient_cover") {
+          const shortage =
+            error.shortage !== undefined && "coveredQty" in error.shortage
+              ? error.shortage
+              : undefined;
+          return { ok: false, reason: "insufficient_cover", shortage };
+        }
         return {
           ok: false,
-          reason: error.reason as ShipSalesOrderResult extends { ok: false; reason: infer R }
-            ? R
-            : never,
+          reason: error.reason as Exclude<
+            ShipSalesOrderResult extends { ok: false; reason: infer R } ? R : never,
+            "insufficient_cover"
+          >,
         };
       }
       throw error;

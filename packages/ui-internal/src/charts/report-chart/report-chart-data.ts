@@ -1,4 +1,4 @@
-import { formatMoneyMinorUnits } from "@dc-inventory/ui";
+import { formatMoneyMinorUnits } from "@dc-inventory/ui/format-money";
 import type { ChartMeta, ChartSeries } from "./report-chart-types";
 
 export function toWideRows(

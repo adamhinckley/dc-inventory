@@ -16,9 +16,38 @@ export function toCreditExceededBody(result: {
 export function toInsufficientAtpBody(result: {
   shortage?: ConfirmSalesOrderShortage;
 }) {
+  return toLineShortageBody("insufficient_atp", result);
+}
+
+export function toInsufficientCoverBody(result: {
+  shortage?: {
+    sku: string;
+    name: string;
+    requestedQty: number;
+    coveredQty: number;
+  };
+}) {
   const shortage = result.shortage;
   return {
-    error: "insufficient_atp" as const,
+    error: "insufficient_cover" as const,
+    ...(shortage !== undefined
+      ? {
+          sku: shortage.sku,
+          name: shortage.name,
+          requestedQty: shortage.requestedQty,
+          coveredQty: shortage.coveredQty,
+        }
+      : {}),
+  };
+}
+
+function toLineShortageBody(
+  error: "insufficient_atp",
+  result: { shortage?: ConfirmSalesOrderShortage },
+) {
+  const shortage = result.shortage;
+  return {
+    error,
     ...(shortage !== undefined
       ? {
           sku: shortage.sku,

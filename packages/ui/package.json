@@ -5,6 +5,7 @@
   "description": "Internal dashboard design system: Carbon White/g100 hex on semantic tokens, Base UI primitives, AppShell. Wholesale does not import this chrome.",
   "exports": {
     ".": "./src/index.ts",
+    "./format-money": "./src/lib/format-money.ts",
     "./globals.css": "./src/globals.css"
   },
   "imports": {

@@ -6,12 +6,15 @@ import type { DemoBookPlan } from "./planner/types.js";
 import type { Phase1SeedSecrets } from "./run-phase1-seed.js";
 import { runAssertDemoBookOnDb } from "./run-assert-demo-book-on-db.js";
 import { runReplayDemoOrdersOnDb } from "./run-replay-demo-orders-on-db.js";
+import { runAssertCustomerAccountingShowcaseOnDb } from "./run-assert-customer-accounting-showcase-on-db.js";
+import { runReplayCustomerAccountingOnDb } from "./run-replay-customer-accounting-on-db.js";
 import { runReplayPaymentsOnDb } from "./run-replay-payments-on-db.js";
 import { runWriteReorderPoliciesOnDb } from "./run-write-reorder-policies-on-db.js";
 import { runWriteStaticDemoBookOnDb } from "./run-write-static-demo-book-on-db.js";
 import type { DemoReconciliationExpectations } from "./reconciliation/expectations.js";
 import { FULL_DEMO_RECONCILIATION_EXPECTATIONS } from "./reconciliation/expectations.js";
 import type { DemoReconciliationResult } from "./reconciliation/contracts.js";
+import type { CustomerAccountingShowcaseAssertionResult } from "./assert-customer-accounting-showcase.js";
 
 export type RunDemoSeedOnDbInput = {
   db: AppDrizzle;
@@ -27,6 +30,7 @@ export type RunDemoSeedOnDbInput = {
 export type RunDemoSeedOnDbResult = {
   staffUserId: StaffUserId;
   reconciliation: DemoReconciliationResult;
+  showcaseAssertion: CustomerAccountingShowcaseAssertionResult;
   elapsedMs: number;
 };
 
@@ -60,6 +64,7 @@ export async function runDemoSeedOnDb(
     return {
       staffUserId: staticResult.staff.id,
       reconciliation: { ok: true },
+      showcaseAssertion: { ok: true },
       elapsedMs: Date.now() - startedAt,
     };
   }
@@ -88,11 +93,27 @@ export async function runDemoSeedOnDb(
     throw new Error(reconciliation.message);
   }
 
+  tick(input, "customer accounting playback");
+  const showcaseReplay = await runReplayCustomerAccountingOnDb(input.db, input.plan, {
+    staffUserId: staticResult.staff.id,
+    assertWithinBudget,
+  });
+
+  tick(input, "customer accounting showcase validation");
+  const showcaseAssertion = await runAssertCustomerAccountingShowcaseOnDb(input.db, {
+    showcaseCustomerId: showcaseReplay.showcaseCustomerId,
+    asOf: input.plan.seedToday,
+  });
+  if (!showcaseAssertion.ok) {
+    throw new Error(showcaseAssertion.message);
+  }
+
   input.deadline?.assertWithinBudget();
 
   return {
     staffUserId: staticResult.staff.id,
     reconciliation,
+    showcaseAssertion,
     elapsedMs: Date.now() - startedAt,
   };
 }
