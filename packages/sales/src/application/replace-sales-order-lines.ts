@@ -115,7 +115,7 @@ export class ReplaceSalesOrderLinesUseCase {
 
     if (input.lines.length === 0) {
       const cancelled: SalesOrder = { ...existing, status: "cancelled", lines: [] };
-      await this.salesOrders.save(cancelled);
+      await this.salesOrders.save(cancelled, existing);
       return { ok: true, salesOrder: cancelled };
     }
 
@@ -151,7 +151,7 @@ export class ReplaceSalesOrderLinesUseCase {
       shipPostal: input.shipPostal ?? existing.shipPostal,
       shipCountry: input.shipCountry ?? existing.shipCountry,
     };
-    await this.salesOrders.save(salesOrder);
+    await this.salesOrders.save(salesOrder, existing);
     return { ok: true, salesOrder };
   }
 }

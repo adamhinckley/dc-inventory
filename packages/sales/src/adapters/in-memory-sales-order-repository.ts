@@ -138,7 +138,7 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
     return null;
   }
 
-  async save(order: SalesOrder): Promise<void> {
+  async save(order: SalesOrder, _existing?: SalesOrder | null): Promise<void> {
     const normalized = toOrder(order);
     const existing = this.byId.get(normalized.id);
     this.byId.set(normalized.id, {

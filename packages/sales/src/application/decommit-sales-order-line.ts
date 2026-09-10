@@ -114,7 +114,7 @@ export class DecommitSalesOrderLineUseCase {
           candidate.id === line.id ? { ...candidate, decommitted: true as const } : candidate,
         );
         const updated: SalesOrder = { ...existing, lines: updatedLines };
-        await scope.salesOrders.save(updated);
+        await scope.salesOrders.save(updated, existing);
         return { ok: true, salesOrder: updated };
       });
     } catch (error) {

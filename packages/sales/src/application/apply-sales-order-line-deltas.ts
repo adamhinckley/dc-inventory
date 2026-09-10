@@ -231,7 +231,7 @@ export class ApplySalesOrderLineDeltasUseCase {
 
     if (working.length === 0) {
       const cancelled: SalesOrder = { ...existing, status: "cancelled", lines: [] };
-      await this.salesOrders.save(cancelled);
+      await this.salesOrders.save(cancelled, existing);
       return { ok: true, salesOrder: cancelled };
     }
 
@@ -292,7 +292,7 @@ export class ApplySalesOrderLineDeltasUseCase {
       ...existing,
       lines: built.lines,
     };
-    await this.salesOrders.save(salesOrder);
+    await this.salesOrders.save(salesOrder, existing);
     return { ok: true, salesOrder };
   }
 }
