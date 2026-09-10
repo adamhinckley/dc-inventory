@@ -54,20 +54,20 @@ export class CancelPurchaseOrderUseCase {
             sku: line.sku,
           })),
         );
-        for (const { line, remainder } of linesToCancel) {
-          const result = await scope.inventory.recordInboundCancelled({
+        const cancelResult = await scope.inventory.recordInboundCancelledBulk(
+          linesToCancel.map(({ line, remainder }) => ({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:cancel:${line.id}`,
             sku: line.sku,
             quantity: remainder,
             purchaseOrderId: existing.id,
-          });
-          if (!result.ok) {
-            if (result.reason === "idempotency_conflict") {
-              throw new PurchasingTransactionError("idempotency_conflict");
-            }
-            throw new PurchasingTransactionError("inventory_conflict");
+          })),
+        );
+        if (!cancelResult.ok) {
+          if (cancelResult.reason === "idempotency_conflict") {
+            throw new PurchasingTransactionError("idempotency_conflict");
           }
+          throw new PurchasingTransactionError("inventory_conflict");
         }
 
         const cancelled: PurchaseOrder = { ...existing, status: "cancelled" };

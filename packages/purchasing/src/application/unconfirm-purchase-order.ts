@@ -48,20 +48,20 @@ export class UnconfirmPurchaseOrderUseCase {
             sku: line.sku,
           })),
         );
-        for (const line of existing.lines) {
-          const result = await scope.inventory.recordInboundCancelled({
+        const cancelResult = await scope.inventory.recordInboundCancelledBulk(
+          existing.lines.map((line) => ({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:unconfirm:${line.id}`,
             sku: line.sku,
             quantity: line.qty,
             purchaseOrderId: existing.id,
-          });
-          if (!result.ok) {
-            if (result.reason === "idempotency_conflict") {
-              throw new PurchasingTransactionError("idempotency_conflict");
-            }
-            throw new PurchasingTransactionError("inventory_conflict");
+          })),
+        );
+        if (!cancelResult.ok) {
+          if (cancelResult.reason === "idempotency_conflict") {
+            throw new PurchasingTransactionError("idempotency_conflict");
           }
+          throw new PurchasingTransactionError("inventory_conflict");
         }
 
         const updated: PurchaseOrder = { ...existing, status: "draft" };

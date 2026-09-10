@@ -17,7 +17,12 @@ export type InventoryCommandFailureReason =
 
 export type InventoryCommandResult =
   | { ok: true }
-  | { ok: false; reason: InventoryCommandFailureReason; availableToSell?: number };
+  | {
+      ok: false;
+      reason: InventoryCommandFailureReason;
+      availableToSell?: number;
+      failedIdempotencyKey?: string;
+    };
 
 export type InventorySnapshotLock = {
   organizationId: OrganizationId;
@@ -111,5 +116,18 @@ export interface IInventoryCommandPort {
   recordAllocated(command: AllocatedCommand): Promise<InventoryCommandResult>;
   recordDeallocated(command: DeallocatedCommand): Promise<InventoryCommandResult>;
   recordShipped(command: ShippedCommand): Promise<InventoryCommandResult>;
+  recordInboundFromPoBulk(
+    commands: readonly InboundFromPoCommand[],
+  ): Promise<InventoryCommandResult>;
+  recordGoodsReceivedBulk(
+    commands: readonly GoodsReceivedCommand[],
+  ): Promise<InventoryCommandResult>;
+  recordInboundCancelledBulk(
+    commands: readonly InboundCancelledCommand[],
+  ): Promise<InventoryCommandResult>;
+  recordCommittedBulk(commands: readonly CommittedCommand[]): Promise<InventoryCommandResult>;
+  recordDecommittedBulk(commands: readonly DecommittedCommand[]): Promise<InventoryCommandResult>;
+  recordDeallocatedBulk(commands: readonly DeallocatedCommand[]): Promise<InventoryCommandResult>;
+  recordShippedBulk(commands: readonly ShippedCommand[]): Promise<InventoryCommandResult>;
   getOrderCoverQuantity(query: OrderCoverQuery): Promise<number>;
 }

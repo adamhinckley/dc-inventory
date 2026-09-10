@@ -1,6 +1,6 @@
 import type { IClock } from "../domain/clock.js";
 import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory/shared-kernel";
-import type { Sku } from "@dc-inventory/shared-kernel";
+import { Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
@@ -65,6 +65,28 @@ type SnapshotRow = {
   windowOpensAt: Date | null;
   windowClosesAt: Date | null;
 };
+
+type PreparedRecord = {
+  movement: Movement;
+  organizationId: OrganizationId;
+  sku: Sku;
+  locationUuid: string;
+  row: SnapshotRow;
+};
+
+type MovementConflictIndex = {
+  byIdempotencyKey: Map<string, Movement>;
+  provenanceTaken: Set<string>;
+};
+
+function provenanceConflictKey(
+  refType: Movement["refType"],
+  refId: string,
+  sku: string,
+  movementType: MovementType,
+): string {
+  return `${refType}\0${refId}\0${sku}\0${movementType}`;
+}
 
 const snapshotRowColumns = {
   id: stockSnapshots.id,
@@ -239,6 +261,40 @@ export class DrizzleStockLedger implements IStockLedger {
     return this.recordWithDemandObservation("Decommitted", command);
   }
 
+  recordInboundFromPoBulk(
+    commands: readonly RecordInboundFromPoCommand[],
+  ): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("InboundFromPo", commands);
+  }
+
+  recordGoodsReceivedBulk(
+    commands: readonly RecordGoodsReceivedCommand[],
+  ): Promise<StockCommandResult> {
+    return this.runGoodsReceivedBulkWithCover(commands);
+  }
+
+  recordInboundCancelledBulk(
+    commands: readonly RecordInboundCancelledCommand[],
+  ): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("InboundCancelled", commands);
+  }
+
+  recordCommittedBulk(commands: readonly RecordCommittedCommand[]): Promise<StockCommandResult> {
+    return this.runCommittedBulkWithCover(commands);
+  }
+
+  recordDecommittedBulk(commands: readonly RecordDecommittedCommand[]): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("Decommitted", commands);
+  }
+
+  recordDeallocatedBulk(commands: readonly RecordDeallocatedCommand[]): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("Deallocated", commands);
+  }
+
+  recordShippedBulk(commands: readonly RecordShippedCommand[]): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("Shipped", commands);
+  }
+
   async reopenSkusForPresell(command: ReopenSkusForPresellCommand): Promise<DemandCommandResult> {
     const organizationId = requireOrganizationId(command.organizationId);
     const windowOpensAt = command.windowOpensAt ?? null;
@@ -333,6 +389,46 @@ export class DrizzleStockLedger implements IStockLedger {
     return { ok: true };
   }
 
+  private async runCommittedBulkWithCover(
+    commands: readonly RecordCommittedCommand[],
+  ): Promise<StockCommandResult> {
+    if (commands.length === 0) {
+      throw new Error("recordCommittedBulk requires at least one command");
+    }
+    await this.lockSnapshots(
+      commands.map((command) => ({
+        organizationId: requireOrganizationId(command.organizationId),
+        sku: command.sku,
+        locationId: command.locationId ?? LocationId.DEFAULT,
+      })),
+    );
+    const observedSkus = new Set<string>();
+    const pending: PreparedRecord[] = [];
+    let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
+    for (const command of commands) {
+      const organizationId = requireOrganizationId(command.organizationId);
+      const locationId = command.locationId ?? LocationId.DEFAULT;
+      const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+      const skuKey = snapshotKey(organizationId, command.sku.value, locationUuid);
+      if (!observedSkus.has(skuKey)) {
+        observedSkus.add(skuKey);
+        await this.observeWindowCloseOnWrite(command.sku, organizationId, locationUuid);
+      }
+      const now = this.clock.now();
+      const result = await recordCommittedWithCover(command, {
+        readState: () => this.coverReadState(organizationId, command.sku, locationUuid, now),
+        record: (movementType, coverCommand) =>
+          this.prepareRecordLocked(movementType, coverCommand, pending),
+      });
+      if (!result.ok) {
+        return { ...result, failedIdempotencyKey: command.idempotencyKey };
+      }
+      lastSuccess = result;
+    }
+    await this.flushPreparedRecords(pending);
+    return lastSuccess ?? { ok: false, reason: "invalid_quantity" };
+  }
+
   private async runCommittedWithCover(
     command: RecordCommittedCommand,
   ): Promise<StockCommandResult> {
@@ -348,6 +444,64 @@ export class DrizzleStockLedger implements IStockLedger {
       readState: () => this.coverReadState(organizationId, command.sku, locationUuid, now),
       record: (movementType, coverCommand) => this.record(movementType, coverCommand),
     });
+  }
+
+  private async runGoodsReceivedBulkWithCover(
+    commands: readonly RecordGoodsReceivedCommand[],
+  ): Promise<StockCommandResult> {
+    if (commands.length === 0) {
+      throw new Error("recordGoodsReceivedBulk requires at least one command");
+    }
+    await this.lockSnapshots(
+      commands.map((command) => ({
+        organizationId: requireOrganizationId(command.organizationId),
+        sku: command.sku,
+        locationId: command.locationId ?? LocationId.DEFAULT,
+      })),
+    );
+    const observedSkus = new Set<string>();
+    const pending: PreparedRecord[] = [];
+    let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
+    for (const command of commands) {
+      const organizationId = requireOrganizationId(command.organizationId);
+      const locationId = command.locationId ?? LocationId.DEFAULT;
+      const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+      const skuKey = snapshotKey(organizationId, command.sku.value, locationUuid);
+      if (!observedSkus.has(skuKey)) {
+        observedSkus.add(skuKey);
+        await this.observeWindowCloseOnWrite(command.sku, organizationId, locationUuid);
+      }
+      const now = this.clock.now();
+      const receiveResult = await this.prepareRecordLocked("GoodsReceived", command, pending);
+      if (!receiveResult.ok) {
+        return { ...receiveResult, failedIdempotencyKey: command.idempotencyKey };
+      }
+      const coverResult = await allocateReceiveCover(command, command.quantity, {
+        readState: () => this.coverReadState(organizationId, command.sku, locationUuid, now),
+        listMovements: async () =>
+          (await this.readModel.listMovements({
+            organizationId,
+            sku: command.sku,
+            locationId,
+            refType: "sales_order",
+            movementTypes: RECEIVE_COVER_MOVEMENT_TYPES,
+          })).map((movement) => ({
+            movementType: movement.movementType,
+            quantity: movement.quantity,
+            refType: movement.refType,
+            refId: movement.refId,
+            createdAt: movement.createdAt,
+          })),
+        record: (movementType, coverCommand) =>
+          this.prepareRecordLocked(movementType, coverCommand, pending),
+      });
+      if (coverResult !== null && !coverResult.ok) {
+        return { ...coverResult, failedIdempotencyKey: command.idempotencyKey };
+      }
+      lastSuccess = receiveResult;
+    }
+    await this.flushPreparedRecords(pending);
+    return lastSuccess ?? { ok: false, reason: "invalid_quantity" };
   }
 
   private async runGoodsReceivedWithCover(
@@ -398,6 +552,48 @@ export class DrizzleStockLedger implements IStockLedger {
     return { figures: this.figuresOf(row, now), demand: demandOf(row), now };
   }
 
+  private async recordBulkWithDemandObservation(
+    movementType: MovementType,
+    commands: readonly StockCommandBase[],
+  ): Promise<StockCommandResult> {
+    if (commands.length === 0) {
+      throw new Error("recordBulk requires at least one command");
+    }
+    await this.lockSnapshots(
+      commands.map((command) => ({
+        organizationId: requireOrganizationId(command.organizationId),
+        sku: command.sku,
+        locationId: command.locationId ?? LocationId.DEFAULT,
+      })),
+    );
+    const observedSkus = new Set<string>();
+    const pending: PreparedRecord[] = [];
+ const conflictIndex = await this.prefetchMovementConflicts(movementType, commands);
+    let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
+    for (const command of commands) {
+      const organizationId = requireOrganizationId(command.organizationId);
+      const locationId = command.locationId ?? LocationId.DEFAULT;
+      const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+      const skuKey = snapshotKey(organizationId, command.sku.value, locationUuid);
+      if (!observedSkus.has(skuKey)) {
+        observedSkus.add(skuKey);
+        await this.observeWindowCloseOnWrite(command.sku, organizationId, locationUuid);
+      }
+      const result = await this.prepareRecordLocked(
+        movementType,
+        command,
+        pending,
+        conflictIndex,
+      );
+      if (!result.ok) {
+        return { ...result, failedIdempotencyKey: command.idempotencyKey };
+      }
+      lastSuccess = result;
+    }
+    await this.flushPreparedRecords(pending);
+    return lastSuccess ?? { ok: false, reason: "invalid_quantity" };
+  }
+
   private async recordWithDemandObservation(
     movementType: MovementType,
     command: StockCommandBase,
@@ -421,6 +617,175 @@ export class DrizzleStockLedger implements IStockLedger {
     if (observed.stickyLocked !== demand.stickyLocked) {
       await this.writeDemand(organizationId, sku, locationUuid, row, observed);
     }
+  }
+
+  private async prepareRecordLocked(
+    movementType: MovementType,
+    command: StockCommandBase,
+    pending: PreparedRecord[],
+    conflictIndex?: MovementConflictIndex,
+  ): Promise<StockCommandResult> {
+    const organizationId = requireOrganizationId(command.organizationId);
+    const locationId = command.locationId ?? LocationId.DEFAULT;
+
+    if (!isPositiveIntegerQuantity(command.quantity)) {
+      return { ok: false, reason: "invalid_quantity" };
+    }
+
+    const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+    const conflicts =
+      conflictIndex === undefined
+        ? await this.findConflictingMovements(
+            organizationId,
+            locationId,
+            locationUuid,
+            movementType,
+            command,
+          )
+        : this.lookupPrefetchedConflicts(
+            conflictIndex,
+            movementType,
+            command,
+            locationId,
+            organizationId,
+          );
+    const pendingReplay = pending.find(
+      (entry) => entry.movement.idempotencyKey === command.idempotencyKey,
+    );
+    if (pendingReplay !== undefined) {
+      if (
+        movementMatchesCommand(
+          pendingReplay.movement,
+          movementType,
+          command,
+          locationId,
+          organizationId,
+        )
+      ) {
+        return { ok: true, movement: pendingReplay.movement };
+      }
+      return { ok: false, reason: "idempotency_conflict" };
+    }
+    if (conflicts.existing !== undefined) {
+      if (
+        movementMatchesCommand(conflicts.existing, movementType, command, locationId, organizationId)
+      ) {
+        return { ok: true, movement: conflicts.existing };
+      }
+      return { ok: false, reason: "idempotency_conflict" };
+    }
+    if (conflicts.provenanceTaken) {
+      return { ok: false, reason: "provenance_conflict" };
+    }
+
+    const row = this.lockedSnapshot(organizationId, command.sku, locationUuid);
+    const current = freezeStockFigures(row.onHand, row.onOrder, row.allocated);
+    const demand = demandOf(row);
+    const deltaResult = computeSnapshotDelta(
+      movementType,
+      command.quantity,
+      current,
+      demand.committed,
+    );
+    if (!deltaResult.ok) {
+      return deltaResult;
+    }
+
+    const movement: Movement = Object.freeze({
+      id: MovementId.parse(newUuid()),
+      organizationId,
+      sku: command.sku,
+      locationId,
+      movementType,
+      quantity: command.quantity,
+      refType: command.refType,
+      refId: command.refId,
+      idempotencyKey: command.idempotencyKey,
+      createdAt: this.clock.now(),
+    });
+
+    const nextRow = this.applySnapshotDeltaInMemory(
+      organizationId,
+      command.sku,
+      locationUuid,
+      row,
+      deltaResult.delta,
+    );
+    pending.push({
+      movement,
+      organizationId,
+      sku: command.sku,
+      locationUuid,
+      row: nextRow,
+    });
+    return { ok: true, movement };
+  }
+
+  private async flushPreparedRecords(prepared: readonly PreparedRecord[]): Promise<void> {
+    if (prepared.length === 0) {
+      return;
+    }
+    await this.db.insert(stockMovements).values(
+      prepared.map((entry) => ({
+        id: entry.movement.id,
+        organizationId: entry.movement.organizationId,
+        sku: entry.movement.sku.value,
+        locationId: entry.locationUuid,
+        movementType: entry.movement.movementType,
+        qty: entry.movement.quantity,
+        refType: entry.movement.refType,
+        refId: entry.movement.refId,
+        idempotencyKey: entry.movement.idempotencyKey,
+        createdAt: entry.movement.createdAt,
+      })),
+    );
+    const latestBySnapshot = new Map<string, PreparedRecord>();
+    for (const entry of prepared) {
+      const key = snapshotKey(entry.organizationId, entry.sku.value, entry.locationUuid);
+      latestBySnapshot.set(key, entry);
+    }
+    for (const entry of latestBySnapshot.values()) {
+      await this.db
+        .update(stockSnapshots)
+        .set({
+          onHand: entry.row.onHand,
+          onOrder: entry.row.onOrder,
+          allocated: entry.row.allocated,
+          committed: entry.row.committed,
+          stickyLocked: entry.row.stickyLocked,
+          windowOpensAt: entry.row.windowOpensAt,
+          windowClosesAt: entry.row.windowClosesAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(stockSnapshots.id, entry.row.id));
+    }
+  }
+
+  private applySnapshotDeltaInMemory(
+    organizationId: OrganizationId,
+    sku: Sku,
+    locationUuid: string,
+    row: SnapshotRow,
+    delta: SnapshotDelta,
+  ): SnapshotRow {
+    const nextFigures = freezeStockFigures(
+      row.onHand + (delta.onHand ?? 0),
+      row.onOrder + (delta.onOrder ?? 0),
+      row.allocated + (delta.allocated ?? 0),
+    );
+    const next: SnapshotRow = {
+      id: row.id,
+      onHand: nextFigures.onHand,
+      onOrder: nextFigures.onOrder,
+      allocated: nextFigures.allocated,
+      committed: row.committed + (delta.committed ?? 0),
+      stickyLocked: delta.stickyLocked ?? row.stickyLocked,
+      windowOpensAt: delta.windowOpensAt !== undefined ? delta.windowOpensAt : row.windowOpensAt,
+      windowClosesAt:
+        delta.windowClosesAt !== undefined ? delta.windowClosesAt : row.windowClosesAt,
+    };
+    this.rememberRow(organizationId, sku, locationUuid, next);
+    return next;
   }
 
   private async record(
@@ -504,6 +869,91 @@ export class DrizzleStockLedger implements IStockLedger {
     );
 
     return { ok: true, movement };
+  }
+
+  private lookupPrefetchedConflicts(
+    conflictIndex: MovementConflictIndex,
+    movementType: MovementType,
+    command: StockCommandBase,
+    locationId: LocationId,
+    organizationId: OrganizationId,
+  ): { existing: Movement | undefined; provenanceTaken: boolean } {
+    const existing = conflictIndex.byIdempotencyKey.get(command.idempotencyKey);
+    const provenanceTaken =
+      isOnceOnlyProvenanceType(movementType) &&
+      conflictIndex.provenanceTaken.has(
+        provenanceConflictKey(
+          command.refType,
+          command.refId,
+          command.sku.value,
+          movementType,
+        ),
+      );
+    if (existing !== undefined) {
+      return { existing, provenanceTaken };
+    }
+    return { existing: undefined, provenanceTaken };
+  }
+
+  private async prefetchMovementConflicts(
+    movementType: MovementType,
+    commands: readonly StockCommandBase[],
+  ): Promise<MovementConflictIndex> {
+    const byIdempotencyKey = new Map<string, Movement>();
+    const provenanceTaken = new Set<string>();
+    if (commands.length === 0) {
+      return { byIdempotencyKey, provenanceTaken };
+    }
+
+    const organizationId = requireOrganizationId(commands[0]!.organizationId);
+    const locationId = commands[0]!.locationId ?? LocationId.DEFAULT;
+    const locationUuid = await this.resolveLocationUuid(organizationId, locationId);
+    const idempotencyKeys = commands.map((command) => command.idempotencyKey);
+    const sameIdempotencyKey = inArray(stockMovements.idempotencyKey, idempotencyKeys);
+    const provenanceClauses = isOnceOnlyProvenanceType(movementType)
+      ? commands.map((command) =>
+          and(
+            eq(stockMovements.refType, command.refType),
+            eq(stockMovements.refId, command.refId),
+            eq(stockMovements.sku, command.sku.value),
+            eq(stockMovements.movementType, movementType),
+          ),
+        )
+      : [];
+    const rows = await this.db
+      .select()
+      .from(stockMovements)
+      .where(
+        and(
+          eq(stockMovements.organizationId, organizationId),
+          eq(stockMovements.locationId, locationUuid),
+          provenanceClauses.length > 0
+            ? or(sameIdempotencyKey, or(...provenanceClauses))
+            : sameIdempotencyKey,
+        ),
+      );
+
+    for (const row of rows) {
+      const movement = Object.freeze({
+        id: MovementId.parse(row.id),
+        organizationId: OrganizationId.parse(row.organizationId),
+        sku: Sku.parse(row.sku),
+        locationId,
+        movementType: row.movementType,
+        quantity: row.qty,
+        refType: row.refType,
+        refId: row.refId,
+        idempotencyKey: row.idempotencyKey,
+        createdAt: row.createdAt,
+      });
+      byIdempotencyKey.set(row.idempotencyKey, movement);
+      if (isOnceOnlyProvenanceType(row.movementType)) {
+        provenanceTaken.add(
+          provenanceConflictKey(row.refType, row.refId, row.sku, row.movementType),
+        );
+      }
+    }
+    return { byIdempotencyKey, provenanceTaken };
   }
 
   /**

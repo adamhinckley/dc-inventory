@@ -51,40 +51,47 @@ export class CancelSalesOrderUseCase {
             sku: line.sku,
           })),
         );
-        for (const line of liveSalesOrderLines(existing.lines)) {
-          const decommitResult = await scope.inventory.recordDecommitted({
+        const liveLines = liveSalesOrderLines(existing.lines);
+        const decommitResult = await scope.inventory.recordDecommittedBulk(
+          liveLines.map((line) => ({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:decommit:${line.id}`,
             sku: line.sku,
             quantity: line.qty,
             orderId: existing.id,
-          });
-          if (!decommitResult.ok) {
-            if (decommitResult.reason === "idempotency_conflict") {
-              throw new SalesTransactionError("idempotency_conflict");
-            }
-            throw new SalesTransactionError("inventory_conflict");
+          })),
+        );
+        if (!decommitResult.ok) {
+          if (decommitResult.reason === "idempotency_conflict") {
+            throw new SalesTransactionError("idempotency_conflict");
           }
+          throw new SalesTransactionError("inventory_conflict");
+        }
 
+        const deallocateCommands = [];
+        for (const line of liveLines) {
           const coverQty = await scope.inventory.getOrderCoverQuantity({
             organizationId: existing.organizationId,
             sku: line.sku,
             orderId: existing.id,
           });
           if (coverQty > 0) {
-            const deallocateResult = await scope.inventory.recordDeallocated({
+            deallocateCommands.push({
               organizationId: existing.organizationId,
               idempotencyKey: `${input.idempotencyKey}:deallocate:${line.id}`,
               sku: line.sku,
               quantity: coverQty,
               orderId: existing.id,
             });
-            if (!deallocateResult.ok) {
-              if (deallocateResult.reason === "idempotency_conflict") {
-                throw new SalesTransactionError("idempotency_conflict");
-              }
-              throw new SalesTransactionError("inventory_conflict");
+          }
+        }
+        if (deallocateCommands.length > 0) {
+          const deallocateResult = await scope.inventory.recordDeallocatedBulk(deallocateCommands);
+          if (!deallocateResult.ok) {
+            if (deallocateResult.reason === "idempotency_conflict") {
+              throw new SalesTransactionError("idempotency_conflict");
             }
+            throw new SalesTransactionError("inventory_conflict");
           }
         }
 

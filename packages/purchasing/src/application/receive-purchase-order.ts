@@ -85,21 +85,23 @@ export class ReceivePurchaseOrderUseCase {
             sku: line.sku,
           })),
         );
-        for (const { receive, line } of validatedReceipts) {
-          const result = await scope.inventory.recordGoodsReceived({
+        const receiveResult = await scope.inventory.recordGoodsReceivedBulk(
+          validatedReceipts.map(({ receive, line }) => ({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:receive:${line.id}:${receive.quantity}`,
             sku: line.sku,
             quantity: receive.quantity,
             purchaseOrderId: existing.id,
-          });
-          if (!result.ok) {
-            if (result.reason === "idempotency_conflict") {
-              throw new PurchasingTransactionError("idempotency_conflict");
-            }
-            throw new PurchasingTransactionError("inventory_conflict");
+          })),
+        );
+        if (!receiveResult.ok) {
+          if (receiveResult.reason === "idempotency_conflict") {
+            throw new PurchasingTransactionError("idempotency_conflict");
           }
+          throw new PurchasingTransactionError("inventory_conflict");
+        }
 
+        for (const { receive, line } of validatedReceipts) {
           const nextLine: PurchaseOrderLine = {
             ...line,
             receivedQty: line.receivedQty + receive.quantity,

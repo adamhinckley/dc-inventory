@@ -16,7 +16,12 @@ export type StockCommandFailureReason =
 
 export type StockCommandResult =
   | { ok: true; movement: Movement }
-  | { ok: false; reason: StockCommandFailureReason; availableToSell?: number };
+  | {
+      ok: false;
+      reason: StockCommandFailureReason;
+      availableToSell?: number;
+      failedIdempotencyKey?: string;
+    };
 
 export type StockCommandBase = {
   organizationId: OrganizationId;
@@ -127,6 +132,19 @@ export interface IStockLedger {
   ): Promise<StockCommandResult>;
   recordCommitted(command: RecordCommittedCommand): Promise<StockCommandResult>;
   recordDecommitted(command: RecordDecommittedCommand): Promise<StockCommandResult>;
+  recordInboundFromPoBulk(
+    commands: readonly RecordInboundFromPoCommand[],
+  ): Promise<StockCommandResult>;
+  recordGoodsReceivedBulk(
+    commands: readonly RecordGoodsReceivedCommand[],
+  ): Promise<StockCommandResult>;
+  recordInboundCancelledBulk(
+    commands: readonly RecordInboundCancelledCommand[],
+  ): Promise<StockCommandResult>;
+  recordCommittedBulk(commands: readonly RecordCommittedCommand[]): Promise<StockCommandResult>;
+  recordDecommittedBulk(commands: readonly RecordDecommittedCommand[]): Promise<StockCommandResult>;
+  recordDeallocatedBulk(commands: readonly RecordDeallocatedCommand[]): Promise<StockCommandResult>;
+  recordShippedBulk(commands: readonly RecordShippedCommand[]): Promise<StockCommandResult>;
   reopenSkusForPresell(command: ReopenSkusForPresellCommand): Promise<DemandCommandResult>;
   closeSkusForPresell(command: CloseSkusForPresellCommand): Promise<CloseSkusForPresellResult>;
   setSellWindow(command: SetSellWindowCommand): Promise<DemandCommandResult>;

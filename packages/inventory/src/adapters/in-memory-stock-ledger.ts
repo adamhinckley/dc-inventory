@@ -48,10 +48,21 @@ import type { InMemoryInventoryReadModel } from "./in-memory-inventory-read-mode
  * in the same unit of work scope as the read model.
  */
 export class InMemoryStockLedger implements IStockLedger {
+  private singleRecordCallCount = 0;
+
   constructor(
     private readonly readModel: InMemoryInventoryReadModel,
     private readonly clock?: IClock,
   ) {}
+
+  /** Counts invocations of the single-row `record()` path (for bulk I/O tests). */
+  getSingleRecordCallCount(): number {
+    return this.singleRecordCallCount;
+  }
+
+  resetSingleRecordCallCount(): void {
+    this.singleRecordCallCount = 0;
+  }
 
   lockSnapshots(_snapshots: readonly StockSnapshotLock[]): Promise<void> {
     return Promise.resolve();
@@ -99,6 +110,40 @@ export class InMemoryStockLedger implements IStockLedger {
 
   recordDecommitted(command: RecordDecommittedCommand): Promise<StockCommandResult> {
     return this.recordWithDemandObservation("Decommitted", command);
+  }
+
+  recordInboundFromPoBulk(
+    commands: readonly RecordInboundFromPoCommand[],
+  ): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("InboundFromPo", commands);
+  }
+
+  recordGoodsReceivedBulk(
+    commands: readonly RecordGoodsReceivedCommand[],
+  ): Promise<StockCommandResult> {
+    return this.runGoodsReceivedBulkWithCover(commands);
+  }
+
+  recordInboundCancelledBulk(
+    commands: readonly RecordInboundCancelledCommand[],
+  ): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("InboundCancelled", commands);
+  }
+
+  recordCommittedBulk(commands: readonly RecordCommittedCommand[]): Promise<StockCommandResult> {
+    return this.runCommittedBulkWithCover(commands);
+  }
+
+  recordDecommittedBulk(commands: readonly RecordDecommittedCommand[]): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("Decommitted", commands);
+  }
+
+  recordDeallocatedBulk(commands: readonly RecordDeallocatedCommand[]): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("Deallocated", commands);
+  }
+
+  recordShippedBulk(commands: readonly RecordShippedCommand[]): Promise<StockCommandResult> {
+    return this.recordBulkWithDemandObservation("Shipped", commands);
   }
 
   async reopenSkusForPresell(command: ReopenSkusForPresellCommand): Promise<DemandCommandResult> {
@@ -184,6 +229,50 @@ export class InMemoryStockLedger implements IStockLedger {
     });
   }
 
+  private async runCommittedBulkWithCover(
+    commands: readonly RecordCommittedCommand[],
+  ): Promise<StockCommandResult> {
+    if (commands.length === 0) {
+      throw new Error("recordCommittedBulk requires at least one command");
+    }
+    await this.lockSnapshots(
+      commands.map((command) => ({
+        organizationId: requireOrganizationId(command.organizationId),
+        sku: command.sku,
+        locationId: command.locationId ?? LocationId.DEFAULT,
+      })),
+    );
+    const observedSkus = new Set<string>();
+    let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
+    for (const command of commands) {
+      const organizationId = requireOrganizationId(command.organizationId);
+      const locationId = command.locationId ?? LocationId.DEFAULT;
+      const now = this.clock ? this.clock.now() : new Date();
+      const skuKey = `${organizationId}\0${command.sku.value}\0${locationId}`;
+      if (!observedSkus.has(skuKey)) {
+        observedSkus.add(skuKey);
+        const demandBefore = this.readModel.getDemandStateSync(command.sku, locationId, organizationId);
+        const observedDemand = observeWindowClose(demandBefore, now);
+        if (observedDemand.stickyLocked !== demandBefore.stickyLocked) {
+          this.readModel.setDemandState(command.sku, locationId, observedDemand, organizationId);
+        }
+      }
+      const result = await recordCommittedWithCover(command, {
+        readState: () => ({
+          figures: this.readModel.getSnapshotSync(command.sku, locationId, organizationId),
+          demand: this.readModel.getDemandStateSync(command.sku, locationId, organizationId),
+          now,
+        }),
+        record: (movementType, coverCommand) => this.applyRecord(movementType, coverCommand),
+      });
+      if (!result.ok) {
+        return { ...result, failedIdempotencyKey: command.idempotencyKey };
+      }
+      lastSuccess = result;
+    }
+    return lastSuccess ?? { ok: false, reason: "invalid_quantity" };
+  }
+
   private async runGoodsReceivedWithCover(
     command: RecordGoodsReceivedCommand,
   ): Promise<StockCommandResult> {
@@ -225,6 +314,106 @@ export class InMemoryStockLedger implements IStockLedger {
     return receiveResult;
   }
 
+  private async runGoodsReceivedBulkWithCover(
+    commands: readonly RecordGoodsReceivedCommand[],
+  ): Promise<StockCommandResult> {
+    if (commands.length === 0) {
+      throw new Error("recordGoodsReceivedBulk requires at least one command");
+    }
+    await this.lockSnapshots(
+      commands.map((command) => ({
+        organizationId: requireOrganizationId(command.organizationId),
+        sku: command.sku,
+        locationId: command.locationId ?? LocationId.DEFAULT,
+      })),
+    );
+    const observedSkus = new Set<string>();
+    let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
+    for (const command of commands) {
+      const organizationId = requireOrganizationId(command.organizationId);
+      const locationId = command.locationId ?? LocationId.DEFAULT;
+      const now = this.clock ? this.clock.now() : new Date();
+      const skuKey = `${organizationId}\0${command.sku.value}\0${locationId}`;
+      if (!observedSkus.has(skuKey)) {
+        observedSkus.add(skuKey);
+        const demandBefore = this.readModel.getDemandStateSync(command.sku, locationId, organizationId);
+        const observedDemand = observeWindowClose(demandBefore, now);
+        if (observedDemand.stickyLocked !== demandBefore.stickyLocked) {
+          this.readModel.setDemandState(command.sku, locationId, observedDemand, organizationId);
+        }
+      }
+      const receiveResult = await this.applyRecord("GoodsReceived", command);
+      if (!receiveResult.ok) {
+        return { ...receiveResult, failedIdempotencyKey: command.idempotencyKey };
+      }
+      const coverResult = await allocateReceiveCover(command, command.quantity, {
+        readState: () => ({
+          figures: this.readModel.getSnapshotSync(command.sku, locationId, organizationId),
+          demand: this.readModel.getDemandStateSync(command.sku, locationId, organizationId),
+          now,
+        }),
+        listMovements: async () =>
+          (await this.readModel.listMovements({
+            organizationId,
+            sku: command.sku,
+            locationId,
+            refType: "sales_order",
+            movementTypes: RECEIVE_COVER_MOVEMENT_TYPES,
+          })).map((movement) => ({
+            movementType: movement.movementType,
+            quantity: movement.quantity,
+            refType: movement.refType,
+            refId: movement.refId,
+            createdAt: movement.createdAt,
+          })),
+        record: (movementType, coverCommand) => this.applyRecord(movementType, coverCommand),
+      });
+      if (coverResult !== null && !coverResult.ok) {
+        return { ...coverResult, failedIdempotencyKey: command.idempotencyKey };
+      }
+      lastSuccess = receiveResult;
+    }
+    return lastSuccess ?? { ok: false, reason: "invalid_quantity" };
+  }
+
+  private async recordBulkWithDemandObservation(
+    movementType: MovementType,
+    commands: readonly StockCommandBase[],
+  ): Promise<StockCommandResult> {
+    if (commands.length === 0) {
+      throw new Error("recordBulk requires at least one command");
+    }
+    await this.lockSnapshots(
+      commands.map((command) => ({
+        organizationId: requireOrganizationId(command.organizationId),
+        sku: command.sku,
+        locationId: command.locationId ?? LocationId.DEFAULT,
+      })),
+    );
+    const observedSkus = new Set<string>();
+    let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
+    for (const command of commands) {
+      const organizationId = requireOrganizationId(command.organizationId);
+      const locationId = command.locationId ?? LocationId.DEFAULT;
+      const now = this.clock ? this.clock.now() : new Date();
+      const skuKey = `${organizationId}\0${command.sku.value}\0${locationId}`;
+      if (!observedSkus.has(skuKey)) {
+        observedSkus.add(skuKey);
+        const demandBefore = this.readModel.getDemandStateSync(command.sku, locationId, organizationId);
+        const observedDemand = observeWindowClose(demandBefore, now);
+        if (observedDemand.stickyLocked !== demandBefore.stickyLocked) {
+          this.readModel.setDemandState(command.sku, locationId, observedDemand, organizationId);
+        }
+      }
+      const result = await this.applyRecord(movementType, command);
+      if (!result.ok) {
+        return { ...result, failedIdempotencyKey: command.idempotencyKey };
+      }
+      lastSuccess = result;
+    }
+    return lastSuccess ?? { ok: false, reason: "invalid_quantity" };
+  }
+
   private recordWithDemandObservation(
     movementType: MovementType,
     command: StockCommandBase,
@@ -241,6 +430,14 @@ export class InMemoryStockLedger implements IStockLedger {
   }
 
   private record(
+    movementType: MovementType,
+    command: StockCommandBase,
+  ): Promise<StockCommandResult> {
+    this.singleRecordCallCount += 1;
+    return this.applyRecord(movementType, command);
+  }
+
+  private applyRecord(
     movementType: MovementType,
     command: StockCommandBase,
   ): Promise<StockCommandResult> {

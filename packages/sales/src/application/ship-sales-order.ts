@@ -71,37 +71,44 @@ export class ShipSalesOrderUseCase {
             sku: line.sku,
           })),
         );
-        for (const line of liveLines) {
-          const result = await scope.inventory.recordShipped({
+        const shipResult = await scope.inventory.recordShippedBulk(
+          liveLines.map((line) => ({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:ship:${line.id}`,
             sku: line.sku,
             quantity: line.qty,
             orderId: existing.id,
-          });
-          if (!result.ok) {
-            if (result.reason === "idempotency_conflict") {
-              throw new SalesTransactionError("idempotency_conflict");
-            }
-            if (
-              result.reason === "insufficient_allocated" ||
-              result.reason === "insufficient_committed" ||
-              result.reason === "insufficient_on_hand"
-            ) {
-              const covered = await scope.inventory.getOrderCoverQuantity({
-                organizationId: existing.organizationId,
-                sku: line.sku,
-                orderId: existing.id,
-              });
-              throw new SalesTransactionError("insufficient_cover", {
-                sku: line.sku.value,
-                name: line.name,
-                requestedQty: line.qty,
-                coveredQty: covered,
-              });
-            }
-            throw new SalesTransactionError("inventory_conflict");
+          })),
+        );
+        if (!shipResult.ok) {
+          const failedLine = liveLines.find(
+            (line) =>
+              shipResult.failedIdempotencyKey === `${input.idempotencyKey}:ship:${line.id}`,
+          );
+          if (shipResult.reason === "idempotency_conflict") {
+            throw new SalesTransactionError("idempotency_conflict");
           }
+          if (
+            shipResult.reason === "insufficient_allocated" ||
+            shipResult.reason === "insufficient_committed" ||
+            shipResult.reason === "insufficient_on_hand"
+          ) {
+            if (failedLine === undefined) {
+              throw new SalesTransactionError("inventory_conflict");
+            }
+            const covered = await scope.inventory.getOrderCoverQuantity({
+              organizationId: existing.organizationId,
+              sku: failedLine.sku,
+              orderId: existing.id,
+            });
+            throw new SalesTransactionError("insufficient_cover", {
+              sku: failedLine.sku.value,
+              name: failedLine.name,
+              requestedQty: failedLine.qty,
+              coveredQty: covered,
+            });
+          }
+          throw new SalesTransactionError("inventory_conflict");
         }
 
         const subtotalCents = computeSubtotalCents(liveLines);

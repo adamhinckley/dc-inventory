@@ -165,31 +165,37 @@ export class ConfirmSalesOrderUseCase {
             sku: line.sku,
           })),
         );
-        for (const line of existing.lines) {
-          const result = await scope.inventory.recordCommitted({
+        const commitResult = await scope.inventory.recordCommittedBulk(
+          existing.lines.map((line) => ({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:confirm:${line.id}`,
             sku: line.sku,
             quantity: line.qty,
             orderId: existing.id,
-          });
-          if (!result.ok) {
-            if (result.reason === "idempotency_conflict") {
-              throw new SalesTransactionError("idempotency_conflict");
-            }
-            if (
-              result.reason === "insufficient_available_to_sell" ||
-              result.reason === "insufficient_available"
-            ) {
-              throw new SalesTransactionError("insufficient_atp", {
-                sku: line.sku.value,
-                name: line.name,
-                requestedQty: line.qty,
-                availableQty: result.availableToSell ?? 0,
-              });
-            }
-            throw new SalesTransactionError("inventory_conflict");
+          })),
+        );
+        if (!commitResult.ok) {
+          const failedLine =
+            existing.lines.find(
+              (line) =>
+                commitResult.failedIdempotencyKey ===
+                `${input.idempotencyKey}:confirm:${line.id}`,
+            ) ?? existing.lines[0];
+          if (commitResult.reason === "idempotency_conflict") {
+            throw new SalesTransactionError("idempotency_conflict");
           }
+          if (
+            commitResult.reason === "insufficient_available_to_sell" ||
+            commitResult.reason === "insufficient_available"
+          ) {
+            throw new SalesTransactionError("insufficient_atp", {
+              sku: failedLine?.sku.value ?? "",
+              name: failedLine?.name ?? "",
+              requestedQty: failedLine?.qty ?? 0,
+              availableQty: commitResult.availableToSell ?? 0,
+            });
+          }
+          throw new SalesTransactionError("inventory_conflict");
         }
 
         const updated: SalesOrder = applyShipToSnapshot(

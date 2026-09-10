@@ -131,6 +131,30 @@ describe("DrizzleStockLedger round trips", () => {
     expect(queryLog).toHaveLength(ROUND_TRIPS_TO_LOCK + ROUND_TRIPS_PER_LINE * lineSkus.length);
   });
 
+  it("batches inbound bulk writes after a single lock instead of 3 round trips per line", async () => {
+    const lineSkus = skus(10);
+
+    queryLog = [];
+    const bulkResult = await ledger.recordInboundFromPoBulk(
+      lineSkus.map((sku) => ({
+        organizationId: ORG,
+        idempotencyKey: `${PO_ID}:${sku.value}`,
+        sku,
+        quantity: 10,
+        refType: "purchase_order",
+        refId: PO_ID,
+      })),
+    );
+    expect(bulkResult.ok).toBe(true);
+
+    const perLineQueries = ROUND_TRIPS_TO_LOCK + ROUND_TRIPS_PER_LINE * lineSkus.length;
+    const movementInserts = queryLog.filter(
+      (query) => query.startsWith("insert into") && query.includes('"inventory"."stock_movements"'),
+    ).length;
+    expect(movementInserts).toBe(1);
+    expect(queryLog.length).toBeLessThan(perLineQueries);
+  });
+
   it("does not re-read a snapshot row it already holds a lock on", async () => {
     const lineSkus = skus(3);
 
