@@ -3,6 +3,7 @@ import type { Sku } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import {
   allocateReceiveCover,
+  RECEIVE_COVER_MOVEMENT_TYPES,
   recordCommittedWithCover,
 } from "../domain/cover-policy.js";
 import {
@@ -206,6 +207,8 @@ export class InMemoryStockLedger implements IStockLedger {
           organizationId,
           sku: command.sku,
           locationId,
+          refType: "sales_order",
+          movementTypes: RECEIVE_COVER_MOVEMENT_TYPES,
         })).map((movement) => ({
           movementType: movement.movementType,
           quantity: movement.quantity,

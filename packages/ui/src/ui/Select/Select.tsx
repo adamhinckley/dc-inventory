@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState, type ComponentPropsWithRef } from 'react'
 import { Select as BaseSelect } from '@base-ui-components/react/select'
 import { Check, ChevronDown } from 'lucide-react'

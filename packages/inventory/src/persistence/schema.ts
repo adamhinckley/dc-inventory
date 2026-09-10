@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  index,
   integer,
   jsonb,
   pgSchema,
@@ -105,6 +106,11 @@ export const stockMovements = inventory.table(
   },
   (table) => [
     check("stock_movements_qty_positive", sql`${table.qty} > 0`),
+    index("stock_movements_organization_id_sku_location_id_idx").on(
+      table.organizationId,
+      table.sku,
+      table.locationId,
+    ),
     uniqueIndex("stock_movements_organization_id_idempotency_key_sku").on(
       table.organizationId,
       table.idempotencyKey,

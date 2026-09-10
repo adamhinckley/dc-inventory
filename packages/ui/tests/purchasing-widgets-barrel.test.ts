@@ -14,13 +14,15 @@ describe("@dc-inventory/ui purchasing widget barrel", () => {
     );
   });
 
-  it("marks Form and FormDialog as client modules so the App Router barrel is safe from RSC", () => {
+  it("marks Form, FormDialog, and Select as client modules so the App Router barrel is safe from RSC", () => {
     const files = [
       "ui/Form/Form.tsx",
       "ui/Form/Form.hook.ts",
       "ui/Form/index.ts",
       "ui/FormDialog/FormDialog.tsx",
       "ui/FormDialog/index.ts",
+      "ui/Select/Select.tsx",
+      "ui/Select/index.ts",
     ];
     for (const file of files) {
       const source = readFileSync(join(uiSrc, file), "utf8");

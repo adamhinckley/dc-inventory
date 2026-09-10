@@ -124,6 +124,7 @@ export {
 } from "./domain/movement.js";
 export {
   allocateReceiveCover,
+  RECEIVE_COVER_MOVEMENT_TYPES,
   gateCommittedQuantity,
   planConfirmCoverAllocation,
   planReceiveCoverAllocations,

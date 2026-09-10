@@ -54,9 +54,13 @@ export class ConfirmPurchaseOrderUseCase {
             sku: line.sku,
           })),
         );
+        const products = await this.catalog.findBySkus(
+          existing.organizationId,
+          existing.lines.map((line) => line.sku),
+        );
         for (const line of existing.lines) {
-          const product = await this.catalog.findBySku(existing.organizationId, line.sku);
-          if (product === null || !product.sku.equals(line.sku)) {
+          const product = products.get(line.sku.value);
+          if (product === undefined || !product.sku.equals(line.sku)) {
             return { ok: false, reason: "product_not_found" };
           }
         }

@@ -1,17 +1,17 @@
 import {
   OrganizationId,
   PurchaseOrderId,
-  Sku,
   SupplierId,
   type StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import { parseIsoDate } from "../domain/iso-date.js";
-import { newUuid, PurchaseOrderLineId } from "../domain/ids.js";
+import { newUuid } from "../domain/ids.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
 import { parsePoPrefix } from "../domain/supplier.js";
-import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
+import type { PurchaseOrder } from "../domain/purchase-order.js";
+import { resolveDraftPurchaseOrderLines } from "./resolve-draft-purchase-order-lines.js";
 
 export type CreatePurchaseOrderLineInput = {
   sku: string;
@@ -66,37 +66,15 @@ export class CreatePurchaseOrderUseCase {
       return { ok: false, reason: "supplier_po_prefix_missing" };
     }
 
-    const lines: PurchaseOrderLine[] = [];
-    const seenSkus = new Set<string>();
-    for (const line of input.lines) {
-      if (!Number.isInteger(line.qty) || line.qty <= 0) {
-        return { ok: false, reason: "invalid" };
-      }
-      try {
-        const requestedSku = Sku.parse(line.sku);
-        const product = await this.catalog.findBySku(input.organizationId, requestedSku);
-        if (product === null) {
-          return { ok: false, reason: "product_not_found" };
-        }
-        if (product.archived) {
-          return { ok: false, reason: "product_archived" };
-        }
-        const name = product.name.trim();
-        if (name.length === 0 || seenSkus.has(product.sku.value)) {
-          return { ok: false, reason: "invalid" };
-        }
-        seenSkus.add(product.sku.value);
-        lines.push({
-          id: PurchaseOrderLineId.parse(newUuid()),
-          sku: product.sku,
-          name,
-          qty: line.qty,
-          receivedQty: 0,
-        });
-      } catch {
-        return { ok: false, reason: "invalid" };
-      }
+    const resolved = await resolveDraftPurchaseOrderLines(
+      this.catalog,
+      input.organizationId,
+      input.lines,
+    );
+    if (!resolved.ok) {
+      return resolved;
     }
+    const { lines } = resolved;
 
     const shipDate = parseIsoDate(input.shipDate);
     const cancelDate = parseIsoDate(input.cancelDate);

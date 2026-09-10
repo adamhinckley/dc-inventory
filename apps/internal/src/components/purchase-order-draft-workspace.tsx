@@ -729,7 +729,7 @@ export function PurchaseOrderDraftWorkspace({
       return;
     }
     setActionError(null);
-    const saved = await flushAutosave(true);
+    const saved = await flushAutosave();
     if (
       !purchaseOrderLinesSavedForConfirm(
         linesRef.current,
@@ -774,7 +774,7 @@ export function PurchaseOrderDraftWorkspace({
     setExporting(true);
     setActionError(null);
     try {
-      await flushAutosave(true);
+      await flushAutosave();
       await downloadPurchaseOrderXlsx(purchaseOrderId, initialDocumentNumber);
     } catch {
       setActionError("XLS download failed.");

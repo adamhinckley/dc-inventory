@@ -247,7 +247,18 @@ export class InMemoryInventoryReadModel implements IInventoryReadModel {
       if (locationId && movement.locationId !== locationId) {
         return false;
       }
-      if (filter.movementType && movement.movementType !== filter.movementType) {
+      if (
+        filter.movementTypes !== undefined &&
+        filter.movementTypes.length > 0 &&
+        !filter.movementTypes.includes(movement.movementType)
+      ) {
+        return false;
+      }
+      if (
+        (filter.movementTypes === undefined || filter.movementTypes.length === 0) &&
+        filter.movementType &&
+        movement.movementType !== filter.movementType
+      ) {
         return false;
       }
       if (filter.refType && movement.refType !== filter.refType) {

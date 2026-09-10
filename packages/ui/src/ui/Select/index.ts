@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Constrained option picker backed by Base UI's Select. Trigger button
  * shows the selected option, opens a popup list. No typeahead filtering;

@@ -1,5 +1,6 @@
 import type { LocationId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Sku } from "@dc-inventory/shared-kernel";
+import type { MovementType } from "./movement.js";
 import {
   computeConfirmCoverQuantity,
   computeEffectiveSellState,
@@ -36,6 +37,13 @@ export type CoverAllocatedCommand = Readonly<{
   refType: "sales_order";
   refId: string;
 }>;
+
+export const RECEIVE_COVER_MOVEMENT_TYPES = [
+  "Committed",
+  "Decommitted",
+  "Allocated",
+  "Deallocated",
+] as const satisfies readonly MovementType[];
 
 export type CoverPolicyRecorder = (
   movementType: "Committed" | "Allocated",
@@ -169,6 +177,14 @@ export async function allocateReceiveCover(
   },
 ): Promise<StockCommandResult | null> {
   const state = await deps.readState();
+  const totalCoverQty = computeReceiveCoverQuantity(
+    receivedQuantity,
+    state.figures,
+    state.demand.committed,
+  );
+  if (totalCoverQty <= 0) {
+    return null;
+  }
   const movements = await deps.listMovements();
   const allocations = planReceiveCoverAllocations(
     command,

@@ -86,8 +86,46 @@ function sqlNameToKey(column: string): string {
   return column.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
+function sqlChunkText(node: unknown): string {
+  if (!isSql(node)) {
+    return "";
+  }
+  return node.queryChunks
+    .map((chunk) => (typeof chunk === "string" ? chunk : sqlChunkText(chunk)))
+    .join(" ")
+    .toLowerCase();
+}
+
+function notInIds(clause: unknown): Set<string> | null {
+  if (!sqlChunkText(clause).includes("not in")) {
+    return null;
+  }
+  const ids = new Set<string>();
+  function walk(node: unknown): void {
+    if (isParam(node) && typeof node.value === "string") {
+      ids.add(node.value);
+      return;
+    }
+    if (isSql(node)) {
+      for (const chunk of node.queryChunks) {
+        walk(chunk);
+      }
+    }
+  }
+  walk(clause);
+  return ids;
+}
+
 function rowMatches(row: Record<string, unknown>, clause: unknown): boolean {
-  return eqPairs(clause).every(({ column, value }) => row[sqlNameToKey(column)] === value);
+  const pairs = eqPairs(clause);
+  if (!pairs.every(({ column, value }) => row[sqlNameToKey(column)] === value)) {
+    return false;
+  }
+  const excluded = notInIds(clause);
+  if (excluded !== null && excluded.has(String(row.id))) {
+    return false;
+  }
+  return pairs.length > 0 || excluded !== null;
 }
 
 function thenableRows<T>(rows: T[]) {
@@ -106,6 +144,7 @@ class FakePurchasingDb {
   readonly orders = new Map<string, OrderRow>();
   readonly lines = new Map<string, LineRow>();
   readonly supplierRows = new Map<string, SupplierRow>();
+  readonly statements: string[] = [];
   failNextLineInsert = false;
 
   constructor() {
@@ -160,25 +199,45 @@ class FakePurchasingDb {
     return {
       values: (value: OrderRow | LineRow | Array<OrderRow | LineRow>) => {
         if (table === supplierPoDocumentNumberCounters) {
+          this.statements.push("counter");
           return {
             onConflictDoUpdate: async () => ({ sequence: 1 }),
             returning: async () => [{ sequence: 1 }],
           };
         }
-        return (async () => {
+        const write = (upsert: boolean) => {
           if (table === purchaseOrderLines && this.failNextLineInsert) {
             this.failNextLineInsert = false;
             throw new Error("forced line insert failure");
           }
+          this.statements.push(upsert ? "upsert-lines" : "insert");
           const rows = Array.isArray(value) ? value : [value];
           for (const row of rows) {
             if (table === purchaseOrders) {
               this.orders.set(row.id, { ...(row as OrderRow) });
-            } else {
-              this.lines.set(row.id, { ...(row as LineRow) });
+              continue;
             }
+            const existing = this.lines.get(row.id);
+            this.lines.set(row.id, {
+              ...(existing ?? {}),
+              ...(row as LineRow),
+              updatedAt: upsert ? new Date() : (row as LineRow).updatedAt,
+            });
           }
-        })();
+        };
+        return {
+          then: (resolve: (value: void) => void, reject: (error: unknown) => void) => {
+            try {
+              write(false);
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          },
+          onConflictDoUpdate: async () => {
+            write(true);
+          },
+        };
       },
     };
   }
@@ -186,13 +245,27 @@ class FakePurchasingDb {
   update(table: unknown) {
     return {
       set: (patch: Record<string, unknown>) => ({
-        where: async (clause: unknown) => {
-          const target = table === purchaseOrders ? this.orders : this.lines;
-          for (const [id, row] of target) {
-            if (rowMatches(row as unknown as Record<string, unknown>, clause)) {
-              target.set(id, { ...row, ...patch } as never);
+        where: (clause: unknown) => {
+          let updated: unknown[] | undefined;
+          const apply = () => {
+            if (updated !== undefined) {
+              return updated;
             }
-          }
+            this.statements.push("update");
+            const target = table === purchaseOrders ? this.orders : this.lines;
+            updated = [];
+            for (const [id, row] of target) {
+              if (rowMatches(row as unknown as Record<string, unknown>, clause)) {
+                const next = { ...row, ...patch };
+                target.set(id, next as never);
+                updated.push(next);
+              }
+            }
+            return updated;
+          };
+          return Object.assign(Promise.resolve().then(apply), {
+            returning: async () => apply(),
+          });
         },
       }),
     };
@@ -201,6 +274,7 @@ class FakePurchasingDb {
   delete(table: unknown) {
     return {
       where: async (clause: unknown) => {
+        this.statements.push("delete");
         const target = table === purchaseOrders ? this.orders : this.lines;
         for (const [id, row] of target) {
           if (rowMatches(row as unknown as Record<string, unknown>, clause)) {
@@ -292,5 +366,30 @@ describe("DrizzlePurchaseOrderRepository.save", () => {
     await repo.save(draft([line(LINE_A, SKU, "Bolt updated", 8)]));
     const loaded = await repo.findById(ORG, PO_ID);
     expect(loaded?.lines[0]?.qty).toBe(8);
+  });
+
+  it("rewrites an existing order in a fixed number of statements, not one per line", async () => {
+    const db = new FakePurchasingDb();
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+    const many = [LINE_A, LINE_B, LINE_C].map((id, index) =>
+      line(id, Sku.parse(`SKU-${index + 1}`), `Part ${index + 1}`, index + 1),
+    );
+    await repo.save(draft(many));
+    db.statements.length = 0;
+
+    await repo.save({
+      ...draft(many),
+      status: "confirmed",
+      lines: many.map((row) => ({ ...row, qty: row.qty + 1 })),
+    });
+
+    expect(db.statements.filter((name) => name !== "counter")).toEqual([
+      "update",
+      "delete",
+      "upsert-lines",
+    ]);
+    const loaded = await repo.findById(ORG, PO_ID);
+    expect(loaded?.status).toBe("confirmed");
+    expect(loaded?.lines.map((row) => row.qty)).toEqual([2, 3, 4]);
   });
 });
