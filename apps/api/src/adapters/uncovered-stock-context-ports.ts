@@ -34,13 +34,7 @@ export function uncoveredCaseQtyReadPort(
 
       const products = await productRepo.findBySkus(organizationId, values);
       const productIds = [...new Set([...products.values()].map((product) => product.id))];
-      const caseQtyByProductId = new Map<string, number | null>();
-      await Promise.all(
-        productIds.map(async (productId) => {
-          const pack = await packaging.findByProductId(productId);
-          caseQtyByProductId.set(productId, pack?.caseQty ?? null);
-        }),
-      );
+      const packagingByProductId = await packaging.findByProductIds(productIds);
 
       for (const sku of values) {
         const product = products.get(sku.value);
@@ -48,7 +42,7 @@ export function uncoveredCaseQtyReadPort(
           continue;
         }
         rows.set(sku.value, {
-          caseQty: caseQtyByProductId.get(product.id) ?? null,
+          caseQty: packagingByProductId.get(product.id)?.caseQty ?? null,
         });
       }
       return rows;

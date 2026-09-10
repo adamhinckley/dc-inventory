@@ -1,5 +1,9 @@
 import type { ICommittedCustomerNamesListQuery } from "@dc-inventory/sales";
-import { computeUncovered, type IInventoryReadModel } from "@dc-inventory/inventory";
+import {
+  computeUncovered,
+  InMemoryInventoryReadModel,
+  type IInventoryReadModel,
+} from "@dc-inventory/inventory";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import type {
   ICommittedCustomerNamesPort,
@@ -61,6 +65,8 @@ export function inventoryUncoveredReadPort(db: AppDrizzle): IInventoryUncoveredR
       return result;
     }
 
+    // Missing DEFAULT location: treat every SKU as uncovered 0 (same as default snapshot /
+    // StockSnapshotQtyReadAdapter omitting rows). UncoveredInventoryListQuery returns [].
     const locationId = await getDefaultLocationId(organizationId);
     if (locationId === null) {
       return result;
@@ -109,11 +115,34 @@ export function inventoryUncoveredReadModelPort(
       return snapshot.uncovered;
     },
     getUncoveredBySkus: async (organizationId: OrganizationId, skus: readonly Sku[]) => {
+      const values = uniqueSkus(skus);
       const result = new Map<string, number>();
-      for (const sku of uniqueSkus(skus)) {
-        const snapshot = await readModel.getSnapshot(sku, LocationId.DEFAULT, organizationId);
-        result.set(sku.value, snapshot.uncovered);
+      for (const sku of values) {
+        result.set(sku.value, 0);
       }
+      if (values.length === 0) {
+        return result;
+      }
+
+      if (readModel instanceof InMemoryInventoryReadModel) {
+        const wanted = new Set(values.map((sku) => sku.value));
+        for (const row of readModel.listOrganizationSnapshots(
+          organizationId,
+          LocationId.DEFAULT,
+        )) {
+          if (wanted.has(row.sku.value)) {
+            result.set(row.sku.value, row.snapshot.uncovered);
+          }
+        }
+        return result;
+      }
+
+      await Promise.all(
+        values.map(async (sku) => {
+          const snapshot = await readModel.getSnapshot(sku, LocationId.DEFAULT, organizationId);
+          result.set(sku.value, snapshot.uncovered);
+        }),
+      );
       return result;
     },
   };

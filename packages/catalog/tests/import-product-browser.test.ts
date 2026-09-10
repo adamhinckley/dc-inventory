@@ -268,6 +268,9 @@ describe("ImportProductBrowserUseCase", () => {
       async findByProductId() {
         return null;
       },
+      async findByProductIds() {
+        return new Map();
+      },
       async save() {
         throw new Error("packaging write failed");
       },

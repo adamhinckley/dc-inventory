@@ -11,6 +11,20 @@ export class InMemoryProductPackagingRepository implements IProductPackagingRepo
     return this.byProductId.get(productId) ?? null;
   }
 
+  async findByProductIds(
+    productIds: readonly ProductId[],
+  ): Promise<ReadonlyMap<string, ProductPackaging>> {
+    const unique = [...new Map(productIds.map((productId) => [productId, productId])).values()];
+    const rows = new Map<string, ProductPackaging>();
+    for (const productId of unique) {
+      const packaging = this.byProductId.get(productId);
+      if (packaging !== undefined) {
+        rows.set(productId, packaging);
+      }
+    }
+    return rows;
+  }
+
   async save(packaging: ProductPackaging): Promise<void> {
     this.byProductId.set(packaging.productId, { ...packaging });
   }
