@@ -12,6 +12,7 @@ import {
   validatorCompiler,
 } from "fastify-type-provider-zod";
 import { featuresAllCoreOn, type IFeatures } from "@dc-inventory/licensing";
+import { registerLicensingFeaturesRequestCache } from "./infrastructure/licensing-features-request-cache.js";
 import { InMemoryDatabase } from "./adapters/in-memory-database.js";
 import { registerHealthRoutes } from "./adapters/http/health.js";
 import { registerPingRoute } from "./adapters/http/ping.js";
@@ -132,6 +133,7 @@ export async function buildAudienceApp(
   app.decorate("licensing", services.licensing);
   app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
+  registerLicensingFeaturesRequestCache(app);
   registerErrorHandler(app, errorReporter);
   await registerCookie(app);
   await registerMultipart(app);
@@ -185,6 +187,7 @@ export async function buildApp(
   app.decorate("inventory", services.inventory);
   applyHttpCompilers(app);
   registerRequestIdHook(app);
+  registerLicensingFeaturesRequestCache(app);
   registerErrorHandler(app, errorReporter);
   await registerCookie(app);
   await registerCors(app);

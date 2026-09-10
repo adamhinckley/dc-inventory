@@ -479,8 +479,16 @@ export const licensingSubscriptionItemSchema = z.object({
   status: z.enum(["trialing", "active", "past_due", "canceled"]),
 });
 
+export const licensingListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+});
+
 export const licensingSubscriptionListResponseSchema = z.object({
   items: z.array(licensingSubscriptionItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
 });
 
 export const licensingPaymentItemSchema = z.object({
@@ -492,6 +500,9 @@ export const licensingPaymentItemSchema = z.object({
 
 export const licensingPaymentListResponseSchema = z.object({
   items: z.array(licensingPaymentItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
 });
 
 export const notFoundResponseSchema = z.object({

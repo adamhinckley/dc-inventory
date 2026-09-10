@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
+  licensingListQuerySchema,
   licensingPaymentListResponseSchema,
   licensingSubscriptionListResponseSchema,
   unauthorizedResponseSchema,
@@ -21,6 +22,7 @@ export function registerInternalLicensingRoutes(app: FastifyInstance): void {
         operationId: "listInternalLicensingSubscriptions",
         tags: ["internal"],
         summary: "List software subscriptions for the staff session organization",
+        querystring: licensingListQuerySchema,
         response: {
           200: licensingSubscriptionListResponseSchema,
           401: unauthorizedResponseSchema,
@@ -28,8 +30,11 @@ export function registerInternalLicensingRoutes(app: FastifyInstance): void {
       },
     },
     async (request) => {
+      const query = request.query as { page: number; pageSize: number };
       const result = await request.server.licensing.listSubscriptions.execute({
         organizationId: staffOrganizationId(request),
+        page: query.page,
+        pageSize: query.pageSize,
       });
       return {
         items: result.items.map((row) => ({
@@ -37,6 +42,9 @@ export function registerInternalLicensingRoutes(app: FastifyInstance): void {
           plan: row.plan,
           status: row.status,
         })),
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
       };
     },
   );
@@ -48,6 +56,7 @@ export function registerInternalLicensingRoutes(app: FastifyInstance): void {
         operationId: "listInternalLicensingPayments",
         tags: ["internal"],
         summary: "List software subscription payments for the staff session organization",
+        querystring: licensingListQuerySchema,
         response: {
           200: licensingPaymentListResponseSchema,
           401: unauthorizedResponseSchema,
@@ -55,8 +64,11 @@ export function registerInternalLicensingRoutes(app: FastifyInstance): void {
       },
     },
     async (request) => {
+      const query = request.query as { page: number; pageSize: number };
       const result = await request.server.licensing.listPayments.execute({
         organizationId: staffOrganizationId(request),
+        page: query.page,
+        pageSize: query.pageSize,
       });
       return {
         items: result.items.map((row) => ({
@@ -65,6 +77,9 @@ export function registerInternalLicensingRoutes(app: FastifyInstance): void {
           providerRef: row.providerRef,
           amountCents: row.amountCents,
         })),
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
       };
     },
   );

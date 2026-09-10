@@ -118,6 +118,7 @@ import {
   DrizzleLicensingReadRepository,
   featuresAllCoreOn,
   InMemoryLicensingStore,
+  GetLatestSubscriptionUseCase,
   LicensingFeatures,
   ListLicensingPaymentsUseCase,
   ListLicensingSubscriptionsUseCase,
@@ -431,6 +432,7 @@ export type AccountingHttpServices = {
 export type LicensingHttpServices = {
   listSubscriptions: ListLicensingSubscriptionsUseCase;
   listPayments: ListLicensingPaymentsUseCase;
+  getLatestSubscription: GetLatestSubscriptionUseCase;
 };
 
 export type CloseSkusForPresellHttpRequest = {
@@ -917,6 +919,7 @@ function licensingServices(repository: ILicensingReadRepository): LicensingHttpS
   return {
     listSubscriptions: new ListLicensingSubscriptionsUseCase(repository),
     listPayments: new ListLicensingPaymentsUseCase(repository),
+    getLatestSubscription: new GetLatestSubscriptionUseCase(repository),
   };
 }
 

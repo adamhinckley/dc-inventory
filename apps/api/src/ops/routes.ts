@@ -31,11 +31,10 @@ export async function opsRoutes(app: FastifyInstance): Promise<void> {
       },
     },
     handler: async (request) => {
-      const result = await request.server.licensing.listSubscriptions.execute({
+      const subscription = await request.server.licensing.getLatestSubscription.execute({
         organizationId: OrganizationId.DEFAULT,
       });
-      const subscription = result.items[0];
-      return subscription === undefined
+      return subscription === null
         ? { status: "inactive" as const, plan: null }
         : { status: subscription.status, plan: subscription.plan };
     },

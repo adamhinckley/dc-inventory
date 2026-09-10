@@ -7,7 +7,11 @@ import type {
   SubscriptionStatus,
 } from "../domain/licensing.js";
 import type { IFeatures } from "../domain/ports/features.js";
-import type { ILicensingReadRepository } from "../domain/ports/licensing-read-repository.js";
+import type {
+  ILicensingReadRepository,
+  LicensingListQuery,
+  LicensingListPage,
+} from "../domain/ports/licensing-read-repository.js";
 
 export class InMemoryLicensingStore implements ILicensingReadRepository {
   private readonly subscriptions = new Map<string, SubscriptionRecord>();
@@ -73,29 +77,57 @@ export class InMemoryLicensingStore implements ILicensingReadRepository {
     this.overrides.set(tenantId, overrides);
   }
 
-  async listSubscriptions(tenantId: OrganizationId): Promise<SubscriptionRecord[]> {
+  private listAllSubscriptions(tenantId: OrganizationId): SubscriptionRecord[] {
     return [...this.subscriptions.values()]
       .filter((subscription) => subscription.tenantId === tenantId)
       .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
   }
 
-  async listPayments(tenantId: OrganizationId): Promise<SoftwarePaymentRecord[]> {
+  private listAllPayments(tenantId: OrganizationId): SoftwarePaymentRecord[] {
     return [...this.payments.values()]
       .filter((payment) => payment.tenantId === tenantId)
       .sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime());
+  }
+
+  async listSubscriptions(
+    tenantId: OrganizationId,
+    query: LicensingListQuery,
+  ): Promise<LicensingListPage<SubscriptionRecord>> {
+    const rows = this.listAllSubscriptions(tenantId);
+    const offset = (query.page - 1) * query.pageSize;
+    return {
+      items: rows.slice(offset, offset + query.pageSize),
+      total: rows.length,
+    };
+  }
+
+  async listPayments(
+    tenantId: OrganizationId,
+    query: LicensingListQuery,
+  ): Promise<LicensingListPage<SoftwarePaymentRecord>> {
+    const rows = this.listAllPayments(tenantId);
+    const offset = (query.page - 1) * query.pageSize;
+    return {
+      items: rows.slice(offset, offset + query.pageSize),
+      total: rows.length,
+    };
+  }
+
+  async getLatestSubscription(tenantId: OrganizationId): Promise<SubscriptionRecord | null> {
+    return this.listAllSubscriptions(tenantId)[0] ?? null;
   }
 
   async findPaymentByProviderRef(
     tenantId: OrganizationId,
     providerRef: string,
   ): Promise<SoftwarePaymentRecord | undefined> {
-    return (await this.listPayments(tenantId)).find(
+    return this.listAllPayments(tenantId).find(
       (payment) => payment.providerRef === providerRef,
     );
   }
 
   async getFeatureState(tenantId: OrganizationId): Promise<TenantFeatureState> {
-    const subscription = (await this.listSubscriptions(tenantId))[0];
+    const subscription = await this.getLatestSubscription(tenantId);
     return {
       subscriptionStatus: subscription?.status ?? null,
       flagOverrides: this.overrides.get(tenantId) ?? [],
