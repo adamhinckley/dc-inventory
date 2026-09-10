@@ -9,13 +9,14 @@ import {
   resolveStaffActingSession,
   type ActingSessionFailureReason,
 } from "./resolve-staff-acting-session.js";
+import type { WholesaleStaffActingSession } from "./resolve-session.js";
 
 export type SelectActingCustomerRequest = {
   customerId: string;
 };
 
 export type SelectActingCustomerResult =
-  | { ok: true; customerId: CustomerId }
+  | ({ ok: true } & WholesaleStaffActingSession)
   | { ok: false; reason: ActingSessionFailureReason }
   | { ok: false; reason: "not_found" }
   | { ok: false; reason: "inactive" };
@@ -70,6 +71,14 @@ export class SelectActingCustomerUseCase {
       return { ok: false, reason: "inactive" };
     }
     await this.sessions.updateCustomerId(resolved.session.id, customerId);
-    return { ok: true, customerId };
+    return {
+      ok: true,
+      mode: "staff_acting",
+      staffUserId: resolved.staffUserId,
+      wholesaleUserId: null,
+      customerId,
+      email: resolved.staffUser.email,
+      organizationId: resolved.organizationId,
+    };
   }
 }

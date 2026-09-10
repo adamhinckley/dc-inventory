@@ -14,7 +14,7 @@ import {
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
 } from "@dc-inventory/identity";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { WHOLESALE_SESSION_COOKIE } from "./auth-cookies.js";
@@ -32,6 +32,7 @@ const ACME_SLUG = "acme";
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
@@ -198,6 +199,37 @@ describe("wholesale acting customer picker HTTP", () => {
     });
     expect(buyerList.statusCode).toBe(404);
     expect(buyerList.json()).toEqual({ error: "not_found" });
+  });
+
+  it("does not call resolveWholesale after successful select or clear", async () => {
+    const { app } = await startActingCustomersApp();
+    const staffCookie = await loginStaffActing(app);
+    const resolveSpy = vi.spyOn(app.identity.resolveWholesale, "execute");
+
+    const select = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/select-customer",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
+      payload: { customerId: ACTIVE_CUSTOMER_ID },
+    });
+    expect(select.statusCode).toBe(200);
+    expect(resolveSpy).toHaveBeenCalledTimes(0);
+
+    const clear = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/clear-customer",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
+    });
+    expect(clear.statusCode).toBe(200);
+    expect(resolveSpy).toHaveBeenCalledTimes(0);
+
+    const session = await app.inject({
+      method: "GET",
+      url: "/wholesale/auth/session",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
+    });
+    expect(session.statusCode).toBe(200);
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
   });
 
   it("selects and clears customers for staff acting with expected status codes", async () => {
