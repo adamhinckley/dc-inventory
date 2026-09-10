@@ -29,6 +29,10 @@ function normalizeTimestamp(value: Date | string | null): Date | null {
   return value instanceof Date ? value : new Date(value);
 }
 
+function normalizeCents(value: number | string): number {
+  return Number(value);
+}
+
 function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
   const asOfBound = asOfSqlBind(asOf);
   return sql`
@@ -225,12 +229,12 @@ type BalanceSqlRow = {
   customer_id: string;
   customer_number: string;
   name: string;
-  credit_limit_cents: number;
-  sum_remaining_cents: number;
-  past_due_cents: number;
+  credit_limit_cents: number | string;
+  sum_remaining_cents: number | string;
+  past_due_cents: number | string;
   oldest_due_date: Date | string | null;
-  unapplied_credit_cents: number;
-  confirmed_unshipped_cents: number;
+  unapplied_credit_cents: number | string;
+  confirmed_unshipped_cents: number | string;
   has_active_plan: boolean;
 };
 
@@ -239,10 +243,15 @@ function rowsFromExecute<T>(result: T[] | { rows: T[] }): T[] {
 }
 
 function mapBalanceRow(row: BalanceSqlRow, asOf: Date): CustomerBalanceRow {
+  const sumRemainingCents = normalizeCents(row.sum_remaining_cents);
+  const unappliedCreditCents = normalizeCents(row.unapplied_credit_cents);
+  const confirmedUnshippedCents = normalizeCents(row.confirmed_unshipped_cents);
+  const creditLimitCents = normalizeCents(row.credit_limit_cents);
+  const pastDueCents = normalizeCents(row.past_due_cents);
   const exposureCents = computeExposureCents(
-    row.sum_remaining_cents,
-    row.confirmed_unshipped_cents,
-    row.unapplied_credit_cents,
+    sumRemainingCents,
+    confirmedUnshippedCents,
+    unappliedCreditCents,
   );
   let daysPastDue = 0;
   const oldestDueDate = normalizeTimestamp(row.oldest_due_date);
@@ -259,12 +268,12 @@ function mapBalanceRow(row: BalanceSqlRow, asOf: Date): CustomerBalanceRow {
     customerId: CustomerId.parse(row.customer_id),
     customerNumber: row.customer_number,
     name: row.name,
-    openBalanceCents: row.sum_remaining_cents - row.unapplied_credit_cents,
-    pastDueCents: row.past_due_cents,
+    openBalanceCents: sumRemainingCents - unappliedCreditCents,
+    pastDueCents,
     oldestDueDate,
     daysPastDue,
-    creditLimitCents: row.credit_limit_cents,
-    availableCreditCents: computeAvailableCreditCents(row.credit_limit_cents, exposureCents),
+    creditLimitCents,
+    availableCreditCents: computeAvailableCreditCents(creditLimitCents, exposureCents),
     hasActivePlan: row.has_active_plan,
   };
 }
