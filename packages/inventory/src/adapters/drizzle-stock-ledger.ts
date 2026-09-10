@@ -3,7 +3,11 @@ import { LocationId, OrganizationId, requireOrganizationId } from "@dc-inventory
 import type { Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { allocateReceiveCover, recordCommittedWithCover } from "../domain/cover-policy.js";
+import {
+  allocateReceiveCover,
+  RECEIVE_COVER_MOVEMENT_TYPES,
+  recordCommittedWithCover,
+} from "../domain/cover-policy.js";
 import {
   applySetSellWindow,
   isSellWindowInvalid,
@@ -137,7 +141,17 @@ export class DrizzleStockLedger implements IStockLedger {
       groups.set(groupKey, group);
     }
 
-    for (const group of groups.values()) {
+    const orderedGroups = [...groups.values()].sort((left, right) => {
+      const leftFirst = left[0];
+      const rightFirst = right[0];
+      if (leftFirst === undefined || rightFirst === undefined) {
+        return 0;
+      }
+      const leftKey = `${leftFirst.organizationId}\0${leftFirst.locationUuid}`;
+      const rightKey = `${rightFirst.organizationId}\0${rightFirst.locationUuid}`;
+      return leftKey.localeCompare(rightKey);
+    });
+    for (const group of orderedGroups) {
       const first = group[0];
       if (first === undefined) {
         continue;
@@ -356,6 +370,8 @@ export class DrizzleStockLedger implements IStockLedger {
           organizationId,
           sku: command.sku,
           locationId,
+          refType: "sales_order",
+          movementTypes: RECEIVE_COVER_MOVEMENT_TYPES,
         })).map((movement) => ({
           movementType: movement.movementType,
           quantity: movement.quantity,
@@ -424,6 +440,7 @@ export class DrizzleStockLedger implements IStockLedger {
     const conflicts = await this.findConflictingMovements(
       organizationId,
       locationId,
+      locationUuid,
       movementType,
       command,
     );
@@ -496,6 +513,7 @@ export class DrizzleStockLedger implements IStockLedger {
   private async findConflictingMovements(
     organizationId: OrganizationId,
     locationId: LocationId,
+    locationUuid: string,
     movementType: MovementType,
     command: StockCommandBase,
   ): Promise<{ existing: Movement | undefined; provenanceTaken: boolean }> {
@@ -512,6 +530,7 @@ export class DrizzleStockLedger implements IStockLedger {
         and(
           eq(stockMovements.organizationId, organizationId),
           eq(stockMovements.sku, command.sku.value),
+          eq(stockMovements.locationId, locationUuid),
           isOnceOnlyProvenanceType(movementType)
             ? or(sameIdempotencyKey, sameProvenance)
             : sameIdempotencyKey,

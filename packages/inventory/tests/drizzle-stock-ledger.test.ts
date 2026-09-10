@@ -4,6 +4,7 @@ import { LocationId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { DrizzleInventoryReadModel } from "../src/adapters/drizzle-inventory-read-model.js";
+import { RECEIVE_COVER_MOVEMENT_TYPES } from "../src/domain/cover-policy.js";
 import { DrizzleStockLedger, type InventoryDrizzle } from "../src/adapters/drizzle-stock-ledger.js";
 import { stockMovements, stockSnapshots } from "../src/persistence/schema.js";
 
@@ -225,6 +226,71 @@ describe("DrizzleStockLedger round trips", () => {
 
     expect(duplicate).toEqual({ ok: false, reason: "provenance_conflict" });
     expect(otherPo.ok).toBe(true);
+  });
+
+  it("filters receive-cover movement list to sales-order cover types in SQL", async () => {
+    const [sku] = skus(1);
+    if (sku === undefined) throw new Error("fixture");
+    const salesOrderId = "550e8400-e29b-41d4-a716-446655440200";
+    const noiseRefId = "550e8400-e29b-41d4-a716-446655440201";
+
+    await confirmPurchaseOrder([sku]);
+    const committed = await ledger.recordCommitted({
+      organizationId: ORG,
+      idempotencyKey: "commit:SKU-1",
+      sku,
+      quantity: 5,
+      refType: "sales_order",
+      refId: salesOrderId,
+    });
+    expect(committed.ok).toBe(true);
+
+    await client.query(
+      `INSERT INTO inventory.stock_movements
+         (organization_id, sku, location_id, movement_type, qty, ref_type, ref_id, idempotency_key)
+       VALUES
+         ($1, $2, $3, 'AdjustmentIncrease', 1, 'adjustment', $4, 'noise-adjust'),
+         ($1, $2, $3, 'Shipped', 1, 'sales_order', $4, 'noise-ship')`,
+      [ORG, sku.value, LOCATION_UUID, noiseRefId],
+    );
+
+    queryLog = [];
+    const received = await ledger.recordGoodsReceived({
+      organizationId: ORG,
+      idempotencyKey: "receive:SKU-1",
+      sku,
+      quantity: 10,
+      refType: "purchase_order",
+      refId: PO_ID,
+    });
+    expect(received.ok).toBe(true);
+
+    const coverListQueries = queryLog.filter(
+      (query) =>
+        query.startsWith("select") &&
+        query.includes('"inventory"."stock_movements"') &&
+        query.includes('"movement_type" in'),
+    );
+    expect(coverListQueries.length).toBeGreaterThan(0);
+    for (const query of coverListQueries) {
+      expect(query).toContain('"ref_type" =');
+      expect(query).toContain('"movement_type" in');
+      expect(query).toMatch(
+        /"movement_type" in \(\$\d+, \$\d+, \$\d+, \$\d+\)/,
+      );
+      expect(RECEIVE_COVER_MOVEMENT_TYPES).toHaveLength(4);
+      expect(query).not.toContain("'GoodsReceived'");
+      expect(query).not.toContain("'InboundFromPo'");
+      expect(query).not.toContain("'Shipped'");
+      expect(query).not.toContain("'AdjustmentIncrease'");
+    }
+
+    const allocated = await client.query<{ movement_type: string; qty: number }>(
+      `SELECT movement_type, qty
+       FROM inventory.stock_movements
+       WHERE idempotency_key LIKE 'receive:SKU-1:cover:%'`,
+    );
+    expect(allocated.rows).toEqual([{ movement_type: "Allocated", qty: 5 }]);
   });
 
   it("guards later commands against figures it wrote earlier in the same transaction", async () => {
