@@ -1,5 +1,5 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
-import { SalesTransactionError, type SalesShortage } from "../domain/errors.js";
+import { SalesTransactionError, type CoverShortage } from "../domain/errors.js";
 import type { ICustomerBillToSnapshotReadPort } from "../domain/ports/customer-bill-to-snapshot-read.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
 import { liveSalesOrderLines, type SalesOrder } from "../domain/sales-order.js";
@@ -23,7 +23,7 @@ export type ShipSalesOrderResult =
         | "accounting_invalid"
         | "bill_to_missing";
     }
-  | { ok: false; reason: "insufficient_cover"; shortage?: SalesShortage };
+  | { ok: false; reason: "insufficient_cover"; shortage?: CoverShortage };
 
 function computeSubtotalCents(lines: readonly SalesOrder["lines"][number][]): number {
   return lines.reduce((sum, line) => sum + line.qty * line.unitPrice.amountMinor, 0);
@@ -97,7 +97,7 @@ export class ShipSalesOrderUseCase {
                 sku: line.sku.value,
                 name: line.name,
                 requestedQty: line.qty,
-                availableQty: covered,
+                coveredQty: covered,
               });
             }
             throw new SalesTransactionError("inventory_conflict");
@@ -124,7 +124,11 @@ export class ShipSalesOrderUseCase {
     } catch (error) {
       if (error instanceof SalesTransactionError) {
         if (error.reason === "insufficient_cover") {
-          return { ok: false, reason: "insufficient_cover", shortage: error.shortage };
+          const shortage =
+            error.shortage !== undefined && "coveredQty" in error.shortage
+              ? error.shortage
+              : undefined;
+          return { ok: false, reason: "insufficient_cover", shortage };
         }
         return {
           ok: false,

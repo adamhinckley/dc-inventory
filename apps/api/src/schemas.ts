@@ -1396,7 +1396,7 @@ export const insufficientCoverResponseSchema = z.object({
   sku: z.string().optional(),
   name: z.string().optional(),
   requestedQty: z.number().int().optional(),
-  availableQty: z.number().int().optional(),
+  coveredQty: z.number().int().optional(),
 });
 
 export const shipRefusedResponseSchema = z.object({

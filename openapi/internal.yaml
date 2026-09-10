@@ -11740,7 +11740,7 @@ paths:
                         type: integer
                         minimum: -9007199254740991
                         maximum: 9007199254740991
-                      availableQty:
+                      coveredQty:
                         type: integer
                         minimum: -9007199254740991
                         maximum: 9007199254740991

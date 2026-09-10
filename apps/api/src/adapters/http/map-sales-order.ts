@@ -20,13 +20,29 @@ export function toInsufficientAtpBody(result: {
 }
 
 export function toInsufficientCoverBody(result: {
-  shortage?: ConfirmSalesOrderShortage;
+  shortage?: {
+    sku: string;
+    name: string;
+    requestedQty: number;
+    coveredQty: number;
+  };
 }) {
-  return toLineShortageBody("insufficient_cover", result);
+  const shortage = result.shortage;
+  return {
+    error: "insufficient_cover" as const,
+    ...(shortage !== undefined
+      ? {
+          sku: shortage.sku,
+          name: shortage.name,
+          requestedQty: shortage.requestedQty,
+          coveredQty: shortage.coveredQty,
+        }
+      : {}),
+  };
 }
 
-function toLineShortageBody<TError extends "insufficient_atp" | "insufficient_cover">(
-  error: TError,
+function toLineShortageBody(
+  error: "insufficient_atp",
   result: { shortage?: ConfirmSalesOrderShortage },
 ) {
   const shortage = result.shortage;

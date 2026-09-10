@@ -4,6 +4,7 @@ type ActionErrorBody = {
   sku?: string;
   requestedQty?: number;
   availableQty?: number;
+  coveredQty?: number;
 };
 
 function formatShortage(data: ActionErrorBody): string | null {
@@ -96,17 +97,17 @@ export function cancelSalesOrderErrorMessage(result: {
 }
 
 function formatShipCoverShortage(data: ActionErrorBody): string | null {
-  if (data.availableQty === undefined || data.requestedQty === undefined) {
+  if (data.coveredQty === undefined || data.requestedQty === undefined) {
     return null;
   }
   const product = data.name?.trim() || data.sku?.trim();
   if (product === undefined || product.length === 0) {
     return null;
   }
-  if (data.availableQty <= 0) {
+  if (data.coveredQty <= 0) {
     return `${product} has no allocated stock. You asked to ship ${data.requestedQty}.`;
   }
-  return `${product} has ${data.availableQty} allocated. You asked to ship ${data.requestedQty}.`;
+  return `${product} has ${data.coveredQty} allocated. You asked to ship ${data.requestedQty}.`;
 }
 
 export function shipSalesOrderErrorMessage(result: {

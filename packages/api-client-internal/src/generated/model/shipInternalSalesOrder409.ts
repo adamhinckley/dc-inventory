@@ -20,7 +20,7 @@ export type ShipInternalSalesOrder409 = {
      * @minimum -9007199254740991
      * @maximum 9007199254740991
      */
-  availableQty?: number;
+  coveredQty?: number;
 } | {
   error: 'bill_to_missing' | 'accounting_invalid' | 'illegal_transition';
 };

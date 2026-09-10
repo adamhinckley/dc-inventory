@@ -55,7 +55,7 @@ describe("sales order action errors", () => {
           error: "insufficient_cover",
           name: "Cover presell widget",
           requestedQty: 1_200,
-          availableQty: 500,
+          coveredQty: 500,
         },
       }),
     ).toBe("Cover presell widget has 500 allocated. You asked to ship 1200.");

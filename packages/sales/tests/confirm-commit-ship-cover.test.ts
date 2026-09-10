@@ -322,7 +322,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         sku: COVER_SKU.value,
         name: "Cover presell widget",
         requestedQty: 1_200,
-        availableQty: 500,
+        coveredQty: 500,
       });
 
       await h.inboundFromPo.execute({

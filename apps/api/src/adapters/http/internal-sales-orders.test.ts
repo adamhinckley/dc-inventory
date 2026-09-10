@@ -322,7 +322,7 @@ describe("internal sales orders HTTP", () => {
       sku: SKU.value,
       name: "Catalog hex bolt",
       requestedQty: 5,
-      availableQty: 2,
+      coveredQty: 2,
     });
   });
 
