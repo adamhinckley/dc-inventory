@@ -22,6 +22,7 @@ export { InMemoryInvoiceRepository } from "./adapters/in-memory-invoice-reposito
 export { InMemoryOpenOrderExposureReadPort } from "./adapters/in-memory-open-order-exposure-read.js";
 export { GetAccountingSummaryUseCase } from "./application/get-accounting-summary.js";
 export { GetCustomerAccountingSummaryUseCase } from "./application/get-customer-accounting-summary.js";
+export { GetCustomerAccountingWorkspaceUseCase } from "./application/get-customer-accounting-workspace.js";
 export { ListCustomerBalancesQuery } from "./application/list-customer-balances.js";
 export { ListPaymentsReceivedQuery } from "./application/list-payments-received.js";
 export { AdjustInvoiceUseCase } from "./application/adjust-invoice.js";
@@ -52,6 +53,8 @@ export { supportsAccountingRepository } from "./domain/ports/invoice-repository.
 export type { CustomerArLoadedData } from "./domain/ar-projection.js";
 export {
   customerHasBalanceOrCredit,
+  deriveCustomerInvoiceRows,
+  deriveCustomerPaymentRows,
   projectCustomerArBalance,
 } from "./domain/ar-projection.js";
 export type { CustomerArStats } from "./domain/ar-stats.js";

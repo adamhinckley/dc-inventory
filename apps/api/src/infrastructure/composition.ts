@@ -177,6 +177,7 @@ import {
   EndPaymentPlanUseCase,
   GetAccountingSummaryUseCase,
   GetCustomerAccountingSummaryUseCase,
+  GetCustomerAccountingWorkspaceUseCase,
   GetInvoiceUseCase,
   InMemoryAccountingUnitOfWork,
   InMemoryArCustomerReadPort,
@@ -409,6 +410,7 @@ export type AccountingHttpServices = {
   getInvoice: GetInvoiceUseCase;
   recordPayment: RecordPaymentUseCase;
   getCustomerAccountingSummary: GetCustomerAccountingSummaryUseCase;
+  getCustomerAccountingWorkspace: GetCustomerAccountingWorkspaceUseCase;
   getAccountingSummary: GetAccountingSummaryUseCase;
   listCustomerBalances: ListCustomerBalancesQuery;
   listPaymentsReceived: ListPaymentsReceivedQuery;
@@ -883,6 +885,12 @@ function accountingServices(input: AccountingServicesInput): AccountingHttpServi
     getInvoice: new GetInvoiceUseCase(invoiceRepo),
     recordPayment: new RecordPaymentUseCase(accountingUnitOfWork, clock),
     getCustomerAccountingSummary: new GetCustomerAccountingSummaryUseCase(
+      arCustomerRead,
+      customerProfiles,
+      openOrderExposure,
+      lastOrderDate,
+    ),
+    getCustomerAccountingWorkspace: new GetCustomerAccountingWorkspaceUseCase(
       arCustomerRead,
       customerProfiles,
       openOrderExposure,

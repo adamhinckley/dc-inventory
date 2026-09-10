@@ -1,22 +1,14 @@
-import type {
-  getInternalCustomerAccounting,
-  listInternalCustomerInvoices,
-  listInternalCustomerPayments,
-} from "@dc-inventory/api-client-internal";
+import type { getInternalCustomerAccountingWorkspace } from "@dc-inventory/api-client-internal";
 
-export type CustomerAccountingSummary = Extract<
-  Awaited<ReturnType<typeof getInternalCustomerAccounting>>,
+export type CustomerAccountingWorkspace = Extract<
+  Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>,
   { status: 200 }
 >["data"];
 
-export type CustomerInvoiceRow = Extract<
-  Awaited<ReturnType<typeof listInternalCustomerInvoices>>,
-  { status: 200 }
->["data"]["items"][number];
+export type CustomerAccountingSummary = CustomerAccountingWorkspace["summary"];
 
-export type CustomerPaymentRow = Extract<
-  Awaited<ReturnType<typeof listInternalCustomerPayments>>,
-  { status: 200 }
->["data"]["items"][number];
+export type CustomerInvoiceRow = CustomerAccountingWorkspace["invoices"][number];
+
+export type CustomerPaymentRow = CustomerAccountingWorkspace["payments"][number];
 
 export type CustomerInvoiceStatus = CustomerInvoiceRow["status"];

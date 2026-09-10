@@ -176,6 +176,21 @@ describe("internal accounting HTTP", () => {
     const { app, openInvoice, paidInvoice } = await startAccountingApp();
     const cookie = await staffCookie(app);
 
+    const workspace = await app.inject({
+      method: "GET",
+      url: `/internal/customers/${CUSTOMER_ID}/accounting/workspace?asOf=${AS_OF.toISOString()}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(workspace.statusCode).toBe(200);
+    expect(workspace.json()).toMatchObject({
+      summary: {
+        openBalanceOwedCents: 1300,
+        stats: { openInvoiceCount: 2 },
+      },
+    });
+    expect(workspace.json().invoices).toHaveLength(3);
+    expect(workspace.json().payments).toHaveLength(1);
+
     const summary = await app.inject({
       method: "GET",
       url: `/internal/customers/${CUSTOMER_ID}/accounting?asOf=${AS_OF.toISOString()}`,

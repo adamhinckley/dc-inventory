@@ -1646,6 +1646,12 @@ export const customerAccountingSummarySchema = z.object({
   planExpectations: paymentPlanExpectationsSchema.nullable(),
 });
 
+export const customerAccountingWorkspaceResponseSchema = z.object({
+  summary: customerAccountingSummarySchema,
+  invoices: z.array(customerArInvoiceItemSchema),
+  payments: z.array(customerPaymentItemSchema),
+});
+
 export const recordCustomerPaymentApplicationBodySchema = z.object({
   invoiceId: z.string().uuid(),
   amountCents: z.number().int().positive(),

@@ -172,6 +172,11 @@ import type {
   GetInternalCustomerAccounting403,
   GetInternalCustomerAccounting404,
   GetInternalCustomerAccountingParams,
+  GetInternalCustomerAccountingWorkspace200,
+  GetInternalCustomerAccountingWorkspace401,
+  GetInternalCustomerAccountingWorkspace403,
+  GetInternalCustomerAccountingWorkspace404,
+  GetInternalCustomerAccountingWorkspaceParams,
   GetInternalCustomerBillTo200,
   GetInternalCustomerBillTo400,
   GetInternalCustomerBillTo401,
@@ -8249,6 +8254,124 @@ export function useGetInternalCustomerAccounting<TData = Awaited<ReturnType<type
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetInternalCustomerAccountingQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getInternalCustomerAccountingWorkspaceResponse200 = {
+  data: GetInternalCustomerAccountingWorkspace200
+  status: 200
+}
+
+export type getInternalCustomerAccountingWorkspaceResponse401 = {
+  data: GetInternalCustomerAccountingWorkspace401
+  status: 401
+}
+
+export type getInternalCustomerAccountingWorkspaceResponse403 = {
+  data: GetInternalCustomerAccountingWorkspace403
+  status: 403
+}
+
+export type getInternalCustomerAccountingWorkspaceResponse404 = {
+  data: GetInternalCustomerAccountingWorkspace404
+  status: 404
+}
+
+export type getInternalCustomerAccountingWorkspaceResponseSuccess = (getInternalCustomerAccountingWorkspaceResponse200) & {
+  headers: Headers;
+};
+export type getInternalCustomerAccountingWorkspaceResponseError = (getInternalCustomerAccountingWorkspaceResponse401 | getInternalCustomerAccountingWorkspaceResponse403 | getInternalCustomerAccountingWorkspaceResponse404) & {
+  headers: Headers;
+};
+
+export type getInternalCustomerAccountingWorkspaceResponse = (getInternalCustomerAccountingWorkspaceResponseSuccess | getInternalCustomerAccountingWorkspaceResponseError)
+
+export const getGetInternalCustomerAccountingWorkspaceUrl = (id: string,
+    params?: GetInternalCustomerAccountingWorkspaceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/customers/${id}/accounting/workspace?${stringifiedParams}` : `/internal/customers/${id}/accounting/workspace`
+}
+
+/**
+ * @summary Get customer accounting workspace bundle
+ */
+export const getInternalCustomerAccountingWorkspace = async (id: string,
+    params?: GetInternalCustomerAccountingWorkspaceParams, options?: Parameters<typeof customFetch>[1]): Promise<getInternalCustomerAccountingWorkspaceResponse> => {
+
+  return customFetch<getInternalCustomerAccountingWorkspaceResponse>(getGetInternalCustomerAccountingWorkspaceUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInternalCustomerAccountingWorkspaceQueryKey = (id: string,
+    params?: GetInternalCustomerAccountingWorkspaceParams,) => {
+    return [
+    `/internal/customers/${id}/accounting/workspace`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetInternalCustomerAccountingWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>, TError = GetInternalCustomerAccountingWorkspace401 | GetInternalCustomerAccountingWorkspace403 | GetInternalCustomerAccountingWorkspace404>(id: string,
+    params?: GetInternalCustomerAccountingWorkspaceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInternalCustomerAccountingWorkspaceQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>> = ({ signal }) => getInternalCustomerAccountingWorkspace(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInternalCustomerAccountingWorkspaceQueryResult = NonNullable<Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>>
+export type GetInternalCustomerAccountingWorkspaceQueryError = GetInternalCustomerAccountingWorkspace401 | GetInternalCustomerAccountingWorkspace403 | GetInternalCustomerAccountingWorkspace404
+
+
+/**
+ * @summary Get customer accounting workspace bundle
+ */
+
+export function useGetInternalCustomerAccountingWorkspace<TData = Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>, TError = GetInternalCustomerAccountingWorkspace401 | GetInternalCustomerAccountingWorkspace403 | GetInternalCustomerAccountingWorkspace404>(
+ id: string,
+    params?: GetInternalCustomerAccountingWorkspaceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInternalCustomerAccountingWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInternalCustomerAccountingWorkspaceQueryOptions(id,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
