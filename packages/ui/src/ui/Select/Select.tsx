@@ -158,7 +158,10 @@ export function Select<T extends string | number | boolean = string>({
   return (
     <BaseSelect.Root<T>
       items={display === 'label' ? resolved : undefined}
-      value={value ?? undefined}
+      // Base UI treats `undefined` as uncontrolled and `null` as a controlled
+      // empty selection. Coercing null → undefined flips the Select from
+      // uncontrolled to controlled on first pick and logs a console error.
+      value={value}
       onValueChange={(next) => onChange(next as T | null)}
       disabled={disabled}
       name={name}

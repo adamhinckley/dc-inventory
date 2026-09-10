@@ -1,15 +1,15 @@
 export const CUSTOMER_DETAIL_TAB_KEYS = [
+  "accounting",
   "ship-tos",
   "bill-to",
   "contacts",
   "certificates",
   "orders",
-  "accounting",
 ] as const;
 
 export type CustomerDetailTabKey = (typeof CUSTOMER_DETAIL_TAB_KEYS)[number];
 
-export const DEFAULT_CUSTOMER_DETAIL_TAB: CustomerDetailTabKey = "ship-tos";
+export const DEFAULT_CUSTOMER_DETAIL_TAB: CustomerDetailTabKey = "accounting";
 
 export const CUSTOMER_DETAIL_TAB_LABELS: Record<CustomerDetailTabKey, string> = {
   "ship-tos": "Ship-Tos",

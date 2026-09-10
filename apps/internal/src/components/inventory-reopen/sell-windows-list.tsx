@@ -35,7 +35,7 @@ export function SellWindowsList() {
       </div>
 
       <div className="overflow-hidden rounded-section border border-border">
-        <div className="grid grid-cols-[minmax(0,1.4fr)_6rem_7rem_7rem_4rem_minmax(0,1fr)_8rem] gap-x-3 border-b border-border bg-surface-card px-3 py-2 text-label text-fg-secondary">
+        <div className="grid grid-cols-[minmax(0,1.4fr)_8rem_7rem_7rem_4rem_minmax(0,1fr)_8rem] gap-x-3 border-b border-border bg-surface-card px-3 py-2 text-label text-fg-secondary">
           <span>Name</span>
           <span>Status</span>
           <span>Opens</span>
@@ -58,7 +58,7 @@ export function SellWindowsList() {
           windows.map((window) => (
             <div
               key={window.id}
-              className="grid grid-cols-[minmax(0,1.4fr)_6rem_7rem_7rem_4rem_minmax(0,1fr)_8rem] items-center gap-x-3 border-b border-border px-3 py-2 text-body-sm"
+              className="grid grid-cols-[minmax(0,1.4fr)_8rem_7rem_7rem_4rem_minmax(0,1fr)_8rem] items-center gap-x-3 border-b border-border px-3 py-2 text-body-sm"
             >
               <Link
                 href={`/inventory/reopen/${window.id}`}

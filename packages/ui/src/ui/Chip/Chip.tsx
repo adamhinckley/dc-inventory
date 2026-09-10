@@ -16,13 +16,12 @@ import './Chip.css'
 // ---------------------------------------------------------------------------
 
 const chipVariants = cva(
-  // `max-w-full min-w-0 whitespace-nowrap` keep the pill atomic when it's a
-  // flex child of a too-narrow container (e.g. a shrunk table cell): the chip
-  // caps at the cell width and its label ellipsizes on one line (see the
-  // label span's `truncate`) instead of the default flex behavior — collapsing
-  // to the longest word and wrapping the rounded-full pill into a misshapen
-  // two-line blob. No-op where the chip has room to size to its content.
-  'glassmorphic-chip relative inline-flex max-w-full min-w-0 items-center gap-icon whitespace-nowrap rounded-full px-item-x py-0.5 text-xs font-medium [--chip-color:var(--color-fg-secondary)] text-(--chip-ink)',
+  // Size to the label. Grid/flex parents stretch items by default — `w-fit`
+  // plus start alignment keep the pill as wide as its content, not the cell.
+  // `max-w-full min-w-0 whitespace-nowrap` still cap a too-narrow cell so the
+  // label ellipsizes (see the inner `truncate`) instead of wrapping the
+  // rounded-full pill into a two-line blob.
+  'glassmorphic-chip relative inline-flex w-fit max-w-full min-w-0 justify-self-start self-start items-center gap-icon whitespace-nowrap rounded-full px-item-x py-0.5 text-xs font-medium [--chip-color:var(--color-fg-secondary)] text-(--chip-ink)',
   {
     variants: {
       animation: {

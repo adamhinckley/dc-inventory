@@ -10,12 +10,12 @@ import {
 describe("customer detail tabs", () => {
   it("defines the six tab query keys", () => {
     expect(CUSTOMER_DETAIL_TAB_KEYS).toEqual([
+      "accounting",
       "ship-tos",
       "bill-to",
       "contacts",
       "certificates",
       "orders",
-      "accounting",
     ]);
   });
 
@@ -33,11 +33,10 @@ describe("customer detail tabs", () => {
     }
   });
 
-  it("defaults to ship-tos when tab is missing or unknown", () => {
-    expect(customerDetailTabFromSearchParams({})).toBe(DEFAULT_CUSTOMER_DETAIL_TAB);
-    expect(customerDetailTabFromSearchParams({ tab: "unknown" })).toBe(
-      DEFAULT_CUSTOMER_DETAIL_TAB,
-    );
+  it("defaults to accounting when tab is missing or unknown", () => {
+    expect(customerDetailTabFromSearchParams({})).toBe("accounting");
+    expect(customerDetailTabFromSearchParams({ tab: "unknown" })).toBe("accounting");
     expect(customerDetailTabFromSearchParams({ tab: "bill-to" })).toBe("bill-to");
+    expect(DEFAULT_CUSTOMER_DETAIL_TAB).toBe("accounting");
   });
 });
