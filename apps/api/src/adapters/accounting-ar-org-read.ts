@@ -1,5 +1,5 @@
 import type { CustomerArLoadedData } from "@dc-inventory/accounting";
-import type { IArOrgReadPort } from "@dc-inventory/accounting";
+import type { IArOrgReadPort, OrgSummaryAggregates } from "@dc-inventory/accounting";
 import {
   invoiceAdjustments,
   invoices,
@@ -12,6 +12,7 @@ import type { OrganizationId } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AccountingDrizzle } from "@dc-inventory/accounting";
 import type { AppDrizzle } from "../infrastructure/db.js";
+import { queryOrgSummaryAggregates } from "./accounting-ar-sql-read.js";
 import {
   dedupeApplications,
   groupBy,
@@ -117,6 +118,16 @@ export class DrizzleArOrgReadPort implements IArOrgReadPort {
     }
 
     return customerData;
+  }
+
+  async loadOrgSummaryAggregates(
+    organizationId: OrganizationId,
+    asOf: Date,
+  ): Promise<OrgSummaryAggregates> {
+    return queryOrgSummaryAggregates(this.db as unknown as AppDrizzle, {
+      organizationId,
+      asOf,
+    });
   }
 }
 

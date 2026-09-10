@@ -5,4 +5,7 @@ export type IOpenOrderExposureReadPort = {
     organizationId: OrganizationId,
     customerId: CustomerId,
   ): Promise<number>;
+  listOpenOrderExposureCentsByCustomer(
+    organizationId: OrganizationId,
+  ): Promise<ReadonlyMap<CustomerId, number>>;
 };

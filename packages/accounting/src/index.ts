@@ -65,7 +65,7 @@ export type {
   AvailableCreditReadRequest,
   IAvailableCreditReadPort,
 } from "./domain/ports/available-credit-read.js";
-export type { IArOrgReadPort } from "./domain/ports/ar-org-read-port.js";
+export type { IArOrgReadPort, OrgSummaryAggregates } from "./domain/ports/ar-org-read-port.js";
 export type {
   CustomerArProfile,
   ICustomerArProfileReadPort,
