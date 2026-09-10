@@ -8,10 +8,15 @@ export {
   InMemoryLicensingStore,
 } from "./adapters/in-memory-licensing.js";
 export {
+  GetLatestSubscriptionUseCase,
   ListLicensingPaymentsUseCase,
   ListLicensingSubscriptionsUseCase,
 } from "./application/list-licensing.js";
 export { LicensingFeatures } from "./application/licensing-features.js";
+export type {
+  LicensingListPage,
+  LicensingListQuery,
+} from "./domain/ports/licensing-read-repository.js";
 export {
   CORE_FEATURE_NAMES,
   FEATURE_NAMES,

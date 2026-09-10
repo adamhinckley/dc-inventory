@@ -62,12 +62,21 @@ describe("persistent licensing composition", () => {
       second = composeAppServices();
 
       await expect(
-        first.licensing.listSubscriptions.execute({ organizationId: tenantId }),
-      ).resolves.toMatchObject({ items: [{ id: subscriptionId, status: "active" }] });
+        first.licensing.listSubscriptions.execute({
+          organizationId: tenantId,
+          page: 1,
+          pageSize: 25,
+        }),
+      ).resolves.toMatchObject({ items: [{ id: subscriptionId, status: "active" }], total: 1 });
       await expect(
-        second.licensing.listPayments.execute({ organizationId: tenantId }),
+        second.licensing.listPayments.execute({
+          organizationId: tenantId,
+          page: 1,
+          pageSize: 25,
+        }),
       ).resolves.toMatchObject({
         items: [{ id: paymentId, amountCents: 2500, status: "succeeded" }],
+        total: 1,
       });
       await expect(first.features.isEnabled(tenantId, "catalog")).resolves.toBe(false);
       await expect(second.features.isEnabled(tenantId, "sales")).resolves.toBe(true);
@@ -77,8 +86,12 @@ describe("persistent licensing composition", () => {
       restarted = composeAppServices();
 
       await expect(
-        restarted.licensing.listPayments.execute({ organizationId: tenantId }),
-      ).resolves.toMatchObject({ items: [{ id: paymentId }] });
+        restarted.licensing.listPayments.execute({
+          organizationId: tenantId,
+          page: 1,
+          pageSize: 25,
+        }),
+      ).resolves.toMatchObject({ items: [{ id: paymentId }], total: 1 });
       await expect(restarted.features.isEnabled(tenantId, "catalog")).resolves.toBe(false);
     } finally {
       await first?.database.close();

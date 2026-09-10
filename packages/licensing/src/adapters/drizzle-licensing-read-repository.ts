@@ -1,12 +1,16 @@
 import { OrganizationId } from "@dc-inventory/shared-kernel";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { TenantFeatureState } from "../domain/features.js";
 import type {
   SoftwarePaymentRecord,
   SubscriptionRecord,
 } from "../domain/licensing.js";
-import type { ILicensingReadRepository } from "../domain/ports/licensing-read-repository.js";
+import type {
+  ILicensingReadRepository,
+  LicensingListQuery,
+  LicensingListPage,
+} from "../domain/ports/licensing-read-repository.js";
 import {
   flagOverrides,
   softwarePayments,
@@ -54,33 +58,70 @@ function toPayment(row: typeof softwarePayments.$inferSelect): SoftwarePaymentRe
 export class DrizzleLicensingReadRepository implements ILicensingReadRepository {
   constructor(private readonly db: LicensingDrizzle) {}
 
-  async listSubscriptions(tenantId: OrganizationId): Promise<SubscriptionRecord[]> {
-    const rows = await this.db
-      .select()
-      .from(subscriptions)
-      .where(eq(subscriptions.tenantId, tenantId))
-      .orderBy(desc(subscriptions.createdAt));
-    return rows.map(toSubscription);
+  async listSubscriptions(
+    tenantId: OrganizationId,
+    query: LicensingListQuery,
+  ): Promise<LicensingListPage<SubscriptionRecord>> {
+    const where = eq(subscriptions.tenantId, tenantId);
+    const offset = (query.page - 1) * query.pageSize;
+    const [rows, countRows] = await Promise.all([
+      this.db
+        .select()
+        .from(subscriptions)
+        .where(where)
+        .orderBy(desc(subscriptions.createdAt))
+        .limit(query.pageSize)
+        .offset(offset),
+      this.db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(subscriptions)
+        .where(where),
+    ]);
+    return {
+      items: rows.map(toSubscription),
+      total: countRows[0]?.count ?? 0,
+    };
   }
 
-  async listPayments(tenantId: OrganizationId): Promise<SoftwarePaymentRecord[]> {
-    const rows = await this.db
-      .select()
-      .from(softwarePayments)
-      .where(eq(softwarePayments.tenantId, tenantId))
-      .orderBy(desc(softwarePayments.occurredAt));
-    return rows.map(toPayment);
+  async listPayments(
+    tenantId: OrganizationId,
+    query: LicensingListQuery,
+  ): Promise<LicensingListPage<SoftwarePaymentRecord>> {
+    const where = eq(softwarePayments.tenantId, tenantId);
+    const offset = (query.page - 1) * query.pageSize;
+    const [rows, countRows] = await Promise.all([
+      this.db
+        .select()
+        .from(softwarePayments)
+        .where(where)
+        .orderBy(desc(softwarePayments.occurredAt))
+        .limit(query.pageSize)
+        .offset(offset),
+      this.db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(softwarePayments)
+        .where(where),
+    ]);
+    return {
+      items: rows.map(toPayment),
+      total: countRows[0]?.count ?? 0,
+    };
   }
 
-  async getFeatureState(tenantId: OrganizationId): Promise<TenantFeatureState> {
-    const subscriptionRows = await this.db
+  async getLatestSubscription(tenantId: OrganizationId): Promise<SubscriptionRecord | null> {
+    const rows = await this.db
       .select()
       .from(subscriptions)
       .where(eq(subscriptions.tenantId, tenantId))
       .orderBy(desc(subscriptions.createdAt))
       .limit(1);
-    const subscription = subscriptionRows[0];
-    if (!subscription) {
+    const row = rows[0];
+    return row === undefined ? null : toSubscription(row);
+  }
+
+  async getFeatureState(tenantId: OrganizationId): Promise<TenantFeatureState> {
+    const subscription = await this.getLatestSubscription(tenantId);
+    if (subscription === null) {
       return { subscriptionStatus: null, flagOverrides: [] };
     }
     const overrides = await this.db

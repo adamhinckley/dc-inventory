@@ -23,14 +23,26 @@ describe("licensing tenant grain (ADA-166)", () => {
     store.recordPayment(DEFAULT_ORG, acmeSubscription.id, "pi_shared_ref");
     store.recordPayment(BETA_ORG, betaSubscription.id, "pi_shared_ref");
 
-    expect(await store.listSubscriptions(DEFAULT_ORG)).toEqual([acmeSubscription]);
-    expect(await store.listSubscriptions(BETA_ORG)).toEqual([betaSubscription]);
-    expect(await store.listPayments(DEFAULT_ORG)).toHaveLength(1);
-    expect(await store.listPayments(BETA_ORG)).toHaveLength(1);
+    expect(
+      await store.listSubscriptions(DEFAULT_ORG, { page: 1, pageSize: 25 }),
+    ).toMatchObject({ items: [acmeSubscription], total: 1 });
+    expect(
+      await store.listSubscriptions(BETA_ORG, { page: 1, pageSize: 25 }),
+    ).toMatchObject({ items: [betaSubscription], total: 1 });
+    expect(
+      (await store.listPayments(DEFAULT_ORG, { page: 1, pageSize: 25 })).items,
+    ).toHaveLength(1);
+    expect(
+      (await store.listPayments(BETA_ORG, { page: 1, pageSize: 25 })).items,
+    ).toHaveLength(1);
     expect(await store.findPaymentByProviderRef(DEFAULT_ORG, "pi_shared_ref")).toBeDefined();
     expect(await store.findPaymentByProviderRef(BETA_ORG, "pi_shared_ref")).toBeDefined();
-    expect((await store.listPayments(DEFAULT_ORG))[0]?.tenantId).toBe(DEFAULT_ORG);
-    expect((await store.listPayments(BETA_ORG))[0]?.tenantId).toBe(BETA_ORG);
+    expect(
+      (await store.listPayments(DEFAULT_ORG, { page: 1, pageSize: 25 })).items[0]?.tenantId,
+    ).toBe(DEFAULT_ORG);
+    expect(
+      (await store.listPayments(BETA_ORG, { page: 1, pageSize: 25 })).items[0]?.tenantId,
+    ).toBe(BETA_ORG);
   });
 
   it("does not leak Acme subscription data when listing Beta", async () => {
@@ -38,12 +50,15 @@ describe("licensing tenant grain (ADA-166)", () => {
     store.createSubscription(DEFAULT_ORG, "enterprise");
     store.createSubscription(BETA_ORG, "starter");
 
-    const betaSubscriptions = await store.listSubscriptions(BETA_ORG);
-    expect(betaSubscriptions).toHaveLength(1);
-    expect(betaSubscriptions[0]?.plan).toBe("starter");
-    expect(betaSubscriptions.every((subscription) => subscription.tenantId === BETA_ORG)).toBe(
-      true,
-    );
+    const betaSubscriptions = await store.listSubscriptions(BETA_ORG, {
+      page: 1,
+      pageSize: 25,
+    });
+    expect(betaSubscriptions.items).toHaveLength(1);
+    expect(betaSubscriptions.items[0]?.plan).toBe("starter");
+    expect(
+      betaSubscriptions.items.every((subscription) => subscription.tenantId === BETA_ORG),
+    ).toBe(true);
   });
 
   it("evaluates flag overrides per tenant", async () => {

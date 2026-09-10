@@ -318,10 +318,11 @@ describe("two-org HTTP isolation (ADA-169)", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
     expect(subscriptions.statusCode).toBe(200);
-    expect(subscriptions.json().items).toHaveLength(1);
-    expect(subscriptions.json().items[0]).toMatchObject({
-      plan: "enterprise",
-      status: "active",
+    expect(subscriptions.json()).toMatchObject({
+      items: [{ plan: "enterprise", status: "active" }],
+      page: 1,
+      pageSize: 25,
+      total: 1,
     });
 
     const payments = await app.inject({
@@ -332,6 +333,9 @@ describe("two-org HTTP isolation (ADA-169)", () => {
     expect(payments.statusCode).toBe(200);
     expect(payments.json()).toMatchObject({
       items: [{ providerRef: "pi_acme_sub", amountCents: 1000 }],
+      page: 1,
+      pageSize: 25,
+      total: 1,
     });
     expect(
       (payments.json() as { items: Array<{ providerRef: string }> }).items.some(

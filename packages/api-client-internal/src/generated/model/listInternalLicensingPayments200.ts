@@ -8,4 +8,19 @@ import type { ListInternalLicensingPayments200ItemsItem } from './listInternalLi
 
 export type ListInternalLicensingPayments200 = {
   items: ListInternalLicensingPayments200ItemsItem[];
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  page: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  pageSize: number;
+  /**
+     * @minimum -9007199254740991
+     * @maximum 9007199254740991
+     */
+  total: number;
 };

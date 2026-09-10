@@ -270,8 +270,10 @@ import type {
   ListInternalCustomersParams,
   ListInternalLicensingPayments200,
   ListInternalLicensingPayments401,
+  ListInternalLicensingPaymentsParams,
   ListInternalLicensingSubscriptions200,
   ListInternalLicensingSubscriptions401,
+  ListInternalLicensingSubscriptionsParams,
   ListInternalProducts200,
   ListInternalProducts400,
   ListInternalProducts401,
@@ -9535,20 +9537,27 @@ export type listInternalLicensingSubscriptionsResponseError = (listInternalLicen
 
 export type listInternalLicensingSubscriptionsResponse = (listInternalLicensingSubscriptionsResponseSuccess | listInternalLicensingSubscriptionsResponseError)
 
-export const getListInternalLicensingSubscriptionsUrl = () => {
+export const getListInternalLicensingSubscriptionsUrl = (params?: ListInternalLicensingSubscriptionsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/internal/licensing/subscriptions`
+  return stringifiedParams.length > 0 ? `/internal/licensing/subscriptions?${stringifiedParams}` : `/internal/licensing/subscriptions`
 }
 
 /**
  * @summary List software subscriptions for the staff session organization
  */
-export const listInternalLicensingSubscriptions = async ( options?: Parameters<typeof customFetch>[1]): Promise<listInternalLicensingSubscriptionsResponse> => {
+export const listInternalLicensingSubscriptions = async (params?: ListInternalLicensingSubscriptionsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalLicensingSubscriptionsResponse> => {
 
-  return customFetch<listInternalLicensingSubscriptionsResponse>(getListInternalLicensingSubscriptionsUrl(),
+  return customFetch<listInternalLicensingSubscriptionsResponse>(getListInternalLicensingSubscriptionsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -9561,23 +9570,23 @@ export const listInternalLicensingSubscriptions = async ( options?: Parameters<t
 
 
 
-export const getListInternalLicensingSubscriptionsQueryKey = () => {
+export const getListInternalLicensingSubscriptionsQueryKey = (params?: ListInternalLicensingSubscriptionsParams,) => {
     return [
-    `/internal/licensing/subscriptions`
+    `/internal/licensing/subscriptions`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListInternalLicensingSubscriptionsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError = ListInternalLicensingSubscriptions401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInternalLicensingSubscriptionsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError = ListInternalLicensingSubscriptions401>(params?: ListInternalLicensingSubscriptionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListInternalLicensingSubscriptionsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListInternalLicensingSubscriptionsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>> = ({ signal }) => listInternalLicensingSubscriptions({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>> = ({ signal }) => listInternalLicensingSubscriptions(params, { signal, ...requestOptions });
 
 
 
@@ -9595,11 +9604,11 @@ export type ListInternalLicensingSubscriptionsQueryError = ListInternalLicensing
  */
 
 export function useListInternalLicensingSubscriptions<TData = Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError = ListInternalLicensingSubscriptions401>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListInternalLicensingSubscriptionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingSubscriptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListInternalLicensingSubscriptionsQueryOptions(options)
+  const queryOptions = getListInternalLicensingSubscriptionsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -9631,20 +9640,27 @@ export type listInternalLicensingPaymentsResponseError = (listInternalLicensingP
 
 export type listInternalLicensingPaymentsResponse = (listInternalLicensingPaymentsResponseSuccess | listInternalLicensingPaymentsResponseError)
 
-export const getListInternalLicensingPaymentsUrl = () => {
+export const getListInternalLicensingPaymentsUrl = (params?: ListInternalLicensingPaymentsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/internal/licensing/payments`
+  return stringifiedParams.length > 0 ? `/internal/licensing/payments?${stringifiedParams}` : `/internal/licensing/payments`
 }
 
 /**
  * @summary List software subscription payments for the staff session organization
  */
-export const listInternalLicensingPayments = async ( options?: Parameters<typeof customFetch>[1]): Promise<listInternalLicensingPaymentsResponse> => {
+export const listInternalLicensingPayments = async (params?: ListInternalLicensingPaymentsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalLicensingPaymentsResponse> => {
 
-  return customFetch<listInternalLicensingPaymentsResponse>(getListInternalLicensingPaymentsUrl(),
+  return customFetch<listInternalLicensingPaymentsResponse>(getListInternalLicensingPaymentsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -9657,23 +9673,23 @@ export const listInternalLicensingPayments = async ( options?: Parameters<typeof
 
 
 
-export const getListInternalLicensingPaymentsQueryKey = () => {
+export const getListInternalLicensingPaymentsQueryKey = (params?: ListInternalLicensingPaymentsParams,) => {
     return [
-    `/internal/licensing/payments`
+    `/internal/licensing/payments`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListInternalLicensingPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError = ListInternalLicensingPayments401>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInternalLicensingPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError = ListInternalLicensingPayments401>(params?: ListInternalLicensingPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListInternalLicensingPaymentsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListInternalLicensingPaymentsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalLicensingPayments>>> = ({ signal }) => listInternalLicensingPayments({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalLicensingPayments>>> = ({ signal }) => listInternalLicensingPayments(params, { signal, ...requestOptions });
 
 
 
@@ -9691,11 +9707,11 @@ export type ListInternalLicensingPaymentsQueryError = ListInternalLicensingPayme
  */
 
 export function useListInternalLicensingPayments<TData = Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError = ListInternalLicensingPayments401>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListInternalLicensingPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalLicensingPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListInternalLicensingPaymentsQueryOptions(options)
+  const queryOptions = getListInternalLicensingPaymentsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
