@@ -25,7 +25,9 @@ import type {
 import type { IInventoryReadModel, IStockLedger } from "../domain/ports/stock-ledger.js";
 
 function mapResult(
-  result: { ok: true } | { ok: false; reason: string; availableToSell?: number },
+  result:
+    | { ok: true }
+    | { ok: false; reason: string; availableToSell?: number; failedIdempotencyKey?: string },
 ): InventoryCommandResult {
   if (result.ok) {
     return { ok: true };
@@ -37,6 +39,9 @@ function mapResult(
       : never,
     ...(result.availableToSell !== undefined
       ? { availableToSell: result.availableToSell }
+      : {}),
+    ...(result.failedIdempotencyKey !== undefined
+      ? { failedIdempotencyKey: result.failedIdempotencyKey }
       : {}),
   };
 }
@@ -206,6 +211,121 @@ export class StockLedgerInventoryCommandAdapter implements IInventoryCommandPort
         refType: "sales_order",
         refId: command.orderId,
       }),
+    );
+  }
+
+  async recordInboundFromPoBulk(
+    commands: readonly InboundFromPoCommand[],
+  ): Promise<InventoryCommandResult> {
+    return mapResult(
+      await this.ledger.recordInboundFromPoBulk(
+        commands.map((command) => ({
+          organizationId: command.organizationId,
+          idempotencyKey: command.idempotencyKey,
+          sku: command.sku,
+          quantity: command.quantity,
+          refType: "purchase_order",
+          refId: command.purchaseOrderId,
+        })),
+      ),
+    );
+  }
+
+  async recordGoodsReceivedBulk(
+    commands: readonly GoodsReceivedCommand[],
+  ): Promise<InventoryCommandResult> {
+    return mapResult(
+      await this.ledger.recordGoodsReceivedBulk(
+        commands.map((command) => ({
+          organizationId: command.organizationId,
+          idempotencyKey: command.idempotencyKey,
+          sku: command.sku,
+          quantity: command.quantity,
+          refType: "purchase_order",
+          refId: command.purchaseOrderId,
+        })),
+      ),
+    );
+  }
+
+  async recordInboundCancelledBulk(
+    commands: readonly InboundCancelledCommand[],
+  ): Promise<InventoryCommandResult> {
+    return mapResult(
+      await this.ledger.recordInboundCancelledBulk(
+        commands.map((command) => ({
+          organizationId: command.organizationId,
+          idempotencyKey: command.idempotencyKey,
+          sku: command.sku,
+          quantity: command.quantity,
+          refType: "purchase_order",
+          refId: command.purchaseOrderId,
+        })),
+      ),
+    );
+  }
+
+  async recordCommittedBulk(commands: readonly CommittedCommand[]): Promise<InventoryCommandResult> {
+    return mapResult(
+      await this.ledger.recordCommittedBulk(
+        commands.map((command) => ({
+          organizationId: command.organizationId,
+          idempotencyKey: command.idempotencyKey,
+          sku: command.sku,
+          quantity: command.quantity,
+          refType: "sales_order",
+          refId: command.orderId,
+        })),
+      ),
+    );
+  }
+
+  async recordDecommittedBulk(
+    commands: readonly DecommittedCommand[],
+  ): Promise<InventoryCommandResult> {
+    return mapResult(
+      await this.ledger.recordDecommittedBulk(
+        commands.map((command) => ({
+          organizationId: command.organizationId,
+          idempotencyKey: command.idempotencyKey,
+          sku: command.sku,
+          quantity: command.quantity,
+          refType: "sales_order",
+          refId: command.orderId,
+        })),
+      ),
+    );
+  }
+
+  async recordDeallocatedBulk(
+    commands: readonly DeallocatedCommand[],
+  ): Promise<InventoryCommandResult> {
+    return mapResult(
+      await this.ledger.recordDeallocatedBulk(
+        commands.map((command) => ({
+          organizationId: command.organizationId,
+          idempotencyKey: command.idempotencyKey,
+          sku: command.sku,
+          quantity: command.quantity,
+          refType: "sales_order",
+          refId: command.orderId,
+        })),
+      ),
+    );
+  }
+
+  async recordShippedBulk(commands: readonly ShippedCommand[]): Promise<InventoryCommandResult> {
+    return mapResult(
+      await this.ledger.recordShippedBulk(
+        commands.map((command) => ({
+          organizationId: command.organizationId,
+          idempotencyKey: command.idempotencyKey,
+          sku: command.sku,
+          quantity: command.quantity,
+          refType: "sales_order",
+          refId: command.orderId,
+        })),
+      ),
     );
   }
 

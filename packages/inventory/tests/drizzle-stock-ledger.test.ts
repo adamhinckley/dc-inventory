@@ -55,6 +55,9 @@ async function createInventorySchema(client: PGlite): Promise<void> {
     );
     CREATE UNIQUE INDEX stock_movements_organization_id_idempotency_key_sku
       ON inventory.stock_movements (organization_id, idempotency_key, sku);
+    CREATE UNIQUE INDEX stock_movements_organization_id_once_only_provenance
+      ON inventory.stock_movements (organization_id, ref_type, ref_id, sku, movement_type)
+      WHERE movement_type IN ('InboundFromPo', 'InboundCancelled', 'Deallocated', 'Shipped');
 
     CREATE TABLE inventory.stock_snapshots (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -131,6 +134,93 @@ describe("DrizzleStockLedger round trips", () => {
     expect(queryLog).toHaveLength(ROUND_TRIPS_TO_LOCK + ROUND_TRIPS_PER_LINE * lineSkus.length);
   });
 
+  it("batches inbound bulk writes after a single lock instead of 3 round trips per line", async () => {
+    const lineSkus = skus(10);
+
+    queryLog = [];
+    const bulkResult = await ledger.recordInboundFromPoBulk(
+      lineSkus.map((sku) => ({
+        organizationId: ORG,
+        idempotencyKey: `${PO_ID}:${sku.value}`,
+        sku,
+        quantity: 10,
+        refType: "purchase_order",
+        refId: PO_ID,
+      })),
+    );
+    expect(bulkResult.ok).toBe(true);
+
+    const perLineQueries = ROUND_TRIPS_TO_LOCK + ROUND_TRIPS_PER_LINE * lineSkus.length;
+    const movementInserts = queryLog.filter(
+      (query) => query.startsWith("insert into") && query.includes('"inventory"."stock_movements"'),
+    ).length;
+    const snapshotUpdates = queryLog.filter(
+      (query) =>
+        query.trim().toLowerCase().startsWith("update") && query.includes("stock_snapshots"),
+    ).length;
+    expect(movementInserts).toBe(1);
+    expect(snapshotUpdates).toBe(1);
+    expect(queryLog.length).toBeLessThan(perLineQueries);
+  });
+
+  it("batches committed bulk writes with one conflict prefetch instead of per-line lookups", async () => {
+    const lineSkus = skus(10);
+    const salesOrderId = "550e8400-e29b-41d4-a716-446655440200";
+
+    queryLog = [];
+    const bulkResult = await ledger.recordCommittedBulk(
+      lineSkus.map((sku) => ({
+        organizationId: ORG,
+        idempotencyKey: `commit-bulk:${sku.value}`,
+        sku,
+        quantity: 2,
+        refType: "sales_order",
+        refId: salesOrderId,
+      })),
+    );
+    expect(bulkResult.ok).toBe(true);
+
+    const movementConflictQueries = queryLog.filter(
+      (query) =>
+        query.startsWith("select") &&
+        query.includes('"inventory"."stock_movements"') &&
+        query.includes('"idempotency_key"'),
+    );
+    expect(movementConflictQueries).toHaveLength(1);
+    expect(
+      queryLog.filter(
+        (query) => query.startsWith("insert into") && query.includes('"inventory"."stock_movements"'),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("rejects duplicate once-only provenance within the same bulk batch", async () => {
+    const [sku] = skus(1);
+    if (sku === undefined) throw new Error("fixture");
+    const command = {
+      organizationId: ORG,
+      idempotencyKey: "dup-inbound:first",
+      sku,
+      quantity: 5,
+      refType: "purchase_order" as const,
+      refId: PO_ID,
+    };
+
+    const bulkResult = await ledger.recordInboundFromPoBulk([
+      command,
+      { ...command, idempotencyKey: "dup-inbound:second" },
+    ]);
+
+    expect(bulkResult.ok).toBe(false);
+    if (!bulkResult.ok) {
+      expect(bulkResult.reason).toBe("provenance_conflict");
+    }
+    const count = await client.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM inventory.stock_movements`,
+    );
+    expect(count.rows[0]?.n).toBe(0);
+  });
+
   it("does not re-read a snapshot row it already holds a lock on", async () => {
     const lineSkus = skus(3);
 
@@ -181,7 +271,7 @@ describe("DrizzleStockLedger round trips", () => {
     const first = await ledger.recordInboundFromPo(command);
     const replay = await ledger.recordInboundFromPo(command);
 
-    expect(first.ok && replay.ok && replay.movement.id).toBe(first.ok && first.movement.id);
+    expect(first.ok && replay.ok && replay.movement?.id).toBe(first.ok && first.movement?.id);
     const count = await client.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM inventory.stock_movements`,
     );

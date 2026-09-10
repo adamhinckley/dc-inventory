@@ -893,27 +893,32 @@ describe("Purchasing (in-memory)", () => {
     poPrefix: "HF",
     });
 
-    let cancelCalls = 0;
     const failingInventory: IPurchasingUnitOfWork["inventory"] = {
       lockSnapshots: (snapshots) => base.inventory.lockSnapshots(snapshots),
       recordInboundFromPo: (command) => base.inventory.recordInboundFromPo(command),
+      recordInboundFromPoBulk: (commands) => base.inventory.recordInboundFromPoBulk(commands),
       recordGoodsReceived: (command) => base.inventory.recordGoodsReceived(command),
-      recordInboundCancelled: async (command) => {
-        cancelCalls += 1;
-        if (cancelCalls === 2) {
+      recordGoodsReceivedBulk: (commands) => base.inventory.recordGoodsReceivedBulk(commands),
+      recordInboundCancelled: (command) => base.inventory.recordInboundCancelled(command),
+      recordInboundCancelledBulk: async (commands) => {
+        if (commands.length >= 2) {
           return { ok: false, reason: "provenance_conflict" };
         }
-        return base.inventory.recordInboundCancelled(command);
+        return base.inventory.recordInboundCancelledBulk(commands);
       },
       recordCommitted: (command) => base.inventory.recordCommitted(command),
+      recordCommittedBulk: (commands) => base.inventory.recordCommittedBulk(commands),
       matchesCommittedIdempotency: (command) =>
         base.inventory.matchesCommittedIdempotency(command),
       recordDecommitted: (command) => base.inventory.recordDecommitted(command),
+      recordDecommittedBulk: (commands) => base.inventory.recordDecommittedBulk(commands),
       matchesDecommittedIdempotency: (command) =>
         base.inventory.matchesDecommittedIdempotency(command),
       recordAllocated: (command) => base.inventory.recordAllocated(command),
       recordDeallocated: (command) => base.inventory.recordDeallocated(command),
+      recordDeallocatedBulk: (commands) => base.inventory.recordDeallocatedBulk(commands),
       recordShipped: (command) => base.inventory.recordShipped(command),
+      recordShippedBulk: (commands) => base.inventory.recordShippedBulk(commands),
       getOrderCoverQuantity: (query) => base.inventory.getOrderCoverQuantity(query),
     };
     const failingUow: IPurchasingUnitOfWork = {

@@ -71,27 +71,33 @@ export class ConfirmPurchaseOrderUseCase {
           }
         }
 
-        for (const line of existing.lines) {
-          const result = await scope.inventory.recordInboundFromPo({
+        const inboundResult = await scope.inventory.recordInboundFromPoBulk(
+          existing.lines.map((line) => ({
             organizationId: existing.organizationId,
             idempotencyKey: `${input.idempotencyKey}:confirm:${line.id}`,
             sku: line.sku,
             quantity: line.qty,
             purchaseOrderId: existing.id,
-          });
-          if (!result.ok) {
-            if (result.reason === "idempotency_conflict") {
-              throw new PurchasingTransactionError("idempotency_conflict");
-            }
-            const reason: ConfirmPurchaseOrderFailureReason =
-              result.reason === "provenance_conflict" || result.reason === "invalid_quantity"
-                ? result.reason
-                : "inventory_conflict";
-            throw new PurchasingTransactionError(reason, {
-              sku: line.sku.value,
-              name: line.name,
-            });
+          })),
+        );
+        if (!inboundResult.ok) {
+          const failedLine = existing.lines.find(
+            (line) =>
+              inboundResult.failedIdempotencyKey ===
+              `${input.idempotencyKey}:confirm:${line.id}`,
+          );
+          if (inboundResult.reason === "idempotency_conflict") {
+            throw new PurchasingTransactionError("idempotency_conflict");
           }
+          const reason: ConfirmPurchaseOrderFailureReason =
+            inboundResult.reason === "provenance_conflict" ||
+            inboundResult.reason === "invalid_quantity"
+              ? inboundResult.reason
+              : "inventory_conflict";
+          throw new PurchasingTransactionError(reason, {
+            sku: failedLine?.sku.value,
+            name: failedLine?.name,
+          });
         }
 
         const updated: PurchaseOrder = { ...existing, status: "confirmed" };
