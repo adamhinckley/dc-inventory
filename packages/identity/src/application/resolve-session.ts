@@ -31,16 +31,17 @@ export type ResolveStaffSessionResult =
     }
   | { ok: false; reason: SessionFailureReason };
 
+export type WholesaleStaffActingSession = {
+  mode: "staff_acting";
+  staffUserId: StaffUserId;
+  wholesaleUserId: null;
+  customerId: CustomerId | null;
+  email: string;
+  organizationId: OrganizationId;
+};
+
 export type ResolveWholesaleSessionResult =
-  | {
-      ok: true;
-      mode: "staff_acting";
-      staffUserId: StaffUserId;
-      wholesaleUserId: null;
-      customerId: CustomerId | null;
-      email: string;
-      organizationId: OrganizationId;
-    }
+  | ({ ok: true } & WholesaleStaffActingSession)
   | {
       ok: true;
       wholesaleUserId: WholesaleUserId;

@@ -288,7 +288,15 @@ describe("acting customer picker use cases", () => {
       customerId: ON_HOLD_CUSTOMER_ID,
     });
 
-    expect(result).toEqual({ ok: true, customerId: ON_HOLD_CUSTOMER_ID });
+    expect(result).toEqual({
+      ok: true,
+      mode: "staff_acting",
+      staffUserId: STAFF_ID,
+      wholesaleUserId: null,
+      customerId: ON_HOLD_CUSTOMER_ID,
+      email: "staff@local.test",
+      organizationId: OrganizationId.DEFAULT,
+    });
     const stored = await h.sessions.findById(session.id);
     expect(stored?.customerId).toBe(ON_HOLD_CUSTOMER_ID);
   });
@@ -300,14 +308,30 @@ describe("acting customer picker use cases", () => {
     const selectActive = await h.selectActingCustomer.execute(session.id, {
       customerId: ACTIVE_CUSTOMER_ID,
     });
-    expect(selectActive).toEqual({ ok: true, customerId: ACTIVE_CUSTOMER_ID });
+    expect(selectActive).toEqual({
+      ok: true,
+      mode: "staff_acting",
+      staffUserId: STAFF_ID,
+      wholesaleUserId: null,
+      customerId: ACTIVE_CUSTOMER_ID,
+      email: "staff@local.test",
+      organizationId: OrganizationId.DEFAULT,
+    });
     let stored = await h.sessions.findById(session.id);
     expect(stored?.customerId).toBe(ACTIVE_CUSTOMER_ID);
 
     const selectOnHold = await h.selectActingCustomer.execute(session.id, {
       customerId: ON_HOLD_CUSTOMER_ID,
     });
-    expect(selectOnHold).toEqual({ ok: true, customerId: ON_HOLD_CUSTOMER_ID });
+    expect(selectOnHold).toEqual({
+      ok: true,
+      mode: "staff_acting",
+      staffUserId: STAFF_ID,
+      wholesaleUserId: null,
+      customerId: ON_HOLD_CUSTOMER_ID,
+      email: "staff@local.test",
+      organizationId: OrganizationId.DEFAULT,
+    });
     stored = await h.sessions.findById(session.id);
     expect(stored?.customerId).toBe(ON_HOLD_CUSTOMER_ID);
   });
@@ -358,7 +382,15 @@ describe("acting customer picker use cases", () => {
 
     const result = await h.clearActingCustomer.execute(session.id);
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({
+      ok: true,
+      mode: "staff_acting",
+      staffUserId: STAFF_ID,
+      wholesaleUserId: null,
+      customerId: null,
+      email: "staff@local.test",
+      organizationId: OrganizationId.DEFAULT,
+    });
     const stored = await h.sessions.findById(session.id);
     expect(stored?.customerId).toBeNull();
   });

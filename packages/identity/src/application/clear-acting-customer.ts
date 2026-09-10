@@ -5,9 +5,10 @@ import {
   resolveStaffActingSession,
   type ActingSessionFailureReason,
 } from "./resolve-staff-acting-session.js";
+import type { WholesaleStaffActingSession } from "./resolve-session.js";
 
 export type ClearActingCustomerResult =
-  | { ok: true }
+  | ({ ok: true } & WholesaleStaffActingSession)
   | { ok: false; reason: ActingSessionFailureReason };
 
 export class ClearActingCustomerUseCase {
@@ -28,6 +29,14 @@ export class ClearActingCustomerUseCase {
       return resolved;
     }
     await this.sessions.updateCustomerId(resolved.session.id, null);
-    return { ok: true };
+    return {
+      ok: true,
+      mode: "staff_acting",
+      staffUserId: resolved.staffUserId,
+      wholesaleUserId: null,
+      customerId: null,
+      email: resolved.staffUser.email,
+      organizationId: resolved.organizationId,
+    };
   }
 }

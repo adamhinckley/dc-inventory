@@ -46,6 +46,7 @@ export {
   type ResolveStaffSessionResult,
   type ResolveWholesaleSessionResult,
   type SessionFailureReason,
+  type WholesaleStaffActingSession,
 } from "./application/resolve-session.js";
 export type { IClock } from "./domain/clock.js";
 export {
