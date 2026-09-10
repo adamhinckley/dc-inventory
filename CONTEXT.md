@@ -80,27 +80,31 @@ _Avoid_: company-wide infinity, season row, auto-reopen on receive
 Optional per-SKU calendar bounds (`windowOpensAt`, `windowClosesAt`) set on reopen. Outside the window the SKU is locked even with no PO. Staff may apply one window pair to many SKUs in one reopen batch.
 _Avoid_: cron, company selling season, ATP in the UI
 
-**Uncovered**:
-`max(0, committed − on_hand − on_order)`. The factory to-order list. Not a shop number.
-_Avoid_: available to sell, backorder document, purchase request
+**To Order**:
+`max(0, committed − on_hand − on_order)`. Per-SKU gap quantity: pre-sold demand not covered by on-hand or inbound PO. Not a shop number. Code/API still label this `uncovered` until [ADA-373](https://linear.app/adamhinckley/issue/ADA-373).
+_Avoid_: available to sell, backorder document, purchase request, pre-sold (that is committed)
+
+**Pre-order**:
+Staff worksheet/tab that lists SKUs with a To Order gap, grouped by factory (supplier), for drafting inbound POs. Not sellability.
+_Avoid_: purchase request, uncovered (code name until ADA-373), available to sell
 
 **Reorder minimum**:
-Target floor on warehouse on-hand for a SKU at a location. When on-hand is at or below this number, the SKU is low stock for replenishment planning. Not the factory uncovered formula.
-_Avoid_: uncovered, min order qty (vendor MOQ), committed
+Target floor on warehouse on-hand for a SKU at a location. When on-hand is at or below this number, the SKU is low stock for replenishment planning. Not the To Order gap formula.
+_Avoid_: To Order gap, min order qty (vendor MOQ), committed
 
 **Reorder maximum**:
 Upper target on warehouse on-hand for a SKU at a location. Used with reorder minimum for replenishment band planning. Not a purchase-order line quantity by itself.
-_Avoid_: uncovered, max order qty, on order / Qty On PO
+_Avoid_: To Order gap, max order qty, on order / Qty On PO
 
 ### Purchasing
 
 **Supplier**:
-Factory or vendor that fulfills purchase orders. Staff link catalog SKUs to a supplier before drafting factory POs from the uncovered worksheet.
+Factory or vendor that fulfills purchase orders. Staff link catalog SKUs to a supplier before drafting factory POs from the Pre-order worksheet.
 _Avoid_: vendor as the only word in tickets (prefer Supplier), customer, wholesale buyer
 
 **Purchase order**:
-Inbound factory document. Draft while staff edit lines and dates; confirmed to place the factory order (`InboundFromPo`); received when stock arrives. One PO belongs to one supplier — the uncovered worksheet splits a multi-SKU selection into one draft per factory.
-_Avoid_: purchase request, mixed-factory PO, auto-confirm from uncovered
+Inbound factory document. Draft while staff edit lines and dates; confirmed to place the factory order (`InboundFromPo`); received when stock arrives. One PO belongs to one supplier — the Pre-order worksheet splits a multi-SKU selection into one draft per factory.
+_Avoid_: purchase request, mixed-factory PO, auto-confirm from Pre-order
 
 ### Customers
 

@@ -338,7 +338,7 @@ uncovered         = max(0, committed − on_hand − on_order)
 
 SoloView dump `on_order_qty` is customer demand (`committed`). Inbound from vendors is Qty On PO (`on_order`). Do not map that dump column onto `on_order`.
 
-**Sellability (v1):** per-SKU **open** (no numeric cap until a factory PO exists) or **locked** (the three-part formula). Inbound PO qty is sellable when locked. Selling before any factory PO exists is open mode. `uncovered` is the factory to-order list, not a shop number. Changing these rules later is a new projection, not a rewrite of the ledger.
+**Sellability (v1):** per-SKU **open** (no numeric cap until a factory PO exists) or **locked** (the three-part formula). Inbound PO qty is sellable when locked. Selling before any factory PO exists is open mode. **To Order** is the factory procurement gap per SKU (code/API: `uncovered` until ADA-373); the **Pre-order** worksheet lists those gaps — neither is a shop number. Changing these rules later is a new projection, not a rewrite of the ledger.
 
 `available` and `availableToSell` are never written by a use case as raw fields. They are computed (or stored only as derived columns maintained by the Inventory adapter). Frontends never compute them.
 

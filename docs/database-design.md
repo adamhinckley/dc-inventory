@@ -386,7 +386,7 @@ flowchart LR
   movements["stock_movements"] --> snapshots["stock_snapshots<br/>on_hand · on_order · committed · allocated · available · availableToSell"]
 ```
 
-`available` = `on_hand − allocated` (warehouse leftover). `availableToSell` is the shop/staff sellable number ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)). `uncovered = max(0, committed − on_hand − on_order)` is the factory to-order list.
+`available` = `on_hand − allocated` (warehouse leftover). `availableToSell` is the shop/staff sellable number ([ADR 0008](./adr/0008-available-to-sell-open-locked.md)). **To Order** (`uncovered` in code until ADA-373) = `max(0, committed − on_hand − on_order)` — the factory gap on the **Pre-order** worksheet.
 
 ---
 
