@@ -3,7 +3,10 @@ import {
   salesOrderCancelDisabled,
   salesOrderCatalogLookupPending,
   salesOrderConfirmDisabled,
+  salesOrderLineLeadingColumnIds,
   salesOrderLinesResolved,
+  salesOrderLineVendorColumnId,
+  salesOrderLineVendorLabel,
   salesOrderLineWritesEqual,
   salesOrderShipDisabled,
   salesOrderWriteLines,
@@ -28,6 +31,24 @@ describe("sales order line math", () => {
     name: "Product B",
     qty: 1,
   };
+
+  it("shows the catalog supplier as the line vendor, or a dash when missing", () => {
+    expect(salesOrderLineVendorLabel("Acme Supply")).toBe("Acme Supply");
+    expect(salesOrderLineVendorLabel("Acme Supply, Other Supply")).toBe(
+      "Acme Supply, Other Supply",
+    );
+    expect(salesOrderLineVendorLabel("Acme Supply", "loading")).toBe("");
+    expect(salesOrderLineVendorLabel("  ")).toBe("—");
+    expect(salesOrderLineVendorLabel(null)).toBe("—");
+    expect(salesOrderLineVendorLabel(undefined)).toBe("—");
+  });
+
+  it("places the supplier column after product on sales order line tables", () => {
+    expect(salesOrderLineLeadingColumnIds).toEqual(["sku", "name", salesOrderLineVendorColumnId]);
+    expect(salesOrderLineLeadingColumnIds.indexOf("name")).toBeLessThan(
+      salesOrderLineLeadingColumnIds.indexOf(salesOrderLineVendorColumnId),
+    );
+  });
 
   it("builds replace-lines payloads from draft rows", () => {
     expect(salesOrderWriteLines([lineA, lineB])).toEqual([

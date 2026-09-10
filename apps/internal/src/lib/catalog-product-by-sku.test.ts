@@ -1,8 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CatalogProductRow } from "./catalog-product-types";
+
+const listInternalProducts = vi.fn();
+
+vi.mock("@dc-inventory/api-client-internal", () => ({
+  getListInternalProductsQueryKey: (params?: unknown) => ["listInternalProducts", params],
+  listInternalProducts: (...args: unknown[]) => listInternalProducts(...args),
+}));
+
 import {
   buildCatalogProductBySku,
   catalogProductFromListResponse,
+  catalogProductStatusBySku,
+  fetchCatalogProductsBySkus,
   findExactCatalogProductInList,
 } from "./catalog-product-by-sku";
 
@@ -37,6 +47,45 @@ describe("findExactCatalogProductInList", () => {
     expect(findExactCatalogProductInList(items, "DC7818")?.sku).toBe("DC7818");
     expect(findExactCatalogProductInList(items, "DC78180")?.sku).toBe("DC78180");
     expect(findExactCatalogProductInList(items, "DC7819")).toBeUndefined();
+  });
+});
+
+describe("fetchCatalogProductsBySkus", () => {
+  beforeEach(() => {
+    listInternalProducts.mockReset();
+    listInternalProducts.mockImplementation(async (params: { q?: string }) => {
+      const sku = params.q ?? "";
+      return {
+        status: 200 as const,
+        data: {
+          items: [productRow(sku)],
+          page: 1,
+          pageSize: 100,
+          total: 1,
+        },
+        headers: new Headers(),
+      };
+    });
+  });
+
+  it("resolves every requested SKU in one batch", async () => {
+    const products = await fetchCatalogProductsBySkus(["SKU-A", "SKU-B"]);
+
+    expect(listInternalProducts).toHaveBeenCalledTimes(2);
+    expect(products.get("SKU-A")?.sku).toBe("SKU-A");
+    expect(products.get("SKU-B")?.sku).toBe("SKU-B");
+  });
+});
+
+describe("catalogProductStatusBySku", () => {
+  it("marks every SKU loading until the batch resolves", () => {
+    const statuses = catalogProductStatusBySku(
+      ["SKU-A", "SKU-B"],
+      new Map([["SKU-A", productRow("SKU-A")]]),
+      true,
+    );
+    expect(statuses.get("SKU-A")).toBe("loading");
+    expect(statuses.get("SKU-B")).toBe("loading");
   });
 });
 

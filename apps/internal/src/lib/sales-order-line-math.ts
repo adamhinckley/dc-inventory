@@ -1,7 +1,28 @@
+import type { CatalogProductLookupStatus } from "./catalog-product-by-sku";
 import type { SalesOrderLineDraft } from "./sales-order-types";
+
+export const salesOrderLineVendorColumnId = "vendor";
+export const salesOrderLineVendorColumnLabel = "Suppliers";
+export const salesOrderLineLeadingColumnIds = [
+  "sku",
+  "name",
+  salesOrderLineVendorColumnId,
+] as const;
 
 export function salesOrderLineRowKey(line: { sku: string; id?: string }): string {
   return line.id ?? line.sku;
+}
+
+/** Comma-joined factory names from catalog `supplierName`; empty while lookup is pending. */
+export function salesOrderLineVendorLabel(
+  supplierName: string | null | undefined,
+  lookupStatus?: CatalogProductLookupStatus,
+): string {
+  if (lookupStatus === "loading") {
+    return "";
+  }
+  const name = supplierName?.trim() ?? "";
+  return name.length > 0 ? name : "—";
 }
 
 export function salesOrderWriteLines(
