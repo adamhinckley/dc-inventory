@@ -399,7 +399,13 @@ export function CustomerAccountingRecordPayment({
         </p>
         </Dialog.Body>
         <Dialog.Footer>
-          <Button type="button" variant="ghost" size="sm" onClick={resetAllocations}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mr-auto"
+            onClick={resetAllocations}
+          >
             <RotateCcw className="size-icon-sm" aria-hidden />
             Reset
           </Button>
