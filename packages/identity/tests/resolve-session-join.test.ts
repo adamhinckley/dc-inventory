@@ -5,7 +5,7 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS } from "../src/adapters/active-wholesale-login-account-status.js";
 import { InMemoryOrganizationRepository } from "../src/adapters/in-memory-organization-repository.js";
@@ -55,6 +55,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
     staffUsers,
     wholesaleUsers,
     sessions,
+    joinSessions,
     loginOps: new LoginOpsUseCase(organizations, opsUsers, sessions, passwords, clock),
     loginStaff: new LoginStaffUseCase(organizations, staffUsers, sessions, passwords, clock),
     loginWholesale: new LoginWholesaleUseCase(
@@ -170,6 +171,66 @@ describe("Resolve session joined reads", () => {
     const result = await h.resolveWholesale.execute(login.sessionId);
     expect(result).toEqual({ ok: false, reason: "invalid" });
     expect(await h.sessions.findById(sessionId)).toBeNull();
+  });
+
+  it("deletes orphaned ops sessions on the join path when tenant organization mismatches", async () => {
+    const h = harness();
+    await seedAcmeOrg(h);
+    await h.opsUsers.save({
+      id: OPERATOR_ID,
+      tenantId: OrganizationId.DEFAULT,
+      email: "operator@local.test",
+      passwordHash: await h.passwords.hash("operator-secret"),
+      kind: "operator",
+    });
+    const login = await h.loginOps.execute({
+      organizationSlug: ACME_SLUG,
+      email: "operator@local.test",
+      password: "operator-secret",
+    });
+    if (!login.ok) {
+      throw new Error("expected login");
+    }
+    const sessionId = SessionId.parse(login.sessionId);
+    await h.opsUsers.save({
+      id: OPERATOR_ID,
+      tenantId: BETA_ORG_ID,
+      email: "operator@local.test",
+      passwordHash: await h.passwords.hash("operator-secret"),
+      kind: "operator",
+    });
+
+    const result = await h.resolveOps.execute(login.sessionId);
+    expect(result).toEqual({ ok: false, reason: "invalid" });
+    expect(await h.sessions.findById(sessionId)).toBeNull();
+  });
+
+  it("resolves wholesale buyer sessions with one joined read", async () => {
+    const h = harness();
+    await seedAcmeOrg(h);
+    await h.wholesaleUsers.save({
+      id: WHOLESALE_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "buyer@local.test",
+      passwordHash: await h.passwords.hash("buyer-secret"),
+      customerId: CUSTOMER_ID,
+    });
+    const login = await h.loginWholesale.execute({
+      organizationSlug: ACME_SLUG,
+      email: "buyer@local.test",
+      password: "buyer-secret",
+    });
+    if (!login.ok) {
+      throw new Error("expected login");
+    }
+
+    const findWholesaleResolved = vi.spyOn(h.joinSessions, "findWholesaleResolved");
+    const joinFindById = vi.spyOn(h.joinSessions, "findById");
+
+    const result = await h.resolveWholesale.execute(login.sessionId);
+    expect(result).toMatchObject({ ok: true, wholesaleUserId: WHOLESALE_ID });
+    expect(findWholesaleResolved).toHaveBeenCalledTimes(1);
+    expect(joinFindById).not.toHaveBeenCalled();
   });
 
   it("debounces lastSeen on the wholesale and ops join paths", async () => {
