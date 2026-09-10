@@ -1385,6 +1385,27 @@ export const salesOrderReplaceLinesBodySchema = z.object({
   ...salesOrderAddressSchema,
 });
 
+const salesOrderLineDeltaAddSchema = z.object({
+  productId: z.string().uuid(),
+  qty: z.number().int().positive(),
+});
+
+const salesOrderLineDeltaUpdateSchema = z
+  .object({
+    lineId: z.string().uuid().optional(),
+    sku: z.string().min(1).optional(),
+    qty: z.number().int().positive(),
+  })
+  .refine((value) => value.lineId !== undefined || value.sku !== undefined, {
+    message: "lineId or sku is required",
+  });
+
+export const salesOrderLineDeltasBodySchema = z.object({
+  add: z.array(salesOrderLineDeltaAddSchema).optional(),
+  update: z.array(salesOrderLineDeltaUpdateSchema).optional(),
+  remove: z.array(z.string().min(1)).optional(),
+});
+
 export const salesOrderCommandBodySchema = z.object({
   idempotencyKey: z.string().min(1),
 });

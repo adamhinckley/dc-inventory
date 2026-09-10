@@ -1,6 +1,9 @@
 "use client";
 
-import { useReplaceWholesaleSalesOrderLines } from "@dc-inventory/api-client-wholesale";
+import {
+  useApplyWholesaleSalesOrderLineDeltas,
+  useReplaceWholesaleSalesOrderLines,
+} from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
@@ -18,6 +21,10 @@ import {
   toReplaceLines,
   type DraftCartLine,
 } from "./cart-line-qty";
+import {
+  cartLinesToDeltaBody,
+  hasCartLineDeltaWork,
+} from "./cart-line-deltas";
 import { wholesaleShortageErrorMessage } from "./confirm-shortage-message";
 import { lookupWholesaleProductId } from "./lookup-wholesale-product-id";
 import {
@@ -56,6 +63,7 @@ export type CartActions = {
  */
 export function useCartActions(draft: WholesaleDraftCartOrder | undefined): CartActions {
   const queryClient = useQueryClient();
+  const applyLineDeltas = useApplyWholesaleSalesOrderLineDeltas();
   const replaceLines = useReplaceWholesaleSalesOrderLines();
   const [message, setMessage] = useState<string | null>(null);
   const draftRef = useRef(draft);
@@ -120,10 +128,22 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
     }
     trackCartReplaceStart(targetDraftId);
     try {
-      const response = await replaceLines.mutateAsync({
-        id: targetDraftId,
-        data: label === undefined ? { lines } : { lines, label },
-      });
+      const response =
+        label === undefined
+          ? await (async () => {
+              const deltas = cartLinesToDeltaBody(currentDraft.lines, lines);
+              if (!hasCartLineDeltaWork(deltas)) {
+                return { status: 200 as const, data: currentDraft };
+              }
+              return applyLineDeltas.mutateAsync({
+                id: targetDraftId,
+                data: deltas,
+              });
+            })()
+          : await replaceLines.mutateAsync({
+              id: targetDraftId,
+              data: { lines, label },
+            });
       if (response.status === 200) {
         writeDraftCartOrder(queryClient, response.data);
       }

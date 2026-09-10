@@ -83,6 +83,7 @@ const ACTION_BY_OPERATION: Readonly<
   shipInternalSalesOrder: "stock_manage",
   createInternalSalesOrder: "sales_orders_manage",
   replaceInternalSalesOrderLines: "sales_orders_manage",
+  applyInternalSalesOrderLineDeltas: "sales_orders_manage",
   confirmInternalSalesOrder: "sales_orders_manage",
   cancelInternalSalesOrder: "sales_orders_manage",
   recordInternalInvoicePayment: "payments_apply",

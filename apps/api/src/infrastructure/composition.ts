@@ -198,6 +198,7 @@ import {
   type IInvoiceRepository,
 } from "@dc-inventory/accounting";
 import {
+  ApplySalesOrderLineDeltasUseCase,
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
@@ -391,6 +392,7 @@ export type SalesHttpServices = {
   listSalesOrders: ListSalesOrdersUseCase;
   createSalesOrder: CreateSalesOrderUseCase;
   replaceSalesOrderLines: ReplaceSalesOrderLinesUseCase;
+  applySalesOrderLineDeltas: ApplySalesOrderLineDeltasUseCase;
   getSalesOrder: GetSalesOrderUseCase;
   confirmSalesOrder: ConfirmSalesOrderUseCase;
   cancelSalesOrder: CancelSalesOrderUseCase;
@@ -838,6 +840,11 @@ function salesServices(
       clock,
     ),
     replaceSalesOrderLines: new ReplaceSalesOrderLinesUseCase(
+      salesOrderRepo,
+      customers,
+      catalogProduct,
+    ),
+    applySalesOrderLineDeltas: new ApplySalesOrderLineDeltasUseCase(
       salesOrderRepo,
       customers,
       catalogProduct,

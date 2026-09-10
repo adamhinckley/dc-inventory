@@ -81,7 +81,7 @@ export type OptimisticLineMeta = {
   sku?: string;
 };
 
-/** Merge replace-lines payload onto the cached draft for instant cart feedback. */
+/** Merge optimistic qty edits locally; reconcile from the line-jobs response on success. */
 export function buildOptimisticDraftOrder(
   draft: WholesaleDraftCartOrder,
   replacePayload: readonly { productId: string; qty: number }[],

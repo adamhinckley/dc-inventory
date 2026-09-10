@@ -24,6 +24,7 @@ import {
   salesOrderListQuerySchema,
   salesOrderListResponseSchema,
   salesOrderReplaceLinesBodySchema,
+  salesOrderLineDeltasBodySchema,
   salesOrderWriteBodySchema,
   salesOrdersListTable,
   shipRefusedResponseSchema,
@@ -271,6 +272,59 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         shipRegion: request.body.shipRegion,
         shipPostal: request.body.shipPostal,
         shipCountry: request.body.shipCountry,
+      });
+      if (!result.ok) {
+        if (
+          result.reason === "not_found" ||
+          result.reason === "customer_not_found" ||
+          result.reason === "product_not_found" ||
+          result.reason === "product_organization_mismatch"
+        ) {
+          return sendNotFound(reply);
+        }
+        if (result.reason === "insufficient_atp") {
+          return sendInsufficientAtp(reply, result);
+        }
+        if (
+          result.reason === "illegal_transition" ||
+          result.reason === "product_inactive" ||
+          result.reason === "customer_on_hold" ||
+          result.reason === "customer_inactive"
+        ) {
+          return sendConflict(reply);
+        }
+        return sendInvalid(reply);
+      }
+      return toSalesOrderBody(request, result.salesOrder);
+    },
+  );
+
+  routes.post(
+    "/sales-orders/:id/line-jobs",
+    {
+      schema: {
+        operationId: "applyInternalSalesOrderLineDeltas",
+        tags: ["internal"],
+        summary: "Apply line deltas on a draft sales order",
+        params: salesOrderIdParamsSchema,
+        body: salesOrderLineDeltasBodySchema,
+        response: {
+          200: salesOrderItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.sales.applySalesOrderLineDeltas.execute({
+        organizationId: staffOrganizationId(request),
+        staffUserId: staffUserId(request),
+        salesOrderId: OrderId.parse(request.params.id),
+        add: request.body.add,
+        update: request.body.update,
+        remove: request.body.remove,
       });
       if (!result.ok) {
         if (

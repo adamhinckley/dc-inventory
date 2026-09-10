@@ -24,6 +24,13 @@ export {
 } from "./application/confirm-sales-order.js";
 export { CreateSalesOrderUseCase } from "./application/create-sales-order.js";
 export { ReplaceSalesOrderLinesUseCase } from "./application/replace-sales-order-lines.js";
+export {
+  ApplySalesOrderLineDeltasUseCase,
+  type ApplySalesOrderLineDeltasRequest,
+  type ApplySalesOrderLineDeltasResult,
+  type SalesOrderLineDeltaAdd,
+  type SalesOrderLineDeltaUpdate,
+} from "./application/apply-sales-order-line-deltas.js";
 export { DecommitSalesOrderLineUseCase } from "./application/decommit-sales-order-line.js";
 export { GetSalesOrderUseCase } from "./application/get-sales-order.js";
 export { ListSalesOrdersUseCase } from "./application/list-sales-orders.js";

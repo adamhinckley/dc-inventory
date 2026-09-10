@@ -28,6 +28,7 @@ import { InMemorySalesUnitOfWork } from "../../src/adapters/in-memory-sales-unit
 import type { IClock } from "../../src/domain/clock.js";
 import type { ICustomerLookupPort } from "../../src/domain/ports/sales-order-repository.js";
 import {
+  ApplySalesOrderLineDeltasUseCase,
   CancelSalesOrderUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
@@ -153,6 +154,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
   const creditCheck = new InMemoryCreditCheckPort();
   const create = new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog);
   const replaceLines = new ReplaceSalesOrderLinesUseCase(uow.salesOrders, customers, catalog);
+  const applyLineDeltas = new ApplySalesOrderLineDeltasUseCase(uow.salesOrders, customers, catalog);
   const confirm = new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot, creditCheck);
   const cancel = new CancelSalesOrderUseCase(uow);
   const decommitLine = new DecommitSalesOrderLineUseCase(uow);
@@ -233,6 +235,7 @@ export function salesDemandHarness(clock?: IClock, options: SalesDemandHarnessOp
     creditCheck,
     create,
     replaceLines,
+    applyLineDeltas,
     confirm,
     cancel,
     decommitLine,
