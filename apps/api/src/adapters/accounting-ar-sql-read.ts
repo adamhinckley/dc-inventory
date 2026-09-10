@@ -22,6 +22,13 @@ function asOfSqlBind(asOf: Date): string {
   return asOf.toISOString();
 }
 
+function normalizeTimestamp(value: Date | string | null): Date | null {
+  if (value === null) {
+    return null;
+  }
+  return value instanceof Date ? value : new Date(value);
+}
+
 function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
   const asOfBound = asOfSqlBind(asOf);
   return sql`
@@ -221,7 +228,7 @@ type BalanceSqlRow = {
   credit_limit_cents: number;
   sum_remaining_cents: number;
   past_due_cents: number;
-  oldest_due_date: Date | null;
+  oldest_due_date: Date | string | null;
   unapplied_credit_cents: number;
   confirmed_unshipped_cents: number;
   has_active_plan: boolean;
@@ -238,11 +245,12 @@ function mapBalanceRow(row: BalanceSqlRow, asOf: Date): CustomerBalanceRow {
     row.unapplied_credit_cents,
   );
   let daysPastDue = 0;
-  if (row.oldest_due_date !== null) {
+  const oldestDueDate = normalizeTimestamp(row.oldest_due_date);
+  if (oldestDueDate !== null) {
     const dueDay = Date.UTC(
-      row.oldest_due_date.getUTCFullYear(),
-      row.oldest_due_date.getUTCMonth(),
-      row.oldest_due_date.getUTCDate(),
+      oldestDueDate.getUTCFullYear(),
+      oldestDueDate.getUTCMonth(),
+      oldestDueDate.getUTCDate(),
     );
     const asOfDay = Date.UTC(asOf.getUTCFullYear(), asOf.getUTCMonth(), asOf.getUTCDate());
     daysPastDue = Math.max(0, Math.floor((asOfDay - dueDay) / (24 * 60 * 60 * 1000)));
@@ -253,7 +261,7 @@ function mapBalanceRow(row: BalanceSqlRow, asOf: Date): CustomerBalanceRow {
     name: row.name,
     openBalanceCents: row.sum_remaining_cents - row.unapplied_credit_cents,
     pastDueCents: row.past_due_cents,
-    oldestDueDate: row.oldest_due_date,
+    oldestDueDate,
     daysPastDue,
     creditLimitCents: row.credit_limit_cents,
     availableCreditCents: computeAvailableCreditCents(row.credit_limit_cents, exposureCents),
