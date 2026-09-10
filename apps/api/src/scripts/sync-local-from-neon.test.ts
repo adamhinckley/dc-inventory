@@ -11,74 +11,102 @@ import {
 } from "./sync-local-from-neon.js";
 
 const localUrl = "postgres://postgres:postgres@localhost:5432/dc_inventory";
+const neonDevelopmentHost = "ep-lingering-voice-a5yv0zwz.us-east-2.aws.neon.tech";
 const neonDevelopment =
-  "postgresql://owner:secret@ep-lingering-voice-a5yv0zwz.us-east-2.aws.neon.tech/neondb?sslmode=require";
+  `postgresql://owner:secret@${neonDevelopmentHost}/neondb?sslmode=require`;
 const neonProduction =
   "postgresql://owner:secret@ep-dry-dawn-a5es0x54.us-east-2.aws.neon.tech/neondb?sslmode=require";
 const neonPooled =
   "postgresql://owner:secret@ep-lingering-voice-a5yv0zwz-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require";
 
+function neonSyncEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  return {
+    NEON_SYNC_ALLOWED_HOST: neonDevelopmentHost,
+    ...overrides,
+  };
+}
+
 describe("parseSyncLocalFromNeonUrls", () => {
   it("reads Neon and local URLs without using DATABASE_TARGET", () => {
     expect(
-      parseSyncLocalFromNeonUrls({
-        DATABASE_TARGET: "local",
-        DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:5432/other",
-        DATABASE_URL_LOCAL: `  ${localUrl}  `,
-        DATABASE_URL_NEON: `  ${neonDevelopment}  `,
-        DATABASE_URL_UNPOOLED: neonPooled,
-      }),
+      parseSyncLocalFromNeonUrls(
+        neonSyncEnv({
+          DATABASE_TARGET: "local",
+          DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:5432/other",
+          DATABASE_URL_LOCAL: `  ${localUrl}  `,
+          DATABASE_URL_NEON: `  ${neonDevelopment}  `,
+          DATABASE_URL_UNPOOLED: neonPooled,
+        }),
+      ),
     ).toEqual({ neonUrl: neonDevelopment, localUrl });
   });
 
   it("falls back to DATABASE_URL_UNPOOLED and DATABASE_URL", () => {
     expect(
-      parseSyncLocalFromNeonUrls({
-        DATABASE_URL: localUrl,
-        DATABASE_URL_UNPOOLED: neonDevelopment,
-      }),
+      parseSyncLocalFromNeonUrls(
+        neonSyncEnv({
+          DATABASE_URL: localUrl,
+          DATABASE_URL_UNPOOLED: neonDevelopment,
+        }),
+      ),
     ).toEqual({ neonUrl: neonDevelopment, localUrl });
   });
 
-  it("fails when the Neon URL is missing or production or pooled", () => {
+  it("fails when the Neon URL is missing, pooled, not allowlisted, or not Neon", () => {
     expect(() => parseSyncLocalFromNeonUrls({ DATABASE_URL_LOCAL: localUrl })).toThrow(
       MissingNeonDatabaseUrlError,
     );
     expect(() =>
-      parseSyncLocalFromNeonUrls({
-        DATABASE_URL_LOCAL: localUrl,
-        DATABASE_URL_NEON: neonPooled,
-      }),
+      parseSyncLocalFromNeonUrls(
+        neonSyncEnv({
+          DATABASE_URL_LOCAL: localUrl,
+          DATABASE_URL_NEON: neonPooled,
+        }),
+      ),
     ).toThrow(PooledDatabaseUrlError);
     expect(() =>
       parseSyncLocalFromNeonUrls({
         DATABASE_URL_LOCAL: localUrl,
-        DATABASE_URL_NEON: neonProduction,
+        DATABASE_URL_NEON: neonDevelopment,
       }),
-    ).toThrow(/production/);
+    ).toThrow(/NEON_SYNC_ALLOWED_HOST is missing/);
     expect(() =>
-      parseSyncLocalFromNeonUrls({
-        DATABASE_URL_LOCAL: localUrl,
-        DATABASE_URL_NEON: "postgres://owner:secret@db.example.com/neondb",
-      }),
+      parseSyncLocalFromNeonUrls(
+        neonSyncEnv({
+          DATABASE_URL_LOCAL: localUrl,
+          DATABASE_URL_NEON: neonProduction,
+        }),
+      ),
+    ).toThrow(/Refusing to dump Neon host/);
+    expect(() =>
+      parseSyncLocalFromNeonUrls(
+        neonSyncEnv({
+          DATABASE_URL_LOCAL: localUrl,
+          DATABASE_URL_NEON: "postgres://owner:secret@db.example.com/neondb",
+        }),
+      ),
     ).toThrow(/not Neon/);
   });
 
   it("fails when the restore target is missing or not local", () => {
     expect(() =>
-      parseSyncLocalFromNeonUrls({ DATABASE_URL_NEON: neonDevelopment }),
+      parseSyncLocalFromNeonUrls(neonSyncEnv({ DATABASE_URL_NEON: neonDevelopment })),
     ).toThrow(MissingDatabaseUrlError);
     expect(() =>
-      parseSyncLocalFromNeonUrls({
-        DATABASE_URL_NEON: neonDevelopment,
-        DATABASE_URL_LOCAL: neonDevelopment,
-      }),
+      parseSyncLocalFromNeonUrls(
+        neonSyncEnv({
+          DATABASE_URL_NEON: neonDevelopment,
+          DATABASE_URL_LOCAL: neonDevelopment,
+        }),
+      ),
     ).toThrow(SyncLocalFromNeonError);
     expect(() =>
-      parseSyncLocalFromNeonUrls({
-        DATABASE_URL_NEON: neonDevelopment,
-        DATABASE_URL_LOCAL: neonDevelopment,
-      }),
+      parseSyncLocalFromNeonUrls(
+        neonSyncEnv({
+          DATABASE_URL_NEON: neonDevelopment,
+          DATABASE_URL_LOCAL: neonDevelopment,
+        }),
+      ),
     ).toThrow(/not allowed/);
   });
 });

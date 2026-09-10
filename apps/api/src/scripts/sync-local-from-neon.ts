@@ -5,9 +5,6 @@ import {
 } from "../infrastructure/database-url.js";
 import { LOCAL_DATABASE_HOSTS } from "../seed/guard/constants.js";
 
-/** Neon production compute — never dump or restore this host. */
-export const FORBIDDEN_NEON_HOST_FRAGMENTS = ["dry-dawn", "a5es0x54"] as const;
-
 const SUPPORTED_PROTOCOLS = new Set(["postgres:", "postgresql:"]);
 
 export class SyncLocalFromNeonError extends Error {
@@ -73,16 +70,27 @@ function assertDirectHost(url: string): void {
   }
 }
 
-function assertNeonSourceHost(url: string): void {
+function readAllowedNeonSyncHost(env: NodeJS.ProcessEnv): string {
+  const allowed = env.NEON_SYNC_ALLOWED_HOST?.trim();
+  if (!allowed) {
+    throw new SyncLocalFromNeonError(
+      "NEON_SYNC_ALLOWED_HOST is missing. Set it to the exact direct development-branch hostname you intend to dump (see apps/api/.env.example).",
+    );
+  }
+  return normalizeHost(allowed);
+}
+
+function assertNeonSourceHost(url: string, env: NodeJS.ProcessEnv): void {
   const host = normalizeHost(parsePostgresUrl(url, "DATABASE_URL_NEON").hostname);
   if (!host.endsWith(".neon.tech") && host !== "neon.tech") {
     throw new SyncLocalFromNeonError(
       `DATABASE_URL_NEON host "${host}" is not Neon. Use the direct development-branch URL.`,
     );
   }
-  if (FORBIDDEN_NEON_HOST_FRAGMENTS.some((fragment) => host.includes(fragment))) {
+  const allowed = readAllowedNeonSyncHost(env);
+  if (host !== allowed) {
     throw new SyncLocalFromNeonError(
-      "Refusing to dump Neon production. Point DATABASE_URL_NEON at the development branch (direct / unpooled).",
+      `Refusing to dump Neon host "${host}". NEON_SYNC_ALLOWED_HOST is "${allowed}". Point DATABASE_URL_NEON at the development branch and set NEON_SYNC_ALLOWED_HOST to its exact hostname.`,
     );
   }
 }
@@ -144,7 +152,7 @@ export function parseSyncLocalFromNeonUrls(
 
   assertDirectHost(neonUrl);
   assertDirectHost(localUrl);
-  assertNeonSourceHost(neonUrl);
+  assertNeonSourceHost(neonUrl, env);
   assertLocalDestinationHost(localUrl);
 
   return { neonUrl, localUrl };
