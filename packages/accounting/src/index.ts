@@ -9,6 +9,7 @@ export {
 export { DrizzleInvoiceRepository, type AccountingDrizzle } from "./adapters/drizzle-invoices.js";
 export { CreateInvoiceForOrderAdapter } from "./adapters/create-invoice-for-order-adapter.js";
 export { CustomerTermsReadAdapter } from "./adapters/customer-terms-read.js";
+export { AvailableCreditReadAdapter } from "./adapters/available-credit-read.js";
 export { InMemoryArCustomerReadPort } from "./adapters/in-memory-ar-customer-read-port.js";
 export { InMemoryArOrgReadPort } from "./adapters/in-memory-ar-org-read-port.js";
 export { InMemoryCustomerArProfileReadPort } from "./adapters/in-memory-customer-ar-profile-read.js";
@@ -55,6 +56,10 @@ export {
 } from "./domain/ar-projection.js";
 export type { CustomerArStats } from "./domain/ar-stats.js";
 export type { IArCustomerReadPort } from "./domain/ports/ar-customer-read-port.js";
+export type {
+  AvailableCreditReadRequest,
+  IAvailableCreditReadPort,
+} from "./domain/ports/available-credit-read.js";
 export type { IArOrgReadPort } from "./domain/ports/ar-org-read-port.js";
 export type {
   CustomerArProfile,

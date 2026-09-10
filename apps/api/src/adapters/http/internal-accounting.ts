@@ -767,18 +767,17 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
       if (!(await ensureCustomerExists(request, reply, customerId))) {
         return;
       }
-      const summary = await request.server.accounting.getCustomerAccountingSummary.execute({
-        organizationId: staffOrganizationId(request),
+      const activePlan = await request.server.accounting.findActivePaymentPlan(
+        staffOrganizationId(request),
         customerId,
-        asOf: new Date(),
-      });
-      if (summary.plan === null) {
+      );
+      if (activePlan === null) {
         return sendNotFound(reply);
       }
       const result = await request.server.accounting.endPaymentPlan.execute({
         staffUserId: staffUserId(request),
         organizationId: staffOrganizationId(request),
-        planId: PaymentPlanId.parse(summary.plan.id),
+        planId: PaymentPlanId.parse(activePlan.id),
       });
       if (!result.ok) {
         if (result.reason === "not_found") {

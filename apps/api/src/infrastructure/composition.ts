@@ -171,6 +171,7 @@ import {
 } from "@dc-inventory/purchasing";
 import {
   AdjustInvoiceUseCase,
+  AvailableCreditReadAdapter,
   CustomerTermsReadAdapter,
   DrizzleInvoiceRepository,
   EndPaymentPlanUseCase,
@@ -195,7 +196,9 @@ import {
   type AccountingUnitOfWorkWithCustomerPayments,
   type IAccountingRepository,
   type IArCustomerReadPort,
+  type IAvailableCreditReadPort,
   type IInvoiceRepository,
+  type PaymentPlan,
 } from "@dc-inventory/accounting";
 import {
   ApplySalesOrderLineDeltasUseCase,
@@ -243,7 +246,7 @@ import {
   type IUncoveredListQuery,
   type RecordReopenSkusForPresellRequest,
 } from "@dc-inventory/inventory";
-import { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
 import { createActingCustomerHeaderReadPort } from "../adapters/acting-customer-header-read-port.js";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
 import { SalesCreditCheckAdapter } from "../adapters/sales-credit-check.js";
@@ -255,6 +258,7 @@ import {
 import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
 import { readFeaturesAllCoreOn } from "./features-all-core-on.js";
+import { createArCustomerReadPort } from "../adapters/accounting-ar-customer-read.js";
 import { createArOrgReadPort } from "../adapters/accounting-ar-org-read.js";
 import { createCustomerBalancesListQuery } from "../adapters/accounting-customer-balances-list-query.js";
 import { DrizzleCustomerArProfileReadPort } from "../adapters/accounting-customer-ar-profile-read.js";
@@ -415,6 +419,11 @@ export type AccountingHttpServices = {
   setPaymentPlan: SetPaymentPlanUseCase;
   endPaymentPlan: EndPaymentPlanUseCase;
   arCustomerRead: IArCustomerReadPort;
+  availableCreditRead: IAvailableCreditReadPort;
+  findActivePaymentPlan: (
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ) => Promise<PaymentPlan | null>;
 };
 
 export type LicensingHttpServices = {
@@ -840,11 +849,19 @@ function accountingServices(input: AccountingServicesInput): AccountingHttpServi
     appDb !== undefined
       ? createArOrgReadPort(appDb)
       : new InMemoryArOrgReadPort(accountingRepository, customerProfiles);
-  const arCustomerRead = new InMemoryArCustomerReadPort(accountingRepository);
+  const arCustomerRead =
+    appDb !== undefined
+      ? createArCustomerReadPort(appDb)
+      : new InMemoryArCustomerReadPort(accountingRepository);
   const openOrderExposure =
     appDb !== undefined
       ? new DrizzleOpenOrderExposureReadAdapter(appDb as unknown as SalesDrizzle)
       : new InMemoryOpenOrderExposureReadAdapter(salesOrderRepo);
+  const availableCreditRead = new AvailableCreditReadAdapter(
+    arCustomerRead,
+    customerProfiles,
+    openOrderExposure,
+  );
   const lastOrderDate =
     appDb !== undefined
       ? new DrizzleLastOrderDateReadAdapter(appDb as unknown as SalesDrizzle)
@@ -882,6 +899,9 @@ function accountingServices(input: AccountingServicesInput): AccountingHttpServi
     setPaymentPlan: new SetPaymentPlanUseCase(customerPaymentsUnitOfWork, clock),
     endPaymentPlan: new EndPaymentPlanUseCase(customerPaymentsUnitOfWork, clock),
     arCustomerRead,
+    availableCreditRead,
+    findActivePaymentPlan: (organizationId, customerId) =>
+      accountingRepository.findActivePaymentPlan(organizationId, customerId),
   };
 }
 
@@ -1287,10 +1307,7 @@ export function composeAppServices(
     salesOrderRepo,
     appDb,
   });
-  const creditCheck = new SalesCreditCheckAdapter(
-    accounting.getCustomerAccountingSummary,
-    clock,
-  );
+  const creditCheck = new SalesCreditCheckAdapter(accounting.availableCreditRead, clock);
 
   return {
     features,
