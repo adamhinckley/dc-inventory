@@ -6,6 +6,8 @@ import type { CSSProperties } from "react";
 import { accountingPaymentMethodLabel } from "../lib/accounting-display";
 import { formatNullableDate } from "../lib/customer-accounting-format";
 import {
+  paymentApplicationInvoiceLabel,
+  paymentApplicationLabelsReady,
   paymentDetailText,
   type PaymentDetailRecord,
 } from "../lib/payment-detail";
@@ -53,10 +55,14 @@ export function PaymentDetailDialog({
   }
 
   const showActions = !payment.voided && (canApplyPayments || canArAdjust);
+  const applicationLabelsReady = paymentApplicationLabelsReady(
+    payment.applications,
+    invoiceNumbers,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <Dialog.Content size="xl" className="overlay" data-testid="payment-detail-dialog">
+      <Dialog.Content size="xl" data-testid="payment-detail-dialog">
         <Dialog.Header>
           <Dialog.Title>Payment Detail</Dialog.Title>
           <Dialog.Close />
@@ -132,24 +138,29 @@ export function PaymentDetailDialog({
               <DescriptionList.Term>Void reason</DescriptionList.Term>
               <DescriptionList.Data>{paymentDetailText(payment.voidReason)}</DescriptionList.Data>
             </DescriptionList.Item>
-            <DescriptionList.Item>
+            <DescriptionList.Item span={2}>
               <DescriptionList.Term>Note</DescriptionList.Term>
               <DescriptionList.Data>{paymentDetailText(payment.note)}</DescriptionList.Data>
             </DescriptionList.Item>
-            <DescriptionList.Item>
+            <DescriptionList.Item span={2}>
               <DescriptionList.Term>Applied to</DescriptionList.Term>
               <DescriptionList.Data>
                 {payment.applications.length === 0 ? (
                   "—"
-                ) : (
+                ) : applicationLabelsReady ? (
                   <ul className="flex flex-col gap-tight">
                     {payment.applications.map((application) => (
                       <li key={application.id} className="tabular-nums">
-                        {invoiceNumbers.get(application.invoiceId) ?? application.invoiceId}{" "}
+                        {paymentApplicationInvoiceLabel(
+                          application.invoiceId,
+                          invoiceNumbers,
+                        )}{" "}
                         {formatMoneyMinorUnits(application.amountCents, application.currency)}
                       </li>
                     ))}
                   </ul>
+                ) : (
+                  <span className="text-fg-secondary">Loading invoice labels…</span>
                 )}
               </DescriptionList.Data>
             </DescriptionList.Item>
@@ -161,14 +172,24 @@ export function PaymentDetailDialog({
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => onReallocate(payment)}
+                onClick={() => {
+                  onOpenChange(false);
+                  onReallocate(payment);
+                }}
               >
                 <ArrowLeftRight className="size-icon" aria-hidden />
                 Reallocate
               </Button>
             ) : null}
             {canArAdjust ? (
-              <Button type="button" variant="primary" onClick={() => onVoid(payment)}>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => {
+                  onOpenChange(false);
+                  onVoid(payment);
+                }}
+              >
                 <Ban className="size-icon" aria-hidden />
                 Void
               </Button>

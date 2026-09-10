@@ -407,17 +407,21 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
 
   const summaryQuery = useGetInternalCustomerAccounting(customerId);
   const invoicesQuery = useListInternalCustomerInvoices(customerId, {
-    includePaid: !hidePaid,
-  });
-  const invoiceLabelsQuery = useListInternalCustomerInvoices(customerId, {
     includePaid: true,
   });
   const paymentsQuery = useListInternalCustomerPayments(customerId);
 
   const summary =
     summaryQuery.data?.status === 200 ? summaryQuery.data.data : undefined;
-  const invoices =
+  const allInvoices =
     invoicesQuery.data?.status === 200 ? invoicesQuery.data.data.items : [];
+  const invoices = useMemo(
+    () =>
+      hidePaid
+        ? allInvoices.filter((invoice) => invoice.remainingCents > 0)
+        : allInvoices,
+    [allInvoices, hidePaid],
+  );
   const payments =
     paymentsQuery.data?.status === 200 ? paymentsQuery.data.data.items : [];
   const detailPayment = useMemo(
@@ -427,8 +431,8 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
 
   const currency = invoices[0]?.currency ?? "USD";
   const openInvoices = useMemo(
-    () => invoices.filter((invoice) => invoice.remainingCents > 0),
-    [invoices],
+    () => allInvoices.filter((invoice) => invoice.remainingCents > 0),
+    [allInvoices],
   );
   const allocationInvoices: AllocationInvoice[] = useMemo(
     () =>
@@ -446,11 +450,9 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     [payments],
   );
   const pastDueCents = summary ? sumPastDueCents(summary.aging) : 0;
-  const labeledInvoices =
-    invoiceLabelsQuery.data?.status === 200 ? invoiceLabelsQuery.data.data.items : invoices;
   const invoiceNumbers = useMemo(
-    () => new Map(labeledInvoices.map((invoice) => [invoice.id, invoice.documentNumber])),
-    [labeledInvoices],
+    () => new Map(allInvoices.map((invoice) => [invoice.id, invoice.documentNumber])),
+    [allInvoices],
   );
   const { orderNumbers, pendingOrderIds } = useCustomerAccountingOrderNumbers(
     invoices.map((invoice) => invoice.orderId),

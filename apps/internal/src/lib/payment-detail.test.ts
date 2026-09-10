@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  paymentApplicationInvoiceLabel,
+  paymentApplicationLabelsReady,
   paymentDetailFromAccountingPayment,
   paymentDetailFromCustomerPayment,
   paymentDetailText,
@@ -78,5 +80,35 @@ describe("payment detail mapping", () => {
     expect(paymentDetailText(null)).toBe("—");
     expect(paymentDetailText("  ")).toBe("—");
     expect(paymentDetailText("keep this")).toBe("keep this");
+  });
+
+  it("holds application labels until invoice numbers are known", () => {
+    const invoiceNumbers = new Map([
+      ["33333333-3333-4333-8333-333333333333", "INV-10001"],
+    ]);
+    const applications = [
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        invoiceId: "33333333-3333-4333-8333-333333333333",
+        amountCents: 2500,
+        currency: "USD",
+      },
+      {
+        id: "55555555-5555-4555-8555-555555555555",
+        invoiceId: "66666666-6666-4666-8666-666666666666",
+        amountCents: 100,
+        currency: "USD",
+      },
+    ];
+
+    expect(
+      paymentApplicationInvoiceLabel(applications[0]!.invoiceId, invoiceNumbers),
+    ).toBe("INV-10001");
+    expect(
+      paymentApplicationInvoiceLabel(applications[1]!.invoiceId, invoiceNumbers),
+    ).toBe("…");
+    expect(paymentApplicationLabelsReady(applications, invoiceNumbers)).toBe(false);
+    invoiceNumbers.set("66666666-6666-4666-8666-666666666666", "INV-10002");
+    expect(paymentApplicationLabelsReady(applications, invoiceNumbers)).toBe(true);
   });
 });

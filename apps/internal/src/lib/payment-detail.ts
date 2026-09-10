@@ -105,3 +105,17 @@ export function paymentDetailText(value: string | null | undefined): string {
   const trimmed = value?.trim();
   return trimmed ? trimmed : "—";
 }
+
+export function paymentApplicationInvoiceLabel(
+  invoiceId: string,
+  invoiceNumbers: ReadonlyMap<string, string>,
+): string {
+  return invoiceNumbers.get(invoiceId) ?? "…";
+}
+
+export function paymentApplicationLabelsReady(
+  applications: readonly PaymentDetailApplication[],
+  invoiceNumbers: ReadonlyMap<string, string>,
+): boolean {
+  return applications.every((application) => invoiceNumbers.has(application.invoiceId));
+}

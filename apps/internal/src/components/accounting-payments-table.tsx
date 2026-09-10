@@ -2,6 +2,7 @@
 
 import {
   getListInternalCustomerInvoicesQueryKey,
+  getListInternalCustomerInvoicesQueryOptions,
   listInternalAccountingPaymentsTable,
   useListInternalAccountingPayments,
   useListInternalCustomerInvoices,
@@ -14,6 +15,7 @@ import {
 } from "@dc-inventory/ui";
 import { CalendarRange } from "lucide-react";
 import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
@@ -127,6 +129,7 @@ function PaymentsRangeToolbar({
 }
 
 export function AccountingPaymentsTable() {
+  const queryClient = useQueryClient();
   const { canApplyPayments, canArAdjust } = useStaffAccountingActions();
   const [detail, setDetail] = useState<PaymentDetailRecord | null>(null);
   const [reallocatePayment, setReallocatePayment] = useState<CustomerPaymentRow | null>(
@@ -193,6 +196,17 @@ export function AccountingPaymentsTable() {
     [],
   );
 
+  const openPaymentDetail = useCallback(
+    async (row: AccountingPaymentRow) => {
+      setActionCustomerId(row.customerId);
+      await queryClient.prefetchQuery(
+        getListInternalCustomerInvoicesQueryOptions(row.customerId, { includePaid: true }),
+      );
+      setDetail(paymentDetailFromAccountingPayment(row));
+    },
+    [queryClient],
+  );
+
   return (
     <>
     <DataTable.Root<PaymentsListParams, AccountingPaymentRow>
@@ -214,7 +228,7 @@ export function AccountingPaymentsTable() {
         receivedAt: (row) => (
           <PaymentReceivedDateButton
             receivedAt={row.receivedAt}
-            onClick={() => setDetail(paymentDetailFromAccountingPayment(row))}
+            onClick={() => void openPaymentDetail(row)}
           />
         ),
         customerName: (row) => (
