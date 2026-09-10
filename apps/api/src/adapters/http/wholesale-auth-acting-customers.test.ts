@@ -213,7 +213,7 @@ describe("wholesale acting customer picker HTTP", () => {
       payload: { customerId: ACTIVE_CUSTOMER_ID },
     });
     expect(select.statusCode).toBe(200);
-    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(resolveSpy).toHaveBeenCalledTimes(0);
 
     const clear = await app.inject({
       method: "POST",
@@ -221,7 +221,15 @@ describe("wholesale acting customer picker HTTP", () => {
       cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
     });
     expect(clear.statusCode).toBe(200);
-    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(resolveSpy).toHaveBeenCalledTimes(0);
+
+    const session = await app.inject({
+      method: "GET",
+      url: "/wholesale/auth/session",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: staffCookie },
+    });
+    expect(session.statusCode).toBe(200);
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
   });
 
   it("selects and clears customers for staff acting with expected status codes", async () => {
