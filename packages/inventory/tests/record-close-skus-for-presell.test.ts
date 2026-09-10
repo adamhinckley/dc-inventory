@@ -4,6 +4,7 @@ import {
   Sku,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
+import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { RecordCloseSkusForPresellUseCase } from "../src/application/record-close-skus-for-presell.js";
 import { demandModelHarness } from "./support/demand-model-harness.js";
 
@@ -71,7 +72,8 @@ describe("RecordCloseSkusForPresellUseCase", () => {
   });
 
   it("preserves the original close instant when the window already elapsed", async () => {
-    const h = demandModelHarness(INSIDE_WINDOW);
+    const clock = new InMemoryClock(INSIDE_WINDOW);
+    const h = demandModelHarness(clock);
     await lockSku(h, CLOSE_A, "close-uc-elapsed");
 
     await h.reopenSkusForPresell({
@@ -82,7 +84,7 @@ describe("RecordCloseSkusForPresellUseCase", () => {
     });
 
     const afterWindow = new Date(WINDOW_CLOSES.getTime() + 60_000);
-    h.clock.advance(afterWindow.getTime() - INSIDE_WINDOW.getTime());
+    clock.advance(afterWindow.getTime() - INSIDE_WINDOW.getTime());
 
     const useCase = new RecordCloseSkusForPresellUseCase(h.uow.ledger);
     const result = await useCase.execute({
