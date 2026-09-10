@@ -3,6 +3,8 @@
 import {
   getGetWholesaleAccountDetailQueryKey,
   getGetWholesaleSessionQueryKey,
+  getListWholesaleExemptionCertificatesQueryKey,
+  getListWholesaleShipTosQueryKey,
   useCreateWholesaleExemptionCertificate,
   useCreateWholesaleShipTo,
   useGetWholesaleAccountDetail,
@@ -304,6 +306,30 @@ function BuyerAccountView() {
   const [certError, setCertError] = useState<string | null>(null);
   const [certDialogOpen, setCertDialogOpen] = useState(false);
 
+  function invalidateAccountDetail() {
+    return queryClient.invalidateQueries({
+      queryKey: getGetWholesaleAccountDetailQueryKey(),
+    });
+  }
+
+  function invalidateAccountShipTos() {
+    return Promise.all([
+      invalidateAccountDetail(),
+      queryClient.invalidateQueries({
+        queryKey: getListWholesaleShipTosQueryKey(),
+      }),
+    ]);
+  }
+
+  function invalidateAccountCertificates() {
+    return Promise.all([
+      invalidateAccountDetail(),
+      queryClient.invalidateQueries({
+        queryKey: getListWholesaleExemptionCertificatesQueryKey(),
+      }),
+    ]);
+  }
+
   const detailData = detail.data?.status === 200 ? detail.data.data : null;
 
   useEffect(() => {
@@ -374,9 +400,7 @@ function BuyerAccountView() {
         { data: body },
         {
           onSuccess: async () => {
-            await queryClient.invalidateQueries({
-              queryKey: getGetWholesaleAccountDetailQueryKey(),
-            });
+            await invalidateAccountShipTos();
             closeShipToDialog();
           },
           onError: () => {
@@ -391,9 +415,7 @@ function BuyerAccountView() {
         { shipToId: editingShipTo.id, data: body },
         {
           onSuccess: async () => {
-            await queryClient.invalidateQueries({
-              queryKey: getGetWholesaleAccountDetailQueryKey(),
-            });
+            await invalidateAccountShipTos();
             closeShipToDialog();
           },
           onError: () => {
@@ -412,9 +434,7 @@ function BuyerAccountView() {
       { shipToId: shipTo.id, data: { isDefault: true } },
       {
         onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: getGetWholesaleAccountDetailQueryKey(),
-          });
+          await invalidateAccountShipTos();
         },
       },
     );
@@ -426,12 +446,7 @@ function BuyerAccountView() {
       { data: { customerNote: customerNote.trim() === "" ? null : customerNote } },
       {
         onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: getGetWholesaleAccountDetailQueryKey(),
-          });
-        },
-        onError: () => {
-          setNoteError("Could not save note.");
+          await invalidateAccountDetail();
         },
       },
     );
@@ -476,9 +491,7 @@ function BuyerAccountView() {
       },
       {
         onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: getGetWholesaleAccountDetailQueryKey(),
-          });
+          await invalidateAccountCertificates();
           closeCertDialog();
         },
         onError: () => {
