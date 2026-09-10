@@ -15,6 +15,7 @@ export type UncoveredFactoryRow = {
   supplierId: string | null;
   supplierNumber: string | null;
   supplierName: string;
+  poPrefix: string | null;
   productCount: number;
   totalUncoveredUnits: number;
   needsMapping: boolean;

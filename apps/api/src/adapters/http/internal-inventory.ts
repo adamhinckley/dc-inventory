@@ -397,6 +397,7 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
           supplierId: row.supplierId,
           supplierNumber: row.supplierNumber,
           supplierName: row.supplierName,
+          poPrefix: row.poPrefix,
           productCount: row.productCount,
           totalUncoveredUnits: row.totalUncoveredUnits,
           needsMapping: row.needsMapping,

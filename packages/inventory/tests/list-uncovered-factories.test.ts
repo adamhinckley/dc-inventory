@@ -79,11 +79,13 @@ function harness() {
     supplierId: SUPPLIER_A,
     supplierNumber: "V-A",
     supplierName: "Factory A",
+    poPrefix: "FA",
   });
   suppliers.set(DEFAULT_ORG, {
     supplierId: SUPPLIER_B,
     supplierNumber: "V-B",
     supplierName: "Factory B",
+    poPrefix: null,
   });
   const openDraftPurchaseOrders = new InMemoryUncoveredSkuDraftPurchaseOrderReadPort();
   return {
@@ -141,6 +143,7 @@ describe("List uncovered factories", () => {
         supplierId: SUPPLIER_A,
         supplierNumber: "V-A",
         supplierName: "Factory A",
+        poPrefix: "FA",
         productCount: 1,
         totalUncoveredUnits: 120,
         needsMapping: false,
@@ -150,6 +153,7 @@ describe("List uncovered factories", () => {
         supplierId: SUPPLIER_B,
         supplierNumber: "V-B",
         supplierName: "Factory B",
+        poPrefix: null,
         productCount: 1,
         totalUncoveredUnits: 40,
         needsMapping: false,
@@ -159,6 +163,7 @@ describe("List uncovered factories", () => {
         supplierId: null,
         supplierNumber: null,
         supplierName: "Needs mapping",
+        poPrefix: null,
         productCount: 2,
         totalUncoveredUnits: 35,
         needsMapping: true,
@@ -209,6 +214,7 @@ describe("List uncovered factories", () => {
         supplierId: SUPPLIER_B,
         supplierNumber: "V-B",
         supplierName: "Factory B",
+        poPrefix: null,
         productCount: 1,
         totalUncoveredUnits: 40,
         needsMapping: false,
@@ -218,6 +224,7 @@ describe("List uncovered factories", () => {
         supplierId: null,
         supplierNumber: null,
         supplierName: "Needs mapping",
+        poPrefix: null,
         productCount: 1,
         totalUncoveredUnits: 25,
         needsMapping: true,

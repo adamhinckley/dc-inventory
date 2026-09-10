@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   afterDraftUncoveredPos,
+  draftableUncoveredFactoryIds,
   formatUnmappedSkusNotice,
   shouldDraftUncoveredSelection,
   toUncoveredBatchDraftRows,
@@ -10,6 +11,16 @@ describe("uncovered draft workflow", () => {
   it("does not draft when selection is empty", () => {
     expect(shouldDraftUncoveredSelection(0)).toBe(false);
     expect(shouldDraftUncoveredSelection(2)).toBe(true);
+  });
+
+  it("drafts every mapped factory and skips the needs-mapping bucket", () => {
+    expect(
+      draftableUncoveredFactoryIds([
+        { id: "factory-a", needsMapping: false },
+        { id: "needs-mapping", needsMapping: true },
+        { id: "factory-b", needsMapping: false },
+      ]),
+    ).toEqual(["factory-a", "factory-b"]);
   });
 
   it("stays on the worksheet with a notice when every selected SKU is unmapped", () => {
