@@ -209,9 +209,6 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         if (result.reason === "empty_order") {
           return sendInvalid(reply);
         }
-        if (result.reason === "supplier_po_prefix_missing") {
-          return reply.code(409).send({ error: "supplier_po_prefix_missing" as const });
-        }
         return sendInvalid(reply);
       }
       return reply.code(201).send(mapPurchaseOrder(result.purchaseOrder));

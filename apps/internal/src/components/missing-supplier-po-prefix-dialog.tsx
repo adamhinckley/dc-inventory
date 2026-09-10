@@ -3,7 +3,7 @@
 import { Button, Dialog } from "@dc-inventory/ui";
 import { FilePlus2, Pencil } from "lucide-react";
 import Link from "next/link";
-import type { SupplierRow } from "../lib/supplier-types";
+import type { SupplierDetail } from "../lib/supplier-types";
 
 function supplierEditHref(supplierId: string): string {
   return `/purchasing/suppliers/${supplierId}`;
@@ -17,7 +17,7 @@ export function MissingSupplierPoPrefixDialog({
   onSubmitAnyway,
 }: {
   open: boolean;
-  suppliers: readonly SupplierRow[];
+  suppliers: readonly SupplierDetail[];
   pending?: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmitAnyway: () => void;

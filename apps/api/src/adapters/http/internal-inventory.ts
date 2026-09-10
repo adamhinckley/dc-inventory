@@ -440,9 +440,6 @@ export function registerInternalUncoveredSkusDraftPurchaseOrderRoutes(
         skus: body.skus,
       });
       if (!result.ok) {
-        if (result.reason === "supplier_po_prefix_missing") {
-          return reply.code(409).send({ error: "supplier_po_prefix_missing" as const });
-        }
         return sendInvalid(reply);
       }
       return reply.code(201).send({

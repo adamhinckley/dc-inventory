@@ -35,7 +35,7 @@ import {
 } from "../lib/purchasing-2-uncovered-constants";
 import { afterDraftUncoveredPos } from "../lib/uncovered-draft-workflow";
 import { loadSuppliersMissingPoPrefix } from "../lib/missing-supplier-po-prefix";
-import type { SupplierRow } from "../lib/supplier-types";
+import type { SupplierDetail } from "../lib/supplier-types";
 import { suggestedDraftPoQty } from "../lib/purchase-order-line-math";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 import { uncoveredListTable } from "../lib/uncovered-list-table";
@@ -199,7 +199,7 @@ export function Purchasing2UncoveredDetail({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [prefixWarningOpen, setPrefixWarningOpen] = useState(false);
   const [missingPrefixSuppliers, setMissingPrefixSuppliers] = useState<
-    readonly SupplierRow[]
+    readonly SupplierDetail[]
   >([]);
 
   const needsMapping = isPurchasing2UncoveredNeedsMappingFactoryId(factoryId);

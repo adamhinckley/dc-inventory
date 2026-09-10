@@ -1,5 +1,5 @@
 import { getInternalSupplier } from "@dc-inventory/api-client-internal";
-import type { SupplierRow } from "./supplier-types";
+import type { SupplierDetail } from "./supplier-types";
 
 export function isSupplierPoPrefixMissing(poPrefix: string | null | undefined): boolean {
   return poPrefix === null || poPrefix === undefined || poPrefix.trim().length === 0;
@@ -7,13 +7,13 @@ export function isSupplierPoPrefixMissing(poPrefix: string | null | undefined): 
 
 export async function loadSuppliersMissingPoPrefix(
   supplierIds: readonly (string | null | undefined)[],
-): Promise<SupplierRow[]> {
+): Promise<SupplierDetail[]> {
   const unique = [
     ...new Set(
       supplierIds.filter((id): id is string => typeof id === "string" && id.length > 0),
     ),
   ];
-  const missing: SupplierRow[] = [];
+  const missing: SupplierDetail[] = [];
   for (const id of unique) {
     const result = await getInternalSupplier(id);
     if (result.status !== 200) {

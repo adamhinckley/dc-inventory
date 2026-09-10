@@ -34,7 +34,7 @@ import {
 import { UncoveredBatchDraftModal } from "./uncovered-batch-draft-modal";
 import { MissingSupplierPoPrefixDialog } from "./missing-supplier-po-prefix-dialog";
 import { loadSuppliersMissingPoPrefix } from "../lib/missing-supplier-po-prefix";
-import type { SupplierRow } from "../lib/supplier-types";
+import type { SupplierDetail } from "../lib/supplier-types";
 
 function FactoryNameCell({ row }: { row: UncoveredFactoryRow }) {
   if (row.needsMapping) {
@@ -83,7 +83,7 @@ export function UncoveredFactorySummary() {
   const [batchUnmappedNotice, setBatchUnmappedNotice] = useState<string | null>(null);
   const [prefixWarningOpen, setPrefixWarningOpen] = useState(false);
   const [missingPrefixSuppliers, setMissingPrefixSuppliers] = useState<
-    readonly SupplierRow[]
+    readonly SupplierDetail[]
   >([]);
 
   const factoriesQuery = useQuery({
