@@ -22,6 +22,7 @@ import {
 import type { ConfirmSalesOrderShortage } from "./confirm-sales-order.js";
 
 export type SalesOrderLineDeltaAdd = {
+  /** New line, or increment existing draft qty by this amount when the SKU is already present. */
   productId: string;
   qty: number;
 };
@@ -235,14 +236,35 @@ export class ApplySalesOrderLineDeltasUseCase {
     }
 
     const lineInputs: SalesOrderLineInput[] = [];
-    for (const line of working) {
-      let productId = line.productId;
-      if (productId === undefined) {
-        const product = await this.catalogProducts.findBySku(input.organizationId, line.sku);
-        if (product === null) {
+    const unresolvedSkus = [
+      ...new Set(
+        working
+          .filter((line) => line.productId === undefined)
+          .map((line) => line.sku.value),
+      ),
+    ];
+    const productIdBySku = new Map<string, ProductId>();
+    if (unresolvedSkus.length > 0) {
+      const resolved = await Promise.all(
+        unresolvedSkus.map(async (skuValue) => {
+          const sku = Sku.parse(skuValue);
+          const product = await this.catalogProducts.findBySku(input.organizationId, sku);
+          return [skuValue, product?.productId ?? null] as const;
+        }),
+      );
+      for (const [skuValue, productId] of resolved) {
+        if (productId === null) {
           return { ok: false, reason: "product_not_found" };
         }
-        productId = product.productId;
+        productIdBySku.set(skuValue, productId);
+      }
+    }
+
+    for (const line of working) {
+      const productId =
+        line.productId ?? productIdBySku.get(line.sku.value);
+      if (productId === undefined) {
+        return { ok: false, reason: "product_not_found" };
       }
       lineInputs.push({ productId, qty: line.qty });
     }

@@ -116,6 +116,29 @@ describe("ApplySalesOrderLineDeltasUseCase", () => {
     ).toBe(4);
   });
 
+  it("add increments qty when the sku is already on the draft", async () => {
+    const h = salesDemandHarness();
+    const created = await h.createWholesaleDraft(OPEN_PRODUCT_ID, 2);
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const result = await h.applyLineDeltas.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      wholesaleUserId: WHOLESALE_USER_ID,
+      salesOrderId: created.salesOrderId,
+      add: [{ productId: OPEN_PRODUCT_ID, qty: 3 }],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.salesOrder.lines).toHaveLength(1);
+    expect(result.salesOrder.lines[0]?.qty).toBe(5);
+  });
+
   it("cancels the draft when the last line is removed", async () => {
     const h = salesDemandHarness();
     const created = await h.createWholesaleDraft(OPEN_PRODUCT_ID, 2);

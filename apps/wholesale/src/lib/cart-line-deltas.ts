@@ -1,4 +1,4 @@
-import type { WholesaleDraftCartOrder } from "./wholesale-cart-cache";
+import type { WholesaleDraftCartListResult, WholesaleDraftCartOrder } from "./wholesale-cart-cache";
 
 export type CartLineDeltaBody = {
   add?: Array<{ productId: string; qty: number }>;
@@ -8,7 +8,18 @@ export type CartLineDeltaBody = {
 
 type TargetLine = { productId: string; qty: number };
 
-/** Build a minimal line-jobs body from cached draft lines and a target replace snapshot. */
+/** Last server-truth lines before an optimistic qty burst; avoids empty deltas after cache writes. */
+export function cartDeltaBaselineLines(
+  draftId: string,
+  currentLines: WholesaleDraftCartOrder["lines"],
+  burstPrevious: WholesaleDraftCartListResult | undefined,
+): WholesaleDraftCartOrder["lines"] {
+  return (
+    burstPrevious?.data.items.find((item) => item.id === draftId)?.lines ?? currentLines
+  );
+}
+
+/** Build a minimal line-jobs body from baseline draft lines and a target replace snapshot. */
 export function cartLinesToDeltaBody(
   currentLines: WholesaleDraftCartOrder["lines"],
   targetLines: readonly TargetLine[],

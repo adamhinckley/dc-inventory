@@ -36,7 +36,6 @@ describe("internal dashboard HTTP", () => {
     expect(joined).toMatch(/useListInternalSalesOrders/);
     expect(joined).toMatch(/useGetInternalSalesOrder/);
     expect(joined).toMatch(/useApplyInternalSalesOrderLineDeltas/);
-    expect(joined).toMatch(/useReplaceInternalSalesOrderLines/);
     expect(joined).toMatch(/useConfirmInternalSalesOrder/);
     expect(joined).toMatch(/useLoginInternal/);
     expect(joined).not.toMatch(/Placeholder staff login/);

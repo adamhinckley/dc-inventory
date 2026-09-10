@@ -22,6 +22,7 @@ import {
   type DraftCartLine,
 } from "./cart-line-qty";
 import {
+  cartDeltaBaselineLines,
   cartLinesToDeltaBody,
   hasCartLineDeltaWork,
 } from "./cart-line-deltas";
@@ -41,14 +42,14 @@ type ReplacePayload = Array<{ productId: string; qty: number }>;
 
 export type CartActions = {
   pending: boolean;
-  /** Debounced qty edits not yet PATCHed to the server. */
+  /** Debounced qty edits not yet POSTed to line-jobs. */
   dirty: boolean;
   message: string | null;
   setMessage: (message: string | null) => void;
-  /** Flush debounced qty edits and wait for any in-flight PATCH before checkout. */
+  /** Flush debounced qty edits and wait for any in-flight line-jobs before checkout. */
   flushPendingChanges: () => Promise<boolean>;
   setLineQty: (lineId: string, qty: number) => Promise<boolean>;
-  /** Stepper: increment from the latest cached qty and debounce the PATCH. */
+  /** Stepper: increment from the latest cached qty and debounce the line-jobs POST. */
   adjustLineQty: (lineId: string, delta: number) => Promise<boolean>;
   removeLine: (lineId: string) => Promise<boolean>;
   rename: (label: string | null) => Promise<boolean>;
@@ -58,7 +59,7 @@ export type CartActions = {
 
 /**
  * Every cart surface (drawer, /cart/[id]) mutates a draft the same way:
- * optimistic cache write, one PATCH, roll back on failure. Sibling carts untouched.
+ * optimistic cache write, one line-jobs POST (or full PATCH for rename), roll back on failure.
  * Debounce and persist gates are shared per draft id so drawer and cart page agree.
  */
 export function useCartActions(draft: WholesaleDraftCartOrder | undefined): CartActions {
@@ -112,6 +113,7 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
     }
     setMessage(null);
     const previous = state.burstPrevious ?? readDraftCartList(queryClient);
+    const baselineLines = cartDeltaBaselineLines(targetDraftId, currentDraft.lines, previous);
     state.burstPrevious = undefined;
     if (lines.length === 0) {
       removeDraftCartOrder(queryClient, targetDraftId);
@@ -131,7 +133,7 @@ export function useCartActions(draft: WholesaleDraftCartOrder | undefined): Cart
       const response =
         label === undefined
           ? await (async () => {
-              const deltas = cartLinesToDeltaBody(currentDraft.lines, lines);
+              const deltas = cartLinesToDeltaBody(baselineLines, lines);
               if (!hasCartLineDeltaWork(deltas)) {
                 return { status: 200 as const, data: currentDraft };
               }

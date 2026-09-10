@@ -1,5 +1,47 @@
 import { describe, expect, it } from "vitest";
-import { cartLinesToDeltaBody, hasCartLineDeltaWork } from "./cart-line-deltas";
+import { cartDeltaBaselineLines, cartLinesToDeltaBody, hasCartLineDeltaWork } from "./cart-line-deltas";
+import type { WholesaleDraftCartListResult } from "./wholesale-cart-cache";
+
+describe("cartDeltaBaselineLines", () => {
+  it("uses burstPrevious lines when optimistic cache already matches the target", () => {
+    const baseline = cartDeltaBaselineLines(
+      "draft-1",
+      [{ id: "line-open", productId: "p-open", sku: "OPEN", name: "Open", qty: 5, unitPriceCents: 100, currency: "USD" }],
+      {
+        status: 200,
+        headers: new Headers(),
+        data: {
+          items: [
+            {
+              id: "draft-1",
+              customerId: "cust",
+              documentNumber: "SO-1",
+              status: "draft",
+              lines: [
+                {
+                  id: "line-open",
+                  productId: "p-open",
+                  sku: "OPEN",
+                  name: "Open",
+                  qty: 2,
+                  unitPriceCents: 100,
+                  currency: "USD",
+                },
+              ],
+            },
+          ],
+          page: 1,
+          pageSize: 25,
+          total: 1,
+        },
+      } satisfies WholesaleDraftCartListResult,
+    );
+
+    const body = cartLinesToDeltaBody(baseline, [{ productId: "p-open", qty: 5 }]);
+    expect(body).toEqual({ update: [{ lineId: "line-open", qty: 5 }] });
+    expect(hasCartLineDeltaWork(body)).toBe(true);
+  });
+});
 
 describe("cartLinesToDeltaBody", () => {
   it("sends only an add when one SKU is appended to a multi-line draft", () => {

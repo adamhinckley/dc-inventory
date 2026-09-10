@@ -36,7 +36,7 @@ describe("cart-mutation-gate", () => {
     expect(cartPage.qtyTask).toBe(drawer.qtyTask);
   });
 
-  it("tracks in-flight replace-lines across surfaces", () => {
+  it("tracks in-flight line-jobs across surfaces", () => {
     const draftId = "draft-pending";
     trackCartReplaceStart(draftId);
     expect(readCartMutationSnapshot(draftId).pending).toBe(true);

@@ -1387,6 +1387,7 @@ export const salesOrderReplaceLinesBodySchema = z.object({
 
 const salesOrderLineDeltaAddSchema = z.object({
   productId: z.string().uuid(),
+  /** Relative increment when the SKU is already on the draft; otherwise adds a new line. */
   qty: z.number().int().positive(),
 });
 
