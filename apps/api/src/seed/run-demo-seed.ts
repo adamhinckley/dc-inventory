@@ -38,6 +38,7 @@ import {
   taxCategoryBySkuFromPlan,
 } from "./replay-sales-orders.js";
 import { runReplayDemoOrders } from "./replay-demo-orders.js";
+import { runReplayCustomerAccounting } from "./replay-customer-accounting.js";
 import { runReplayPayments } from "./replay-payments.js";
 import type { Phase1SeedSecrets } from "./run-phase1-seed.js";
 import { runWriteReorderPolicies } from "./write-reorder-policies.js";
@@ -257,6 +258,21 @@ export async function runDemoSeedInMemory(
   if (!reconciliation.ok) {
     throw new Error(reconciliation.message);
   }
+
+  tick(input, "customer accounting playback");
+  await runReplayCustomerAccounting(
+    {
+      accountingUow,
+      clock,
+      customers: staticPorts.customers,
+      invoices: uow.invoices,
+    },
+    {
+      plan: input.plan,
+      staffUserId: staticResult.staff.id,
+      assertWithinBudget,
+    },
+  );
 
   input.deadline?.assertWithinBudget();
 

@@ -48,5 +48,25 @@ describe("sales order action errors", () => {
     expect(shipSalesOrderErrorMessage({ status: 409, data: { error: "conflict" } })).toMatch(
       /conflict/i,
     );
+    expect(
+      shipSalesOrderErrorMessage({
+        status: 409,
+        data: {
+          error: "insufficient_cover",
+          name: "Cover presell widget",
+          requestedQty: 1_200,
+          availableQty: 500,
+        },
+      }),
+    ).toBe("Cover presell widget has 500 allocated. You asked to ship 1200.");
+    expect(
+      shipSalesOrderErrorMessage({ status: 409, data: { error: "bill_to_missing" } }),
+    ).toBe("Shipping refused because this customer has no bill-to address.");
+    expect(
+      shipSalesOrderErrorMessage({ status: 409, data: { error: "accounting_invalid" } }),
+    ).toBe("Could not post an invoice. Check that the customer has payment terms.");
+    expect(
+      shipSalesOrderErrorMessage({ status: 409, data: { error: "illegal_transition" } }),
+    ).toBe("This order is not confirmed, so it cannot be shipped.");
   });
 });

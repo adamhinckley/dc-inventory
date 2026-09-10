@@ -1391,6 +1391,18 @@ export const insufficientAtpResponseSchema = z.object({
   availableQty: z.number().int().optional(),
 });
 
+export const insufficientCoverResponseSchema = z.object({
+  error: z.literal("insufficient_cover"),
+  sku: z.string().optional(),
+  name: z.string().optional(),
+  requestedQty: z.number().int().optional(),
+  availableQty: z.number().int().optional(),
+});
+
+export const shipRefusedResponseSchema = z.object({
+  error: z.enum(["bill_to_missing", "accounting_invalid", "illegal_transition"]),
+});
+
 export const creditExceededResponseSchema = z.object({
   error: z.literal("credit_exceeded"),
   availableCreditCents: z.number().int().optional(),

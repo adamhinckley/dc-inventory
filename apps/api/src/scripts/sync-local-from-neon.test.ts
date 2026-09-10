@@ -1,0 +1,142 @@
+import { describe, expect, it } from "vitest";
+import {
+  MissingDatabaseUrlError,
+  MissingNeonDatabaseUrlError,
+  PooledDatabaseUrlError,
+} from "../infrastructure/database-url.js";
+import {
+  parseSyncLocalFromNeonUrls,
+  planSyncLocalFromNeon,
+  SyncLocalFromNeonError,
+} from "./sync-local-from-neon.js";
+
+const localUrl = "postgres://postgres:postgres@localhost:5432/dc_inventory";
+const neonDevelopment =
+  "postgresql://owner:secret@ep-lingering-voice-a5yv0zwz.us-east-2.aws.neon.tech/neondb?sslmode=require";
+const neonProduction =
+  "postgresql://owner:secret@ep-dry-dawn-a5es0x54.us-east-2.aws.neon.tech/neondb?sslmode=require";
+const neonPooled =
+  "postgresql://owner:secret@ep-lingering-voice-a5yv0zwz-pooler.us-east-2.aws.neon.tech/neondb?sslmode=require";
+
+describe("parseSyncLocalFromNeonUrls", () => {
+  it("reads Neon and local URLs without using DATABASE_TARGET", () => {
+    expect(
+      parseSyncLocalFromNeonUrls({
+        DATABASE_TARGET: "local",
+        DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:5432/other",
+        DATABASE_URL_LOCAL: `  ${localUrl}  `,
+        DATABASE_URL_NEON: `  ${neonDevelopment}  `,
+        DATABASE_URL_UNPOOLED: neonPooled,
+      }),
+    ).toEqual({ neonUrl: neonDevelopment, localUrl });
+  });
+
+  it("falls back to DATABASE_URL_UNPOOLED and DATABASE_URL", () => {
+    expect(
+      parseSyncLocalFromNeonUrls({
+        DATABASE_URL: localUrl,
+        DATABASE_URL_UNPOOLED: neonDevelopment,
+      }),
+    ).toEqual({ neonUrl: neonDevelopment, localUrl });
+  });
+
+  it("fails when the Neon URL is missing or production or pooled", () => {
+    expect(() => parseSyncLocalFromNeonUrls({ DATABASE_URL_LOCAL: localUrl })).toThrow(
+      MissingNeonDatabaseUrlError,
+    );
+    expect(() =>
+      parseSyncLocalFromNeonUrls({
+        DATABASE_URL_LOCAL: localUrl,
+        DATABASE_URL_NEON: neonPooled,
+      }),
+    ).toThrow(PooledDatabaseUrlError);
+    expect(() =>
+      parseSyncLocalFromNeonUrls({
+        DATABASE_URL_LOCAL: localUrl,
+        DATABASE_URL_NEON: neonProduction,
+      }),
+    ).toThrow(/production/);
+    expect(() =>
+      parseSyncLocalFromNeonUrls({
+        DATABASE_URL_LOCAL: localUrl,
+        DATABASE_URL_NEON: "postgres://owner:secret@db.example.com/neondb",
+      }),
+    ).toThrow(/not Neon/);
+  });
+
+  it("fails when the restore target is missing or not local", () => {
+    expect(() =>
+      parseSyncLocalFromNeonUrls({ DATABASE_URL_NEON: neonDevelopment }),
+    ).toThrow(MissingDatabaseUrlError);
+    expect(() =>
+      parseSyncLocalFromNeonUrls({
+        DATABASE_URL_NEON: neonDevelopment,
+        DATABASE_URL_LOCAL: neonDevelopment,
+      }),
+    ).toThrow(SyncLocalFromNeonError);
+    expect(() =>
+      parseSyncLocalFromNeonUrls({
+        DATABASE_URL_NEON: neonDevelopment,
+        DATABASE_URL_LOCAL: neonDevelopment,
+      }),
+    ).toThrow(/not allowed/);
+  });
+});
+
+describe("planSyncLocalFromNeon", () => {
+  it("dumps Neon, recreates the local database, then restores", () => {
+    const plan = planSyncLocalFromNeon(
+      { neonUrl: neonDevelopment, localUrl },
+      "/tmp/dc-inventory-neon-sync.dump",
+    );
+
+    expect(plan.localDatabaseName).toBe("dc_inventory");
+    expect(plan.commands.map((command) => command.argv[0])).toEqual([
+      "pg_dump",
+      "dropdb",
+      "createdb",
+      "pg_restore",
+    ]);
+    expect(plan.commands[0]?.argv).toEqual([
+      "pg_dump",
+      "--no-owner",
+      "--no-acl",
+      "-Fc",
+      "-d",
+      neonDevelopment,
+      "-f",
+      "/tmp/dc-inventory-neon-sync.dump",
+    ]);
+    expect(plan.commands[1]?.argv).toEqual([
+      "dropdb",
+      "--if-exists",
+      "--force",
+      "-h",
+      "localhost",
+      "-p",
+      "5432",
+      "-U",
+      "postgres",
+      "dc_inventory",
+    ]);
+    expect(plan.commands[1]?.env).toEqual({ PGPASSWORD: "postgres" });
+    expect(plan.commands[2]?.argv).toEqual([
+      "createdb",
+      "-h",
+      "localhost",
+      "-p",
+      "5432",
+      "-U",
+      "postgres",
+      "dc_inventory",
+    ]);
+    expect(plan.commands[3]?.argv).toEqual([
+      "pg_restore",
+      "--no-owner",
+      "--no-acl",
+      "-d",
+      localUrl,
+      "/tmp/dc-inventory-neon-sync.dump",
+    ]);
+  });
+});

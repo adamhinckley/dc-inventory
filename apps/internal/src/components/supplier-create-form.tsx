@@ -13,6 +13,7 @@ import {
   supplierPoPrefixFieldSchema,
 } from "../lib/supplier-po-prefix";
 import { z } from "zod";
+import { throwIfSupplierWriteFailed } from "../lib/supplier-write-errors";
 
 const createSupplierSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -28,14 +29,17 @@ export function SupplierCreateForm() {
   const { mutateAsync } = useCreateInternalSupplier();
 
   const onSubmit = useFormSubmit<CreateSupplierInput, Awaited<ReturnType<typeof createInternalSupplier>>>({
-    mutate: (data) =>
-      mutateAsync({
+    mutate: async (data) => {
+      const result = await mutateAsync({
         data: {
           name: data.name,
           vendorNumber: data.vendorNumber,
           poPrefix: data.poPrefix,
         },
-      }),
+      });
+      throwIfSupplierWriteFailed(result);
+      return result;
+    },
     successMessage: "Supplier created",
     invalidate: getListInternalSuppliersQueryKey(),
     onSuccess: (result) => {

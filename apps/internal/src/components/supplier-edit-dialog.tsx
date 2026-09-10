@@ -5,15 +5,15 @@ import {
   getListInternalSuppliersQueryKey,
   useUpdateInternalSupplier,
 } from "@dc-inventory/api-client-internal";
-import { Form, useDetailView, useFormSubmit } from "@dc-inventory/ui";
+import { Form, FormDialog } from "@dc-inventory/ui";
 import { Save } from "lucide-react";
+import { z } from "zod";
 import {
   SUPPLIER_PO_PREFIX_HELPER,
   supplierPoPrefixFieldSchema,
   supplierPoPrefixFormDefault,
 } from "../lib/supplier-po-prefix";
-import { z } from "zod";
-import type { SupplierDetail } from "../lib/supplier-types";
+import type { SupplierRow } from "../lib/supplier-types";
 import { throwIfSupplierWriteFailed } from "../lib/supplier-write-errors";
 
 const editSupplierSchema = z.object({
@@ -22,42 +22,52 @@ const editSupplierSchema = z.object({
   poPrefix: supplierPoPrefixFieldSchema,
 });
 
-type EditSupplierInput = z.infer<typeof editSupplierSchema>;
-
-export function SupplierEditForm({ supplier }: { supplier: SupplierDetail }) {
-  const { setEditOpen } = useDetailView();
+export function SupplierEditDialog({
+  supplier,
+  open,
+  onOpenChange,
+}: {
+  supplier: SupplierRow;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { mutateAsync } = useUpdateInternalSupplier();
 
-  const onSubmit = useFormSubmit<EditSupplierInput>({
-    mutate: async (data) => {
-      const result = await mutateAsync({
-        id: supplier.id,
-        data: {
-          name: data.name,
-          vendorNumber: data.vendorNumber,
-          poPrefix: data.poPrefix,
-        },
-      });
-      throwIfSupplierWriteFailed(result);
-      return result;
-    },
-    successMessage: "Supplier updated",
-    invalidate: [
-      getListInternalSuppliersQueryKey(),
-      getGetInternalSupplierQueryKey(supplier.id),
-    ],
-    onSuccess: () => setEditOpen(false),
-  });
-
   return (
-    <Form
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Edit ${supplier.name}`}
+      description="Update the vendor number, name, and PO prefix."
       schema={editSupplierSchema}
       defaultValues={{
         name: supplier.name,
         vendorNumber: supplier.vendorNumber,
         poPrefix: supplierPoPrefixFormDefault(supplier.poPrefix),
       }}
-      onSubmit={onSubmit}
+      mutate={async (data) => {
+        const result = await mutateAsync({
+          id: supplier.id,
+          data: {
+            name: data.name,
+            vendorNumber: data.vendorNumber,
+            poPrefix: data.poPrefix,
+          },
+        });
+        throwIfSupplierWriteFailed(result);
+        return result;
+      }}
+      successMessage="Supplier updated"
+      invalidate={[
+        getListInternalSuppliersQueryKey(),
+        getGetInternalSupplierQueryKey(supplier.id),
+      ]}
+      submitLabel={
+        <>
+          <Save className="size-icon-lg" aria-hidden />
+          Save Changes
+        </>
+      }
     >
       <Form.Field
         name="vendorNumber"
@@ -72,13 +82,6 @@ export function SupplierEditForm({ supplier }: { supplier: SupplierDetail }) {
         description={SUPPLIER_PO_PREFIX_HELPER}
         form={{ kind: "text" }}
       />
-      <Form.RootError />
-      <Form.Actions>
-        <Form.Submit>
-          <Save className="size-icon-lg" aria-hidden />
-          Save Changes
-        </Form.Submit>
-      </Form.Actions>
-    </Form>
+    </FormDialog>
   );
 }

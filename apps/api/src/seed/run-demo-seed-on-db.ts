@@ -6,6 +6,7 @@ import type { DemoBookPlan } from "./planner/types.js";
 import type { Phase1SeedSecrets } from "./run-phase1-seed.js";
 import { runAssertDemoBookOnDb } from "./run-assert-demo-book-on-db.js";
 import { runReplayDemoOrdersOnDb } from "./run-replay-demo-orders-on-db.js";
+import { runReplayCustomerAccountingOnDb } from "./run-replay-customer-accounting-on-db.js";
 import { runReplayPaymentsOnDb } from "./run-replay-payments-on-db.js";
 import { runWriteReorderPoliciesOnDb } from "./run-write-reorder-policies-on-db.js";
 import { runWriteStaticDemoBookOnDb } from "./run-write-static-demo-book-on-db.js";
@@ -87,6 +88,12 @@ export async function runDemoSeedOnDb(
   if (!reconciliation.ok) {
     throw new Error(reconciliation.message);
   }
+
+  tick(input, "customer accounting playback");
+  await runReplayCustomerAccountingOnDb(input.db, input.plan, {
+    staffUserId: staticResult.staff.id,
+    assertWithinBudget,
+  });
 
   input.deadline?.assertWithinBudget();
 

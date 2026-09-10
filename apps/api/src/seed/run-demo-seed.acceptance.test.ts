@@ -113,7 +113,7 @@ describe("seed:demo contract", () => {
     const cli = readFileSync(resolve(root, "apps/api/src/seed/run-demo-seed-cli.ts"), "utf8");
     expect(cli).not.toMatch(/runPhase1Seed|db:seed:phase1|cli\.ts/);
     expect(cli).toMatch(/runDemoSeedOnDb/);
-    expect(cli).toMatch(/planDemoBook/);
+    expect(cli).toMatch(/planCliDemoBook/);
   });
 
   it("keeps full bench out of default vitest include unless opted in", () => {

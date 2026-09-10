@@ -13,11 +13,12 @@ import {
   formatMoneyMinorUnits,
   Table,
   useTable,
+  useToast,
 } from "@dc-inventory/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Ban, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   cancelSalesOrderErrorMessage,
   shipSalesOrderErrorMessage,
@@ -115,7 +116,7 @@ export function SalesOrderFrozenWorkspace({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState<string | null>(null);
+  const { toast } = useToast();
   const cancelMutation = useCancelInternalSalesOrder();
   const shipMutation = useShipInternalSalesOrder();
 
@@ -180,40 +181,56 @@ export function SalesOrderFrozenWorkspace({
   }, [queryClient, salesOrderId]);
 
   const cancelOrder = useCallback(async () => {
-    setActionError(null);
     try {
       const result = await cancelMutation.mutateAsync({
         id: salesOrderId,
         data: { idempotencyKey: `cancel-${salesOrderId}` },
       });
       if (result.status !== 200) {
-        setActionError(cancelSalesOrderErrorMessage(result));
+        toast({
+          intent: "error",
+          title: cancelSalesOrderErrorMessage(result),
+          testid: "sales-order-cancel-error-toast",
+        });
         return;
       }
       await invalidateOrder();
       router.refresh();
     } catch {
-      setActionError("Could not cancel this sales order.");
+      toast({
+        intent: "error",
+        title: "Could not cancel this sales order.",
+        testid: "sales-order-cancel-error-toast",
+      });
     }
-  }, [cancelMutation, invalidateOrder, router, salesOrderId]);
+  }, [cancelMutation, invalidateOrder, router, salesOrderId, toast]);
 
   const shipOrder = useCallback(async () => {
-    setActionError(null);
     try {
       const result = await shipMutation.mutateAsync({
         id: salesOrderId,
         data: { idempotencyKey: `ship-${salesOrderId}` },
       });
       if (result.status !== 200) {
-        setActionError(shipSalesOrderErrorMessage(result));
+        toast({
+          intent: "warning",
+          title: shipSalesOrderErrorMessage(result),
+          timeout: 0,
+          testid: "sales-order-ship-warning-toast",
+        });
         return;
       }
       await invalidateOrder();
       router.refresh();
     } catch {
-      setActionError("Could not ship this sales order.");
+      toast({
+        intent: "warning",
+        title: "Could not ship this sales order.",
+        timeout: 0,
+        testid: "sales-order-ship-warning-toast",
+      });
     }
-  }, [invalidateOrder, router, salesOrderId, shipMutation]);
+  }, [invalidateOrder, router, salesOrderId, shipMutation, toast]);
 
   const cancelDisabled = salesOrderCancelDisabled({
     status,
@@ -262,12 +279,6 @@ export function SalesOrderFrozenWorkspace({
           </Button>
         </div>
       </header>
-
-      {actionError ? (
-        <p className="text-body-sm text-error" role="alert">
-          {actionError}
-        </p>
-      ) : null}
 
       <ShipToSnapshot
         shipLine1={shipLine1}

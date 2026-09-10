@@ -16,9 +16,22 @@ export function toCreditExceededBody(result: {
 export function toInsufficientAtpBody(result: {
   shortage?: ConfirmSalesOrderShortage;
 }) {
+  return toLineShortageBody("insufficient_atp", result);
+}
+
+export function toInsufficientCoverBody(result: {
+  shortage?: ConfirmSalesOrderShortage;
+}) {
+  return toLineShortageBody("insufficient_cover", result);
+}
+
+function toLineShortageBody<TError extends "insufficient_atp" | "insufficient_cover">(
+  error: TError,
+  result: { shortage?: ConfirmSalesOrderShortage },
+) {
   const shortage = result.shortage;
   return {
-    error: "insufficient_atp" as const,
+    error,
     ...(shortage !== undefined
       ? {
           sku: shortage.sku,

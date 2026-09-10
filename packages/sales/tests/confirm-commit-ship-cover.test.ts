@@ -311,6 +311,19 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
         idempotencyKey: "ship-before-cover",
       });
       expect(shipBeforeReceive.ok).toBe(false);
+      if (shipBeforeReceive.ok) {
+        return;
+      }
+      expect(shipBeforeReceive.reason).toBe("insufficient_cover");
+      if (shipBeforeReceive.reason !== "insufficient_cover") {
+        return;
+      }
+      expect(shipBeforeReceive.shortage).toEqual({
+        sku: COVER_SKU.value,
+        name: "Cover presell widget",
+        requestedQty: 1_200,
+        availableQty: 500,
+      });
 
       await h.inboundFromPo.execute({
         organizationId: DEFAULT_ORG,

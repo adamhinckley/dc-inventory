@@ -274,6 +274,58 @@ describe("internal sales orders HTTP", () => {
     });
   });
 
+  it("returns insufficient_cover with the short product when ship lacks allocation", async () => {
+    const { app, unitOfWork } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    await unitOfWork.run(async (scope) => {
+      const result = await new RecordAdjustmentIncreaseUseCase(scope.inventory.ledger).execute({
+        organizationId: OrganizationId.DEFAULT,
+        idempotencyKey: "http-cover-seed",
+        sku: SKU,
+        quantity: 2,
+        refType: "adjustment",
+        refId: "http-cover-seed",
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 5 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-cover-confirm", shipToId: API_TEST_SHIP_TO_ID },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const shipped = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/ship`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-cover-ship" },
+    });
+    expect(shipped.statusCode).toBe(409);
+    expect(shipped.json()).toEqual({
+      error: "insufficient_cover",
+      sku: SKU.value,
+      name: "Catalog hex bolt",
+      requestedQty: 5,
+      availableQty: 2,
+    });
+  });
+
   it("rejects ship without staff_session", async () => {
     const { app } = await startSalesApp();
     const response = await app.inject({

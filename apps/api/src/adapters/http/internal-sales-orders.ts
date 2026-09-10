@@ -4,11 +4,17 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import type { SalesOrder } from "@dc-inventory/sales";
 import { CustomerId, OrderId, StaffUserId } from "@dc-inventory/shared-kernel";
-import { mapSalesOrder, toCreditExceededBody, toInsufficientAtpBody } from "./map-sales-order.js";
+import {
+  mapSalesOrder,
+  toCreditExceededBody,
+  toInsufficientAtpBody,
+  toInsufficientCoverBody,
+} from "./map-sales-order.js";
 import {
   conflictResponseSchema,
   creditExceededResponseSchema,
   insufficientAtpResponseSchema,
+  insufficientCoverResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
   salesOrderCommandBodySchema,
@@ -20,6 +26,7 @@ import {
   salesOrderReplaceLinesBodySchema,
   salesOrderWriteBodySchema,
   salesOrdersListTable,
+  shipRefusedResponseSchema,
   unauthorizedResponseSchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
@@ -105,6 +112,13 @@ function sendInsufficientAtp(
   result: Parameters<typeof toInsufficientAtpBody>[0],
 ) {
   return reply.code(409).send(toInsufficientAtpBody(result));
+}
+
+function sendInsufficientCover(
+  reply: FastifyReply,
+  result: Parameters<typeof toInsufficientCoverBody>[0],
+) {
+  return reply.code(409).send(toInsufficientCoverBody(result));
 }
 
 const readErrors = {
@@ -426,7 +440,11 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: conflictResponseSchema,
+          409: z.union([
+            conflictResponseSchema,
+            insufficientCoverResponseSchema,
+            shipRefusedResponseSchema,
+          ]),
         },
       },
     },
@@ -441,13 +459,19 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         if (result.reason === "not_found") {
           return sendNotFound(reply);
         }
-        if (
-          result.reason === "illegal_transition" ||
-          result.reason === "idempotency_conflict" ||
-          result.reason === "inventory_conflict" ||
-          result.reason === "accounting_invalid" ||
-          result.reason === "bill_to_missing"
-        ) {
+        if (result.reason === "insufficient_cover") {
+          return sendInsufficientCover(reply, result);
+        }
+        if (result.reason === "bill_to_missing") {
+          return reply.code(409).send({ error: "bill_to_missing" as const });
+        }
+        if (result.reason === "accounting_invalid") {
+          return reply.code(409).send({ error: "accounting_invalid" as const });
+        }
+        if (result.reason === "illegal_transition") {
+          return reply.code(409).send({ error: "illegal_transition" as const });
+        }
+        if (result.reason === "idempotency_conflict" || result.reason === "inventory_conflict") {
           return sendConflict(reply);
         }
         return sendInvalid(reply);

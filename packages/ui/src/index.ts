@@ -20,6 +20,7 @@ export {
   type LabeledFieldProps,
 } from "./ui/FieldRow";
 export { AppShell, useAppShellContext } from "./shells/AppShell";
+export { useToast } from "./ui/Toast";
 
 export { Combobox, type ComboboxProps } from "./ui/Combobox";
 export { Select, type SelectProps } from "./ui/Select";

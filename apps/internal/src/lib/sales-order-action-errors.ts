@@ -95,10 +95,39 @@ export function cancelSalesOrderErrorMessage(result: {
   return "Could not cancel this sales order.";
 }
 
+function formatShipCoverShortage(data: ActionErrorBody): string | null {
+  if (data.availableQty === undefined || data.requestedQty === undefined) {
+    return null;
+  }
+  const product = data.name?.trim() || data.sku?.trim();
+  if (product === undefined || product.length === 0) {
+    return null;
+  }
+  if (data.availableQty <= 0) {
+    return `${product} has no allocated stock. You asked to ship ${data.requestedQty}.`;
+  }
+  return `${product} has ${data.availableQty} allocated. You asked to ship ${data.requestedQty}.`;
+}
+
 export function shipSalesOrderErrorMessage(result: {
   status: number;
   data?: ActionErrorBody;
 }): string {
+  if (result.status === 409 && result.data?.error === "insufficient_cover") {
+    return (
+      formatShipCoverShortage(result.data) ??
+      "This order cannot ship until every line is fully allocated."
+    );
+  }
+  if (result.status === 409 && result.data?.error === "bill_to_missing") {
+    return "Shipping refused because this customer has no bill-to address.";
+  }
+  if (result.status === 409 && result.data?.error === "accounting_invalid") {
+    return "Could not post an invoice. Check that the customer has payment terms.";
+  }
+  if (result.status === 409 && result.data?.error === "illegal_transition") {
+    return "This order is not confirmed, so it cannot be shipped.";
+  }
   if (result.status === 409) {
     return "This order could not be shipped due to a conflict.";
   }
