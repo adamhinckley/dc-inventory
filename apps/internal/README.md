@@ -29,7 +29,7 @@ pnpm dev:internal
 | `/login` | `(auth)/login` placeholder |
 | `/catalog` | Example `DataTable` + `useListInternalProducts` (Orval) |
 | `/customers` | Placeholder |
-| `/purchasing` | Placeholder |
+| `/procurement` | Procurement hub (Pre-order, Purchase Orders, Receiving, Suppliers) |
 | `/inventory` | Placeholder |
 | `/sales` | Placeholder |
 | `/accounting` | Placeholder |

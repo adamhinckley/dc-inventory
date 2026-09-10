@@ -6,5 +6,5 @@ export function isUncoveredNeedsMappingFactoryId(factoryId: string): boolean {
 }
 
 export function uncoveredFactoryDetailHref(factoryId: string): string {
-  return `/purchasing/uncovered/${factoryId}`;
+  return `/procurement/pre-order/${factoryId}`;
 }

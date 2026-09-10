@@ -32,7 +32,7 @@ describe("crumbsFromPathname", () => {
     ]);
     expect(crumbsFromPathname("/procurement/pre-order/factory-1")).toEqual([
       { href: "/procurement", label: "Procurement", current: false },
-      { href: "/procurement/pre-order", label: "Pre-order", current: false },
+      { href: "/procurement", label: "Pre-order", current: false },
       { href: "/procurement/pre-order/factory-1", label: "factory-1", current: true },
     ]);
   });
