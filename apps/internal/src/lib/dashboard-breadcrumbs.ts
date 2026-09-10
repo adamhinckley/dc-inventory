@@ -19,7 +19,6 @@ const SEGMENT_LABELS: Record<string, string> = {
   "purchase-orders": "Purchase Orders",
   receiving: "Receiving",
   suppliers: "Suppliers",
-  uncovered: "Uncovered",
   reopen: "Sell Windows",
 };
 
