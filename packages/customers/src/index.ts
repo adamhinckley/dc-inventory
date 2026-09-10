@@ -22,6 +22,7 @@ export { CreateExemptionCertificateUseCase } from "./application/create-exemptio
 export { CreateShipToUseCase } from "./application/create-ship-to.js";
 export { GetBillToUseCase } from "./application/get-bill-to.js";
 export { GetCustomerUseCase } from "./application/get-customer.js";
+export { GetWholesaleAccountDetailUseCase } from "./application/get-wholesale-account-detail.js";
 export { GetWholesaleCustomerUseCase } from "./application/get-wholesale-customer.js";
 export { ListContactsUseCase } from "./application/list-contacts.js";
 export { ListCustomersUseCase } from "./application/list-customers.js";

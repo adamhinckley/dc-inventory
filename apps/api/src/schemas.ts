@@ -744,6 +744,14 @@ export const exemptionItemSchema = z.object({
   status: z.string(),
 });
 
+export const wholesaleAccountDetailSchema = z.object({
+  account: wholesaleCustomerItemSchema,
+  shipTos: z.array(shipToItemSchema),
+  billTo: billToItemSchema.nullable(),
+  contacts: z.array(contactItemSchema),
+  certificates: z.array(exemptionItemSchema),
+});
+
 export const exemptionListResponseSchema = z.object({
   items: z.array(exemptionItemSchema),
 });

@@ -59,6 +59,10 @@ import type {
   GetWholesaleAccount401,
   GetWholesaleAccount403,
   GetWholesaleAccount404,
+  GetWholesaleAccountDetail200,
+  GetWholesaleAccountDetail401,
+  GetWholesaleAccountDetail403,
+  GetWholesaleAccountDetail404,
   GetWholesaleBillTo200,
   GetWholesaleBillTo401,
   GetWholesaleBillTo403,
@@ -1044,6 +1048,112 @@ export function useGetWholesaleCatalogProduct<TData = Awaited<ReturnType<typeof 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetWholesaleCatalogProductQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type getWholesaleAccountDetailResponse200 = {
+  data: GetWholesaleAccountDetail200
+  status: 200
+}
+
+export type getWholesaleAccountDetailResponse401 = {
+  data: GetWholesaleAccountDetail401
+  status: 401
+}
+
+export type getWholesaleAccountDetailResponse403 = {
+  data: GetWholesaleAccountDetail403
+  status: 403
+}
+
+export type getWholesaleAccountDetailResponse404 = {
+  data: GetWholesaleAccountDetail404
+  status: 404
+}
+
+export type getWholesaleAccountDetailResponseSuccess = (getWholesaleAccountDetailResponse200) & {
+  headers: Headers;
+};
+export type getWholesaleAccountDetailResponseError = (getWholesaleAccountDetailResponse401 | getWholesaleAccountDetailResponse403 | getWholesaleAccountDetailResponse404) & {
+  headers: Headers;
+};
+
+export type getWholesaleAccountDetailResponse = (getWholesaleAccountDetailResponseSuccess | getWholesaleAccountDetailResponseError)
+
+export const getGetWholesaleAccountDetailUrl = () => {
+
+
+
+
+  return `/wholesale/account/detail`
+}
+
+/**
+ * @summary Read bundled account detail for session customer
+ */
+export const getWholesaleAccountDetail = async ( options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleAccountDetailResponse> => {
+
+  return customFetch<getWholesaleAccountDetailResponse>(getGetWholesaleAccountDetailUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWholesaleAccountDetailQueryKey = () => {
+    return [
+    `/wholesale/account/detail`
+    ] as const;
+    }
+
+
+export const getGetWholesaleAccountDetailQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleAccountDetail>>, TError = GetWholesaleAccountDetail401 | GetWholesaleAccountDetail403 | GetWholesaleAccountDetail404>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccountDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWholesaleAccountDetailQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWholesaleAccountDetail>>> = ({ signal }) => getWholesaleAccountDetail({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccountDetail>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWholesaleAccountDetailQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleAccountDetail>>>
+export type GetWholesaleAccountDetailQueryError = GetWholesaleAccountDetail401 | GetWholesaleAccountDetail403 | GetWholesaleAccountDetail404
+
+
+/**
+ * @summary Read bundled account detail for session customer
+ */
+
+export function useGetWholesaleAccountDetail<TData = Awaited<ReturnType<typeof getWholesaleAccountDetail>>, TError = GetWholesaleAccountDetail401 | GetWholesaleAccountDetail403 | GetWholesaleAccountDetail404>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleAccountDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWholesaleAccountDetailQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

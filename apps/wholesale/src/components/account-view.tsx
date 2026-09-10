@@ -1,19 +1,14 @@
 "use client";
 
 import {
-  WholesaleHttpError,
-  getGetWholesaleAccountQueryKey,
+  getGetWholesaleAccountDetailQueryKey,
   getGetWholesaleSessionQueryKey,
   getListWholesaleExemptionCertificatesQueryKey,
   getListWholesaleShipTosQueryKey,
   useCreateWholesaleExemptionCertificate,
   useCreateWholesaleShipTo,
-  useGetWholesaleAccount,
-  useGetWholesaleBillTo,
+  useGetWholesaleAccountDetail,
   useGetWholesaleSession,
-  useListWholesaleContacts,
-  useListWholesaleExemptionCertificates,
-  useListWholesaleShipTos,
   useUpdateWholesaleAccountCustomerNote,
   useUpdateWholesaleShipTo,
 } from "@dc-inventory/api-client-wholesale";
@@ -286,14 +281,10 @@ export function AccountView() {
 
 function BuyerAccountView() {
   const queryClient = useQueryClient();
-  const account = useGetWholesaleAccount();
+  const detail = useGetWholesaleAccountDetail();
   const updateNote = useUpdateWholesaleAccountCustomerNote();
-  const shipTos = useListWholesaleShipTos();
   const createShipTo = useCreateWholesaleShipTo();
   const updateShipTo = useUpdateWholesaleShipTo();
-  const billTo = useGetWholesaleBillTo();
-  const contacts = useListWholesaleContacts();
-  const certificates = useListWholesaleExemptionCertificates();
   const createCertificate = useCreateWholesaleExemptionCertificate();
 
   const [customerNote, setCustomerNote] = useState("");
@@ -315,14 +306,39 @@ function BuyerAccountView() {
   const [certError, setCertError] = useState<string | null>(null);
   const [certDialogOpen, setCertDialogOpen] = useState(false);
 
-  const accountData = account.data?.status === 200 ? account.data.data : null;
+  function invalidateAccountDetail() {
+    return queryClient.invalidateQueries({
+      queryKey: getGetWholesaleAccountDetailQueryKey(),
+    });
+  }
+
+  function invalidateAccountShipTos() {
+    return Promise.all([
+      invalidateAccountDetail(),
+      queryClient.invalidateQueries({
+        queryKey: getListWholesaleShipTosQueryKey(),
+      }),
+    ]);
+  }
+
+  function invalidateAccountCertificates() {
+    return Promise.all([
+      invalidateAccountDetail(),
+      queryClient.invalidateQueries({
+        queryKey: getListWholesaleExemptionCertificatesQueryKey(),
+      }),
+    ]);
+  }
+
+  const detailData = detail.data?.status === 200 ? detail.data.data : null;
 
   useEffect(() => {
-    if (accountData !== null && !noteInitialized) {
-      setCustomerNote(accountData.customerNote ?? "");
+    const account = detailData?.account;
+    if (account !== undefined && !noteInitialized) {
+      setCustomerNote(account.customerNote ?? "");
       setNoteInitialized(true);
     }
-  }, [accountData, noteInitialized]);
+  }, [detailData, noteInitialized]);
 
   useEffect(() => {
     const dialog = shipToDialogRef.current;
@@ -384,9 +400,7 @@ function BuyerAccountView() {
         { data: body },
         {
           onSuccess: async () => {
-            await queryClient.invalidateQueries({
-              queryKey: getListWholesaleShipTosQueryKey(),
-            });
+            await invalidateAccountShipTos();
             closeShipToDialog();
           },
           onError: () => {
@@ -401,9 +415,7 @@ function BuyerAccountView() {
         { shipToId: editingShipTo.id, data: body },
         {
           onSuccess: async () => {
-            await queryClient.invalidateQueries({
-              queryKey: getListWholesaleShipTosQueryKey(),
-            });
+            await invalidateAccountShipTos();
             closeShipToDialog();
           },
           onError: () => {
@@ -422,9 +434,7 @@ function BuyerAccountView() {
       { shipToId: shipTo.id, data: { isDefault: true } },
       {
         onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: getListWholesaleShipTosQueryKey(),
-          });
+          await invalidateAccountShipTos();
         },
       },
     );
@@ -436,12 +446,7 @@ function BuyerAccountView() {
       { data: { customerNote: customerNote.trim() === "" ? null : customerNote } },
       {
         onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: getGetWholesaleAccountQueryKey(),
-          });
-        },
-        onError: () => {
-          setNoteError("Could not save note.");
+          await invalidateAccountDetail();
         },
       },
     );
@@ -486,9 +491,7 @@ function BuyerAccountView() {
       },
       {
         onSuccess: async () => {
-          await queryClient.invalidateQueries({
-            queryKey: getListWholesaleExemptionCertificatesQueryKey(),
-          });
+          await invalidateAccountCertificates();
           closeCertDialog();
         },
         onError: () => {
@@ -498,11 +501,11 @@ function BuyerAccountView() {
     );
   }
 
-  if (account.isPending) {
+  if (detail.isPending) {
     return <p className="text-ink-muted">Loading account…</p>;
   }
 
-  if (account.isError || accountData === null) {
+  if (detail.isError || detailData === null) {
     return (
       <p className="text-sold-out" role="alert">
         Account details are unavailable. Start the API with `pnpm dev:api` and reload.
@@ -510,27 +513,12 @@ function BuyerAccountView() {
     );
   }
 
-  const shipToItems =
-    shipTos.data?.status === 200 && "items" in shipTos.data.data
-      ? shipTos.data.data.items
-      : [];
-
-  const billToMissing =
-    billTo.isError &&
-    billTo.error instanceof WholesaleHttpError &&
-    billTo.error.status === 404;
-  const billToData =
-    billTo.data?.status === 200 ? billTo.data.data : null;
-
-  const contactItems =
-    contacts.data?.status === 200 && "items" in contacts.data.data
-      ? contacts.data.data.items
-      : [];
-
-  const certificateItems =
-    certificates.data?.status === 200 && "items" in certificates.data.data
-      ? certificates.data.data.items
-      : [];
+  const shipToItems = detailData.shipTos;
+  const billToMissing = detailData.billTo === null;
+  const billToData = detailData.billTo;
+  const contactItems = detailData.contacts;
+  const certificateItems = detailData.certificates;
+  const accountData = detailData.account;
 
   const shipToPending = createShipTo.isPending || updateShipTo.isPending;
 
@@ -612,11 +600,7 @@ function BuyerAccountView() {
             {shipToItems.length === 0 ? "Add Ship-To" : "Add"}
           </button>
         </div>
-        {shipTos.isError ? (
-          <p className="mt-3 text-sm text-sold-out" role="alert">
-            Ship-to addresses are unavailable.
-          </p>
-        ) : shipToItems.length === 0 ? (
+        {shipToItems.length === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">
             No ship-to addresses on file.
           </p>
@@ -662,16 +646,10 @@ function BuyerAccountView() {
 
       <div className="rounded-2xl border border-line bg-card p-5">
         <p className="text-sm font-semibold text-ink">Bill-To Address</p>
-        {billTo.isPending ? (
-          <p className="mt-3 text-sm text-ink-muted">Loading bill-to…</p>
-        ) : billToMissing ? (
+        {billToMissing ? (
           <p className="mt-3 text-sm text-ink-muted">
             No bill-to on file. Contact customer service to add one before your
             order ships.
-          </p>
-        ) : billTo.isError ? (
-          <p className="mt-3 text-sm text-sold-out" role="alert">
-            Bill-to address is unavailable.
           </p>
         ) : billToData !== null ? (
           <p className="mt-3 text-sm text-ink">
@@ -687,11 +665,7 @@ function BuyerAccountView() {
 
       <div className="rounded-2xl border border-line bg-card p-5">
         <p className="text-sm font-semibold text-ink">Contacts</p>
-        {contacts.isError ? (
-          <p className="mt-3 text-sm text-sold-out" role="alert">
-            Contacts are unavailable.
-          </p>
-        ) : contactItems.length === 0 ? (
+        {contactItems.length === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">
             No contacts on file. Contact customer service.
           </p>
@@ -724,11 +698,7 @@ function BuyerAccountView() {
             Add Certificate
           </button>
         </div>
-        {certificates.isError ? (
-          <p className="mt-3 text-sm text-sold-out" role="alert">
-            Exemption certificates are unavailable.
-          </p>
-        ) : certificateItems.length === 0 ? (
+        {certificateItems.length === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">No certificates on file.</p>
         ) : (
           <ul className="mt-3 flex flex-col gap-2">

@@ -32,6 +32,7 @@ describe("wholesale shop HTTP", () => {
     expect(joined).toMatch(/useReplaceWholesaleSalesOrderLines/);
     expect(joined).toMatch(/useApplyWholesaleSalesOrderLineDeltas/);
     expect(joined).toMatch(/useListWholesaleSalesOrders/);
+    expect(joined).toMatch(/useGetWholesaleAccountDetail/);
     expect(joined).toMatch(/useListWholesaleShipTos/);
     expect(joined).toMatch(/useConfirmWholesaleSalesOrder/);
     expect(joined).toMatch(/useLoginWholesale/);

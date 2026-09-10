@@ -26,6 +26,7 @@ import {
   unauthorizedResponseSchema,
   wholesaleCustomerItemSchema,
   wholesaleCustomerNotePatchBodySchema,
+  wholesaleAccountDetailSchema,
   wholesaleShipToParamsSchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
@@ -140,6 +141,41 @@ function parseOptionalDate(value: string | null | undefined): Date | null | unde
 
 export function registerWholesaleCustomerRoutes(app: FastifyInstance): void {
   const routes = typed(app);
+
+  routes.get(
+    "/account/detail",
+    {
+      schema: {
+        operationId: "getWholesaleAccountDetail",
+        tags: ["wholesale"],
+        summary: "Read bundled account detail for session customer",
+        response: {
+          200: wholesaleAccountDetailSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const identity = wholesaleIdentity(request);
+      const result = await request.server.customers.getWholesaleAccountDetail.execute({
+        organizationId: wholesaleOrganizationId(request),
+        wholesaleUserId: identity.wholesaleUserId,
+        customerId: identity.customerId,
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      return {
+        account: mapWholesaleCustomer(result.account),
+        shipTos: result.shipTos.map(mapShipTo),
+        billTo: result.billTo === null ? null : mapBillTo(result.billTo),
+        contacts: result.contacts.map(mapContact),
+        certificates: result.certificates.map(mapExemption),
+      };
+    },
+  );
 
   routes.get(
     "/account",
