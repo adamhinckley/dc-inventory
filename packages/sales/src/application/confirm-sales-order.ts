@@ -175,12 +175,11 @@ export class ConfirmSalesOrderUseCase {
           })),
         );
         if (!commitResult.ok) {
-          const failedLine =
-            existing.lines.find(
-              (line) =>
-                commitResult.failedIdempotencyKey ===
-                `${input.idempotencyKey}:confirm:${line.id}`,
-            ) ?? existing.lines[0];
+          const failedLine = existing.lines.find(
+            (line) =>
+              commitResult.failedIdempotencyKey ===
+              `${input.idempotencyKey}:confirm:${line.id}`,
+          );
           if (commitResult.reason === "idempotency_conflict") {
             throw new SalesTransactionError("idempotency_conflict");
           }
@@ -188,10 +187,13 @@ export class ConfirmSalesOrderUseCase {
             commitResult.reason === "insufficient_available_to_sell" ||
             commitResult.reason === "insufficient_available"
           ) {
+            if (failedLine === undefined) {
+              throw new SalesTransactionError("inventory_conflict");
+            }
             throw new SalesTransactionError("insufficient_atp", {
-              sku: failedLine?.sku.value ?? "",
-              name: failedLine?.name ?? "",
-              requestedQty: failedLine?.qty ?? 0,
+              sku: failedLine.sku.value,
+              name: failedLine.name,
+              requestedQty: failedLine.qty,
               availableQty: commitResult.availableToSell ?? 0,
             });
           }

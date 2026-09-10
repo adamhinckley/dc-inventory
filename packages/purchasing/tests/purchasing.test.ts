@@ -851,23 +851,15 @@ describe("Purchasing (in-memory)", () => {
     poPrefix: "HF",
     });
 
-    let cancelCalls = 0;
     const failingInventory: IPurchasingUnitOfWork["inventory"] = {
       lockSnapshots: (snapshots) => base.inventory.lockSnapshots(snapshots),
       recordInboundFromPo: (command) => base.inventory.recordInboundFromPo(command),
       recordInboundFromPoBulk: (commands) => base.inventory.recordInboundFromPoBulk(commands),
       recordGoodsReceived: (command) => base.inventory.recordGoodsReceived(command),
       recordGoodsReceivedBulk: (commands) => base.inventory.recordGoodsReceivedBulk(commands),
-      recordInboundCancelled: async (command) => {
-        cancelCalls += 1;
-        if (cancelCalls === 2) {
-          return { ok: false, reason: "provenance_conflict" };
-        }
-        return base.inventory.recordInboundCancelled(command);
-      },
+      recordInboundCancelled: (command) => base.inventory.recordInboundCancelled(command),
       recordInboundCancelledBulk: async (commands) => {
-        cancelCalls += 1;
-        if (cancelCalls === 2 || commands.length > 1) {
+        if (commands.length >= 2) {
           return { ok: false, reason: "provenance_conflict" };
         }
         return base.inventory.recordInboundCancelledBulk(commands);

@@ -15,7 +15,7 @@ export type StockCommandFailureReason =
   | "provenance_conflict";
 
 export type StockCommandResult =
-  | { ok: true; movement: Movement }
+  | { ok: true; movement?: Movement }
   | {
       ok: false;
       reason: StockCommandFailureReason;

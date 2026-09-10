@@ -12,12 +12,13 @@ function lineSkus(count: number): Sku[] {
 }
 
 describe("bulk inventory ledger I/O", () => {
-  it("uses bounded single-row record() calls for a 10-line inbound confirm bulk", async () => {
+  it("uses bounded applyRecord calls for a 10-line inbound confirm bulk", async () => {
     const uow = new InMemoryInventoryUnitOfWork();
     const ledger = uow.ledger;
     const skus = lineSkus(10);
 
     ledger.resetSingleRecordCallCount();
+    ledger.resetApplyRecordCallCount();
     const bulkResult = await ledger.recordInboundFromPoBulk(
       skus.map((sku, index) => ({
         organizationId: DEFAULT_ORG,
@@ -30,8 +31,10 @@ describe("bulk inventory ledger I/O", () => {
     );
     expect(bulkResult.ok).toBe(true);
     expect(ledger.getSingleRecordCallCount()).toBe(0);
+    expect(ledger.getApplyRecordCallCount()).toBe(10);
 
     ledger.resetSingleRecordCallCount();
+    ledger.resetApplyRecordCallCount();
     for (const [index, sku] of skus.entries()) {
       const result = await ledger.recordInboundFromPo({
         organizationId: DEFAULT_ORG,
@@ -44,14 +47,16 @@ describe("bulk inventory ledger I/O", () => {
       expect(result.ok).toBe(true);
     }
     expect(ledger.getSingleRecordCallCount()).toBe(10);
+    expect(ledger.getApplyRecordCallCount()).toBe(0);
   });
 
-  it("uses bounded single-row record() calls for a 10-line sales commit bulk", async () => {
+  it("uses bounded applyRecord calls for a 10-line sales commit bulk", async () => {
     const uow = new InMemoryInventoryUnitOfWork();
     const ledger = uow.ledger;
     const skus = lineSkus(10);
 
     ledger.resetSingleRecordCallCount();
+    ledger.resetApplyRecordCallCount();
     const bulkResult = await ledger.recordCommittedBulk(
       skus.map((sku, index) => ({
         organizationId: DEFAULT_ORG,
@@ -64,6 +69,37 @@ describe("bulk inventory ledger I/O", () => {
     );
     expect(bulkResult.ok).toBe(true);
     expect(ledger.getSingleRecordCallCount()).toBe(0);
+    expect(ledger.getApplyRecordCallCount()).toBe(10);
+  });
+
+  it("rejects duplicate once-only provenance within the same inbound bulk batch", async () => {
+    const uow = new InMemoryInventoryUnitOfWork();
+    const ledger = uow.ledger;
+    const sku = Sku.parse("BULK-DUP-SKU");
+    const command = {
+      organizationId: DEFAULT_ORG,
+      idempotencyKey: "dup:first",
+      sku,
+      quantity: 4,
+      refType: "purchase_order" as const,
+      refId: PO_ID,
+    };
+
+    const bulkResult = await ledger.recordInboundFromPoBulk([
+      command,
+      { ...command, idempotencyKey: "dup:second" },
+    ]);
+    expect(bulkResult.ok).toBe(false);
+    if (!bulkResult.ok) {
+      expect(bulkResult.reason).toBe("provenance_conflict");
+    }
+
+    const movements = await uow.readModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      sku,
+      locationId: DEFAULT,
+    });
+    expect(movements).toHaveLength(0);
   });
 
   it("writes the same snapshot totals for bulk and sequential inbound paths", async () => {

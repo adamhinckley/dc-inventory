@@ -52,20 +52,22 @@ export class CancelSalesOrderUseCase {
           })),
         );
         const liveLines = liveSalesOrderLines(existing.lines);
-        const decommitResult = await scope.inventory.recordDecommittedBulk(
-          liveLines.map((line) => ({
-            organizationId: existing.organizationId,
-            idempotencyKey: `${input.idempotencyKey}:decommit:${line.id}`,
-            sku: line.sku,
-            quantity: line.qty,
-            orderId: existing.id,
-          })),
-        );
-        if (!decommitResult.ok) {
-          if (decommitResult.reason === "idempotency_conflict") {
-            throw new SalesTransactionError("idempotency_conflict");
+        if (liveLines.length > 0) {
+          const decommitResult = await scope.inventory.recordDecommittedBulk(
+            liveLines.map((line) => ({
+              organizationId: existing.organizationId,
+              idempotencyKey: `${input.idempotencyKey}:decommit:${line.id}`,
+              sku: line.sku,
+              quantity: line.qty,
+              orderId: existing.id,
+            })),
+          );
+          if (!decommitResult.ok) {
+            if (decommitResult.reason === "idempotency_conflict") {
+              throw new SalesTransactionError("idempotency_conflict");
+            }
+            throw new SalesTransactionError("inventory_conflict");
           }
-          throw new SalesTransactionError("inventory_conflict");
         }
 
         const deallocateCommands = [];

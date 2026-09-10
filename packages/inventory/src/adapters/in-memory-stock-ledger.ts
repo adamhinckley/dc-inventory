@@ -43,12 +43,30 @@ import type {
 } from "../domain/ports/stock-ledger.js";
 import type { InMemoryInventoryReadModel } from "./in-memory-inventory-read-model.js";
 
+type BulkRecordState = {
+  pendingMovements: Movement[];
+  snapshotsBefore: ReturnType<InMemoryInventoryReadModel["cloneSnapshots"]>;
+  movementsBefore: ReturnType<InMemoryInventoryReadModel["cloneMovements"]>;
+};
+
+const EMPTY_BULK_SUCCESS: StockCommandResult = { ok: true };
+
+function provenanceConflictKey(
+  refType: Movement["refType"],
+  refId: string,
+  sku: string,
+  movementType: MovementType,
+): string {
+  return `${refType}\0${refId}\0${sku}\0${movementType}`;
+}
+
 /**
  * In-memory stock ledger. Records append-only movements and projects snapshots
  * in the same unit of work scope as the read model.
  */
 export class InMemoryStockLedger implements IStockLedger {
   private singleRecordCallCount = 0;
+  private applyRecordCallCount = 0;
 
   constructor(
     private readonly readModel: InMemoryInventoryReadModel,
@@ -62,6 +80,15 @@ export class InMemoryStockLedger implements IStockLedger {
 
   resetSingleRecordCallCount(): void {
     this.singleRecordCallCount = 0;
+  }
+
+  /** Counts internal `applyRecord` calls issued by bulk paths. */
+  getApplyRecordCallCount(): number {
+    return this.applyRecordCallCount;
+  }
+
+  resetApplyRecordCallCount(): void {
+    this.applyRecordCallCount = 0;
   }
 
   lockSnapshots(_snapshots: readonly StockSnapshotLock[]): Promise<void> {
@@ -233,7 +260,7 @@ export class InMemoryStockLedger implements IStockLedger {
     commands: readonly RecordCommittedCommand[],
   ): Promise<StockCommandResult> {
     if (commands.length === 0) {
-      throw new Error("recordCommittedBulk requires at least one command");
+      return EMPTY_BULK_SUCCESS;
     }
     await this.lockSnapshots(
       commands.map((command) => ({
@@ -242,6 +269,7 @@ export class InMemoryStockLedger implements IStockLedger {
         locationId: command.locationId ?? LocationId.DEFAULT,
       })),
     );
+    const bulkState = this.createBulkState();
     const observedSkus = new Set<string>();
     let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
     for (const command of commands) {
@@ -263,9 +291,11 @@ export class InMemoryStockLedger implements IStockLedger {
           demand: this.readModel.getDemandStateSync(command.sku, locationId, organizationId),
           now,
         }),
-        record: (movementType, coverCommand) => this.applyRecord(movementType, coverCommand),
+        record: (movementType, coverCommand) =>
+          this.applyRecord(movementType, coverCommand, bulkState),
       });
       if (!result.ok) {
+        this.rollbackBulkState(bulkState);
         return { ...result, failedIdempotencyKey: command.idempotencyKey };
       }
       lastSuccess = result;
@@ -318,7 +348,7 @@ export class InMemoryStockLedger implements IStockLedger {
     commands: readonly RecordGoodsReceivedCommand[],
   ): Promise<StockCommandResult> {
     if (commands.length === 0) {
-      throw new Error("recordGoodsReceivedBulk requires at least one command");
+      return EMPTY_BULK_SUCCESS;
     }
     await this.lockSnapshots(
       commands.map((command) => ({
@@ -327,6 +357,7 @@ export class InMemoryStockLedger implements IStockLedger {
         locationId: command.locationId ?? LocationId.DEFAULT,
       })),
     );
+    const bulkState = this.createBulkState();
     const observedSkus = new Set<string>();
     let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
     for (const command of commands) {
@@ -342,8 +373,9 @@ export class InMemoryStockLedger implements IStockLedger {
           this.readModel.setDemandState(command.sku, locationId, observedDemand, organizationId);
         }
       }
-      const receiveResult = await this.applyRecord("GoodsReceived", command);
+      const receiveResult = await this.applyRecord("GoodsReceived", command, bulkState);
       if (!receiveResult.ok) {
+        this.rollbackBulkState(bulkState);
         return { ...receiveResult, failedIdempotencyKey: command.idempotencyKey };
       }
       const coverResult = await allocateReceiveCover(command, command.quantity, {
@@ -366,9 +398,11 @@ export class InMemoryStockLedger implements IStockLedger {
             refId: movement.refId,
             createdAt: movement.createdAt,
           })),
-        record: (movementType, coverCommand) => this.applyRecord(movementType, coverCommand),
+        record: (movementType, coverCommand) =>
+          this.applyRecord(movementType, coverCommand, bulkState),
       });
       if (coverResult !== null && !coverResult.ok) {
+        this.rollbackBulkState(bulkState);
         return { ...coverResult, failedIdempotencyKey: command.idempotencyKey };
       }
       lastSuccess = receiveResult;
@@ -381,7 +415,7 @@ export class InMemoryStockLedger implements IStockLedger {
     commands: readonly StockCommandBase[],
   ): Promise<StockCommandResult> {
     if (commands.length === 0) {
-      throw new Error("recordBulk requires at least one command");
+      return EMPTY_BULK_SUCCESS;
     }
     await this.lockSnapshots(
       commands.map((command) => ({
@@ -390,6 +424,7 @@ export class InMemoryStockLedger implements IStockLedger {
         locationId: command.locationId ?? LocationId.DEFAULT,
       })),
     );
+    const bulkState = this.createBulkState();
     const observedSkus = new Set<string>();
     let lastSuccess: Extract<StockCommandResult, { ok: true }> | undefined;
     for (const command of commands) {
@@ -405,13 +440,28 @@ export class InMemoryStockLedger implements IStockLedger {
           this.readModel.setDemandState(command.sku, locationId, observedDemand, organizationId);
         }
       }
-      const result = await this.applyRecord(movementType, command);
+      const result = await this.applyRecord(movementType, command, bulkState);
       if (!result.ok) {
+        this.rollbackBulkState(bulkState);
         return { ...result, failedIdempotencyKey: command.idempotencyKey };
       }
       lastSuccess = result;
     }
     return lastSuccess ?? { ok: false, reason: "invalid_quantity" };
+  }
+
+  private createBulkState(): BulkRecordState {
+    return {
+      pendingMovements: [],
+      snapshotsBefore: this.readModel.cloneSnapshots(),
+      movementsBefore: this.readModel.cloneMovements(),
+    };
+  }
+
+  private rollbackBulkState(bulkState: BulkRecordState): void {
+    this.readModel.restoreSnapshots(bulkState.snapshotsBefore);
+    this.readModel.restoreMovements(bulkState.movementsBefore);
+    bulkState.pendingMovements.length = 0;
   }
 
   private recordWithDemandObservation(
@@ -437,15 +487,78 @@ export class InMemoryStockLedger implements IStockLedger {
     return this.applyRecord(movementType, command);
   }
 
+  private checkBulkConflicts(
+    bulkState: BulkRecordState,
+    movementType: MovementType,
+    command: StockCommandBase,
+    organizationId: OrganizationId,
+    locationId: LocationId,
+  ): StockCommandResult | null {
+    const pendingReplay = bulkState.pendingMovements.find(
+      (movement) =>
+        movement.organizationId === organizationId &&
+        movement.sku.equals(command.sku) &&
+        movement.idempotencyKey === command.idempotencyKey,
+    );
+    if (pendingReplay !== undefined) {
+      if (
+        movementMatchesCommand(pendingReplay, movementType, command, locationId, organizationId)
+      ) {
+        return { ok: true, movement: pendingReplay };
+      }
+      return { ok: false, reason: "idempotency_conflict" };
+    }
+
+    if (isOnceOnlyProvenanceType(movementType)) {
+      const provenanceKey = provenanceConflictKey(
+        command.refType,
+        command.refId,
+        command.sku.value,
+        movementType,
+      );
+      if (
+        bulkState.pendingMovements.some(
+          (movement) =>
+            movement.movementType === movementType &&
+            provenanceConflictKey(
+              movement.refType,
+              movement.refId,
+              movement.sku.value,
+              movement.movementType,
+            ) === provenanceKey,
+        )
+      ) {
+        return { ok: false, reason: "provenance_conflict" };
+      }
+    }
+
+    return null;
+  }
+
   private applyRecord(
     movementType: MovementType,
     command: StockCommandBase,
+    bulkState?: BulkRecordState,
   ): Promise<StockCommandResult> {
     const organizationId = requireOrganizationId(command.organizationId);
     const locationId = command.locationId ?? LocationId.DEFAULT;
 
     if (!isPositiveIntegerQuantity(command.quantity)) {
       return Promise.resolve({ ok: false, reason: "invalid_quantity" });
+    }
+
+    if (bulkState !== undefined) {
+      this.applyRecordCallCount += 1;
+      const bulkConflict = this.checkBulkConflicts(
+        bulkState,
+        movementType,
+        command,
+        organizationId,
+        locationId,
+      );
+      if (bulkConflict !== null) {
+        return Promise.resolve(bulkConflict);
+      }
     }
 
     const existing = this.readModel.findMovementByIdempotency(
@@ -500,6 +613,9 @@ export class InMemoryStockLedger implements IStockLedger {
 
     this.readModel.appendMovement(movement);
     this.readModel.applySnapshotDelta(command.sku, locationId, deltaResult.delta, organizationId);
+    if (bulkState !== undefined) {
+      bulkState.pendingMovements.push(movement);
+    }
     return Promise.resolve({ ok: true, movement });
   }
 }

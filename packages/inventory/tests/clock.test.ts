@@ -67,7 +67,7 @@ describe("Inventory seed clock (in-memory)", () => {
     if (!inbound.ok) {
       return;
     }
-    expect(inbound.movement.createdAt.getTime()).toBe(FIXED.getTime());
+    expect(inbound.movement?.createdAt.getTime()).toBe(FIXED.getTime());
 
     const listed = await h.uow.readModel.listMovements({ organizationId: DEFAULT_ORG, sku: SKU, locationId: DEFAULT });
     expect(listed).toHaveLength(1);
