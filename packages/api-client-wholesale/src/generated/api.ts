@@ -19,6 +19,13 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApplyWholesaleSalesOrderLineDeltas200,
+  ApplyWholesaleSalesOrderLineDeltas400,
+  ApplyWholesaleSalesOrderLineDeltas401,
+  ApplyWholesaleSalesOrderLineDeltas403,
+  ApplyWholesaleSalesOrderLineDeltas404,
+  ApplyWholesaleSalesOrderLineDeltas409,
+  ApplyWholesaleSalesOrderLineDeltasBody,
   ClearActingCustomer200,
   ClearActingCustomer401,
   ClearActingCustomer404,
@@ -2474,6 +2481,123 @@ export const useReplaceWholesaleSalesOrderLines = <TError = ReplaceWholesaleSale
         TContext
       > => {
       return useMutation(getReplaceWholesaleSalesOrderLinesMutationOptions(options));
+    }
+
+export type applyWholesaleSalesOrderLineDeltasResponse200 = {
+  data: ApplyWholesaleSalesOrderLineDeltas200
+  status: 200
+}
+
+export type applyWholesaleSalesOrderLineDeltasResponse400 = {
+  data: ApplyWholesaleSalesOrderLineDeltas400
+  status: 400
+}
+
+export type applyWholesaleSalesOrderLineDeltasResponse401 = {
+  data: ApplyWholesaleSalesOrderLineDeltas401
+  status: 401
+}
+
+export type applyWholesaleSalesOrderLineDeltasResponse403 = {
+  data: ApplyWholesaleSalesOrderLineDeltas403
+  status: 403
+}
+
+export type applyWholesaleSalesOrderLineDeltasResponse404 = {
+  data: ApplyWholesaleSalesOrderLineDeltas404
+  status: 404
+}
+
+export type applyWholesaleSalesOrderLineDeltasResponse409 = {
+  data: ApplyWholesaleSalesOrderLineDeltas409
+  status: 409
+}
+
+export type applyWholesaleSalesOrderLineDeltasResponseSuccess = (applyWholesaleSalesOrderLineDeltasResponse200) & {
+  headers: Headers;
+};
+export type applyWholesaleSalesOrderLineDeltasResponseError = (applyWholesaleSalesOrderLineDeltasResponse400 | applyWholesaleSalesOrderLineDeltasResponse401 | applyWholesaleSalesOrderLineDeltasResponse403 | applyWholesaleSalesOrderLineDeltasResponse404 | applyWholesaleSalesOrderLineDeltasResponse409) & {
+  headers: Headers;
+};
+
+export type applyWholesaleSalesOrderLineDeltasResponse = (applyWholesaleSalesOrderLineDeltasResponseSuccess | applyWholesaleSalesOrderLineDeltasResponseError)
+
+export const getApplyWholesaleSalesOrderLineDeltasUrl = (id: string,) => {
+
+
+
+
+  return `/wholesale/sales-orders/${id}/line-jobs`
+}
+
+/**
+ * @summary Apply line deltas on a draft sales order
+ */
+export const applyWholesaleSalesOrderLineDeltas = async (id: string,
+    applyWholesaleSalesOrderLineDeltasBody: ApplyWholesaleSalesOrderLineDeltasBody, options?: Parameters<typeof customFetch>[1]): Promise<applyWholesaleSalesOrderLineDeltasResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<applyWholesaleSalesOrderLineDeltasResponse>(getApplyWholesaleSalesOrderLineDeltasUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(applyWholesaleSalesOrderLineDeltasBody)
+  }
+);}
+
+
+
+
+
+export const getApplyWholesaleSalesOrderLineDeltasMutationOptions = <TError = ApplyWholesaleSalesOrderLineDeltas400 | ApplyWholesaleSalesOrderLineDeltas401 | ApplyWholesaleSalesOrderLineDeltas403 | ApplyWholesaleSalesOrderLineDeltas404 | ApplyWholesaleSalesOrderLineDeltas409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyWholesaleSalesOrderLineDeltas>>, TError,{id: string;data: ApplyWholesaleSalesOrderLineDeltasBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyWholesaleSalesOrderLineDeltas>>, TError,{id: string;data: ApplyWholesaleSalesOrderLineDeltasBody}, TContext> => {
+
+const mutationKey = ['applyWholesaleSalesOrderLineDeltas'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyWholesaleSalesOrderLineDeltas>>, {id: string;data: ApplyWholesaleSalesOrderLineDeltasBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  applyWholesaleSalesOrderLineDeltas(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyWholesaleSalesOrderLineDeltasMutationResult = NonNullable<Awaited<ReturnType<typeof applyWholesaleSalesOrderLineDeltas>>>
+    export type ApplyWholesaleSalesOrderLineDeltasMutationBody = ApplyWholesaleSalesOrderLineDeltasBody
+    export type ApplyWholesaleSalesOrderLineDeltasMutationError = ApplyWholesaleSalesOrderLineDeltas400 | ApplyWholesaleSalesOrderLineDeltas401 | ApplyWholesaleSalesOrderLineDeltas403 | ApplyWholesaleSalesOrderLineDeltas404 | ApplyWholesaleSalesOrderLineDeltas409
+
+    /**
+ * @summary Apply line deltas on a draft sales order
+ */
+export const useApplyWholesaleSalesOrderLineDeltas = <TError = ApplyWholesaleSalesOrderLineDeltas400 | ApplyWholesaleSalesOrderLineDeltas401 | ApplyWholesaleSalesOrderLineDeltas403 | ApplyWholesaleSalesOrderLineDeltas404 | ApplyWholesaleSalesOrderLineDeltas409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyWholesaleSalesOrderLineDeltas>>, TError,{id: string;data: ApplyWholesaleSalesOrderLineDeltasBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyWholesaleSalesOrderLineDeltas>>,
+        TError,
+        {id: string;data: ApplyWholesaleSalesOrderLineDeltasBody},
+        TContext
+      > => {
+      return useMutation(getApplyWholesaleSalesOrderLineDeltasMutationOptions(options));
     }
 
 export type confirmWholesaleSalesOrderResponse200 = {

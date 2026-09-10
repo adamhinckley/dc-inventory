@@ -512,6 +512,126 @@ describe("wholesale sales orders (ADA-272)", () => {
     expect(replaced.json().lines[0]?.qty).toBe(5);
   });
 
+  it("POST line-jobs updates qty on a draft order", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "DELTA-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const updated = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${orderId}/line-jobs`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { update: [{ sku: "DELTA-SKU", qty: 4 }] },
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json()).toMatchObject({
+      id: orderId,
+      status: "draft",
+      lines: [{ sku: "DELTA-SKU", qty: 4 }],
+    });
+  });
+
+  it("line-jobs cancels the draft when the last line is removed", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "DELTA-CLEAR-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const order = created.json() as { id: string; lines: Array<{ id: string }> };
+    const lineId = order.lines[0]?.id;
+    expect(lineId).toBeDefined();
+
+    const cleared = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${order.id}/line-jobs`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { remove: [lineId] },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).toMatchObject({
+      id: order.id,
+      status: "cancelled",
+      lines: [],
+    });
+  });
+
+  it("line-jobs returns 404 for another customer's order without mutating it", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const buyerBCookie = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "buyer-b@local.test",
+        password: "buyer-b-secret",
+      },
+    }).then((res) => wholesaleCookie(res));
+    const actingCookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "DELTA-SCOPE-SKU");
+
+    const buyerOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(buyerOrder.statusCode).toBe(201);
+    const buyerOrderId = buyerOrder.json().id as string;
+    const buyerLineId = buyerOrder.json().lines[0]?.id as string;
+
+    await selectCustomer(app, actingCookie, CUSTOMER_A_ID);
+
+    const forbidden = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${buyerOrderId}/line-jobs`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+      payload: { update: [{ lineId: buyerLineId, qty: 99 }] },
+    });
+    expect(forbidden.statusCode).toBe(404);
+    expect(forbidden.json()).toEqual({ error: "not_found" });
+
+    const buyerRefetch = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/${buyerOrderId}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+    });
+    expect(buyerRefetch.statusCode).toBe(200);
+    expect(buyerRefetch.json().lines[0]?.qty).toBe(1);
+  });
+
+  it("rejects line-jobs without wholesale session", async () => {
+    const { app } = await startApp();
+    const response = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders/11111111-1111-4111-8111-111111111111/line-jobs",
+      payload: { update: [{ sku: "NO-AUTH", qty: 1 }] },
+    });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "unauthorized" });
+  });
+
   it("GET ship-tos returns session customer addresses", async () => {
     const { app } = await startApp();
     const cookie = await loginStaffActing(app);

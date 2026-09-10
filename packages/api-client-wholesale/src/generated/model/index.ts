@@ -5,6 +5,20 @@
  * OpenAPI spec version: 0.0.0
  */
 
+export * from './applyWholesaleSalesOrderLineDeltas200';
+export * from './applyWholesaleSalesOrderLineDeltas200LinesItem';
+export * from './applyWholesaleSalesOrderLineDeltas200Status';
+export * from './applyWholesaleSalesOrderLineDeltas400';
+export * from './applyWholesaleSalesOrderLineDeltas401';
+export * from './applyWholesaleSalesOrderLineDeltas401Error';
+export * from './applyWholesaleSalesOrderLineDeltas403';
+export * from './applyWholesaleSalesOrderLineDeltas403Error';
+export * from './applyWholesaleSalesOrderLineDeltas404';
+export * from './applyWholesaleSalesOrderLineDeltas404Error';
+export * from './applyWholesaleSalesOrderLineDeltas409';
+export * from './applyWholesaleSalesOrderLineDeltasBody';
+export * from './applyWholesaleSalesOrderLineDeltasBodyAddItem';
+export * from './applyWholesaleSalesOrderLineDeltasBodyUpdateItem';
 export * from './clearActingCustomer200';
 export * from './clearActingCustomer200Mode';
 export * from './clearActingCustomer401';

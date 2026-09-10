@@ -1,8 +1,8 @@
 "use client";
 
 import {
+  useApplyWholesaleSalesOrderLineDeltas,
   useCreateWholesaleSalesOrder,
-  useReplaceWholesaleSalesOrderLines,
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import {
   parseCartQty,
   toReplaceLines,
 } from "../lib/cart-line-qty";
+import { cartLinesToDeltaBody } from "../lib/cart-line-deltas";
 import { trackCartReplaceEnd, trackCartReplaceStart } from "../lib/cart-mutation-gate";
 import { wholesaleShortageErrorMessage } from "../lib/confirm-shortage-message";
 import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
@@ -73,7 +74,7 @@ export function AddToCartButton({
       : "/products";
   const { activeDraft, setActiveCart } = useActiveCart();
   const createOrder = useCreateWholesaleSalesOrder();
-  const replaceLines = useReplaceWholesaleSalesOrderLines();
+  const applyLineDeltas = useApplyWholesaleSalesOrderLineDeltas();
   const qtyFieldId = `cart-qty-${productId}`;
   const maxQty = shopDisplayAvailableQty({ available, availableToSell, sellState });
   const [qtyInput, setQtyInput] = useState("1");
@@ -154,25 +155,26 @@ export function AddToCartButton({
                 qty,
               },
             ];
-      const lines =
+      const targetLines =
         linesForReplace(nextLines) ??
         (await toReplaceLines(nextLines, lookupWholesaleProductId));
-      if (lines === null) {
+      if (targetLines === null) {
         setMessage("Could not update cart");
         return;
       }
+      const deltaBody = cartLinesToDeltaBody(draft.lines, targetLines);
 
       const previous = readDraftCartList(queryClient);
       writeDraftCartOrder(
         queryClient,
-        buildOptimisticDraftOrder(draft, lines, new Map([[productId, lineMeta()]])),
+        buildOptimisticDraftOrder(draft, targetLines, new Map([[productId, lineMeta()]])),
       );
       setPending(true);
       trackCartReplaceStart(draft.id);
       try {
-        const response = await replaceLines.mutateAsync({
+        const response = await applyLineDeltas.mutateAsync({
           id: draft.id,
-          data: { lines },
+          data: deltaBody,
         });
         if (response.status === 200) {
           writeDraftCartOrder(queryClient, response.data);

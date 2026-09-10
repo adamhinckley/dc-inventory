@@ -516,4 +516,123 @@ describe("internal sales orders HTTP", () => {
       lines: [{ sku: SKU.value, qty: 4 }],
     });
   });
+
+  it("line-jobs cancels the draft when the last line is removed", async () => {
+    const { app } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const order = created.json() as { id: string; lines: Array<{ id: string }> };
+    const lineId = order.lines[0]?.id;
+    expect(lineId).toBeDefined();
+
+    const cleared = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${order.id}/line-jobs`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { remove: [lineId] },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json()).toMatchObject({
+      id: order.id,
+      status: "cancelled",
+      lines: [],
+    });
+  });
+
+  it("line-jobs rejects confirmed orders", async () => {
+    const { app, unitOfWork } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    await unitOfWork.run(async (scope) => {
+      const result = await new RecordAdjustmentIncreaseUseCase(scope.inventory.ledger).execute({
+        organizationId: OrganizationId.DEFAULT,
+        idempotencyKey: "line-jobs-confirmed-seed",
+        sku: SKU,
+        quantity: 10,
+        refType: "adjustment",
+        refId: "line-jobs-confirmed-seed",
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/confirm`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "line-jobs-confirmed", shipToId: API_TEST_SHIP_TO_ID },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const updated = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/line-jobs`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { update: [{ sku: SKU.value, qty: 2 }] },
+    });
+    expect(updated.statusCode).toBe(409);
+    expect(updated.json()).toEqual({ error: "conflict" });
+  });
+
+  it("rejects line-jobs without staff_session", async () => {
+    const { app } = await startSalesApp();
+    const response = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders/11111111-1111-4111-8111-111111111111/line-jobs",
+      payload: { update: [{ sku: SKU.value, qty: 1 }] },
+    });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("line-jobs updates qty on a draft order", async () => {
+    const { app } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+
+    const updated = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${orderId}/line-jobs`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { update: [{ sku: SKU.value, qty: 4 }] },
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json()).toMatchObject({
+      id: orderId,
+      status: "draft",
+      lines: [{ sku: SKU.value, qty: 4 }],
+    });
+  });
 });

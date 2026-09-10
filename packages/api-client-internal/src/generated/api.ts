@@ -25,6 +25,13 @@ import type {
   AdjustInternalInvoice403,
   AdjustInternalInvoice404,
   AdjustInternalInvoiceBody,
+  ApplyInternalSalesOrderLineDeltas200,
+  ApplyInternalSalesOrderLineDeltas400,
+  ApplyInternalSalesOrderLineDeltas401,
+  ApplyInternalSalesOrderLineDeltas403,
+  ApplyInternalSalesOrderLineDeltas404,
+  ApplyInternalSalesOrderLineDeltas409,
+  ApplyInternalSalesOrderLineDeltasBody,
   AssignInternalSupplierProduct201,
   AssignInternalSupplierProduct400,
   AssignInternalSupplierProduct401,
@@ -7449,6 +7456,123 @@ export function useGetInternalSalesOrder<TData = Awaited<ReturnType<typeof getIn
 
 
 
+
+export type applyInternalSalesOrderLineDeltasResponse200 = {
+  data: ApplyInternalSalesOrderLineDeltas200
+  status: 200
+}
+
+export type applyInternalSalesOrderLineDeltasResponse400 = {
+  data: ApplyInternalSalesOrderLineDeltas400
+  status: 400
+}
+
+export type applyInternalSalesOrderLineDeltasResponse401 = {
+  data: ApplyInternalSalesOrderLineDeltas401
+  status: 401
+}
+
+export type applyInternalSalesOrderLineDeltasResponse403 = {
+  data: ApplyInternalSalesOrderLineDeltas403
+  status: 403
+}
+
+export type applyInternalSalesOrderLineDeltasResponse404 = {
+  data: ApplyInternalSalesOrderLineDeltas404
+  status: 404
+}
+
+export type applyInternalSalesOrderLineDeltasResponse409 = {
+  data: ApplyInternalSalesOrderLineDeltas409
+  status: 409
+}
+
+export type applyInternalSalesOrderLineDeltasResponseSuccess = (applyInternalSalesOrderLineDeltasResponse200) & {
+  headers: Headers;
+};
+export type applyInternalSalesOrderLineDeltasResponseError = (applyInternalSalesOrderLineDeltasResponse400 | applyInternalSalesOrderLineDeltasResponse401 | applyInternalSalesOrderLineDeltasResponse403 | applyInternalSalesOrderLineDeltasResponse404 | applyInternalSalesOrderLineDeltasResponse409) & {
+  headers: Headers;
+};
+
+export type applyInternalSalesOrderLineDeltasResponse = (applyInternalSalesOrderLineDeltasResponseSuccess | applyInternalSalesOrderLineDeltasResponseError)
+
+export const getApplyInternalSalesOrderLineDeltasUrl = (id: string,) => {
+
+
+
+
+  return `/internal/sales-orders/${id}/line-jobs`
+}
+
+/**
+ * @summary Apply line deltas on a draft sales order
+ */
+export const applyInternalSalesOrderLineDeltas = async (id: string,
+    applyInternalSalesOrderLineDeltasBody: ApplyInternalSalesOrderLineDeltasBody, options?: Parameters<typeof customFetch>[1]): Promise<applyInternalSalesOrderLineDeltasResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<applyInternalSalesOrderLineDeltasResponse>(getApplyInternalSalesOrderLineDeltasUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(applyInternalSalesOrderLineDeltasBody)
+  }
+);}
+
+
+
+
+
+export const getApplyInternalSalesOrderLineDeltasMutationOptions = <TError = ApplyInternalSalesOrderLineDeltas400 | ApplyInternalSalesOrderLineDeltas401 | ApplyInternalSalesOrderLineDeltas403 | ApplyInternalSalesOrderLineDeltas404 | ApplyInternalSalesOrderLineDeltas409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyInternalSalesOrderLineDeltas>>, TError,{id: string;data: ApplyInternalSalesOrderLineDeltasBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyInternalSalesOrderLineDeltas>>, TError,{id: string;data: ApplyInternalSalesOrderLineDeltasBody}, TContext> => {
+
+const mutationKey = ['applyInternalSalesOrderLineDeltas'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyInternalSalesOrderLineDeltas>>, {id: string;data: ApplyInternalSalesOrderLineDeltasBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  applyInternalSalesOrderLineDeltas(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyInternalSalesOrderLineDeltasMutationResult = NonNullable<Awaited<ReturnType<typeof applyInternalSalesOrderLineDeltas>>>
+    export type ApplyInternalSalesOrderLineDeltasMutationBody = ApplyInternalSalesOrderLineDeltasBody
+    export type ApplyInternalSalesOrderLineDeltasMutationError = ApplyInternalSalesOrderLineDeltas400 | ApplyInternalSalesOrderLineDeltas401 | ApplyInternalSalesOrderLineDeltas403 | ApplyInternalSalesOrderLineDeltas404 | ApplyInternalSalesOrderLineDeltas409
+
+    /**
+ * @summary Apply line deltas on a draft sales order
+ */
+export const useApplyInternalSalesOrderLineDeltas = <TError = ApplyInternalSalesOrderLineDeltas400 | ApplyInternalSalesOrderLineDeltas401 | ApplyInternalSalesOrderLineDeltas403 | ApplyInternalSalesOrderLineDeltas404 | ApplyInternalSalesOrderLineDeltas409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyInternalSalesOrderLineDeltas>>, TError,{id: string;data: ApplyInternalSalesOrderLineDeltasBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyInternalSalesOrderLineDeltas>>,
+        TError,
+        {id: string;data: ApplyInternalSalesOrderLineDeltasBody},
+        TContext
+      > => {
+      return useMutation(getApplyInternalSalesOrderLineDeltasMutationOptions(options));
+    }
 
 export type confirmInternalSalesOrderResponse200 = {
   data: ConfirmInternalSalesOrder200

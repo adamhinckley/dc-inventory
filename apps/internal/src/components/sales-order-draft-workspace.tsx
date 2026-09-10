@@ -4,12 +4,12 @@ import {
   getGetInternalSalesOrderQueryKey,
   getListInternalProductsQueryKey,
   getListInternalSalesOrdersQueryKey,
+  useApplyInternalSalesOrderLineDeltas,
   useCancelInternalSalesOrder,
   useConfirmInternalSalesOrder,
   useGetInternalCustomer,
   useListInternalCustomerShipTos,
   useListInternalProducts,
-  useReplaceInternalSalesOrderLines,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -44,6 +44,10 @@ import {
   replaceSalesOrderLinesErrorMessage,
 } from "../lib/sales-order-action-errors";
 import {
+  hasSalesOrderLineDeltaWork,
+  salesOrderLineDeltaBody,
+} from "../lib/sales-order-line-deltas";
+import {
   lineSubtotalCents,
   salesOrderCancelDisabled,
   salesOrderCatalogLookupPending,
@@ -56,7 +60,6 @@ import {
   salesOrderLineVendorColumnLabel,
   salesOrderLineVendorLabel,
   salesOrderSubtotalCents,
-  salesOrderWriteLines,
 } from "../lib/sales-order-line-math";
 import type { SalesOrderLineDraft } from "../lib/sales-order-types";
 import { useCatalogProductsBySku } from "../lib/use-catalog-products-by-sku";
@@ -236,7 +239,7 @@ export function SalesOrderDraftWorkspace({
   const router = useRouter();
   const queryClient = useQueryClient();
   const shipTosQuery = useListInternalCustomerShipTos(customerId);
-  const replaceMutation = useReplaceInternalSalesOrderLines();
+  const applyLineDeltas = useApplyInternalSalesOrderLineDeltas();
   const confirmMutation = useConfirmInternalSalesOrder();
   const cancelMutation = useCancelInternalSalesOrder();
 
@@ -318,9 +321,15 @@ export function SalesOrderDraftWorkspace({
         setSaveState("saving");
         setActionError(null);
         try {
-          const result = await replaceMutation.mutateAsync({
+          const deltaBody = salesOrderLineDeltaBody(lastSavedLinesRef.current, payloadLines);
+          if (!hasSalesOrderLineDeltaWork(deltaBody)) {
+            lastPersistSucceededRef.current = true;
+            setSaveState("saved");
+            return true;
+          }
+          const result = await applyLineDeltas.mutateAsync({
             id: salesOrderId,
-            data: { lines: salesOrderWriteLines(payloadLines) },
+            data: deltaBody,
           });
           if (result.status === 200) {
             if (result.data.status === "cancelled") {
@@ -352,7 +361,7 @@ export function SalesOrderDraftWorkspace({
       );
       return next;
     },
-    [invalidateOrder, replaceMutation, router, salesOrderId],
+    [applyLineDeltas, invalidateOrder, router, salesOrderId],
   );
 
   const linesResolved = salesOrderLinesResolved(lines);

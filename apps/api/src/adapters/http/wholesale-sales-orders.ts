@@ -24,6 +24,7 @@ import {
   unauthorizedResponseSchema,
   wholesaleSalesOrderWriteBodySchema,
   salesOrderReplaceLinesBodySchema,
+  salesOrderLineDeltasBodySchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { wholesaleCustomerId, wholesaleOrganizationId } from "./org-session.js";
@@ -294,6 +295,59 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         shipRegion: request.body.shipRegion,
         shipPostal: request.body.shipPostal,
         shipCountry: request.body.shipCountry,
+      });
+      if (!result.ok) {
+        if (
+          result.reason === "not_found" ||
+          result.reason === "customer_not_found" ||
+          result.reason === "product_not_found" ||
+          result.reason === "product_organization_mismatch"
+        ) {
+          return sendNotFound(reply);
+        }
+        if (result.reason === "insufficient_atp") {
+          return sendInsufficientAtp(reply, result);
+        }
+        if (result.reason === "illegal_transition" || result.reason === "product_inactive") {
+          return reply.code(409).send({ error: "conflict" as const });
+        }
+        if (result.reason === "customer_inactive") {
+          return reply.code(409).send({ error: "conflict" as const });
+        }
+        return reply.code(400).send({ error: "invalid" as const });
+      }
+      return toSalesOrderBody(request, result.salesOrder);
+    },
+  );
+
+  routes.post(
+    "/sales-orders/:id/line-jobs",
+    {
+      schema: {
+        operationId: "applyWholesaleSalesOrderLineDeltas",
+        tags: ["wholesale"],
+        summary: "Apply line deltas on a draft sales order",
+        params: salesOrderIdParamsSchema,
+        body: salesOrderLineDeltasBodySchema,
+        response: {
+          200: salesOrderItemSchema,
+          400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+          409: z.union([conflictResponseSchema, insufficientAtpResponseSchema]),
+        },
+      },
+    },
+    async (request, reply) => {
+      const actor = wholesaleCreateInput(request);
+      const result = await request.server.sales.applySalesOrderLineDeltas.execute({
+        organizationId: wholesaleOrganizationId(request),
+        ...actor,
+        salesOrderId: OrderId.parse(request.params.id),
+        add: request.body.add,
+        update: request.body.update,
+        remove: request.body.remove,
       });
       if (!result.ok) {
         if (
