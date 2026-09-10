@@ -1,10 +1,5 @@
 import type { IUncoveredCaseQtyReadPort } from "@dc-inventory/inventory";
-import {
-  OrganizationId,
-  Sku,
-  type StaffUserId,
-  type SupplierId,
-} from "@dc-inventory/shared-kernel";
+import { OrganizationId, Sku, type StaffUserId } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import { DraftPurchaseOrdersAbortError } from "../domain/errors.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
@@ -77,32 +72,24 @@ export class DraftPurchaseOrdersFromUncoveredSkusUseCase {
       return { ok: false, reason: "invalid" };
     }
 
-    const supplierBySku = new Map<string, SupplierId | null>();
-    for (const sku of skus) {
-      supplierBySku.set(
-        sku.value,
-        await this.supplierMapping.findSupplierForSku(input.organizationId, sku),
-      );
-    }
+    const [mappings, packaging, uncoveredBySku] = await Promise.all([
+      this.supplierMapping.getSkuMappings(input.organizationId, skus),
+      this.caseQty.readBySkus(input.organizationId, skus),
+      this.inventoryUncovered.getUncoveredBySkus(input.organizationId, skus),
+    ]);
 
-    const packaging = await this.caseQty.readBySkus(input.organizationId, skus);
-    const draftLines = await Promise.all(
-      skus.map(async (sku) => {
-        const uncovered = await this.inventoryUncovered.getUncovered(
-          input.organizationId,
-          sku,
-        );
-        const caseQty = packaging.get(sku.value)?.caseQty ?? null;
-        return {
-          sku,
-          qty: draftPoQtyFromUncovered(uncovered, caseQty),
-        };
-      }),
-    );
+    const draftLines = skus.map((sku) => {
+      const uncovered = uncoveredBySku.get(sku.value) ?? 0;
+      const caseQty = packaging.get(sku.value)?.caseQty ?? null;
+      return {
+        sku,
+        qty: draftPoQtyFromUncovered(uncovered, caseQty),
+      };
+    });
 
     const grouped = groupUncoveredSkusBySupplier({
       lines: draftLines,
-      supplierForSku: (sku) => supplierBySku.get(sku.value) ?? null,
+      supplierForSku: (sku) => mappings.get(sku.value)?.supplierId ?? null,
     });
 
     try {

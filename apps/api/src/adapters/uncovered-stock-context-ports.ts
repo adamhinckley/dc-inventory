@@ -23,15 +23,33 @@ export function uncoveredCaseQtyReadPort(
 ): IUncoveredCaseQtyReadPort {
   return {
     async readBySkus(organizationId: OrganizationId, skus: readonly Sku[]) {
+      const values = uniqueSkus(skus);
       const rows = new Map<string, { caseQty: number | null }>();
-      for (const sku of uniqueSkus(skus)) {
-        const product = await productRepo.findBySku(organizationId, sku);
-        if (product === null) {
-          rows.set(sku.value, { caseQty: null });
+      for (const sku of values) {
+        rows.set(sku.value, { caseQty: null });
+      }
+      if (values.length === 0) {
+        return rows;
+      }
+
+      const products = await productRepo.findBySkus(organizationId, values);
+      const productIds = [...new Set([...products.values()].map((product) => product.id))];
+      const caseQtyByProductId = new Map<string, number | null>();
+      await Promise.all(
+        productIds.map(async (productId) => {
+          const pack = await packaging.findByProductId(productId);
+          caseQtyByProductId.set(productId, pack?.caseQty ?? null);
+        }),
+      );
+
+      for (const sku of values) {
+        const product = products.get(sku.value);
+        if (product === undefined) {
           continue;
         }
-        const pack = await packaging.findByProductId(product.id);
-        rows.set(sku.value, { caseQty: pack?.caseQty ?? null });
+        rows.set(sku.value, {
+          caseQty: caseQtyByProductId.get(product.id) ?? null,
+        });
       }
       return rows;
     },

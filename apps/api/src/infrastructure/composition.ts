@@ -247,6 +247,7 @@ import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js
 import { SalesCreditCheckAdapter } from "../adapters/sales-credit-check.js";
 import {
   committedCustomerNamesPort,
+  inventoryUncoveredReadModelPort,
   inventoryUncoveredReadPort,
 } from "../adapters/purchasing-short-readout-ports.js";
 import { catalogProductPort } from "../adapters/catalog-product-port.js";
@@ -1410,7 +1411,9 @@ export function composeAppServices(
       catalogSkuLookup,
       supplierProductQty,
       factorySendCatalog,
-      inventoryUncoveredReadPort(unitOfWork.inventory.readModel),
+      appDb
+        ? inventoryUncoveredReadPort(appDb)
+        : inventoryUncoveredReadModelPort(unitOfWork.inventory.readModel),
       committedCustomerNamesPort(committedCustomerNamesListQuery),
       supplierSkuMapping,
       uncoveredCaseQty,
