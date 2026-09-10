@@ -33,6 +33,10 @@ function normalizeCents(value: number | string): number {
   return Number(value);
 }
 
+function escapeLikePattern(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
 function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
   const asOfBound = asOfSqlBind(asOf);
   return sql`
@@ -105,6 +109,14 @@ function customerBalancesCte(organizationId: OrganizationId, asOf: Date): SQL {
           pa.payment_id,
           sum(pa.amount_cents)::int as applied_cents
         from accounting.payment_applications pa
+        inner join accounting.payments pay on pay.id = pa.payment_id
+        inner join accounting.invoices inv on inv.id = pa.invoice_id
+        where pay.organization_id = ${organizationId}
+          and pay.voided_at is null
+          and pay.received_at <= ${asOfBound}::timestamptz
+          and inv.organization_id = ${organizationId}
+          and inv.posted_at is not null
+          and inv.posted_at <= ${asOfBound}::timestamptz
         group by pa.payment_id
       ) applied on applied.payment_id = p.id
       where p.organization_id = ${organizationId}
@@ -190,7 +202,7 @@ function sortExpression(sortBy: CustomerBalancesSortBy, asOf: Date): SQL {
     case "customerNumber":
       return sql`customer_number`;
     case "oldestDue":
-      return sql`oldest_due_date`;
+      return sql`oldest_due_date nulls last`;
     case "daysPastDue":
       return sql`case
         when oldest_due_date is null then 0
@@ -213,8 +225,10 @@ function sortExpression(sortBy: CustomerBalancesSortBy, asOf: Date): SQL {
 function balancesFilterSql(query: CustomerBalancesListQuery): SQL {
   const filters: SQL[] = [];
   if (query.q !== undefined && query.q.trim().length > 0) {
-    const needle = `%${query.q.trim()}%`;
-    filters.push(sql`(name ilike ${needle} or customer_number ilike ${needle})`);
+    const needle = `%${escapeLikePattern(query.q.trim())}%`;
+    filters.push(
+      sql`(name ilike ${needle} escape '\\' or customer_number ilike ${needle} escape '\\')`,
+    );
   }
   if (query.bucket !== undefined) {
     filters.push(sql.raw(`${bucketColumnName(query.bucket)} > 0`));
