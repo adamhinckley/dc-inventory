@@ -48,9 +48,12 @@ import {
   salesOrderCancelDisabled,
   salesOrderCatalogLookupPending,
   salesOrderConfirmDisabled,
+  salesOrderLineLeadingColumnIds,
   salesOrderLineRowKey,
   salesOrderLinesResolved,
   salesOrderLineWritesEqual,
+  salesOrderLineVendorColumnId,
+  salesOrderLineVendorColumnLabel,
   salesOrderLineVendorLabel,
   salesOrderSubtotalCents,
   salesOrderWriteLines,
@@ -428,17 +431,24 @@ export function SalesOrderDraftWorkspace({
       lines.map((line, rowIndex) => ({
         ...line,
         rowIndex,
-        vendor: salesOrderLineVendorLabel(productBySku.get(line.sku)?.supplierName),
+        vendor: salesOrderLineVendorLabel(
+          productBySku.get(line.sku)?.supplierName,
+          statusBySku.get(line.sku),
+        ),
       })),
-    [lines, productBySku],
+    [lines, productBySku, statusBySku],
   );
 
   const table = useTable({
     data: rows,
     columns: [
-      { id: "sku", label: "SKU", sort: false as const },
-      { id: "name", label: "Product", sort: false as const },
-      { id: "vendor", label: "Vendor", sort: false as const },
+      { id: salesOrderLineLeadingColumnIds[0], label: "SKU", sort: false as const },
+      { id: salesOrderLineLeadingColumnIds[1], label: "Product", sort: false as const },
+      {
+        id: salesOrderLineVendorColumnId,
+        label: salesOrderLineVendorColumnLabel,
+        sort: false as const,
+      },
       {
         id: "qty",
         label: "Qty",

@@ -26,6 +26,9 @@ import {
 import {
   lineSubtotalCents,
   salesOrderCancelDisabled,
+  salesOrderLineLeadingColumnIds,
+  salesOrderLineVendorColumnId,
+  salesOrderLineVendorColumnLabel,
   salesOrderLineVendorLabel,
   salesOrderShipDisabled,
   salesOrderSubtotalCents,
@@ -125,7 +128,8 @@ export function SalesOrderFrozenWorkspace({
   useBreadcrumbLabel(salesOrderId, documentNumber);
 
   const lineSkus = useMemo(() => lines.map((line) => line.sku), [lines]);
-  const { productBySku } = useCatalogProductsBySku(lineSkus);
+  // Supplier labels come from the live catalog, not the frozen order snapshot.
+  const { productBySku, statusBySku } = useCatalogProductsBySku(lineSkus);
 
   const rows = useMemo<Array<SalesOrderLineSnapshot & { vendor: string }>>(
     () =>
@@ -133,12 +137,15 @@ export function SalesOrderFrozenWorkspace({
         rowKey: line.id,
         sku: line.sku,
         name: line.name,
-        vendor: salesOrderLineVendorLabel(productBySku.get(line.sku)?.supplierName),
+        vendor: salesOrderLineVendorLabel(
+          productBySku.get(line.sku)?.supplierName,
+          statusBySku.get(line.sku),
+        ),
         qty: line.qty,
         unitPriceCents: line.unitPriceCents,
         currency: line.currency,
       })),
-    [lines, productBySku],
+    [lines, productBySku, statusBySku],
   );
 
   const currency = rows[0]?.currency ?? "USD";
@@ -147,9 +154,13 @@ export function SalesOrderFrozenWorkspace({
   const table = useTable({
     data: rows,
     columns: [
-      { id: "sku", label: "SKU", sort: false as const },
-      { id: "name", label: "Product", sort: false as const },
-      { id: "vendor", label: "Vendor", sort: false as const },
+      { id: salesOrderLineLeadingColumnIds[0], label: "SKU", sort: false as const },
+      { id: salesOrderLineLeadingColumnIds[1], label: "Product", sort: false as const },
+      {
+        id: salesOrderLineVendorColumnId,
+        label: salesOrderLineVendorColumnLabel,
+        sort: false as const,
+      },
       { id: "qty", label: "Qty", sort: false as const, align: "right" as const },
       {
         id: "unitPrice",
