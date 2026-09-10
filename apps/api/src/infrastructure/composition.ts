@@ -111,9 +111,7 @@ import {
   type IWholesaleLoginAccountStatusReadPort,
   type IWholesaleUserRepository,
   type IdentityDrizzle,
-  type ActingCustomerPickerRow,
   type IActingCustomerHeaderReadPort,
-  type WholesaleLoginAccountStatus,
 } from "@dc-inventory/identity";
 import {
   DrizzleLicensingReadRepository,
@@ -244,10 +242,8 @@ import {
   type IUncoveredListQuery,
   type RecordReopenSkusForPresellRequest,
 } from "@dc-inventory/inventory";
-import { customers } from "@dc-inventory/customers/schema";
-import { wholesaleUsers } from "@dc-inventory/identity/schema";
-import { CustomerId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { OrganizationId, Sku } from "@dc-inventory/shared-kernel";
+import { createActingCustomerHeaderReadPort } from "../adapters/acting-customer-header-read-port.js";
 import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js";
 import { SalesCreditCheckAdapter } from "../adapters/sales-credit-check.js";
 import {
@@ -660,80 +656,6 @@ function wholesaleLoginAccountStatusReadPort(
   return {
     getAccountStatus: (organizationId, linkedPartyId) =>
       accountStatus.getAccountStatus(organizationId, linkedPartyId),
-  };
-}
-
-function toWholesaleLoginAccountStatus(value: string): WholesaleLoginAccountStatus {
-  if (value === "active" || value === "on_hold" || value === "inactive") {
-    return value;
-  }
-  return "active";
-}
-
-function actingCustomerHeaderReadPort(
-  customerRepo: ICustomerRepository,
-  wholesaleUserRepo: IWholesaleUserRepository,
-  appDb?: AppDrizzle,
-): IActingCustomerHeaderReadPort {
-  return {
-    async listPickerItems(organizationId): Promise<readonly ActingCustomerPickerRow[]> {
-      if (appDb !== undefined) {
-        const rows = await appDb
-          .selectDistinct({
-            customerId: customers.id,
-            businessName: customers.name,
-            customerNumber: customers.customerNumber,
-            accountStatus: customers.accountStatus,
-          })
-          .from(wholesaleUsers)
-          .innerJoin(
-            customers,
-            and(
-              eq(customers.id, wholesaleUsers.customerId),
-              eq(customers.organizationId, organizationId),
-            ),
-          )
-          .where(
-            and(
-              eq(wholesaleUsers.organizationId, organizationId),
-              inArray(customers.accountStatus, ["active", "on_hold"]),
-            ),
-          )
-          .orderBy(asc(customers.name));
-        return rows.map((row) => ({
-          customerId: CustomerId.parse(row.customerId),
-          businessName: row.businessName,
-          customerNumber: row.customerNumber,
-          accountStatus: toWholesaleLoginAccountStatus(row.accountStatus),
-        }));
-      }
-      const customerIds = await wholesaleUserRepo.listCustomerIdsWithWholesaleUsers(organizationId);
-      const items: ActingCustomerPickerRow[] = [];
-      for (const customerId of customerIds) {
-        const customer = await customerRepo.findById(organizationId, customerId);
-        if (customer === null || customer.accountStatus === "inactive") {
-          continue;
-        }
-        items.push({
-          customerId: customer.id,
-          businessName: customer.name,
-          customerNumber: customer.customerNumber,
-          accountStatus: customer.accountStatus,
-        });
-      }
-      return items;
-    },
-    async findById(organizationId, customerId) {
-      const customer = await customerRepo.findById(organizationId, customerId);
-      if (customer === null) {
-        return null;
-      }
-      return {
-        customerId: customer.id,
-        businessName: customer.name,
-        customerNumber: customer.customerNumber,
-      };
-    },
   };
 }
 
@@ -1299,7 +1221,7 @@ export function composeAppServices(
         : defaultInMemoryAccountingUow.invoices);
 
   const wholesaleAccountStatus = wholesaleLoginAccountStatusReadPort(readPorts.accountStatus);
-  const actingCustomerHeaders = actingCustomerHeaderReadPort(
+  const actingCustomerHeaders = createActingCustomerHeaderReadPort(
     customerRepo,
     wholesaleUsers,
     appDb,
