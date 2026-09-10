@@ -34,7 +34,7 @@ export function SuppliersTable({
   }, []);
 
   const getRowHref = useCallback((row: { id?: string }) => {
-    return row.id ? `/purchasing/suppliers/${row.id}` : undefined;
+    return row.id ? `/procurement/suppliers/${row.id}` : undefined;
   }, []);
 
   const rowActions = useCallback((row: Record<string, unknown>) => {

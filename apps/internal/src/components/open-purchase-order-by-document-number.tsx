@@ -21,7 +21,7 @@ export function OpenPurchaseOrderByDocumentNumber() {
     try {
       const result = await getInternalPurchaseOrderByDocumentNumber(trimmed);
       if (result.status === 200) {
-        router.push(`/purchasing/${result.data.id}`);
+        router.push(`/procurement/purchase-orders/${result.data.id}`);
       }
     } finally {
       setLoading(false);

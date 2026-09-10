@@ -4,11 +4,12 @@ import { crumbsFromPathname } from "./dashboard-breadcrumbs";
 describe("crumbsFromPathname", () => {
   it("maps a receiving document history path with a document-number label", () => {
     expect(
-      crumbsFromPathname("/receiving/abc/history", { abc: "PO-00016" }),
+      crumbsFromPathname("/procurement/receiving/abc/history", { abc: "PO-00016" }),
     ).toEqual([
-      { href: "/receiving", label: "Receiving", current: false },
-      { href: "/receiving/abc", label: "PO-00016", current: false },
-      { href: "/receiving/abc/history", label: "History", current: true },
+      { href: "/procurement", label: "Procurement", current: false },
+      { href: "/procurement/receiving", label: "Receiving", current: false },
+      { href: "/procurement/receiving/abc", label: "PO-00016", current: false },
+      { href: "/procurement/receiving/abc/history", label: "History", current: true },
     ]);
   });
 
@@ -25,20 +26,22 @@ describe("crumbsFromPathname", () => {
     ]);
   });
 
-  it("labels purchasing 2.0 hub and uncovered tabs", () => {
-    expect(crumbsFromPathname("/purchasing-2")).toEqual([
-      { href: "/purchasing-2", label: "Purchasing 2.0", current: true },
+  it("labels procurement hub and pre-order tabs", () => {
+    expect(crumbsFromPathname("/procurement")).toEqual([
+      { href: "/procurement", label: "Procurement", current: true },
     ]);
-    expect(crumbsFromPathname("/purchasing-2/uncovered")).toEqual([
-      { href: "/purchasing-2", label: "Purchasing 2.0", current: false },
-      { href: "/purchasing-2/uncovered", label: "Uncovered", current: true },
+    expect(crumbsFromPathname("/procurement/pre-order/factory-1")).toEqual([
+      { href: "/procurement", label: "Procurement", current: false },
+      { href: "/procurement/pre-order", label: "Pre-order", current: false },
+      { href: "/procurement/pre-order/factory-1", label: "factory-1", current: true },
     ]);
   });
 
-  it("labels a purchasing 2.0 purchase order with a document-number label", () => {
-    expect(crumbsFromPathname("/purchasing-2/abc", { abc: "PO-00042" })).toEqual([
-      { href: "/purchasing-2", label: "Purchasing 2.0", current: false },
-      { href: "/purchasing-2/abc", label: "PO-00042", current: true },
+  it("labels a procurement purchase order with a document-number label", () => {
+    expect(crumbsFromPathname("/procurement/purchase-orders/abc", { abc: "PO-00042" })).toEqual([
+      { href: "/procurement", label: "Procurement", current: false },
+      { href: "/procurement/purchase-orders", label: "Purchase Orders", current: false },
+      { href: "/procurement/purchase-orders/abc", label: "PO-00042", current: true },
     ]);
   });
 });

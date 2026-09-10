@@ -776,10 +776,10 @@ function ReceivingDocumentBody({
               What titles should these tabs have?
             </DevComment>
             <RouterTabs.List>
-              <RouterTabs.Trigger href={`/receiving/${purchaseOrderId}`} exact>
+              <RouterTabs.Trigger href={`/procurement/receiving/${purchaseOrderId}`} exact>
                 Lines
               </RouterTabs.Trigger>
-              <RouterTabs.Trigger href={`/receiving/${purchaseOrderId}/history`}>
+              <RouterTabs.Trigger href={`/procurement/receiving/${purchaseOrderId}/history`}>
                 History
               </RouterTabs.Trigger>
             </RouterTabs.List>

@@ -34,7 +34,7 @@ export function PurchaseOrdersTable({
   }, []);
 
   const getRowHref = useCallback((row: { id?: string }) => {
-    return row.id ? `/purchasing/${row.id}` : undefined;
+    return row.id ? `/procurement/purchase-orders/${row.id}` : undefined;
   }, []);
 
   const renderRowLink = useCallback(
