@@ -72,9 +72,14 @@ class TestSupplierSkuMappingReadPort implements IUncoveredSkuSupplierMappingRead
 
 function harness() {
   const h = demandModelHarness();
-  const uncoveredList = new InMemoryUncoveredListQuery(h.readModel);
   const supplierMapping = new TestSupplierSkuMappingReadPort();
+  const openDraftPurchaseOrders = new InMemoryUncoveredSkuDraftPurchaseOrderReadPort();
   const suppliers = new InMemoryUncoveredSkuSupplierReadPort();
+  const uncoveredList = new InMemoryUncoveredListQuery(h.readModel, {
+    supplierMapping,
+    suppliers,
+    openDraftPurchaseOrders,
+  });
   suppliers.set(DEFAULT_ORG, {
     supplierId: SUPPLIER_A,
     supplierNumber: "V-A",
@@ -87,18 +92,12 @@ function harness() {
     supplierName: "Factory B",
     poPrefix: null,
   });
-  const openDraftPurchaseOrders = new InMemoryUncoveredSkuDraftPurchaseOrderReadPort();
   return {
     ...h,
     supplierMapping,
     suppliers,
     openDraftPurchaseOrders,
-    listFactories: new ListUncoveredFactoriesUseCase(
-      uncoveredList,
-      supplierMapping,
-      suppliers,
-      openDraftPurchaseOrders,
-    ),
+    listFactories: new ListUncoveredFactoriesUseCase(uncoveredList, suppliers),
     listUncovered: new ListUncoveredSkusUseCase(
       uncoveredList,
       new InMemoryUncoveredCaseQtyReadPort(),
@@ -135,7 +134,11 @@ describe("List uncovered factories", () => {
       expect(commit.ok).toBe(true);
     }
 
-    const result = await h.listFactories.execute({ organizationId: DEFAULT_ORG });
+    const result = await h.listFactories.execute({
+      organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 25,
+    });
 
     expect(result.items).toEqual([
       {
@@ -197,7 +200,11 @@ describe("List uncovered factories", () => {
       documentNumber: "PO-00042",
     });
 
-    const unfiltered = await h.listFactories.execute({ organizationId: DEFAULT_ORG });
+    const unfiltered = await h.listFactories.execute({
+      organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 25,
+    });
     expect(unfiltered.items.map((row) => row.id)).toEqual([
       SUPPLIER_A,
       SUPPLIER_B,
@@ -206,6 +213,8 @@ describe("List uncovered factories", () => {
 
     const filtered = await h.listFactories.execute({
       organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 25,
       excludeSuppliersWithOpenDraft: true,
     });
     expect(filtered.items).toEqual([

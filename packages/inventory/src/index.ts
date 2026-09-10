@@ -182,6 +182,9 @@ export type {
 } from "./domain/ports/stock-ledger.js";
 export type {
   IUncoveredListQuery,
+  UncoveredFactoryCoreRow,
+  UncoveredFactoryListPage,
+  UncoveredFactoryListQuery,
   UncoveredListCoreRow,
   UncoveredListPage,
   UncoveredListQuery,

@@ -13,7 +13,7 @@ import {
   Sku,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { PurchasingDrizzle } from "@dc-inventory/purchasing";
 import type {
   UncoveredOpenDraftPurchaseOrderRef,
@@ -36,6 +36,11 @@ export function uncoveredOpenDraftPurchaseOrderReadPort(
       return refs;
     }
 
+    const pairValues = sql.join(
+      rows.map((row) => sql`(${row.supplierId}, ${row.sku.value})`),
+      sql`, `,
+    );
+
     const draftRows = await db
       .select({
         id: purchaseOrders.id,
@@ -49,6 +54,7 @@ export function uncoveredOpenDraftPurchaseOrderReadPort(
         and(
           eq(purchaseOrders.organizationId, organizationId),
           eq(purchaseOrders.status, "draft"),
+          sql`(${purchaseOrders.supplierId}, ${purchaseOrderLines.sku}) in (values ${pairValues})`,
         ),
       );
 

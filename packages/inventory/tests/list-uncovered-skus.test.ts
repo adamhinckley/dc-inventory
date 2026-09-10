@@ -4,9 +4,11 @@ import {
   PurchaseOrderId,
   Sku,
   LocationId,
+  SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryUncoveredListQuery } from "../src/adapters/in-memory-uncovered-list-query.js";
+import type { IUncoveredListQuery } from "../src/domain/ports/uncovered-list-query.js";
 import {
   InMemoryUncoveredCaseQtyReadPort,
   InMemoryUncoveredReorderPolicyReadPort,
@@ -35,13 +37,16 @@ const SO_COVER = "550e8400-e29b-41d4-a716-446655440071";
 const SO_FLOOR = "550e8400-e29b-41d4-a716-446655440072";
 const SO_COLON = "550e8400-e29b-41d4-a716-446655440073";
 const PO_COVER = PurchaseOrderId.parse("550e8400-e29b-41d4-a716-446655440080");
+const FILTER_SUPPLIER = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+const FILTER_SKU = Sku.parse("FILTER-SUPPLIER-SKU");
+const FILTER_UNMAPPED_SKU = Sku.parse("FILTER-UNMAPPED-SKU");
 
 function harness() {
   const h = demandModelHarness();
-  const uncoveredList = new InMemoryUncoveredListQuery(h.readModel);
+  const supplierMapping = new InMemoryUncoveredSkuSupplierMappingReadPort();
+  const uncoveredList = new InMemoryUncoveredListQuery(h.readModel, { supplierMapping });
   const caseQty = new InMemoryUncoveredCaseQtyReadPort();
   const reorderPolicies = new InMemoryUncoveredReorderPolicyReadPort();
-  const supplierMapping = new InMemoryUncoveredSkuSupplierMappingReadPort();
   const suppliers = new InMemoryUncoveredSkuSupplierReadPort();
   const openDraftPurchaseOrders = new InMemoryUncoveredSkuDraftPurchaseOrderReadPort();
   return {
@@ -51,6 +56,7 @@ function harness() {
     supplierMapping,
     suppliers,
     openDraftPurchaseOrders,
+    readModel: h.readModel,
     listUncovered: new ListUncoveredSkusUseCase(
       uncoveredList,
       caseQty,
@@ -334,5 +340,61 @@ describe("List uncovered SKUs — demand-to-PO query (ADA-180)", () => {
       reorderMax: 120,
       ...unmappedEnrichment,
     });
+  });
+
+  it("does not call listAll when filtering by supplierId or needsMapping", async () => {
+    const h = harness();
+    h.supplierMapping.set(DEFAULT_ORG, FILTER_SKU.value, {
+      status: "mapped",
+      supplierId: FILTER_SUPPLIER,
+    });
+
+    for (const [sku, key] of [
+      [FILTER_SKU, "filter-mapped"],
+      [FILTER_UNMAPPED_SKU, "filter-unmapped"],
+    ] as const) {
+      const commit = await h.committed({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: `${key}-commit`,
+        sku,
+        quantity: 30,
+        refType: "sales_order",
+        refId: `${key}-so`,
+      });
+      expect(commit.ok).toBe(true);
+    }
+
+    const inner = new InMemoryUncoveredListQuery(h.readModel, {
+      supplierMapping: h.supplierMapping,
+    });
+    const listAll = vi.spyOn(inner, "listAll");
+    const trackingList: IUncoveredListQuery = {
+      list: (query) => inner.list(query),
+      listAll: (...args) => inner.listAll(...args),
+      listFactories: (query) => inner.listFactories(query),
+    };
+    const listUncovered = new ListUncoveredSkusUseCase(
+      trackingList,
+      h.caseQty,
+      h.reorderPolicies,
+      h.supplierMapping,
+      h.suppliers,
+      h.openDraftPurchaseOrders,
+    );
+
+    await listUncovered.execute({
+      organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 25,
+      supplierId: FILTER_SUPPLIER,
+    });
+    await listUncovered.execute({
+      organizationId: DEFAULT_ORG,
+      page: 1,
+      pageSize: 25,
+      needsMapping: true,
+    });
+
+    expect(listAll).not.toHaveBeenCalled();
   });
 });

@@ -3,6 +3,7 @@ import {
   bigint,
   char,
   date,
+  index,
   integer,
   pgEnum,
   pgSchema,
@@ -85,7 +86,13 @@ export const purchaseOrders = purchasing.table(
     cancelDate: date("cancel_date", { mode: "string" }),
     ...timestamps(),
   },
-  (table) => [unique().on(table.organizationId, table.documentNumber)],
+  (table) => [
+    unique().on(table.organizationId, table.documentNumber),
+    index("purchase_orders_organization_id_status_idx").on(
+      table.organizationId,
+      table.status,
+    ),
+  ],
 );
 
 export const supplierPoDocumentNumberCounters = purchasing.table(

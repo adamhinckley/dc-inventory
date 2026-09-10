@@ -2,16 +2,10 @@ import {
   LocationId,
   OrganizationId,
   requireOrganizationId,
-  type Sku,
   type SupplierId,
 } from "@dc-inventory/shared-kernel";
 import type { IUncoveredListQuery } from "../domain/ports/uncovered-list-query.js";
-import type {
-  IUncoveredSkuDraftPurchaseOrderReadPort,
-  IUncoveredSkuSupplierMappingReadPort,
-  IUncoveredSkuSupplierReadPort,
-} from "../domain/ports/uncovered-sku-enrichment.js";
-import { uncoveredSkuDraftKey } from "../domain/ports/uncovered-sku-enrichment.js";
+import type { IUncoveredSkuSupplierReadPort } from "../domain/ports/uncovered-sku-enrichment.js";
 
 export const UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID = "needs-mapping";
 
@@ -29,125 +23,70 @@ export type UncoveredFactorySummaryRow = Readonly<{
 export type ListUncoveredFactoriesRequest = {
   organizationId: OrganizationId;
   locationId?: LocationId;
+  page: number;
+  pageSize: number;
   excludeSuppliersWithOpenDraft?: boolean;
 };
 
 export type ListUncoveredFactoriesResult = {
   items: UncoveredFactorySummaryRow[];
+  page: number;
+  pageSize: number;
+  total: number;
 };
 
 export class ListUncoveredFactoriesUseCase {
   constructor(
     private readonly uncoveredList: IUncoveredListQuery,
-    private readonly supplierMapping: IUncoveredSkuSupplierMappingReadPort,
     private readonly suppliers: IUncoveredSkuSupplierReadPort,
-    private readonly openDraftPurchaseOrders: IUncoveredSkuDraftPurchaseOrderReadPort,
   ) {}
 
   async execute(input: ListUncoveredFactoriesRequest): Promise<ListUncoveredFactoriesResult> {
     const organizationId = requireOrganizationId(input.organizationId);
     const resolvedLocationId = input.locationId ?? LocationId.DEFAULT;
-    const rows = await this.uncoveredList.listAll({
+
+    const page = await this.uncoveredList.listFactories({
       organizationId,
       locationId: resolvedLocationId,
+      page: input.page,
+      pageSize: input.pageSize,
+      excludeSuppliersWithOpenDraft: input.excludeSuppliersWithOpenDraft,
     });
-    const mappings = await this.supplierMapping.getSkuMappings(
-      organizationId,
-      rows.map((row) => row.sku),
-    );
 
-    const bySupplier = new Map<SupplierId, { productCount: number; totalUncoveredUnits: number }>();
-    const supplierSkus = new Map<SupplierId, Sku[]>();
-    let needsMappingProductCount = 0;
-    let needsMappingUnits = 0;
+    const mappedSupplierIds = page.items
+      .map((row) => row.supplierId)
+      .filter((supplierId): supplierId is SupplierId => supplierId !== null);
+    const supplierInfo = await this.suppliers.findByIds(organizationId, mappedSupplierIds);
 
-    for (const row of rows) {
-      const mapping = mappings.get(row.sku.value) ?? {
-        status: "unmapped",
-        supplierId: null,
-      };
-      if (mapping.status === "mapped" && mapping.supplierId !== null) {
-        const existing = bySupplier.get(mapping.supplierId) ?? {
-          productCount: 0,
-          totalUncoveredUnits: 0,
+    return {
+      items: page.items.map((row) => {
+        if (row.needsMapping) {
+          return {
+            id: UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
+            supplierId: null,
+            supplierNumber: null,
+            supplierName: "Needs mapping",
+            poPrefix: null,
+            productCount: row.productCount,
+            totalUncoveredUnits: row.totalUncoveredUnits,
+            needsMapping: true,
+          };
+        }
+        const supplier = row.supplierId === null ? undefined : supplierInfo.get(row.supplierId);
+        return {
+          id: row.supplierId!,
+          supplierId: row.supplierId,
+          supplierNumber: supplier?.supplierNumber ?? null,
+          supplierName: supplier?.supplierName ?? "Unknown factory",
+          poPrefix: supplier?.poPrefix ?? null,
+          productCount: row.productCount,
+          totalUncoveredUnits: row.totalUncoveredUnits,
+          needsMapping: false,
         };
-        existing.productCount += 1;
-        existing.totalUncoveredUnits += row.uncovered;
-        bySupplier.set(mapping.supplierId, existing);
-        const skus = supplierSkus.get(mapping.supplierId) ?? [];
-        skus.push(row.sku);
-        supplierSkus.set(mapping.supplierId, skus);
-        continue;
-      }
-      needsMappingProductCount += 1;
-      needsMappingUnits += row.uncovered;
-    }
-
-    const supplierIds = [...bySupplier.keys()];
-    const supplierInfo = await this.suppliers.findByIds(organizationId, supplierIds);
-    const items: UncoveredFactorySummaryRow[] = [];
-    for (const supplierId of supplierIds) {
-      const aggregate = bySupplier.get(supplierId);
-      if (aggregate === undefined) {
-        continue;
-      }
-      const supplier = supplierInfo.get(supplierId);
-      items.push({
-        id: supplierId,
-        supplierId,
-        supplierNumber: supplier?.supplierNumber ?? null,
-        supplierName: supplier?.supplierName ?? "Unknown factory",
-        poPrefix: supplier?.poPrefix ?? null,
-        productCount: aggregate.productCount,
-        totalUncoveredUnits: aggregate.totalUncoveredUnits,
-        needsMapping: false,
-      });
-    }
-    items.sort((left, right) => left.supplierName.localeCompare(right.supplierName));
-
-    if (needsMappingProductCount > 0) {
-      items.push({
-        id: UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
-        supplierId: null,
-        supplierNumber: null,
-        supplierName: "Needs mapping",
-        poPrefix: null,
-        productCount: needsMappingProductCount,
-        totalUncoveredUnits: needsMappingUnits,
-        needsMapping: true,
-      });
-    }
-
-    if (input.excludeSuppliersWithOpenDraft === true && supplierSkus.size > 0) {
-      const draftLookupByKey = new Map<string, { supplierId: SupplierId; sku: Sku }>();
-      for (const [supplierId, skus] of supplierSkus) {
-        for (const sku of skus) {
-          draftLookupByKey.set(uncoveredSkuDraftKey(supplierId, sku), { supplierId, sku });
-        }
-      }
-      const openDrafts = await this.openDraftPurchaseOrders.findOpenDraftsForSupplierSkus(
-        organizationId,
-        [...draftLookupByKey.values()],
-      );
-      const suppliersWithOpenDraft = new Set<SupplierId>();
-      for (const [supplierId, skus] of supplierSkus) {
-        for (const sku of skus) {
-          if (openDrafts.has(uncoveredSkuDraftKey(supplierId, sku))) {
-            suppliersWithOpenDraft.add(supplierId);
-            break;
-          }
-        }
-      }
-      return {
-        items: items.filter(
-          (row) =>
-            row.needsMapping ||
-            row.supplierId === null ||
-            !suppliersWithOpenDraft.has(row.supplierId),
-        ),
-      };
-    }
-
-    return { items };
+      }),
+      page: input.page,
+      pageSize: input.pageSize,
+      total: page.total,
+    };
   }
 }

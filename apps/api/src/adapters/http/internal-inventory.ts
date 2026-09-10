@@ -386,13 +386,12 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
       };
       const result = await request.server.inventory.listUncoveredFactories.execute({
         organizationId: staffOrganizationId(request),
+        page: query.page,
+        pageSize: query.pageSize,
         excludeSuppliersWithOpenDraft: query.excludeSuppliersWithOpenDraft,
       });
-      const total = result.items.length;
-      const offset = (query.page - 1) * query.pageSize;
-      const items = result.items.slice(offset, offset + query.pageSize);
       return {
-        items: items.map((row) => ({
+        items: result.items.map((row) => ({
           id: row.id,
           supplierId: row.supplierId,
           supplierNumber: row.supplierNumber,
@@ -402,9 +401,9 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
           totalUncoveredUnits: row.totalUncoveredUnits,
           needsMapping: row.needsMapping,
         })),
-        page: query.page,
-        pageSize: query.pageSize,
-        total,
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
       };
     },
   );

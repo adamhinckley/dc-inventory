@@ -7,6 +7,28 @@ export type UncoveredListQuery = {
   locationId?: LocationId;
   page: number;
   pageSize: number;
+  supplierId?: SupplierId;
+  needsMapping?: boolean;
+};
+
+export type UncoveredFactoryListQuery = {
+  organizationId: OrganizationId;
+  locationId?: LocationId;
+  page: number;
+  pageSize: number;
+  excludeSuppliersWithOpenDraft?: boolean;
+};
+
+export type UncoveredFactoryCoreRow = Readonly<{
+  supplierId: SupplierId | null;
+  productCount: number;
+  totalUncoveredUnits: number;
+  needsMapping: boolean;
+}>;
+
+export type UncoveredFactoryListPage = {
+  items: readonly UncoveredFactoryCoreRow[];
+  total: number;
 };
 
 export type UncoveredListCoreRow = Readonly<{
@@ -49,5 +71,8 @@ export type UncoveredListPage = {
  */
 export interface IUncoveredListQuery {
   list(query: UncoveredListQuery): Promise<UncoveredListPage>;
-  listAll(query: Omit<UncoveredListQuery, "page" | "pageSize">): Promise<readonly UncoveredListCoreRow[]>;
+  listAll(
+    query: Omit<UncoveredListQuery, "page" | "pageSize" | "supplierId" | "needsMapping">,
+  ): Promise<readonly UncoveredListCoreRow[]>;
+  listFactories(query: UncoveredFactoryListQuery): Promise<UncoveredFactoryListPage>;
 }
