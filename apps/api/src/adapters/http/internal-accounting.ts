@@ -220,6 +220,7 @@ function mapCustomerPaymentRow(input: {
     appliedCents: input.appliedCents,
     unappliedCents: input.unappliedCents,
     voided: input.voided,
+    voidReason: input.payment.voidReason ?? null,
     applications: input.applications.map(mapPaymentApplication),
   };
 }
@@ -927,9 +928,18 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
           currency: row.currency,
           method: row.method,
           reference: row.reference,
+          note: row.note,
+          voidReason: row.voidReason,
           appliedCents: row.appliedCents,
           unappliedCents: row.unappliedCents,
           voided: row.voided,
+          applications: row.applications.map((application) => ({
+            id: application.id,
+            invoiceId: application.invoiceId,
+            amountCents: application.amountCents,
+            currency: application.currency,
+            createdAt: application.createdAt,
+          })),
         })),
         page: result.page,
         pageSize: result.pageSize,

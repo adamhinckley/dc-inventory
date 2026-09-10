@@ -12561,6 +12561,9 @@ paths:
                           maximum: 9007199254740991
                         voided:
                           type: boolean
+                        voidReason:
+                          nullable: true
+                          type: string
                         applications:
                           type: array
                           items:
@@ -12603,6 +12606,7 @@ paths:
                         - appliedCents
                         - unappliedCents
                         - voided
+                        - voidReason
                         - applications
                       additionalProperties: false
                 required:
@@ -14077,6 +14081,12 @@ paths:
                         reference:
                           nullable: true
                           type: string
+                        note:
+                          nullable: true
+                          type: string
+                        voidReason:
+                          nullable: true
+                          type: string
                         appliedCents:
                           type: integer
                           minimum: -9007199254740991
@@ -14087,6 +14097,37 @@ paths:
                           maximum: 9007199254740991
                         voided:
                           type: boolean
+                        applications:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                format: uuid
+                                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                              invoiceId:
+                                type: string
+                                format: uuid
+                                pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                              amountCents:
+                                type: integer
+                                minimum: -9007199254740991
+                                maximum: 9007199254740991
+                              currency:
+                                type: string
+                                minLength: 3
+                                maxLength: 3
+                              createdAt:
+                                type: string
+                                format: date-time
+                            required:
+                              - id
+                              - invoiceId
+                              - amountCents
+                              - currency
+                              - createdAt
+                            additionalProperties: false
                       required:
                         - paymentId
                         - receivedAt
@@ -14097,9 +14138,12 @@ paths:
                         - currency
                         - method
                         - reference
+                        - note
+                        - voidReason
                         - appliedCents
                         - unappliedCents
                         - voided
+                        - applications
                       additionalProperties: false
                   page:
                     type: integer

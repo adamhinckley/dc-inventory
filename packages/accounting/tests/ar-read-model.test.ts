@@ -242,6 +242,7 @@ async function seedReadModelFixture(h: Awaited<ReturnType<typeof readHarness>>) 
     currency: "USD",
     method: "check",
     reference: "1002",
+    note: "partial check from walk-in",
     receivedAt: new Date("2026-08-20T00:00:00.000Z"),
     idempotencyKey: "partial-payment",
     holdRemainderAsCredit: false,
@@ -618,7 +619,15 @@ describe("AR read model (ADA-360)", () => {
     const voided = payments.items.find((row) => row.customerName === "Voided Violets");
     expect(voided?.voided).toBe(true);
     expect(voided?.appliedCents).toBe(1800);
+    expect(voided?.voidReason).toBe("entered in error");
+    expect(voided?.note).toBeNull();
     const credit = payments.items.find((row) => row.customerName === "Credit Corner");
     expect(credit?.unappliedCents).toBe(900);
+    expect(credit?.applications).toEqual([]);
+    const partial = payments.items.find((row) => row.customerName === "Partial Petals");
+    expect(partial?.note).toBe("partial check from walk-in");
+    expect(partial?.voidReason).toBeNull();
+    expect(partial?.applications).toHaveLength(1);
+    expect(partial?.applications[0]?.amountCents).toBe(800);
   });
 });
