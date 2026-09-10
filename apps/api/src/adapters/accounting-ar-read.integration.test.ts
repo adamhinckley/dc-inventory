@@ -1,6 +1,7 @@
 import {
   DrizzleInvoiceRepository,
   GetAccountingSummaryUseCase,
+  InMemoryArCustomerReadPort,
   InMemoryArOrgReadPort,
   InMemoryPaymentsReceivedListQuery,
   ListCustomerBalancesQuery,
@@ -25,16 +26,27 @@ import {
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { randomUUID } from "node:crypto";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabaseConnection, type DatabaseConnection } from "../infrastructure/db.js";
+import { schema } from "../infrastructure/schema.js";
 import { DrizzleCustomerArProfileReadPort } from "./accounting-customer-ar-profile-read.js";
 import { createCustomerBalancesListQuery } from "./accounting-customer-balances-list-query.js";
+import { createArCustomerReadPort } from "./accounting-ar-customer-read.js";
 import { createArOrgReadPort } from "./accounting-ar-org-read.js";
 import { DrizzlePaymentsReceivedListQuery } from "./accounting-payments-received-list-query.js";
+import {
+  assertCustomerScopedInvoiceQuery,
+  capturePostgresQuery,
+  referencesAccountingTable,
+  type CapturedQuery,
+} from "./drizzle-sql-capture.js";
 
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
 const integrationEnabled = process.env.AR_READ_INTEGRATION === "1";
 
+// Runs in required CI via scripts/ci-compose-migrate-ready.sh (AR_READ_INTEGRATION=1).
 describe.skipIf(!integrationEnabled || !databaseUrl)(
   "PostgreSQL AR read model matches in-memory projections",
   () => {
@@ -252,6 +264,90 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
         new DrizzlePaymentsReceivedListQuery(db),
       ).execute(paymentsQuery);
       expect(sqlPayments).toEqual(inMemoryPayments);
+    });
+
+    it("customer-scoped SQL read matches in-memory and does not select all org invoices", async () => {
+      const otherCustomerId = CustomerId.parse(randomUUID());
+      const otherInvoiceId = InvoiceId.parse(randomUUID());
+      const otherOrderId = OrderId.parse(randomUUID());
+      await connection.sql`
+        insert into customers.customers
+          (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
+        values
+          (${otherCustomerId}, ${organizationId}, 'Other customer', ${`CUST-OTHER-${organizationId}`}, 10000, 'USD', 'NET30')
+      `;
+      await connection.sql`
+        insert into sales.orders
+          (id, organization_id, customer_id, status, document_number, created_at)
+        values
+          (${otherOrderId}, ${organizationId}, ${otherCustomerId}, 'shipped', ${`SO-OTHER-${organizationId}`}, ${"2026-08-10T00:00:00.000Z"})
+      `;
+      await connection.sql`
+        insert into accounting.invoices
+          (
+            id,
+            organization_id,
+            order_id,
+            customer_id,
+            document_number,
+            status,
+            posted_at,
+            due_date,
+            subtotal_cents,
+            total_cents,
+            currency
+          )
+        values
+          (
+            ${otherInvoiceId},
+            ${organizationId},
+            ${otherOrderId},
+            ${otherCustomerId},
+            ${`INV-OTHER-${organizationId}`},
+            'posted',
+            ${"2026-08-10T00:00:00.000Z"},
+            ${"2026-08-10T00:00:00.000Z"},
+            9000,
+            9000,
+            'USD'
+          )
+      `;
+
+      const db = connection.db;
+      const repository = new DrizzleInvoiceRepository(db as unknown as AccountingDrizzle);
+      const inMemoryCustomerRead = new InMemoryArCustomerReadPort(repository);
+      const sqlCustomerRead = createArCustomerReadPort(db);
+
+      const inMemoryData = await inMemoryCustomerRead.loadCustomerData(organizationId, customerId);
+      const sqlData = await sqlCustomerRead.loadCustomerData(organizationId, customerId);
+      expect(sqlData.invoices).toHaveLength(inMemoryData.invoices.length);
+      expect(sqlData.payments).toHaveLength(inMemoryData.payments.length);
+      expect(sqlData.invoices.every((invoice) => invoice.customerId === customerId)).toBe(true);
+      expect(sqlData.invoices.some((invoice) => invoice.id === otherInvoiceId)).toBe(false);
+
+      const capturedQueries: CapturedQuery[] = [];
+      const tracedSql = postgres(databaseUrl, {
+        max: 1,
+        debug: (_connection, query, parameters) => {
+          capturedQueries.push(capturePostgresQuery(query, parameters));
+        },
+      });
+      const tracedDb = drizzle(tracedSql, { schema });
+      const tracedCustomerRead = createArCustomerReadPort(tracedDb);
+      await tracedCustomerRead.loadCustomerData(organizationId, customerId);
+      await tracedSql.end({ timeout: 5 });
+
+      expect(capturedQueries.length).toBeGreaterThan(0);
+      const invoiceQueries = capturedQueries.filter((entry) =>
+        referencesAccountingTable(entry.text, "invoices"),
+      );
+      expect(invoiceQueries.length).toBeGreaterThan(0);
+      for (const entry of invoiceQueries) {
+        assertCustomerScopedInvoiceQuery(entry, customerId);
+      }
+      expect(
+        invoiceQueries.some((entry) => entry.parameters.map(String).includes(String(otherCustomerId))),
+      ).toBe(false);
     });
   },
 );

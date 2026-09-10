@@ -25,6 +25,8 @@ pnpm exec vitest run --config vitest.integration.config.ts
 pnpm exec vitest run apps/api/src/adapters/postgres-concurrency.integration.test.ts
 pnpm exec vitest run apps/api/src/adapters/sql-list-pagination.integration.test.ts
 pnpm exec vitest run apps/api/src/infrastructure/document-number-allocation.integration.test.ts
+AR_READ_INTEGRATION=1 pnpm exec vitest run \
+  apps/api/src/adapters/accounting-ar-read.integration.test.ts
 RUN_ORGANIZATION_CONSTRAINT_ACCEPTANCE=1 pnpm exec vitest run \
   apps/api/src/infrastructure/organization-reference-constraints.acceptance.test.ts
 

@@ -43,6 +43,8 @@ describe("required CI: Compose + db:migrate + GET /ready (ADA-55)", () => {
 
     expect(script).toContain("docker compose up -d --wait");
     expect(script).toContain("pnpm db:migrate");
+    expect(script).toContain("AR_READ_INTEGRATION=1");
+    expect(script).toContain("accounting-ar-read.integration.test.ts");
     expect(script).toContain("pnpm dev:api");
     expect(script).toMatch(/\/ready/);
     expect(script).toMatch(/ready":true/);

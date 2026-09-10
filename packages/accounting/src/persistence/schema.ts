@@ -9,6 +9,7 @@ import {
   pgSchema,
   text,
   timestamp,
+  index,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -84,6 +85,10 @@ export const invoices = accounting.table(
     ...timestamps(),
   },
   (table) => [
+    index("invoices_organization_id_customer_id_idx").on(
+      table.organizationId,
+      table.customerId,
+    ),
     uniqueIndex("invoices_organization_id_document_number_unique").on(
       table.organizationId,
       table.documentNumber,
@@ -136,6 +141,10 @@ export const payments = accounting.table(
     ...timestamps(),
   },
   (table) => [
+    index("payments_organization_id_customer_id_idx").on(
+      table.organizationId,
+      table.customerId,
+    ),
     uniqueIndex("payments_organization_id_idempotency_key_unique").on(
       table.organizationId,
       table.idempotencyKey,

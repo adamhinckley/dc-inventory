@@ -1,10 +1,10 @@
-import type { GetCustomerAccountingSummaryUseCase, IClock } from "@dc-inventory/accounting";
+import type { IAvailableCreditReadPort, IClock } from "@dc-inventory/accounting";
 import type { ICreditCheckPort } from "@dc-inventory/sales";
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 
 export class SalesCreditCheckAdapter implements ICreditCheckPort {
   constructor(
-    private readonly getCustomerAccountingSummary: GetCustomerAccountingSummaryUseCase,
+    private readonly availableCreditRead: IAvailableCreditReadPort,
     private readonly clock: IClock,
   ) {}
 
@@ -12,11 +12,10 @@ export class SalesCreditCheckAdapter implements ICreditCheckPort {
     organizationId: OrganizationId,
     customerId: CustomerId,
   ): Promise<number> {
-    const summary = await this.getCustomerAccountingSummary.execute({
+    return this.availableCreditRead.getAvailableCreditCents({
       organizationId,
       customerId,
       asOf: this.clock.now(),
     });
-    return summary.availableCreditCents;
   }
 }
