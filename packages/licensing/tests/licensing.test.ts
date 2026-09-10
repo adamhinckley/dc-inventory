@@ -6,6 +6,7 @@ import {
   LicensingFeatures,
   ListLicensingPaymentsUseCase,
   ListLicensingSubscriptionsUseCase,
+  runWithLicensingFeatureStateCacheAsync,
 } from "../src/index.js";
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
@@ -95,18 +96,44 @@ describe("Licensing application ports", () => {
     await expect(features.isEnabled(pastDueOrg, "inventory")).resolves.toBe(false);
   });
 
-  it("caches tenant feature state for repeated isEnabled calls in one request", async () => {
+  it("caches tenant feature state for repeated isEnabled calls in one request scope", async () => {
     const store = new InMemoryLicensingStore();
     store.createSubscription(DEFAULT_ORG, "core", "active");
     const getFeatureState = vi.spyOn(store, "getFeatureState");
     const features = new LicensingFeatures(store);
 
-    await expect(features.isEnabled(DEFAULT_ORG, "catalog")).resolves.toBe(true);
-    await expect(features.isEnabled(DEFAULT_ORG, "sales")).resolves.toBe(true);
-    expect(getFeatureState).toHaveBeenCalledTimes(1);
+    await runWithLicensingFeatureStateCacheAsync(async () => {
+      await expect(features.isEnabled(DEFAULT_ORG, "catalog")).resolves.toBe(true);
+      await expect(features.isEnabled(DEFAULT_ORG, "sales")).resolves.toBe(true);
+      expect(getFeatureState).toHaveBeenCalledTimes(1);
+    });
 
-    features.clearRequestCache();
-    await expect(features.isEnabled(DEFAULT_ORG, "catalog")).resolves.toBe(true);
+    await runWithLicensingFeatureStateCacheAsync(async () => {
+      await expect(features.isEnabled(DEFAULT_ORG, "catalog")).resolves.toBe(true);
+      expect(getFeatureState).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("does not share feature-state cache across concurrent request scopes", async () => {
+    const store = new InMemoryLicensingStore();
+    store.createSubscription(DEFAULT_ORG, "core", "active");
+    const getFeatureState = vi.spyOn(store, "getFeatureState").mockImplementation(
+      async (organizationId) =>
+        InMemoryLicensingStore.prototype.getFeatureState.call(store, organizationId),
+    );
+    const features = new LicensingFeatures(store);
+
+    await Promise.all([
+      runWithLicensingFeatureStateCacheAsync(async () => {
+        await features.isEnabled(DEFAULT_ORG, "catalog");
+        await features.isEnabled(DEFAULT_ORG, "sales");
+      }),
+      runWithLicensingFeatureStateCacheAsync(async () => {
+        await features.isEnabled(DEFAULT_ORG, "inventory");
+        await features.isEnabled(DEFAULT_ORG, "sales");
+      }),
+    ]);
+
     expect(getFeatureState).toHaveBeenCalledTimes(2);
   });
 

@@ -13,6 +13,11 @@ export {
   ListLicensingSubscriptionsUseCase,
 } from "./application/list-licensing.js";
 export { LicensingFeatures } from "./application/licensing-features.js";
+export {
+  getLicensingFeatureStateCache,
+  runWithLicensingFeatureStateCache,
+  runWithLicensingFeatureStateCacheAsync,
+} from "./application/licensing-feature-state-cache.js";
 export type {
   LicensingListPage,
   LicensingListQuery,
