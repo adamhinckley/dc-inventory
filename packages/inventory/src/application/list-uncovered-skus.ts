@@ -31,20 +31,6 @@ export type ListUncoveredSkusResult = {
   total: number;
 };
 
-function matchesFilter(
-  mapping: { status: string; supplierId: SupplierId | null },
-  supplierId: SupplierId | undefined,
-  needsMapping: boolean | undefined,
-): boolean {
-  if (needsMapping === true) {
-    return mapping.status !== "mapped";
-  }
-  if (supplierId !== undefined) {
-    return mapping.status === "mapped" && mapping.supplierId === supplierId;
-  }
-  return true;
-}
-
 export class ListUncoveredSkusUseCase {
   constructor(
     private readonly uncoveredList: IUncoveredListQuery,
@@ -58,40 +44,17 @@ export class ListUncoveredSkusUseCase {
   async execute(input: ListUncoveredSkusRequest): Promise<ListUncoveredSkusResult> {
     const organizationId = requireOrganizationId(input.organizationId);
     const resolvedLocationId = input.locationId ?? LocationId.DEFAULT;
-    const hasFilter = input.supplierId !== undefined || input.needsMapping === true;
 
-    let coreRows: readonly UncoveredListCoreRow[];
-    let total: number;
-
-    if (hasFilter) {
-      const allRows = await this.uncoveredList.listAll({
-        organizationId,
-        locationId: resolvedLocationId,
-      });
-      const allMappings = await this.supplierMapping.getSkuMappings(
-        organizationId,
-        allRows.map((row) => row.sku),
-      );
-      const filtered = allRows.filter((row) => {
-        const mapping = allMappings.get(row.sku.value) ?? {
-          status: "unmapped",
-          supplierId: null,
-        };
-        return matchesFilter(mapping, input.supplierId, input.needsMapping);
-      });
-      total = filtered.length;
-      const offset = (input.page - 1) * input.pageSize;
-      coreRows = filtered.slice(offset, offset + input.pageSize);
-    } else {
-      const page = await this.uncoveredList.list({
-        organizationId,
-        locationId: resolvedLocationId,
-        page: input.page,
-        pageSize: input.pageSize,
-      });
-      coreRows = page.items;
-      total = page.total;
-    }
+    const page = await this.uncoveredList.list({
+      organizationId,
+      locationId: resolvedLocationId,
+      page: input.page,
+      pageSize: input.pageSize,
+      supplierId: input.supplierId,
+      needsMapping: input.needsMapping,
+    });
+    const coreRows: readonly UncoveredListCoreRow[] = page.items;
+    const total = page.total;
 
     const skus = coreRows.map((row) => row.sku);
     const [packaging, reorderPolicies, mappings] = await Promise.all([

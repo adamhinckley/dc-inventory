@@ -67,6 +67,10 @@ class StubUncoveredListQuery implements IUncoveredListQuery {
       .filter(([key]) => key.startsWith(prefix))
       .map(([, row]) => row);
   }
+
+  async listFactories() {
+    return { items: [], total: 0 };
+  }
 }
 
 class StubUncoveredPort implements IInventoryUncoveredReadPort {

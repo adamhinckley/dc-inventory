@@ -1304,9 +1304,7 @@ export function composeAppServices(
   );
   const listUncoveredFactories = new ListUncoveredFactoriesUseCase(
     uncoveredList,
-    uncoveredSkuSupplierMapping,
     uncoveredSkuSupplier,
-    uncoveredSkuDraftPurchaseOrder,
   );
   const accounting = accountingServices({
     invoiceRepo,
