@@ -5,7 +5,8 @@ import type {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import type { OpsUserId } from "../ops-user.js";
+import type { OpsActorKind, OpsUserId } from "../ops-user.js";
+import type { StaffRole } from "../staff-role.js";
 import type { Session, SessionAudience } from "../session.js";
 
 export type NewSession = {
@@ -19,10 +20,39 @@ export type NewSession = {
   lastSeenAt: Date;
 };
 
+export type StaffResolvedSession = {
+  session: Session;
+  email: string;
+  roles: readonly StaffRole[];
+};
+
+export type WholesaleStaffActingResolvedSession = {
+  session: Session;
+  email: string;
+};
+
+export type WholesaleBuyerResolvedSession = {
+  session: Session;
+  email: string;
+};
+
+export type OpsResolvedSession = {
+  session: Session;
+  email: string;
+  kind: OpsActorKind;
+  tenantId: OrganizationId;
+};
+
 export interface ISessionStore {
   create(input: NewSession): Promise<Session>;
   findById(id: SessionId): Promise<Session | null>;
   touch(id: SessionId, lastSeenAt: Date): Promise<void>;
   updateCustomerId(id: SessionId, customerId: CustomerId | null): Promise<void>;
   delete(id: SessionId): Promise<void>;
+  findStaffResolved?(id: SessionId): Promise<StaffResolvedSession | null>;
+  findWholesaleStaffActingResolved?(
+    id: SessionId,
+  ): Promise<WholesaleStaffActingResolvedSession | null>;
+  findWholesaleBuyerResolved?(id: SessionId): Promise<WholesaleBuyerResolvedSession | null>;
+  findOpsResolved?(id: SessionId): Promise<OpsResolvedSession | null>;
 }

@@ -1,6 +1,7 @@
 import {
   CustomerId,
   OrganizationId,
+  SessionId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
@@ -24,7 +25,11 @@ import {
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
 } from "../src/application/resolve-session.js";
-import { SESSION_ABSOLUTE_MS, SESSION_IDLE_MS } from "../src/domain/session.js";
+import {
+  SESSION_ABSOLUTE_MS,
+  SESSION_IDLE_MS,
+  SESSION_TOUCH_DEBOUNCE_MS,
+} from "../src/domain/session.js";
 import { OpsUserId } from "../src/domain/ops-user.js";
 
 const STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440001");
@@ -246,6 +251,78 @@ describe("Identity login and sessions (in-memory)", () => {
     expect(session.customerId).toBe(CUSTOMER_ID);
     expect(session.wholesaleUserId).toBe(WHOLESALE_ID);
     expect(session.organizationId).toBe(OrganizationId.DEFAULT);
+  });
+
+  it("debounces lastSeen touch: two resolves one second apart touch once", async () => {
+    const h = harness();
+    await seedAcmeOrg(h);
+    await h.staffUsers.save({
+      id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "staff@local.test",
+      passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
+    });
+    const login = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
+      email: "staff@local.test",
+      password: "staff-secret",
+    });
+    if (!login.ok) {
+      throw new Error("expected login");
+    }
+
+    const sessionId = SessionId.parse(login.sessionId);
+    const afterLogin = await h.sessions.findById(sessionId);
+    if (afterLogin === null) {
+      throw new Error("expected session");
+    }
+    const loginLastSeen = afterLogin.lastSeenAt;
+
+    h.clock.advance(1000);
+    const first = await h.resolveStaff.execute(login.sessionId);
+    expect(first.ok).toBe(true);
+    const afterFirst = await h.sessions.findById(sessionId);
+    expect(afterFirst?.lastSeenAt).toEqual(loginLastSeen);
+
+    h.clock.advance(1000);
+    const second = await h.resolveStaff.execute(login.sessionId);
+    expect(second.ok).toBe(true);
+    const afterSecond = await h.sessions.findById(sessionId);
+    expect(afterSecond?.lastSeenAt).toEqual(loginLastSeen);
+  });
+
+  it("touches lastSeen again after the 5-minute debounce window", async () => {
+    const h = harness();
+    await seedAcmeOrg(h);
+    await h.staffUsers.save({
+      id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "staff@local.test",
+      passwordHash: await h.passwords.hash("staff-secret"),
+      roles: ["admin"],
+    });
+    const login = await h.loginStaff.execute({
+      organizationSlug: ACME_SLUG,
+      email: "staff@local.test",
+      password: "staff-secret",
+    });
+    if (!login.ok) {
+      throw new Error("expected login");
+    }
+
+    const sessionId = SessionId.parse(login.sessionId);
+    const afterLogin = await h.sessions.findById(sessionId);
+    if (afterLogin === null) {
+      throw new Error("expected session");
+    }
+    const loginLastSeen = afterLogin.lastSeenAt;
+
+    h.clock.advance(SESSION_TOUCH_DEBOUNCE_MS);
+    const resolved = await h.resolveStaff.execute(login.sessionId);
+    expect(resolved.ok).toBe(true);
+    const afterDebounce = await h.sessions.findById(sessionId);
+    expect(afterDebounce?.lastSeenAt.getTime()).toBeGreaterThan(loginLastSeen.getTime());
   });
 
   it("expires a session after idle 30 minutes via the clock", async () => {

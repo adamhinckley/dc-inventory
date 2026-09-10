@@ -5,11 +5,18 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
-import type { ISessionStore, NewSession } from "../domain/ports/session-store.js";
+import { and, eq } from "drizzle-orm";
+import type {
+  ISessionStore,
+  NewSession,
+  OpsResolvedSession,
+  StaffResolvedSession,
+  WholesaleBuyerResolvedSession,
+  WholesaleStaffActingResolvedSession,
+} from "../domain/ports/session-store.js";
 import { OpsUserId } from "../domain/ops-user.js";
 import type { Session, SessionAudience } from "../domain/session.js";
-import { sessions } from "../persistence/schema.js";
+import { opsUsers, sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
 import type { IdentityDrizzle } from "./drizzle-staff-user-repository.js";
 
 export class DrizzleSessionStore implements ISessionStore {
@@ -53,6 +60,141 @@ export class DrizzleSessionStore implements ISessionStore {
       .where(eq(sessions.id, id))
       .limit(1);
     return rows[0] === undefined ? null : toSession(rows[0]);
+  }
+
+  async findStaffResolved(id: SessionId): Promise<StaffResolvedSession | null> {
+    const rows = await this.db
+      .select({
+        session: sessions,
+        email: staffUsers.email,
+        roles: staffUsers.roles,
+        organizationId: staffUsers.organizationId,
+      })
+      .from(sessions)
+      .innerJoin(
+        staffUsers,
+        and(eq(sessions.actorType, "staff"), eq(sessions.actorId, staffUsers.id)),
+      )
+      .where(eq(sessions.id, id))
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      return null;
+    }
+    const session = toSession(row.session);
+    if (session.audience !== "staff" || session.staffUserId === null) {
+      return null;
+    }
+    if (OrganizationId.parse(row.organizationId) !== session.organizationId) {
+      return null;
+    }
+    return {
+      session,
+      email: row.email,
+      roles: row.roles,
+    };
+  }
+
+  async findWholesaleStaffActingResolved(
+    id: SessionId,
+  ): Promise<WholesaleStaffActingResolvedSession | null> {
+    const rows = await this.db
+      .select({
+        session: sessions,
+        email: staffUsers.email,
+        organizationId: staffUsers.organizationId,
+      })
+      .from(sessions)
+      .innerJoin(staffUsers, eq(sessions.staffUserId, staffUsers.id))
+      .where(and(eq(sessions.id, id), eq(sessions.actorType, "wholesale")))
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      return null;
+    }
+    const session = toSession(row.session);
+    if (
+      session.audience !== "wholesale" ||
+      session.staffUserId === null ||
+      session.wholesaleUserId !== null
+    ) {
+      return null;
+    }
+    if (OrganizationId.parse(row.organizationId) !== session.organizationId) {
+      return null;
+    }
+    return {
+      session,
+      email: row.email,
+    };
+  }
+
+  async findWholesaleBuyerResolved(
+    id: SessionId,
+  ): Promise<WholesaleBuyerResolvedSession | null> {
+    const rows = await this.db
+      .select({
+        session: sessions,
+        email: wholesaleUsers.email,
+        organizationId: wholesaleUsers.organizationId,
+      })
+      .from(sessions)
+      .innerJoin(
+        wholesaleUsers,
+        and(eq(sessions.actorType, "wholesale"), eq(sessions.actorId, wholesaleUsers.id)),
+      )
+      .where(eq(sessions.id, id))
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      return null;
+    }
+    const session = toSession(row.session);
+    if (
+      session.audience !== "wholesale" ||
+      session.wholesaleUserId === null ||
+      session.customerId === null
+    ) {
+      return null;
+    }
+    if (OrganizationId.parse(row.organizationId) !== session.organizationId) {
+      return null;
+    }
+    return {
+      session,
+      email: row.email,
+    };
+  }
+
+  async findOpsResolved(id: SessionId): Promise<OpsResolvedSession | null> {
+    const rows = await this.db
+      .select({
+        session: sessions,
+        email: opsUsers.email,
+        kind: opsUsers.kind,
+        tenantId: opsUsers.tenantId,
+      })
+      .from(sessions)
+      .innerJoin(
+        opsUsers,
+        and(eq(sessions.actorType, "ops"), eq(sessions.actorId, opsUsers.id)),
+      )
+      .where(eq(sessions.id, id))
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      return null;
+    }
+    const session = toSession(row.session);
+    if (session.audience !== "ops" || session.opsUserId === null) {
+      return null;
+    }
+    return {
+      session,
+      email: row.email,
+      kind: row.kind,
+      tenantId: OrganizationId.parse(row.tenantId),
+    };
   }
 
   async touch(id: SessionId, lastSeenAt: Date): Promise<void> {

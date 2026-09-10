@@ -29,6 +29,9 @@ export function registerStaffAudienceGuard(app: FastifyInstance): void {
     if (isAuthRoute(request)) {
       return;
     }
+    if (request.staffAuth !== undefined) {
+      return;
+    }
     const token = request.cookies[STAFF_SESSION_COOKIE];
     const result = await request.server.identity.resolveStaff.execute(token);
     if (!result.ok) {
@@ -49,6 +52,9 @@ export function registerStaffAudienceGuard(app: FastifyInstance): void {
 export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
   app.addHook("preHandler", async (request, reply) => {
     if (isAuthRoute(request)) {
+      return;
+    }
+    if (request.wholesaleAuth !== undefined) {
       return;
     }
     const token = request.cookies[WHOLESALE_SESSION_COOKIE];
@@ -87,6 +93,9 @@ export function registerWholesaleAudienceGuard(app: FastifyInstance): void {
 export function registerOpsAudienceGuard(app: FastifyInstance): void {
   app.addHook("preHandler", async (request, reply) => {
     if (isOpsLoginRoute(request)) {
+      return;
+    }
+    if (request.opsAuth !== undefined) {
       return;
     }
     const token = request.cookies[OPS_SESSION_COOKIE];
