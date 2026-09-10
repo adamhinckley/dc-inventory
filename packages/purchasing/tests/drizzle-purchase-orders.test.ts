@@ -576,6 +576,17 @@ describe("DrizzlePurchaseOrderRepository.listNewestDraftsBySuppliers", () => {
   });
 });
 
+describe("DrizzlePurchaseOrderRepository.exists", () => {
+  it("returns whether a purchase order header exists without loading lines", async () => {
+    const db = new FakePurchasingDb();
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+    await repo.save(draft([line(LINE_A, SKU, "Bolt", 5), line(LINE_B, OTHER_SKU, "Washer", 2)]));
+
+    expect(await repo.exists(ORG, PO_ID)).toBe(true);
+    expect(await repo.exists(ORG, PurchaseOrderId.parse(FOREIGN_PO_ID))).toBe(false);
+  });
+});
+
 describe("DrizzlePurchaseOrderRepository.save", () => {
   it("drops previous line rows when the saved line set uses new ids", async () => {
     const db = new FakePurchasingDb();

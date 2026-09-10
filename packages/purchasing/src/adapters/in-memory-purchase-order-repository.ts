@@ -168,6 +168,11 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     return row.order;
   }
 
+  async exists(organizationId: OrganizationId, id: PurchaseOrderId): Promise<boolean> {
+    const row = this.byId.get(id);
+    return row !== undefined && row.order.organizationId === organizationId;
+  }
+
   async findByDocumentNumber(
     organizationId: OrganizationId,
     documentNumber: string,
