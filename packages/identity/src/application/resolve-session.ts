@@ -12,7 +12,7 @@ import type { IOpsUserRepository } from "../domain/ports/ops-user-repository.js"
 import type { ISessionStore } from "../domain/ports/session-store.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
-import type { Session } from "../domain/session.js";
+import type { Session, SessionAudience } from "../domain/session.js";
 import { isSessionExpired, shouldTouchSessionLastSeen } from "../domain/session.js";
 import type { StaffRole } from "../domain/staff-role.js";
 
@@ -82,6 +82,44 @@ async function maybeTouchSession(
   }
 }
 
+async function joinedSessionMissFailure(
+  sessions: ISessionStore,
+  sessionId: SessionId,
+  expectedAudience: SessionAudience,
+): Promise<SessionFailureReason> {
+  const session = await sessions.findById(sessionId);
+  if (session === null) {
+    return "invalid";
+  }
+  if (session.audience !== expectedAudience) {
+    return "wrong_audience";
+  }
+  await sessions.delete(session.id);
+  return "invalid";
+}
+
+async function wholesaleJoinedSessionMissFailure(
+  sessions: ISessionStore,
+  sessionId: SessionId,
+): Promise<SessionFailureReason> {
+  const session = await sessions.findById(sessionId);
+  if (session === null) {
+    return "invalid";
+  }
+  if (session.audience !== "wholesale") {
+    return "wrong_audience";
+  }
+  if (session.staffUserId !== null && session.wholesaleUserId === null) {
+    await sessions.delete(session.id);
+    return "invalid";
+  }
+  if (session.wholesaleUserId !== null) {
+    await sessions.delete(session.id);
+    return "invalid";
+  }
+  return "wrong_audience";
+}
+
 export class ResolveStaffSessionUseCase {
   constructor(
     private readonly sessions: ISessionStore,
@@ -101,7 +139,10 @@ export class ResolveStaffSessionUseCase {
     if (findStaffResolved !== undefined) {
       const resolved = await findStaffResolved.call(this.sessions, sessionId);
       if (resolved === null) {
-        return { ok: false, reason: "invalid" };
+        return {
+          ok: false,
+          reason: await joinedSessionMissFailure(this.sessions, sessionId, "staff"),
+        };
       }
       const { session, email, roles } = resolved;
       if (session.audience !== "staff" || session.staffUserId === null) {
@@ -173,52 +214,51 @@ export class ResolveWholesaleSessionUseCase {
       return { ok: false, reason: "invalid" };
     }
 
-    const findStaffActing = this.sessions.findWholesaleStaffActingResolved;
-    const findBuyer = this.sessions.findWholesaleBuyerResolved;
-    if (findStaffActing !== undefined && findBuyer !== undefined) {
-      const staffActing = await findStaffActing.call(this.sessions, sessionId);
-      if (staffActing !== null) {
-        const { session, email } = staffActing;
-        const now = this.clock.now();
-        if (isSessionExpired(session, now)) {
+    const findWholesaleResolved = this.sessions.findWholesaleResolved;
+    if (findWholesaleResolved !== undefined) {
+      const resolved = await findWholesaleResolved.call(this.sessions, sessionId);
+      if (resolved === null) {
+        return {
+          ok: false,
+          reason: await wholesaleJoinedSessionMissFailure(this.sessions, sessionId),
+        };
+      }
+      const { session, email, mode } = resolved;
+      const now = this.clock.now();
+      if (isSessionExpired(session, now)) {
+        await this.sessions.delete(session.id);
+        return { ok: false, reason: "expired" };
+      }
+      if (mode === "staff_acting") {
+        const staffUserId = session.staffUserId;
+        if (staffUserId === null) {
           await this.sessions.delete(session.id);
-          return { ok: false, reason: "expired" };
+          return { ok: false, reason: "invalid" };
         }
         await maybeTouchSession(this.sessions, session, now);
         return {
           ok: true,
           mode: "staff_acting",
-          staffUserId: session.staffUserId!,
+          staffUserId,
           wholesaleUserId: null,
           customerId: session.customerId,
           email,
           organizationId: session.organizationId,
         };
       }
-      const buyer = await findBuyer.call(this.sessions, sessionId);
-      if (buyer !== null) {
-        const { session, email } = buyer;
-        const now = this.clock.now();
-        if (isSessionExpired(session, now)) {
-          await this.sessions.delete(session.id);
-          return { ok: false, reason: "expired" };
-        }
-        await maybeTouchSession(this.sessions, session, now);
-        return {
-          ok: true,
-          wholesaleUserId: session.wholesaleUserId!,
-          email,
-          customerId: session.customerId!,
-          organizationId: session.organizationId,
-        };
+      const wholesaleUserId = session.wholesaleUserId;
+      const customerId = session.customerId;
+      if (wholesaleUserId === null || customerId === null) {
+        return { ok: false, reason: "wrong_audience" };
       }
-      const session = await this.sessions.findById(sessionId);
-      if (session === null) {
-        return { ok: false, reason: "invalid" };
-      }
-      return session.audience !== "wholesale"
-        ? { ok: false, reason: "wrong_audience" }
-        : { ok: false, reason: "invalid" };
+      await maybeTouchSession(this.sessions, session, now);
+      return {
+        ok: true,
+        wholesaleUserId,
+        email,
+        customerId,
+        organizationId: session.organizationId,
+      };
     }
 
     const session = await this.sessions.findById(sessionId);
@@ -296,7 +336,10 @@ export class ResolveOpsSessionUseCase {
     if (findOpsResolved !== undefined) {
       const resolved = await findOpsResolved.call(this.sessions, sessionId);
       if (resolved === null) {
-        return { ok: false, reason: "invalid" };
+        return {
+          ok: false,
+          reason: await joinedSessionMissFailure(this.sessions, sessionId, "ops"),
+        };
       }
       const { session, email, kind, tenantId } = resolved;
       if (session.audience !== "ops" || session.opsUserId === null) {

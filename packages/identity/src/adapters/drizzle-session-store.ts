@@ -11,8 +11,7 @@ import type {
   NewSession,
   OpsResolvedSession,
   StaffResolvedSession,
-  WholesaleBuyerResolvedSession,
-  WholesaleStaffActingResolvedSession,
+  WholesaleResolvedSession,
 } from "../domain/ports/session-store.js";
 import { OpsUserId } from "../domain/ops-user.js";
 import type { Session, SessionAudience } from "../domain/session.js";
@@ -95,51 +94,18 @@ export class DrizzleSessionStore implements ISessionStore {
     };
   }
 
-  async findWholesaleStaffActingResolved(
-    id: SessionId,
-  ): Promise<WholesaleStaffActingResolvedSession | null> {
+  async findWholesaleResolved(id: SessionId): Promise<WholesaleResolvedSession | null> {
     const rows = await this.db
       .select({
         session: sessions,
-        email: staffUsers.email,
-        organizationId: staffUsers.organizationId,
+        staffEmail: staffUsers.email,
+        staffOrganizationId: staffUsers.organizationId,
+        wholesaleEmail: wholesaleUsers.email,
+        wholesaleOrganizationId: wholesaleUsers.organizationId,
       })
       .from(sessions)
-      .innerJoin(staffUsers, eq(sessions.staffUserId, staffUsers.id))
-      .where(and(eq(sessions.id, id), eq(sessions.actorType, "wholesale")))
-      .limit(1);
-    const row = rows[0];
-    if (row === undefined) {
-      return null;
-    }
-    const session = toSession(row.session);
-    if (
-      session.audience !== "wholesale" ||
-      session.staffUserId === null ||
-      session.wholesaleUserId !== null
-    ) {
-      return null;
-    }
-    if (OrganizationId.parse(row.organizationId) !== session.organizationId) {
-      return null;
-    }
-    return {
-      session,
-      email: row.email,
-    };
-  }
-
-  async findWholesaleBuyerResolved(
-    id: SessionId,
-  ): Promise<WholesaleBuyerResolvedSession | null> {
-    const rows = await this.db
-      .select({
-        session: sessions,
-        email: wholesaleUsers.email,
-        organizationId: wholesaleUsers.organizationId,
-      })
-      .from(sessions)
-      .innerJoin(
+      .leftJoin(staffUsers, eq(sessions.staffUserId, staffUsers.id))
+      .leftJoin(
         wholesaleUsers,
         and(eq(sessions.actorType, "wholesale"), eq(sessions.actorId, wholesaleUsers.id)),
       )
@@ -150,19 +116,35 @@ export class DrizzleSessionStore implements ISessionStore {
       return null;
     }
     const session = toSession(row.session);
-    if (
-      session.audience !== "wholesale" ||
-      session.wholesaleUserId === null ||
-      session.customerId === null
-    ) {
+    if (session.audience !== "wholesale") {
       return null;
     }
-    if (OrganizationId.parse(row.organizationId) !== session.organizationId) {
+    if (session.staffUserId !== null && session.wholesaleUserId === null) {
+      if (row.staffEmail === null || row.staffOrganizationId === null) {
+        return null;
+      }
+      if (OrganizationId.parse(row.staffOrganizationId) !== session.organizationId) {
+        return null;
+      }
+      return {
+        mode: "staff_acting",
+        session,
+        email: row.staffEmail,
+      };
+    }
+    if (session.wholesaleUserId === null || session.customerId === null) {
+      return null;
+    }
+    if (row.wholesaleEmail === null || row.wholesaleOrganizationId === null) {
+      return null;
+    }
+    if (OrganizationId.parse(row.wholesaleOrganizationId) !== session.organizationId) {
       return null;
     }
     return {
+      mode: "buyer",
       session,
-      email: row.email,
+      email: row.wholesaleEmail,
     };
   }
 
@@ -189,11 +171,15 @@ export class DrizzleSessionStore implements ISessionStore {
     if (session.audience !== "ops" || session.opsUserId === null) {
       return null;
     }
+    const tenantId = OrganizationId.parse(row.tenantId);
+    if (tenantId !== session.organizationId) {
+      return null;
+    }
     return {
       session,
       email: row.email,
       kind: row.kind,
-      tenantId: OrganizationId.parse(row.tenantId),
+      tenantId,
     };
   }
 

@@ -318,7 +318,13 @@ describe("Identity login and sessions (in-memory)", () => {
     }
     const loginLastSeen = afterLogin.lastSeenAt;
 
-    h.clock.advance(SESSION_TOUCH_DEBOUNCE_MS);
+    h.clock.advance(SESSION_TOUCH_DEBOUNCE_MS - 2000);
+    const atBoundary = await h.resolveStaff.execute(login.sessionId);
+    expect(atBoundary.ok).toBe(true);
+    const atBoundarySession = await h.sessions.findById(sessionId);
+    expect(atBoundarySession?.lastSeenAt).toEqual(loginLastSeen);
+
+    h.clock.advance(2001);
     const resolved = await h.resolveStaff.execute(login.sessionId);
     expect(resolved.ok).toBe(true);
     const afterDebounce = await h.sessions.findById(sessionId);

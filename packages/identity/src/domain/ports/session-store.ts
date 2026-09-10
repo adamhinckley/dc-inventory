@@ -26,15 +26,9 @@ export type StaffResolvedSession = {
   roles: readonly StaffRole[];
 };
 
-export type WholesaleStaffActingResolvedSession = {
-  session: Session;
-  email: string;
-};
-
-export type WholesaleBuyerResolvedSession = {
-  session: Session;
-  email: string;
-};
+export type WholesaleResolvedSession =
+  | { mode: "staff_acting"; session: Session; email: string }
+  | { mode: "buyer"; session: Session; email: string };
 
 export type OpsResolvedSession = {
   session: Session;
@@ -50,9 +44,6 @@ export interface ISessionStore {
   updateCustomerId(id: SessionId, customerId: CustomerId | null): Promise<void>;
   delete(id: SessionId): Promise<void>;
   findStaffResolved?(id: SessionId): Promise<StaffResolvedSession | null>;
-  findWholesaleStaffActingResolved?(
-    id: SessionId,
-  ): Promise<WholesaleStaffActingResolvedSession | null>;
-  findWholesaleBuyerResolved?(id: SessionId): Promise<WholesaleBuyerResolvedSession | null>;
+  findWholesaleResolved?(id: SessionId): Promise<WholesaleResolvedSession | null>;
   findOpsResolved?(id: SessionId): Promise<OpsResolvedSession | null>;
 }

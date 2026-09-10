@@ -32,5 +32,5 @@ export function isSessionExpired(session: Session, now: Date): boolean {
 }
 
 export function shouldTouchSessionLastSeen(session: Session, now: Date): boolean {
-  return now.getTime() - session.lastSeenAt.getTime() >= SESSION_TOUCH_DEBOUNCE_MS;
+  return now.getTime() - session.lastSeenAt.getTime() > SESSION_TOUCH_DEBOUNCE_MS;
 }
