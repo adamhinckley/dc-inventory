@@ -16,6 +16,7 @@ describe("listPurchasing2UncoveredFactories", () => {
             supplierId: "factory-1",
             supplierNumber: "F1",
             supplierName: "Factory 1",
+            poPrefix: "F1",
             productCount: 1,
             totalUncoveredUnits: 10,
             needsMapping: false,

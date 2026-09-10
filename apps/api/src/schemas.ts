@@ -297,6 +297,10 @@ export const uncoveredFactoriesListResponseSchema = z.object({
       supplierId: z.string().uuid().nullable(),
       supplierNumber: z.string().nullable(),
       supplierName: z.string(),
+      poPrefix: z
+        .string()
+        .regex(/^[A-Z0-9]{2,4}$/)
+        .nullable(),
       productCount: z.number().int().nonnegative(),
       totalUncoveredUnits: z.number().int().nonnegative(),
       needsMapping: z.boolean(),
@@ -312,6 +316,7 @@ export const uncoveredFactoriesListTable = {
   columns: [
     { field: "supplierName", label: "Factory" },
     { field: "supplierNumber", label: "Factory #" },
+    { field: "poPrefix", label: "Vendor prefix" },
     { field: "productCount", label: "Products" },
     { field: "totalUncoveredUnits", label: "Uncovered units" },
   ],

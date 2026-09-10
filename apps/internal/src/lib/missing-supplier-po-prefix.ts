@@ -14,6 +14,33 @@ function supplierDetailWhenLookupFailed(id: string): SupplierDetail {
   };
 }
 
+export function factoriesMissingVendorPrefix(
+  rows: readonly {
+    supplierId: string | null;
+    supplierName: string;
+    supplierNumber: string | null;
+    poPrefix: string | null;
+    needsMapping: boolean;
+  }[],
+): SupplierDetail[] {
+  const missing: SupplierDetail[] = [];
+  for (const row of rows) {
+    if (row.needsMapping || row.supplierId === null) {
+      continue;
+    }
+    if (!isSupplierPoPrefixMissing(row.poPrefix)) {
+      continue;
+    }
+    missing.push({
+      id: row.supplierId,
+      vendorNumber: row.supplierNumber ?? "",
+      name: row.supplierName,
+      poPrefix: row.poPrefix,
+    });
+  }
+  return missing;
+}
+
 export async function loadSuppliersMissingPoPrefix(
   supplierIds: readonly (string | null | undefined)[],
 ): Promise<SupplierDetail[]> {

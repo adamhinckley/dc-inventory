@@ -17,6 +17,11 @@ export type ListInternalUncoveredFactories200ItemsItem = {
   supplierNumber: string | null;
   supplierName: string;
   /**
+     * @nullable
+     * @pattern ^[A-Z0-9]{2,4}$
+     */
+  poPrefix: string | null;
+  /**
      * @minimum 0
      * @maximum 9007199254740991
      */

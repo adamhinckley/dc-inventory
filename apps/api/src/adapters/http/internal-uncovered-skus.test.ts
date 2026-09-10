@@ -421,6 +421,7 @@ describe("internal uncovered SKUs HTTP", () => {
           supplierId: SUPPLIER_A,
           supplierNumber: "V-A",
           supplierName: "Factory A",
+          poPrefix: "FA",
           productCount: 1,
           totalUncoveredUnits: 120,
           needsMapping: false,
@@ -430,6 +431,7 @@ describe("internal uncovered SKUs HTTP", () => {
           supplierId: SUPPLIER_B,
           supplierNumber: "V-B",
           supplierName: "Factory B",
+          poPrefix: "FB",
           productCount: 1,
           totalUncoveredUnits: 40,
           needsMapping: false,
@@ -439,6 +441,7 @@ describe("internal uncovered SKUs HTTP", () => {
           supplierId: null,
           supplierNumber: null,
           supplierName: "Needs mapping",
+          poPrefix: null,
           productCount: 1,
           totalUncoveredUnits: 25,
           needsMapping: true,
@@ -482,6 +485,7 @@ describe("internal uncovered SKUs HTTP", () => {
           supplierId: SUPPLIER_B,
           supplierNumber: "V-B",
           supplierName: "Factory B",
+          poPrefix: "FB",
           productCount: 1,
           totalUncoveredUnits: 40,
           needsMapping: false,
@@ -491,6 +495,7 @@ describe("internal uncovered SKUs HTTP", () => {
           supplierId: null,
           supplierNumber: null,
           supplierName: "Needs mapping",
+          poPrefix: null,
           productCount: 1,
           totalUncoveredUnits: 25,
           needsMapping: true,
@@ -664,6 +669,21 @@ describe("internal uncovered SKUs HTTP", () => {
   it("drafts POs for suppliers without poPrefix using a fallback document number", async () => {
     const app = await startUncoveredApp({ withDraftSuppliers: true, withoutPoPrefix: true });
     const cookie = await staffCookie(app);
+    const factories = await app.inject({
+      method: "GET",
+      url: "/internal/uncovered-skus/factories",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(factories.statusCode).toBe(200);
+    expect(
+      (factories.json() as { items: Array<{ id: string; poPrefix: string | null }> }).items.map(
+        (row) => ({ id: row.id, poPrefix: row.poPrefix }),
+      ),
+    ).toEqual([
+      { id: SUPPLIER_A, poPrefix: null },
+      { id: SUPPLIER_B, poPrefix: null },
+      { id: UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID, poPrefix: null },
+    ]);
     const drafted = await app.inject({
       method: "POST",
       url: "/internal/uncovered-skus/draft-purchase-orders",

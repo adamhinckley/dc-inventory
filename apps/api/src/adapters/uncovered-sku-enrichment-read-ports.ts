@@ -34,7 +34,12 @@ export function uncoveredSkuSupplierReadPort(
     async findByIds(organizationId: OrganizationId, supplierIds: readonly SupplierId[]) {
       const info = new Map<
         string,
-        { supplierId: SupplierId; supplierNumber: string; supplierName: string }
+        {
+          supplierId: SupplierId;
+          supplierNumber: string;
+          supplierName: string;
+          poPrefix: string | null;
+        }
       >();
       if (supplierIds.length === 0) {
         return info;
@@ -45,6 +50,7 @@ export function uncoveredSkuSupplierReadPort(
           supplierId: SupplierId.parse(supplierId),
           supplierNumber: supplier.vendorNumber,
           supplierName: supplier.name,
+          poPrefix: supplier.poPrefix,
         });
       }
       return info;
