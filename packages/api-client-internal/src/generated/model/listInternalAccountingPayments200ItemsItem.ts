@@ -4,6 +4,7 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { ListInternalAccountingPayments200ItemsItemApplicationsItem } from './listInternalAccountingPayments200ItemsItemApplicationsItem';
 import type { ListInternalAccountingPayments200ItemsItemMethod } from './listInternalAccountingPayments200ItemsItemMethod';
 
 export type ListInternalAccountingPayments200ItemsItem = {
@@ -27,6 +28,10 @@ export type ListInternalAccountingPayments200ItemsItem = {
   method: ListInternalAccountingPayments200ItemsItemMethod;
   /** @nullable */
   reference: string | null;
+  /** @nullable */
+  note: string | null;
+  /** @nullable */
+  voidReason: string | null;
   /**
      * @minimum -9007199254740991
      * @maximum 9007199254740991
@@ -38,4 +43,5 @@ export type ListInternalAccountingPayments200ItemsItem = {
      */
   unappliedCents: number;
   voided: boolean;
+  applications: ListInternalAccountingPayments200ItemsItemApplicationsItem[];
 };

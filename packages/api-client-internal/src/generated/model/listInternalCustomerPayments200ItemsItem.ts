@@ -37,5 +37,7 @@ export type ListInternalCustomerPayments200ItemsItem = {
      */
   unappliedCents: number;
   voided: boolean;
+  /** @nullable */
+  voidReason: string | null;
   applications: ListInternalCustomerPayments200ItemsItemApplicationsItem[];
 };

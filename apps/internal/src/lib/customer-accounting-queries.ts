@@ -1,5 +1,6 @@
 import {
   getGetInternalCustomerAccountingQueryKey,
+  getListInternalAccountingPaymentsQueryKey,
   getListInternalCustomerInvoicesQueryKey,
   getListInternalCustomerPaymentsQueryKey,
 } from "@dc-inventory/api-client-internal";
@@ -18,6 +19,9 @@ export async function invalidateCustomerAccountingQueries(
     }),
     queryClient.invalidateQueries({
       queryKey: getListInternalCustomerPaymentsQueryKey(customerId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: getListInternalAccountingPaymentsQueryKey(),
     }),
   ]);
 }

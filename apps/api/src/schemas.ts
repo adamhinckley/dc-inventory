@@ -1548,6 +1548,7 @@ export const customerPaymentItemSchema = z.object({
   appliedCents: z.number().int(),
   unappliedCents: z.number().int(),
   voided: z.boolean(),
+  voidReason: z.string().nullable(),
   applications: z.array(customerPaymentApplicationItemSchema),
 });
 
@@ -1795,9 +1796,12 @@ export const paymentReceivedItemSchema = z.object({
   currency: z.string().length(3),
   method: paymentMethodSchema,
   reference: z.string().nullable(),
+  note: z.string().nullable(),
+  voidReason: z.string().nullable(),
   appliedCents: z.number().int(),
   unappliedCents: z.number().int(),
   voided: z.boolean(),
+  applications: z.array(customerPaymentApplicationItemSchema),
 });
 
 export const paymentsReceivedListResponseSchema = z.object({

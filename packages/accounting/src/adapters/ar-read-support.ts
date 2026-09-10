@@ -237,9 +237,18 @@ export function buildPaymentReceivedRow(
     currency: payment.amount.currency,
     method: payment.method ?? "other",
     reference: payment.reference ?? null,
+    note: payment.note ?? null,
+    voidReason: payment.voidReason ?? null,
     appliedCents,
     unappliedCents: computeUnappliedCents(payment, applications, asOf),
     voided: payment.voidedAt != null,
+    applications: applications.map((application) => ({
+      id: application.id,
+      invoiceId: application.invoiceId,
+      amountCents: application.amount.amountMinor,
+      currency: application.amount.currency,
+      createdAt: application.createdAt,
+    })),
   };
 }
 

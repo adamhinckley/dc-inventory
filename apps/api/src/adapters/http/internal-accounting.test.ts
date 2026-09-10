@@ -578,4 +578,97 @@ describe("internal accounting HTTP", () => {
     expect(payments.statusCode).toBe(200);
     expect(payments.json()).toMatchObject({ total: 1, page: 1, pageSize: 25 });
   });
+
+  it("returns payment note, applications, and void reason on list endpoints", async () => {
+    const { app, openInvoice } = await startAccountingApp();
+    const cookie = await staffCookie(app);
+
+    const recorded = await app.inject({
+      method: "POST",
+      url: `/internal/customers/${CUSTOMER_ID}/payments`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        amountCents: 250,
+        currency: "USD",
+        method: "check",
+        reference: "4411",
+        note: "front desk check",
+        receivedAt: "2026-09-08T00:00:00.000Z",
+        idempotencyKey: "note-and-void-detail",
+        holdRemainderAsCredit: false,
+        applications: [{ invoiceId: openInvoice.id, amountCents: 250 }],
+      },
+    });
+    expect(recorded.statusCode).toBe(200);
+    const paymentId = recorded.json().paymentId as string;
+
+    const listed = await app.inject({
+      method: "GET",
+      url: `/internal/customers/${CUSTOMER_ID}/payments?asOf=${AS_OF.toISOString()}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    const noted = listed
+      .json()
+      .items.find((row: { id: string }) => row.id === paymentId) as {
+      note: string | null;
+      voidReason: string | null;
+      applications: Array<{ invoiceId: string; amountCents: number }>;
+    };
+    expect(noted.note).toBe("front desk check");
+    expect(noted.voidReason).toBeNull();
+    expect(noted.applications).toEqual([
+      expect.objectContaining({
+        invoiceId: openInvoice.id,
+        amountCents: 250,
+      }),
+    ]);
+
+    const voided = await app.inject({
+      method: "POST",
+      url: `/internal/payments/${paymentId}/void`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { voidReason: "duplicate deposit" },
+    });
+    expect(voided.statusCode).toBe(200);
+
+    const listedAfterVoid = await app.inject({
+      method: "GET",
+      url: `/internal/customers/${CUSTOMER_ID}/payments?asOf=${AS_OF.toISOString()}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listedAfterVoid.statusCode).toBe(200);
+    const voidedRow = listedAfterVoid
+      .json()
+      .items.find((row: { id: string }) => row.id === paymentId) as {
+      note: string | null;
+      voided: boolean;
+      voidReason: string | null;
+    };
+    expect(voidedRow.voided).toBe(true);
+    expect(voidedRow.voidReason).toBe("duplicate deposit");
+    expect(voidedRow.note).toBe("front desk check");
+
+    const orgPayments = await app.inject({
+      method: "GET",
+      url: `/internal/accounting/payments?from=2026-01-01T00:00:00.000Z&to=2026-12-31T00:00:00.000Z&page=1&pageSize=25`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(orgPayments.statusCode).toBe(200);
+    const orgRow = orgPayments
+      .json()
+      .items.find((row: { paymentId: string }) => row.paymentId === paymentId) as {
+      note: string | null;
+      voidReason: string | null;
+      applications: Array<{ invoiceId: string; amountCents: number }>;
+    };
+    expect(orgRow.note).toBe("front desk check");
+    expect(orgRow.voidReason).toBe("duplicate deposit");
+    expect(orgRow.applications).toEqual([
+      expect.objectContaining({
+        invoiceId: openInvoice.id,
+        amountCents: 250,
+      }),
+    ]);
+  });
 });
