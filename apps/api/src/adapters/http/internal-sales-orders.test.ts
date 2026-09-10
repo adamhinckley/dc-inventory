@@ -9,7 +9,7 @@ import {
   RecordAdjustmentIncreaseUseCase,
 } from "@dc-inventory/inventory";
 import { CustomerId, LocationId, Money, OrderId, OrganizationId, Sku, StaffUserId } from "@dc-inventory/shared-kernel";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { InMemoryUnitOfWork } from "../../adapters/in-memory-unit-of-work.js";
 import { CustomerBillToSnapshotReadAdapter } from "@dc-inventory/customers";
 import { CustomerTermsReadAdapter } from "@dc-inventory/accounting";
@@ -604,6 +604,37 @@ describe("internal sales orders HTTP", () => {
     });
     expect(response.statusCode).toBe(401);
     expect(response.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("list batches product-id lookup once per page when orders share SKUs", async () => {
+    const { app } = await startSalesApp();
+    const cookie = await staffCookie(app);
+    const lookupSpy = vi.spyOn(app.catalog, "lookupProductIdsBySkus");
+
+    for (let index = 0; index < 2; index += 1) {
+      const created = await app.inject({
+        method: "POST",
+        url: "/internal/sales-orders",
+        cookies: { [STAFF_SESSION_COOKIE]: cookie },
+        payload: {
+          customerId: CUSTOMER_ID,
+          lines: [{ productId: PRODUCT_ID, qty: index + 1 }],
+        },
+      });
+      expect(created.statusCode).toBe(201);
+    }
+
+    lookupSpy.mockClear();
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().items).toHaveLength(2);
+    expect(lookupSpy).toHaveBeenCalledTimes(1);
+    expect(lookupSpy.mock.calls[0]?.[1]).toEqual([SKU.value]);
   });
 
   it("line-jobs updates qty on a draft order", async () => {

@@ -59,22 +59,58 @@ function toLineShortageBody(
   };
 }
 
+export function collectSalesOrderListSkus(orders: readonly SalesOrder[]): string[] {
+  const skus = new Set<string>();
+  for (const order of orders) {
+    for (const line of order.lines) {
+      skus.add(line.sku.value);
+    }
+  }
+  return [...skus];
+}
+
+export async function mapSalesOrderListItems(
+  orders: readonly SalesOrder[],
+  lookupProductId: (sku: string) => Promise<string | null>,
+  lookupCustomerName: (customerId: string) => Promise<string | null>,
+  lookupProductIds: (skus: readonly string[]) => Promise<ReadonlyMap<string, string | null>>,
+) {
+  const pageSkus = collectSalesOrderListSkus(orders);
+  const productIdBySku =
+    pageSkus.length > 0
+      ? await lookupProductIds(pageSkus)
+      : new Map<string, string | null>();
+  return Promise.all(
+    orders.map((order) =>
+      mapSalesOrder(
+        order,
+        lookupProductId,
+        lookupCustomerName,
+        undefined,
+        productIdBySku,
+      ),
+    ),
+  );
+}
+
 export async function mapSalesOrder(
   order: SalesOrder,
   lookupProductId: (sku: string) => Promise<string | null>,
   lookupCustomerName: (customerId: string) => Promise<string | null>,
   lookupProductIds?: (skus: readonly string[]) => Promise<ReadonlyMap<string, string | null>>,
+  productIdBySku?: ReadonlyMap<string, string | null>,
 ) {
   const customerName = await lookupCustomerName(order.customerId);
   const skus = order.lines.map((line) => line.sku.value);
-  const productIdsBySku =
-    lookupProductIds !== undefined && skus.length > 0
+  const resolvedProductIdsBySku =
+    productIdBySku ??
+    (lookupProductIds !== undefined && skus.length > 0
       ? await lookupProductIds(skus)
-      : undefined;
+      : undefined);
 
   const lines = await Promise.all(
     order.lines.map(async (line) => {
-      const batchProductId = productIdsBySku?.get(line.sku.value);
+      const batchProductId = resolvedProductIdsBySku?.get(line.sku.value);
       const productId =
         batchProductId !== undefined
           ? batchProductId
