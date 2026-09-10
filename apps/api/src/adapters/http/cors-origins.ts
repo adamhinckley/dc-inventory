@@ -1,4 +1,5 @@
-const DEFAULT_ORIGINS = "http://localhost:3000,http://localhost:3002";
+const DEFAULT_ORIGINS =
+  "http://localhost:3000,http://localhost:3002,http://dc-internal.test:3000,http://dc-wholesale.test:3002";
 
 export function readCorsOrigins(raw = process.env.CORS_ORIGINS): string[] {
   const value = raw?.trim() ? raw : DEFAULT_ORIGINS;

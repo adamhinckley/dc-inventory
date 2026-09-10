@@ -22,6 +22,16 @@ pnpm dev:internal
 
 `pnpm --filter @dc-inventory/internal dev` is the same dashboard command.
 
+### Local hostname (password managers)
+
+Add [`scripts/local-dev-hosts.txt`](../../scripts/local-dev-hosts.txt) to `/etc/hosts`, then:
+
+```bash
+pnpm dev:internal:local
+```
+
+Dashboard: [http://dc-internal.test:3000](http://dc-internal.test:3000)
+
 ## What this shell includes
 
 | Route | Purpose |

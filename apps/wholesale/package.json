@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --port 3002",
+    "dev:local": "next dev --hostname dc-wholesale.test --port 3002",
     "build": "next build",
     "start": "next start --port 3002",
     "typecheck": "tsc --noEmit -p tsconfig.json"

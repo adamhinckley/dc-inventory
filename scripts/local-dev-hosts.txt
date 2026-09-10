@@ -1,0 +1,5 @@
+# Add these lines to /etc/hosts so password managers can distinguish this repo
+# from other localhost projects. Required for pnpm dev:internal:local and
+# pnpm dev:wholesale:local.
+127.0.0.1 dc-internal.test
+127.0.0.1 dc-wholesale.test
