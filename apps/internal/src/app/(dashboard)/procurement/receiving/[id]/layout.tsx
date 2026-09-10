@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { ReceivingDocumentWorkspace } from "../../../../components/receiving-document-workspace";
+import { ReceivingDocumentWorkspace } from "../../../../../components/receiving-document-workspace";
 
-export default async function ReceivingDocumentLayout({
+export default async function ProcurementReceivingDocumentLayout({
   children,
   params,
 }: {

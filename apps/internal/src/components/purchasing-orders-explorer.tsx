@@ -29,21 +29,21 @@ export function PurchasingOrdersExplorer({
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-action">
             <Link
-              href="/purchasing/uncovered"
+              href="/procurement"
               className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
               <ClipboardList className="size-icon-lg" aria-hidden />
               Uncovered
             </Link>
             <Link
-              href="/purchasing/suppliers"
+              href="/procurement/suppliers"
               className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
               <Building2 className="size-icon-lg" aria-hidden />
               Suppliers
             </Link>
             <Link
-              href="/purchasing/new"
+              href="/procurement/purchase-orders/new"
               className={buttonVariants({ variant: "primary", size: "sm" })}
             >
               <Plus className="size-icon-lg" aria-hidden />

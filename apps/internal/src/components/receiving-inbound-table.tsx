@@ -99,7 +99,7 @@ export function ReceivingInboundTable({
   }, []);
 
   const getRowHref = useCallback((row: { id?: string }) => {
-    return row.id ? `/receiving/${row.id}` : undefined;
+    return row.id ? `/procurement/receiving/${row.id}` : undefined;
   }, []);
 
   const renderRowLink = useCallback(

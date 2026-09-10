@@ -7,9 +7,9 @@ export function isPurchasing2UncoveredNeedsMappingFactoryId(factoryId: string): 
 }
 
 export function purchasing2UncoveredFactoryDetailHref(factoryId: string): string {
-  return `/purchasing-2/uncovered/${factoryId}`;
+  return `/procurement/pre-order/${factoryId}`;
 }
 
 export function purchasing2PurchaseOrderHref(purchaseOrderId: string): string {
-  return `/purchasing-2/${purchaseOrderId}`;
+  return `/procurement/purchase-orders/${purchaseOrderId}`;
 }

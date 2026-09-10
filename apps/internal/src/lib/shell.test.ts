@@ -7,8 +7,8 @@ const srcRoot = join(import.meta.dirname, "..");
 
 describe("internal dashboard shell", () => {
   const navPagePath = (href: string) => {
-    if (href === "/purchasing-2") {
-      return "purchasing-2/(hub)/page.tsx";
+    if (href === "/procurement") {
+      return "procurement/(hub)/page.tsx";
     }
     return `${href.slice(1)}/page.tsx`;
   };
@@ -22,21 +22,27 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "app/(auth)/login/page.tsx"))).toBe(true);
   });
 
-  it("includes purchasing sub-routes and workspace components", () => {
+  it("includes procurement sub-routes and workspace components", () => {
     expect(
-      existsSync(join(srcRoot, "app/(dashboard)/purchasing/completed/page.tsx")),
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/(hub)/page.tsx")),
     ).toBe(true);
     expect(
-      existsSync(join(srcRoot, "app/(dashboard)/purchasing/suppliers/page.tsx")),
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/(hub)/pre-order/[factoryId]/page.tsx")),
     ).toBe(true);
     expect(
-      existsSync(join(srcRoot, "app/(dashboard)/purchasing-2/(hub)/page.tsx")),
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/(hub)/purchase-orders/page.tsx")),
     ).toBe(true);
     expect(
-      existsSync(join(srcRoot, "app/(dashboard)/purchasing-2/(hub)/uncovered/page.tsx")),
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/purchase-orders/new/page.tsx")),
     ).toBe(true);
     expect(
-      existsSync(join(srcRoot, "app/(dashboard)/purchasing-2/(workspace)/[id]/page.tsx")),
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/purchase-orders/[id]/page.tsx")),
+    ).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/(hub)/suppliers/page.tsx")),
+    ).toBe(true);
+    expect(
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/(hub)/suppliers/[id]/page.tsx")),
     ).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchasing-2-workspace.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/purchasing-2-heading.tsx"))).toBe(true);
@@ -54,10 +60,10 @@ describe("internal dashboard shell", () => {
     expect(existsSync(join(srcRoot, "components/receiving-inbound-explorer.tsx"))).toBe(true);
     expect(existsSync(join(srcRoot, "components/receiving-inbound-table.tsx"))).toBe(true);
     expect(
-      existsSync(join(srcRoot, "app/(dashboard)/receiving/[id]/page.tsx")),
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/receiving/[id]/page.tsx")),
     ).toBe(true);
     expect(
-      existsSync(join(srcRoot, "app/(dashboard)/receiving/[id]/history/page.tsx")),
+      existsSync(join(srcRoot, "app/(dashboard)/procurement/receiving/[id]/history/page.tsx")),
     ).toBe(true);
     expect(existsSync(join(srcRoot, "components/receiving-document-workspace.tsx"))).toBe(
       true,

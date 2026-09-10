@@ -45,7 +45,7 @@ export function SupplierCreateForm() {
     onSuccess: (result) => {
       setCreateOpen(false);
       if (result.status === 201) {
-        router.push(`/purchasing/suppliers/${result.data.id}`);
+        router.push(`/procurement/suppliers/${result.data.id}`);
       }
     },
   });

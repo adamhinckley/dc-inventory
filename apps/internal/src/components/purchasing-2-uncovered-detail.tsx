@@ -370,7 +370,7 @@ export function Purchasing2UncoveredDetail({
         router.push(purchasing2PurchaseOrderHref(next.drafts[0]!.purchaseOrderId));
         return;
       }
-      router.push("/purchasing-2");
+      router.push("/procurement/purchase-orders");
     } catch {
       setActionError("Could not load uncovered SKUs for this factory.");
     } finally {
@@ -391,7 +391,7 @@ export function Purchasing2UncoveredDetail({
     return (
       <p className="text-body-sm text-fg-secondary">
         Factory not found.{" "}
-        <Link href="/purchasing-2/uncovered" className="text-link hover:text-link-hover">
+        <Link href="/procurement" className="text-link hover:text-link-hover">
           Back to uncovered
         </Link>
       </p>
@@ -401,7 +401,7 @@ export function Purchasing2UncoveredDetail({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-form-section">
       <p className="text-body-sm text-fg-secondary">
-        <Link href="/purchasing-2/uncovered" className="text-link hover:text-link-hover">
+        <Link href="/procurement" className="text-link hover:text-link-hover">
           ← Uncovered without draft
         </Link>
       </p>

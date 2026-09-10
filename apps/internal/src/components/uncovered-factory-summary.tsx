@@ -222,7 +222,7 @@ export function UncoveredFactorySummary() {
         return;
       }
       if (next.action === "navigate") {
-        router.push(`/purchasing/${next.purchaseOrderId}`);
+        router.push(`/procurement/purchase-orders/${next.purchaseOrderId}`);
         return;
       }
       setBatchDrafts(next.drafts);

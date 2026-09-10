@@ -546,7 +546,7 @@ export function PurchaseOrderDraftWorkspace({
           await queryClient.invalidateQueries({
             queryKey: getListInternalPurchaseOrdersQueryKey(),
           });
-          router.replace(`/purchasing/${result.data.id}`);
+          router.replace(`/procurement/purchase-orders/${result.data.id}`);
           return;
         }
         setSaveState("error");

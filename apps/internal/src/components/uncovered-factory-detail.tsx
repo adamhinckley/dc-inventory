@@ -155,7 +155,7 @@ function SkuCell({ row }: { row: UncoveredRow }) {
     <div className="flex min-w-0 flex-col gap-1">
       <span className="truncate font-medium">{row.sku}</span>
       {row.draftPurchaseOrder ? (
-        <Link href={`/purchasing/${row.draftPurchaseOrder.id}`} className="w-fit">
+        <Link href={`/procurement/purchase-orders/${row.draftPurchaseOrder.id}`} className="w-fit">
           <Chip
             style={{ "--chip-color": "var(--color-status-open)" } as CSSProperties}
           >
@@ -372,7 +372,7 @@ export function UncoveredFactoryDetail({
         return;
       }
       if (next.action === "navigate") {
-        router.push(`/purchasing/${next.purchaseOrderId}`);
+        router.push(`/procurement/purchase-orders/${next.purchaseOrderId}`);
         return;
       }
       setBatchDrafts(next.drafts);
@@ -396,7 +396,7 @@ export function UncoveredFactoryDetail({
     return (
       <p className="text-body-sm text-fg-secondary">
         Factory not found.{" "}
-        <Link href="/purchasing/uncovered" className="text-link hover:text-link-hover">
+        <Link href="/procurement" className="text-link hover:text-link-hover">
           Back to factories
         </Link>
       </p>
@@ -406,7 +406,7 @@ export function UncoveredFactoryDetail({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-form-section">
       <p className="text-body-sm text-fg-secondary">
-        <Link href="/purchasing/uncovered" className="text-link hover:text-link-hover">
+        <Link href="/procurement" className="text-link hover:text-link-hover">
           ← All factories
         </Link>
       </p>

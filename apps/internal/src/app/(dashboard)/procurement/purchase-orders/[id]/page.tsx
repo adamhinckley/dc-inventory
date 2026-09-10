@@ -1,6 +1,6 @@
 import { PurchaseOrderWorkspace } from "../../../../../components/purchase-order-workspace";
 
-export default async function Purchasing2PurchaseOrderPage({
+export default async function ProcurementPurchaseOrderPage({
   params,
 }: {
   params: Promise<{ id: string }>;

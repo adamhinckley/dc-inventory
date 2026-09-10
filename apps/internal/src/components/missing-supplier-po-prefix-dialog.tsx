@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { SupplierDetail } from "../lib/supplier-types";
 
 function supplierEditHref(supplierId: string): string {
-  return `/purchasing/suppliers/${supplierId}`;
+  return `/procurement/suppliers/${supplierId}`;
 }
 
 export function MissingSupplierPoPrefixDialog({

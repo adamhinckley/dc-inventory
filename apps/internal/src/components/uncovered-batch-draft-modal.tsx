@@ -4,13 +4,14 @@ import { Button, Dialog } from "@dc-inventory/ui";
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { UncoveredBatchDraftRow } from "../lib/uncovered-draft-workflow";
+import { purchasing2PurchaseOrderHref } from "../lib/purchasing-2-uncovered-constants";
 
 export function UncoveredBatchDraftModal({
   open,
   drafts,
   unmappedNotice,
   onOpenChange,
-  purchaseOrderHref = (purchaseOrderId) => `/purchasing/${purchaseOrderId}`,
+  purchaseOrderHref = purchasing2PurchaseOrderHref,
 }: {
   open: boolean;
   drafts: readonly UncoveredBatchDraftRow[];

@@ -15,14 +15,20 @@ export function Purchasing2Workspace({ children }: { children: ReactNode }) {
   return (
     <RouterTabs
       className="flex min-h-0 flex-1 flex-col"
-      data-testid="purchasing-2-page-router-tabs"
+      data-testid="procurement-page-router-tabs"
     >
       <RouterTabs.List>
-        <RouterTabs.Trigger href={purchasing2TabHref("/purchasing-2", search)} exact>
-          Draft POs
+        <RouterTabs.Trigger href={purchasing2TabHref("/procurement", search)} exact>
+          Pre-order
         </RouterTabs.Trigger>
-        <RouterTabs.Trigger href={purchasing2TabHref("/purchasing-2/uncovered", search)}>
-          Uncovered
+        <RouterTabs.Trigger href={purchasing2TabHref("/procurement/purchase-orders", search)}>
+          Purchase Orders
+        </RouterTabs.Trigger>
+        <RouterTabs.Trigger href={purchasing2TabHref("/procurement/receiving", search)}>
+          Receiving
+        </RouterTabs.Trigger>
+        <RouterTabs.Trigger href={purchasing2TabHref("/procurement/suppliers", search)}>
+          Suppliers
         </RouterTabs.Trigger>
       </RouterTabs.List>
       <RouterTabs.Panel className="flex min-h-0 flex-1 flex-col p-0 pt-card">
