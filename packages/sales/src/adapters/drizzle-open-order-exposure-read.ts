@@ -11,8 +11,20 @@ export class DrizzleOpenOrderExposureReadAdapter implements IOpenOrderExposureRe
     organizationId: OrganizationId,
     customerId: CustomerId,
   ): Promise<number> {
-    const exposureByCustomer = await this.listOpenOrderExposureCentsByCustomer(organizationId);
-    return exposureByCustomer.get(customerId) ?? 0;
+    const [row] = await this.db
+      .select({
+        totalCents: sql<number>`coalesce(sum((${orderLines.qty} * ${orderLines.unitPriceCents})::bigint), 0)::int`,
+      })
+      .from(orders)
+      .innerJoin(orderLines, eq(orderLines.orderId, orders.id))
+      .where(
+        and(
+          eq(orders.organizationId, organizationId),
+          eq(orders.customerId, customerId),
+          eq(orders.status, "confirmed"),
+        ),
+      );
+    return row?.totalCents ?? 0;
   }
 
   async listOpenOrderExposureCentsByCustomer(
