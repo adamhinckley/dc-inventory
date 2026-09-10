@@ -14,6 +14,7 @@ import {
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
+import { AvailableCreditReadAdapter } from "../src/adapters/available-credit-read.js";
 import { InMemoryArCustomerReadPort } from "../src/adapters/in-memory-ar-customer-read-port.js";
 import { InMemoryArOrgReadPort } from "../src/adapters/in-memory-ar-org-read-port.js";
 import { InMemoryCustomerArProfileReadPort } from "../src/adapters/in-memory-customer-ar-profile-read.js";
@@ -55,6 +56,11 @@ async function readHarness() {
   const customerProfiles = new InMemoryCustomerArProfileReadPort(customers);
   const arOrgRead = new InMemoryArOrgReadPort(uow.invoices, customerProfiles);
   const openOrderExposure = new InMemoryOpenOrderExposureReadAdapter(salesOrders);
+  const availableCreditRead = new AvailableCreditReadAdapter(
+    arCustomerRead,
+    customerProfiles,
+    openOrderExposure,
+  );
   const lastOrderDate = new InMemoryLastOrderDateReadPort();
   const customerBalancesList = new InMemoryCustomerBalancesListQuery(
     arOrgRead,
@@ -80,6 +86,7 @@ async function readHarness() {
       openOrderExposure,
       lastOrderDate,
     ),
+    availableCreditRead,
     getAccountingSummary: new GetAccountingSummaryUseCase(arOrgRead),
     listCustomerBalances: new ListCustomerBalancesQuery(customerBalancesList),
     listPaymentsReceived: new ListPaymentsReceivedQuery(paymentsReceivedList),
@@ -344,6 +351,33 @@ async function seedReadModelFixture(h: Awaited<ReturnType<typeof readHarness>>) 
 }
 
 describe("AR read model (ADA-360)", () => {
+  it("available credit read matches customer summary availableCreditCents", async () => {
+    const h = await readHarness();
+    await seedReadModelFixture(h);
+
+    for (const customerId of [
+      CUSTOMER_OPEN,
+      CUSTOMER_PARTIAL,
+      CUSTOMER_PAST_DUE,
+      CUSTOMER_PAID,
+      CUSTOMER_VOIDED,
+      CUSTOMER_ADJUSTED,
+      CUSTOMER_CREDIT,
+    ]) {
+      const summary = await h.getCustomerSummary.execute({
+        organizationId: DEFAULT_ORG,
+        customerId,
+        asOf: AS_OF,
+      });
+      const availableCredit = await h.availableCreditRead.getAvailableCreditCents({
+        organizationId: DEFAULT_ORG,
+        customerId,
+        asOf: AS_OF,
+      });
+      expect(availableCredit).toBe(summary.availableCreditCents);
+    }
+  });
+
   it("customer summary covers open, partial, past-due, paid, voided, adjusted, and credit-held cases", async () => {
     const h = await readHarness();
     await seedReadModelFixture(h);

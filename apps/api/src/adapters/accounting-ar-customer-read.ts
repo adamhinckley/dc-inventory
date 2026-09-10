@@ -46,7 +46,7 @@ export class DrizzleArCustomerReadPort implements IArCustomerReadPort {
     const [invoiceRows, paymentRows, planRows] = await Promise.all([
       this.db.select().from(invoices).where(customerScope),
       this.db.select().from(payments).where(paymentScope),
-      this.db.select().from(paymentPlans).where(planScope),
+      this.db.select().from(paymentPlans).where(planScope).limit(1),
     ]);
 
     const parsedInvoices = invoiceRows.map(toInvoice);

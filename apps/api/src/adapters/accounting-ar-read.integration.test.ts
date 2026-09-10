@@ -40,6 +40,28 @@ import { DrizzlePaymentsReceivedListQuery } from "./accounting-payments-received
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
 const integrationEnabled = process.env.AR_READ_INTEGRATION === "1";
 
+type CapturedQuery = {
+  text: string;
+  parameters: unknown[];
+};
+
+function invoiceWhereClause(query: string): string {
+  const whereIndex = query.search(/\bwhere\b/i);
+  return whereIndex < 0 ? "" : query.slice(whereIndex);
+}
+
+function assertCustomerScopedInvoiceQuery(
+  entry: CapturedQuery,
+  customerId: CustomerId,
+): void {
+  const where = invoiceWhereClause(entry.text);
+  expect(where.length).toBeGreaterThan(0);
+  expect(where).toMatch(/customer_id\s*=\s*\$/);
+  expect(where).not.toMatch(/organization_id\s*=\s*\$\d+\s*;?\s*$/);
+  expect(entry.parameters.map(String)).toContain(String(customerId));
+}
+
+// Runs in required CI via scripts/ci-compose-migrate-ready.sh (AR_READ_INTEGRATION=1).
 describe.skipIf(!integrationEnabled || !databaseUrl)(
   "PostgreSQL AR read model matches in-memory projections",
   () => {
@@ -318,11 +340,11 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       expect(sqlData.invoices.every((invoice) => invoice.customerId === customerId)).toBe(true);
       expect(sqlData.invoices.some((invoice) => invoice.id === otherInvoiceId)).toBe(false);
 
-      const capturedQueries: string[] = [];
+      const capturedQueries: CapturedQuery[] = [];
       const tracedSql = postgres(databaseUrl, {
         max: 1,
-        debug: (_connection, query) => {
-          capturedQueries.push(query);
+        debug: (_connection, query, parameters) => {
+          capturedQueries.push({ text: query, parameters: [...parameters] });
         },
       });
       const tracedDb = drizzle(tracedSql, { schema });
@@ -330,19 +352,15 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       await tracedCustomerRead.loadCustomerData(organizationId, customerId);
       await tracedSql.end({ timeout: 5 });
 
-      const invoiceQueries = capturedQueries.filter((query) =>
-        query.includes("accounting.invoices"),
+      const invoiceQueries = capturedQueries.filter((entry) =>
+        entry.text.includes("accounting.invoices"),
       );
       expect(invoiceQueries.length).toBeGreaterThan(0);
-      for (const query of invoiceQueries) {
-        expect(query).toContain("customer_id");
+      for (const entry of invoiceQueries) {
+        assertCustomerScopedInvoiceQuery(entry, customerId);
       }
       expect(
-        invoiceQueries.some(
-          (query) =>
-            query.includes("organization_id") &&
-            !query.includes("customer_id"),
-        ),
+        invoiceQueries.some((entry) => entry.parameters.map(String).includes(String(otherCustomerId))),
       ).toBe(false);
     });
   },
