@@ -53,6 +53,7 @@ import {
   DrizzleShipToRepository,
   GetBillToUseCase,
   GetCustomerUseCase,
+  GetWholesaleAccountDetailUseCase,
   GetWholesaleCustomerUseCase,
   InMemoryBillToRepository,
   InMemoryContactRepository,
@@ -354,6 +355,7 @@ export type CustomersHttpServices = {
   createBillTo: CreateBillToUseCase;
   updateBillTo: UpdateBillToUseCase;
   copyBillToFromDefaultShipTo: CopyBillToFromDefaultShipToUseCase;
+  getWholesaleAccountDetail: GetWholesaleAccountDetailUseCase;
   getWholesaleCustomer: GetWholesaleCustomerUseCase;
   updateWholesaleCustomerNote: UpdateWholesaleCustomerNoteUseCase;
 };
@@ -635,6 +637,13 @@ function customersServices(
       customerRepo,
       shipToRepo,
       billToRepo,
+    ),
+    getWholesaleAccountDetail: new GetWholesaleAccountDetailUseCase(
+      customerRepo,
+      shipToRepo,
+      billToRepo,
+      contactRepo,
+      exemptionRepo,
     ),
     getWholesaleCustomer: new GetWholesaleCustomerUseCase(customerRepo),
     updateWholesaleCustomerNote: new UpdateWholesaleCustomerNoteUseCase(customerRepo),

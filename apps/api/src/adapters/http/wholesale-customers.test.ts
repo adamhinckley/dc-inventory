@@ -99,6 +99,34 @@ async function staffActingCookie(app: Awaited<ReturnType<typeof buildApp>>) {
 }
 
 describe("wholesale customers HTTP", () => {
+  it("reads bundled account detail without staff note", async () => {
+    const app = await startSeededApp();
+    const cookie = await wholesaleCookie(app);
+
+    const detail = await app.inject({
+      method: "GET",
+      url: "/wholesale/account/detail",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(detail.statusCode).toBe(200);
+    const body = detail.json() as {
+      account: Record<string, unknown>;
+      shipTos: unknown[];
+      billTo: unknown;
+      contacts: unknown[];
+      certificates: unknown[];
+    };
+    expect(body.account).toMatchObject({
+      customerNumber: "CUST-00001",
+      accountStatus: "active",
+    });
+    expect(body.account).not.toHaveProperty("staffNote");
+    expect(body.shipTos).toEqual([]);
+    expect(body.billTo).toBeNull();
+    expect(body.contacts).toEqual([]);
+    expect(body.certificates).toEqual([]);
+  });
+
   it("reads own account without staff note and edits customer note only", async () => {
     const app = await startSeededApp();
     const cookie = await wholesaleCookie(app);
@@ -304,6 +332,7 @@ describe("wholesale customers HTTP", () => {
     const cookie = await staffActingCookie(app);
 
     for (const { method, url } of [
+      { method: "GET", url: "/wholesale/account/detail" },
       { method: "GET", url: "/wholesale/contacts" },
       { method: "GET", url: "/wholesale/bill-to" },
       { method: "GET", url: "/wholesale/exemption-certificates" },
