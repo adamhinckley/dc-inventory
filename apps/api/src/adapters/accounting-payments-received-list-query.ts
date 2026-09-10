@@ -7,7 +7,7 @@ import {
 } from "@dc-inventory/accounting";
 import { paymentApplications, payments } from "@dc-inventory/accounting/schema";
 import { CustomerId } from "@dc-inventory/shared-kernel";
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { customers } from "@dc-inventory/customers/schema";
 import type { AppDrizzle } from "../infrastructure/db.js";
 
@@ -40,6 +40,14 @@ function customerJoin() {
   );
 }
 
+function appliedCentsForPayment() {
+  return sql<number>`coalesce((
+    select sum(${paymentApplications.amountCents})
+    from ${paymentApplications}
+    where ${paymentApplications.paymentId} = ${payments.id}
+  ), 0)`;
+}
+
 export class DrizzlePaymentsReceivedListQuery implements IPaymentsReceivedListQuery {
   constructor(private readonly db: AppDrizzle) {}
 
@@ -54,6 +62,7 @@ export class DrizzlePaymentsReceivedListQuery implements IPaymentsReceivedListQu
     const total = Number(countRows[0]?.total ?? 0);
 
     const offset = (query.page - 1) * query.pageSize;
+    const appliedCentsExpr = appliedCentsForPayment();
     const pageRows = await this.db
       .select({
         id: payments.id,
@@ -68,6 +77,8 @@ export class DrizzlePaymentsReceivedListQuery implements IPaymentsReceivedListQu
         note: payments.note,
         voidReason: payments.voidReason,
         voidedAt: payments.voidedAt,
+        appliedCents: appliedCentsExpr,
+        unappliedCents: sql<number>`case when ${payments.voidedAt} is not null then 0 else ${payments.amountCents} - ${appliedCentsExpr} end`,
       })
       .from(payments)
       .innerJoin(customers, customerJoin())
@@ -76,44 +87,22 @@ export class DrizzlePaymentsReceivedListQuery implements IPaymentsReceivedListQu
       .limit(query.pageSize)
       .offset(offset);
 
-    const appliedByPaymentId = new Map<string, number>();
-    const paymentIds = pageRows.map((row) => row.id);
-    if (paymentIds.length > 0) {
-      const appliedRows = await this.db
-        .select({
-          paymentId: paymentApplications.paymentId,
-          appliedCents: sql<number>`coalesce(sum(${paymentApplications.amountCents}), 0)`.as(
-            "applied_cents",
-          ),
-        })
-        .from(paymentApplications)
-        .where(inArray(paymentApplications.paymentId, paymentIds))
-        .groupBy(paymentApplications.paymentId);
-      for (const row of appliedRows) {
-        appliedByPaymentId.set(row.paymentId, Number(row.appliedCents));
-      }
-    }
-
-    const items: PaymentReceivedRow[] = pageRows.map((row) => {
-      const appliedCents = appliedByPaymentId.get(row.id) ?? 0;
-      const voided = row.voidedAt != null;
-      return {
-        paymentId: PaymentId.parse(row.id),
-        receivedAt: row.receivedAt,
-        customerId: CustomerId.parse(row.customerId),
-        customerNumber: row.customerNumber,
-        customerName: row.customerName,
-        amountCents: row.amountCents,
-        currency: row.currency,
-        method: row.method ?? "other",
-        reference: row.reference ?? null,
-        note: row.note ?? null,
-        voidReason: row.voidReason ?? null,
-        appliedCents,
-        unappliedCents: voided ? 0 : row.amountCents - appliedCents,
-        voided,
-      };
-    });
+    const items: PaymentReceivedRow[] = pageRows.map((row) => ({
+      paymentId: PaymentId.parse(row.id),
+      receivedAt: row.receivedAt,
+      customerId: CustomerId.parse(row.customerId),
+      customerNumber: row.customerNumber,
+      customerName: row.customerName,
+      amountCents: row.amountCents,
+      currency: row.currency,
+      method: row.method ?? "other",
+      reference: row.reference ?? null,
+      note: row.note ?? null,
+      voidReason: row.voidReason ?? null,
+      appliedCents: Number(row.appliedCents),
+      unappliedCents: Number(row.unappliedCents),
+      voided: row.voidedAt != null,
+    }));
 
     return { items, total };
   }

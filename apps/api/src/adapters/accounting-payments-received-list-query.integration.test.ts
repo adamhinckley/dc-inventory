@@ -244,6 +244,9 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       const tracedDb = drizzle(tracedSql, { schema });
       const tracedQuery = new DrizzlePaymentsReceivedListQuery(tracedDb);
 
+      await tracedSql`select 1`;
+      capturedQueries.length = 0;
+
       await tracedQuery.list({
         organizationId,
         from,
@@ -255,15 +258,19 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       });
       await tracedSql.end({ timeout: 5 });
 
-      expect(capturedQueries.length).toBeGreaterThan(0);
-      expect(capturedQueries.length).toBeLessThanOrEqual(3);
+      const businessQueries = capturedQueries.filter(
+        (entry) =>
+          referencesAccountingTable(entry.text, "payments") ||
+          /payment_applications/i.test(entry.text),
+      );
+
+      expect(businessQueries.length).toBe(2);
+      expect(businessQueries.length).toBeLessThanOrEqual(3);
       expect(
-        capturedQueries.some((entry) => referencesAccountingTable(entry.text, "payments")),
+        businessQueries.some((entry) => referencesAccountingTable(entry.text, "payments")),
       ).toBe(true);
       expect(
-        capturedQueries.some((entry) =>
-          /payment_applications/i.test(entry.text),
-        ),
+        businessQueries.some((entry) => /payment_applications/i.test(entry.text)),
       ).toBe(true);
     });
   },
