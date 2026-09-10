@@ -852,13 +852,6 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
           appliedCents: row.appliedCents,
           unappliedCents: row.unappliedCents,
           voided: row.voided,
-          applications: row.applications.map((application) => ({
-            id: application.id,
-            invoiceId: application.invoiceId,
-            amountCents: application.amountCents,
-            currency: application.currency,
-            createdAt: application.createdAt,
-          })),
         })),
         page: result.page,
         pageSize: result.pageSize,

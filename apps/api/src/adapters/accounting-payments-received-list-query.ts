@@ -1,57 +1,109 @@
 import {
-  buildPaymentReceivedRow,
-  DrizzleInvoiceRepository,
-  listPaymentsReceivedInMemory,
   PaymentId,
-  type AccountingDrizzle,
   type IPaymentsReceivedListQuery,
+  type PaymentReceivedRow,
   type PaymentsReceivedListPage,
   type PaymentsReceivedListQuery,
 } from "@dc-inventory/accounting";
-import { payments } from "@dc-inventory/accounting/schema";
+import { paymentApplications, payments } from "@dc-inventory/accounting/schema";
 import { CustomerId } from "@dc-inventory/shared-kernel";
-import { eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { customers } from "@dc-inventory/customers/schema";
 import type { AppDrizzle } from "../infrastructure/db.js";
-import { DrizzleCustomerArProfileReadPort } from "./accounting-customer-ar-profile-read.js";
+
+function paymentListWhere(query: PaymentsReceivedListQuery) {
+  return and(
+    eq(payments.organizationId, query.organizationId),
+    gte(payments.receivedAt, query.from),
+    lte(payments.receivedAt, query.to),
+  );
+}
+
+function paymentListOrderBy(query: PaymentsReceivedListQuery) {
+  const direction = query.sortOrder === "asc" ? asc : desc;
+  const tieBreak = desc(payments.id);
+  switch (query.sortBy) {
+    case "amount":
+      return [direction(payments.amountCents), tieBreak];
+    case "customerName":
+      return [direction(customers.name), tieBreak];
+    case "receivedAt":
+    default:
+      return [direction(payments.receivedAt), tieBreak];
+  }
+}
+
+function customerJoin() {
+  return and(
+    eq(payments.organizationId, customers.organizationId),
+    eq(payments.customerId, customers.id),
+  );
+}
+
+function appliedCentsForPayment() {
+  return sql<number>`coalesce((
+    select sum(${paymentApplications.amountCents})
+    from ${paymentApplications}
+    where ${paymentApplications.paymentId} = ${payments.id}
+  ), 0)`;
+}
 
 export class DrizzlePaymentsReceivedListQuery implements IPaymentsReceivedListQuery {
   constructor(private readonly db: AppDrizzle) {}
 
   async list(query: PaymentsReceivedListQuery): Promise<PaymentsReceivedListPage> {
-    const profiles = await new DrizzleCustomerArProfileReadPort(this.db).listAll(
-      query.organizationId,
-    );
-    const profileByCustomerId = new Map(
-      profiles.map((profile) => [profile.customerId, profile]),
-    );
-    const repository = new DrizzleInvoiceRepository(
-      this.db as unknown as AccountingDrizzle,
-    );
-    const paymentRows = await this.db
-      .select()
+    const where = paymentListWhere(query);
+
+    const countRows = await this.db
+      .select({ total: count() })
       .from(payments)
-      .where(eq(payments.organizationId, query.organizationId));
+      .innerJoin(customers, customerJoin())
+      .where(where);
+    const total = Number(countRows[0]?.total ?? 0);
 
-    const rows = [];
-    for (const row of paymentRows) {
-      const profile = profileByCustomerId.get(CustomerId.parse(row.customerId));
-      if (profile === undefined) {
-        continue;
-      }
-      const payment = await repository.findPaymentById(
-        query.organizationId,
-        PaymentId.parse(row.id),
-      );
-      if (payment === null) {
-        continue;
-      }
-      const applications = await repository.listApplicationsByPayment(
-        query.organizationId,
-        payment.id,
-      );
-      rows.push(buildPaymentReceivedRow(payment, applications, profile));
-    }
+    const offset = (query.page - 1) * query.pageSize;
+    const appliedCentsExpr = appliedCentsForPayment();
+    const pageRows = await this.db
+      .select({
+        id: payments.id,
+        receivedAt: payments.receivedAt,
+        customerId: payments.customerId,
+        customerNumber: customers.customerNumber,
+        customerName: customers.name,
+        amountCents: payments.amountCents,
+        currency: payments.currency,
+        method: payments.method,
+        reference: payments.reference,
+        note: payments.note,
+        voidReason: payments.voidReason,
+        voidedAt: payments.voidedAt,
+        appliedCents: appliedCentsExpr,
+        unappliedCents: sql<number>`case when ${payments.voidedAt} is not null then 0 else ${payments.amountCents} - ${appliedCentsExpr} end`,
+      })
+      .from(payments)
+      .innerJoin(customers, customerJoin())
+      .where(where)
+      .orderBy(...paymentListOrderBy(query))
+      .limit(query.pageSize)
+      .offset(offset);
 
-    return listPaymentsReceivedInMemory(rows, query);
+    const items: PaymentReceivedRow[] = pageRows.map((row) => ({
+      paymentId: PaymentId.parse(row.id),
+      receivedAt: row.receivedAt,
+      customerId: CustomerId.parse(row.customerId),
+      customerNumber: row.customerNumber,
+      customerName: row.customerName,
+      amountCents: row.amountCents,
+      currency: row.currency,
+      method: row.method ?? "other",
+      reference: row.reference ?? null,
+      note: row.note ?? null,
+      voidReason: row.voidReason ?? null,
+      appliedCents: Number(row.appliedCents),
+      unappliedCents: Number(row.unappliedCents),
+      voided: row.voidedAt != null,
+    }));
+
+    return { items, total };
   }
 }

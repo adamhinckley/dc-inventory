@@ -81,7 +81,6 @@ export type { ILastOrderDateReadPort } from "./domain/ports/last-order-date-read
 export type { IOpenOrderExposureReadPort } from "./domain/ports/open-order-exposure-read.js";
 export type {
   IPaymentsReceivedListQuery,
-  PaymentReceivedApplicationRow,
   PaymentReceivedRow,
   PaymentsReceivedListPage,
   PaymentsReceivedListQuery,

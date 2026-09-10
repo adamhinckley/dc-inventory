@@ -605,7 +605,7 @@ describe("internal accounting HTTP", () => {
     expect(payments.json()).toMatchObject({ total: 1, page: 1, pageSize: 25 });
   });
 
-  it("returns payment note, applications, and void reason on list endpoints", async () => {
+  it("returns payment note and void reason on list endpoints", async () => {
     const { app, openInvoice } = await startAccountingApp();
     const cookie = await staffCookie(app);
 
@@ -686,15 +686,14 @@ describe("internal accounting HTTP", () => {
       .items.find((row: { paymentId: string }) => row.paymentId === paymentId) as {
       note: string | null;
       voidReason: string | null;
-      applications: Array<{ invoiceId: string; amountCents: number }>;
+      appliedCents: number;
+      unappliedCents: number;
+      voided: boolean;
     };
     expect(orgRow.note).toBe("front desk check");
     expect(orgRow.voidReason).toBe("duplicate deposit");
-    expect(orgRow.applications).toEqual([
-      expect.objectContaining({
-        invoiceId: openInvoice.id,
-        amountCents: 250,
-      }),
-    ]);
+    expect(orgRow.voided).toBe(true);
+    expect(orgRow.appliedCents).toBe(250);
+    expect(orgRow.unappliedCents).toBe(0);
   });
 });

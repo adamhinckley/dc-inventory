@@ -242,13 +242,6 @@ export function buildPaymentReceivedRow(
     appliedCents,
     unappliedCents: computeUnappliedCents(payment, applications, asOf),
     voided: payment.voidedAt != null,
-    applications: applications.map((application) => ({
-      id: application.id,
-      invoiceId: application.invoiceId,
-      amountCents: application.amount.amountMinor,
-      currency: application.amount.currency,
-      createdAt: application.createdAt,
-    })),
   };
 }
 

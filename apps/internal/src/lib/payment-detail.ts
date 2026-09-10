@@ -25,7 +25,7 @@ export type PaymentDetailRecord = {
 };
 
 function mapApplications(
-  applications: CustomerPaymentRow["applications"] | AccountingPaymentRow["applications"],
+  applications: CustomerPaymentRow["applications"],
 ): PaymentDetailApplication[] {
   return applications.map((application) => ({
     id: application.id,
@@ -58,6 +58,7 @@ export function paymentDetailFromCustomerPayment(
 
 export function paymentDetailFromAccountingPayment(
   row: AccountingPaymentRow,
+  customerPayment?: CustomerPaymentRow | null,
 ): PaymentDetailRecord {
   return {
     id: row.paymentId,
@@ -72,7 +73,10 @@ export function paymentDetailFromAccountingPayment(
     unappliedCents: row.unappliedCents,
     voided: row.voided,
     voidReason: row.voidReason,
-    applications: mapApplications(row.applications),
+    applications:
+      customerPayment === undefined || customerPayment === null
+        ? []
+        : mapApplications(customerPayment.applications),
   };
 }
 

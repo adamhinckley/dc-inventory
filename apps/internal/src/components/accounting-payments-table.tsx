@@ -3,6 +3,7 @@
 import {
   getListInternalCustomerInvoicesQueryKey,
   getListInternalCustomerInvoicesQueryOptions,
+  getListInternalCustomerPaymentsQueryOptions,
   listInternalAccountingPaymentsTable,
   useListInternalAccountingPayments,
   useListInternalCustomerInvoices,
@@ -199,10 +200,17 @@ export function AccountingPaymentsTable() {
   const openPaymentDetail = useCallback(
     async (row: AccountingPaymentRow) => {
       setActionCustomerId(row.customerId);
-      await queryClient.prefetchQuery(
-        getListInternalCustomerInvoicesQueryOptions(row.customerId, { includePaid: true }),
-      );
-      setDetail(paymentDetailFromAccountingPayment(row));
+      const [, customerPayments] = await Promise.all([
+        queryClient.fetchQuery(
+          getListInternalCustomerInvoicesQueryOptions(row.customerId, { includePaid: true }),
+        ),
+        queryClient.fetchQuery(getListInternalCustomerPaymentsQueryOptions(row.customerId)),
+      ]);
+      const customerPayment =
+        customerPayments.status === 200
+          ? customerPayments.data.items.find((payment) => payment.id === row.paymentId)
+          : undefined;
+      setDetail(paymentDetailFromAccountingPayment(row, customerPayment));
     },
     [queryClient],
   );
