@@ -4,6 +4,7 @@ import {
   salesOrderCatalogLookupPending,
   salesOrderConfirmDisabled,
   salesOrderLinesResolved,
+  salesOrderLineVendorLabel,
   salesOrderLineWritesEqual,
   salesOrderShipDisabled,
   salesOrderWriteLines,
@@ -28,6 +29,13 @@ describe("sales order line math", () => {
     name: "Product B",
     qty: 1,
   };
+
+  it("shows the catalog supplier as the line vendor, or a dash when missing", () => {
+    expect(salesOrderLineVendorLabel("Acme Supply")).toBe("Acme Supply");
+    expect(salesOrderLineVendorLabel("  ")).toBe("—");
+    expect(salesOrderLineVendorLabel(null)).toBe("—");
+    expect(salesOrderLineVendorLabel(undefined)).toBe("—");
+  });
 
   it("builds replace-lines payloads from draft rows", () => {
     expect(salesOrderWriteLines([lineA, lineB])).toEqual([

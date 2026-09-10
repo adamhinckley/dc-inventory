@@ -26,10 +26,12 @@ import {
 import {
   lineSubtotalCents,
   salesOrderCancelDisabled,
+  salesOrderLineVendorLabel,
   salesOrderShipDisabled,
   salesOrderSubtotalCents,
 } from "../lib/sales-order-line-math";
 import type { SalesOrderLineSnapshot } from "../lib/sales-order-types";
+import { useCatalogProductsBySku } from "../lib/use-catalog-products-by-sku";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 
 function CustomerName({ customerId }: { customerId: string }) {
@@ -122,17 +124,21 @@ export function SalesOrderFrozenWorkspace({
 
   useBreadcrumbLabel(salesOrderId, documentNumber);
 
-  const rows = useMemo<SalesOrderLineSnapshot[]>(
+  const lineSkus = useMemo(() => lines.map((line) => line.sku), [lines]);
+  const { productBySku } = useCatalogProductsBySku(lineSkus);
+
+  const rows = useMemo<Array<SalesOrderLineSnapshot & { vendor: string }>>(
     () =>
       lines.map((line) => ({
         rowKey: line.id,
         sku: line.sku,
         name: line.name,
+        vendor: salesOrderLineVendorLabel(productBySku.get(line.sku)?.supplierName),
         qty: line.qty,
         unitPriceCents: line.unitPriceCents,
         currency: line.currency,
       })),
-    [lines],
+    [lines, productBySku],
   );
 
   const currency = rows[0]?.currency ?? "USD";
@@ -143,6 +149,7 @@ export function SalesOrderFrozenWorkspace({
     columns: [
       { id: "sku", label: "SKU", sort: false as const },
       { id: "name", label: "Product", sort: false as const },
+      { id: "vendor", label: "Vendor", sort: false as const },
       { id: "qty", label: "Qty", sort: false as const, align: "right" as const },
       {
         id: "unitPrice",

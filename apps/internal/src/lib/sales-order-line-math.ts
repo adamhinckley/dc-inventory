@@ -4,6 +4,13 @@ export function salesOrderLineRowKey(line: { sku: string; id?: string }): string
   return line.id ?? line.sku;
 }
 
+export function salesOrderLineVendorLabel(
+  supplierName: string | null | undefined,
+): string {
+  const name = supplierName?.trim() ?? "";
+  return name.length > 0 ? name : "—";
+}
+
 export function salesOrderWriteLines(
   lines: readonly SalesOrderLineDraft[],
 ): Array<{ productId: string; qty: number }> {

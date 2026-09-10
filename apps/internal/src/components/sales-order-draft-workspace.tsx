@@ -51,6 +51,7 @@ import {
   salesOrderLineRowKey,
   salesOrderLinesResolved,
   salesOrderLineWritesEqual,
+  salesOrderLineVendorLabel,
   salesOrderSubtotalCents,
   salesOrderWriteLines,
 } from "../lib/sales-order-line-math";
@@ -59,7 +60,10 @@ import { useCatalogProductsBySku } from "../lib/use-catalog-products-by-sku";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { DashboardTopbarPortal } from "./purchase-order-workspace-shared";
 
-type SalesOrderLineRow = SalesOrderLineDraft & { rowIndex: number };
+type SalesOrderLineRow = SalesOrderLineDraft & {
+  rowIndex: number;
+  vendor: string;
+};
 
 type SalesOrderLineResponse = {
   id: string;
@@ -420,8 +424,13 @@ export function SalesOrderDraftWorkspace({
   }, []);
 
   const rows = useMemo<SalesOrderLineRow[]>(
-    () => lines.map((line, rowIndex) => ({ ...line, rowIndex })),
-    [lines],
+    () =>
+      lines.map((line, rowIndex) => ({
+        ...line,
+        rowIndex,
+        vendor: salesOrderLineVendorLabel(productBySku.get(line.sku)?.supplierName),
+      })),
+    [lines, productBySku],
   );
 
   const table = useTable({
@@ -429,6 +438,7 @@ export function SalesOrderDraftWorkspace({
     columns: [
       { id: "sku", label: "SKU", sort: false as const },
       { id: "name", label: "Product", sort: false as const },
+      { id: "vendor", label: "Vendor", sort: false as const },
       {
         id: "qty",
         label: "Qty",
