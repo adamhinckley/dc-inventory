@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cancelPurchaseOrderErrorMessage,
   createPurchaseOrderErrorMessage,
   issuePurchaseOrderErrorMessage,
   unissuePurchaseOrderErrorMessage,
@@ -48,6 +49,15 @@ describe("purchase-order action errors", () => {
     );
     expect(unissuePurchaseOrderErrorMessage({ status: 409, data: { error: "conflict" } })).toBe(
       "This purchase order could not be unissued because receiving has started.",
+    );
+    expect(cancelPurchaseOrderErrorMessage({ status: 409, data: { error: "conflict" } })).toBe(
+      "This purchase order could not be cancelled due to a conflict.",
+    );
+    expect(cancelPurchaseOrderErrorMessage({ status: 404 })).toBe(
+      "Cancel failed because the purchase order was not found.",
+    );
+    expect(cancelPurchaseOrderErrorMessage({ status: 500 })).toBe(
+      "Could not cancel this purchase order.",
     );
   });
 });

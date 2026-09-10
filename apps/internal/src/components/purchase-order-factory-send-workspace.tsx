@@ -3,6 +3,7 @@
 import {
   getGetInternalPurchaseOrderQueryKey,
   getListInternalPurchaseOrdersQueryKey,
+  useCancelInternalPurchaseOrder,
   useGetInternalPurchaseOrderFactorySend,
   useUnconfirmInternalPurchaseOrder,
 } from "@dc-inventory/api-client-internal";
@@ -12,12 +13,15 @@ import {
   Table,
   useTable,
 } from "@dc-inventory/ui";
-import { Download, Package, Undo2 } from "lucide-react";
+import { Ban, Download, Package, Undo2 } from "lucide-react";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { useMemo, useState, type CSSProperties } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { unissuePurchaseOrderErrorMessage } from "../lib/purchase-order-action-errors";
+import {
+  cancelPurchaseOrderErrorMessage,
+  unissuePurchaseOrderErrorMessage,
+} from "../lib/purchase-order-action-errors";
 import { purchaseOrderStatusPresentation } from "../lib/purchase-order-status-chip";
 import { ProductCaseQtyDialog } from "./product-case-qty-dialog";
 import { downloadPurchaseOrderXlsx } from "../lib/download-purchase-order-xlsx";
@@ -172,6 +176,7 @@ export function PurchaseOrderFactorySendWorkspace({
   const router = useRouter();
   const queryClient = useQueryClient();
   const unconfirmMutation = useUnconfirmInternalPurchaseOrder();
+  const cancelMutation = useCancelInternalPurchaseOrder();
   const [exporting, setExporting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [missingCaseQtyDownloadOpen, setMissingCaseQtyDownloadOpen] =
@@ -190,6 +195,7 @@ export function PurchaseOrderFactorySendWorkspace({
     [lines],
   );
   const canUnissue = status === "confirmed" && totalReceived === 0;
+  const canCancel = canUnissue;
   const statusPresentation = purchaseOrderStatusPresentation(status);
 
   useBreadcrumbLabel(purchaseOrderId, documentNumber);
@@ -249,6 +255,32 @@ export function PurchaseOrderFactorySendWorkspace({
     }
   };
 
+  const cancelPo = async () => {
+    if (!canCancel) {
+      return;
+    }
+    setActionError(null);
+    try {
+      const result = await cancelMutation.mutateAsync({
+        id: purchaseOrderId,
+        data: { idempotencyKey: `cancel-${purchaseOrderId}` },
+      });
+      if (result.status !== 200) {
+        setActionError(cancelPurchaseOrderErrorMessage(result));
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: getGetInternalPurchaseOrderQueryKey(purchaseOrderId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: getListInternalPurchaseOrdersQueryKey(),
+      });
+      router.push("/procurement/purchase-orders");
+    } catch {
+      setActionError("Could not cancel this purchase order.");
+    }
+  };
+
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-region">
       <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
@@ -277,12 +309,24 @@ export function PurchaseOrderFactorySendWorkspace({
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-tight">
+          {canCancel ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={cancelMutation.isPending || unconfirmMutation.isPending}
+              onClick={() => void cancelPo()}
+            >
+              <Ban className="size-icon-lg" aria-hidden />
+              {cancelMutation.isPending ? "Cancelling…" : "Cancel PO"}
+            </Button>
+          ) : null}
           {canUnissue ? (
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              disabled={unconfirmMutation.isPending}
+              disabled={unconfirmMutation.isPending || cancelMutation.isPending}
               onClick={() => void unissuePo()}
             >
               <Undo2 className="size-icon-lg" aria-hidden />
