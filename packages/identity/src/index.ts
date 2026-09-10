@@ -63,7 +63,10 @@ export type { IOrganizationRepository } from "./domain/ports/organization-reposi
 export type { IOpsUserRepository } from "./domain/ports/ops-user-repository.js";
 export type { IPasswordHasher } from "./domain/ports/password-hasher.js";
 export type { ISessionStore } from "./domain/ports/session-store.js";
-export type { IActingCustomerHeaderReadPort } from "./domain/ports/acting-customer-header-read.js";
+export type {
+  ActingCustomerPickerRow,
+  IActingCustomerHeaderReadPort,
+} from "./domain/ports/acting-customer-header-read.js";
 export type { IStaffUserRepository } from "./domain/ports/staff-user-repository.js";
 export type { IWholesaleUserRepository } from "./domain/ports/wholesale-user-repository.js";
 export type { IWholesaleLoginAccountStatusReadPort } from "./domain/ports/wholesale-login-account-status-read.js";

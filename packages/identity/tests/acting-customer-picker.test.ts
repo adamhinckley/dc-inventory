@@ -15,6 +15,7 @@ import { SelectActingCustomerUseCase } from "../src/application/select-acting-cu
 import type { WholesaleLoginAccountStatus } from "../src/domain/account-status.js";
 import type {
   ActingCustomerHeader,
+  ActingCustomerPickerRow,
   IActingCustomerHeaderReadPort,
 } from "../src/domain/ports/acting-customer-header-read.js";
 import type { IWholesaleLoginAccountStatusReadPort } from "../src/domain/ports/wholesale-login-account-status-read.js";
@@ -31,10 +32,32 @@ const OTHER_ORG_ID = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099"
 class InMemoryActingCustomerHeaderReadPort implements IActingCustomerHeaderReadPort {
   constructor(
     private readonly headersByOrg: ReadonlyMap<OrganizationId, readonly ActingCustomerHeader[]>,
+    private readonly wholesaleUsers: InMemoryWholesaleUserRepository,
+    private readonly accountStatuses: ReadonlyMap<CustomerId, WholesaleLoginAccountStatus | null>,
   ) {}
 
-  async list(organizationId: OrganizationId): Promise<readonly ActingCustomerHeader[]> {
-    return this.headersByOrg.get(organizationId) ?? [];
+  async listPickerItems(organizationId: OrganizationId): Promise<readonly ActingCustomerPickerRow[]> {
+    const headers = this.headersByOrg.get(organizationId) ?? [];
+    const wholesaleCustomerIds = new Set(
+      await this.wholesaleUsers.listCustomerIdsWithWholesaleUsers(organizationId),
+    );
+    const items: ActingCustomerPickerRow[] = [];
+    for (const header of headers) {
+      if (!wholesaleCustomerIds.has(header.customerId)) {
+        continue;
+      }
+      const status = this.accountStatuses.get(header.customerId) ?? null;
+      if (status === null || status === "inactive") {
+        continue;
+      }
+      items.push({
+        customerId: header.customerId,
+        businessName: header.businessName,
+        customerNumber: header.customerNumber,
+        accountStatus: status,
+      });
+    }
+    return items;
   }
 
   async findById(
@@ -109,19 +132,23 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
-  const customerHeaders = new InMemoryActingCustomerHeaderReadPort(HEADERS_BY_ORG);
+  const customerHeaders = new InMemoryActingCustomerHeaderReadPort(
+    HEADERS_BY_ORG,
+    wholesaleUsers,
+    ACCOUNT_STATUSES,
+  );
   const accountStatus = new ConfigurableAccountStatusReadPort(ACCOUNT_STATUSES);
   return {
     clock,
     staffUsers,
     wholesaleUsers,
     sessions,
+    customerHeaders,
+    accountStatus,
     listActingCustomers: new ListActingCustomersUseCase(
       sessions,
       staffUsers,
-      wholesaleUsers,
       customerHeaders,
-      accountStatus,
       clock,
     ),
     selectActingCustomer: new SelectActingCustomerUseCase(
@@ -347,5 +374,144 @@ describe("acting customer picker use cases", () => {
 
     expect(select).toEqual({ ok: false, reason: "buyer_session" });
     expect(clear).toEqual({ ok: false, reason: "buyer_session" });
+  });
+
+  it("does not paginate the full customer table when only a few wholesale accounts exist", async () => {
+    const clock = new InMemoryClock(new Date("2026-08-23T02:00:00.000Z"));
+    const staffUsers = new InMemoryStaffUserRepository();
+    const wholesaleUsers = new InMemoryWholesaleUserRepository();
+    const sessions = new InMemorySessionStore();
+    let listCallCount = 0;
+    const wholesaleCustomerIds = [
+      ACTIVE_CUSTOMER_ID,
+      ON_HOLD_CUSTOMER_ID,
+      INACTIVE_CUSTOMER_ID,
+    ] as const;
+    const customerById = new Map(
+      wholesaleCustomerIds.map((customerId, index) => [
+        customerId,
+        {
+          customerId,
+          businessName: `Wholesale ${index + 1}`,
+          customerNumber: `C-${String(index + 1).padStart(5, "0")}`,
+          accountStatus:
+            customerId === INACTIVE_CUSTOMER_ID
+              ? ("inactive" as const)
+              : customerId === ON_HOLD_CUSTOMER_ID
+                ? ("on_hold" as const)
+                : ("active" as const),
+        },
+      ]),
+    );
+    const customerList = {
+      async list(query: { page: number }) {
+        listCallCount += 1;
+        return {
+          items: [],
+          total: 150,
+          page: query.page,
+          pageSize: 100,
+        };
+      },
+      async findById(_organizationId: OrganizationId, customerId: CustomerId) {
+        const customer = customerById.get(customerId);
+        if (customer === undefined) {
+          return null;
+        }
+        return {
+          id: customer.customerId,
+          name: customer.businessName,
+          customerNumber: customer.customerNumber,
+          accountStatus: customer.accountStatus,
+        };
+      },
+    };
+    const headerRead: IActingCustomerHeaderReadPort = {
+      async listPickerItems(organizationId) {
+        const customerIds = await wholesaleUsers.listCustomerIdsWithWholesaleUsers(organizationId);
+        const items: ActingCustomerPickerRow[] = [];
+        for (const customerId of customerIds) {
+          const customer = await customerList.findById(organizationId, customerId);
+          if (customer === null || customer.accountStatus === "inactive") {
+            continue;
+          }
+          items.push({
+            customerId: customer.id,
+            businessName: customer.name,
+            customerNumber: customer.customerNumber,
+            accountStatus: customer.accountStatus,
+          });
+        }
+        return items;
+      },
+      async findById(organizationId, customerId) {
+        const customer = await customerList.findById(organizationId, customerId);
+        if (customer === null) {
+          return null;
+        }
+        return {
+          customerId: customer.id,
+          businessName: customer.name,
+          customerNumber: customer.customerNumber,
+        };
+      },
+    };
+    const listActingCustomers = new ListActingCustomersUseCase(
+      sessions,
+      staffUsers,
+      headerRead,
+      clock,
+    );
+
+    await staffUsers.save({
+      id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
+      email: "staff@local.test",
+      passwordHash: "hash",
+      roles: ["admin"],
+    });
+    for (const [index, customerId] of wholesaleCustomerIds.entries()) {
+      await wholesaleUsers.save({
+        id: WholesaleUserId.parse(
+          `550e8400-e29b-41d4-a716-44665544${String(index).padStart(4, "0")}`,
+        ),
+        organizationId: OrganizationId.DEFAULT,
+        email: `buyer-${index}@local.test`,
+        passwordHash: "hash",
+        customerId,
+      });
+    }
+    const now = clock.now();
+    const session = await sessions.create({
+      audience: "wholesale",
+      organizationId: OrganizationId.DEFAULT,
+      staffUserId: STAFF_ID,
+      wholesaleUserId: null,
+      opsUserId: null,
+      customerId: null,
+      createdAt: now,
+      lastSeenAt: now,
+    });
+
+    const result = await listActingCustomers.execute(session.id);
+
+    expect(listCallCount).toBe(0);
+    expect(result).toEqual({
+      ok: true,
+      items: [
+        {
+          customerId: ACTIVE_CUSTOMER_ID,
+          businessName: "Wholesale 1",
+          customerNumber: "C-00001",
+          accountStatus: "active",
+        },
+        {
+          customerId: ON_HOLD_CUSTOMER_ID,
+          businessName: "Wholesale 2",
+          customerNumber: "C-00002",
+          accountStatus: "on_hold",
+        },
+      ],
+    });
   });
 });
