@@ -5,7 +5,7 @@ import {
   StaffUserId,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryFactorySendCatalogPort } from "../src/adapters/in-memory-factory-send-catalog.js";
 import { InMemoryCatalogSkuLookupPort } from "../src/adapters/in-memory-catalog-sku-lookup.js";
 import { InMemoryWorkbookWriter } from "../src/adapters/in-memory-workbook-writer.js";
@@ -17,7 +17,7 @@ import { CreatePurchaseOrderUseCase } from "../src/application/create-purchase-o
 import { ConfirmPurchaseOrderUseCase } from "../src/application/confirm-purchase-order.js";
 import { ReceivePurchaseOrderUseCase } from "../src/application/receive-purchase-order.js";
 import { ReplacePurchaseOrderLinesUseCase } from "../src/application/replace-purchase-order-lines.js";
-import { SupplierProductId } from "../src/domain/ids.js";
+import { newUuid, SupplierProductId } from "../src/domain/ids.js";
 import { PHASE2_SUPPLIER_NAME, PHASE2_SUPPLIER_VENDOR_NUMBER } from "@dc-inventory/inventory";
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
@@ -351,6 +351,64 @@ describe("ExportPurchaseOrderUseCase", () => {
         canc_date: new Date("2026-01-15T00:00:00.000Z"),
       }),
     ]);
+  });
+
+  it("loads supplier links and catalog case qty with one batch call each", async () => {
+    const h = await harness();
+    const batchSkus = Array.from({ length: 25 }, (_, index) =>
+      Sku.parse(`BATCH-EXPORT-${String(index).padStart(3, "0")}`),
+    );
+    for (const sku of batchSkus) {
+      h.catalog.set(DEFAULT_ORG, sku.value, `Catalog ${sku.value}`);
+      h.factorySendCatalog.set(DEFAULT_ORG, sku.value, { caseQty: 48 });
+      await h.supplierProducts.save({
+        id: SupplierProductId.parse(newUuid()),
+        supplierId: h.supplierId,
+        sku,
+        supplierSku: `MFG-${sku.value}`,
+        minOrderQty: null,
+        minOrderAmountCents: null,
+        lastPoCostCents: 100,
+        currency: "USD",
+      });
+    }
+
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: batchSkus.map((sku) => ({
+        sku: sku.value,
+        name: `Caller ${sku.value}`,
+        qty: 96,
+      })),
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const findBySupplierAndSku = vi.spyOn(h.supplierProducts, "findBySupplierAndSku");
+    const findBySupplierSkuPairs = vi.spyOn(h.supplierProducts, "findBySupplierSkuPairs");
+    const readBySkus = vi.spyOn(h.factorySendCatalog, "readBySkus");
+
+    const result = await h.exportPo.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      format: "xlsx",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(h.workbookWriter.writes[0]?.rows).toHaveLength(25);
+    expect(findBySupplierAndSku).not.toHaveBeenCalled();
+    expect(findBySupplierSkuPairs).toHaveBeenCalledTimes(1);
+    expect(readBySkus).toHaveBeenCalledTimes(1);
+    expect(findBySupplierSkuPairs.mock.calls[0]?.[0]).toHaveLength(25);
+    expect(readBySkus.mock.calls[0]?.[1]).toHaveLength(25);
   });
 
   it("returns not_found for missing purchase order", async () => {

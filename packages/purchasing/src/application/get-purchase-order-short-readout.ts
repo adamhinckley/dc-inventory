@@ -49,12 +49,14 @@ export class GetPurchaseOrderShortReadoutUseCase {
       return { ok: false, reason: "not_found" };
     }
 
-    const uncoveredRows = await Promise.all(
-      purchaseOrder.lines.map(async (line) => ({
-        sku: line.sku,
-        uncovered: await this.inventoryUncovered.getUncovered(input.organizationId, line.sku),
-      })),
+    const uncoveredBySku = await this.inventoryUncovered.getUncoveredBySkus(
+      input.organizationId,
+      purchaseOrder.lines.map((line) => line.sku),
     );
+    const uncoveredRows = purchaseOrder.lines.map((line) => ({
+      sku: line.sku,
+      uncovered: uncoveredBySku.get(line.sku.value) ?? 0,
+    }));
 
     const skusWithUncovered = uncoveredRows
       .filter((row) => row.uncovered > 0)

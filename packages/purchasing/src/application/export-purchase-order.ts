@@ -110,14 +110,12 @@ export async function loadFactorySendSheet(
   const uniqueSkus = [
     ...new Map(purchaseOrder.lines.map((line) => [line.sku.value, line.sku])).values(),
   ];
-  const links = await Promise.all(
-    uniqueSkus.map((sku) =>
-      supplierProducts.findBySupplierAndSku(purchaseOrder.supplierId, sku),
-    ),
-  );
-  const linkBySku = new Map(
-    uniqueSkus.map((sku, index) => [sku.value, links[index] ?? null]),
-  );
+  const pairs = uniqueSkus.map((sku) => ({
+    supplierId: purchaseOrder.supplierId,
+    sku,
+  }));
+  const links = await supplierProducts.findBySupplierSkuPairs(pairs);
+  const linkBySku = new Map(links.map((link) => [link.sku.value, link]));
   const rows = purchaseOrder.lines.map((line) =>
     toFactoryRow(purchaseOrder, line, linkBySku.get(line.sku.value) ?? null, totCartons),
   );

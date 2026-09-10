@@ -70,17 +70,18 @@ export class ListSupplierProductsUseCase {
       input.organizationId,
       page.items.map((row) => row.sku),
     );
-    const names = await Promise.all(
-      page.items.map((row) => this.catalog.findBySku(input.organizationId, row.sku)),
+    const names = await this.catalog.findBySkus(
+      input.organizationId,
+      page.items.map((row) => row.sku),
     );
     const packaging = await this.factorySendCatalog.readBySkus(
       input.organizationId,
       page.items.map((row) => row.sku),
     );
-    const items: SupplierProductListRow[] = page.items.map((row, index) => ({
+    const items: SupplierProductListRow[] = page.items.map((row) => ({
       id: row.id,
       sku: row.sku.value,
-      catalogName: names[index]?.name ?? row.sku.value,
+      catalogName: names.get(row.sku.value)?.name ?? row.sku.value,
       supplierSku: row.supplierSku,
       minOrderQty: row.minOrderQty,
       minOrderAmountCents: row.minOrderAmountCents,

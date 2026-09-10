@@ -11,7 +11,7 @@ import {
   StaffUserId,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
 import { newUuid, PurchaseOrderLineId } from "../src/domain/ids.js";
 import type { IPurchasingUnitOfWork } from "../src/domain/ports/purchase-order-repository.js";
@@ -203,6 +203,61 @@ describe("Purchasing (in-memory)", () => {
     }
     expect(first.purchaseOrder.documentNumber).toBe("PO-HF-00001");
     expect(other.purchaseOrder.documentNumber).toBe("PO-OS-00001");
+  });
+
+  it("loads supplier names with one findByIds call per list page", async () => {
+    const h = await harness();
+    const supplierIds = Array.from({ length: 5 }, (_, index) =>
+      SupplierId.parse(
+        `${String(index).padStart(8, "0")}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`,
+      ),
+    );
+    for (const [index, supplierId] of supplierIds.entries()) {
+      await h.uow.suppliers.save({
+        id: supplierId,
+        organizationId: DEFAULT_ORG,
+        vendorNumber: `VEND-BATCH-${index}`,
+        name: `Batch Supplier ${index}`,
+        poPrefix: `B${index}`,
+      });
+      const created = await h.create.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        supplierId,
+        lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
+      });
+      expect(created.ok).toBe(true);
+    }
+
+    let findByIdCalls = 0;
+    let findByIdsCalls = 0;
+    const suppliers = {
+      ...h.uow.suppliers,
+      findById: async (organizationId: OrganizationId, id: SupplierId) => {
+        findByIdCalls += 1;
+        return h.uow.suppliers.findById(organizationId, id);
+      },
+      findByIds: async (organizationId: OrganizationId, ids: readonly SupplierId[]) => {
+        findByIdsCalls += 1;
+        return h.uow.suppliers.findByIds(organizationId, ids);
+      },
+    };
+    const list = new ListPurchaseOrdersUseCase(h.uow.purchaseOrders, suppliers);
+    const listed = await list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "documentNumber",
+      sortOrder: "asc",
+    });
+
+    expect(listed.items).toHaveLength(5);
+    expect(findByIdCalls).toBe(0);
+    expect(findByIdsCalls).toBe(1);
+    expect([...listed.supplierNames.values()].sort()).toEqual(
+      ["Batch Supplier 0", "Batch Supplier 1", "Batch Supplier 2", "Batch Supplier 3", "Batch Supplier 4"].sort(),
+    );
   });
 
   it("sorts listed purchase orders by ship date and remaining qty", async () => {

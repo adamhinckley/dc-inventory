@@ -338,6 +338,79 @@ describe("Supplier products use cases (in-memory)", () => {
     }
   });
 
+  it("loads catalog names with one findBySkus call per page", async () => {
+    const h = harness();
+    const created = await h.createSupplier.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      name: "Acme Supply",
+      vendorNumber: "VEND-001",
+    });
+    if (!created.ok) {
+      throw new Error("expected supplier");
+    }
+
+    const batchSkus = Array.from({ length: 25 }, (_, index) =>
+      Sku.parse(`BATCH-SUPPLIER-PROD-${String(index).padStart(3, "0")}`),
+    );
+    for (const sku of batchSkus) {
+      h.catalog.set(DEFAULT_ORG, sku.value, `Widget ${sku.value}`);
+      const assigned = await h.assignSupplierProduct.execute({
+        organizationId: DEFAULT_ORG,
+        staffUserId: STAFF_ID,
+        supplierId: created.supplier.id,
+        sku: sku.value,
+      });
+      expect(assigned.ok).toBe(true);
+    }
+
+    let findBySkuCalls = 0;
+    let findBySkusCalls = 0;
+    let readBySkusCalls = 0;
+    const catalog = {
+      findBySku: async (organizationId: OrganizationId, sku: Sku) => {
+        findBySkuCalls += 1;
+        return h.catalog.findBySku(organizationId, sku);
+      },
+      findBySkus: async (organizationId: OrganizationId, skus: readonly Sku[]) => {
+        findBySkusCalls += 1;
+        return h.catalog.findBySkus(organizationId, skus);
+      },
+    };
+    const factorySendCatalog = {
+      readBySkus: async (organizationId: OrganizationId, skus: readonly Sku[]) => {
+        readBySkusCalls += 1;
+        return h.factorySendCatalog.readBySkus(organizationId, skus);
+      },
+    };
+    const listSupplierProducts = new ListSupplierProductsUseCase(
+      h.suppliers,
+      h.supplierProducts,
+      catalog,
+      h.qty,
+      factorySendCatalog,
+    );
+
+    const listed = await listSupplierProducts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: created.supplier.id,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) {
+      return;
+    }
+    expect(listed.items).toHaveLength(25);
+    expect(findBySkuCalls).toBe(0);
+    expect(findBySkusCalls).toBe(1);
+    expect(readBySkusCalls).toBe(1);
+  });
+
   it("returns not_found for missing supplier or product", async () => {
     const h = harness();
     const missingSupplier = await h.listSupplierProducts.execute({
