@@ -10,12 +10,10 @@ import type { PaymentMethod } from "../domain/invoice.js";
 import type { AccountingUnitOfWorkWithCustomerPayments } from "../domain/ports/invoice-repository.js";
 import type { Payment } from "../domain/invoice.js";
 import {
-  collectVoidedPaymentIds,
-  remainingForInvoice,
+  remainingForInvoices,
   sameCustomerPaymentPayload,
   type CustomerPaymentPayload,
 } from "./customer-payment-support.js";
-import { computeRemainingCents } from "../domain/invoice.js";
 
 export type CustomerPaymentApplicationInput = {
   readonly invoiceId: InvoiceId;
@@ -104,7 +102,7 @@ export class RecordCustomerPaymentUseCase {
         if (!sameCustomerPaymentPayload(existingPayment, payload)) {
           return { ok: false, reason: "conflict" };
         }
-        const applicationsByInvoice = await this.loadRemainingByInvoice(
+        const remainingByInvoiceId = await this.loadRemainingByInvoice(
           invoices,
           input.organizationId,
           input.applications.map((row) => row.invoiceId),
@@ -118,7 +116,7 @@ export class RecordCustomerPaymentUseCase {
           paymentId: existingPayment.payment.id,
           unappliedCents: existingPayment.payment.amount.amountMinor -
             paymentApplications.reduce((sum, row) => sum + row.amount.amountMinor, 0),
-          remainingByInvoiceId: applicationsByInvoice,
+          remainingByInvoiceId,
         };
       }
 
@@ -129,29 +127,33 @@ export class RecordCustomerPaymentUseCase {
           return { ok: false, reason: "invalid" };
         }
         appliedTotal += application.amountCents;
-        const invoice = await invoices.findByIdForPayment(
-          input.organizationId,
-          application.invoiceId,
-        );
-        if (invoice === null || invoice.customerId !== input.customerId) {
-          return { ok: false, reason: "not_found" };
-        }
-        if (invoice.total.currency !== currency) {
-          return { ok: false, reason: "wrong_currency" };
-        }
         totalsByInvoice.set(
           application.invoiceId,
           (totalsByInvoice.get(application.invoiceId) ?? 0) + application.amountCents,
         );
       }
 
+      const invoiceIds = [...totalsByInvoice.keys()];
+      const invoiceMap = await invoices.findByIdsForPayment(input.organizationId, invoiceIds);
+      for (const application of input.applications) {
+        const invoice = invoiceMap.get(application.invoiceId);
+        if (invoice === undefined || invoice.customerId !== input.customerId) {
+          return { ok: false, reason: "not_found" };
+        }
+        if (invoice.total.currency !== currency) {
+          return { ok: false, reason: "wrong_currency" };
+        }
+      }
+
+      const remainingBefore = await remainingForInvoices(
+        invoices,
+        input.organizationId,
+        invoiceIds,
+        invoiceMap,
+      );
       for (const [invoiceId, totalForInvoice] of totalsByInvoice) {
-        const remaining = await remainingForInvoice(
-          invoices,
-          input.organizationId,
-          invoiceId,
-        );
-        if (remaining === null || totalForInvoice > remaining) {
+        const remaining = remainingBefore.get(invoiceId);
+        if (remaining === null || remaining === undefined || totalForInvoice > remaining) {
           return { ok: false, reason: "overpay" };
         }
       }
@@ -186,11 +188,13 @@ export class RecordCustomerPaymentUseCase {
         input.holdRemainderAsCredit,
       );
 
-      const remainingByInvoiceId = await this.loadRemainingByInvoice(
-        invoices,
-        input.organizationId,
-        input.applications.map((row) => row.invoiceId),
-      );
+      const remainingByInvoiceId: Record<string, number> = {};
+      for (const [invoiceId, totalForInvoice] of totalsByInvoice) {
+        const before = remainingBefore.get(invoiceId);
+        if (before !== null && before !== undefined) {
+          remainingByInvoiceId[String(invoiceId)] = before - totalForInvoice;
+        }
+      }
 
       return {
         ok: true,
@@ -207,24 +211,11 @@ export class RecordCustomerPaymentUseCase {
     invoiceIds: readonly InvoiceId[],
   ): Promise<Readonly<Record<string, number>>> {
     const remainingByInvoiceId: Record<string, number> = {};
-    for (const invoiceId of invoiceIds) {
-      const invoice = await invoices.findByIdForPayment(organizationId, invoiceId);
-      if (invoice === null) {
-        continue;
+    const remaining = await remainingForInvoices(invoices, organizationId, invoiceIds);
+    for (const [invoiceId, value] of remaining) {
+      if (value !== null) {
+        remainingByInvoiceId[String(invoiceId)] = value;
       }
-      const applications = await invoices.listApplications(invoiceId);
-      const adjustments = await invoices.listAdjustments(invoiceId);
-      const voidedPaymentIds = await collectVoidedPaymentIds(
-        invoices,
-        organizationId,
-        applications.map((row) => row.paymentId),
-      );
-      remainingByInvoiceId[String(invoiceId)] = computeRemainingCents(
-        invoice,
-        applications,
-        voidedPaymentIds,
-        adjustments,
-      );
     }
     return remainingByInvoiceId;
   }

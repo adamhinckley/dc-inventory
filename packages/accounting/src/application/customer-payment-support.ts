@@ -1,7 +1,8 @@
-import type { InvoiceId } from "@dc-inventory/shared-kernel";
+import type { InvoiceId, OrganizationId } from "@dc-inventory/shared-kernel";
+import type { PaymentId } from "../domain/ids.js";
 import { computeRemainingCents } from "../domain/invoice.js";
+import type { Invoice, Payment, PaymentMethod } from "../domain/invoice.js";
 import type { PaymentIdempotencyRecord, PaymentApplicationSpec } from "../domain/ports/invoice-repository.js";
-import type { Payment, PaymentMethod } from "../domain/invoice.js";
 
 export type CustomerPaymentPayload = {
   readonly customerId: string;
@@ -87,51 +88,99 @@ function compareApplicationSpec(a: PaymentApplicationSpec, b: PaymentApplication
   return a.amountCents - b.amountCents;
 }
 
+export type InvoicePaymentReadPort = {
+  findPaymentById(organizationId: OrganizationId, paymentId: PaymentId): Promise<Payment | null>;
+  findPaymentsByIds(
+    organizationId: OrganizationId,
+    paymentIds: readonly PaymentId[],
+  ): Promise<ReadonlyMap<PaymentId, Payment>>;
+  findByIdForPayment(organizationId: OrganizationId, id: InvoiceId): Promise<import("../domain/invoice.js").Invoice | null>;
+  findByIdsForPayment(
+    organizationId: OrganizationId,
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, import("../domain/invoice.js").Invoice>>;
+  listApplications(invoiceId: InvoiceId): Promise<readonly import("../domain/invoice.js").PaymentApplication[]>;
+  listApplicationsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly import("../domain/invoice.js").PaymentApplication[]>>;
+  listAdjustments(
+    invoiceId: InvoiceId,
+  ): Promise<readonly import("../domain/invoice.js").InvoiceAdjustment[]>;
+  listAdjustmentsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly import("../domain/invoice.js").InvoiceAdjustment[]>>;
+};
+
+function uniqueInvoiceIds(invoiceIds: readonly InvoiceId[]): InvoiceId[] {
+  return [...new Set(invoiceIds)];
+}
+
+function uniquePaymentIds(paymentIds: Iterable<PaymentId>): PaymentId[] {
+  return [...new Set(paymentIds)];
+}
+
 export async function collectVoidedPaymentIds(
-  invoices: {
-    findPaymentById(
-      organizationId: import("@dc-inventory/shared-kernel").OrganizationId,
-      paymentId: import("../domain/ids.js").PaymentId,
-    ): Promise<Payment | null>;
-  },
-  organizationId: import("@dc-inventory/shared-kernel").OrganizationId,
-  paymentIds: Iterable<import("../domain/ids.js").PaymentId>,
-): Promise<Set<import("../domain/ids.js").PaymentId>> {
-  const voided = new Set<import("../domain/ids.js").PaymentId>();
-  for (const paymentId of paymentIds) {
-    const payment = await invoices.findPaymentById(organizationId, paymentId);
-    if (payment !== null && payment.voidedAt != null) {
+  invoices: Pick<InvoicePaymentReadPort, "findPaymentById" | "findPaymentsByIds">,
+  organizationId: OrganizationId,
+  paymentIds: Iterable<PaymentId>,
+): Promise<Set<PaymentId>> {
+  const ids = uniquePaymentIds(paymentIds);
+  if (ids.length === 0) {
+    return new Set();
+  }
+  const payments = await invoices.findPaymentsByIds(organizationId, ids);
+  const voided = new Set<PaymentId>();
+  for (const paymentId of ids) {
+    const payment = payments.get(paymentId);
+    if (payment !== undefined && payment.voidedAt != null) {
       voided.add(paymentId);
     }
   }
   return voided;
 }
 
-export async function remainingForInvoice(
-  invoices: {
-    findByIdForPayment(
-      organizationId: import("@dc-inventory/shared-kernel").OrganizationId,
-      id: InvoiceId,
-    ): Promise<import("../domain/invoice.js").Invoice | null>;
-    listApplications(invoiceId: InvoiceId): Promise<readonly import("../domain/invoice.js").PaymentApplication[]>;
-    listAdjustments(
-      invoiceId: InvoiceId,
-    ): Promise<readonly import("../domain/invoice.js").InvoiceAdjustment[]>;
-    findPaymentById(
-      organizationId: import("@dc-inventory/shared-kernel").OrganizationId,
-      paymentId: import("../domain/ids.js").PaymentId,
-    ): Promise<Payment | null>;
-  },
-  organizationId: import("@dc-inventory/shared-kernel").OrganizationId,
-  invoiceId: InvoiceId,
-): Promise<number | null> {
-  const invoice = await invoices.findByIdForPayment(organizationId, invoiceId);
-  if (invoice === null) {
-    return null;
+export async function remainingForInvoices(
+  invoices: InvoicePaymentReadPort,
+  organizationId: OrganizationId,
+  invoiceIds: readonly InvoiceId[],
+  preloadedInvoices?: ReadonlyMap<InvoiceId, Invoice>,
+): Promise<ReadonlyMap<InvoiceId, number | null>> {
+  const uniqueIds = uniqueInvoiceIds(invoiceIds);
+  const remainingByInvoiceId = new Map<InvoiceId, number | null>();
+  if (uniqueIds.length === 0) {
+    return remainingByInvoiceId;
   }
-  const applications = await invoices.listApplications(invoiceId);
-  const adjustments = await invoices.listAdjustments(invoiceId);
-  const paymentIds = new Set(applications.map((row) => row.paymentId));
+
+  const invoiceMap =
+    preloadedInvoices ??
+    await invoices.findByIdsForPayment(organizationId, uniqueIds);
+  const [applicationsMap, adjustmentsMap] = await Promise.all([
+    invoices.listApplicationsByInvoiceIds(uniqueIds),
+    invoices.listAdjustmentsByInvoiceIds(uniqueIds),
+  ]);
+  const paymentIds = new Set<PaymentId>();
+  for (const applications of applicationsMap.values()) {
+    for (const application of applications) {
+      paymentIds.add(application.paymentId);
+    }
+  }
   const voidedPaymentIds = await collectVoidedPaymentIds(invoices, organizationId, paymentIds);
-  return computeRemainingCents(invoice, applications, voidedPaymentIds, adjustments);
+
+  for (const invoiceId of uniqueIds) {
+    const invoice = invoiceMap.get(invoiceId);
+    if (invoice === undefined) {
+      remainingByInvoiceId.set(invoiceId, null);
+      continue;
+    }
+    remainingByInvoiceId.set(
+      invoiceId,
+      computeRemainingCents(
+        invoice,
+        applicationsMap.get(invoiceId) ?? [],
+        voidedPaymentIds,
+        adjustmentsMap.get(invoiceId) ?? [],
+      ),
+    );
+  }
+  return remainingByInvoiceId;
 }

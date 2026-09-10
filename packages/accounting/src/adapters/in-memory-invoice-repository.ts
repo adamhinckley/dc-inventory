@@ -192,6 +192,20 @@ export class InMemoryInvoiceRepository implements IAccountingRepository {
     return this.findById(organizationId, id);
   }
 
+  async findByIdsForPayment(
+    organizationId: OrganizationId,
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, Invoice>> {
+    const byId = new Map<InvoiceId, Invoice>();
+    for (const invoiceId of new Set(invoiceIds)) {
+      const invoice = await this.findByIdForPayment(organizationId, invoiceId);
+      if (invoice !== null) {
+        byId.set(invoiceId, invoice);
+      }
+    }
+    return byId;
+  }
+
   async findByOrderId(
     organizationId: OrganizationId,
     orderId: OrderId,
@@ -239,6 +253,16 @@ export class InMemoryInvoiceRepository implements IAccountingRepository {
     return [...(this.applicationsByInvoice.get(invoiceId) ?? [])];
   }
 
+  async listApplicationsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly PaymentApplication[]>> {
+    const byInvoiceId = new Map<InvoiceId, readonly PaymentApplication[]>();
+    for (const invoiceId of new Set(invoiceIds)) {
+      byInvoiceId.set(invoiceId, await this.listApplications(invoiceId));
+    }
+    return byInvoiceId;
+  }
+
   async listApplicationsByPayment(
     organizationId: OrganizationId,
     paymentId: PaymentId,
@@ -259,6 +283,20 @@ export class InMemoryInvoiceRepository implements IAccountingRepository {
       return null;
     }
     return payment;
+  }
+
+  async findPaymentsByIds(
+    organizationId: OrganizationId,
+    paymentIds: readonly PaymentId[],
+  ): Promise<ReadonlyMap<PaymentId, Payment>> {
+    const byId = new Map<PaymentId, Payment>();
+    for (const paymentId of new Set(paymentIds)) {
+      const payment = await this.findPaymentById(organizationId, paymentId);
+      if (payment !== null) {
+        byId.set(paymentId, payment);
+      }
+    }
+    return byId;
   }
 
   async findPaymentByIdempotencyKey(
@@ -353,6 +391,16 @@ export class InMemoryInvoiceRepository implements IAccountingRepository {
 
   async listAdjustments(invoiceId: InvoiceId): Promise<readonly InvoiceAdjustment[]> {
     return [...(this.adjustmentsByInvoice.get(invoiceId) ?? [])];
+  }
+
+  async listAdjustmentsByInvoiceIds(
+    invoiceIds: readonly InvoiceId[],
+  ): Promise<ReadonlyMap<InvoiceId, readonly InvoiceAdjustment[]>> {
+    const byInvoiceId = new Map<InvoiceId, readonly InvoiceAdjustment[]>();
+    for (const invoiceId of new Set(invoiceIds)) {
+      byInvoiceId.set(invoiceId, await this.listAdjustments(invoiceId));
+    }
+    return byInvoiceId;
   }
 
   async insertAdjustment(adjustment: InvoiceAdjustment): Promise<void> {
