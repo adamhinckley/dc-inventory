@@ -48,24 +48,15 @@ const accountingPayment = {
   appliedCents: 2500,
   unappliedCents: 0,
   voided: true,
-  applications: [
-    {
-      id: "22222222-2222-4222-8222-222222222222",
-      invoiceId: "33333333-3333-4333-8333-333333333333",
-      amountCents: 2500,
-      currency: "USD",
-      createdAt: "2026-09-08T00:00:00.000Z",
-    },
-  ],
 } satisfies AccountingPaymentRow;
 
 describe("payment detail mapping", () => {
-  it("keeps note, void reason, and applications from both list rows", () => {
+  it("keeps note, void reason, and applications from customer payment rows", () => {
     const fromCustomer = paymentDetailFromCustomerPayment(
       customerPayment,
       "44444444-4444-4444-8444-444444444444",
     );
-    const fromOrg = paymentDetailFromAccountingPayment(accountingPayment);
+    const fromOrg = paymentDetailFromAccountingPayment(accountingPayment, customerPayment);
 
     expect(fromCustomer.note).toBe("front desk check");
     expect(fromCustomer.voidReason).toBe("duplicate deposit");
@@ -74,6 +65,12 @@ describe("payment detail mapping", () => {
     );
     expect(fromOrg).toEqual(fromCustomer);
     expect(paymentDetailToCustomerRow(fromOrg).id).toBe(accountingPayment.paymentId);
+  });
+
+  it("leaves applications empty when the org list row has no customer payment detail", () => {
+    const fromOrg = paymentDetailFromAccountingPayment(accountingPayment);
+    expect(fromOrg.applications).toEqual([]);
+    expect(fromOrg.note).toBe("front desk check");
   });
 
   it("renders blank note and void reason as an em dash", () => {

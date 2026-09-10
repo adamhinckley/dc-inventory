@@ -657,11 +657,9 @@ describe("AR read model (ADA-360)", () => {
     expect(voided?.note).toBeNull();
     const credit = payments.items.find((row) => row.customerName === "Credit Corner");
     expect(credit?.unappliedCents).toBe(900);
-    expect(credit?.applications).toEqual([]);
     const partial = payments.items.find((row) => row.customerName === "Partial Petals");
     expect(partial?.note).toBe("partial check from walk-in");
     expect(partial?.voidReason).toBeNull();
-    expect(partial?.applications).toHaveLength(1);
-    expect(partial?.applications[0]?.amountCents).toBe(800);
+    expect(partial?.appliedCents).toBe(800);
   });
 });

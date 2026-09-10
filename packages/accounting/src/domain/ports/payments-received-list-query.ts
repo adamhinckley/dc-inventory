@@ -1,5 +1,5 @@
-import type { CustomerId, InvoiceId, OrganizationId } from "@dc-inventory/shared-kernel";
-import type { PaymentApplicationId, PaymentId } from "../ids.js";
+import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
+import type { PaymentId } from "../ids.js";
 import type { PaymentMethod } from "../invoice.js";
 
 export type PaymentsReceivedSortBy = "receivedAt" | "amount" | "customerName";
@@ -13,14 +13,6 @@ export type PaymentsReceivedListQuery = {
   readonly pageSize: number;
   readonly sortBy: PaymentsReceivedSortBy;
   readonly sortOrder: SortOrder;
-};
-
-export type PaymentReceivedApplicationRow = {
-  readonly id: PaymentApplicationId;
-  readonly invoiceId: InvoiceId;
-  readonly amountCents: number;
-  readonly currency: string;
-  readonly createdAt: Date;
 };
 
 export type PaymentReceivedRow = {
@@ -38,7 +30,6 @@ export type PaymentReceivedRow = {
   readonly appliedCents: number;
   readonly unappliedCents: number;
   readonly voided: boolean;
-  readonly applications: readonly PaymentReceivedApplicationRow[];
 };
 
 export type PaymentsReceivedListPage = {

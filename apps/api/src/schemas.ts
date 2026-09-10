@@ -1826,7 +1826,6 @@ export const paymentReceivedItemSchema = z.object({
   appliedCents: z.number().int(),
   unappliedCents: z.number().int(),
   voided: z.boolean(),
-  applications: z.array(customerPaymentApplicationItemSchema),
 });
 
 export const paymentsReceivedListResponseSchema = z.object({
