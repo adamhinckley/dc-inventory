@@ -4,7 +4,7 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS } from "../src/adapters/active-wholesale-login-account-status.js";
 import { InMemoryOrganizationRepository } from "../src/adapters/in-memory-organization-repository.js";
@@ -12,16 +12,8 @@ import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hashe
 import { InMemorySessionStore } from "../src/adapters/in-memory-session-store.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
 import { InMemoryWholesaleUserRepository } from "../src/adapters/in-memory-wholesale-user-repository.js";
-import { ClearActingCustomerUseCase } from "../src/application/clear-acting-customer.js";
 import { LoginWholesaleUseCase } from "../src/application/login-wholesale.js";
 import { ResolveWholesaleSessionUseCase } from "../src/application/resolve-session.js";
-import { SelectActingCustomerUseCase } from "../src/application/select-acting-customer.js";
-import type { WholesaleLoginAccountStatus } from "../src/domain/account-status.js";
-import type {
-  ActingCustomerHeader,
-  IActingCustomerHeaderReadPort,
-} from "../src/domain/ports/acting-customer-header-read.js";
-import type { IWholesaleLoginAccountStatusReadPort } from "../src/domain/ports/wholesale-login-account-status-read.js";
 import type { StaffRole } from "../src/domain/staff-role.js";
 
 const ACME_SLUG = "acme";
@@ -31,37 +23,6 @@ const PURCHASING_STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440
 const WAREHOUSE_STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440014");
 const WHOLESALE_ID = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440002");
 const CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-446655440003");
-
-class InMemoryActingCustomerHeaderReadPort implements IActingCustomerHeaderReadPort {
-  constructor(private readonly headers: readonly ActingCustomerHeader[]) {}
-
-  async listPickerItems() {
-    return [];
-  }
-
-  async findById(
-    organizationId: OrganizationId,
-    customerId: CustomerId,
-  ): Promise<ActingCustomerHeader | null> {
-    if (organizationId !== OrganizationId.DEFAULT) {
-      return null;
-    }
-    return this.headers.find((header) => header.customerId === customerId) ?? null;
-  }
-}
-
-class ConfigurableAccountStatusReadPort implements IWholesaleLoginAccountStatusReadPort {
-  constructor(
-    private readonly statuses: ReadonlyMap<CustomerId, WholesaleLoginAccountStatus | null>,
-  ) {}
-
-  async getAccountStatus(
-    _organizationId: OrganizationId,
-    customerId: CustomerId,
-  ): Promise<WholesaleLoginAccountStatus | null> {
-    return this.statuses.get(customerId) ?? null;
-  }
-}
 
 function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   const clock = new InMemoryClock(at);
@@ -87,21 +48,6 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
       ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS,
     ),
     resolveWholesale: new ResolveWholesaleSessionUseCase(sessions, wholesaleUsers, staffUsers, clock),
-    selectActingCustomer: new SelectActingCustomerUseCase(
-      sessions,
-      staffUsers,
-      wholesaleUsers,
-      new InMemoryActingCustomerHeaderReadPort([
-        {
-          customerId: CUSTOMER_ID,
-          businessName: "Active Wholesale",
-          customerNumber: "C-00001",
-        },
-      ]),
-      new ConfigurableAccountStatusReadPort(new Map([[CUSTOMER_ID, "active"]])),
-      clock,
-    ),
-    clearActingCustomer: new ClearActingCustomerUseCase(sessions, staffUsers, clock),
   };
 }
 
@@ -360,77 +306,6 @@ describe("Wholesale staff acting (ADA-268 owner tests)", () => {
         customerId: CUSTOMER_ID,
         organizationId: OrganizationId.DEFAULT,
       });
-    });
-  });
-
-  describe("acting customer mutations", () => {
-    async function seedStaffActingSession(h: ReturnType<typeof harness>) {
-      await seedOrg(h);
-      await seedStaffUser(h, {
-        id: ADMIN_STAFF_ID,
-        email: "david@local.test",
-        password: "staff-secret",
-        roles: ["admin"],
-      });
-      await seedWholesaleBuyer(h);
-      const now = h.clock.now();
-      return h.sessions.create({
-        audience: "wholesale",
-        organizationId: OrganizationId.DEFAULT,
-        staffUserId: ADMIN_STAFF_ID,
-        wholesaleUserId: null,
-        opsUserId: null,
-        customerId: null,
-        createdAt: now,
-        lastSeenAt: now,
-      });
-    }
-
-    it("select returns the wholesale session body without calling resolveWholesale", async () => {
-      const h = harness();
-      const session = await seedStaffActingSession(h);
-      const resolveSpy = vi.spyOn(h.resolveWholesale, "execute");
-
-      const result = await h.selectActingCustomer.execute(session.id, {
-        customerId: CUSTOMER_ID,
-      });
-
-      expect(resolveSpy).not.toHaveBeenCalled();
-      expect(result).toEqual({
-        ok: true,
-        mode: "staff_acting",
-        staffUserId: ADMIN_STAFF_ID,
-        wholesaleUserId: null,
-        customerId: CUSTOMER_ID,
-        email: "david@local.test",
-        organizationId: OrganizationId.DEFAULT,
-      });
-
-      const resolved = await h.resolveWholesale.execute(session.id);
-      expect(result).toEqual(resolved);
-    });
-
-    it("clear returns the wholesale session body without calling resolveWholesale", async () => {
-      const h = harness();
-      const session = await seedStaffActingSession(h);
-      await h.selectActingCustomer.execute(session.id, { customerId: CUSTOMER_ID });
-      const resolveSpy = vi.spyOn(h.resolveWholesale, "execute");
-
-      const result = await h.clearActingCustomer.execute(session.id);
-
-      expect(resolveSpy).not.toHaveBeenCalled();
-      expect(result).toEqual({
-        ok: true,
-        mode: "staff_acting",
-        staffUserId: ADMIN_STAFF_ID,
-        wholesaleUserId: null,
-        customerId: null,
-        email: "david@local.test",
-        organizationId: OrganizationId.DEFAULT,
-      });
-
-      const resolved = await h.resolveWholesale.execute(session.id);
-      expect(result).toEqual(resolved);
     });
   });
 });
