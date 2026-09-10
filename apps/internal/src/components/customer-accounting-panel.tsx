@@ -42,6 +42,7 @@ import type {
 } from "../lib/customer-accounting-types";
 import { useCustomerAccountingOrderNumbers } from "../lib/customer-accounting-order-numbers";
 import { useStaffAccountingActions } from "../lib/staff-accounting-actions";
+import { paymentDetailFromCustomerPayment } from "../lib/payment-detail";
 import {
   CustomerAccountingAdjustDialog,
   CustomerAccountingApplyCreditPickerDialog,
@@ -50,6 +51,10 @@ import {
   CustomerAccountingReallocateDialog,
   CustomerAccountingVoidDialog,
 } from "./customer-accounting-dialogs";
+import {
+  PaymentDetailDialog,
+  PaymentReceivedDateButton,
+} from "./payment-detail-dialog";
 import { CustomerAccountingRecordPayment } from "./customer-accounting-record-payment";
 
 type DrawerTab = "payments" | "plan" | "stats";
@@ -212,6 +217,7 @@ function PaymentsTable({
   canArAdjust,
   onReallocate,
   onVoid,
+  onOpenDetail,
 }: {
   payments: CustomerPaymentRow[];
   currency: string;
@@ -220,6 +226,7 @@ function PaymentsTable({
   canArAdjust: boolean;
   onReallocate: (payment: CustomerPaymentRow) => void;
   onVoid: (payment: CustomerPaymentRow) => void;
+  onOpenDetail: (payment: CustomerPaymentRow) => void;
 }) {
   return (
     <table className="w-full border-separate border-spacing-0">
@@ -261,12 +268,19 @@ function PaymentsTable({
           return (
             <tr
               key={payment.id}
-              className={payment.voided ? "text-fg-muted line-through" : ""}
+              className={payment.voided ? "text-fg-muted" : ""}
             >
-              <td className="px-section-content-x py-section-content-y text-body-sm tabular-nums">
-                {formatNullableDate(payment.receivedAt)}
+              <td className="px-section-content-x py-section-content-y text-body-sm">
+                <PaymentReceivedDateButton
+                  receivedAt={payment.receivedAt}
+                  onClick={() => onOpenDetail(payment)}
+                />
               </td>
-              <td className="px-section-content-x py-section-content-y text-right text-body-sm tabular-nums">
+              <td
+                className={`px-section-content-x py-section-content-y text-right text-body-sm tabular-nums ${
+                  payment.voided ? "line-through" : ""
+                }`}
+              >
                 {formatMoneyMinorUnits(payment.amountCents, payment.currency)}
               </td>
               <td className="px-section-content-x py-section-content-y text-body-sm">
@@ -385,6 +399,7 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
   const [reallocatePayment, setReallocatePayment] =
     useState<CustomerPaymentRow | null>(null);
   const [voidPayment, setVoidPayment] = useState<CustomerPaymentRow | null>(null);
+  const [detailPaymentId, setDetailPaymentId] = useState<string | null>(null);
   const [planOpen, setPlanOpen] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const [applyCreditPickerOpen, setApplyCreditPickerOpen] = useState(false);
@@ -394,6 +409,9 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
   const invoicesQuery = useListInternalCustomerInvoices(customerId, {
     includePaid: !hidePaid,
   });
+  const invoiceLabelsQuery = useListInternalCustomerInvoices(customerId, {
+    includePaid: true,
+  });
   const paymentsQuery = useListInternalCustomerPayments(customerId);
 
   const summary =
@@ -402,6 +420,10 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     invoicesQuery.data?.status === 200 ? invoicesQuery.data.data.items : [];
   const payments =
     paymentsQuery.data?.status === 200 ? paymentsQuery.data.data.items : [];
+  const detailPayment = useMemo(
+    () => payments.find((payment) => payment.id === detailPaymentId) ?? null,
+    [detailPaymentId, payments],
+  );
 
   const currency = invoices[0]?.currency ?? "USD";
   const openInvoices = useMemo(
@@ -424,9 +446,11 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     [payments],
   );
   const pastDueCents = summary ? sumPastDueCents(summary.aging) : 0;
+  const labeledInvoices =
+    invoiceLabelsQuery.data?.status === 200 ? invoiceLabelsQuery.data.data.items : invoices;
   const invoiceNumbers = useMemo(
-    () => new Map(invoices.map((invoice) => [invoice.id, invoice.documentNumber])),
-    [invoices],
+    () => new Map(labeledInvoices.map((invoice) => [invoice.id, invoice.documentNumber])),
+    [labeledInvoices],
   );
   const { orderNumbers, pendingOrderIds } = useCustomerAccountingOrderNumbers(
     invoices.map((invoice) => invoice.orderId),
@@ -582,6 +606,7 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
                   setApplyCreditOpen(false);
                 }}
                 onVoid={setVoidPayment}
+                onOpenDetail={(payment) => setDetailPaymentId(payment.id)}
               />
             ) : null}
             {drawer === "plan" ? (
@@ -664,6 +689,35 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
         onOpenChange={(open) => {
           if (!open) {
             setAdjustInvoice(null);
+          }
+        }}
+      />
+      <PaymentDetailDialog
+        payment={
+          detailPayment
+            ? paymentDetailFromCustomerPayment(detailPayment, customerId)
+            : null
+        }
+        invoiceNumbers={invoiceNumbers}
+        open={detailPayment !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailPaymentId(null);
+          }
+        }}
+        canApplyPayments={canApplyPayments}
+        canArAdjust={canArAdjust}
+        onReallocate={(payment) => {
+          const row = payments.find((item) => item.id === payment.id);
+          if (row) {
+            setReallocatePayment(row);
+            setApplyCreditOpen(false);
+          }
+        }}
+        onVoid={(payment) => {
+          const row = payments.find((item) => item.id === payment.id);
+          if (row) {
+            setVoidPayment(row);
           }
         }}
       />

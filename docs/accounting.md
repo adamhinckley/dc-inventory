@@ -170,7 +170,7 @@ A statement is a **PDF projection** of a customer's open invoices plus aging as 
 | **Aging** | One row, Current / 1–15 / 16–30 / 31–45 / 46–60 / 61–90 / 90+ |
 | **Stats** | §3 list, two columns like SoloView |
 | **Payment plan** | Active plan fields + next expected / estimated end / installments received; **New Plan** / **End Plan** |
-| **Payments** | Recent payments: received date, amount, method, reference, applied / unapplied, void state. Row actions: **Reallocate**, **Void** |
+| **Payments** | Recent payments: received date, amount, method, reference, applied / unapplied, void state. Received date opens a large payment-detail dialog (note, applications, void reason). Row actions: **Reallocate**, **Void** (also from the dialog) |
 | **Actions** | **Record Payment**, **Apply Credit** (when unapplied > 0), **Adjust Invoice** (from a grid row) |
 
 **Record Payment form:** amount, method, reference, received date (default today), note. Below: the open grid with an editable *Apply* column prefilled oldest-due-first; footer shows *Remaining to allocate* and the checkbox **Hold $X as credit** when > 0. Submit disabled until Σ apply + held = amount.
@@ -183,7 +183,7 @@ Follows `work-dashboard-design-spec.md` §12–13 (FieldRow, one control height,
 
 ## 11. Surface: business-wide `/accounting`
 
-Replaces the placeholder page. Job: *who owes us, who is late, what came in*; with a past `asOf`, *what AR looked like at month-end*. **Read-only.** Every row hands off to the customer Accounting tab (§10), which owns Record Payment, Reallocate, Void, Adjust, and Plan. SoloView has no equivalent screen we have seen (§13).
+Replaces the placeholder page. Job: *who owes us, who is late, what came in*; with a past `asOf`, *what AR looked like at month-end*. Balances stay a handoff to the customer Accounting tab (§10). The Payments tab is read-only except **Reallocate** and **Void** from the payment-detail dialog (received-date link). Record Payment, Adjust, and Plan stay on the customer tab. SoloView has no equivalent screen we have seen (§13).
 
 `ExplorerView` like Customers; `RouterTabs` like `purchasing-2-workspace.tsx`. `asOf` is a URL param shared by every section and preserved across tabs.
 
@@ -193,9 +193,9 @@ Replaces the placeholder page. Job: *who owes us, who is late, what came in*; wi
 | **KPI strip** | Four `StatTile`s: Total open AR · **Past due** (amount and % of open) · Unapplied credit · MTD write-offs |
 | **Aging strip** | Seven buckets (§3) as one row, all customers. Clicking a bucket filters the Balances table to customers with money in it (`bucket` URL param) |
 | **Balances** tab (`/accounting`) | `DataTable`: Customer, Open balance, Past due, Oldest due, Days past due, Credit limit, Available credit, Plan chip. Default sort past-due desc. `DataTable.Search` on customer name / number. Row → `/customers/:id?tab=accounting` |
-| **Payments** tab (`/accounting/payments`) | `DataTable`: Received, Customer, Amount, Method, Reference, Applied / Unapplied, Voided chip. Range chips **Today** · **MTD** · **Custom** (`DateRangeInput`), relative to `asOf`. Row → customer Accounting tab |
+| **Payments** tab (`/accounting/payments`) | `DataTable`: Received, Customer, Amount, Method, Reference, Applied / Unapplied, Voided chip. Range chips **Today** · **MTD** · **Custom** (`DateRangeInput`), relative to `asOf`. Customer name → customer Accounting tab. Received date → payment-detail dialog (note, applications, void reason; **Reallocate** / **Void** when permitted) |
 
-Two tall tables do not stack on one scroll; hence tabs. Per-customer aging buckets stay on the customer tab, not on the Balances row (§13 if David wants them here). No write actions on this page in v1.
+Two tall tables do not stack on one scroll; hence tabs. Per-customer aging buckets stay on the customer tab, not on the Balances row (§13 if David wants them here). No Record Payment on this page in v1.
 
 **Layout prototype (2026-09-08):** mock-data variants on branch [`prototype/accounting-ar-tab`](https://github.com/adamhinckley/dc-inventory/tree/prototype/accounting-ar-tab) at `/accounting?variant=A|B` — A tabs (this spec), B single scroll. To show David; see ADA-364.
 
@@ -209,7 +209,7 @@ Reuse `internal-invoices.ts` patterns and `schemas.ts` response shapes. All unde
 |---|---|
 | `GET /customers/:id/accounting?asOf=` | `GetCustomerAccountingSummary` — stats, aging, unapplied credit, available credit, plan |
 | `GET /customers/:id/invoices?includePaid=` | list with derived status and remaining |
-| `GET /customers/:id/payments` | list with applications and void state |
+| `GET /customers/:id/payments` | list with applications, note, void state, and void reason |
 | `POST /customers/:id/payments` | `RecordCustomerPayment` (`applications[]`, `holdRemainderAsCredit`, idempotency key) |
 | `POST /payments/:id/reallocate` | `ReallocatePayment` (also serves Apply Credit) |
 | `POST /payments/:id/void` | `VoidPayment` |
@@ -217,7 +217,7 @@ Reuse `internal-invoices.ts` patterns and `schemas.ts` response shapes. All unde
 | `PUT /customers/:id/payment-plan`, `DELETE …` | create / end plan |
 | `GET /accounting/summary?asOf=` | `GetAccountingSummary` — totals (open AR, past due, unapplied credit, MTD write-offs) and the aging row. Small payload, no rows |
 | `GET /accounting/customer-balances?asOf=&bucket=` | `ListCustomerBalances` — `x-table` list (server sort / page / search) for the Balances tab |
-| `GET /accounting/payments?from=&to=` | `ListPaymentsReceived` — `x-table` list for the Payments tab |
+| `GET /accounting/payments?from=&to=` | `ListPaymentsReceived` — `x-table` list for the Payments tab (row also includes note, void reason, applications; those are not table columns) |
 
 The business-wide page is three resources, not one blob: `DataTable` drives from `x-table` list endpoints, and customers-with-balance can be hundreds of rows.
 

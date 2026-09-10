@@ -132,11 +132,13 @@ export function CustomerAccountingVoidDialog({
   payment,
   open,
   onOpenChange,
+  onSuccess,
 }: {
   customerId: string;
   payment: CustomerPaymentRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { mutateAsync, isPending } = useVoidInternalPayment();
@@ -175,10 +177,11 @@ export function CustomerAccountingVoidDialog({
       }
       await invalidateCustomerAccountingQueries(queryClient, customerId);
       handleOpenChange(false);
+      onSuccess?.();
     } catch {
       setError("Could not void payment.");
     }
-  }, [customerId, handleOpenChange, mutateAsync, payment, queryClient, reason]);
+  }, [customerId, handleOpenChange, mutateAsync, onSuccess, payment, queryClient, reason]);
 
   if (!payment) {
     return null;
@@ -236,6 +239,7 @@ export function CustomerAccountingReallocateDialog({
   open,
   onOpenChange,
   title = "Reallocate Payment",
+  onSuccess,
 }: {
   customerId: string;
   payment: CustomerPaymentRow | null;
@@ -243,6 +247,7 @@ export function CustomerAccountingReallocateDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
+  onSuccess?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { mutateAsync, isPending } = useReallocateInternalPayment();
@@ -295,6 +300,7 @@ export function CustomerAccountingReallocateDialog({
       }
       await invalidateCustomerAccountingQueries(queryClient, customerId);
       handleOpenChange(false);
+      onSuccess?.();
     } catch {
       setError("Could not reallocate payment.");
     }
@@ -303,6 +309,7 @@ export function CustomerAccountingReallocateDialog({
     customerId,
     handleOpenChange,
     mutateAsync,
+    onSuccess,
     payment,
     queryClient,
   ]);

@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  getListInternalCustomerInvoicesQueryKey,
   listInternalAccountingPaymentsTable,
   useListInternalAccountingPayments,
+  useListInternalCustomerInvoices,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -13,7 +15,7 @@ import {
 import { CalendarRange } from "lucide-react";
 import { DataTable, type ListQueryHook, type ListQueryParams } from "@dc-inventory/ui-internal";
 import Link from "next/link";
-import { useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   accountingAppliedUnappliedLabel,
   accountingPaymentMethodLabel,
@@ -28,8 +30,22 @@ import {
   type AccountingPaymentRange,
 } from "../lib/accounting-url-params";
 import { useAccountingUrl } from "../lib/use-accounting-url";
-import { formatNullableDate } from "../lib/customer-accounting-format";
+import type { CustomerInvoiceRow, CustomerPaymentRow } from "../lib/customer-accounting-types";
+import {
+  paymentDetailFromAccountingPayment,
+  paymentDetailToCustomerRow,
+  type PaymentDetailRecord,
+} from "../lib/payment-detail";
 import { customerDetailTabHref } from "../lib/customer-detail-tabs";
+import { useStaffAccountingActions } from "../lib/staff-accounting-actions";
+import {
+  CustomerAccountingReallocateDialog,
+  CustomerAccountingVoidDialog,
+} from "./customer-accounting-dialogs";
+import {
+  PaymentDetailDialog,
+  PaymentReceivedDateButton,
+} from "./payment-detail-dialog";
 
 type PaymentsListParams = NonNullable<
   Parameters<typeof useListInternalAccountingPayments>[0]
@@ -111,6 +127,13 @@ function PaymentsRangeToolbar({
 }
 
 export function AccountingPaymentsTable() {
+  const { canApplyPayments, canArAdjust } = useStaffAccountingActions();
+  const [detail, setDetail] = useState<PaymentDetailRecord | null>(null);
+  const [reallocatePayment, setReallocatePayment] = useState<CustomerPaymentRow | null>(
+    null,
+  );
+  const [voidPayment, setVoidPayment] = useState<CustomerPaymentRow | null>(null);
+  const [actionCustomerId, setActionCustomerId] = useState("");
   const { searchRecord, setTableParams } = useAccountingUrl();
   const asOf = accountingAsOfFromSearchParams(searchRecord);
   const range = accountingPaymentRangeFromSearchParams(searchRecord);
@@ -131,6 +154,30 @@ export function AccountingPaymentsTable() {
     [setTableParams],
   );
 
+  const invoiceCustomerId = actionCustomerId || detail?.customerId || "";
+  const invoicesQuery = useListInternalCustomerInvoices(
+    invoiceCustomerId,
+    { includePaid: true },
+    {
+      query: {
+        enabled: invoiceCustomerId.length > 0,
+        queryKey: getListInternalCustomerInvoicesQueryKey(invoiceCustomerId, {
+          includePaid: true,
+        }),
+      },
+    },
+  );
+  const invoices: CustomerInvoiceRow[] =
+    invoicesQuery.data?.status === 200 ? invoicesQuery.data.data.items : [];
+  const invoiceNumbers = useMemo(
+    () => new Map(invoices.map((invoice) => [invoice.id, invoice.documentNumber])),
+    [invoices],
+  );
+  const openInvoices = useMemo(
+    () => invoices.filter((invoice) => invoice.remainingCents > 0),
+    [invoices],
+  );
+
   const getRowHref = useCallback(
     (row: AccountingPaymentRow) =>
       customerDetailTabHref(row.customerId, "accounting"),
@@ -147,6 +194,7 @@ export function AccountingPaymentsTable() {
   );
 
   return (
+    <>
     <DataTable.Root<PaymentsListParams, AccountingPaymentRow>
       key={remountKey}
       meta={accountingPaymentsListTable}
@@ -163,7 +211,12 @@ export function AccountingPaymentsTable() {
       renderRowLink={renderRowLink}
       emptyMessage="No payments in this range."
       renderColumns={{
-        receivedAt: (row) => formatNullableDate(row.receivedAt),
+        receivedAt: (row) => (
+          <PaymentReceivedDateButton
+            receivedAt={row.receivedAt}
+            onClick={() => setDetail(paymentDetailFromAccountingPayment(row))}
+          />
+        ),
         customerName: (row) => (
           <span className="min-w-0 truncate font-medium">{row.customerName}</span>
         ),
@@ -208,5 +261,49 @@ export function AccountingPaymentsTable() {
       <DataTable.Table />
       <DataTable.Pagination />
     </DataTable.Root>
+    <PaymentDetailDialog
+      payment={detail}
+      invoiceNumbers={invoiceNumbers}
+      open={detail !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          setDetail(null);
+        }
+      }}
+      canApplyPayments={canApplyPayments}
+      canArAdjust={canArAdjust}
+      onReallocate={(payment) => {
+        setActionCustomerId(payment.customerId);
+        setReallocatePayment(paymentDetailToCustomerRow(payment));
+      }}
+      onVoid={(payment) => {
+        setActionCustomerId(payment.customerId);
+        setVoidPayment(paymentDetailToCustomerRow(payment));
+      }}
+    />
+    <CustomerAccountingReallocateDialog
+      customerId={actionCustomerId || detail?.customerId || ""}
+      payment={reallocatePayment}
+      openInvoices={openInvoices}
+      open={reallocatePayment !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          setReallocatePayment(null);
+        }
+      }}
+      onSuccess={() => setDetail(null)}
+    />
+    <CustomerAccountingVoidDialog
+      customerId={actionCustomerId || detail?.customerId || ""}
+      payment={voidPayment}
+      open={voidPayment !== null}
+      onOpenChange={(open) => {
+        if (!open) {
+          setVoidPayment(null);
+        }
+      }}
+      onSuccess={() => setDetail(null)}
+    />
+    </>
   );
 }
