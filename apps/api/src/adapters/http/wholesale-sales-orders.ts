@@ -8,7 +8,12 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { mapSalesOrder, toCreditExceededBody, toInsufficientAtpBody } from "./map-sales-order.js";
+import {
+  mapSalesOrder,
+  mapSalesOrderListItems,
+  toCreditExceededBody,
+  toInsufficientAtpBody,
+} from "./map-sales-order.js";
 import {
   conflictResponseSchema,
   creditExceededResponseSchema,
@@ -104,12 +109,9 @@ function toSalesOrderBody(
   request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
   order: SalesOrder,
 ) {
-  return mapSalesOrder(
-    order,
-    lookupProductId(request),
-    lookupCustomerName(request),
-    lookupProductIds(request),
-  );
+  return mapSalesOrder(order, lookupProductId(request), lookupCustomerName(request), {
+    lookupProductIds: lookupProductIds(request),
+  });
 }
 
 function sendNotFound(reply: FastifyReply) {
@@ -163,8 +165,11 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         status: query.status,
       });
       return {
-        items: await Promise.all(
-          result.items.map((order) => toSalesOrderBody(request, order)),
+        items: await mapSalesOrderListItems(
+          result.items,
+          lookupProductId(request),
+          lookupCustomerName(request),
+          lookupProductIds(request),
         ),
         page: result.page,
         pageSize: result.pageSize,

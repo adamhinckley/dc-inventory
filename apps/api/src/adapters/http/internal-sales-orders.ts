@@ -6,6 +6,7 @@ import type { SalesOrder } from "@dc-inventory/sales";
 import { CustomerId, OrderId, StaffUserId } from "@dc-inventory/shared-kernel";
 import {
   mapSalesOrder,
+  mapSalesOrderListItems,
   toCreditExceededBody,
   toInsufficientAtpBody,
   toInsufficientCoverBody,
@@ -88,12 +89,9 @@ function toSalesOrderBody(
   },
   order: SalesOrder,
 ) {
-  return mapSalesOrder(
-    order,
-    lookupProductId(request),
-    lookupCustomerName(request),
-    lookupProductIds(request),
-  );
+  return mapSalesOrder(order, lookupProductId(request), lookupCustomerName(request), {
+    lookupProductIds: lookupProductIds(request),
+  });
 }
 
 function sendNotFound(reply: FastifyReply) {
@@ -168,13 +166,12 @@ export function registerInternalSalesOrderRoutes(app: FastifyInstance): void {
         customerId:
           query.customerId === undefined ? undefined : CustomerId.parse(query.customerId),
       });
-      const productIdBySku = lookupProductId(request);
-      const nameByCustomerId = lookupCustomerName(request);
       return {
-        items: await Promise.all(
-          result.items.map((order) =>
-            mapSalesOrder(order, productIdBySku, nameByCustomerId),
-          ),
+        items: await mapSalesOrderListItems(
+          result.items,
+          lookupProductId(request),
+          lookupCustomerName(request),
+          lookupProductIds(request),
         ),
         page: result.page,
         pageSize: result.pageSize,
