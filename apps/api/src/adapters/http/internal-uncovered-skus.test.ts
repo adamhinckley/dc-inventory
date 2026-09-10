@@ -661,7 +661,7 @@ describe("internal uncovered SKUs HTTP", () => {
     ).toEqual([{ sku: SKU_B.value, qty: suggestedDraftPoQty(40, null) }]);
   });
 
-  it("returns 409 when drafting POs for suppliers without poPrefix", async () => {
+  it("drafts POs for suppliers without poPrefix using a fallback document number", async () => {
     const app = await startUncoveredApp({ withDraftSuppliers: true, withoutPoPrefix: true });
     const cookie = await staffCookie(app);
     const drafted = await app.inject({
@@ -670,8 +670,16 @@ describe("internal uncovered SKUs HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
       payload: { skus: [SKU.value] },
     });
-    expect(drafted.statusCode).toBe(409);
-    expect(drafted.json()).toEqual({ error: "supplier_po_prefix_missing" });
+    expect(drafted.statusCode).toBe(201);
+    expect(drafted.json()).toMatchObject({
+      purchaseOrders: [
+        expect.objectContaining({
+          supplierId: SUPPLIER_A,
+          documentNumber: "PO-OP06-00001",
+          status: "draft",
+        }),
+      ],
+    });
   });
 
   it("requires staff_session to sync draft purchase orders from uncovered", async () => {

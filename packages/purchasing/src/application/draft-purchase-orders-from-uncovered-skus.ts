@@ -33,7 +33,7 @@ export type DraftPurchaseOrdersFromUncoveredSkusResult =
     }
   | {
       ok: false;
-      reason: "invalid" | "empty_selection" | "supplier_po_prefix_missing";
+      reason: "invalid" | "empty_selection";
       unmappedSkus?: readonly string[];
     };
 
@@ -125,12 +125,6 @@ export class DraftPurchaseOrdersFromUncoveredSkusUseCase {
             })),
           });
           if (!created.ok) {
-            if (created.reason === "supplier_po_prefix_missing") {
-              throw new DraftPurchaseOrdersAbortError(
-                "supplier_po_prefix_missing",
-                grouped.unmappedSkus,
-              );
-            }
             throw new DraftPurchaseOrdersAbortError("invalid", grouped.unmappedSkus);
           }
           createdOrders.push(created.purchaseOrder);

@@ -1071,6 +1071,19 @@ export const conflictResponseSchema = z.object({
   error: z.literal("conflict"),
 });
 
+export const confirmPurchaseOrderConflictResponseSchema = z.object({
+  error: z.enum([
+    "illegal_transition",
+    "product_not_found",
+    "inventory_conflict",
+    "idempotency_conflict",
+    "provenance_conflict",
+    "invalid_quantity",
+  ]),
+  sku: z.string().optional(),
+  name: z.string().optional(),
+});
+
 export const purchaseOrdersListTable = {
   rowId: "id",
   columns: [
@@ -1150,10 +1163,6 @@ export const duplicateVendorNumberResponseSchema = z.object({
 
 export const duplicatePoPrefixResponseSchema = z.object({
   error: z.literal("duplicate_po_prefix"),
-});
-
-export const supplierPoPrefixMissingResponseSchema = z.object({
-  error: z.literal("supplier_po_prefix_missing"),
 });
 
 export const suppliersListTable = {

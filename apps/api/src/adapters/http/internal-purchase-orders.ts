@@ -5,8 +5,8 @@ import { z } from "zod";
 import { PurchaseOrderLineId, type PurchaseOrder } from "@dc-inventory/purchasing";
 import { PurchaseOrderId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
+  confirmPurchaseOrderConflictResponseSchema,
   conflictResponseSchema,
-  supplierPoPrefixMissingResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
   purchaseOrderCommandBodySchema,
@@ -185,7 +185,6 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: supplierPoPrefixMissingResponseSchema,
         },
       },
     },
@@ -207,9 +206,6 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         }
         if (result.reason === "empty_order") {
           return sendInvalid(reply);
-        }
-        if (result.reason === "supplier_po_prefix_missing") {
-          return reply.code(409).send({ error: "supplier_po_prefix_missing" as const });
         }
         return sendInvalid(reply);
       }
@@ -457,7 +453,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: conflictResponseSchema,
+          409: confirmPurchaseOrderConflictResponseSchema,
         },
       },
     },
@@ -476,9 +472,15 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           result.reason === "illegal_transition" ||
           result.reason === "product_not_found" ||
           result.reason === "idempotency_conflict" ||
-          result.reason === "inventory_conflict"
+          result.reason === "inventory_conflict" ||
+          result.reason === "provenance_conflict" ||
+          result.reason === "invalid_quantity"
         ) {
-          return sendConflict(reply);
+          return reply.code(409).send({
+            error: result.reason,
+            ...(result.sku !== undefined ? { sku: result.sku } : {}),
+            ...(result.name !== undefined ? { name: result.name } : {}),
+          });
         }
         return sendInvalid(reply);
       }

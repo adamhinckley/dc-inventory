@@ -40,6 +40,9 @@ import { suggestedDraftPoQty } from "../lib/purchase-order-line-math";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 import { uncoveredListTable } from "../lib/uncovered-list-table";
 import { UncoveredBatchDraftModal } from "./uncovered-batch-draft-modal";
+import { MissingSupplierPoPrefixDialog } from "./missing-supplier-po-prefix-dialog";
+import { loadSuppliersMissingPoPrefix } from "../lib/missing-supplier-po-prefix";
+import type { SupplierDetail } from "../lib/supplier-types";
 
 type UncoveredListParams = NonNullable<
   Parameters<typeof useListInternalUncoveredSkus>[0]
@@ -206,6 +209,10 @@ export function UncoveredFactoryDetail({
     [],
   );
   const [batchUnmappedNotice, setBatchUnmappedNotice] = useState<string | null>(null);
+  const [prefixWarningOpen, setPrefixWarningOpen] = useState(false);
+  const [missingPrefixSuppliers, setMissingPrefixSuppliers] = useState<
+    readonly SupplierDetail[]
+  >([]);
 
   const needsMapping = isUncoveredNeedsMappingFactoryId(factoryId);
   const factoriesQuery = useQuery({
@@ -318,7 +325,7 @@ export function UncoveredFactoryDetail({
     ]);
   }, [queryClient]);
 
-  const draftSelected = useCallback(async () => {
+  const draftSelected = useCallback(async (options?: { skipPrefixWarning?: boolean }) => {
     if (creatingRef.current || needsMapping) {
       return;
     }
@@ -326,6 +333,22 @@ export function UncoveredFactoryDetail({
     if (!shouldDraftUncoveredSelection(skus.length)) {
       return;
     }
+    if (options?.skipPrefixWarning !== true) {
+      try {
+        const missing = await loadSuppliersMissingPoPrefix([
+          factorySummary?.supplierId ?? factoryId,
+        ]);
+        if (missing.length > 0) {
+          setMissingPrefixSuppliers(missing);
+          setPrefixWarningOpen(true);
+          return;
+        }
+      } catch {
+        setActionError("Could not check this factory's PO prefix.");
+        return;
+      }
+    }
+    setPrefixWarningOpen(false);
     creatingRef.current = true;
     setActionError(null);
     setStatusMessage(null);
@@ -360,6 +383,8 @@ export function UncoveredFactoryDetail({
     }
   }, [
     draftMutation,
+    factoryId,
+    factorySummary?.supplierId,
     invalidateUncoveredQueries,
     needsMapping,
     router,
@@ -458,6 +483,15 @@ export function UncoveredFactoryDetail({
         drafts={batchDrafts}
         unmappedNotice={batchUnmappedNotice}
         onOpenChange={setBatchModalOpen}
+      />
+      <MissingSupplierPoPrefixDialog
+        open={prefixWarningOpen}
+        suppliers={missingPrefixSuppliers}
+        pending={draftMutation.isPending}
+        onOpenChange={setPrefixWarningOpen}
+        onSubmitAnyway={() => {
+          void draftSelected({ skipPrefixWarning: true });
+        }}
       />
     </div>
   );

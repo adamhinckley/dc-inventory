@@ -6840,20 +6840,6 @@ paths:
                 required:
                   - error
                 additionalProperties: false
-        "409":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - supplier_po_prefix_missing
-                required:
-                  - error
-                additionalProperties: false
   /internal/purchase-orders/sync-from-uncovered:
     post:
       operationId: syncInternalPurchaseOrdersFromUncovered
@@ -8061,7 +8047,16 @@ paths:
                   error:
                     type: string
                     enum:
-                      - conflict
+                      - illegal_transition
+                      - product_not_found
+                      - inventory_conflict
+                      - idempotency_conflict
+                      - provenance_conflict
+                      - invalid_quantity
+                  sku:
+                    type: string
+                  name:
+                    type: string
                 required:
                   - error
                 additionalProperties: false
@@ -8910,20 +8905,6 @@ paths:
                     required:
                       - error
                     additionalProperties: false
-        "409":
-          description: Default Response
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - supplier_po_prefix_missing
-                required:
-                  - error
-                additionalProperties: false
   /internal/suppliers:
     get:
       operationId: listInternalSuppliers

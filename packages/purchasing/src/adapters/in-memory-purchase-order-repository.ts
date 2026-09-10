@@ -4,8 +4,12 @@ import {
   Sku,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { formatDocumentNumber, parseDocumentNumber } from "../domain/document-number.js";
-import { SupplierPoPrefixMissingError } from "../domain/errors.js";
+import {
+  collectOccupiedDocumentPrefixes,
+  formatDocumentNumber,
+  parseDocumentNumber,
+  resolveDocumentPoPrefix,
+} from "../domain/document-number.js";
 import { PurchaseOrderLineId } from "../domain/ids.js";
 import type {
   IPurchaseOrderRepository,
@@ -91,6 +95,9 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
       _organizationId: OrganizationId,
       _supplierId: SupplierId,
     ): Promise<string | null> => null,
+    private readonly listSuppliersInOrg = async (
+      _organizationId: OrganizationId,
+    ): Promise<readonly { id: SupplierId; poPrefix: string | null }[]> => [],
   ) {}
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
@@ -153,11 +160,13 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     organizationId: OrganizationId,
     supplierId: SupplierId,
   ): Promise<string> {
-    const poPrefix = (await this.supplierPoPrefix(organizationId, supplierId))?.trim();
-    if (poPrefix === undefined || poPrefix.length === 0) {
-      throw new SupplierPoPrefixMissingError();
-    }
-    return poPrefix;
+    const poPrefix = await this.supplierPoPrefix(organizationId, supplierId);
+    const suppliers = await this.listSuppliersInOrg(organizationId);
+    const occupied = collectOccupiedDocumentPrefixes(
+      suppliers.map((supplier) => ({ id: supplier.id, poPrefix: supplier.poPrefix })),
+      supplierId,
+    );
+    return resolveDocumentPoPrefix(poPrefix, supplierId, occupied);
   }
 
   async save(order: PurchaseOrder): Promise<void> {

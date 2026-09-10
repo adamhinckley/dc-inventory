@@ -32,6 +32,9 @@ import {
   type UncoveredBatchDraftRow,
 } from "../lib/uncovered-draft-workflow";
 import { UncoveredBatchDraftModal } from "./uncovered-batch-draft-modal";
+import { MissingSupplierPoPrefixDialog } from "./missing-supplier-po-prefix-dialog";
+import { loadSuppliersMissingPoPrefix } from "../lib/missing-supplier-po-prefix";
+import type { SupplierDetail } from "../lib/supplier-types";
 
 function FactoryNameCell({ row }: { row: UncoveredFactoryRow }) {
   if (row.needsMapping) {
@@ -78,6 +81,10 @@ export function UncoveredFactorySummary() {
     [],
   );
   const [batchUnmappedNotice, setBatchUnmappedNotice] = useState<string | null>(null);
+  const [prefixWarningOpen, setPrefixWarningOpen] = useState(false);
+  const [missingPrefixSuppliers, setMissingPrefixSuppliers] = useState<
+    readonly SupplierDetail[]
+  >([]);
 
   const factoriesQuery = useQuery({
     queryKey: [...getListInternalUncoveredFactoriesQueryKey(), "all"],
@@ -168,10 +175,27 @@ export function UncoveredFactorySummary() {
     ]);
   }, [queryClient]);
 
-  const draftSelected = useCallback(async () => {
+  const draftSelected = useCallback(async (options?: { skipPrefixWarning?: boolean }) => {
     if (creatingRef.current || draftableFactoryIds.length === 0) {
       return;
     }
+    if (options?.skipPrefixWarning !== true) {
+      try {
+        const selected = rows.filter((row) => draftableFactoryIds.includes(row.id));
+        const missing = await loadSuppliersMissingPoPrefix(
+          selected.map((row) => row.supplierId ?? row.id),
+        );
+        if (missing.length > 0) {
+          setMissingPrefixSuppliers(missing);
+          setPrefixWarningOpen(true);
+          return;
+        }
+      } catch {
+        setActionError("Could not check PO prefixes for the selected factories.");
+        return;
+      }
+    }
+    setPrefixWarningOpen(false);
     creatingRef.current = true;
     setActionError(null);
     setStatusMessage(null);
@@ -214,6 +238,7 @@ export function UncoveredFactorySummary() {
     draftableFactoryIds,
     invalidateUncoveredQueries,
     router,
+    rows,
     supplierNamesById,
     table.selection,
   ]);
@@ -261,6 +286,15 @@ export function UncoveredFactorySummary() {
         drafts={batchDrafts}
         unmappedNotice={batchUnmappedNotice}
         onOpenChange={setBatchModalOpen}
+      />
+      <MissingSupplierPoPrefixDialog
+        open={prefixWarningOpen}
+        suppliers={missingPrefixSuppliers}
+        pending={draftMutation.isPending}
+        onOpenChange={setPrefixWarningOpen}
+        onSubmitAnyway={() => {
+          void draftSelected({ skipPrefixWarning: true });
+        }}
       />
     </div>
   );

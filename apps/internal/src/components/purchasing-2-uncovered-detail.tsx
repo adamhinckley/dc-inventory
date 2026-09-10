@@ -34,9 +34,12 @@ import {
   purchasing2PurchaseOrderHref,
 } from "../lib/purchasing-2-uncovered-constants";
 import { afterDraftUncoveredPos } from "../lib/uncovered-draft-workflow";
+import { loadSuppliersMissingPoPrefix } from "../lib/missing-supplier-po-prefix";
+import type { SupplierDetail } from "../lib/supplier-types";
 import { suggestedDraftPoQty } from "../lib/purchase-order-line-math";
 import { replaceTableUrlParams } from "../lib/table-url-params";
 import { uncoveredListTable } from "../lib/uncovered-list-table";
+import { MissingSupplierPoPrefixDialog } from "./missing-supplier-po-prefix-dialog";
 
 type UncoveredListParams = NonNullable<
   Parameters<typeof useListInternalUncoveredSkus>[0]
@@ -194,6 +197,10 @@ export function Purchasing2UncoveredDetail({
   const creatingRef = useRef(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [prefixWarningOpen, setPrefixWarningOpen] = useState(false);
+  const [missingPrefixSuppliers, setMissingPrefixSuppliers] = useState<
+    readonly SupplierDetail[]
+  >([]);
 
   const needsMapping = isPurchasing2UncoveredNeedsMappingFactoryId(factoryId);
   const factoriesQuery = useQuery({
@@ -306,10 +313,26 @@ export function Purchasing2UncoveredDetail({
     ]);
   }, [queryClient]);
 
-  const saveDraft = useCallback(async () => {
+  const saveDraft = useCallback(async (options?: { skipPrefixWarning?: boolean }) => {
     if (creatingRef.current || needsMapping) {
       return;
     }
+    if (options?.skipPrefixWarning !== true) {
+      try {
+        const missing = await loadSuppliersMissingPoPrefix([
+          factorySummary?.supplierId ?? factoryId,
+        ]);
+        if (missing.length > 0) {
+          setMissingPrefixSuppliers(missing);
+          setPrefixWarningOpen(true);
+          return;
+        }
+      } catch {
+        setActionError("Could not check this factory's PO prefix.");
+        return;
+      }
+    }
+    setPrefixWarningOpen(false);
     creatingRef.current = true;
     setActionError(null);
     setStatusMessage(null);
@@ -356,6 +379,7 @@ export function Purchasing2UncoveredDetail({
   }, [
     draftMutation,
     factoryId,
+    factorySummary?.supplierId,
     invalidateUncoveredQueries,
     needsMapping,
     queryClient,
@@ -448,6 +472,16 @@ export function Purchasing2UncoveredDetail({
         <Table.Empty />
         <Table.Pagination />
       </Table>
+
+      <MissingSupplierPoPrefixDialog
+        open={prefixWarningOpen}
+        suppliers={missingPrefixSuppliers}
+        pending={draftMutation.isPending}
+        onOpenChange={setPrefixWarningOpen}
+        onSubmitAnyway={() => {
+          void saveDraft({ skipPrefixWarning: true });
+        }}
+      />
     </div>
   );
 }

@@ -121,7 +121,7 @@ describe("Purchasing (in-memory)", () => {
     expect(searched.items.map((order) => order.documentNumber)).toEqual(["PO-HF-00002"]);
   });
 
-  it("returns supplier_po_prefix_missing when supplier has no PO prefix", async () => {
+  it("numbers a PO with a fallback prefix when the supplier has no PO prefix", async () => {
     const h = await harness();
     const missingPrefixId = SupplierId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
     await h.uow.suppliers.save({
@@ -138,7 +138,11 @@ describe("Purchasing (in-memory)", () => {
       supplierId: missingPrefixId,
       lines: [{ sku: SKU.value, name: "Bolt", qty: 1 }],
     });
-    expect(created).toEqual({ ok: false, reason: "supplier_po_prefix_missing" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(created.purchaseOrder.documentNumber).toBe("PO-SDUI-00001");
   });
 
   it("allows updating existing POs after supplier poPrefix is cleared", async () => {
@@ -1017,6 +1021,19 @@ describe("Purchasing (in-memory)", () => {
     });
     expect(movements.filter((movement) => movement.movementType === "InboundCancelled")).toHaveLength(1);
     expect(movements.find((movement) => movement.movementType === "InboundCancelled")?.quantity).toBe(12);
+
+    const reissued = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      idempotencyKey: "confirm-after-unconfirm",
+    });
+    expect(reissued).toEqual({
+      ok: false,
+      reason: "provenance_conflict",
+      sku: SKU.value,
+      name: "Catalog bolt",
+    });
   });
 
   it("rejects unconfirm when any line has received quantity", async () => {

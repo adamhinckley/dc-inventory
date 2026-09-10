@@ -9,7 +9,6 @@ import { parseIsoDate } from "../domain/iso-date.js";
 import { newUuid } from "../domain/ids.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
-import { parsePoPrefix } from "../domain/supplier.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
 import { resolveDraftPurchaseOrderLines } from "./resolve-draft-purchase-order-lines.js";
 
@@ -38,7 +37,6 @@ export type CreatePurchaseOrderResult =
       reason:
         | "invalid"
         | "supplier_not_found"
-        | "supplier_po_prefix_missing"
         | "product_not_found"
         | "product_archived"
         | "empty_order";
@@ -61,9 +59,6 @@ export class CreatePurchaseOrderUseCase {
     const supplier = await this.suppliers.findById(input.organizationId, input.supplierId);
     if (supplier === null) {
       return { ok: false, reason: "supplier_not_found" };
-    }
-    if (parsePoPrefix(supplier.poPrefix) === null) {
-      return { ok: false, reason: "supplier_po_prefix_missing" };
     }
 
     const resolved = await resolveDraftPurchaseOrderLines(

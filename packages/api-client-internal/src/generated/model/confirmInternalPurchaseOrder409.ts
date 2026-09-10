@@ -8,4 +8,6 @@ import type { ConfirmInternalPurchaseOrder409Error } from './confirmInternalPurc
 
 export type ConfirmInternalPurchaseOrder409 = {
   error: ConfirmInternalPurchaseOrder409Error;
+  sku?: string;
+  name?: string;
 };
