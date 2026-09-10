@@ -5,6 +5,7 @@ import {
   SupplierId,
 } from "@dc-inventory/shared-kernel";
 import {
+  collectOccupiedDocumentPrefixes,
   formatDocumentNumber,
   parseDocumentNumber,
   resolveDocumentPoPrefix,
@@ -94,6 +95,9 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
       _organizationId: OrganizationId,
       _supplierId: SupplierId,
     ): Promise<string | null> => null,
+    private readonly listSuppliersInOrg = async (
+      _organizationId: OrganizationId,
+    ): Promise<readonly { id: SupplierId; poPrefix: string | null }[]> => [],
   ) {}
 
   async list(query: ListPurchaseOrdersQuery): Promise<PurchaseOrderListPage> {
@@ -157,7 +161,12 @@ export class InMemoryPurchaseOrderRepository implements IPurchaseOrderRepository
     supplierId: SupplierId,
   ): Promise<string> {
     const poPrefix = await this.supplierPoPrefix(organizationId, supplierId);
-    return resolveDocumentPoPrefix(poPrefix, supplierId);
+    const suppliers = await this.listSuppliersInOrg(organizationId);
+    const occupied = collectOccupiedDocumentPrefixes(
+      suppliers.map((supplier) => ({ id: supplier.id, poPrefix: supplier.poPrefix })),
+      supplierId,
+    );
+    return resolveDocumentPoPrefix(poPrefix, supplierId, occupied);
   }
 
   async save(order: PurchaseOrder): Promise<void> {

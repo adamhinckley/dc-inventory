@@ -1165,10 +1165,6 @@ export const duplicatePoPrefixResponseSchema = z.object({
   error: z.literal("duplicate_po_prefix"),
 });
 
-export const supplierPoPrefixMissingResponseSchema = z.object({
-  error: z.literal("supplier_po_prefix_missing"),
-});
-
 export const suppliersListTable = {
   rowId: "id",
   columns: [

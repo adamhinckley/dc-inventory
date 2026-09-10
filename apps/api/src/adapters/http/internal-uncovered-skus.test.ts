@@ -675,7 +675,7 @@ describe("internal uncovered SKUs HTTP", () => {
       purchaseOrders: [
         expect.objectContaining({
           supplierId: SUPPLIER_A,
-          documentNumber: "PO-AAAA-00001",
+          documentNumber: "PO-OP06-00001",
           status: "draft",
         }),
       ],

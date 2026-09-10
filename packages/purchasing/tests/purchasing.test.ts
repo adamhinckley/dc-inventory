@@ -142,7 +142,7 @@ describe("Purchasing (in-memory)", () => {
     if (!created.ok) {
       return;
     }
-    expect(created.purchaseOrder.documentNumber).toBe("PO-CCCC-00001");
+    expect(created.purchaseOrder.documentNumber).toBe("PO-SDUI-00001");
   });
 
   it("allows updating existing POs after supplier poPrefix is cleared", async () => {

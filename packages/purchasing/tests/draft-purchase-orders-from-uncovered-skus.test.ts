@@ -226,7 +226,7 @@ describe("DraftPurchaseOrdersFromUncoveredSkusUseCase", () => {
       return;
     }
     expect(result.purchaseOrders).toHaveLength(1);
-    expect(result.purchaseOrders[0]?.documentNumber).toBe("PO-AAAA-00001");
+    expect(result.purchaseOrders[0]?.documentNumber).toBe("PO-OP06-00001");
   });
 
   it("treats ambiguous multi-supplier SKUs as unmapped without failing mapped drafts", async () => {

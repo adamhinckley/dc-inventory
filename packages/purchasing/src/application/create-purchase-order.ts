@@ -9,13 +9,8 @@ import { parseIsoDate } from "../domain/iso-date.js";
 import { newUuid } from "../domain/ids.js";
 import type { IPurchaseOrderRepository, ISupplierRepository } from "../domain/ports/purchase-order-repository.js";
 import type { ICatalogSkuLookupPort } from "../domain/ports/supplier-product-repository.js";
-<<<<<<< HEAD
-import { parsePoPrefix } from "../domain/supplier.js";
 import type { PurchaseOrder } from "../domain/purchase-order.js";
 import { resolveDraftPurchaseOrderLines } from "./resolve-draft-purchase-order-lines.js";
-=======
-import type { PurchaseOrder, PurchaseOrderLine } from "../domain/purchase-order.js";
->>>>>>> 904feaf (Explain PO issue conflicts and warn when a vendor prefix is missing.)
 
 export type CreatePurchaseOrderLineInput = {
   sku: string;

@@ -6,16 +6,13 @@ import {
 } from "./purchase-order-action-errors";
 
 describe("purchase-order action errors", () => {
-  it("explains missing vendor PO prefix on create", () => {
+  it("maps create and issue conflicts", () => {
     expect(
-      createPurchaseOrderErrorMessage({
-        status: 409,
-        data: { error: "supplier_po_prefix_missing" },
-      }),
-    ).toBe("Set a PO prefix on this vendor before creating a purchase order.");
-  });
-
-  it("maps issue and unissue conflicts", () => {
+      createPurchaseOrderErrorMessage({ status: 404, data: { error: "not_found" } }),
+    ).toBe("Could not create draft purchase order because the vendor was not found.");
+    expect(createPurchaseOrderErrorMessage({ status: 400 })).toBe(
+      "Could not create draft purchase order.",
+    );
     expect(
       issuePurchaseOrderErrorMessage({ status: 409, data: { error: "illegal_transition" } }),
     ).toBe("This purchase order is not a draft, so it cannot be issued.");

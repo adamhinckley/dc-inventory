@@ -18,6 +18,12 @@ export class InMemoryPurchasingUnitOfWork implements IPurchasingUnitOfWork {
       const supplier = await this.suppliers.findById(organizationId, supplierId);
       return supplier?.poPrefix ?? null;
     },
+    async (organizationId) => {
+      const suppliers = await this.suppliers.listAll();
+      return suppliers
+        .filter((supplier) => supplier.organizationId === organizationId)
+        .map((supplier) => ({ id: supplier.id, poPrefix: supplier.poPrefix }));
+    },
   );
   private readonly inventoryUow: InMemoryInventoryUnitOfWork;
   readonly inventory: StockLedgerInventoryCommandAdapter;

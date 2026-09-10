@@ -16,9 +16,6 @@ export function createPurchaseOrderErrorMessage(result: {
   status: number;
   data?: ActionErrorBody;
 }): string {
-  if (result.status === 409 && result.data?.error === "supplier_po_prefix_missing") {
-    return "Set a PO prefix on this vendor before creating a purchase order.";
-  }
   if (result.status === 404) {
     return "Could not create draft purchase order because the vendor was not found.";
   }

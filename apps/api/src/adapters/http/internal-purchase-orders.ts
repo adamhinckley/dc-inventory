@@ -5,9 +5,8 @@ import { z } from "zod";
 import { PurchaseOrderLineId, type PurchaseOrder } from "@dc-inventory/purchasing";
 import { PurchaseOrderId, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
-  conflictResponseSchema,
   confirmPurchaseOrderConflictResponseSchema,
-  supplierPoPrefixMissingResponseSchema,
+  conflictResponseSchema,
   invalidResponseSchema,
   notFoundResponseSchema,
   purchaseOrderCommandBodySchema,
@@ -186,7 +185,6 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
           404: notFoundResponseSchema,
-          409: supplierPoPrefixMissingResponseSchema,
         },
       },
     },

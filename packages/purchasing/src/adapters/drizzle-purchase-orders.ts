@@ -2,6 +2,7 @@ import { OrganizationId, PurchaseOrderId, Sku, SupplierId } from "@dc-inventory/
 import { and, asc, count, desc, eq, ilike, inArray, notInArray, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
+  collectOccupiedDocumentPrefixes,
   formatDocumentNumber,
   parseDocumentNumber,
   resolveDocumentPoPrefix,
@@ -197,11 +198,12 @@ async function loadSupplierPoPrefix(
   supplierId: SupplierId,
 ): Promise<string> {
   const rows = await db
-    .select({ poPrefix: suppliers.poPrefix })
+    .select({ id: suppliers.id, poPrefix: suppliers.poPrefix })
     .from(suppliers)
-    .where(and(eq(suppliers.id, supplierId), eq(suppliers.organizationId, organizationId)))
-    .limit(1);
-  return resolveDocumentPoPrefix(rows[0]?.poPrefix, supplierId);
+    .where(eq(suppliers.organizationId, organizationId));
+  const current = rows.find((row) => row.id === supplierId);
+  const occupied = collectOccupiedDocumentPrefixes(rows, supplierId);
+  return resolveDocumentPoPrefix(current?.poPrefix, supplierId, occupied);
 }
 
 async function allocateDocumentNumber(

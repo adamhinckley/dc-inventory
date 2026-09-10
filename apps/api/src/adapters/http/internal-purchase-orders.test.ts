@@ -132,7 +132,7 @@ describe("internal purchase orders HTTP", () => {
     expect(created.statusCode).toBe(201);
     expect(created.json()).toMatchObject({
       supplierId: SUPPLIER_NO_PREFIX_ID,
-      documentNumber: "PO-EEEE-00001",
+      documentNumber: "PO-W2OU-00001",
       status: "draft",
     });
   });

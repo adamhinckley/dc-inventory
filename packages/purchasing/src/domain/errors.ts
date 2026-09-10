@@ -8,13 +8,6 @@ export class PurchasingTransactionError extends Error {
   }
 }
 
-export class SupplierPoPrefixMissingError extends Error {
-  constructor() {
-    super("supplier_po_prefix_missing");
-    this.name = "SupplierPoPrefixMissingError";
-  }
-}
-
 export class DraftPurchaseOrdersAbortError extends Error {
   constructor(
     readonly reason: "invalid",
