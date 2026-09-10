@@ -109,12 +109,9 @@ function toSalesOrderBody(
   request: { server: FastifyInstance; wholesaleAuth?: WholesaleAuth },
   order: SalesOrder,
 ) {
-  return mapSalesOrder(
-    order,
-    lookupProductId(request),
-    lookupCustomerName(request),
-    lookupProductIds(request),
-  );
+  return mapSalesOrder(order, lookupProductId(request), lookupCustomerName(request), {
+    lookupProductIds: lookupProductIds(request),
+  });
 }
 
 function sendNotFound(reply: FastifyReply) {

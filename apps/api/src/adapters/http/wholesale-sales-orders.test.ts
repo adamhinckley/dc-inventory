@@ -14,7 +14,7 @@ import {
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
 } from "@dc-inventory/identity";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import {
@@ -242,6 +242,45 @@ describe("wholesale sales orders (ADA-272)", () => {
     });
     expect(order.statusCode).toBe(409);
     expect(order.json()).toEqual({ error: "conflict" });
+  });
+
+  it("list batches product-id lookup once per page when orders share SKUs", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "BATCH-LIST-SKU");
+    const batchLookupSpy = vi.spyOn(app.catalog, "lookupProductIdsBySkus");
+    const singleLookupSpy = vi.spyOn(app.catalog, "lookupProductIdBySku");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    for (let index = 0; index < 2; index += 1) {
+      const created = await app.inject({
+        method: "POST",
+        url: "/wholesale/sales-orders",
+        cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+        payload: { lines: [{ productId, qty: index + 1 }] },
+      });
+      expect(created.statusCode).toBe(201);
+    }
+
+    batchLookupSpy.mockClear();
+    singleLookupSpy.mockClear();
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(listed.statusCode).toBe(200);
+    const items = listed.json().items as Array<{ lines: Array<{ productId?: string }> }>;
+    expect(items).toHaveLength(2);
+    expect(batchLookupSpy).toHaveBeenCalledTimes(1);
+    expect(batchLookupSpy.mock.calls[0]?.[1]).toEqual(["BATCH-LIST-SKU"]);
+    expect(singleLookupSpy).not.toHaveBeenCalled();
+    for (const item of items) {
+      expect(item.lines[0]?.productId).toBe(productId);
+    }
   });
 
   it("GET list returns only session customer orders", async () => {

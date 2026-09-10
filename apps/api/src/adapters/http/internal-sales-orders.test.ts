@@ -609,7 +609,8 @@ describe("internal sales orders HTTP", () => {
   it("list batches product-id lookup once per page when orders share SKUs", async () => {
     const { app } = await startSalesApp();
     const cookie = await staffCookie(app);
-    const lookupSpy = vi.spyOn(app.catalog, "lookupProductIdsBySkus");
+    const batchLookupSpy = vi.spyOn(app.catalog, "lookupProductIdsBySkus");
+    const singleLookupSpy = vi.spyOn(app.catalog, "lookupProductIdBySku");
 
     for (let index = 0; index < 2; index += 1) {
       const created = await app.inject({
@@ -624,7 +625,8 @@ describe("internal sales orders HTTP", () => {
       expect(created.statusCode).toBe(201);
     }
 
-    lookupSpy.mockClear();
+    batchLookupSpy.mockClear();
+    singleLookupSpy.mockClear();
 
     const listed = await app.inject({
       method: "GET",
@@ -632,9 +634,14 @@ describe("internal sales orders HTTP", () => {
       cookies: { [STAFF_SESSION_COOKIE]: cookie },
     });
     expect(listed.statusCode).toBe(200);
-    expect(listed.json().items).toHaveLength(2);
-    expect(lookupSpy).toHaveBeenCalledTimes(1);
-    expect(lookupSpy.mock.calls[0]?.[1]).toEqual([SKU.value]);
+    const items = listed.json().items as Array<{ lines: Array<{ productId?: string }> }>;
+    expect(items).toHaveLength(2);
+    expect(batchLookupSpy).toHaveBeenCalledTimes(1);
+    expect(batchLookupSpy.mock.calls[0]?.[1]).toEqual([SKU.value]);
+    expect(singleLookupSpy).not.toHaveBeenCalled();
+    for (const item of items) {
+      expect(item.lines[0]?.productId).toBe(PRODUCT_ID);
+    }
   });
 
   it("line-jobs updates qty on a draft order", async () => {

@@ -59,7 +59,7 @@ function toLineShortageBody(
   };
 }
 
-export function collectSalesOrderListSkus(orders: readonly SalesOrder[]): string[] {
+function collectSalesOrderListSkus(orders: readonly SalesOrder[]): string[] {
   const skus = new Set<string>();
   for (const order of orders) {
     for (const line of order.lines) {
@@ -82,30 +82,28 @@ export async function mapSalesOrderListItems(
       : new Map<string, string | null>();
   return Promise.all(
     orders.map((order) =>
-      mapSalesOrder(
-        order,
-        lookupProductId,
-        lookupCustomerName,
-        undefined,
-        productIdBySku,
-      ),
+      mapSalesOrder(order, lookupProductId, lookupCustomerName, { productIdBySku }),
     ),
   );
 }
+
+type MapSalesOrderOptions = {
+  lookupProductIds?: (skus: readonly string[]) => Promise<ReadonlyMap<string, string | null>>;
+  productIdBySku?: ReadonlyMap<string, string | null>;
+};
 
 export async function mapSalesOrder(
   order: SalesOrder,
   lookupProductId: (sku: string) => Promise<string | null>,
   lookupCustomerName: (customerId: string) => Promise<string | null>,
-  lookupProductIds?: (skus: readonly string[]) => Promise<ReadonlyMap<string, string | null>>,
-  productIdBySku?: ReadonlyMap<string, string | null>,
+  options?: MapSalesOrderOptions,
 ) {
   const customerName = await lookupCustomerName(order.customerId);
   const skus = order.lines.map((line) => line.sku.value);
   const resolvedProductIdsBySku =
-    productIdBySku ??
-    (lookupProductIds !== undefined && skus.length > 0
-      ? await lookupProductIds(skus)
+    options?.productIdBySku ??
+    (options?.lookupProductIds !== undefined && skus.length > 0
+      ? await options.lookupProductIds(skus)
       : undefined);
 
   const lines = await Promise.all(
