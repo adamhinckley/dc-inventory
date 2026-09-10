@@ -499,5 +499,149 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
         ),
       ).toBe(true);
     });
+
+    it("sorts balances by oldestDue without invalid ORDER BY SQL", async () => {
+      const db = connection.db;
+      const repository = new DrizzleInvoiceRepository(db as unknown as AccountingDrizzle);
+      const drizzleProfiles = new DrizzleCustomerArProfileReadPort(db);
+      const inMemoryOrgRead = new InMemoryArOrgReadPort(repository, drizzleProfiles);
+      const inMemoryExposure = new InMemoryOpenOrderExposureReadAdapter(new InMemorySalesOrderRepository());
+      const listQuery = {
+        organizationId,
+        asOf,
+        page: 1,
+        pageSize: 10,
+        sortBy: "oldestDue" as const,
+        sortOrder: "desc" as const,
+      };
+
+      const inMemoryBalances = await new ListCustomerBalancesQuery(
+        new InMemoryCustomerBalancesListQuery(
+          inMemoryOrgRead,
+          drizzleProfiles,
+          inMemoryExposure,
+        ),
+      ).execute(listQuery);
+      const sqlBalances = await new ListCustomerBalancesQuery(
+        createCustomerBalancesListQuery(db),
+      ).execute(listQuery);
+
+      expect(sqlBalances.total).toBe(inMemoryBalances.total);
+      expect(sqlBalances.items.map((row) => row.customerId)).toEqual(
+        inMemoryBalances.items.map((row) => row.customerId),
+      );
+    });
+
+    it("ignores payment applications to invoices posted after asOf when computing unapplied credit", async () => {
+      const db = connection.db;
+      const repository = new DrizzleInvoiceRepository(db as unknown as AccountingDrizzle);
+      const drizzleProfiles = new DrizzleCustomerArProfileReadPort(db);
+      const inMemoryOrgRead = new InMemoryArOrgReadPort(repository, drizzleProfiles);
+      const inMemoryExposure = new InMemoryOpenOrderExposureReadAdapter(new InMemorySalesOrderRepository());
+      const customerId = CustomerId.parse(randomUUID());
+      const earlyOrderId = OrderId.parse(randomUUID());
+      const futureOrderId = OrderId.parse(randomUUID());
+      const futureInvoiceId = InvoiceId.parse(randomUUID());
+      const paymentId = randomUUID();
+      const asOfMidMonth = new Date("2026-09-09T00:00:00.000Z");
+
+      await connection.sql`
+        insert into customers.customers
+          (id, organization_id, name, customer_number, credit_limit_cents, currency, terms)
+        values
+          (${customerId}, ${organizationId}, 'As-of credit customer', ${`C382-ASOF-${customerId}`}, 50000, 'USD', 'NET30')
+      `;
+      await connection.sql`
+        insert into sales.orders
+          (id, organization_id, customer_id, status, document_number, created_at)
+        values
+          (${earlyOrderId}, ${organizationId}, ${customerId}, 'shipped', ${`SO-ASOF-${customerId}`}, ${"2026-08-01T00:00:00.000Z"}),
+          (${futureOrderId}, ${organizationId}, ${customerId}, 'shipped', ${`SO-FUT-${customerId}`}, ${"2026-09-15T00:00:00.000Z"})
+      `;
+      await connection.sql`
+        insert into accounting.invoices
+          (
+            id,
+            organization_id,
+            order_id,
+            customer_id,
+            document_number,
+            status,
+            posted_at,
+            due_date,
+            subtotal_cents,
+            total_cents,
+            currency
+          )
+        values
+          (
+            ${futureInvoiceId},
+            ${organizationId},
+            ${futureOrderId},
+            ${customerId},
+            ${`INV-FUT-${customerId}`},
+            'posted',
+            ${"2026-09-15T00:00:00.000Z"},
+            ${"2026-10-01T00:00:00.000Z"},
+            500,
+            500,
+            'USD'
+          )
+      `;
+      await connection.sql`
+        insert into accounting.payments
+          (
+            id,
+            organization_id,
+            customer_id,
+            amount_cents,
+            currency,
+            idempotency_key,
+            method,
+            received_at
+          )
+        values
+          (
+            ${paymentId},
+            ${organizationId},
+            ${customerId},
+            900,
+            'USD',
+            ${`ada-382-asof-${paymentId}`},
+            'check',
+            ${"2026-09-01T00:00:00.000Z"}
+          )
+      `;
+      await connection.sql`
+        insert into accounting.payment_applications
+          (id, payment_id, invoice_id, amount_cents, currency)
+        values
+          (${randomUUID()}, ${paymentId}, ${futureInvoiceId}, 900, 'USD')
+      `;
+
+      const listQuery = {
+        organizationId,
+        asOf: asOfMidMonth,
+        q: "As-of credit",
+        page: 1,
+        pageSize: 10,
+        sortBy: "openBalance" as const,
+        sortOrder: "desc" as const,
+      };
+      const inMemoryBalances = await new ListCustomerBalancesQuery(
+        new InMemoryCustomerBalancesListQuery(
+          inMemoryOrgRead,
+          drizzleProfiles,
+          inMemoryExposure,
+        ),
+      ).execute(listQuery);
+      const sqlBalances = await new ListCustomerBalancesQuery(
+        createCustomerBalancesListQuery(db),
+      ).execute(listQuery);
+
+      expect(inMemoryBalances.items).toHaveLength(1);
+      expect(inMemoryBalances.items[0]?.openBalanceCents).toBe(-900);
+      expect(sqlBalances.items).toEqual(inMemoryBalances.items);
+    });
   },
 );

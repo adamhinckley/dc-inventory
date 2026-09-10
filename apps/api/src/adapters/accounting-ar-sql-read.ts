@@ -202,7 +202,7 @@ function sortExpression(sortBy: CustomerBalancesSortBy, asOf: Date): SQL {
     case "customerNumber":
       return sql`customer_number`;
     case "oldestDue":
-      return sql`oldest_due_date nulls last`;
+      return sql`oldest_due_date`;
     case "daysPastDue":
       return sql`case
         when oldest_due_date is null then 0
@@ -292,13 +292,20 @@ function mapBalanceRow(row: BalanceSqlRow, asOf: Date): CustomerBalanceRow {
   };
 }
 
+function balancesOrderBy(query: CustomerBalancesListQuery): SQL {
+  const sortDirection = query.sortOrder === "asc" ? sql`asc` : sql`desc`;
+  if (query.sortBy === "oldestDue") {
+    return sql`oldest_due_date ${sortDirection} nulls last, customer_id asc`;
+  }
+  return sql`${sortExpression(query.sortBy, query.asOf)} ${sortDirection}, customer_id asc`;
+}
+
 export async function queryCustomerBalancesPage(
   db: AppDrizzle,
   query: CustomerBalancesListQuery,
 ): Promise<{ items: CustomerBalanceRow[]; total: number }> {
   const filter = balancesFilterSql(query);
   const offset = (query.page - 1) * query.pageSize;
-  const sortDirection = query.sortOrder === "asc" ? sql`asc` : sql`desc`;
 
   const countResult = await db.execute<{ total: number }>(sql`
     ${customerBalancesCte(query.organizationId, query.asOf)}
@@ -322,7 +329,7 @@ export async function queryCustomerBalancesPage(
       has_active_plan
     from customer_balances
     where ${filter}
-    order by ${sortExpression(query.sortBy, query.asOf)} ${sortDirection}, customer_id asc
+    order by ${balancesOrderBy(query)}
     limit ${query.pageSize}
     offset ${offset}
   `);
@@ -371,7 +378,7 @@ export async function queryOrgSummaryAggregates(
       where organization_id = ${scope.organizationId}
         and kind = 'write_off'
         and amount_cents > 0
-        and created_at >= date_trunc('month', ${asOfBound}::timestamptz at time zone 'UTC')
+        and created_at >= (date_trunc('month', ${asOfBound}::timestamptz at time zone 'UTC') at time zone 'UTC')
         and created_at <= ${asOfBound}::timestamptz
     `),
   ]);
