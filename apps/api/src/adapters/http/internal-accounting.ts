@@ -2,21 +2,14 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
-  computeRemainingCents,
   deriveInvoiceStatus,
-  filterAdjustmentsForAsOf,
-  isInvoicePostedAsOf,
-  isPaymentVoided,
   PaymentId,
   PaymentPlanId,
-  type ArAsOfContext,
   type CustomerBalancesSortBy,
-  type CustomerArLoadedData,
   type CustomerArStats,
   type Invoice,
   type Payment,
   type PaymentApplication,
-  type InvoiceAdjustment,
   type PaymentPlan,
   type PaymentPlanExpectations,
   type PaymentsReceivedSortBy,
@@ -37,6 +30,7 @@ import {
   conflictResponseSchema,
   customerAccountingQuerySchema,
   customerAccountingSummarySchema,
+  customerAccountingWorkspaceResponseSchema,
   customerArInvoiceListResponseSchema,
   customerBalancesListQuerySchema,
   customerBalancesListResponseSchema,
@@ -225,123 +219,33 @@ function mapCustomerPaymentRow(input: {
   };
 }
 
-function buildArAsOfContext(
-  payments: readonly Payment[],
-  asOf: Date,
-): ArAsOfContext {
+function mapSummaryResponse(result: {
+  asOf: Date;
+  aging: Readonly<Record<string, number>>;
+  unappliedCreditCents: number;
+  openBalanceCents: number;
+  openBalanceOwedCents: number;
+  exposureCents: number;
+  availableCreditCents: number;
+  stats: CustomerArStats;
+  plan: PaymentPlan | null;
+  planExpectations: PaymentPlanExpectations | null;
+}) {
   return {
-    asOf,
-    paymentsById: new Map(payments.map((payment) => [payment.id, payment])),
+    asOf: result.asOf,
+    aging: mapAgingBuckets(result.aging),
+    unappliedCreditCents: result.unappliedCreditCents,
+    openBalanceCents: result.openBalanceCents,
+    openBalanceOwedCents: result.openBalanceOwedCents,
+    exposureCents: result.exposureCents,
+    availableCreditCents: result.availableCreditCents,
+    stats: mapStats(result.stats),
+    plan: result.plan === null ? null : mapPaymentPlan(result.plan),
+    planExpectations:
+      result.planExpectations === null
+        ? null
+        : mapPlanExpectations(result.planExpectations),
   };
-}
-
-function collectVoidedPaymentIds(payments: readonly Payment[]): ReadonlySet<PaymentId> {
-  return new Set(payments.filter(isPaymentVoided).map((payment) => payment.id));
-}
-
-function filterCustomerArDataForAsOf(
-  data: CustomerArLoadedData,
-  asOf: Date,
-): CustomerArLoadedData {
-  const invoices = data.invoices.filter((invoice) => isInvoicePostedAsOf(invoice, asOf));
-  const payments = data.payments.filter(
-    (payment) => payment.receivedAt !== undefined && payment.receivedAt <= asOf,
-  );
-  const invoiceIds = new Set(invoices.map((invoice) => invoice.id));
-  const paymentIds = new Set(payments.map((payment) => payment.id));
-
-  const applicationsByInvoiceId = new Map<
-    InvoiceId,
-    readonly PaymentApplication[]
-  >();
-  for (const [invoiceId, applications] of data.applicationsByInvoiceId) {
-    if (!invoiceIds.has(invoiceId)) {
-      continue;
-    }
-    applicationsByInvoiceId.set(
-      invoiceId,
-      applications.filter((application) => paymentIds.has(application.paymentId)),
-    );
-  }
-
-  const adjustmentsByInvoiceId = new Map<InvoiceId, readonly InvoiceAdjustment[]>();
-  for (const [invoiceId, adjustments] of data.adjustmentsByInvoiceId) {
-    if (!invoiceIds.has(invoiceId)) {
-      continue;
-    }
-    adjustmentsByInvoiceId.set(
-      invoiceId,
-      filterAdjustmentsForAsOf(adjustments, asOf),
-    );
-  }
-
-  const applicationsByPaymentId = new Map<
-    PaymentId,
-    readonly PaymentApplication[]
-  >();
-  for (const [paymentId, applications] of data.applicationsByPaymentId) {
-    if (!paymentIds.has(paymentId)) {
-      continue;
-    }
-    applicationsByPaymentId.set(
-      paymentId,
-      applications.filter((application) => invoiceIds.has(application.invoiceId)),
-    );
-  }
-
-  const activePlan =
-    data.activePlan !== null &&
-    (data.activePlan.endedAt === null || data.activePlan.endedAt > asOf)
-      ? data.activePlan
-      : null;
-
-  return {
-    invoices,
-    applicationsByInvoiceId,
-    adjustmentsByInvoiceId,
-    payments,
-    applicationsByPaymentId,
-    activePlan,
-  };
-}
-
-function listCustomerInvoiceRows(
-  data: CustomerArLoadedData,
-  asOf: Date,
-  includePaid: boolean,
-) {
-  const filtered = filterCustomerArDataForAsOf(data, asOf);
-  const voidedPaymentIds = collectVoidedPaymentIds(filtered.payments);
-  const asOfContext = buildArAsOfContext(filtered.payments, asOf);
-
-  return filtered.invoices
-    .map((invoice) => {
-      const applications = filtered.applicationsByInvoiceId.get(invoice.id) ?? [];
-      const adjustments = filtered.adjustmentsByInvoiceId.get(invoice.id) ?? [];
-      const remainingCents = computeRemainingCents(
-        invoice,
-        applications,
-        voidedPaymentIds,
-        adjustments,
-        asOfContext,
-      );
-      if (!includePaid && remainingCents <= 0) {
-        return null;
-      }
-      return mapInvoiceRow(
-        invoice,
-        remainingCents,
-        deriveInvoiceStatus(
-          invoice,
-          applications,
-          asOf,
-          voidedPaymentIds,
-          adjustments,
-          asOfContext,
-        ),
-      );
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
 }
 
 async function ensureCustomerExists(request: FastifyRequest, reply: FastifyReply, customerId: CustomerId) {
@@ -400,20 +304,44 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
         customerId,
         asOf,
       });
+      return mapSummaryResponse(result);
+    },
+  );
+
+  routes.get(
+    "/customers/:id/accounting/workspace",
+    {
+      schema: {
+        operationId: "getInternalCustomerAccountingWorkspace",
+        tags: ["internal"],
+        summary: "Get customer accounting workspace bundle",
+        params: customerIdParamsSchema,
+        querystring: customerAccountingQuerySchema,
+        response: {
+          200: customerAccountingWorkspaceResponseSchema,
+          ...readErrors,
+        },
+      } as FastifySchema,
+    },
+    async (request, reply) => {
+      const params = request.params as { id: string };
+      const query = request.query as { asOf?: Date };
+      const customerId = CustomerId.parse(params.id);
+      if (!(await ensureCustomerExists(request, reply, customerId))) {
+        return;
+      }
+      const asOf = resolveAsOf(query.asOf, new Date());
+      const result = await request.server.accounting.getCustomerAccountingWorkspace.execute({
+        organizationId: staffOrganizationId(request),
+        customerId,
+        asOf,
+      });
       return {
-        asOf: result.asOf,
-        aging: mapAgingBuckets(result.aging),
-        unappliedCreditCents: result.unappliedCreditCents,
-        openBalanceCents: result.openBalanceCents,
-        openBalanceOwedCents: result.openBalanceOwedCents,
-        exposureCents: result.exposureCents,
-        availableCreditCents: result.availableCreditCents,
-        stats: mapStats(result.stats),
-        plan: result.plan === null ? null : mapPaymentPlan(result.plan),
-        planExpectations:
-          result.planExpectations === null
-            ? null
-            : mapPlanExpectations(result.planExpectations),
+        summary: mapSummaryResponse(result.summary),
+        invoices: result.invoices.map((row) =>
+          mapInvoiceRow(row.invoice, row.remainingCents, row.status),
+        ),
+        payments: result.payments.map(mapCustomerPaymentRow),
       };
     },
   );
@@ -441,24 +369,16 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
         return;
       }
       const asOf = resolveAsOf(query.asOf, new Date());
-      const result = await request.server.accounting.getCustomerAccountingSummary.execute({
+      const result = await request.server.accounting.listCustomerInvoices.execute({
         organizationId: staffOrganizationId(request),
         customerId,
         asOf,
+        includePaid: query.includePaid === true,
       });
-      if (query.includePaid !== true) {
-        return {
-          items: result.openInvoices.map((row) =>
-            mapInvoiceRow(row.invoice, row.remainingCents, row.status),
-          ),
-        };
-      }
-      const data = await request.server.accounting.arCustomerRead.loadCustomerData(
-        staffOrganizationId(request),
-        customerId,
-      );
       return {
-        items: listCustomerInvoiceRows(data, asOf, true),
+        items: result.items.map((row) =>
+          mapInvoiceRow(row.invoice, row.remainingCents, row.status),
+        ),
       };
     },
   );
@@ -486,13 +406,13 @@ export function registerInternalAccountingRoutes(app: FastifyInstance): void {
         return;
       }
       const asOf = resolveAsOf(query.asOf, new Date());
-      const result = await request.server.accounting.getCustomerAccountingSummary.execute({
+      const result = await request.server.accounting.listCustomerPayments.execute({
         organizationId: staffOrganizationId(request),
         customerId,
         asOf,
       });
       return {
-        items: result.recentPayments.map(mapCustomerPaymentRow),
+        items: result.items.map(mapCustomerPaymentRow),
       };
     },
   );

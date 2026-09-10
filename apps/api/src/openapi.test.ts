@@ -37,6 +37,7 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("x-table");
     expect(specs.internal).toContain("listInternalProducts");
     expect(specs.internal).toContain("getInternalCustomerAccounting");
+    expect(specs.internal).toContain("getInternalCustomerAccountingWorkspace");
     expect(specs.internal).toContain("listInternalCustomerInvoices");
     expect(specs.internal).toContain("listInternalCustomerPayments");
     expect(specs.internal).toContain("recordInternalCustomerPayment");

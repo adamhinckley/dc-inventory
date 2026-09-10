@@ -8,12 +8,14 @@ import type {
   PaymentApplication,
   PaymentPlan,
 } from "./invoice.js";
+import type { ArInvoiceStatus } from "./invoice.js";
 import {
   computeAgingBuckets,
   computeDaysPastDue,
   computeOpenBalanceCents,
   computeRemainingCents,
   computeSumRemainingCents,
+  computeUnappliedCents,
   computeUnappliedCreditCents,
   deriveInvoiceStatus,
   filterAdjustmentsForAsOf,
@@ -222,14 +224,25 @@ export function customerHasBalanceOrCredit(projection: CustomerArBalanceProjecti
   return projection.openBalanceCents > 0 || projection.unappliedCreditCents > 0;
 }
 
-export function deriveOpenInvoiceRows(
+export type CustomerInvoiceProjectionRow = {
+  readonly invoice: Invoice;
+  readonly remainingCents: number;
+  readonly status: ArInvoiceStatus;
+};
+
+export type CustomerPaymentProjectionRow = {
+  readonly payment: Payment;
+  readonly appliedCents: number;
+  readonly unappliedCents: number;
+  readonly applications: readonly PaymentApplication[];
+  readonly voided: boolean;
+};
+
+export function deriveCustomerInvoiceRows(
   data: CustomerArLoadedData,
   asOf: Date,
-): readonly {
-  invoice: Invoice;
-  remainingCents: number;
-  status: import("./invoice.js").ArInvoiceStatus;
-}[] {
+  includePaid: boolean,
+): readonly CustomerInvoiceProjectionRow[] {
   const filtered = filterCustomerArDataForAsOf(data, asOf);
   const voidedPaymentIds = collectVoidedPaymentIds(filtered.payments);
   const asOfContext = buildArAsOfContext(filtered.payments, asOf);
@@ -245,7 +258,7 @@ export function deriveOpenInvoiceRows(
         adjustments,
         asOfContext,
       );
-      if (remainingCents <= 0) {
+      if (!includePaid && remainingCents <= 0) {
         return null;
       }
       return {
@@ -261,5 +274,40 @@ export function deriveOpenInvoiceRows(
         ),
       };
     })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
+    .filter((row): row is CustomerInvoiceProjectionRow => row !== null);
+}
+
+export function deriveOpenInvoiceRows(
+  data: CustomerArLoadedData,
+  asOf: Date,
+): readonly CustomerInvoiceProjectionRow[] {
+  return deriveCustomerInvoiceRows(data, asOf, false);
+}
+
+export function deriveCustomerPaymentRows(
+  data: CustomerArLoadedData,
+  asOf: Date,
+): readonly CustomerPaymentProjectionRow[] {
+  const filtered = filterCustomerArDataForAsOf(data, asOf);
+
+  return [...filtered.payments]
+    .sort((left, right) => {
+      const leftReceived = left.receivedAt?.getTime() ?? 0;
+      const rightReceived = right.receivedAt?.getTime() ?? 0;
+      return rightReceived - leftReceived;
+    })
+    .map((payment) => {
+      const applications = filtered.applicationsByPaymentId.get(payment.id) ?? [];
+      const appliedCents = applications.reduce(
+        (sum, application) => sum + application.amount.amountMinor,
+        0,
+      );
+      return {
+        payment,
+        appliedCents,
+        unappliedCents: computeUnappliedCents(payment, applications, asOf),
+        applications,
+        voided: payment.voidedAt != null,
+      };
+    });
 }

@@ -179,6 +179,7 @@ import {
   EndPaymentPlanUseCase,
   GetAccountingSummaryUseCase,
   GetCustomerAccountingSummaryUseCase,
+  GetCustomerAccountingWorkspaceUseCase,
   GetInvoiceUseCase,
   InMemoryAccountingUnitOfWork,
   InMemoryArCustomerReadPort,
@@ -187,6 +188,8 @@ import {
   InMemoryCustomerBalancesListQuery,
   InMemoryPaymentsReceivedListQuery,
   ListCustomerBalancesQuery,
+  ListCustomerInvoicesUseCase,
+  ListCustomerPaymentsUseCase,
   ListPaymentsReceivedQuery,
   RecordCustomerPaymentUseCase,
   RecordPaymentUseCase,
@@ -412,6 +415,9 @@ export type AccountingHttpServices = {
   getInvoice: GetInvoiceUseCase;
   recordPayment: RecordPaymentUseCase;
   getCustomerAccountingSummary: GetCustomerAccountingSummaryUseCase;
+  getCustomerAccountingWorkspace: GetCustomerAccountingWorkspaceUseCase;
+  listCustomerInvoices: ListCustomerInvoicesUseCase;
+  listCustomerPayments: ListCustomerPaymentsUseCase;
   getAccountingSummary: GetAccountingSummaryUseCase;
   listCustomerBalances: ListCustomerBalancesQuery;
   listPaymentsReceived: ListPaymentsReceivedQuery;
@@ -899,6 +905,14 @@ function accountingServices(input: AccountingServicesInput): AccountingHttpServi
       openOrderExposure,
       lastOrderDate,
     ),
+    getCustomerAccountingWorkspace: new GetCustomerAccountingWorkspaceUseCase(
+      arCustomerRead,
+      customerProfiles,
+      openOrderExposure,
+      lastOrderDate,
+    ),
+    listCustomerInvoices: new ListCustomerInvoicesUseCase(arCustomerRead),
+    listCustomerPayments: new ListCustomerPaymentsUseCase(arCustomerRead),
     getAccountingSummary: new GetAccountingSummaryUseCase(arOrgRead),
     listCustomerBalances: new ListCustomerBalancesQuery(customerBalancesList),
     listPaymentsReceived: new ListPaymentsReceivedQuery(paymentsReceivedList),

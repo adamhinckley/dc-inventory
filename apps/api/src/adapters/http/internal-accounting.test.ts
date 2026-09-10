@@ -176,6 +176,30 @@ describe("internal accounting HTTP", () => {
     const { app, openInvoice, paidInvoice } = await startAccountingApp();
     const cookie = await staffCookie(app);
 
+    const workspace = await app.inject({
+      method: "GET",
+      url: `/internal/customers/${CUSTOMER_ID}/accounting/workspace?asOf=${AS_OF.toISOString()}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(workspace.statusCode).toBe(200);
+    const workspaceBody = workspace.json();
+    expect(workspaceBody).toMatchObject({
+      summary: {
+        openBalanceOwedCents: 1300,
+        stats: { openInvoiceCount: 2 },
+      },
+    });
+    expect(workspaceBody.invoices).toHaveLength(3);
+    expect(workspaceBody.invoices.map((row: { id: string }) => row.id)).toEqual(
+      expect.arrayContaining([openInvoice.id, paidInvoice.id]),
+    );
+    expect(workspaceBody.payments).toHaveLength(1);
+    expect(workspaceBody.payments[0]).toMatchObject({
+      amountCents: 500,
+      appliedCents: 500,
+      voided: false,
+    });
+
     const summary = await app.inject({
       method: "GET",
       url: `/internal/customers/${CUSTOMER_ID}/accounting?asOf=${AS_OF.toISOString()}`,
@@ -220,12 +244,14 @@ describe("internal accounting HTTP", () => {
     const { app } = await startAccountingApp();
     const cookie = await staffCookie(app);
     const missing = CustomerId.parse("99999999-9999-4999-8999-999999999999");
-    const response = await app.inject({
-      method: "GET",
-      url: `/internal/customers/${missing}/accounting`,
-      cookies: { [STAFF_SESSION_COOKIE]: cookie },
-    });
-    expect(response.statusCode).toBe(404);
+    for (const path of ["accounting", "accounting/workspace", "invoices", "payments"]) {
+      const response = await app.inject({
+        method: "GET",
+        url: `/internal/customers/${missing}/${path}`,
+        cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      });
+      expect(response.statusCode).toBe(404);
+    }
   });
 
   it("records customer payment with success and error mapping", async () => {

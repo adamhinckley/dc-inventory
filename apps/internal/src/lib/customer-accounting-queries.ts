@@ -1,8 +1,7 @@
 import {
-  getGetInternalCustomerAccountingQueryKey,
+  getGetInternalCustomerAccountingWorkspaceQueryKey,
   getListInternalAccountingPaymentsQueryKey,
   getListInternalCustomerInvoicesQueryKey,
-  getListInternalCustomerPaymentsQueryKey,
 } from "@dc-inventory/api-client-internal";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -12,13 +11,10 @@ export async function invalidateCustomerAccountingQueries(
 ): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({
-      queryKey: getGetInternalCustomerAccountingQueryKey(customerId),
+      queryKey: getGetInternalCustomerAccountingWorkspaceQueryKey(customerId),
     }),
     queryClient.invalidateQueries({
       queryKey: getListInternalCustomerInvoicesQueryKey(customerId),
-    }),
-    queryClient.invalidateQueries({
-      queryKey: getListInternalCustomerPaymentsQueryKey(customerId),
     }),
     queryClient.invalidateQueries({
       queryKey: getListInternalAccountingPaymentsQueryKey(),

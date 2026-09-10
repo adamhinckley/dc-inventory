@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useGetInternalCustomerAccounting,
-  useListInternalCustomerInvoices,
-  useListInternalCustomerPayments,
-} from "@dc-inventory/api-client-internal";
+import { useGetInternalCustomerAccountingWorkspace } from "@dc-inventory/api-client-internal";
 import {
   Button,
   Checkbox,
@@ -405,16 +401,12 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
   const [applyCreditPickerOpen, setApplyCreditPickerOpen] = useState(false);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
 
-  const summaryQuery = useGetInternalCustomerAccounting(customerId);
-  const invoicesQuery = useListInternalCustomerInvoices(customerId, {
-    includePaid: true,
-  });
-  const paymentsQuery = useListInternalCustomerPayments(customerId);
+  const workspaceQuery = useGetInternalCustomerAccountingWorkspace(customerId);
 
-  const summary =
-    summaryQuery.data?.status === 200 ? summaryQuery.data.data : undefined;
-  const allInvoices =
-    invoicesQuery.data?.status === 200 ? invoicesQuery.data.data.items : [];
+  const workspace =
+    workspaceQuery.data?.status === 200 ? workspaceQuery.data.data : undefined;
+  const summary = workspace?.summary;
+  const allInvoices = workspace?.invoices ?? [];
   const invoices = useMemo(
     () =>
       hidePaid
@@ -422,8 +414,7 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
         : allInvoices,
     [allInvoices, hidePaid],
   );
-  const payments =
-    paymentsQuery.data?.status === 200 ? paymentsQuery.data.data.items : [];
+  const payments = workspace?.payments ?? [];
   const detailPayment = useMemo(
     () => payments.find((payment) => payment.id === detailPaymentId) ?? null,
     [detailPaymentId, payments],
@@ -458,10 +449,8 @@ export function CustomerAccountingPanel({ customerId }: { customerId: string }) 
     invoices.map((invoice) => invoice.orderId),
   );
 
-  const loading =
-    summaryQuery.isLoading || invoicesQuery.isLoading || paymentsQuery.isLoading;
-  const error =
-    summaryQuery.isError || invoicesQuery.isError || paymentsQuery.isError;
+  const loading = workspaceQuery.isLoading;
+  const error = workspaceQuery.isError;
 
   if (loading) {
     return <p className="text-body-sm text-fg-secondary">Loading accounting…</p>;
