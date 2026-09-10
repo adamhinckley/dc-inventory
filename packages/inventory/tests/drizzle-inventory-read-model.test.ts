@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import { DrizzleInventoryReadModel } from "../src/adapters/drizzle-inventory-read-model.js";
 
 const DEFAULT_ORG = OrganizationId.DEFAULT;
-const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
 const DEFAULT_LOCATION_UUID = "550e8400-e29b-41d4-a716-446655440001";
 const FILTER_LOCATION = LocationId.DEFAULT;
 
@@ -23,10 +22,32 @@ function movementRow(organizationId: OrganizationId, locationId: string) {
 }
 
 describe("DrizzleInventoryReadModel listMovements", () => {
-  it("skips rows when resolveLocationUuid throws unknown location code", async () => {
+  it("returns no movements when the filter location code is unknown", async () => {
+    const db = {
+      select: () => ({
+        from: () => ({
+          where: async () => {
+            throw new Error("listMovements should not query after an unknown location");
+          },
+        }),
+      }),
+    };
+
+    const readModel = new DrizzleInventoryReadModel(db as never, async () => {
+      throw new Error(`Unknown inventory location code ${FILTER_LOCATION}`);
+    });
+
+    const movements = await readModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      locationId: FILTER_LOCATION,
+    });
+    expect(movements).toHaveLength(0);
+  });
+
+  it("resolves the location once and skips rows at other location uuids", async () => {
     const rows = [
       movementRow(DEFAULT_ORG, DEFAULT_LOCATION_UUID),
-      movementRow(BETA_ORG, "550e8400-e29b-41d4-a716-446655440099"),
+      movementRow(DEFAULT_ORG, "550e8400-e29b-41d4-a716-446655440099"),
     ];
     const db = {
       select: () => ({
@@ -36,14 +57,17 @@ describe("DrizzleInventoryReadModel listMovements", () => {
       }),
     };
 
-    const readModel = new DrizzleInventoryReadModel(db as never, async (organizationId) => {
-      if (organizationId === BETA_ORG) {
-        throw new Error(`Unknown inventory location code ${FILTER_LOCATION}`);
-      }
+    let resolveCount = 0;
+    const readModel = new DrizzleInventoryReadModel(db as never, async () => {
+      resolveCount += 1;
       return DEFAULT_LOCATION_UUID;
     });
 
-    const movements = await readModel.listMovements({ organizationId: DEFAULT_ORG, locationId: FILTER_LOCATION });
+    const movements = await readModel.listMovements({
+      organizationId: DEFAULT_ORG,
+      locationId: FILTER_LOCATION,
+    });
+    expect(resolveCount).toBe(1);
     expect(movements).toHaveLength(1);
     expect(movements[0]?.organizationId).toBe(DEFAULT_ORG);
   });

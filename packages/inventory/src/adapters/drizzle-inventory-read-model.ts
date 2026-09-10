@@ -5,7 +5,7 @@ import {
   requireOrganizationId,
   Sku,
 } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { IClock } from "../domain/clock.js";
 import {
@@ -15,7 +15,7 @@ import {
   type DemandStockFigures,
 } from "../domain/demand-model.js";
 import { MovementId } from "../domain/ids.js";
-import type { Movement } from "../domain/movement.js";
+import type { Movement, MovementRefType, MovementType } from "../domain/movement.js";
 import type {
   IInventoryReadModel,
   MovementListFilter,
@@ -130,7 +130,9 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
     if (filter.sku) {
       conditions.push(eq(stockMovements.sku, filter.sku.value));
     }
-    if (filter.movementType) {
+    if (filter.movementTypes !== undefined && filter.movementTypes.length > 0) {
+      conditions.push(inArray(stockMovements.movementType, [...filter.movementTypes]));
+    } else if (filter.movementType) {
       conditions.push(eq(stockMovements.movementType, filter.movementType));
     }
     if (filter.refType) {
@@ -138,6 +140,18 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
     }
     if (filter.refId) {
       conditions.push(eq(stockMovements.refId, filter.refId));
+    }
+    let locationUuid: string | undefined;
+    if (filter.locationId !== undefined) {
+      try {
+        locationUuid = await this.resolveLocationUuid(organizationId, filter.locationId);
+      } catch (error) {
+        if (isUnknownLocationCodeError(error)) {
+          return [];
+        }
+        throw error;
+      }
+      conditions.push(eq(stockMovements.locationId, locationUuid));
     }
     const rows = await this.db
       .select()
@@ -148,25 +162,11 @@ export class DrizzleInventoryReadModel implements IInventoryReadModel {
       if (filter.sku && row.sku !== filter.sku.value) {
         continue;
       }
+      if (locationUuid !== undefined && row.locationId !== locationUuid) {
+        continue;
+      }
       const rowOrganizationId = OrganizationId.parse(row.organizationId);
       const rowLocationId = filter.locationId ?? LocationId.DEFAULT;
-      if (filter.locationId !== undefined) {
-        let locationUuid: string;
-        try {
-          locationUuid = await this.resolveLocationUuid(
-            rowOrganizationId,
-            filter.locationId,
-          );
-        } catch (error) {
-          if (!isUnknownLocationCodeError(error)) {
-            throw error;
-          }
-          continue;
-        }
-        if (row.locationId !== locationUuid) {
-          continue;
-        }
-      }
       try {
         movements.push(this.toMovement(row, rowLocationId, rowOrganizationId));
       } catch (error) {

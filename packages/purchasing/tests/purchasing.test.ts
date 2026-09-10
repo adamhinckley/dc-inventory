@@ -415,6 +415,55 @@ describe("Purchasing (in-memory)", () => {
     expect(blocked.reason).toBe("illegal_transition");
   });
 
+  it("looks up replacement line SKUs in one catalog batch", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: h.supplierId,
+      lines: [{ sku: SKU.value, name: "Bolt", qty: 5 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    let findBySkuCalls = 0;
+    let findBySkusCalls = 0;
+    const catalog = {
+      findBySku: async (
+        organizationId: OrganizationId,
+        sku: Sku,
+      ) => {
+        findBySkuCalls += 1;
+        return h.catalog.findBySku(organizationId, sku);
+      },
+      findBySkus: async (
+        organizationId: OrganizationId,
+        skus: readonly Sku[],
+      ) => {
+        findBySkusCalls += 1;
+        return h.catalog.findBySkus(organizationId, skus);
+      },
+    };
+    const replaceLines = new ReplacePurchaseOrderLinesUseCase(
+      h.uow.purchaseOrders,
+      catalog,
+    );
+    const replaced = await replaceLines.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      purchaseOrderId: created.purchaseOrder.id,
+      lines: [
+        { sku: SKU.value, qty: 8 },
+        { sku: "PO-OTHER-SKU", qty: 2 },
+      ],
+    });
+    expect(replaced.ok).toBe(true);
+    expect(findBySkuCalls).toBe(0);
+    expect(findBySkusCalls).toBe(1);
+  });
+
   it("rejects empty and duplicate SKU lines on draft replace", async () => {
     const h = await harness();
     const created = await h.create.execute({

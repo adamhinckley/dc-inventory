@@ -60,6 +60,7 @@ export function listFifoUncoveredCommittedOrders(
 ): readonly FifoUncoveredOrder[] {
   const firstCommittedAt = new Map<string, Date>();
   const netCommittedByOrder = new Map<string, number>();
+  const netCoveredByOrder = new Map<string, number>();
 
   for (const movement of movements) {
     if (movement.refType !== "sales_order") {
@@ -74,6 +75,10 @@ export function listFifoUncoveredCommittedOrders(
       }
     } else if (movement.movementType === "Decommitted") {
       netCommittedByOrder.set(orderId, (netCommittedByOrder.get(orderId) ?? 0) - movement.quantity);
+    } else if (movement.movementType === "Allocated") {
+      netCoveredByOrder.set(orderId, (netCoveredByOrder.get(orderId) ?? 0) + movement.quantity);
+    } else if (movement.movementType === "Deallocated") {
+      netCoveredByOrder.set(orderId, (netCoveredByOrder.get(orderId) ?? 0) - movement.quantity);
     }
   }
 
@@ -88,12 +93,14 @@ export function listFifoUncoveredCommittedOrders(
       return left.localeCompare(right);
     });
 
-  return fifoOrderIds.map((orderId) => {
-    const committed = netCommittedByOrder.get(orderId) ?? 0;
-    const covered = netOrderCoverQuantity(movements, orderId as OrderId);
-    return Object.freeze({
-      orderId,
-      uncoveredQty: Math.max(0, committed - covered),
-    });
-  }).filter((row) => row.uncoveredQty > 0);
+  return fifoOrderIds
+    .map((orderId) => {
+      const committed = netCommittedByOrder.get(orderId) ?? 0;
+      const covered = netCoveredByOrder.get(orderId) ?? 0;
+      return Object.freeze({
+        orderId,
+        uncoveredQty: Math.max(0, committed - covered),
+      });
+    })
+    .filter((row) => row.uncoveredQty > 0);
 }

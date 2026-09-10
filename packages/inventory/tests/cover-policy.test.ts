@@ -229,6 +229,40 @@ describe("cover-policy (ADA-255)", () => {
     ]);
   });
 
+  it("skips movement load when receive cover quantity is zero", async () => {
+    const { record } = recordingStub();
+    const state: CoverPolicyReadState = {
+      figures: freezeStockFigures(500, 0, 1_200),
+      demand: { ...ZERO_DEMAND_STATE, committed: 1_200 },
+      now: new Date("2026-06-15T12:00:00.000Z"),
+    };
+    let listed = false;
+
+    const coverResult = await allocateReceiveCover(
+      {
+        organizationId: ORG,
+        idempotencyKey: "receive-covered",
+        sku: SKU,
+        quantity: 40,
+        locationId: LOCATION,
+        refType: "purchase_order",
+        refId: "PO-COVERED",
+      },
+      40,
+      {
+        readState: () => state,
+        listMovements: () => {
+          listed = true;
+          return [];
+        },
+        record,
+      },
+    );
+
+    expect(coverResult).toBeNull();
+    expect(listed).toBe(false);
+  });
+
   it("surfaces recorder failures from confirm cover allocation", async () => {
     const failingRecord: CoverPolicyRecorder = async (movementType) => {
       if (movementType === "Allocated") {

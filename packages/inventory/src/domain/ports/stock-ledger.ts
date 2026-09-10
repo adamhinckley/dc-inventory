@@ -137,6 +137,7 @@ export type MovementListFilter = {
   sku?: Sku;
   locationId?: LocationId;
   movementType?: MovementType;
+  movementTypes?: readonly MovementType[];
   refType?: MovementRefType;
   refId?: string;
 };
