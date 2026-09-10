@@ -9,7 +9,7 @@ import {
   StaffUserId,
   SupplierId,
 } from "@dc-inventory/shared-kernel";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryCatalogSkuLookupPort } from "../src/adapters/in-memory-catalog-sku-lookup.js";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { InMemoryPurchasingUnitOfWork } from "../src/adapters/in-memory-purchasing-unit-of-work.js";
@@ -18,9 +18,8 @@ import { InMemorySupplierSkuMappingReadPort } from "../src/adapters/in-memory-su
 import { AssignSupplierProductUseCase } from "../src/application/assign-supplier-product.js";
 import { CreatePurchaseOrderUseCase } from "../src/application/create-purchase-order.js";
 import { draftPoQtyFromUncovered } from "../src/application/draft-po-qty-from-uncovered.js";
-import { ReplacePurchaseOrderLinesUseCase } from "../src/application/replace-purchase-order-lines.js";
 import { SyncDraftPurchaseOrdersFromUncoveredUseCase } from "../src/application/sync-draft-purchase-orders-from-uncovered.js";
-import type { IInventoryUncoveredReadPort } from "../src/domain/ports/short-readout.js";
+import type { IPurchasingUnitOfWork } from "../src/domain/ports/purchase-order-repository.js";
 
 const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const DEFAULT_ORG = OrganizationId.DEFAULT;
@@ -73,26 +72,37 @@ class StubUncoveredListQuery implements IUncoveredListQuery {
   }
 }
 
-class StubUncoveredPort implements IInventoryUncoveredReadPort {
-  private readonly values = new Map<string, number>();
+class GuardedPurchasingUnitOfWork implements IPurchasingUnitOfWork {
+  private insideRun = false;
 
-  set(sku: string, uncovered: number): void {
-    this.values.set(sku, uncovered);
-  }
+  constructor(private readonly inner: InMemoryPurchasingUnitOfWork) {}
 
-  async getUncovered(_organizationId: OrganizationId, sku: Sku): Promise<number> {
-    return this.values.get(sku.value) ?? 0;
-  }
-
-  async getUncoveredBySkus(
-    _organizationId: OrganizationId,
-    skus: readonly Sku[],
-  ): Promise<ReadonlyMap<string, number>> {
-    const rows = new Map<string, number>();
-    for (const sku of skus) {
-      rows.set(sku.value, this.values.get(sku.value) ?? 0);
+  get purchaseOrders() {
+    if (!this.insideRun) {
+      throw new Error("Access purchasing repositories inside unitOfWork.run");
     }
-    return rows;
+    return this.inner.purchaseOrders;
+  }
+
+  get suppliers() {
+    if (!this.insideRun) {
+      throw new Error("Access purchasing repositories inside unitOfWork.run");
+    }
+    return this.inner.suppliers;
+  }
+
+  get inventory() {
+    if (!this.insideRun) {
+      throw new Error("Access inventory commands inside unitOfWork.run");
+    }
+    return this.inner.inventory;
+  }
+
+  run<T>(work: (uow: IPurchasingUnitOfWork) => Promise<T>): Promise<T> {
+    this.insideRun = true;
+    return this.inner.run(work).finally(() => {
+      this.insideRun = false;
+    });
   }
 }
 
@@ -102,7 +112,6 @@ async function harness() {
   const catalog = new InMemoryCatalogSkuLookupPort();
   const supplierProducts = new InMemorySupplierProductRepository();
   const uncoveredList = new StubUncoveredListQuery();
-  const inventoryUncovered = new StubUncoveredPort();
   const caseQty = new InMemoryUncoveredCaseQtyReadPort();
   const supplierMapping = new InMemorySupplierSkuMappingReadPort(
     uow.suppliers,
@@ -119,14 +128,12 @@ async function harness() {
     catalog,
     clock,
   );
-  const replaceLines = new ReplacePurchaseOrderLinesUseCase(uow.purchaseOrders, catalog);
   const syncDrafts = new SyncDraftPurchaseOrdersFromUncoveredUseCase(
-    uow.purchaseOrders,
+    uow,
     supplierMapping,
     uncoveredList,
     caseQty,
-    inventoryUncovered,
-    replaceLines,
+    catalog,
   );
 
   catalog.set(DEFAULT_ORG, SKU_A.value, "Widget A");
@@ -153,8 +160,8 @@ async function harness() {
     uow,
     catalog,
     supplierProducts,
+    supplierMapping,
     uncoveredList,
-    inventoryUncovered,
     caseQty,
     assignProduct,
     createPurchaseOrder,
@@ -179,7 +186,6 @@ function seedUncovered(
       onOrder: row.onOrder,
       uncovered: row.uncovered,
     });
-    h.inventoryUncovered.set(row.sku.value, row.uncovered);
   }
 }
 
@@ -217,9 +223,6 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
       return;
     }
 
-    h.inventoryUncovered.set(SKU_A.value, 584);
-    h.inventoryUncovered.set(SKU_B.value, 40);
-
     const result = await h.syncDrafts.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
@@ -229,8 +232,15 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     if (!result.ok) {
       return;
     }
-    expect(result.purchaseOrders).toHaveLength(1);
-    const synced = result.purchaseOrders[0];
+    expect(result.purchaseOrderIds).toEqual([created.purchaseOrder.id]);
+    expect(result.syncedSupplierIds).toEqual([SUPPLIER_A]);
+    expect(result.clearedSupplierIds).toEqual([]);
+    expect(result.unmappedSkus).toEqual([]);
+
+    const synced = await h.uow.purchaseOrders.findById(
+      DEFAULT_ORG,
+      created.purchaseOrder.id,
+    );
     expect(synced?.lines).toHaveLength(2);
     const bySku = new Map(synced?.lines.map((line) => [line.sku.value, line.qty]));
     expect(bySku.get(SKU_A.value)).toBe(draftPoQtyFromUncovered(584, 100));
@@ -262,7 +272,6 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     }
 
     h.uncoveredList.clear(DEFAULT_ORG);
-    h.inventoryUncovered.set(SKU_A.value, 0);
 
     const result = await h.syncDrafts.execute({
       organizationId: DEFAULT_ORG,
@@ -273,7 +282,14 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     if (!result.ok) {
       return;
     }
-    expect(result.purchaseOrders[0]?.lines).toEqual([]);
+    expect(result.clearedSupplierIds).toEqual([SUPPLIER_A]);
+    expect(result.syncedSupplierIds).toEqual([]);
+
+    const cleared = await h.uow.purchaseOrders.findById(
+      DEFAULT_ORG,
+      created.purchaseOrder.id,
+    );
+    expect(cleared?.lines).toEqual([]);
   });
 
   it("syncs only the newest draft when multiple drafts exist for one supplier", async () => {
@@ -323,9 +339,14 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     if (!result.ok) {
       return;
     }
-    expect(result.purchaseOrders).toHaveLength(1);
-    expect(result.purchaseOrders[0]?.id).toBe(newer.purchaseOrder.id);
-    expect(result.purchaseOrders[0]?.lines[0]?.qty).toBe(draftPoQtyFromUncovered(24, 12));
+    expect(result.purchaseOrderIds).toEqual([newer.purchaseOrder.id]);
+    expect(result.syncedSupplierIds).toEqual([SUPPLIER_A]);
+
+    const synced = await h.uow.purchaseOrders.findById(
+      DEFAULT_ORG,
+      newer.purchaseOrder.id,
+    );
+    expect(synced?.lines[0]?.qty).toBe(draftPoQtyFromUncovered(24, 12));
 
     const untouched = await h.uow.purchaseOrders.findById(
       DEFAULT_ORG,
@@ -381,8 +402,8 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     if (!result.ok) {
       return;
     }
-    expect(result.purchaseOrders).toHaveLength(1);
-    expect(result.purchaseOrders[0]?.supplierId).toBe(SUPPLIER_A);
+    expect(result.purchaseOrderIds).toEqual([poA.purchaseOrder.id]);
+    expect(result.syncedSupplierIds).toEqual([SUPPLIER_A]);
 
     const skipped = await h.uow.purchaseOrders.findById(
       DEFAULT_ORG,
@@ -431,12 +452,143 @@ describe("SyncDraftPurchaseOrdersFromUncoveredUseCase", () => {
     expect(unchanged?.lines[0]?.qty).toBe(48);
   });
 
-  it("returns an empty list when no draft purchase orders exist", async () => {
+  it("returns an empty result when no draft purchase orders exist", async () => {
     const h = await harness();
     const result = await h.syncDrafts.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
     });
-    expect(result).toEqual({ ok: true, purchaseOrders: [] });
+    expect(result).toEqual({
+      ok: true,
+      purchaseOrderIds: [],
+      syncedSupplierIds: [],
+      clearedSupplierIds: [],
+      unmappedSkus: [],
+    });
+  });
+
+  it("loads uncovered and mappings once and uses one unit of work without listing all drafts", async () => {
+    const h = await harness();
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+
+    seedUncovered(h, [
+      { sku: SKU_A, uncovered: 12, committed: 12, onHand: 0, onOrder: 0 },
+    ]);
+
+    const created = await h.createPurchaseOrder.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      lines: [{ sku: SKU_A.value, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const listAll = vi.spyOn(h.uncoveredList, "listAll");
+    const getSkuMappings = vi.spyOn(h.supplierMapping, "getSkuMappings");
+    const readBySkus = vi.spyOn(h.caseQty, "readBySkus");
+    const listDrafts = vi.spyOn(h.uow.purchaseOrders, "list");
+    const listNewestDrafts = vi.spyOn(h.uow.purchaseOrders, "listNewestDraftsBySuppliers");
+    const uowRun = vi.spyOn(h.uow, "run");
+
+    const result = await h.syncDrafts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(listAll).toHaveBeenCalledTimes(1);
+    expect(readBySkus).toHaveBeenCalledTimes(1);
+    expect(listDrafts).not.toHaveBeenCalled();
+    expect(listNewestDrafts).toHaveBeenCalledTimes(1);
+    expect(listNewestDrafts).toHaveBeenCalledWith({
+      organizationId: DEFAULT_ORG,
+      supplierIds: undefined,
+    });
+    expect(uowRun).toHaveBeenCalledTimes(1);
+    expect(getSkuMappings).toHaveBeenCalledTimes(1);
+  });
+
+  it("queries newest drafts inside unitOfWork.run like Postgres composition root", async () => {
+    const h = await harness();
+    const guardedUow = new GuardedPurchasingUnitOfWork(h.uow);
+    const syncDrafts = new SyncDraftPurchaseOrdersFromUncoveredUseCase(
+      guardedUow,
+      h.supplierMapping,
+      h.uncoveredList,
+      h.caseQty,
+      h.catalog,
+    );
+
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+    seedUncovered(h, [
+      { sku: SKU_A, uncovered: 12, committed: 12, onHand: 0, onOrder: 0 },
+    ]);
+    const created = await h.createPurchaseOrder.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      lines: [{ sku: SKU_A.value, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const result = await syncDrafts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.purchaseOrderIds).toEqual([created.purchaseOrder.id]);
+  });
+
+  it("does not re-fetch each draft with findById before saving lines", async () => {
+    const h = await harness();
+    await h.assignProduct.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      sku: SKU_A.value,
+    });
+    seedUncovered(h, [
+      { sku: SKU_A, uncovered: 12, committed: 12, onHand: 0, onOrder: 0 },
+    ]);
+    const created = await h.createPurchaseOrder.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      supplierId: SUPPLIER_A,
+      lines: [{ sku: SKU_A.value, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    const findById = vi.spyOn(h.uow.purchaseOrders, "findById");
+
+    const result = await h.syncDrafts.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(findById).not.toHaveBeenCalled();
   });
 });

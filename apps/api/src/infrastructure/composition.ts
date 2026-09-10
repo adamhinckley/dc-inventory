@@ -747,12 +747,11 @@ function purchasingServices(
       clock,
     ),
     syncDraftPurchaseOrdersFromUncovered: new SyncDraftPurchaseOrdersFromUncoveredUseCase(
-      purchaseOrderRepo,
+      unitOfWork.purchasing,
       supplierSkuMapping,
       uncoveredList,
       caseQty,
-      inventoryUncovered,
-      replacePurchaseOrderLines,
+      catalogSkuLookup,
     ),
   };
 }

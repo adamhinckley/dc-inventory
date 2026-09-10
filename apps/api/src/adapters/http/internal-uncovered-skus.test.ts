@@ -649,20 +649,46 @@ describe("internal uncovered SKUs HTTP", () => {
     });
     expect(synced.statusCode).toBe(200);
     const body = synced.json() as {
-      purchaseOrders: Array<{
-        id: string;
-        supplierId: string;
-        lines: Array<{ sku: string; qty: number }>;
-      }>;
+      purchaseOrderIds: string[];
+      syncedSupplierIds: string[];
+      clearedSupplierIds: string[];
+      unmappedSkus: string[];
     };
-    const syncedA = body.purchaseOrders.find((po) => po.supplierId === SUPPLIER_A);
-    expect(syncedA?.id).toBe(poA.id);
+    expect(body.purchaseOrderIds).toContain(poA.id);
+    expect(body.syncedSupplierIds).toEqual(
+      expect.arrayContaining([SUPPLIER_A, SUPPLIER_B]),
+    );
+    expect(body.clearedSupplierIds).toEqual([]);
+
+    const poADetail = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${poA.id}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(poADetail.statusCode).toBe(200);
     expect(
-      syncedA?.lines.map((line) => ({ sku: line.sku, qty: line.qty })),
+      (poADetail.json() as { lines: Array<{ sku: string; qty: number }> }).lines.map((line) => ({
+        sku: line.sku,
+        qty: line.qty,
+      })),
     ).toEqual([{ sku: SKU.value, qty: suggestedDraftPoQty(120, 48) }]);
-    const syncedB = body.purchaseOrders.find((po) => po.supplierId === SUPPLIER_B);
+
+    const poBId = body.purchaseOrderIds.find((id) => id !== poA.id);
+    expect(poBId).toBeDefined();
+    if (poBId === undefined) {
+      return;
+    }
+    const poBDetail = await app.inject({
+      method: "GET",
+      url: `/internal/purchase-orders/${poBId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(poBDetail.statusCode).toBe(200);
     expect(
-      syncedB?.lines.map((line) => ({ sku: line.sku, qty: line.qty })),
+      (poBDetail.json() as { lines: Array<{ sku: string; qty: number }> }).lines.map((line) => ({
+        sku: line.sku,
+        qty: line.qty,
+      })),
     ).toEqual([{ sku: SKU_B.value, qty: suggestedDraftPoQty(40, null) }]);
   });
 

@@ -59,6 +59,29 @@ function isParam(node: unknown): node is { value: unknown } {
   return typeof node === "object" && node !== null && "encoder" in node && "value" in node;
 }
 
+function isValueChunk(node: unknown): node is { value: unknown } {
+  return typeof node === "object" && node !== null && "value" in node && !("encoder" in node);
+}
+
+function walkQueryChunks(node: unknown, visit: (chunk: unknown) => void): void {
+  if (isSql(node)) {
+    for (const chunk of node.queryChunks) {
+      walkQueryChunks(chunk, visit);
+    }
+    return;
+  }
+  if (typeof node === "object" && node !== null) {
+    const numericKeys = Object.keys(node).filter((key) => /^\d+$/.test(key));
+    if (numericKeys.length > 0) {
+      for (const key of numericKeys) {
+        walkQueryChunks((node as Record<string, unknown>)[key], visit);
+      }
+      return;
+    }
+  }
+  visit(node);
+}
+
 function eqPairs(clause: unknown): Array<{ column: string; value: unknown }> {
   const pairs: Array<{ column: string; value: unknown }> = [];
   let pending: string | undefined;
@@ -86,14 +109,26 @@ function sqlNameToKey(column: string): string {
   return column.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 }
 
-function sqlChunkText(node: unknown): string {
-  if (!isSql(node)) {
-    return "";
+function chunkText(node: unknown): string {
+  if (typeof node === "string") {
+    return node;
   }
-  return node.queryChunks
-    .map((chunk) => (typeof chunk === "string" ? chunk : sqlChunkText(chunk)))
-    .join(" ")
-    .toLowerCase();
+  if (isValueChunk(node)) {
+    if (typeof node.value === "string") {
+      return node.value;
+    }
+    if (Array.isArray(node.value)) {
+      return node.value.join("");
+    }
+  }
+  if (isSql(node)) {
+    return node.queryChunks.map((chunk) => chunkText(chunk)).join(" ");
+  }
+  return "";
+}
+
+function sqlChunkText(node: unknown): string {
+  return chunkText(node).toLowerCase();
 }
 
 function notInIds(clause: unknown): Set<string> | null {
@@ -116,6 +151,69 @@ function notInIds(clause: unknown): Set<string> | null {
   return ids;
 }
 
+function inArrayConstraint(
+  clause: unknown,
+): { column: string; values: Set<string> } | null {
+  const text = sqlChunkText(clause);
+  if (!text.includes(" in ") || text.includes("not in") || text.includes(" and ")) {
+    return null;
+  }
+  let column: string | undefined;
+  const values = new Set<string>();
+  walkQueryChunks(clause, (node) => {
+    if (isColumn(node)) {
+      column = node.name;
+      return;
+    }
+    if (!isParam(node)) {
+      return;
+    }
+    if (Array.isArray(node.value)) {
+      for (const value of node.value) {
+        if (typeof value === "string") {
+          values.add(value);
+        }
+      }
+      return;
+    }
+    if (typeof node.value === "string") {
+      values.add(node.value);
+    }
+  });
+  if (column === undefined || values.size === 0) {
+    return null;
+  }
+  return { column, values };
+}
+
+function allInArrayConstraints(
+  clause: unknown,
+): Array<{ column: string; values: Set<string> }> {
+  const constraints: Array<{ column: string; values: Set<string> }> = [];
+  function walk(node: unknown): void {
+    if (isSql(node)) {
+      const constraint = inArrayConstraint(node);
+      if (constraint !== null) {
+        constraints.push(constraint);
+      }
+      for (const chunk of node.queryChunks) {
+        walk(chunk);
+      }
+      return;
+    }
+    if (typeof node === "object" && node !== null) {
+      const numericKeys = Object.keys(node).filter((key) => /^\d+$/.test(key));
+      if (numericKeys.length > 0) {
+        for (const key of numericKeys) {
+          walk((node as Record<string, unknown>)[key]);
+        }
+      }
+    }
+  }
+  walk(clause);
+  return constraints;
+}
+
 function rowMatches(row: Record<string, unknown>, clause: unknown): boolean {
   const pairs = eqPairs(clause);
   if (!pairs.every(({ column, value }) => row[sqlNameToKey(column)] === value)) {
@@ -125,7 +223,14 @@ function rowMatches(row: Record<string, unknown>, clause: unknown): boolean {
   if (excluded !== null && excluded.has(String(row.id))) {
     return false;
   }
-  return pairs.length > 0 || excluded !== null;
+  for (const included of allInArrayConstraints(clause)) {
+    const value = row[sqlNameToKey(included.column)];
+    if (typeof value !== "string" || !included.values.has(value)) {
+      return false;
+    }
+  }
+  const included = allInArrayConstraints(clause);
+  return pairs.length > 0 || excluded !== null || included.length > 0;
 }
 
 function thenableRows<T>(rows: T[]) {
@@ -174,23 +279,65 @@ class FakePurchasingDb {
   }
 
   select() {
+    const self = this;
     return {
       from: (table: unknown) => ({
         where: (clause: unknown) => {
-          if (table === purchaseOrders) {
-            return thenableRows(
-              [...this.orders.values()].filter((row) => rowMatches(row, clause)),
-            );
-          }
-          if (table === suppliers) {
-            return thenableRows(
-              [...this.supplierRows.values()].filter((row) => rowMatches(row, clause)),
-            );
-          }
-          return thenableRows(
-            [...this.lines.values()].filter((row) => rowMatches(row, clause)),
-          );
+          const rowsForTable = () => {
+            if (table === purchaseOrders) {
+              return [...self.orders.values()].filter((row) => rowMatches(row, clause));
+            }
+            if (table === suppliers) {
+              return [...self.supplierRows.values()].filter((row) => rowMatches(row, clause));
+            }
+            return [...self.lines.values()].filter((row) => rowMatches(row, clause));
+          };
+          const rows = rowsForTable();
+          const result = thenableRows(rows as OrderRow[]);
+          return Object.assign(result, {
+            orderBy: (..._order: unknown[]) => thenableRows(rows as OrderRow[]),
+            limit: (n: number) => thenableRows((rows as OrderRow[]).slice(0, n)),
+          });
         },
+        leftJoin: (_other: unknown, _on: unknown) => ({
+          where: (clause: unknown) => {
+            const rows = [...self.orders.values()].filter((row) => rowMatches(row, clause));
+            const result = thenableRows(rows.map((header) => ({ header })));
+            return Object.assign(result, {
+              orderBy: (..._order: unknown[]) => thenableRows(rows.map((header) => ({ header }))),
+              limit: (n: number) =>
+                thenableRows(rows.slice(0, n).map((header) => ({ header }))),
+              offset: (_offset: number) => result,
+            });
+          },
+        }),
+      }),
+    };
+  }
+
+  selectDistinctOn(_columns: unknown[], _selection: unknown) {
+    const self = this;
+    return {
+      from: (table: unknown) => ({
+        where: (clause: unknown) => ({
+          orderBy: (..._order: unknown[]) => {
+            if (table !== purchaseOrders) {
+              return thenableRows([]);
+            }
+            const rows = [...self.orders.values()].filter((row) => rowMatches(row, clause));
+            const newestBySupplier = new Map<string, OrderRow>();
+            for (const row of rows) {
+              const existing = newestBySupplier.get(row.supplierId);
+              if (existing === undefined || row.createdAt > existing.createdAt) {
+                newestBySupplier.set(row.supplierId, row);
+              }
+            }
+            const headers = [...newestBySupplier.values()].sort((left, right) =>
+              left.supplierId.localeCompare(right.supplierId),
+            );
+            return thenableRows(headers.map((header) => ({ header })));
+          },
+        }),
       }),
     };
   }
@@ -316,6 +463,118 @@ const FOREIGN_LINE_ROW: LineRow = {
 function seedForeignLine(db: FakePurchasingDb): void {
   db.lines.set(FOREIGN_LINE, { ...FOREIGN_LINE_ROW });
 }
+
+const SUPPLIER_B = SupplierId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccc01");
+const OLDER_DRAFT_ID = PurchaseOrderId.parse("dddddddd-dddd-4ddd-8ddd-dddddddddd01");
+const NEWER_DRAFT_ID = PurchaseOrderId.parse("eeeeeeee-eeee-4eee-8eee-eeeeeeeeee01");
+const OTHER_SUPPLIER_DRAFT_ID = PurchaseOrderId.parse("ffffffff-ffff-4fff-8fff-ffffffffffff");
+const CONFIRMED_PO_ID = PurchaseOrderId.parse("11111111-1111-4111-8111-111111111111");
+
+function seedDraftOrders(db: FakePurchasingDb): void {
+  db.orders.set(OLDER_DRAFT_ID, {
+    id: OLDER_DRAFT_ID,
+    organizationId: ORG,
+    supplierId: SUPPLIER_ID,
+    status: "draft",
+    documentNumber: "PO-HF-00001",
+    createdAt: new Date("2026-08-01T00:00:00.000Z"),
+  });
+  db.orders.set(NEWER_DRAFT_ID, {
+    id: NEWER_DRAFT_ID,
+    organizationId: ORG,
+    supplierId: SUPPLIER_ID,
+    status: "draft",
+    documentNumber: "PO-HF-00002",
+    createdAt: new Date("2026-09-01T00:00:00.000Z"),
+  });
+  db.orders.set(OTHER_SUPPLIER_DRAFT_ID, {
+    id: OTHER_SUPPLIER_DRAFT_ID,
+    organizationId: ORG,
+    supplierId: SUPPLIER_B,
+    status: "draft",
+    documentNumber: "PO-FB-00001",
+    createdAt: new Date("2026-08-15T00:00:00.000Z"),
+  });
+  db.orders.set(CONFIRMED_PO_ID, {
+    id: CONFIRMED_PO_ID,
+    organizationId: ORG,
+    supplierId: SUPPLIER_B,
+    status: "confirmed",
+    documentNumber: "PO-FB-00002",
+    createdAt: new Date("2026-09-02T00:00:00.000Z"),
+  });
+  db.lines.set(LINE_A, {
+    id: LINE_A,
+    purchaseOrderId: NEWER_DRAFT_ID,
+    sku: SKU.value,
+    name: "Bolt",
+    qty: 5,
+    receivedQty: 0,
+  });
+  db.lines.set(LINE_B, {
+    id: LINE_B,
+    purchaseOrderId: OTHER_SUPPLIER_DRAFT_ID,
+    sku: OTHER_SKU.value,
+    name: "Washer",
+    qty: 2,
+    receivedQty: 0,
+  });
+}
+
+describe("DrizzlePurchaseOrderRepository.listNewestDraftsBySuppliers", () => {
+  it("matches drizzle inArray clauses in the fake database", async () => {
+    const { and, eq, inArray } = await import("drizzle-orm");
+    const supplierIn = inArray(purchaseOrders.supplierId, [SUPPLIER_ID]);
+    const where = and(
+      eq(purchaseOrders.organizationId, ORG),
+      eq(purchaseOrders.status, "draft"),
+      supplierIn,
+    );
+    expect(inArrayConstraint(supplierIn)).toEqual({
+      column: "supplier_id",
+      values: new Set([SUPPLIER_ID]),
+    });
+    expect(allInArrayConstraints(where)).toEqual([
+      { column: "supplier_id", values: new Set([SUPPLIER_ID]) },
+    ]);
+    expect(
+      allInArrayConstraints(
+        inArray(purchaseOrderLines.purchaseOrderId, [NEWER_DRAFT_ID, OTHER_SUPPLIER_DRAFT_ID]),
+      ),
+    ).toEqual([
+      {
+        column: "purchase_order_id",
+        values: new Set([NEWER_DRAFT_ID, OTHER_SUPPLIER_DRAFT_ID]),
+      },
+    ]);
+  });
+
+  it("returns the newest draft per supplier and ignores confirmed orders", async () => {
+    const db = new FakePurchasingDb();
+    seedDraftOrders(db);
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+
+    const drafts = await repo.listNewestDraftsBySuppliers({ organizationId: ORG });
+
+    expect(drafts.map((order) => order.id).sort()).toEqual(
+      [NEWER_DRAFT_ID, OTHER_SUPPLIER_DRAFT_ID].sort(),
+    );
+    expect(drafts.find((order) => order.id === NEWER_DRAFT_ID)?.lines[0]?.sku).toEqual(SKU);
+  });
+
+  it("filters drafts to the requested suppliers", async () => {
+    const db = new FakePurchasingDb();
+    seedDraftOrders(db);
+    const repo = new DrizzlePurchaseOrderRepository(db as never);
+
+    const drafts = await repo.listNewestDraftsBySuppliers({
+      organizationId: ORG,
+      supplierIds: [SUPPLIER_ID],
+    });
+
+    expect(drafts.map((order) => order.id)).toEqual([NEWER_DRAFT_ID]);
+  });
+});
 
 describe("DrizzlePurchaseOrderRepository.save", () => {
   it("drops previous line rows when the saved line set uses new ids", async () => {
