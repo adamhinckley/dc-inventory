@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { LocationId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { DrizzleInventoryReadModel } from "../src/adapters/drizzle-inventory-read-model.js";
 import { RECEIVE_COVER_MOVEMENT_TYPES } from "../src/domain/cover-policy.js";
@@ -432,5 +432,47 @@ describe("DrizzleStockLedger round trips", () => {
       allocated: 10,
       sticky_locked: true,
     });
+  });
+
+  it("locks all close-skus snapshots once instead of once per SKU", async () => {
+    const lineSkus = skus(8);
+    const windowOpens = new Date("2026-09-01T00:00:00.000Z");
+    const windowCloses = new Date("2026-09-30T00:00:00.000Z");
+
+    await confirmPurchaseOrder(lineSkus);
+    await ledger.reopenSkusForPresell({
+      organizationId: ORG,
+      skus: lineSkus,
+      windowOpensAt: windowOpens,
+      windowClosesAt: windowCloses,
+    });
+
+    const clock = new InMemoryClock(new Date("2026-09-09T12:00:00.000Z"));
+    const resolveLocationUuid = async () => LOCATION_UUID;
+    const readModel = new DrizzleInventoryReadModel(db, resolveLocationUuid, clock);
+    const closeLedger = new DrizzleStockLedger(db, readModel, resolveLocationUuid, clock);
+
+    queryLog = [];
+    const lockSnapshots = vi.spyOn(closeLedger, "lockSnapshots");
+    const result = await closeLedger.closeSkusForPresell({
+      organizationId: ORG,
+      skus: lineSkus,
+    });
+
+    expect(result).toEqual({ ok: true, closedCount: lineSkus.length });
+    expect(lockSnapshots).toHaveBeenCalledTimes(1);
+    expect(lockSnapshots.mock.calls[0]?.[0]).toHaveLength(lineSkus.length);
+
+    const snapshotLockQueries = queryLog.filter(
+      (query) => query.startsWith("select") && query.includes('"inventory"."stock_snapshots"'),
+    );
+    expect(snapshotLockQueries).toHaveLength(1);
+    expect(
+      queryLog.filter(
+        (query) =>
+          query.trim().toLowerCase().startsWith("update") && query.includes("stock_snapshots"),
+      ),
+    ).toHaveLength(1);
+    lockSnapshots.mockRestore();
   });
 });

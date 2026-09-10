@@ -367,11 +367,22 @@ export class DrizzleStockLedger implements IStockLedger {
   async closeSkusForPresell(command: CloseSkusForPresellCommand): Promise<CloseSkusForPresellResult> {
     const organizationId = requireOrganizationId(command.organizationId);
     const now = this.clock.now();
-    let closedCount = 0;
+    const uniqueSkus = [...new Map(command.skus.map((sku) => [sku.value, sku])).values()];
+    if (uniqueSkus.length === 0) {
+      return { ok: true, closedCount: 0 };
+    }
 
-    for (const sku of command.skus) {
-      await this.lockSnapshots([{ organizationId, sku, locationId: LocationId.DEFAULT }]);
-      const locationUuid = await this.resolveLocationUuid(organizationId, LocationId.DEFAULT);
+    await this.lockSnapshots(
+      uniqueSkus.map((sku) => ({
+        organizationId,
+        sku,
+        locationId: LocationId.DEFAULT,
+      })),
+    );
+    const locationUuid = await this.resolveLocationUuid(organizationId, LocationId.DEFAULT);
+
+    const skusToClose: Sku[] = [];
+    for (const sku of uniqueSkus) {
       const row = this.lockedSnapshot(organizationId, sku, locationUuid);
       const demand = demandOf(row);
       if (demand.stickyLocked) {
@@ -381,10 +392,38 @@ export class DrizzleStockLedger implements IStockLedger {
       if (!nextDemand.stickyLocked) {
         continue;
       }
-      await this.writeDemand(organizationId, sku, locationUuid, row, nextDemand);
-      closedCount++;
+      skusToClose.push(sku);
     }
-    return { ok: true, closedCount };
+
+    if (skusToClose.length > 0) {
+      await this.db
+        .update(stockSnapshots)
+        .set({
+          stickyLocked: true,
+          windowClosesAt: now,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(stockSnapshots.organizationId, organizationId),
+            eq(stockSnapshots.locationId, locationUuid),
+            inArray(
+              stockSnapshots.sku,
+              skusToClose.map((sku) => sku.value),
+            ),
+          ),
+        );
+      for (const sku of skusToClose) {
+        const row = this.lockedSnapshot(organizationId, sku, locationUuid);
+        this.rememberRow(organizationId, sku, locationUuid, {
+          ...row,
+          stickyLocked: true,
+          windowClosesAt: now,
+        });
+      }
+    }
+
+    return { ok: true, closedCount: skusToClose.length };
   }
 
   async setSellWindow(command: SetSellWindowCommand): Promise<DemandCommandResult> {
