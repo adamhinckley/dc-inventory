@@ -3,7 +3,7 @@ import type {
   IProductRepository,
   IQtyReadPort,
 } from "@dc-inventory/catalog";
-import { computeUncovered } from "@dc-inventory/inventory";
+import { computeToOrder } from "@dc-inventory/inventory";
 import type {
   ICatalogSkuLookupPort,
   IFactorySendCatalogPort,
@@ -55,7 +55,7 @@ export function supplierProductQtyReadPort(qtyRead: IQtyReadPort): ISupplierProd
             allocated: qty.allocated,
             available: qty.available,
             committed: qty.committed,
-            uncovered: computeUncovered(qty.committed, qty.onHand, qty.onOrder),
+            toOrder: computeToOrder(qty.committed, qty.onHand, qty.onOrder),
           },
         ]),
       );

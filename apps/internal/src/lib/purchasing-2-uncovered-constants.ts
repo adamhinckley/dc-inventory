@@ -1,12 +1,12 @@
-import { UNCOVERED_NEEDS_MAPPING_FACTORY_ID } from "./uncovered-constants";
+import { PRE_ORDER_NEEDS_MAPPING_FACTORY_ID } from "./uncovered-constants";
 
-export { UNCOVERED_NEEDS_MAPPING_FACTORY_ID as PURCHASING2_UNCOVERED_NEEDS_MAPPING_FACTORY_ID };
+export { PRE_ORDER_NEEDS_MAPPING_FACTORY_ID as PURCHASING2_PRE_ORDER_NEEDS_MAPPING_FACTORY_ID };
 
-export function isPurchasing2UncoveredNeedsMappingFactoryId(factoryId: string): boolean {
-  return factoryId === UNCOVERED_NEEDS_MAPPING_FACTORY_ID;
+export function isPurchasing2PreOrderNeedsMappingFactoryId(factoryId: string): boolean {
+  return factoryId === PRE_ORDER_NEEDS_MAPPING_FACTORY_ID;
 }
 
-export function purchasing2UncoveredFactoryDetailHref(factoryId: string): string {
+export function purchasing2PreOrderFactoryDetailHref(factoryId: string): string {
   return `/procurement/pre-order/${factoryId}`;
 }
 

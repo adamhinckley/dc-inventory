@@ -1,13 +1,13 @@
 import type { ICommittedCustomerNamesListQuery } from "@dc-inventory/sales";
 import {
-  computeUncovered,
+  computeToOrder,
   InMemoryInventoryReadModel,
   type IInventoryReadModel,
 } from "@dc-inventory/inventory";
 import { locations, stockSnapshots } from "@dc-inventory/inventory/schema";
 import type {
   ICommittedCustomerNamesPort,
-  IInventoryUncoveredReadPort,
+  IInventoryToOrderReadPort,
 } from "@dc-inventory/purchasing";
 import { LocationId, type OrganizationId, type Sku } from "@dc-inventory/shared-kernel";
 import { and, eq, inArray } from "drizzle-orm";
@@ -19,7 +19,7 @@ function uniqueSkus(skus: readonly Sku[]): Sku[] {
   return [...new Map(skus.map((sku) => [sku.value, sku])).values()];
 }
 
-export function inventoryUncoveredReadPort(db: AppDrizzle): IInventoryUncoveredReadPort {
+export function inventoryToOrderReadPort(db: AppDrizzle): IInventoryToOrderReadPort {
   const defaultLocationIdByOrg = new Map<string, Promise<string | null>>();
 
   function getDefaultLocationId(organizationId: OrganizationId): Promise<string | null> {
@@ -52,7 +52,7 @@ export function inventoryUncoveredReadPort(db: AppDrizzle): IInventoryUncoveredR
     return loaded;
   }
 
-  async function getUncoveredBySkus(
+  async function getToOrderBySkus(
     organizationId: OrganizationId,
     skus: readonly Sku[],
   ): Promise<ReadonlyMap<string, number>> {
@@ -65,8 +65,8 @@ export function inventoryUncoveredReadPort(db: AppDrizzle): IInventoryUncoveredR
       return result;
     }
 
-    // Missing DEFAULT location: treat every SKU as uncovered 0 (same as default snapshot /
-    // StockSnapshotQtyReadAdapter omitting rows). UncoveredInventoryListQuery returns [].
+    // Missing DEFAULT location: treat every SKU as toOrder 0 (same as default snapshot /
+    // StockSnapshotQtyReadAdapter omitting rows). PreOrderInventoryListQuery returns [].
     const locationId = await getDefaultLocationId(organizationId);
     if (locationId === null) {
       return result;
@@ -92,29 +92,29 @@ export function inventoryUncoveredReadPort(db: AppDrizzle): IInventoryUncoveredR
       );
 
     for (const row of rows) {
-      result.set(row.sku, computeUncovered(row.committed, row.onHand, row.onOrder));
+      result.set(row.sku, computeToOrder(row.committed, row.onHand, row.onOrder));
     }
     return result;
   }
 
   return {
-    getUncovered: async (organizationId: OrganizationId, sku: Sku) => {
-      const bySku = await getUncoveredBySkus(organizationId, [sku]);
+    getToOrder: async (organizationId: OrganizationId, sku: Sku) => {
+      const bySku = await getToOrderBySkus(organizationId, [sku]);
       return bySku.get(sku.value) ?? 0;
     },
-    getUncoveredBySkus,
+    getToOrderBySkus,
   };
 }
 
-export function inventoryUncoveredReadModelPort(
+export function inventoryToOrderReadModelPort(
   readModel: IInventoryReadModel,
-): IInventoryUncoveredReadPort {
+): IInventoryToOrderReadPort {
   return {
-    getUncovered: async (organizationId: OrganizationId, sku: Sku) => {
+    getToOrder: async (organizationId: OrganizationId, sku: Sku) => {
       const snapshot = await readModel.getSnapshot(sku, LocationId.DEFAULT, organizationId);
-      return snapshot.uncovered;
+      return snapshot.toOrder;
     },
-    getUncoveredBySkus: async (organizationId: OrganizationId, skus: readonly Sku[]) => {
+    getToOrderBySkus: async (organizationId: OrganizationId, skus: readonly Sku[]) => {
       const values = uniqueSkus(skus);
       const result = new Map<string, number>();
       for (const sku of values) {
@@ -131,7 +131,7 @@ export function inventoryUncoveredReadModelPort(
           LocationId.DEFAULT,
         )) {
           if (wanted.has(row.sku.value)) {
-            result.set(row.sku.value, row.snapshot.uncovered);
+            result.set(row.sku.value, row.snapshot.toOrder);
           }
         }
         return result;
@@ -140,7 +140,7 @@ export function inventoryUncoveredReadModelPort(
       await Promise.all(
         values.map(async (sku) => {
           const snapshot = await readModel.getSnapshot(sku, LocationId.DEFAULT, organizationId);
-          result.set(sku.value, snapshot.uncovered);
+          result.set(sku.value, snapshot.toOrder);
         }),
       );
       return result;

@@ -16,8 +16,8 @@ import {
 } from "../adapters/http/internal-products.js";
 import {
   registerInternalInventoryRoutes,
-  registerInternalUncoveredSkusDraftPurchaseOrderRoutes,
-  registerInternalUncoveredSkusListRoutes,
+  registerInternalPreOrderSkusDraftPurchaseOrderRoutes,
+  registerInternalPreOrderSkusListRoutes,
 } from "../adapters/http/internal-inventory.js";
 import { registerStaffActionGuard } from "../adapters/http/staff-action-guard.js";
 
@@ -32,7 +32,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   });
   await app.register(async (inventoryReads) => {
     registerFeatureGuard(inventoryReads, "inventory", "staff");
-    registerInternalUncoveredSkusListRoutes(inventoryReads);
+    registerInternalPreOrderSkusListRoutes(inventoryReads);
   });
   await app.register(async (catalog) => {
     registerFeatureGuard(catalog, "catalog", "staff");
@@ -46,7 +46,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   await app.register(async (purchasing) => {
     registerFeatureGuard(purchasing, "purchasing", "staff");
     registerInternalPurchaseOrderRoutes(purchasing);
-    registerInternalUncoveredSkusDraftPurchaseOrderRoutes(purchasing);
+    registerInternalPreOrderSkusDraftPurchaseOrderRoutes(purchasing);
     registerInternalSupplierRoutes(purchasing);
     registerInternalSupplierProductRoutes(purchasing);
   });

@@ -9,7 +9,7 @@ export { InMemoryPurchaseOrderRepository } from "./adapters/in-memory-purchase-o
 export { InMemorySupplierProductQtyReadPort } from "./adapters/in-memory-supplier-product-qty-read.js";
 export { InMemorySupplierProductRepository } from "./adapters/in-memory-supplier-product-repository.js";
 export { InMemorySupplierSkuMappingReadPort } from "./adapters/in-memory-supplier-sku-mapping.js";
-export { InMemoryUncoveredOpenDraftPurchaseOrderReadPort } from "./adapters/in-memory-uncovered-open-draft-purchase-order-read.js";
+export { InMemoryPreOrderOpenDraftPurchaseOrderReadPort } from "./adapters/in-memory-pre-order-open-draft-purchase-order-read.js";
 export { InMemorySupplierRepository } from "./adapters/in-memory-supplier-repository.js";
 export { InMemoryWorkbookWriter } from "./adapters/in-memory-workbook-writer.js";
 export { ExcelJsWorkbookWriter } from "./adapters/exceljs-workbook-writer.js";
@@ -18,10 +18,10 @@ export { CancelPurchaseOrderUseCase } from "./application/cancel-purchase-order.
 export { CancelRemainingPurchaseOrderUseCase } from "./application/cancel-remaining-purchase-order.js";
 export { ConfirmPurchaseOrderUseCase } from "./application/confirm-purchase-order.js";
 export { CreatePurchaseOrderUseCase } from "./application/create-purchase-order.js";
-export { draftPoQtyFromUncovered } from "./application/draft-po-qty-from-uncovered.js";
-export { DraftPurchaseOrdersFromUncoveredSkusUseCase } from "./application/draft-purchase-orders-from-uncovered-skus.js";
-export { SyncDraftPurchaseOrdersFromUncoveredUseCase } from "./application/sync-draft-purchase-orders-from-uncovered.js";
-export { groupUncoveredSkusBySupplier } from "./application/group-uncovered-skus-by-supplier.js";
+export { draftPoQtyFromToOrder } from "./application/draft-po-qty-from-to-order.js";
+export { DraftPurchaseOrdersFromPreOrderSkusUseCase } from "./application/draft-purchase-orders-from-pre-order-skus.js";
+export { SyncDraftPurchaseOrdersFromPreOrderUseCase } from "./application/sync-draft-purchase-orders-from-pre-order.js";
+export { groupPreOrderSkusBySupplier } from "./application/group-pre-order-skus-by-supplier.js";
 export { ExportPurchaseOrderUseCase } from "./application/export-purchase-order.js";
 export { GetPurchaseOrderFactorySendUseCase } from "./application/get-purchase-order-factory-send.js";
 export { GetPurchaseOrderShortReadoutUseCase } from "./application/get-purchase-order-short-readout.js";
@@ -76,11 +76,11 @@ export {
   type SupplierSkuMappingStatus,
 } from "./domain/supplier-sku-mapping-status.js";
 export type {
-  IUncoveredOpenDraftPurchaseOrderReadPort,
-  UncoveredOpenDraftPurchaseOrderRef,
-  UncoveredOpenDraftSupplierSku,
-} from "./domain/ports/uncovered-open-draft-purchase-order-read.js";
-export { uncoveredOpenDraftKey } from "./domain/ports/uncovered-open-draft-purchase-order-read.js";
+  IPreOrderOpenDraftPurchaseOrderReadPort,
+  PreOrderOpenDraftPurchaseOrderRef,
+  PreOrderOpenDraftSupplierSku,
+} from "./domain/ports/pre-order-open-draft-purchase-order-read.js";
+export { preOrderOpenDraftKey } from "./domain/ports/pre-order-open-draft-purchase-order-read.js";
 export type {
   FactorySendCatalogRow,
   IFactorySendCatalogPort,
@@ -88,7 +88,7 @@ export type {
 export type {
   CommittedCustomerName,
   ICommittedCustomerNamesPort,
-  IInventoryUncoveredReadPort,
+  IInventoryToOrderReadPort,
 } from "./domain/ports/short-readout.js";
 export type { PurchaseOrder, PurchaseOrderLine, PurchaseOrderStatus } from "./domain/purchase-order.js";
 export type { SupplierProductQty } from "./domain/qty.js";

@@ -16,7 +16,7 @@ export type DemandStockFigures = StockFigures &
     sellState: SellState;
     /** `null` means no numeric cap while effectively open. */
     availableToSell: number | null;
-    uncovered: number;
+    toOrder: number;
     windowOpensAt: Date | null;
     windowClosesAt: Date | null;
     stickyLocked: boolean;
@@ -72,12 +72,12 @@ export function isDemandStockFigures(snapshot: StockFigures): snapshot is Demand
     "committed" in snapshot &&
     "sellState" in snapshot &&
     "availableToSell" in snapshot &&
-    "uncovered" in snapshot &&
+    "toOrder" in snapshot &&
     "stickyLocked" in snapshot
   );
 }
 
-export function computeUncovered(committed: number, onHand: number, onOrder: number): number {
+export function computeToOrder(committed: number, onHand: number, onOrder: number): number {
   return Math.max(0, committed - onHand - onOrder);
 }
 

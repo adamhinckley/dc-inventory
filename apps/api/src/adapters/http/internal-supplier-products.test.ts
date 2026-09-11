@@ -175,7 +175,7 @@ describe("internal supplier products HTTP", () => {
             allocated: 1,
             available: 11,
             committed: 22,
-            uncovered: 7,
+            toOrder: 7,
           },
         },
       ],

@@ -6,11 +6,11 @@ export type { InventoryUnitOfWorkScope } from "./adapters/in-memory-inventory-un
 export { InMemoryStockLedger } from "./adapters/in-memory-stock-ledger.js";
 export { InMemorySellWindowRepository } from "./adapters/in-memory-sell-window-repository.js";
 export { DrizzleSellWindowRepository, type SellWindowDrizzle } from "./adapters/drizzle-sell-window-repository.js";
-export { InMemoryUncoveredListQuery } from "./adapters/in-memory-uncovered-list-query.js";
+export { InMemoryPreOrderListQuery } from "./adapters/in-memory-pre-order-list-query.js";
 export {
-  InMemoryUncoveredCaseQtyReadPort,
-  InMemoryUncoveredReorderPolicyReadPort,
-} from "./adapters/in-memory-uncovered-stock-context.js";
+  InMemoryPreOrderCaseQtyReadPort,
+  InMemoryPreOrderReorderPolicyReadPort,
+} from "./adapters/in-memory-pre-order-stock-context.js";
 export { DrizzleInventoryReadModel } from "./adapters/drizzle-inventory-read-model.js";
 export type { InventoryReadDrizzle } from "./adapters/drizzle-inventory-read-model.js";
 export { DrizzleStockLedger } from "./adapters/drizzle-stock-ledger.js";
@@ -50,14 +50,14 @@ export {
   type ListPurchaseOrderGoodsReceivedResult,
   type PurchaseOrderGoodsReceivedItem,
 } from "./application/list-purchase-order-goods-received.js";
-export { ListUncoveredSkusUseCase } from "./application/list-uncovered-skus.js";
+export { ListPreOrderSkusUseCase } from "./application/list-pre-order-skus.js";
 export {
-  ListUncoveredFactoriesUseCase,
-  UNCOVERED_NEEDS_MAPPING_FACTORY_ROW_ID,
-  type ListUncoveredFactoriesRequest,
-  type ListUncoveredFactoriesResult,
-  type UncoveredFactorySummaryRow,
-} from "./application/list-uncovered-factories.js";
+  ListPreOrderFactoriesUseCase,
+  PRE_ORDER_NEEDS_MAPPING_FACTORY_ROW_ID,
+  type ListPreOrderFactoriesRequest,
+  type ListPreOrderFactoriesResult,
+  type PreOrderFactorySummaryRow,
+} from "./application/list-pre-order-factories.js";
 export { RecordAdjustmentDecreaseUseCase } from "./application/record-adjustment-decrease.js";
 export { RecordAdjustmentIncreaseUseCase } from "./application/record-adjustment-increase.js";
 export { RecordAllocatedUseCase } from "./application/record-allocated.js";
@@ -94,7 +94,7 @@ export {
   computeAvailableToSell,
   computeEffectiveSellState,
   computeLockedAvailableToSell,
-  computeUncovered,
+  computeToOrder,
   hasActiveSellWindowMembership,
   isSellWindowInvalid,
   isSellWindowOpenInThePast,
@@ -181,27 +181,27 @@ export type {
   StockSnapshotLock,
 } from "./domain/ports/stock-ledger.js";
 export type {
-  IUncoveredListQuery,
-  UncoveredFactoryCoreRow,
-  UncoveredFactoryListPage,
-  UncoveredFactoryListQuery,
-  UncoveredListCoreRow,
-  UncoveredListPage,
-  UncoveredListQuery,
-  UncoveredListRow,
-  UncoveredSkuDraftPurchaseOrderRef,
-} from "./domain/ports/uncovered-list-query.js";
+  IPreOrderListQuery,
+  PreOrderFactoryCoreRow,
+  PreOrderFactoryListPage,
+  PreOrderFactoryListQuery,
+  PreOrderListCoreRow,
+  PreOrderListPage,
+  PreOrderListQuery,
+  PreOrderListRow,
+  PreOrderSkuDraftPurchaseOrderRef,
+} from "./domain/ports/pre-order-list-query.js";
 export type {
-  IUncoveredSkuDraftPurchaseOrderReadPort,
-  IUncoveredSkuSupplierMappingReadPort,
-  IUncoveredSkuSupplierReadPort,
-  UncoveredSkuDraftPurchaseOrderRef as UncoveredSkuEnrichmentDraftPurchaseOrderRef,
-  UncoveredSkuMappingStatus,
-  UncoveredSkuSupplierInfo,
-  UncoveredSkuSupplierMapping,
-  UncoveredSkuSupplierSku,
-} from "./domain/ports/uncovered-sku-enrichment.js";
-export { uncoveredSkuDraftKey } from "./domain/ports/uncovered-sku-enrichment.js";
+  IPreOrderSkuDraftPurchaseOrderReadPort,
+  IPreOrderSkuSupplierMappingReadPort,
+  IPreOrderSkuSupplierReadPort,
+  PreOrderSkuDraftPurchaseOrderRef as PreOrderSkuEnrichmentDraftPurchaseOrderRef,
+  PreOrderSkuMappingStatus,
+  PreOrderSkuSupplierInfo,
+  PreOrderSkuSupplierMapping,
+  PreOrderSkuSupplierSku,
+} from "./domain/ports/pre-order-sku-enrichment.js";
+export { preOrderSkuDraftKey } from "./domain/ports/pre-order-sku-enrichment.js";
 export {
   computeSellWindowStatus,
   projectLiveSellWindowStatus,
@@ -220,11 +220,11 @@ export type {
 } from "./domain/ports/sell-window-repository.js";
 export { normalizeSellWindowFilterSnapshot } from "./domain/ports/sell-window-repository.js";
 export type {
-  IUncoveredCaseQtyReadPort,
-  IUncoveredReorderPolicyReadPort,
-  UncoveredCaseQty,
-  UncoveredReorderPolicy,
-} from "./domain/ports/uncovered-stock-context.js";
+  IPreOrderCaseQtyReadPort,
+  IPreOrderReorderPolicyReadPort,
+  PreOrderCaseQty,
+  PreOrderReorderPolicy,
+} from "./domain/ports/pre-order-stock-context.js";
 export {
   computeAvailable,
   freezeStockFigures,

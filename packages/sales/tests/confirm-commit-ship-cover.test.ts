@@ -1,4 +1,4 @@
-import { computeUncovered } from "@dc-inventory/inventory";
+import { computeToOrder } from "@dc-inventory/inventory";
 import { OrderId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -49,7 +49,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
       expect(snapshot.available).toBe(0);
       expect(snapshot.sellState).toBe("open");
       expect(snapshot.availableToSell).toBeNull();
-      expect(snapshot.uncovered).toBe(computeUncovered(100_000, 0, 0));
+      expect(snapshot.toOrder).toBe(computeToOrder(100_000, 0, 0));
 
       const movements = await h.readModel.listMovements({
         organizationId: DEFAULT_ORG,
@@ -302,7 +302,7 @@ describe("Sales confirm commits and ship cover (ADA-177)", () => {
       const afterConfirm = await h.demandSnapshot(COVER_SKU);
       expect(afterConfirm.committed).toBe(1_200);
       expect(afterConfirm.allocated).toBe(500);
-      expect(afterConfirm.uncovered).toBe(700);
+      expect(afterConfirm.toOrder).toBe(700);
 
       const shipBeforeReceive = await h.ship.execute({
         organizationId: DEFAULT_ORG,

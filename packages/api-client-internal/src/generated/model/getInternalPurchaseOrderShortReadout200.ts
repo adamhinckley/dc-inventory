@@ -5,9 +5,9 @@
  * OpenAPI spec version: 0.0.0
  */
 import type { GetInternalPurchaseOrderShortReadout200AffectedCustomersItem } from './getInternalPurchaseOrderShortReadout200AffectedCustomersItem';
-import type { GetInternalPurchaseOrderShortReadout200UncoveredItem } from './getInternalPurchaseOrderShortReadout200UncoveredItem';
+import type { GetInternalPurchaseOrderShortReadout200ToOrderItem } from './getInternalPurchaseOrderShortReadout200ToOrderItem';
 
 export type GetInternalPurchaseOrderShortReadout200 = {
-  uncovered: GetInternalPurchaseOrderShortReadout200UncoveredItem[];
+  toOrder: GetInternalPurchaseOrderShortReadout200ToOrderItem[];
   affectedCustomers: GetInternalPurchaseOrderShortReadout200AffectedCustomersItem[];
 };

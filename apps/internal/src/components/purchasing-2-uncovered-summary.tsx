@@ -2,9 +2,9 @@
 
 import {
   getListInternalPurchaseOrdersQueryKey,
-  getListInternalUncoveredFactoriesQueryKey,
-  getListInternalUncoveredSkusQueryKey,
-  useDraftInternalUncoveredPurchaseOrders,
+  getListInternalPreOrderFactoriesQueryKey,
+  getListInternalPreOrderSkusQueryKey,
+  useDraftInternalPreOrderPurchaseOrders,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -19,16 +19,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { UncoveredFactoryRow } from "../lib/list-all-uncovered-factories";
-import { listPurchasing2UncoveredFactories } from "../lib/list-purchasing-2-uncovered-factories";
-import { collectUncoveredSkusForFactories } from "../lib/uncovered-collect-skus";
+import { listPurchasing2PreOrderFactories } from "../lib/list-purchasing-2-uncovered-factories";
+import { collectPreOrderSkusForFactories } from "../lib/uncovered-collect-skus";
 import {
-  isPurchasing2UncoveredNeedsMappingFactoryId,
+  isPurchasing2PreOrderNeedsMappingFactoryId,
   purchasing2PurchaseOrderHref,
-  purchasing2UncoveredFactoryDetailHref,
+  purchasing2PreOrderFactoryDetailHref,
 } from "../lib/purchasing-2-uncovered-constants";
 import { syncPurchasing2DraftPurchaseOrders } from "../lib/purchasing-2-sync-draft-pos";
 import {
-  afterDraftUncoveredPos,
+  afterDraftPreOrderPos,
   draftableUncoveredFactoryIds,
   type UncoveredBatchDraftRow,
 } from "../lib/uncovered-draft-workflow";
@@ -46,7 +46,7 @@ function FactoryNameCell({ row }: { row: UncoveredFactoryRow }) {
   if (row.needsMapping) {
     return (
       <Link
-        href={purchasing2UncoveredFactoryDetailHref(row.id)}
+        href={purchasing2PreOrderFactoryDetailHref(row.id)}
         className="text-link hover:text-link-hover inline-flex min-w-0 items-center gap-field"
       >
         <Chip style={{ "--chip-color": "var(--color-warning)" } as CSSProperties}>
@@ -58,7 +58,7 @@ function FactoryNameCell({ row }: { row: UncoveredFactoryRow }) {
 
   return (
     <Link
-      href={purchasing2UncoveredFactoryDetailHref(row.id)}
+      href={purchasing2PreOrderFactoryDetailHref(row.id)}
       className="text-link hover:text-link-hover block min-w-0 truncate font-medium"
     >
       {row.supplierName}
@@ -109,13 +109,13 @@ export function Purchasing2UncoveredSummary() {
 
   const factoriesQuery = useQuery({
     queryKey: [
-      ...getListInternalUncoveredFactoriesQueryKey(),
+      ...getListInternalPreOrderFactoriesQueryKey(),
       "purchasing-2",
       "excludeSuppliersWithOpenDraft",
     ],
-    queryFn: () => listPurchasing2UncoveredFactories(),
+    queryFn: () => listPurchasing2PreOrderFactories(),
   });
-  const draftMutation = useDraftInternalUncoveredPurchaseOrders();
+  const draftMutation = useDraftInternalPreOrderPurchaseOrders();
 
   const rows = factoriesQuery.data ?? [];
   const busy = factoriesQuery.isPending;
@@ -165,11 +165,11 @@ export function Purchasing2UncoveredSummary() {
         render: ({ record }) => formatFactoryCell(record, "productCount"),
       },
       {
-        id: "totalUncoveredUnits",
+        id: "totalToOrderUnits",
         label: "Total to order",
         sort: false,
         align: "right",
-        render: ({ record }) => formatFactoryCell(record, "totalUncoveredUnits"),
+        render: ({ record }) => formatFactoryCell(record, "totalToOrderUnits"),
       },
     ],
     [],
@@ -207,19 +207,19 @@ export function Purchasing2UncoveredSummary() {
   });
 
   const needsMappingCount = rows.filter((row) =>
-    isPurchasing2UncoveredNeedsMappingFactoryId(row.id),
+    isPurchasing2PreOrderNeedsMappingFactoryId(row.id),
   ).length;
 
-  const invalidateUncoveredQueries = useCallback(async () => {
+  const invalidatePreOrderQueries = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: getListInternalPurchaseOrdersQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredFactoriesQueryKey(),
+        queryKey: getListInternalPreOrderFactoriesQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredSkusQueryKey(),
+        queryKey: getListInternalPreOrderSkusQueryKey(),
       }),
     ]);
   }, [queryClient]);
@@ -243,7 +243,7 @@ export function Purchasing2UncoveredSummary() {
     setActionError(null);
     setStatusMessage(null);
     try {
-      const skus = await collectUncoveredSkusForFactories(factoryIds);
+      const skus = await collectPreOrderSkusForFactories(factoryIds);
       if (skus.length === 0) {
         setStatusMessage("No SKUs to order for these factories.");
         return;
@@ -253,13 +253,13 @@ export function Purchasing2UncoveredSummary() {
         setActionError("Could not create draft purchase orders.");
         return;
       }
-      await invalidateUncoveredQueries();
+      await invalidatePreOrderQueries();
       try {
         await syncPurchasing2DraftPurchaseOrders(queryClient, factoryIds);
       } catch {
         // Ignore a failed resync after a successful Save All Drafts.
       }
-      const next = afterDraftUncoveredPos(
+      const next = afterDraftPreOrderPos(
         result.data.purchaseOrders,
         result.data.unmappedSkus,
         supplierNamesById,
@@ -283,7 +283,7 @@ export function Purchasing2UncoveredSummary() {
   }, [
     draftMutation,
     factoryIds,
-    invalidateUncoveredQueries,
+    invalidatePreOrderQueries,
     queryClient,
     router,
     rows,

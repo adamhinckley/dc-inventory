@@ -27,13 +27,13 @@ export type DemandStockFigures = StockFigures &
     sellState: SellState;
     /** `null` means no numeric cap while effectively open. */
     availableToSell: number | null;
-    uncovered: number;
+    toOrder: number;
     windowOpensAt: Date | null;
     windowClosesAt: Date | null;
     stickyLocked: boolean;
   }>;
 
-export function computeUncovered(committed: number, onHand: number, onOrder: number): number {
+export function computeToOrder(committed: number, onHand: number, onOrder: number): number {
   return Math.max(0, committed - onHand - onOrder);
 }
 
@@ -288,14 +288,14 @@ export function projectDemandFigures(
     figures.onOrder,
     demand.committed,
   );
-  const uncovered = computeUncovered(demand.committed, figures.onHand, figures.onOrder);
+  const toOrder = computeToOrder(demand.committed, figures.onHand, figures.onOrder);
 
   return Object.freeze({
     ...figures,
     committed: demand.committed,
     sellState,
     availableToSell,
-    uncovered,
+    toOrder,
     windowOpensAt: demand.windowOpensAt,
     windowClosesAt: demand.windowClosesAt,
     stickyLocked: demand.stickyLocked,

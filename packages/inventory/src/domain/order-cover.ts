@@ -52,7 +52,7 @@ export type FifoUncoveredOrder = Readonly<{
 }>;
 
 /**
- * Committed sales orders with uncovered demand, oldest commit first.
+ * Committed sales orders with toOrder demand, oldest commit first.
  * Uncovered per order = net committed minus net cover for that order ref.
  */
 export function listFifoUncoveredCommittedOrders(

@@ -133,7 +133,7 @@ import {
   ConfirmPurchaseOrderUseCase,
   CreatePurchaseOrderUseCase,
   CreateSupplierUseCase,
-  DraftPurchaseOrdersFromUncoveredSkusUseCase,
+  DraftPurchaseOrdersFromPreOrderSkusUseCase,
   DrizzlePurchaseOrderRepository,
   DrizzleSupplierProductRepository,
   DrizzleSupplierRepository,
@@ -153,7 +153,7 @@ import {
   ListSuppliersUseCase,
   ReceivePurchaseOrderUseCase,
   ReplacePurchaseOrderLinesUseCase,
-  SyncDraftPurchaseOrdersFromUncoveredUseCase,
+  SyncDraftPurchaseOrdersFromPreOrderUseCase,
   UnlinkSupplierProductUseCase,
   UnconfirmPurchaseOrderUseCase,
   UpdateSupplierProductUseCase,
@@ -165,10 +165,10 @@ import {
   type ISupplierProductRepository,
   type ISupplierRepository,
   type ICommittedCustomerNamesPort,
-  type IInventoryUncoveredReadPort,
+  type IInventoryToOrderReadPort,
   type ISupplierSkuMappingReadPort,
-  InMemoryUncoveredOpenDraftPurchaseOrderReadPort,
-  type IUncoveredOpenDraftPurchaseOrderReadPort,
+  InMemoryPreOrderOpenDraftPurchaseOrderReadPort,
+  type IPreOrderOpenDraftPurchaseOrderReadPort,
   type PurchasingDrizzle,
 } from "@dc-inventory/purchasing";
 import {
@@ -236,19 +236,19 @@ import {
   GetSellWindowUseCase,
   GetStockSnapshotUseCase,
   InMemorySellWindowRepository,
-  InMemoryUncoveredCaseQtyReadPort,
-  InMemoryUncoveredListQuery,
-  InMemoryUncoveredReorderPolicyReadPort,
+  InMemoryPreOrderCaseQtyReadPort,
+  InMemoryPreOrderListQuery,
+  InMemoryPreOrderReorderPolicyReadPort,
   ListPurchaseOrderGoodsReceivedUseCase,
   ListSellWindowsUseCase,
-  ListUncoveredFactoriesUseCase,
-  ListUncoveredSkusUseCase,
+  ListPreOrderFactoriesUseCase,
+  ListPreOrderSkusUseCase,
   RecordReopenSkusForPresellUseCase,
   RecordCloseSkusForPresellUseCase,
   SellWindowId,
   type InMemoryInventoryReadModel,
   type ISellWindowRepository,
-  type IUncoveredListQuery,
+  type IPreOrderListQuery,
   type RecordReopenSkusForPresellRequest,
 } from "@dc-inventory/inventory";
 import { CustomerId, OrganizationId, Sku } from "@dc-inventory/shared-kernel";
@@ -257,8 +257,8 @@ import { PurchaseOrderLookupAdapter } from "../adapters/purchase-order-lookup.js
 import { SalesCreditCheckAdapter } from "../adapters/sales-credit-check.js";
 import {
   committedCustomerNamesPort,
-  inventoryUncoveredReadModelPort,
-  inventoryUncoveredReadPort,
+  inventoryToOrderReadModelPort,
+  inventoryToOrderReadPort,
 } from "../adapters/purchasing-short-readout-ports.js";
 import { catalogProductPort } from "../adapters/catalog-product-port.js";
 import { InMemoryUnitOfWork } from "../adapters/in-memory-unit-of-work.js";
@@ -271,11 +271,11 @@ import { DrizzlePaymentsReceivedListQuery } from "../adapters/accounting-payment
 import { PostgresAccountingUnitOfWork } from "../adapters/postgres-accounting-unit-of-work.js";
 import { PostgresInventoryUnitOfWork } from "../adapters/postgres-inventory-unit-of-work.js";
 import { CatalogInventoryListQuery } from "../adapters/catalog-inventory-list-query.js";
-import { UncoveredInventoryListQuery } from "../adapters/uncovered-inventory-list-query.js";
+import { PreOrderInventoryListQuery } from "../adapters/pre-order-inventory-list-query.js";
 import {
-  uncoveredCaseQtyReadPort,
-  uncoveredReorderPolicyReadPort,
-} from "../adapters/uncovered-stock-context-ports.js";
+  preOrderCaseQtyReadPort,
+  preOrderReorderPolicyReadPort,
+} from "../adapters/pre-order-stock-context-ports.js";
 import { InventoryReadModelQtyReadAdapter } from "../adapters/inventory-read-model-qty-read.js";
 import { PurchasingSupplierLinkAdapter } from "../adapters/purchasing-supplier-link.js";
 import { PurchasingProductPrimarySupplierReadAdapter } from "../adapters/purchasing-product-primary-supplier-read.js";
@@ -289,14 +289,14 @@ import {
 } from "../adapters/purchasing-catalog-ports.js";
 import { supplierSkuMappingReadPort } from "../adapters/supplier-sku-mapping-read-port.js";
 import {
-  inMemoryUncoveredOpenDraftPurchaseOrderReadPort,
-  uncoveredOpenDraftPurchaseOrderReadPort,
-} from "../adapters/uncovered-open-draft-purchase-order-read-port.js";
+  inMemoryPreOrderOpenDraftPurchaseOrderReadPort,
+  preOrderOpenDraftPurchaseOrderReadPort,
+} from "../adapters/pre-order-open-draft-purchase-order-read-port.js";
 import {
-  uncoveredSkuDraftPurchaseOrderReadPort,
-  uncoveredSkuSupplierMappingReadPort,
-  uncoveredSkuSupplierReadPort,
-} from "../adapters/uncovered-sku-enrichment-read-ports.js";
+  preOrderSkuDraftPurchaseOrderReadPort,
+  preOrderSkuSupplierMappingReadPort,
+  preOrderSkuSupplierReadPort,
+} from "../adapters/pre-order-sku-enrichment-read-ports.js";
 import { StockSnapshotQtyReadAdapter } from "../adapters/stock-snapshot-qty-read.js";
 import { SystemClock } from "../adapters/system-clock.js";
 import type { IUnitOfWork } from "../domain/unit-of-work.js";
@@ -396,8 +396,8 @@ export type PurchasingHttpServices = {
   assignSupplierProduct: AssignSupplierProductUseCase;
   updateSupplierProduct: UpdateSupplierProductUseCase;
   unlinkSupplierProduct: UnlinkSupplierProductUseCase;
-  draftPurchaseOrdersFromUncoveredSkus: DraftPurchaseOrdersFromUncoveredSkusUseCase;
-  syncDraftPurchaseOrdersFromUncovered: SyncDraftPurchaseOrdersFromUncoveredUseCase;
+  draftPurchaseOrdersFromPreOrderSkus: DraftPurchaseOrdersFromPreOrderSkusUseCase;
+  syncDraftPurchaseOrdersFromPreOrder: SyncDraftPurchaseOrdersFromPreOrderUseCase;
 };
 
 export type SalesHttpServices = {
@@ -454,8 +454,8 @@ export type CloseSkusForPresellHttpResult =
 export type InventoryHttpServices = {
   getStockSnapshot: GetStockSnapshotUseCase;
   listPurchaseOrderGoodsReceived: ListPurchaseOrderGoodsReceivedUseCase;
-  listUncoveredSkus: ListUncoveredSkusUseCase;
-  listUncoveredFactories: ListUncoveredFactoriesUseCase;
+  listPreOrderSkus: ListPreOrderSkusUseCase;
+  listPreOrderFactories: ListPreOrderFactoriesUseCase;
   reopenSkusForPresell: Pick<RecordReopenSkusForPresellUseCase, "execute">;
   closeSkusForPresell: Pick<
     { execute(input: CloseSkusForPresellHttpRequest): Promise<CloseSkusForPresellHttpResult> },
@@ -519,7 +519,7 @@ export type AppServiceOverrides = {
   supplierRepo?: ISupplierRepository;
   supplierProductRepo?: ISupplierProductRepository;
   supplierSkuMapping?: import("@dc-inventory/purchasing").ISupplierSkuMappingReadPort;
-  openDraftPurchaseOrderRead?: IUncoveredOpenDraftPurchaseOrderReadPort;
+  openDraftPurchaseOrderRead?: IPreOrderOpenDraftPurchaseOrderReadPort;
   catalogSkuLookup?: ICatalogSkuLookupPort;
   factorySendCatalog?: IFactorySendCatalogPort;
   supplierProductQtyRead?: ISupplierProductQtyReadPort;
@@ -528,9 +528,9 @@ export type AppServiceOverrides = {
   invoiceRepo?: IInvoiceRepository;
   accountingUnitOfWork?: import("@dc-inventory/accounting").IAccountingUnitOfWork;
   unitOfWork?: IUnitOfWork;
-  uncoveredList?: IUncoveredListQuery;
-  uncoveredCaseQtyRead?: import("@dc-inventory/inventory").IUncoveredCaseQtyReadPort;
-  uncoveredReorderPolicyRead?: import("@dc-inventory/inventory").IUncoveredReorderPolicyReadPort;
+  preOrderList?: IPreOrderListQuery;
+  preOrderCaseQtyRead?: import("@dc-inventory/inventory").IPreOrderCaseQtyReadPort;
+  preOrderReorderPolicyRead?: import("@dc-inventory/inventory").IPreOrderReorderPolicyReadPort;
   sellWindowRepo?: ISellWindowRepository;
   licensingStore?: InMemoryLicensingStore;
   licensingRepository?: ILicensingReadRepository;
@@ -695,11 +695,11 @@ function purchasingServices(
   catalogSkuLookup: ICatalogSkuLookupPort,
   supplierProductQty: ISupplierProductQtyReadPort,
   factorySendCatalog: IFactorySendCatalogPort,
-  inventoryUncovered: IInventoryUncoveredReadPort,
+  inventoryToOrder: IInventoryToOrderReadPort,
   committedCustomerNames: ICommittedCustomerNamesPort,
   supplierSkuMapping: ISupplierSkuMappingReadPort,
-  caseQty: import("@dc-inventory/inventory").IUncoveredCaseQtyReadPort,
-  uncoveredList: import("@dc-inventory/inventory").IUncoveredListQuery,
+  caseQty: import("@dc-inventory/inventory").IPreOrderCaseQtyReadPort,
+  preOrderList: import("@dc-inventory/inventory").IPreOrderListQuery,
   unitOfWork: IUnitOfWork,
   clock: import("@dc-inventory/purchasing").IClock,
 ): PurchasingHttpServices {
@@ -740,7 +740,7 @@ function purchasingServices(
     ),
     getPurchaseOrderShortReadout: new GetPurchaseOrderShortReadoutUseCase(
       purchaseOrderRepo,
-      inventoryUncovered,
+      inventoryToOrder,
       committedCustomerNames,
     ),
     cancelPurchaseOrder: new CancelPurchaseOrderUseCase(unitOfWork.purchasing),
@@ -764,18 +764,18 @@ function purchasingServices(
     ),
     updateSupplierProduct: new UpdateSupplierProductUseCase(supplierRepo, supplierProductRepo),
     unlinkSupplierProduct: new UnlinkSupplierProductUseCase(supplierRepo, supplierProductRepo),
-    draftPurchaseOrdersFromUncoveredSkus: new DraftPurchaseOrdersFromUncoveredSkusUseCase(
+    draftPurchaseOrdersFromPreOrderSkus: new DraftPurchaseOrdersFromPreOrderSkusUseCase(
       supplierSkuMapping,
-      inventoryUncovered,
+      inventoryToOrder,
       caseQty,
       unitOfWork.purchasing,
       catalogSkuLookup,
       clock,
     ),
-    syncDraftPurchaseOrdersFromUncovered: new SyncDraftPurchaseOrdersFromUncoveredUseCase(
+    syncDraftPurchaseOrdersFromPreOrder: new SyncDraftPurchaseOrdersFromPreOrderUseCase(
       unitOfWork.purchasing,
       supplierSkuMapping,
-      uncoveredList,
+      preOrderList,
       caseQty,
       catalogSkuLookup,
     ),
@@ -943,9 +943,9 @@ function licensingServices(repository: ILicensingReadRepository): LicensingHttpS
 function inventoryServices(
   unitOfWork: IUnitOfWork,
   purchaseOrderRepo: IPurchaseOrderRepository,
-  uncoveredList: IUncoveredListQuery,
-  listUncoveredSkus: ListUncoveredSkusUseCase,
-  listUncoveredFactories: ListUncoveredFactoriesUseCase,
+  preOrderList: IPreOrderListQuery,
+  listPreOrderSkus: ListPreOrderSkusUseCase,
+  listPreOrderFactories: ListPreOrderFactoriesUseCase,
   sellWindowRepo: ISellWindowRepository,
   clock: import("@dc-inventory/inventory").IClock,
 ): InventoryHttpServices {
@@ -955,8 +955,8 @@ function inventoryServices(
       unitOfWork.inventory.readModel,
       new PurchaseOrderLookupAdapter(purchaseOrderRepo),
     ),
-    listUncoveredSkus,
-    listUncoveredFactories,
+    listPreOrderSkus,
+    listPreOrderFactories,
     reopenSkusForPresell: {
       execute: (input: RecordReopenSkusForPresellRequest) =>
         unitOfWork.run((scope) => {
@@ -1283,49 +1283,49 @@ export function composeAppServices(
     appDb,
   );
 
-  const uncoveredCaseQty =
-    overrides.uncoveredCaseQtyRead ??
+  const preOrderCaseQty =
+    overrides.preOrderCaseQtyRead ??
     (productRepo && productPackagingRepo
-      ? uncoveredCaseQtyReadPort(productRepo, productPackagingRepo)
-      : new InMemoryUncoveredCaseQtyReadPort());
-  const uncoveredReorderPolicy =
-    overrides.uncoveredReorderPolicyRead ??
+      ? preOrderCaseQtyReadPort(productRepo, productPackagingRepo)
+      : new InMemoryPreOrderCaseQtyReadPort());
+  const preOrderReorderPolicy =
+    overrides.preOrderReorderPolicyRead ??
     (appDb
-      ? uncoveredReorderPolicyReadPort(appDb)
-      : new InMemoryUncoveredReorderPolicyReadPort());
+      ? preOrderReorderPolicyReadPort(appDb)
+      : new InMemoryPreOrderReorderPolicyReadPort());
   const openDraftPurchaseOrderRead =
     overrides.openDraftPurchaseOrderRead ??
     (purchasingDb
-      ? uncoveredOpenDraftPurchaseOrderReadPort(purchasingDb)
-      : inMemoryUncoveredOpenDraftPurchaseOrderReadPort(purchaseOrderRepo));
-  const uncoveredSkuSupplierMapping = uncoveredSkuSupplierMappingReadPort(supplierSkuMapping);
-  const uncoveredSkuSupplier = uncoveredSkuSupplierReadPort(supplierRepo);
-  const uncoveredSkuDraftPurchaseOrder = uncoveredSkuDraftPurchaseOrderReadPort(
+      ? preOrderOpenDraftPurchaseOrderReadPort(purchasingDb)
+      : inMemoryPreOrderOpenDraftPurchaseOrderReadPort(purchaseOrderRepo));
+  const preOrderSkuSupplierMapping = preOrderSkuSupplierMappingReadPort(supplierSkuMapping);
+  const preOrderSkuSupplier = preOrderSkuSupplierReadPort(supplierRepo);
+  const preOrderSkuDraftPurchaseOrder = preOrderSkuDraftPurchaseOrderReadPort(
     openDraftPurchaseOrderRead,
   );
-  const uncoveredList =
-    overrides.uncoveredList ??
+  const preOrderList =
+    overrides.preOrderList ??
     (appDb
-      ? new UncoveredInventoryListQuery(appDb)
-      : new InMemoryUncoveredListQuery(
+      ? new PreOrderInventoryListQuery(appDb)
+      : new InMemoryPreOrderListQuery(
           unitOfWork.inventory.readModel as InMemoryInventoryReadModel,
           {
-            supplierMapping: uncoveredSkuSupplierMapping,
-            openDraftPurchaseOrders: uncoveredSkuDraftPurchaseOrder,
-            suppliers: uncoveredSkuSupplier,
+            supplierMapping: preOrderSkuSupplierMapping,
+            openDraftPurchaseOrders: preOrderSkuDraftPurchaseOrder,
+            suppliers: preOrderSkuSupplier,
           },
         ));
-  const listUncoveredSkus = new ListUncoveredSkusUseCase(
-    uncoveredList,
-    uncoveredCaseQty,
-    uncoveredReorderPolicy,
-    uncoveredSkuSupplierMapping,
-    uncoveredSkuSupplier,
-    uncoveredSkuDraftPurchaseOrder,
+  const listPreOrderSkus = new ListPreOrderSkusUseCase(
+    preOrderList,
+    preOrderCaseQty,
+    preOrderReorderPolicy,
+    preOrderSkuSupplierMapping,
+    preOrderSkuSupplier,
+    preOrderSkuDraftPurchaseOrder,
   );
-  const listUncoveredFactories = new ListUncoveredFactoriesUseCase(
-    uncoveredList,
-    uncoveredSkuSupplier,
+  const listPreOrderFactories = new ListPreOrderFactoriesUseCase(
+    preOrderList,
+    preOrderSkuSupplier,
   );
   const accounting = accountingServices({
     invoiceRepo,
@@ -1425,12 +1425,12 @@ export function composeAppServices(
       supplierProductQty,
       factorySendCatalog,
       appDb
-        ? inventoryUncoveredReadPort(appDb)
-        : inventoryUncoveredReadModelPort(unitOfWork.inventory.readModel),
+        ? inventoryToOrderReadPort(appDb)
+        : inventoryToOrderReadModelPort(unitOfWork.inventory.readModel),
       committedCustomerNamesPort(committedCustomerNamesListQuery),
       supplierSkuMapping,
-      uncoveredCaseQty,
-      uncoveredList,
+      preOrderCaseQty,
+      preOrderList,
       unitOfWork,
       clock,
     ),
@@ -1450,9 +1450,9 @@ export function composeAppServices(
     inventory: inventoryServices(
       unitOfWork,
       purchaseOrderRepo,
-      uncoveredList,
-      listUncoveredSkus,
-      listUncoveredFactories,
+      preOrderList,
+      listPreOrderSkus,
+      listPreOrderFactories,
       sellWindowRepo,
       clock,
     ),

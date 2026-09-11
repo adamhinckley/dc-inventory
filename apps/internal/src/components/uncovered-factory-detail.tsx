@@ -2,10 +2,10 @@
 
 import {
   getListInternalPurchaseOrdersQueryKey,
-  getListInternalUncoveredFactoriesQueryKey,
-  getListInternalUncoveredSkusQueryKey,
-  useDraftInternalUncoveredPurchaseOrders,
-  useListInternalUncoveredSkus,
+  getListInternalPreOrderFactoriesQueryKey,
+  getListInternalPreOrderSkusQueryKey,
+  useDraftInternalPreOrderPurchaseOrders,
+  useListInternalPreOrderSkus,
 } from "@dc-inventory/api-client-internal";
 import {
   unwrapListData,
@@ -26,31 +26,31 @@ import { FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
-import { isUncoveredNeedsMappingFactoryId } from "../lib/uncovered-constants";
+import { isPreOrderNeedsMappingFactoryId } from "../lib/uncovered-constants";
 import {
-  listAllUncoveredFactories,
+  listAllPreOrderFactories,
   type UncoveredFactoryRow,
 } from "../lib/list-all-uncovered-factories";
 import {
-  afterDraftUncoveredPos,
+  afterDraftPreOrderPos,
   shouldDraftUncoveredSelection,
   type UncoveredBatchDraftRow,
 } from "../lib/uncovered-draft-workflow";
 import { suggestedDraftPoQty } from "../lib/purchase-order-line-math";
 import { replaceTableUrlParams } from "../lib/table-url-params";
-import { uncoveredListTable } from "../lib/uncovered-list-table";
+import { preOrderListTable } from "../lib/uncovered-list-table";
 import { UncoveredBatchDraftModal } from "./uncovered-batch-draft-modal";
 import { MissingSupplierPoPrefixDialog } from "./missing-supplier-po-prefix-dialog";
 import { loadSuppliersMissingPoPrefix } from "../lib/missing-supplier-po-prefix";
 import type { SupplierDetail } from "../lib/supplier-types";
 
-type UncoveredListParams = NonNullable<
-  Parameters<typeof useListInternalUncoveredSkus>[0]
+type PreOrderListParams = NonNullable<
+  Parameters<typeof useListInternalPreOrderSkus>[0]
 >;
 
-type UncoveredApiRow = {
+type PreOrderApiRow = {
   sku: string;
-  uncovered: number;
+  toOrder: number;
   onHand: number;
   onOrder: number;
   committed: number;
@@ -64,22 +64,22 @@ type UncoveredApiRow = {
   draftPurchaseOrder: { id: string; documentNumber: string } | null;
 };
 
-type UncoveredRow = UncoveredApiRow & {
+type PreOrderRow = PreOrderApiRow & {
   suggestedQty: number;
 };
 
-function withSuggestedQty(row: UncoveredApiRow): UncoveredRow {
+function withSuggestedQty(row: PreOrderApiRow): PreOrderRow {
   return {
     ...row,
-    suggestedQty: suggestedDraftPoQty(row.uncovered, row.caseQty ?? null),
+    suggestedQty: suggestedDraftPoQty(row.toOrder, row.caseQty ?? null),
   };
 }
 
 function buildSkuListParams(
   factoryId: string,
   params: ListQueryParams = {},
-): UncoveredListParams {
-  if (isUncoveredNeedsMappingFactoryId(factoryId)) {
+): PreOrderListParams {
+  if (isPreOrderNeedsMappingFactoryId(factoryId)) {
     return {
       ...params,
       needsMapping: "true",
@@ -93,22 +93,22 @@ function buildSkuListParams(
   };
 }
 
-function useUncoveredFactorySkuList(
+function usePreOrderFactorySkuList(
   factoryId: string,
-): ListQueryHook<UncoveredListParams, UncoveredRow> {
+): ListQueryHook<PreOrderListParams, PreOrderRow> {
   return (params) => {
-    const query = useListInternalUncoveredSkus(buildSkuListParams(factoryId, params));
+    const query = useListInternalPreOrderSkus(buildSkuListParams(factoryId, params));
 
-    const data = useMemo((): ListQueryResult<UncoveredRow>["data"] => {
+    const data = useMemo((): ListQueryResult<PreOrderRow>["data"] => {
       const envelope = unwrapListData(
-        query.data as ListQueryResult<UncoveredRow>["data"],
+        query.data as ListQueryResult<PreOrderRow>["data"],
       );
       if (!envelope) {
-        return query.data as ListQueryResult<UncoveredRow>["data"];
+        return query.data as ListQueryResult<PreOrderRow>["data"];
       }
 
       const items = envelope.items.map((item) =>
-        withSuggestedQty(item as UncoveredApiRow),
+        withSuggestedQty(item as PreOrderApiRow),
       );
 
       const orval = query.data;
@@ -126,7 +126,7 @@ function useUncoveredFactorySkuList(
             ...orval.data,
             items,
           },
-        } as ListQueryResult<UncoveredRow>["data"];
+        } as ListQueryResult<PreOrderRow>["data"];
       }
 
       return {
@@ -142,7 +142,7 @@ function useUncoveredFactorySkuList(
   };
 }
 
-function formatCell(row: UncoveredRow, field: keyof UncoveredRow): string {
+function formatCell(row: PreOrderRow, field: keyof PreOrderRow): string {
   const value = row[field];
   if (value === null || value === undefined) {
     return "—";
@@ -150,7 +150,7 @@ function formatCell(row: UncoveredRow, field: keyof UncoveredRow): string {
   return String(value);
 }
 
-function SkuCell({ row }: { row: UncoveredRow }) {
+function SkuCell({ row }: { row: PreOrderRow }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <span className="truncate font-medium">{row.sku}</span>
@@ -182,15 +182,15 @@ function SkuCell({ row }: { row: UncoveredRow }) {
 }
 
 const DETAIL_COLUMN_SPECS = [
-  { id: "uncovered", label: "Uncovered" },
+  { id: "toOrder", label: "To Order" },
   { id: "onHand", label: "On hand" },
   { id: "onOrder", label: "On order" },
-  { id: "committed", label: "Committed (pre-sold)" },
+  { id: "committed", label: "Pre-sold" },
   { id: "caseQty", label: "Master pack" },
   { id: "reorderMin", label: "Reorder min" },
   { id: "reorderMax", label: "Reorder max" },
   { id: "suggestedQty", label: "Suggested qty" },
-] as const satisfies readonly { id: keyof UncoveredRow; label: string }[];
+] as const satisfies readonly { id: keyof PreOrderRow; label: string }[];
 
 export function UncoveredFactoryDetail({
   factoryId,
@@ -214,14 +214,14 @@ export function UncoveredFactoryDetail({
     readonly SupplierDetail[]
   >([]);
 
-  const needsMapping = isUncoveredNeedsMappingFactoryId(factoryId);
+  const needsMapping = isPreOrderNeedsMappingFactoryId(factoryId);
   const factoriesQuery = useQuery({
-    queryKey: [...getListInternalUncoveredFactoriesQueryKey(), "all"],
-    queryFn: () => listAllUncoveredFactories(),
+    queryKey: [...getListInternalPreOrderFactoriesQueryKey(), "all"],
+    queryFn: () => listAllPreOrderFactories(),
   });
-  const draftMutation = useDraftInternalUncoveredPurchaseOrders();
+  const draftMutation = useDraftInternalPreOrderPurchaseOrders();
   const useSkuList = useMemo(
-    () => useUncoveredFactorySkuList(factoryId),
+    () => usePreOrderFactorySkuList(factoryId),
     [factoryId],
   );
 
@@ -231,12 +231,12 @@ export function UncoveredFactoryDetail({
   );
 
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(uncoveredListTable, params);
+    replaceTableUrlParams(preOrderListTable, params);
   }, []);
 
   const { items, query, setState, total, page, pageSize, pageCount } =
     useDataTable({
-      meta: uncoveredListTable,
+      meta: preOrderListTable,
       queryHook: useSkuList,
       initialParams,
       onParamsChange,
@@ -248,7 +248,7 @@ export function UncoveredFactoryDetail({
     query.isLoading === true ||
     (envelope === undefined && query.isError !== true);
 
-  const columns = useMemo<TableColumnDef<UncoveredRow>[]>(
+  const columns = useMemo<TableColumnDef<PreOrderRow>[]>(
     () => [
       {
         id: "sku",
@@ -263,14 +263,14 @@ export function UncoveredFactoryDetail({
         label,
         sort: false as const,
         align: "right" as const,
-        render: ({ record }: { record: UncoveredRow }) => formatCell(record, id),
+        render: ({ record }: { record: PreOrderRow }) => formatCell(record, id),
       })),
     ],
     [],
   );
 
   const table = useTable({
-    data: items as UncoveredRow[],
+    data: items as PreOrderRow[],
     isPending: busy,
     isError: query.isError === true,
     columns,
@@ -311,16 +311,16 @@ export function UncoveredFactoryDetail({
     return names;
   }, [factorySummary]);
 
-  const invalidateUncoveredQueries = useCallback(async () => {
+  const invalidatePreOrderQueries = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: getListInternalPurchaseOrdersQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredFactoriesQueryKey(),
+        queryKey: getListInternalPreOrderFactoriesQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredSkusQueryKey(),
+        queryKey: getListInternalPreOrderSkusQueryKey(),
       }),
     ]);
   }, [queryClient]);
@@ -359,8 +359,8 @@ export function UncoveredFactoryDetail({
         return;
       }
       table.selection.clear();
-      await invalidateUncoveredQueries();
-      const next = afterDraftUncoveredPos(
+      await invalidatePreOrderQueries();
+      const next = afterDraftPreOrderPos(
         result.data.purchaseOrders,
         result.data.unmappedSkus,
         supplierNamesById,
@@ -385,7 +385,7 @@ export function UncoveredFactoryDetail({
     draftMutation,
     factoryId,
     factorySummary?.supplierId,
-    invalidateUncoveredQueries,
+    invalidatePreOrderQueries,
     needsMapping,
     router,
     supplierNamesById,
@@ -419,13 +419,13 @@ export function UncoveredFactoryDetail({
               <>
                 {factorySummary.productCount} product
                 {factorySummary.productCount === 1 ? "" : "s"} ·{" "}
-                {factorySummary.totalUncoveredUnits} total uncovered units
+                {factorySummary.totalToOrderUnits} total toOrder units
               </>
             ) : (
               <>
                 {factorySummary.productCount} product
                 {factorySummary.productCount === 1 ? "" : "s"} ready for a purchase order ·{" "}
-                {factorySummary.totalUncoveredUnits} total uncovered units
+                {factorySummary.totalToOrderUnits} total toOrder units
               </>
             )}
           </p>
@@ -454,7 +454,7 @@ export function UncoveredFactoryDetail({
         sticky
         className="min-h-0 flex-1"
         table={table}
-        emptyMessage="No uncovered SKUs for this factory"
+        emptyMessage="No toOrder SKUs for this factory"
       >
         <Table.Header />
         <Table.Body />

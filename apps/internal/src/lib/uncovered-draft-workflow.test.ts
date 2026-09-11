@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  afterDraftUncoveredPos,
+  afterDraftPreOrderPos,
   draftableUncoveredFactoryIds,
   formatUnmappedSkusNotice,
   shouldDraftUncoveredSelection,
   toUncoveredBatchDraftRows,
 } from "./uncovered-draft-workflow";
 
-describe("uncovered draft workflow", () => {
+describe("toOrder draft workflow", () => {
   it("does not draft when selection is empty", () => {
     expect(shouldDraftUncoveredSelection(0)).toBe(false);
     expect(shouldDraftUncoveredSelection(2)).toBe(true);
@@ -24,7 +24,7 @@ describe("uncovered draft workflow", () => {
   });
 
   it("stays on the worksheet with a notice when every selected SKU is unmapped", () => {
-    const next = afterDraftUncoveredPos([], ["SKU-X", "SKU-Y"]);
+    const next = afterDraftPreOrderPos([], ["SKU-X", "SKU-Y"]);
     expect(next).toEqual({
       action: "stay",
       unmappedNotice:
@@ -37,7 +37,7 @@ describe("uncovered draft workflow", () => {
       ["supplier-a", "Factory A"],
       ["supplier-b", "Factory B"],
     ]);
-    const next = afterDraftUncoveredPos(
+    const next = afterDraftPreOrderPos(
       [
         {
           id: "po-1",
@@ -78,7 +78,7 @@ describe("uncovered draft workflow", () => {
   });
 
   it("opens the batch modal when one draft is created but some SKUs were skipped", () => {
-    const next = afterDraftUncoveredPos(
+    const next = afterDraftPreOrderPos(
       [
         {
           id: "po-1",
@@ -101,7 +101,7 @@ describe("uncovered draft workflow", () => {
   });
 
   it("navigates to the draft PO workspace when exactly one draft is created with no skips", () => {
-    const next = afterDraftUncoveredPos([{ id: "po-1", supplierId: "supplier-a", documentNumber: "PO-0001", lines: [{}] }], []);
+    const next = afterDraftPreOrderPos([{ id: "po-1", supplierId: "supplier-a", documentNumber: "PO-0001", lines: [{}] }], []);
     expect(next).toEqual({
       action: "navigate",
       purchaseOrderId: "po-1",

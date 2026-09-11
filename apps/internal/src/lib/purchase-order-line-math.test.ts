@@ -161,12 +161,12 @@ describe("casesForDraftPoQty", () => {
 });
 
 describe("draftLineFromVendorProduct", () => {
-  it("covers uncovered need rounded up to a master pack", () => {
+  it("covers toOrder need rounded up to a master pack", () => {
     const line = draftLineFromVendorProduct({
       sku: "DC7818LV",
       catalogName: 'Baby Rose Bush X 7 12" - Lavender',
       caseQty: 100,
-      qty: { uncovered: 584 },
+      qty: { toOrder: 584 },
     });
     expect(line.qty).toBe(600);
 

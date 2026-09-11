@@ -29,7 +29,7 @@ function productRow(
       allocated: 0,
       available: 0,
       committed: 0,
-      uncovered: 0,
+      toOrder: 0,
       ...qty,
     },
   };
@@ -59,7 +59,7 @@ describe("supplierProductFromListResponse", () => {
     const offPageResponse = {
       status: 200 as const,
       data: {
-        items: [productRow(offPageSku, { onHand: 17, committed: 4, uncovered: 9 })],
+        items: [productRow(offPageSku, { onHand: 17, committed: 4, toOrder: 9 })],
         page: 1,
         pageSize: 100,
         total: 1,
@@ -75,7 +75,7 @@ describe("supplierProductFromListResponse", () => {
     );
     expect(merged.get(offPageSku)?.qty.onHand).toBe(17);
     expect(merged.get(offPageSku)?.qty.committed).toBe(4);
-    expect(merged.get(offPageSku)?.qty.uncovered).toBe(9);
+    expect(merged.get(offPageSku)?.qty.toOrder).toBe(9);
   });
 });
 

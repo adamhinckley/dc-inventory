@@ -417,18 +417,18 @@ function ReceivingShortPanel({
     return null;
   }
 
-  const { uncovered, affectedCustomers } = shortReadoutQuery.data.data;
-  const uncoveredRows = uncovered.filter((row) => row.uncovered > 0);
-  const hasUncovered = uncoveredRows.length > 0;
+  const { toOrder, affectedCustomers } = shortReadoutQuery.data.data;
+  const toOrderRows = toOrder.filter((row) => row.toOrder > 0);
+  const hasToOrder = toOrderRows.length > 0;
 
   return (
     <section className="flex flex-col gap-form-section">
       <h2 className="text-heading-sm">Short readout</h2>
-      {hasUncovered ? (
+      {hasToOrder ? (
         <ul className="text-body-sm">
-          {uncoveredRows.map((row) => (
+          {toOrderRows.map((row) => (
             <li key={row.sku} className="tabular-nums">
-              {row.sku}: {row.uncovered} uncovered
+              {row.sku}: {row.toOrder} toOrder
             </li>
           ))}
         </ul>

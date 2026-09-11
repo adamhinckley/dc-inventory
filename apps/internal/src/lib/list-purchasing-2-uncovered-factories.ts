@@ -1,12 +1,12 @@
-import { listInternalUncoveredFactories } from "@dc-inventory/api-client-internal";
+import { listInternalPreOrderFactories } from "@dc-inventory/api-client-internal";
 import {
-  UNCOVERED_FACTORY_LIST_PAGE_SIZE,
-  type UncoveredFactoryListFn,
+  PRE_ORDER_FACTORY_LIST_PAGE_SIZE,
+  type PreOrderFactoryListFn,
   type UncoveredFactoryRow,
 } from "./list-all-uncovered-factories";
 
-export async function listPurchasing2UncoveredFactories(
-  listFactories: UncoveredFactoryListFn = listInternalUncoveredFactories,
+export async function listPurchasing2PreOrderFactories(
+  listFactories: PreOrderFactoryListFn = listInternalPreOrderFactories,
 ): Promise<UncoveredFactoryRow[]> {
   const items: UncoveredFactoryRow[] = [];
   let page = 1;
@@ -14,11 +14,11 @@ export async function listPurchasing2UncoveredFactories(
   while (true) {
     const response = await listFactories({
       page,
-      pageSize: UNCOVERED_FACTORY_LIST_PAGE_SIZE,
+      pageSize: PRE_ORDER_FACTORY_LIST_PAGE_SIZE,
       excludeSuppliersWithOpenDraft: "true",
     });
     if (response.status !== 200) {
-      throw new Error("Could not load uncovered factories.");
+      throw new Error("Could not load toOrder factories.");
     }
     items.push(...response.data.items);
     const loadedThrough = response.data.page * response.data.pageSize;
