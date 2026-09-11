@@ -2,20 +2,28 @@ import { formatMoneyMinorUnits } from "../../lib/format-money";
 import { orderLineSubtotalCents, orderSubtotalCents } from "../../lib/order-history";
 import type { PrototypeOrder } from "../../lib/prototype/order-history-fixtures";
 
-export function PrototypeOrderDetailBody({ order }: { order: PrototypeOrder }) {
+export function PrototypeOrderDetailBody({
+  order,
+  showShipTo = true,
+}: {
+  order: PrototypeOrder;
+  showShipTo?: boolean;
+}) {
   const currency = order.lines[0]?.currency ?? "USD";
   return (
     <>
-      <section className="rounded-2xl border border-line bg-card p-5">
-        <h2 className="text-sm font-semibold text-ink">Ship To</h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          <span className="block">{order.shipLine1}</span>
-          <span className="block">
-            {order.shipCity}, {order.shipRegion} {order.shipPostal}
-          </span>
-          <span className="block">{order.shipCountry}</span>
-        </p>
-      </section>
+      {showShipTo ? (
+        <section className="rounded-2xl border border-line bg-card p-5">
+          <h2 className="text-sm font-semibold text-ink">Ship To</h2>
+          <p className="mt-2 text-sm text-ink-muted">
+            <span className="block">{order.shipLine1}</span>
+            <span className="block">
+              {order.shipCity}, {order.shipRegion} {order.shipPostal}
+            </span>
+            <span className="block">{order.shipCountry}</span>
+          </p>
+        </section>
+      ) : null}
       <section className="overflow-hidden rounded-2xl border border-line bg-card">
         <table className="w-full text-left text-sm">
           <caption className="sr-only">Order lines</caption>

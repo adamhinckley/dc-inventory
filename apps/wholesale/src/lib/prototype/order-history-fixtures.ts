@@ -13,6 +13,8 @@ export type PrototypeOrder = {
   documentNumber: string;
   status: VisibleOrderStatus;
   placedOn: string;
+  shippedOn?: string;
+  cancelledOn?: string;
   shipLine1: string;
   shipCity: string;
   shipRegion: string;
@@ -61,6 +63,7 @@ export const PROTOTYPE_ORDERS: readonly PrototypeOrder[] = [
     documentNumber: "SO-00038",
     status: "shipped",
     placedOn: "Aug 22, 2026",
+    shippedOn: "Aug 28, 2026",
     shipLine1: "14 Market Row",
     shipCity: "Portland",
     shipRegion: "OR",
@@ -81,6 +84,7 @@ export const PROTOTYPE_ORDERS: readonly PrototypeOrder[] = [
     documentNumber: "SO-00031",
     status: "cancelled",
     placedOn: "Jul 14, 2026",
+    cancelledOn: "Jul 16, 2026",
     shipLine1: "88 Pine Ave",
     shipCity: "Boise",
     shipRegion: "ID",

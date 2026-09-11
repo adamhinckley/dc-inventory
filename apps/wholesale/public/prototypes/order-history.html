@@ -137,6 +137,8 @@
           documentNumber: "SO-00042",
           status: "Confirmed",
           placedOn: "Sep 8, 2026",
+          shippedOn: "—",
+          cancelledOn: "—",
           ship: "200 Ship St, Seattle WA",
           city: "Seattle",
           total: "$366.00",
@@ -149,6 +151,8 @@
           documentNumber: "SO-00038",
           status: "Shipped",
           placedOn: "Aug 22, 2026",
+          shippedOn: "Aug 28, 2026",
+          cancelledOn: "—",
           ship: "14 Market Row, Portland OR",
           city: "Portland",
           total: "$384.00",
@@ -158,6 +162,8 @@
           documentNumber: "SO-00031",
           status: "Cancelled",
           placedOn: "Jul 14, 2026",
+          shippedOn: "—",
+          cancelledOn: "Jul 16, 2026",
           ship: "88 Pine Ave, Boise ID",
           city: "Boise",
           total: "$218.00",
@@ -218,11 +224,27 @@
         }
         return `<article>
           <p class="muted"><button class="btn-secondary" data-back="${back}">Back to Orders</button></p>
-          <header style="display:flex;justify-content:space-between;align-items:end;gap:16px;margin:16px 0">
-            <div><p class="section-title">Order</p><h1>${order.documentNumber}</h1></div>
-            <span class="pill">${order.status}</span>
+          <header style="margin:16px 0">
+            <p class="section-title">Order</p>
+            <h1 style="font-family:Figtree,ui-sans-serif,system-ui,sans-serif;font-size:1.5rem;letter-spacing:-0.02em">${order.documentNumber}</h1>
           </header>
-          ${shipCard(order)}${linesTable(order)}
+          <section class="card">
+            <div class="grid-2">
+              <div><strong>Status</strong><p class="muted">${order.status}</p></div>
+              <div><strong>Order Date</strong><p class="muted">${order.placedOn}</p></div>
+              <div><strong>Ship Date</strong><p class="muted">${order.shippedOn}</p></div>
+              ${
+                order.cancelledOn !== "—"
+                  ? `<div><strong>Cancelled</strong><p class="muted">${order.cancelledOn}</p></div>`
+                  : ""
+              }
+            </div>
+            <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+              <strong>Ship To</strong>
+              <p class="muted" style="margin:8px 0 0">${order.ship}</p>
+            </div>
+          </section>
+          ${linesTable(order)}
         </article>`;
       }
 
