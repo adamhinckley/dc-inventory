@@ -52,6 +52,7 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("draftInternalPreOrderPurchaseOrders");
     expect(specs.internal).toContain("/internal/pre-order-skus/draft-purchase-orders");
     expect(specs.internal).toContain("/internal/purchase-orders/sync-from-pre-order");
+    expect(specs.internal).not.toMatch(/uncovered/i);
     expect(specs.internal).not.toContain("/ops/auth/");
 
     expect(specs.wholesale).toContain("/wholesale/catalog");
