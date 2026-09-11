@@ -16,6 +16,7 @@ import {
 } from "../lib/customer-detail-tabs";
 import { customerAccountStatusLabel } from "../lib/customer-account-status";
 import type { CustomerDetail } from "../lib/customer-types";
+import { orvalDetailViewError } from "../lib/orval-query-load";
 import { useCanManageMasterData } from "../lib/staff-master-data-manage";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
@@ -115,7 +116,7 @@ export function CustomerDetailPage({
   return (
     <DetailView<CustomerDetail>
       loading={query.isLoading}
-      error={query.isError ? query.error : undefined}
+      error={orvalDetailViewError(query)}
       data={customer}
     >
       {(loaded) => (

@@ -14,7 +14,13 @@ import { Copy, Pencil, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { formatPostalAddress } from "../lib/postal-address-format";
-import { billToEmptyMessage } from "../lib/customer-address-empty-copy";
+import { BILL_TO_EMPTY_PREFIX, billToEmptyMessage } from "../lib/customer-address-empty-copy";
+import {
+  BILL_TO_LOAD_ERROR,
+  SHIP_TOS_LOAD_ERROR,
+  orvalBillToLoadFailed,
+  orvalQueryFailed,
+} from "../lib/orval-query-load";
 
 const billToSchema = z.object({
   line1: z.string().min(1),
@@ -61,6 +67,8 @@ export function CustomerBillToPanel({
   const queryClient = useQueryClient();
   const billToQuery = useGetInternalCustomerBillTo(customerId);
   const shipTosQuery = useListInternalCustomerShipTos(customerId);
+  const billToFailed = orvalBillToLoadFailed(billToQuery);
+  const shipTosFailed = orvalQueryFailed(shipTosQuery);
   const billTo = billToQuery.data?.status === 200 ? billToQuery.data.data : null;
   const shipTos =
     shipTosQuery.data?.status === 200 ? shipTosQuery.data.data.items : [];
@@ -88,7 +96,7 @@ export function CustomerBillToPanel({
             Invoice address for this customer.
           </p>
         </div>
-        {canManage ? (
+        {canManage && !billToFailed ? (
           <div className="flex flex-wrap items-center gap-action">
             {billTo ? (
               <Button
@@ -140,6 +148,10 @@ export function CustomerBillToPanel({
 
       {billToQuery.isLoading ? (
         <p className="text-body-sm text-fg-secondary">Loading bill-to…</p>
+      ) : billToFailed ? (
+        <p className="text-body-sm text-error" role="alert">
+          {BILL_TO_LOAD_ERROR}
+        </p>
       ) : billTo ? (
         <div className="section-flat rounded-section p-card">
           <dl className="space-y-1">
@@ -151,7 +163,9 @@ export function CustomerBillToPanel({
       ) : (
         <div className="section-flat rounded-section p-card">
           <p className="text-body-sm text-fg-secondary">
-            {billToEmptyMessage(defaultShipTo !== undefined)}
+            {shipTosFailed
+              ? `${BILL_TO_EMPTY_PREFIX} ${SHIP_TOS_LOAD_ERROR}`
+              : billToEmptyMessage(defaultShipTo !== undefined)}
           </p>
         </div>
       )}

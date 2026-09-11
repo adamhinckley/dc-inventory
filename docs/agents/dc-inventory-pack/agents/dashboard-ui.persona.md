@@ -41,3 +41,5 @@ Overlay surfaces: §13. Tooltip, popover, menu, and dialog cards use `.overlay`.
 ## Done when
 
 UI consumes Orval hooks; filters/search match the API contract; tests or Story/smoke notes as required by the ticket.
+
+Orval `customFetch` does not throw on HTTP 500. Tables: `useDataTable` `busy` / `listFailed`. Detail/dialog loading: `isSuccessfulOrvalResponse` / 2xx, not `!query.isError` alone.

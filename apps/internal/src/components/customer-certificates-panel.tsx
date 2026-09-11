@@ -18,6 +18,7 @@ import {
 import { Pencil, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
+import { orvalQueryFailed } from "../lib/orval-query-load";
 import type { CustomerCertificateRow } from "../lib/customer-types";
 
 const emptyToNull = (value: unknown) =>
@@ -115,6 +116,7 @@ export function CustomerCertificatesPanel({
 
   const table = useTable({
     data: items,
+    isError: orvalQueryFailed(query),
     columns,
     rowActions: canManage ? rowActions : undefined,
     getRowId: (row) => row.id,

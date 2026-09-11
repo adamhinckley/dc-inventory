@@ -17,6 +17,7 @@ import {
 import { Pencil, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { z } from "zod";
+import { orvalQueryFailed } from "../lib/orval-query-load";
 import type { CustomerContactRow } from "../lib/customer-types";
 
 const contactSchema = z.object({
@@ -91,6 +92,7 @@ export function CustomerContactsPanel({
 
   const table = useTable({
     data: items,
+    isError: orvalQueryFailed(query),
     columns,
     rowActions: canManage ? rowActions : undefined,
     getRowId: (row) => row.id,

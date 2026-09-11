@@ -37,7 +37,7 @@ export function preOrderOpenDraftPurchaseOrderReadPort(
     }
 
     const pairValues = sql.join(
-      rows.map((row) => sql`(${row.supplierId}, ${row.sku.value})`),
+      rows.map((row) => sql`(cast(${row.supplierId} as uuid), ${row.sku.value})`),
       sql`, `,
     );
 

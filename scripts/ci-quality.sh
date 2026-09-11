@@ -8,6 +8,7 @@ cd "$root"
 
 pnpm test
 pnpm lint
+bash scripts/ci-house-rules.sh
 pnpm --filter @dc-inventory/internal build
 pnpm --filter @dc-inventory/wholesale build
 
