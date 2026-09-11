@@ -11,6 +11,7 @@ import { Dialog, Form, FormDialog } from "@dc-inventory/ui";
 import { Save } from "lucide-react";
 import type { ReactNode } from "react";
 import { z } from "zod";
+import { catalogProductEditLoadCopy } from "../lib/catalog-product-edit-load";
 
 const emptyToNull = (value: unknown) =>
   value === "" || value === undefined ? null : value;
@@ -306,7 +307,7 @@ export function CatalogProductEditDialog({
           </Dialog.Header>
           <Dialog.Body>
             <p className="text-body-sm text-fg-secondary">
-              {query.isError ? "Could not load this product." : "Loading product…"}
+              {catalogProductEditLoadCopy(query)}
             </p>
           </Dialog.Body>
         </Dialog.Content>

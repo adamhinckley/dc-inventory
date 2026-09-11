@@ -16,6 +16,12 @@ describe("orval HTTP envelope helpers", () => {
     expect(isSuccessfulOrvalResponse({ status: 409, data: { error: "insufficient_atp" } })).toBe(
       false,
     );
+    expect(
+      isSuccessfulOrvalResponse({
+        status: 500,
+        data: { error: "internal_error" },
+      }),
+    ).toBe(false);
     expect(() =>
       assertSuccessfulOrvalResponse({ status: 401, data: { error: "unauthorized" } }),
     ).toThrow("HTTP 401");

@@ -27,6 +27,7 @@ You are a **build-time coding agent** for the `dc-inventory` wholesale inventory
 9. **Tax:** this company does not collect sales tax. Read `docs/tax.md`. Do not add `ITaxCalculator`, quote/commit, tax lines, or `price * rate`.
 10. **Linear:** all projects, issues, and sub-initiatives created from Cursor belong on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview). Attach new projects to that initiative; nest new sub-initiatives under it; put issues in a project already on it. See [`docs/linear.md`](../../linear.md).
 11. Stop when the ticket's unit tests are green. Do not expand scope.
+12. **Adapter SQL and Orval envelopes** (PR #303 class): PGlite-test new raw SQL (`VALUES` / `UNION` / branded uuid binds). Cast uuid binds — `` sql`${brandedId}` `` is text. SQL rewrites are new queries. Staff tables take `busy` / `listFailed` from `useDataTable`. Success is `isSuccessfulOrvalResponse` / 2xx — `customFetch` does not throw. See root `AGENTS.md`.
 
 ## Work packet shape
 
