@@ -22,6 +22,7 @@ import {
   needsCustomerResponseSchema,
   notFoundResponseSchema,
   salesOrderStaffConfirmBodySchema,
+  salesOrderDocumentNumberParamsSchema,
   salesOrderIdParamsSchema,
   salesOrderItemSchema,
   salesOrderListQuerySchema,
@@ -175,6 +176,41 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         pageSize: result.pageSize,
         total: result.total,
       };
+    },
+  );
+
+  routes.get(
+    "/sales-orders/by-document-number/:documentNumber",
+    {
+      schema: {
+        operationId: "getWholesaleSalesOrderByDocumentNumber",
+        tags: ["wholesale"],
+        summary: "Get sales order by exact document number for session customer",
+        params: salesOrderDocumentNumberParamsSchema,
+        response: {
+          200: salesOrderItemSchema,
+          401: unauthorizedResponseSchema,
+          403: needsCustomerResponseSchema,
+          404: notFoundResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.sales.getSalesOrderByDocumentNumber.execute({
+        organizationId: wholesaleOrganizationId(request),
+        staffUserId: wholesaleStaffUserId(request),
+        documentNumber: request.params.documentNumber,
+      });
+      if (!result.ok) {
+        return sendNotFound(reply);
+      }
+      if (result.salesOrder.customerId !== wholesaleCustomerId(request)) {
+        return sendNotFound(reply);
+      }
+      if (result.salesOrder.status === "draft") {
+        return sendNotFound(reply);
+      }
+      return toSalesOrderBody(request, result.salesOrder);
     },
   );
 
