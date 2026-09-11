@@ -837,9 +837,10 @@ function salesServices(
       customers,
       shipToSnapshot,
       creditCheck,
+      clock,
     ),
-    cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
-    shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot),
+    cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales, clock),
+    shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot, clock),
   };
 }
 

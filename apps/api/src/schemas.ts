@@ -1337,6 +1337,9 @@ export const salesOrderItemSchema = z.object({
   customerName: z.string().optional(),
   documentNumber: z.string(),
   status: salesOrderStatusSchema,
+  confirmedAt: z.string().datetime().optional(),
+  shippedAt: z.string().datetime().optional(),
+  cancelledAt: z.string().datetime().optional(),
   label: z.string().optional(),
   creditLimitOverriddenByStaffUserId: z.string().uuid().optional(),
   shipLine1: z.string().optional(),
@@ -1354,7 +1357,7 @@ export const salesOrderListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
-  status: salesOrderStatusSchema.optional(),
+  status: optionalRepeatedQuery(salesOrderStatusSchema),
   customerId: z.string().uuid().optional(),
 });
 
@@ -1480,7 +1483,7 @@ export const salesOrdersListTable = {
     placeholder: "Search SO number",
   },
   filters: [
-    { param: "status", control: "select" },
+    { param: "status", control: "multiselect" },
     { param: "customerId", control: "text" },
   ],
   sort: {

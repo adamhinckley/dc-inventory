@@ -132,6 +132,9 @@ export async function mapSalesOrder(
     ...(customerName !== null ? { customerName } : {}),
     documentNumber: order.documentNumber,
     status: order.status,
+    ...(order.confirmedAt !== undefined ? { confirmedAt: order.confirmedAt.toISOString() } : {}),
+    ...(order.shippedAt !== undefined ? { shippedAt: order.shippedAt.toISOString() } : {}),
+    ...(order.cancelledAt !== undefined ? { cancelledAt: order.cancelledAt.toISOString() } : {}),
     ...(order.label !== undefined ? { label: order.label } : {}),
     ...(order.creditLimitOverriddenByStaffUserId !== undefined
       ? { creditLimitOverriddenByStaffUserId: order.creditLimitOverriddenByStaffUserId }

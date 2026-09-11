@@ -56,6 +56,12 @@ export type SalesOrder = {
   readonly documentNumber: string;
   readonly status: SalesOrderStatus;
   readonly createdAt: Date;
+  /** Set once on draft → confirmed. */
+  readonly confirmedAt?: Date;
+  /** Set once on confirmed → shipped. */
+  readonly shippedAt?: Date;
+  /** Set once on draft/confirmed → cancelled. */
+  readonly cancelledAt?: Date;
   readonly lines: readonly SalesOrderLine[];
   /** Buyer-chosen cart name. A customer may hold many open drafts; this tells them apart. */
   readonly label?: string;

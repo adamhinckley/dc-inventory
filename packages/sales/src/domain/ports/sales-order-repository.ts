@@ -34,7 +34,7 @@ export type ListSalesOrdersQuery = {
   pageSize: number;
   sortBy?: "documentNumber" | "status";
   sortOrder?: "asc" | "desc";
-  status?: SalesOrderStatus;
+  status?: readonly SalesOrderStatus[];
   customerId?: CustomerId;
 };
 

@@ -55,6 +55,9 @@ export const orders = sales.table(
     shipCountry: text("ship_country"),
     placedByStaffUserId: uuid("placed_by_staff_user_id"),
     creditLimitOverriddenByStaffUserId: uuid("credit_limit_overridden_by_staff_user_id"),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true, mode: "date" }),
+    shippedAt: timestamp("shipped_at", { withTimezone: true, mode: "date" }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true, mode: "date" }),
     ...timestamps(),
   },
   (table) => [

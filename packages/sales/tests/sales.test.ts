@@ -156,12 +156,16 @@ describe("Sales (in-memory)", () => {
     }
     expect(first.salesOrder.documentNumber).toBe("SO-00001");
 
-    await h.cancel.execute({
+    const cancelledDraft = await h.cancel.execute({
       organizationId: DEFAULT_ORG,
       staffUserId: STAFF_ID,
       salesOrderId: first.salesOrder.id,
       idempotencyKey: "cancel-draft",
     });
+    expect(cancelledDraft.ok).toBe(true);
+    if (cancelledDraft.ok) {
+      expect(cancelledDraft.salesOrder.cancelledAt).toBeInstanceOf(Date);
+    }
 
     const second = await h.create.execute({
       organizationId: DEFAULT_ORG,
@@ -193,10 +197,21 @@ describe("Sales (in-memory)", () => {
       pageSize: 25,
       sortBy: "documentNumber",
       sortOrder: "desc",
-      status: "draft",
+      status: ["draft"],
       customerId: CUSTOMER_ID,
     });
     expect(searched.items.map((order) => order.documentNumber)).toEqual(["SO-00002"]);
+
+    const byStatuses = await h.list.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "status",
+      sortOrder: "asc",
+      status: ["draft", "cancelled"],
+    });
+    expect(byStatuses.items.map((order) => order.status)).toEqual(["cancelled", "draft"]);
   });
 
   it("merges duplicate product lines at create", async () => {
