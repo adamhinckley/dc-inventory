@@ -1,18 +1,18 @@
-import { listInternalUncoveredSkusTable } from "@dc-inventory/api-client-internal";
+import { listInternalPreOrderSkusTable } from "@dc-inventory/api-client-internal";
 import type { TableMeta } from "@dc-inventory/ui-internal";
 
 const PRE_ORDER_COLUMN_LABELS: Partial<
-  Record<(typeof listInternalUncoveredSkusTable.columns)[number]["field"], string>
+  Record<(typeof listInternalPreOrderSkusTable.columns)[number]["field"], string>
 > = {
-  uncovered: "To Order",
+  toOrder: "To Order",
   committed: "Pre-sold",
 };
 
 /** Staff pre-order worksheet: API columns plus client suggested draft PO qty. */
-export const uncoveredListTable = {
-  rowId: listInternalUncoveredSkusTable.rowId,
+export const preOrderListTable = {
+  rowId: listInternalPreOrderSkusTable.rowId,
   columns: [
-    ...listInternalUncoveredSkusTable.columns.map((column) => ({
+    ...listInternalPreOrderSkusTable.columns.map((column) => ({
       ...column,
       label: PRE_ORDER_COLUMN_LABELS[column.field] ?? column.label,
     })),

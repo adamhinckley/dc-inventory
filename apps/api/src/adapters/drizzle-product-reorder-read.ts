@@ -1,13 +1,13 @@
 import type { IProductReorderReadPort, ProductReorderPolicy } from "@dc-inventory/catalog";
 import type { AppDrizzle } from "../infrastructure/db.js";
-import { uncoveredReorderPolicyReadPort } from "./uncovered-stock-context-ports.js";
+import { preOrderReorderPolicyReadPort } from "./pre-order-stock-context-ports.js";
 import { LocationId, type OrganizationId, type Sku } from "@dc-inventory/shared-kernel";
 
 export class DrizzleProductReorderReadAdapter implements IProductReorderReadPort {
   private readonly reorderRead;
 
   constructor(db: AppDrizzle) {
-    this.reorderRead = uncoveredReorderPolicyReadPort(db);
+    this.reorderRead = preOrderReorderPolicyReadPort(db);
   }
 
   async findByCatalogSku(

@@ -3,7 +3,7 @@
 import {
   getGetInternalSupplierQueryKey,
   getListInternalSuppliersQueryKey,
-  getListInternalUncoveredFactoriesQueryKey,
+  getListInternalPreOrderFactoriesQueryKey,
   useUpdateInternalSupplier,
 } from "@dc-inventory/api-client-internal";
 import { Form, FormDialog } from "@dc-inventory/ui";
@@ -54,7 +54,7 @@ export function VendorPrefixEditDialog({
       }
       successMessage="Vendor prefix updated"
       invalidate={[
-        getListInternalUncoveredFactoriesQueryKey(),
+        getListInternalPreOrderFactoriesQueryKey(),
         getListInternalSuppliersQueryKey(),
         getGetInternalSupplierQueryKey(supplierId),
       ]}

@@ -1,6 +1,6 @@
 import { Purchasing2UncoveredDetail } from "../../../../../../components/purchasing-2-uncovered-detail";
 import { listParamsFromSearchParams } from "../../../../../../lib/table-url-params";
-import { uncoveredListTable } from "../../../../../../lib/uncovered-list-table";
+import { preOrderListTable } from "../../../../../../lib/uncovered-list-table";
 
 type PreOrderDetailSearchParams = Record<string, string | string[] | undefined>;
 
@@ -13,7 +13,7 @@ export default async function ProcurementPreOrderFactoryDetailPage({
 }) {
   const { factoryId } = await params;
   const initialParams = listParamsFromSearchParams(
-    uncoveredListTable,
+    preOrderListTable,
     await searchParams,
   );
 

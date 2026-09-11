@@ -11,11 +11,11 @@ import {
   Sku,
 } from "@dc-inventory/shared-kernel";
 import { SalesOrderLineId } from "@dc-inventory/sales";
-import { computeUncovered } from "@dc-inventory/inventory";
+import { computeToOrder } from "@dc-inventory/inventory";
 import { describe, expect, it } from "vitest";
 import {
   committedCustomerNamesPort,
-  inventoryUncoveredReadPort,
+  inventoryToOrderReadPort,
 } from "./purchasing-short-readout-ports.js";
 import { createCatalogListQueryPgliteHarness } from "./support/catalog-list-query-pglite.js";
 
@@ -70,8 +70,8 @@ async function seedSalesOrder(
   });
 }
 
-describe("inventoryUncoveredReadPort", () => {
-  it("loads uncovered for multiple SKUs in one stock_snapshots IN query", async () => {
+describe("inventoryToOrderReadPort", () => {
+  it("loads toOrder for multiple SKUs in one stock_snapshots IN query", async () => {
     const harness = await createCatalogListQueryPgliteHarness();
     try {
       const skuA = Sku.parse("UNCOVERED-BATCH-A");
@@ -97,22 +97,22 @@ describe("inventoryUncoveredReadPort", () => {
         [OrganizationId.DEFAULT, skuA.value, harness.locationId, skuB.value],
       );
 
-      const port = inventoryUncoveredReadPort(harness.db);
-      const uncovered = await port.getUncoveredBySkus(OrganizationId.DEFAULT, [
+      const port = inventoryToOrderReadPort(harness.db);
+      const toOrder = await port.getToOrderBySkus(OrganizationId.DEFAULT, [
         skuA,
         skuB,
         Sku.parse("UNCOVERED-MISSING"),
       ]);
 
-      expect(uncovered.get(skuA.value)).toBe(computeUncovered(40, 10, 5));
-      expect(uncovered.get(skuB.value)).toBe(computeUncovered(25, 0, 0));
-      expect(uncovered.get("UNCOVERED-MISSING")).toBe(0);
+      expect(toOrder.get(skuA.value)).toBe(computeToOrder(40, 10, 5));
+      expect(toOrder.get(skuB.value)).toBe(computeToOrder(25, 0, 0));
+      expect(toOrder.get("UNCOVERED-MISSING")).toBe(0);
     } finally {
       await harness.close();
     }
   });
 
-  it("returns uncovered 0 for every SKU when DEFAULT location is missing", async () => {
+  it("returns toOrder 0 for every SKU when DEFAULT location is missing", async () => {
     const harness = await createCatalogListQueryPgliteHarness();
     try {
       await harness.client.query(`DELETE FROM inventory.stock_snapshots`);
@@ -120,11 +120,11 @@ describe("inventoryUncoveredReadPort", () => {
         OrganizationId.DEFAULT,
       ]);
 
-      const port = inventoryUncoveredReadPort(harness.db);
+      const port = inventoryToOrderReadPort(harness.db);
       const sku = Sku.parse("NO-DEFAULT-LOC");
-      const uncovered = await port.getUncoveredBySkus(OrganizationId.DEFAULT, [sku]);
+      const toOrder = await port.getToOrderBySkus(OrganizationId.DEFAULT, [sku]);
 
-      expect(uncovered.get(sku.value)).toBe(0);
+      expect(toOrder.get(sku.value)).toBe(0);
     } finally {
       await harness.close();
     }

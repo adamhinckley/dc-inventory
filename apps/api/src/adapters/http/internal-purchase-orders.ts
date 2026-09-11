@@ -24,8 +24,8 @@ import {
   purchaseOrderReplaceLinesBodySchema,
   purchaseOrderWriteBodySchema,
   purchaseOrdersListTable,
-  syncDraftPurchaseOrdersFromUncoveredBodySchema,
-  syncDraftPurchaseOrdersFromUncoveredResponseSchema,
+  syncDraftPurchaseOrdersFromPreOrderBodySchema,
+  syncDraftPurchaseOrdersFromPreOrderResponseSchema,
   unauthorizedResponseSchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
@@ -142,15 +142,15 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
   );
 
   routes.post(
-    "/purchase-orders/sync-from-uncovered",
+    "/purchase-orders/sync-from-pre-order",
     {
       schema: {
-        operationId: "syncInternalPurchaseOrdersFromUncovered",
+        operationId: "syncInternalPurchaseOrdersFromPreOrder",
         tags: ["internal"],
-        summary: "Sync open draft purchase order lines from current uncovered SKUs",
-        body: syncDraftPurchaseOrdersFromUncoveredBodySchema,
+        summary: "Sync open draft purchase order lines from current toOrder SKUs",
+        body: syncDraftPurchaseOrdersFromPreOrderBodySchema,
         response: {
-          200: syncDraftPurchaseOrdersFromUncoveredResponseSchema,
+          200: syncDraftPurchaseOrdersFromPreOrderResponseSchema,
           400: z.union([invalidResponseSchema, zodValidationErrorResponseSchema]),
           401: unauthorizedResponseSchema,
         },
@@ -158,7 +158,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
     },
     async (request, reply) => {
       const supplierIds = request.body.supplierIds?.map((id) => SupplierId.parse(id));
-      const result = await request.server.purchasing.syncDraftPurchaseOrdersFromUncovered.execute({
+      const result = await request.server.purchasing.syncDraftPurchaseOrdersFromPreOrder.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
         supplierIds,
@@ -417,7 +417,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
       schema: {
         operationId: "getInternalPurchaseOrderShortReadout",
         tags: ["internal"],
-        summary: "Return uncovered SKUs and affected customers for a purchase order",
+        summary: "Return toOrder SKUs and affected customers for a purchase order",
         params: purchaseOrderIdParamsSchema,
         response: {
           200: purchaseOrderShortReadoutResponseSchema,
@@ -436,7 +436,7 @@ export function registerInternalPurchaseOrderRoutes(app: FastifyInstance): void 
         return sendNotFound(reply);
       }
       return purchaseOrderShortReadoutResponseSchema.parse({
-        uncovered: [...result.uncovered],
+        toOrder: [...result.toOrder],
         affectedCustomers: [...result.affectedCustomers],
       });
     },

@@ -12,7 +12,7 @@ import { newUuid, PurchaseOrderLineId } from "../src/domain/ids.js";
 import type {
   CommittedCustomerName,
   ICommittedCustomerNamesPort,
-  IInventoryUncoveredReadPort,
+  IInventoryToOrderReadPort,
 } from "../src/domain/ports/short-readout.js";
 import { GetPurchaseOrderShortReadoutUseCase } from "../src/application/get-purchase-order-short-readout.js";
 
@@ -24,18 +24,18 @@ const CUSTOMER_ID = CustomerId.parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
 const SUPPLIER_ID = SupplierId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
 const PO_ID = PurchaseOrderId.parse("cccccccc-cccc-4ccc-8ccc-cccccccccccc");
 
-class StubUncoveredPort implements IInventoryUncoveredReadPort {
+class StubUncoveredPort implements IInventoryToOrderReadPort {
   private readonly values = new Map<string, number>();
 
-  set(sku: string, uncovered: number): void {
-    this.values.set(sku, uncovered);
+  set(sku: string, toOrder: number): void {
+    this.values.set(sku, toOrder);
   }
 
-  async getUncovered(_organizationId: OrganizationId, sku: Sku): Promise<number> {
+  async getToOrder(_organizationId: OrganizationId, sku: Sku): Promise<number> {
     return this.values.get(sku.value) ?? 0;
   }
 
-  async getUncoveredBySkus(
+  async getToOrderBySkus(
     _organizationId: OrganizationId,
     skus: readonly Sku[],
   ): Promise<ReadonlyMap<string, number>> {
@@ -94,21 +94,21 @@ async function seedPurchaseOrder(repo: InMemoryPurchaseOrderRepository) {
 }
 
 describe("GetPurchaseOrderShortReadoutUseCase", () => {
-  it("returns one uncovered row per PO SKU and customers only for SKUs with uncovered > 0", async () => {
+  it("returns one toOrder row per PO SKU and customers only for SKUs with toOrder > 0", async () => {
     const purchaseOrders = new InMemoryPurchaseOrderRepository(
       async () => "",
       async () => "HF",
     );
     await seedPurchaseOrder(purchaseOrders);
-    const inventoryUncovered = new StubUncoveredPort();
-    inventoryUncovered.set(SKU_A.value, 10);
-    inventoryUncovered.set(SKU_B.value, 0);
+    const inventoryToOrder = new StubUncoveredPort();
+    inventoryToOrder.set(SKU_A.value, 10);
+    inventoryToOrder.set(SKU_B.value, 0);
     const committedCustomers = new StubCommittedCustomersPort();
     committedCustomers.setCustomers([{ customerId: CUSTOMER_ID, name: "Acme Wholesale" }]);
 
     const useCase = new GetPurchaseOrderShortReadoutUseCase(
       purchaseOrders,
-      inventoryUncovered,
+      inventoryToOrder,
       committedCustomers,
     );
     const result = await useCase.execute({
@@ -119,30 +119,30 @@ describe("GetPurchaseOrderShortReadoutUseCase", () => {
 
     expect(result).toEqual({
       ok: true,
-      uncovered: [
-        { sku: SKU_A.value, uncovered: 10 },
-        { sku: SKU_B.value, uncovered: 0 },
+      toOrder: [
+        { sku: SKU_A.value, toOrder: 10 },
+        { sku: SKU_B.value, toOrder: 0 },
       ],
       affectedCustomers: [{ customerId: CUSTOMER_ID, name: "Acme Wholesale" }],
     });
     expect(committedCustomers.requestedSkus.map((sku) => sku.value)).toEqual([SKU_A.value]);
   });
 
-  it("returns empty affectedCustomers when every uncovered is zero", async () => {
+  it("returns empty affectedCustomers when every toOrder is zero", async () => {
     const purchaseOrders = new InMemoryPurchaseOrderRepository(
       async () => "",
       async () => "HF",
     );
     await seedPurchaseOrder(purchaseOrders);
-    const inventoryUncovered = new StubUncoveredPort();
-    inventoryUncovered.set(SKU_A.value, 0);
-    inventoryUncovered.set(SKU_B.value, 0);
+    const inventoryToOrder = new StubUncoveredPort();
+    inventoryToOrder.set(SKU_A.value, 0);
+    inventoryToOrder.set(SKU_B.value, 0);
     const committedCustomers = new StubCommittedCustomersPort();
     committedCustomers.setCustomers([{ customerId: CUSTOMER_ID, name: "Acme Wholesale" }]);
 
     const useCase = new GetPurchaseOrderShortReadoutUseCase(
       purchaseOrders,
-      inventoryUncovered,
+      inventoryToOrder,
       committedCustomers,
     );
     const result = await useCase.execute({
@@ -153,16 +153,16 @@ describe("GetPurchaseOrderShortReadoutUseCase", () => {
 
     expect(result).toEqual({
       ok: true,
-      uncovered: [
-        { sku: SKU_A.value, uncovered: 0 },
-        { sku: SKU_B.value, uncovered: 0 },
+      toOrder: [
+        { sku: SKU_A.value, toOrder: 0 },
+        { sku: SKU_B.value, toOrder: 0 },
       ],
       affectedCustomers: [],
     });
     expect(committedCustomers.requestedSkus).toEqual([]);
   });
 
-  it("loads uncovered values with one getUncoveredBySkus call per document", async () => {
+  it("loads toOrder values with one getToOrderBySkus call per document", async () => {
     const purchaseOrders = new InMemoryPurchaseOrderRepository(
       async () => "",
       async () => "HF",
@@ -188,17 +188,17 @@ describe("GetPurchaseOrderShortReadoutUseCase", () => {
       })),
     });
 
-    const inventoryUncovered = new StubUncoveredPort();
+    const inventoryToOrder = new StubUncoveredPort();
     for (const sku of batchSkus) {
-      inventoryUncovered.set(sku.value, 5);
+      inventoryToOrder.set(sku.value, 5);
     }
-    const getUncovered = vi.spyOn(inventoryUncovered, "getUncovered");
-    const getUncoveredBySkus = vi.spyOn(inventoryUncovered, "getUncoveredBySkus");
+    const getToOrder = vi.spyOn(inventoryToOrder, "getToOrder");
+    const getToOrderBySkus = vi.spyOn(inventoryToOrder, "getToOrderBySkus");
     const committedCustomers = new StubCommittedCustomersPort();
 
     const useCase = new GetPurchaseOrderShortReadoutUseCase(
       purchaseOrders,
-      inventoryUncovered,
+      inventoryToOrder,
       committedCustomers,
     );
     const result = await useCase.execute({
@@ -211,10 +211,10 @@ describe("GetPurchaseOrderShortReadoutUseCase", () => {
     if (!result.ok) {
       return;
     }
-    expect(result.uncovered).toHaveLength(25);
-    expect(getUncovered).not.toHaveBeenCalled();
-    expect(getUncoveredBySkus).toHaveBeenCalledTimes(1);
-    expect(getUncoveredBySkus.mock.calls[0]?.[1]).toHaveLength(25);
+    expect(result.toOrder).toHaveLength(25);
+    expect(getToOrder).not.toHaveBeenCalled();
+    expect(getToOrderBySkus).toHaveBeenCalledTimes(1);
+    expect(getToOrderBySkus.mock.calls[0]?.[1]).toHaveLength(25);
   });
 
   it("returns not_found when the purchase order is missing", async () => {

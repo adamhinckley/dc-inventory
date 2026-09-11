@@ -140,11 +140,11 @@ import type {
   CreateInternalSupplier403,
   CreateInternalSupplier409,
   CreateInternalSupplierBody,
-  DraftInternalUncoveredPurchaseOrders201,
-  DraftInternalUncoveredPurchaseOrders400,
-  DraftInternalUncoveredPurchaseOrders401,
-  DraftInternalUncoveredPurchaseOrders403,
-  DraftInternalUncoveredPurchaseOrdersBody,
+  DraftInternalPreOrderPurchaseOrders201,
+  DraftInternalPreOrderPurchaseOrders400,
+  DraftInternalPreOrderPurchaseOrders401,
+  DraftInternalPreOrderPurchaseOrders403,
+  DraftInternalPreOrderPurchaseOrdersBody,
   EndInternalCustomerPaymentPlan204,
   EndInternalCustomerPaymentPlan401,
   EndInternalCustomerPaymentPlan403,
@@ -279,6 +279,16 @@ import type {
   ListInternalLicensingSubscriptions200,
   ListInternalLicensingSubscriptions401,
   ListInternalLicensingSubscriptionsParams,
+  ListInternalPreOrderFactories200,
+  ListInternalPreOrderFactories400,
+  ListInternalPreOrderFactories401,
+  ListInternalPreOrderFactories403,
+  ListInternalPreOrderFactoriesParams,
+  ListInternalPreOrderSkus200,
+  ListInternalPreOrderSkus400,
+  ListInternalPreOrderSkus401,
+  ListInternalPreOrderSkus403,
+  ListInternalPreOrderSkusParams,
   ListInternalProducts200,
   ListInternalProducts400,
   ListInternalProducts401,
@@ -314,16 +324,6 @@ import type {
   ListInternalSuppliers401,
   ListInternalSuppliers403,
   ListInternalSuppliersParams,
-  ListInternalUncoveredFactories200,
-  ListInternalUncoveredFactories400,
-  ListInternalUncoveredFactories401,
-  ListInternalUncoveredFactories403,
-  ListInternalUncoveredFactoriesParams,
-  ListInternalUncoveredSkus200,
-  ListInternalUncoveredSkus400,
-  ListInternalUncoveredSkus401,
-  ListInternalUncoveredSkus403,
-  ListInternalUncoveredSkusParams,
   LoginInternal200,
   LoginInternal401,
   LoginInternal429,
@@ -391,11 +391,11 @@ import type {
   ShipInternalSalesOrder404,
   ShipInternalSalesOrder409,
   ShipInternalSalesOrderBody,
-  SyncInternalPurchaseOrdersFromUncovered200,
-  SyncInternalPurchaseOrdersFromUncovered400,
-  SyncInternalPurchaseOrdersFromUncovered401,
-  SyncInternalPurchaseOrdersFromUncovered403,
-  SyncInternalPurchaseOrdersFromUncoveredBody,
+  SyncInternalPurchaseOrdersFromPreOrder200,
+  SyncInternalPurchaseOrdersFromPreOrder400,
+  SyncInternalPurchaseOrdersFromPreOrder401,
+  SyncInternalPurchaseOrdersFromPreOrder403,
+  SyncInternalPurchaseOrdersFromPreOrderBody,
   UnconfirmInternalPurchaseOrder200,
   UnconfirmInternalPurchaseOrder401,
   UnconfirmInternalPurchaseOrder403,
@@ -2696,36 +2696,36 @@ export const useCopyInternalCustomerBillToFromDefaultShipTo = <TError = CopyInte
       return useMutation(getCopyInternalCustomerBillToFromDefaultShipToMutationOptions(options));
     }
 
-export type listInternalUncoveredSkusResponse200 = {
-  data: ListInternalUncoveredSkus200
+export type listInternalPreOrderSkusResponse200 = {
+  data: ListInternalPreOrderSkus200
   status: 200
 }
 
-export type listInternalUncoveredSkusResponse400 = {
-  data: ListInternalUncoveredSkus400
+export type listInternalPreOrderSkusResponse400 = {
+  data: ListInternalPreOrderSkus400
   status: 400
 }
 
-export type listInternalUncoveredSkusResponse401 = {
-  data: ListInternalUncoveredSkus401
+export type listInternalPreOrderSkusResponse401 = {
+  data: ListInternalPreOrderSkus401
   status: 401
 }
 
-export type listInternalUncoveredSkusResponse403 = {
-  data: ListInternalUncoveredSkus403
+export type listInternalPreOrderSkusResponse403 = {
+  data: ListInternalPreOrderSkus403
   status: 403
 }
 
-export type listInternalUncoveredSkusResponseSuccess = (listInternalUncoveredSkusResponse200) & {
+export type listInternalPreOrderSkusResponseSuccess = (listInternalPreOrderSkusResponse200) & {
   headers: Headers;
 };
-export type listInternalUncoveredSkusResponseError = (listInternalUncoveredSkusResponse400 | listInternalUncoveredSkusResponse401 | listInternalUncoveredSkusResponse403) & {
+export type listInternalPreOrderSkusResponseError = (listInternalPreOrderSkusResponse400 | listInternalPreOrderSkusResponse401 | listInternalPreOrderSkusResponse403) & {
   headers: Headers;
 };
 
-export type listInternalUncoveredSkusResponse = (listInternalUncoveredSkusResponseSuccess | listInternalUncoveredSkusResponseError)
+export type listInternalPreOrderSkusResponse = (listInternalPreOrderSkusResponseSuccess | listInternalPreOrderSkusResponseError)
 
-export const getListInternalUncoveredSkusUrl = (params?: ListInternalUncoveredSkusParams,) => {
+export const getListInternalPreOrderSkusUrl = (params?: ListInternalPreOrderSkusParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -2737,15 +2737,15 @@ export const getListInternalUncoveredSkusUrl = (params?: ListInternalUncoveredSk
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/internal/uncovered-skus?${stringifiedParams}` : `/internal/uncovered-skus`
+  return stringifiedParams.length > 0 ? `/internal/pre-order-skus?${stringifiedParams}` : `/internal/pre-order-skus`
 }
 
 /**
  * @summary List SKUs with factory to-order need
  */
-export const listInternalUncoveredSkus = async (params?: ListInternalUncoveredSkusParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalUncoveredSkusResponse> => {
+export const listInternalPreOrderSkus = async (params?: ListInternalPreOrderSkusParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalPreOrderSkusResponse> => {
 
-  return customFetch<listInternalUncoveredSkusResponse>(getListInternalUncoveredSkusUrl(params),
+  return customFetch<listInternalPreOrderSkusResponse>(getListInternalPreOrderSkusUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2758,45 +2758,45 @@ export const listInternalUncoveredSkus = async (params?: ListInternalUncoveredSk
 
 
 
-export const getListInternalUncoveredSkusQueryKey = (params?: ListInternalUncoveredSkusParams,) => {
+export const getListInternalPreOrderSkusQueryKey = (params?: ListInternalPreOrderSkusParams,) => {
     return [
-    `/internal/uncovered-skus`, ...(params ? [params] : [])
+    `/internal/pre-order-skus`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListInternalUncoveredSkusQueryOptions = <TData = Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError = ListInternalUncoveredSkus400 | ListInternalUncoveredSkus401 | ListInternalUncoveredSkus403>(params?: ListInternalUncoveredSkusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInternalPreOrderSkusQueryOptions = <TData = Awaited<ReturnType<typeof listInternalPreOrderSkus>>, TError = ListInternalPreOrderSkus400 | ListInternalPreOrderSkus401 | ListInternalPreOrderSkus403>(params?: ListInternalPreOrderSkusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalPreOrderSkus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListInternalUncoveredSkusQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getListInternalPreOrderSkusQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalUncoveredSkus>>> = ({ signal }) => listInternalUncoveredSkus(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalPreOrderSkus>>> = ({ signal }) => listInternalPreOrderSkus(params, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalPreOrderSkus>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListInternalUncoveredSkusQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalUncoveredSkus>>>
-export type ListInternalUncoveredSkusQueryError = ListInternalUncoveredSkus400 | ListInternalUncoveredSkus401 | ListInternalUncoveredSkus403
+export type ListInternalPreOrderSkusQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalPreOrderSkus>>>
+export type ListInternalPreOrderSkusQueryError = ListInternalPreOrderSkus400 | ListInternalPreOrderSkus401 | ListInternalPreOrderSkus403
 
 
 /**
  * @summary List SKUs with factory to-order need
  */
 
-export function useListInternalUncoveredSkus<TData = Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError = ListInternalUncoveredSkus400 | ListInternalUncoveredSkus401 | ListInternalUncoveredSkus403>(
- params?: ListInternalUncoveredSkusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredSkus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListInternalPreOrderSkus<TData = Awaited<ReturnType<typeof listInternalPreOrderSkus>>, TError = ListInternalPreOrderSkus400 | ListInternalPreOrderSkus401 | ListInternalPreOrderSkus403>(
+ params?: ListInternalPreOrderSkusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalPreOrderSkus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListInternalUncoveredSkusQueryOptions(params,options)
+  const queryOptions = getListInternalPreOrderSkusQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2809,36 +2809,36 @@ export function useListInternalUncoveredSkus<TData = Awaited<ReturnType<typeof l
 
 
 
-export type listInternalUncoveredFactoriesResponse200 = {
-  data: ListInternalUncoveredFactories200
+export type listInternalPreOrderFactoriesResponse200 = {
+  data: ListInternalPreOrderFactories200
   status: 200
 }
 
-export type listInternalUncoveredFactoriesResponse400 = {
-  data: ListInternalUncoveredFactories400
+export type listInternalPreOrderFactoriesResponse400 = {
+  data: ListInternalPreOrderFactories400
   status: 400
 }
 
-export type listInternalUncoveredFactoriesResponse401 = {
-  data: ListInternalUncoveredFactories401
+export type listInternalPreOrderFactoriesResponse401 = {
+  data: ListInternalPreOrderFactories401
   status: 401
 }
 
-export type listInternalUncoveredFactoriesResponse403 = {
-  data: ListInternalUncoveredFactories403
+export type listInternalPreOrderFactoriesResponse403 = {
+  data: ListInternalPreOrderFactories403
   status: 403
 }
 
-export type listInternalUncoveredFactoriesResponseSuccess = (listInternalUncoveredFactoriesResponse200) & {
+export type listInternalPreOrderFactoriesResponseSuccess = (listInternalPreOrderFactoriesResponse200) & {
   headers: Headers;
 };
-export type listInternalUncoveredFactoriesResponseError = (listInternalUncoveredFactoriesResponse400 | listInternalUncoveredFactoriesResponse401 | listInternalUncoveredFactoriesResponse403) & {
+export type listInternalPreOrderFactoriesResponseError = (listInternalPreOrderFactoriesResponse400 | listInternalPreOrderFactoriesResponse401 | listInternalPreOrderFactoriesResponse403) & {
   headers: Headers;
 };
 
-export type listInternalUncoveredFactoriesResponse = (listInternalUncoveredFactoriesResponseSuccess | listInternalUncoveredFactoriesResponseError)
+export type listInternalPreOrderFactoriesResponse = (listInternalPreOrderFactoriesResponseSuccess | listInternalPreOrderFactoriesResponseError)
 
-export const getListInternalUncoveredFactoriesUrl = (params?: ListInternalUncoveredFactoriesParams,) => {
+export const getListInternalPreOrderFactoriesUrl = (params?: ListInternalPreOrderFactoriesParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -2850,15 +2850,15 @@ export const getListInternalUncoveredFactoriesUrl = (params?: ListInternalUncove
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/internal/uncovered-skus/factories?${stringifiedParams}` : `/internal/uncovered-skus/factories`
+  return stringifiedParams.length > 0 ? `/internal/pre-order-skus/factories?${stringifiedParams}` : `/internal/pre-order-skus/factories`
 }
 
 /**
- * @summary List uncovered demand grouped by factory
+ * @summary List pre-order demand grouped by factory
  */
-export const listInternalUncoveredFactories = async (params?: ListInternalUncoveredFactoriesParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalUncoveredFactoriesResponse> => {
+export const listInternalPreOrderFactories = async (params?: ListInternalPreOrderFactoriesParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalPreOrderFactoriesResponse> => {
 
-  return customFetch<listInternalUncoveredFactoriesResponse>(getListInternalUncoveredFactoriesUrl(params),
+  return customFetch<listInternalPreOrderFactoriesResponse>(getListInternalPreOrderFactoriesUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2871,45 +2871,45 @@ export const listInternalUncoveredFactories = async (params?: ListInternalUncove
 
 
 
-export const getListInternalUncoveredFactoriesQueryKey = (params?: ListInternalUncoveredFactoriesParams,) => {
+export const getListInternalPreOrderFactoriesQueryKey = (params?: ListInternalPreOrderFactoriesParams,) => {
     return [
-    `/internal/uncovered-skus/factories`, ...(params ? [params] : [])
+    `/internal/pre-order-skus/factories`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListInternalUncoveredFactoriesQueryOptions = <TData = Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError = ListInternalUncoveredFactories400 | ListInternalUncoveredFactories401 | ListInternalUncoveredFactories403>(params?: ListInternalUncoveredFactoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInternalPreOrderFactoriesQueryOptions = <TData = Awaited<ReturnType<typeof listInternalPreOrderFactories>>, TError = ListInternalPreOrderFactories400 | ListInternalPreOrderFactories401 | ListInternalPreOrderFactories403>(params?: ListInternalPreOrderFactoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalPreOrderFactories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListInternalUncoveredFactoriesQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getListInternalPreOrderFactoriesQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalUncoveredFactories>>> = ({ signal }) => listInternalUncoveredFactories(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalPreOrderFactories>>> = ({ signal }) => listInternalPreOrderFactories(params, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalPreOrderFactories>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListInternalUncoveredFactoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalUncoveredFactories>>>
-export type ListInternalUncoveredFactoriesQueryError = ListInternalUncoveredFactories400 | ListInternalUncoveredFactories401 | ListInternalUncoveredFactories403
+export type ListInternalPreOrderFactoriesQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalPreOrderFactories>>>
+export type ListInternalPreOrderFactoriesQueryError = ListInternalPreOrderFactories400 | ListInternalPreOrderFactories401 | ListInternalPreOrderFactories403
 
 
 /**
- * @summary List uncovered demand grouped by factory
+ * @summary List pre-order demand grouped by factory
  */
 
-export function useListInternalUncoveredFactories<TData = Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError = ListInternalUncoveredFactories400 | ListInternalUncoveredFactories401 | ListInternalUncoveredFactories403>(
- params?: ListInternalUncoveredFactoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalUncoveredFactories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListInternalPreOrderFactories<TData = Awaited<ReturnType<typeof listInternalPreOrderFactories>>, TError = ListInternalPreOrderFactories400 | ListInternalPreOrderFactories401 | ListInternalPreOrderFactories403>(
+ params?: ListInternalPreOrderFactoriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalPreOrderFactories>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListInternalUncoveredFactoriesQueryOptions(params,options)
+  const queryOptions = getListInternalPreOrderFactoriesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -4602,47 +4602,47 @@ export const useCreateInternalPurchaseOrder = <TError = CreateInternalPurchaseOr
       return useMutation(getCreateInternalPurchaseOrderMutationOptions(options));
     }
 
-export type syncInternalPurchaseOrdersFromUncoveredResponse200 = {
-  data: SyncInternalPurchaseOrdersFromUncovered200
+export type syncInternalPurchaseOrdersFromPreOrderResponse200 = {
+  data: SyncInternalPurchaseOrdersFromPreOrder200
   status: 200
 }
 
-export type syncInternalPurchaseOrdersFromUncoveredResponse400 = {
-  data: SyncInternalPurchaseOrdersFromUncovered400
+export type syncInternalPurchaseOrdersFromPreOrderResponse400 = {
+  data: SyncInternalPurchaseOrdersFromPreOrder400
   status: 400
 }
 
-export type syncInternalPurchaseOrdersFromUncoveredResponse401 = {
-  data: SyncInternalPurchaseOrdersFromUncovered401
+export type syncInternalPurchaseOrdersFromPreOrderResponse401 = {
+  data: SyncInternalPurchaseOrdersFromPreOrder401
   status: 401
 }
 
-export type syncInternalPurchaseOrdersFromUncoveredResponse403 = {
-  data: SyncInternalPurchaseOrdersFromUncovered403
+export type syncInternalPurchaseOrdersFromPreOrderResponse403 = {
+  data: SyncInternalPurchaseOrdersFromPreOrder403
   status: 403
 }
 
-export type syncInternalPurchaseOrdersFromUncoveredResponseSuccess = (syncInternalPurchaseOrdersFromUncoveredResponse200) & {
+export type syncInternalPurchaseOrdersFromPreOrderResponseSuccess = (syncInternalPurchaseOrdersFromPreOrderResponse200) & {
   headers: Headers;
 };
-export type syncInternalPurchaseOrdersFromUncoveredResponseError = (syncInternalPurchaseOrdersFromUncoveredResponse400 | syncInternalPurchaseOrdersFromUncoveredResponse401 | syncInternalPurchaseOrdersFromUncoveredResponse403) & {
+export type syncInternalPurchaseOrdersFromPreOrderResponseError = (syncInternalPurchaseOrdersFromPreOrderResponse400 | syncInternalPurchaseOrdersFromPreOrderResponse401 | syncInternalPurchaseOrdersFromPreOrderResponse403) & {
   headers: Headers;
 };
 
-export type syncInternalPurchaseOrdersFromUncoveredResponse = (syncInternalPurchaseOrdersFromUncoveredResponseSuccess | syncInternalPurchaseOrdersFromUncoveredResponseError)
+export type syncInternalPurchaseOrdersFromPreOrderResponse = (syncInternalPurchaseOrdersFromPreOrderResponseSuccess | syncInternalPurchaseOrdersFromPreOrderResponseError)
 
-export const getSyncInternalPurchaseOrdersFromUncoveredUrl = () => {
-
-
+export const getSyncInternalPurchaseOrdersFromPreOrderUrl = () => {
 
 
-  return `/internal/purchase-orders/sync-from-uncovered`
+
+
+  return `/internal/purchase-orders/sync-from-pre-order`
 }
 
 /**
- * @summary Sync open draft purchase order lines from current uncovered SKUs
+ * @summary Sync open draft purchase order lines from current toOrder SKUs
  */
-export const syncInternalPurchaseOrdersFromUncovered = async (syncInternalPurchaseOrdersFromUncoveredBody: SyncInternalPurchaseOrdersFromUncoveredBody, options?: Parameters<typeof customFetch>[1]): Promise<syncInternalPurchaseOrdersFromUncoveredResponse> => {
+export const syncInternalPurchaseOrdersFromPreOrder = async (syncInternalPurchaseOrdersFromPreOrderBody: SyncInternalPurchaseOrdersFromPreOrderBody, options?: Parameters<typeof customFetch>[1]): Promise<syncInternalPurchaseOrdersFromPreOrderResponse> => {
 
     const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
     if (!h) return {};
@@ -4650,12 +4650,12 @@ export const syncInternalPurchaseOrdersFromUncovered = async (syncInternalPurcha
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-return customFetch<syncInternalPurchaseOrdersFromUncoveredResponse>(getSyncInternalPurchaseOrdersFromUncoveredUrl(),
+return customFetch<syncInternalPurchaseOrdersFromPreOrderResponse>(getSyncInternalPurchaseOrdersFromPreOrderUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(syncInternalPurchaseOrdersFromUncoveredBody)
+    body: JSON.stringify(syncInternalPurchaseOrdersFromPreOrderBody)
   }
 );}
 
@@ -4663,11 +4663,11 @@ return customFetch<syncInternalPurchaseOrdersFromUncoveredResponse>(getSyncInter
 
 
 
-export const getSyncInternalPurchaseOrdersFromUncoveredMutationOptions = <TError = SyncInternalPurchaseOrdersFromUncovered400 | SyncInternalPurchaseOrdersFromUncovered401 | SyncInternalPurchaseOrdersFromUncovered403,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, TError,{data: SyncInternalPurchaseOrdersFromUncoveredBody}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, TError,{data: SyncInternalPurchaseOrdersFromUncoveredBody}, TContext> => {
+export const getSyncInternalPurchaseOrdersFromPreOrderMutationOptions = <TError = SyncInternalPurchaseOrdersFromPreOrder400 | SyncInternalPurchaseOrdersFromPreOrder401 | SyncInternalPurchaseOrdersFromPreOrder403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromPreOrder>>, TError,{data: SyncInternalPurchaseOrdersFromPreOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromPreOrder>>, TError,{data: SyncInternalPurchaseOrdersFromPreOrderBody}, TContext> => {
 
-const mutationKey = ['syncInternalPurchaseOrdersFromUncovered'];
+const mutationKey = ['syncInternalPurchaseOrdersFromPreOrder'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -4677,10 +4677,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, {data: SyncInternalPurchaseOrdersFromUncoveredBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromPreOrder>>, {data: SyncInternalPurchaseOrdersFromPreOrderBody}> = (props) => {
           const {data} = props ?? {};
 
-          return  syncInternalPurchaseOrdersFromUncovered(data,requestOptions)
+          return  syncInternalPurchaseOrdersFromPreOrder(data,requestOptions)
         }
 
 
@@ -4690,22 +4690,22 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type SyncInternalPurchaseOrdersFromUncoveredMutationResult = NonNullable<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>>
-    export type SyncInternalPurchaseOrdersFromUncoveredMutationBody = SyncInternalPurchaseOrdersFromUncoveredBody
-    export type SyncInternalPurchaseOrdersFromUncoveredMutationError = SyncInternalPurchaseOrdersFromUncovered400 | SyncInternalPurchaseOrdersFromUncovered401 | SyncInternalPurchaseOrdersFromUncovered403
+    export type SyncInternalPurchaseOrdersFromPreOrderMutationResult = NonNullable<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromPreOrder>>>
+    export type SyncInternalPurchaseOrdersFromPreOrderMutationBody = SyncInternalPurchaseOrdersFromPreOrderBody
+    export type SyncInternalPurchaseOrdersFromPreOrderMutationError = SyncInternalPurchaseOrdersFromPreOrder400 | SyncInternalPurchaseOrdersFromPreOrder401 | SyncInternalPurchaseOrdersFromPreOrder403
 
     /**
- * @summary Sync open draft purchase order lines from current uncovered SKUs
+ * @summary Sync open draft purchase order lines from current toOrder SKUs
  */
-export const useSyncInternalPurchaseOrdersFromUncovered = <TError = SyncInternalPurchaseOrdersFromUncovered400 | SyncInternalPurchaseOrdersFromUncovered401 | SyncInternalPurchaseOrdersFromUncovered403,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>, TError,{data: SyncInternalPurchaseOrdersFromUncoveredBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useSyncInternalPurchaseOrdersFromPreOrder = <TError = SyncInternalPurchaseOrdersFromPreOrder400 | SyncInternalPurchaseOrdersFromPreOrder401 | SyncInternalPurchaseOrdersFromPreOrder403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromPreOrder>>, TError,{data: SyncInternalPurchaseOrdersFromPreOrderBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromUncovered>>,
+        Awaited<ReturnType<typeof syncInternalPurchaseOrdersFromPreOrder>>,
         TError,
-        {data: SyncInternalPurchaseOrdersFromUncoveredBody},
+        {data: SyncInternalPurchaseOrdersFromPreOrderBody},
         TContext
       > => {
-      return useMutation(getSyncInternalPurchaseOrdersFromUncoveredMutationOptions(options));
+      return useMutation(getSyncInternalPurchaseOrdersFromPreOrderMutationOptions(options));
     }
 
 export type getInternalPurchaseOrderByDocumentNumberResponse200 = {
@@ -5355,7 +5355,7 @@ export const getGetInternalPurchaseOrderShortReadoutUrl = (id: string,) => {
 }
 
 /**
- * @summary Return uncovered SKUs and affected customers for a purchase order
+ * @summary Return toOrder SKUs and affected customers for a purchase order
  */
 export const getInternalPurchaseOrderShortReadout = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<getInternalPurchaseOrderShortReadoutResponse> => {
 
@@ -5402,7 +5402,7 @@ export type GetInternalPurchaseOrderShortReadoutQueryError = GetInternalPurchase
 
 
 /**
- * @summary Return uncovered SKUs and affected customers for a purchase order
+ * @summary Return toOrder SKUs and affected customers for a purchase order
  */
 
 export function useGetInternalPurchaseOrderShortReadout<TData = Awaited<ReturnType<typeof getInternalPurchaseOrderShortReadout>>, TError = GetInternalPurchaseOrderShortReadout401 | GetInternalPurchaseOrderShortReadout403 | GetInternalPurchaseOrderShortReadout404>(
@@ -5993,47 +5993,47 @@ export const useCancelInternalPurchaseOrder = <TError = CancelInternalPurchaseOr
       return useMutation(getCancelInternalPurchaseOrderMutationOptions(options));
     }
 
-export type draftInternalUncoveredPurchaseOrdersResponse201 = {
-  data: DraftInternalUncoveredPurchaseOrders201
+export type draftInternalPreOrderPurchaseOrdersResponse201 = {
+  data: DraftInternalPreOrderPurchaseOrders201
   status: 201
 }
 
-export type draftInternalUncoveredPurchaseOrdersResponse400 = {
-  data: DraftInternalUncoveredPurchaseOrders400
+export type draftInternalPreOrderPurchaseOrdersResponse400 = {
+  data: DraftInternalPreOrderPurchaseOrders400
   status: 400
 }
 
-export type draftInternalUncoveredPurchaseOrdersResponse401 = {
-  data: DraftInternalUncoveredPurchaseOrders401
+export type draftInternalPreOrderPurchaseOrdersResponse401 = {
+  data: DraftInternalPreOrderPurchaseOrders401
   status: 401
 }
 
-export type draftInternalUncoveredPurchaseOrdersResponse403 = {
-  data: DraftInternalUncoveredPurchaseOrders403
+export type draftInternalPreOrderPurchaseOrdersResponse403 = {
+  data: DraftInternalPreOrderPurchaseOrders403
   status: 403
 }
 
-export type draftInternalUncoveredPurchaseOrdersResponseSuccess = (draftInternalUncoveredPurchaseOrdersResponse201) & {
+export type draftInternalPreOrderPurchaseOrdersResponseSuccess = (draftInternalPreOrderPurchaseOrdersResponse201) & {
   headers: Headers;
 };
-export type draftInternalUncoveredPurchaseOrdersResponseError = (draftInternalUncoveredPurchaseOrdersResponse400 | draftInternalUncoveredPurchaseOrdersResponse401 | draftInternalUncoveredPurchaseOrdersResponse403) & {
+export type draftInternalPreOrderPurchaseOrdersResponseError = (draftInternalPreOrderPurchaseOrdersResponse400 | draftInternalPreOrderPurchaseOrdersResponse401 | draftInternalPreOrderPurchaseOrdersResponse403) & {
   headers: Headers;
 };
 
-export type draftInternalUncoveredPurchaseOrdersResponse = (draftInternalUncoveredPurchaseOrdersResponseSuccess | draftInternalUncoveredPurchaseOrdersResponseError)
+export type draftInternalPreOrderPurchaseOrdersResponse = (draftInternalPreOrderPurchaseOrdersResponseSuccess | draftInternalPreOrderPurchaseOrdersResponseError)
 
-export const getDraftInternalUncoveredPurchaseOrdersUrl = () => {
-
-
+export const getDraftInternalPreOrderPurchaseOrdersUrl = () => {
 
 
-  return `/internal/uncovered-skus/draft-purchase-orders`
+
+
+  return `/internal/pre-order-skus/draft-purchase-orders`
 }
 
 /**
- * @summary Create draft purchase orders from uncovered SKU selection
+ * @summary Create draft purchase orders from toOrder SKU selection
  */
-export const draftInternalUncoveredPurchaseOrders = async (draftInternalUncoveredPurchaseOrdersBody: DraftInternalUncoveredPurchaseOrdersBody, options?: Parameters<typeof customFetch>[1]): Promise<draftInternalUncoveredPurchaseOrdersResponse> => {
+export const draftInternalPreOrderPurchaseOrders = async (draftInternalPreOrderPurchaseOrdersBody: DraftInternalPreOrderPurchaseOrdersBody, options?: Parameters<typeof customFetch>[1]): Promise<draftInternalPreOrderPurchaseOrdersResponse> => {
 
     const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
     if (!h) return {};
@@ -6041,12 +6041,12 @@ export const draftInternalUncoveredPurchaseOrders = async (draftInternalUncovere
     if (Array.isArray(h)) return Object.fromEntries(h);
     return h;
   };
-return customFetch<draftInternalUncoveredPurchaseOrdersResponse>(getDraftInternalUncoveredPurchaseOrdersUrl(),
+return customFetch<draftInternalPreOrderPurchaseOrdersResponse>(getDraftInternalPreOrderPurchaseOrdersUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(draftInternalUncoveredPurchaseOrdersBody)
+    body: JSON.stringify(draftInternalPreOrderPurchaseOrdersBody)
   }
 );}
 
@@ -6054,11 +6054,11 @@ return customFetch<draftInternalUncoveredPurchaseOrdersResponse>(getDraftInterna
 
 
 
-export const getDraftInternalUncoveredPurchaseOrdersMutationOptions = <TError = DraftInternalUncoveredPurchaseOrders400 | DraftInternalUncoveredPurchaseOrders401 | DraftInternalUncoveredPurchaseOrders403,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof draftInternalUncoveredPurchaseOrders>>, TError,{data: DraftInternalUncoveredPurchaseOrdersBody}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof draftInternalUncoveredPurchaseOrders>>, TError,{data: DraftInternalUncoveredPurchaseOrdersBody}, TContext> => {
+export const getDraftInternalPreOrderPurchaseOrdersMutationOptions = <TError = DraftInternalPreOrderPurchaseOrders400 | DraftInternalPreOrderPurchaseOrders401 | DraftInternalPreOrderPurchaseOrders403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof draftInternalPreOrderPurchaseOrders>>, TError,{data: DraftInternalPreOrderPurchaseOrdersBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof draftInternalPreOrderPurchaseOrders>>, TError,{data: DraftInternalPreOrderPurchaseOrdersBody}, TContext> => {
 
-const mutationKey = ['draftInternalUncoveredPurchaseOrders'];
+const mutationKey = ['draftInternalPreOrderPurchaseOrders'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -6068,10 +6068,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof draftInternalUncoveredPurchaseOrders>>, {data: DraftInternalUncoveredPurchaseOrdersBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof draftInternalPreOrderPurchaseOrders>>, {data: DraftInternalPreOrderPurchaseOrdersBody}> = (props) => {
           const {data} = props ?? {};
 
-          return  draftInternalUncoveredPurchaseOrders(data,requestOptions)
+          return  draftInternalPreOrderPurchaseOrders(data,requestOptions)
         }
 
 
@@ -6081,22 +6081,22 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type DraftInternalUncoveredPurchaseOrdersMutationResult = NonNullable<Awaited<ReturnType<typeof draftInternalUncoveredPurchaseOrders>>>
-    export type DraftInternalUncoveredPurchaseOrdersMutationBody = DraftInternalUncoveredPurchaseOrdersBody
-    export type DraftInternalUncoveredPurchaseOrdersMutationError = DraftInternalUncoveredPurchaseOrders400 | DraftInternalUncoveredPurchaseOrders401 | DraftInternalUncoveredPurchaseOrders403
+    export type DraftInternalPreOrderPurchaseOrdersMutationResult = NonNullable<Awaited<ReturnType<typeof draftInternalPreOrderPurchaseOrders>>>
+    export type DraftInternalPreOrderPurchaseOrdersMutationBody = DraftInternalPreOrderPurchaseOrdersBody
+    export type DraftInternalPreOrderPurchaseOrdersMutationError = DraftInternalPreOrderPurchaseOrders400 | DraftInternalPreOrderPurchaseOrders401 | DraftInternalPreOrderPurchaseOrders403
 
     /**
- * @summary Create draft purchase orders from uncovered SKU selection
+ * @summary Create draft purchase orders from toOrder SKU selection
  */
-export const useDraftInternalUncoveredPurchaseOrders = <TError = DraftInternalUncoveredPurchaseOrders400 | DraftInternalUncoveredPurchaseOrders401 | DraftInternalUncoveredPurchaseOrders403,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof draftInternalUncoveredPurchaseOrders>>, TError,{data: DraftInternalUncoveredPurchaseOrdersBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useDraftInternalPreOrderPurchaseOrders = <TError = DraftInternalPreOrderPurchaseOrders400 | DraftInternalPreOrderPurchaseOrders401 | DraftInternalPreOrderPurchaseOrders403,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof draftInternalPreOrderPurchaseOrders>>, TError,{data: DraftInternalPreOrderPurchaseOrdersBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof draftInternalUncoveredPurchaseOrders>>,
+        Awaited<ReturnType<typeof draftInternalPreOrderPurchaseOrders>>,
         TError,
-        {data: DraftInternalUncoveredPurchaseOrdersBody},
+        {data: DraftInternalPreOrderPurchaseOrdersBody},
         TContext
       > => {
-      return useMutation(getDraftInternalUncoveredPurchaseOrdersMutationOptions(options));
+      return useMutation(getDraftInternalPreOrderPurchaseOrdersMutationOptions(options));
     }
 
 export type listInternalSuppliersResponse200 = {

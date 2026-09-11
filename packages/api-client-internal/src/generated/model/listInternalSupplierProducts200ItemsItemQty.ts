@@ -35,5 +35,5 @@ export type ListInternalSupplierProducts200ItemsItemQty = {
      * @minimum -9007199254740991
      * @maximum 9007199254740991
      */
-  uncovered: number;
+  toOrder: number;
 };

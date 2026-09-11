@@ -4,7 +4,7 @@ import {
   getListInternalPurchaseOrdersQueryKey,
   listInternalPurchaseOrdersTable,
   useListInternalPurchaseOrders,
-  useSyncInternalPurchaseOrdersFromUncovered,
+  useSyncInternalPurchaseOrdersFromPreOrder,
 } from "@dc-inventory/api-client-internal";
 import {
   DataTable,
@@ -39,7 +39,7 @@ export function Purchasing2DraftOrdersExplorer({
   initialParams?: ListQueryParams;
 }) {
   const queryClient = useQueryClient();
-  const syncMutation = useSyncInternalPurchaseOrdersFromUncovered();
+  const syncMutation = useSyncInternalPurchaseOrdersFromPreOrder();
   const syncStartedRef = useRef(false);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export function Purchasing2DraftOrdersExplorer({
     try {
       const result = await syncMutation.mutateAsync({ data: {} });
       if (result.status !== 200) {
-        setSyncError("Could not sync draft purchase orders from uncovered demand.");
+        setSyncError("Could not sync draft purchase orders from toOrder demand.");
         return;
       }
       setLastSyncedAt(new Date());
@@ -57,7 +57,7 @@ export function Purchasing2DraftOrdersExplorer({
         queryKey: getListInternalPurchaseOrdersQueryKey(),
       });
     } catch {
-      setSyncError("Could not sync draft purchase orders from uncovered demand.");
+      setSyncError("Could not sync draft purchase orders from toOrder demand.");
     }
   }, [queryClient, syncMutation]);
 
@@ -91,7 +91,7 @@ export function Purchasing2DraftOrdersExplorer({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-form-section">
       <p className="text-body-sm text-fg-secondary">
-        Open draft POs refresh from current uncovered demand when this hub loads. Edits
+        Open draft POs refresh from current toOrder demand when this hub loads. Edits
         in the PO editor are kept until the next hub visit.
         {lastSyncedAt
           ? ` Last synced ${formatLastSyncedAt(lastSyncedAt)}.`

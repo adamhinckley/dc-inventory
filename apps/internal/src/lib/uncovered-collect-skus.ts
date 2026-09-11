@@ -1,18 +1,18 @@
-import { listInternalUncoveredSkus } from "@dc-inventory/api-client-internal";
-import { isUncoveredNeedsMappingFactoryId } from "./uncovered-constants";
-import { UNCOVERED_FACTORY_LIST_PAGE_SIZE } from "./list-all-uncovered-factories";
+import { listInternalPreOrderSkus } from "@dc-inventory/api-client-internal";
+import { isPreOrderNeedsMappingFactoryId } from "./uncovered-constants";
+import { PRE_ORDER_FACTORY_LIST_PAGE_SIZE } from "./list-all-uncovered-factories";
 
-type UncoveredSkuListParams = NonNullable<
-  Parameters<typeof listInternalUncoveredSkus>[0]
+type PreOrderSkuListParams = NonNullable<
+  Parameters<typeof listInternalPreOrderSkus>[0]
 >;
 
-type UncoveredSkuListFn = (
-  params: UncoveredSkuListParams,
-) => Promise<Awaited<ReturnType<typeof listInternalUncoveredSkus>>>;
+type PreOrderSkuListFn = (
+  params: PreOrderSkuListParams,
+) => Promise<Awaited<ReturnType<typeof listInternalPreOrderSkus>>>;
 
-async function listAllUncoveredSkus(
-  params: UncoveredSkuListParams,
-  listSkus: UncoveredSkuListFn = listInternalUncoveredSkus,
+async function listAllPreOrderSkus(
+  params: PreOrderSkuListParams,
+  listSkus: PreOrderSkuListFn = listInternalPreOrderSkus,
 ): Promise<readonly string[]> {
   const skus: string[] = [];
   let page = 1;
@@ -21,10 +21,10 @@ async function listAllUncoveredSkus(
     const response = await listSkus({
       ...params,
       page,
-      pageSize: UNCOVERED_FACTORY_LIST_PAGE_SIZE,
+      pageSize: PRE_ORDER_FACTORY_LIST_PAGE_SIZE,
     });
     if (response.status !== 200) {
-      throw new Error("Could not load uncovered SKUs.");
+      throw new Error("Could not load toOrder SKUs.");
     }
     for (const item of response.data.items) {
       skus.push(item.sku);
@@ -37,18 +37,18 @@ async function listAllUncoveredSkus(
   }
 }
 
-/** Collects every uncovered SKU for draftable factory rows (excludes needs-mapping). */
-export async function collectUncoveredSkusForFactories(
+/** Collects every toOrder SKU for draftable factory rows (excludes needs-mapping). */
+export async function collectPreOrderSkusForFactories(
   factoryIds: readonly string[],
-  listSkus: UncoveredSkuListFn = listInternalUncoveredSkus,
+  listSkus: PreOrderSkuListFn = listInternalPreOrderSkus,
 ): Promise<readonly string[]> {
   const skus: string[] = [];
 
   for (const factoryId of factoryIds) {
-    if (isUncoveredNeedsMappingFactoryId(factoryId)) {
+    if (isPreOrderNeedsMappingFactoryId(factoryId)) {
       continue;
     }
-    const factorySkus = await listAllUncoveredSkus({ supplierId: factoryId }, listSkus);
+    const factorySkus = await listAllPreOrderSkus({ supplierId: factoryId }, listSkus);
     skus.push(...factorySkus);
   }
 

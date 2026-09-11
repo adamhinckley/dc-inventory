@@ -3,7 +3,7 @@ import type { IPurchaseOrderRepository } from "../domain/ports/purchase-order-re
 import type {
   CommittedCustomerName,
   ICommittedCustomerNamesPort,
-  IInventoryUncoveredReadPort,
+  IInventoryToOrderReadPort,
 } from "../domain/ports/short-readout.js";
 
 export type GetPurchaseOrderShortReadoutRequest = {
@@ -12,9 +12,9 @@ export type GetPurchaseOrderShortReadoutRequest = {
   purchaseOrderId: PurchaseOrderId;
 };
 
-export type PurchaseOrderShortReadoutUncoveredRow = Readonly<{
+export type PurchaseOrderShortReadoutToOrderRow = Readonly<{
   sku: string;
-  uncovered: number;
+  toOrder: number;
 }>;
 
 export type PurchaseOrderShortReadoutAffectedCustomer = Readonly<{
@@ -25,7 +25,7 @@ export type PurchaseOrderShortReadoutAffectedCustomer = Readonly<{
 export type GetPurchaseOrderShortReadoutResult =
   | {
       ok: true;
-      uncovered: readonly PurchaseOrderShortReadoutUncoveredRow[];
+      toOrder: readonly PurchaseOrderShortReadoutToOrderRow[];
       affectedCustomers: readonly PurchaseOrderShortReadoutAffectedCustomer[];
     }
   | { ok: false; reason: "not_found" };
@@ -33,7 +33,7 @@ export type GetPurchaseOrderShortReadoutResult =
 export class GetPurchaseOrderShortReadoutUseCase {
   constructor(
     private readonly purchaseOrders: IPurchaseOrderRepository,
-    private readonly inventoryUncovered: IInventoryUncoveredReadPort,
+    private readonly inventoryToOrder: IInventoryToOrderReadPort,
     private readonly committedCustomers: ICommittedCustomerNamesPort,
   ) {}
 
@@ -49,32 +49,32 @@ export class GetPurchaseOrderShortReadoutUseCase {
       return { ok: false, reason: "not_found" };
     }
 
-    const uncoveredBySku = await this.inventoryUncovered.getUncoveredBySkus(
+    const toOrderBySku = await this.inventoryToOrder.getToOrderBySkus(
       input.organizationId,
       purchaseOrder.lines.map((line) => line.sku),
     );
-    const uncoveredRows = purchaseOrder.lines.map((line) => ({
+    const toOrderRows = purchaseOrder.lines.map((line) => ({
       sku: line.sku,
-      uncovered: uncoveredBySku.get(line.sku.value) ?? 0,
+      toOrder: toOrderBySku.get(line.sku.value) ?? 0,
     }));
 
-    const skusWithUncovered = uncoveredRows
-      .filter((row) => row.uncovered > 0)
+    const skusWithToOrder = toOrderRows
+      .filter((row) => row.toOrder > 0)
       .map((row) => row.sku);
 
     let affectedCustomers: readonly CommittedCustomerName[] = [];
-    if (skusWithUncovered.length > 0) {
+    if (skusWithToOrder.length > 0) {
       affectedCustomers = await this.committedCustomers.listCommittedCustomerNames(
         input.organizationId,
-        skusWithUncovered,
+        skusWithToOrder,
       );
     }
 
     return {
       ok: true,
-      uncovered: uncoveredRows.map((row) => ({
+      toOrder: toOrderRows.map((row) => ({
         sku: row.sku.value,
-        uncovered: row.uncovered,
+        toOrder: row.toOrder,
       })),
       affectedCustomers: affectedCustomers.map((customer) => ({
         customerId: customer.customerId,

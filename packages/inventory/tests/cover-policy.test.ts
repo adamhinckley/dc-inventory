@@ -305,7 +305,7 @@ describe("cover-policy (ADA-255)", () => {
 });
 
 describe("cover-policy FIFO receive attribution (ADA-256)", () => {
-  it("plans receive cover FIFO across two uncovered committed orders", () => {
+  it("plans receive cover FIFO across two toOrder committed orders", () => {
     const allocations = planReceiveCoverAllocations(
       {
         organizationId: ORG,

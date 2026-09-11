@@ -195,6 +195,86 @@ export const listInternalCustomersTable = {
   }
 } as const satisfies InternalTableMetadata;
 
+export const listInternalPreOrderFactoriesTable = {
+  "rowId": "id",
+  "columns": [
+    {
+      "field": "supplierName",
+      "label": "Factory"
+    },
+    {
+      "field": "supplierNumber",
+      "label": "Factory #"
+    },
+    {
+      "field": "poPrefix",
+      "label": "Vendor prefix"
+    },
+    {
+      "field": "productCount",
+      "label": "Products"
+    },
+    {
+      "field": "totalToOrderUnits",
+      "label": "To Order units"
+    }
+  ]
+} as const satisfies InternalTableMetadata;
+
+export const listInternalPreOrderSkusTable = {
+  "rowId": "sku",
+  "columns": [
+    {
+      "field": "sku",
+      "label": "SKU"
+    },
+    {
+      "field": "supplierName",
+      "label": "Factory"
+    },
+    {
+      "field": "supplierNumber",
+      "label": "Factory #"
+    },
+    {
+      "field": "toOrder",
+      "label": "To Order"
+    },
+    {
+      "field": "onHand",
+      "label": "On hand"
+    },
+    {
+      "field": "onOrder",
+      "label": "On order"
+    },
+    {
+      "field": "committed",
+      "label": "Pre-sold"
+    },
+    {
+      "field": "caseQty",
+      "label": "Master pack"
+    },
+    {
+      "field": "reorderMin",
+      "label": "Reorder min"
+    },
+    {
+      "field": "reorderMax",
+      "label": "Reorder max"
+    },
+    {
+      "field": "mappingStatus",
+      "label": "Mapping"
+    },
+    {
+      "field": "draftPurchaseOrder.documentNumber",
+      "label": "Draft PO"
+    }
+  ]
+} as const satisfies InternalTableMetadata;
+
 export const listInternalProductsTable = {
   "rowId": "id",
   "columns": [
@@ -507,98 +587,18 @@ export const listInternalSuppliersTable = {
   }
 } as const satisfies InternalTableMetadata;
 
-export const listInternalUncoveredFactoriesTable = {
-  "rowId": "id",
-  "columns": [
-    {
-      "field": "supplierName",
-      "label": "Factory"
-    },
-    {
-      "field": "supplierNumber",
-      "label": "Factory #"
-    },
-    {
-      "field": "poPrefix",
-      "label": "Vendor prefix"
-    },
-    {
-      "field": "productCount",
-      "label": "Products"
-    },
-    {
-      "field": "totalUncoveredUnits",
-      "label": "Uncovered units"
-    }
-  ]
-} as const satisfies InternalTableMetadata;
-
-export const listInternalUncoveredSkusTable = {
-  "rowId": "sku",
-  "columns": [
-    {
-      "field": "sku",
-      "label": "SKU"
-    },
-    {
-      "field": "supplierName",
-      "label": "Factory"
-    },
-    {
-      "field": "supplierNumber",
-      "label": "Factory #"
-    },
-    {
-      "field": "uncovered",
-      "label": "Uncovered"
-    },
-    {
-      "field": "onHand",
-      "label": "On hand"
-    },
-    {
-      "field": "onOrder",
-      "label": "On order"
-    },
-    {
-      "field": "committed",
-      "label": "Committed (pre-sold)"
-    },
-    {
-      "field": "caseQty",
-      "label": "Master pack"
-    },
-    {
-      "field": "reorderMin",
-      "label": "Reorder min"
-    },
-    {
-      "field": "reorderMax",
-      "label": "Reorder max"
-    },
-    {
-      "field": "mappingStatus",
-      "label": "Mapping"
-    },
-    {
-      "field": "draftPurchaseOrder.documentNumber",
-      "label": "Draft PO"
-    }
-  ]
-} as const satisfies InternalTableMetadata;
-
 export const internalTableMetadata = {
   listInternalAccountingCustomerBalances: listInternalAccountingCustomerBalancesTable,
   listInternalAccountingPayments: listInternalAccountingPaymentsTable,
   listInternalCustomers: listInternalCustomersTable,
+  listInternalPreOrderFactories: listInternalPreOrderFactoriesTable,
+  listInternalPreOrderSkus: listInternalPreOrderSkusTable,
   listInternalProducts: listInternalProductsTable,
   listInternalPurchaseOrders: listInternalPurchaseOrdersTable,
   listInternalSalesOrders: listInternalSalesOrdersTable,
   listInternalSellWindows: listInternalSellWindowsTable,
   listInternalSupplierProducts: listInternalSupplierProductsTable,
   listInternalSuppliers: listInternalSuppliersTable,
-  listInternalUncoveredFactories: listInternalUncoveredFactoriesTable,
-  listInternalUncoveredSkus: listInternalUncoveredSkusTable,
 } as const;
 
 export type InternalTableOperationId = keyof typeof internalTableMetadata;

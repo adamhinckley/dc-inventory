@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  listAllUncoveredFactories,
-  UNCOVERED_FACTORY_LIST_PAGE_SIZE,
-  type UncoveredFactoryListFn,
+  listAllPreOrderFactories,
+  PRE_ORDER_FACTORY_LIST_PAGE_SIZE,
+  type PreOrderFactoryListFn,
 } from "./list-all-uncovered-factories";
 
-describe("listAllUncoveredFactories", () => {
+describe("listAllPreOrderFactories", () => {
   it("pages through factories until the reported total is loaded", async () => {
     const listFactoriesMock = vi.fn(async (params: { page?: number; pageSize?: number }) => {
       const page = params.page ?? 1;
-      const pageSize = params.pageSize ?? UNCOVERED_FACTORY_LIST_PAGE_SIZE;
+      const pageSize = params.pageSize ?? PRE_ORDER_FACTORY_LIST_PAGE_SIZE;
       const total = 150;
       const start = (page - 1) * pageSize;
       const count = Math.min(pageSize, Math.max(0, total - start));
@@ -23,7 +23,7 @@ describe("listAllUncoveredFactories", () => {
             supplierName: `Factory ${start + index + 1}`,
             poPrefix: "FA",
             productCount: 1,
-            totalUncoveredUnits: 10,
+            totalToOrderUnits: 10,
             needsMapping: false,
           })),
           page,
@@ -32,9 +32,9 @@ describe("listAllUncoveredFactories", () => {
         },
       };
     });
-    const listFactories = listFactoriesMock as unknown as UncoveredFactoryListFn;
+    const listFactories = listFactoriesMock as unknown as PreOrderFactoryListFn;
 
-    const factories = await listAllUncoveredFactories(listFactories);
+    const factories = await listAllPreOrderFactories(listFactories);
 
     expect(listFactoriesMock.mock.calls.map((call) => call[0]?.page)).toEqual([1, 2]);
     expect(factories).toHaveLength(150);
@@ -46,10 +46,10 @@ describe("listAllUncoveredFactories", () => {
     const listFactories = vi.fn(async () => ({
       status: 403 as const,
       data: { error: "forbidden" as const },
-    })) as unknown as UncoveredFactoryListFn;
+    })) as unknown as PreOrderFactoryListFn;
 
-    await expect(listAllUncoveredFactories(listFactories)).rejects.toThrow(
-      "Could not load uncovered factories.",
+    await expect(listAllPreOrderFactories(listFactories)).rejects.toThrow(
+      "Could not load toOrder factories.",
     );
   });
 });

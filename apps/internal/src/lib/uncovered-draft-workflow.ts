@@ -54,7 +54,7 @@ export function toUncoveredBatchDraftRows(
   }));
 }
 
-export function afterDraftUncoveredPos(
+export function afterDraftPreOrderPos(
   purchaseOrders: readonly UncoveredDraftPurchaseOrder[],
   unmappedSkus: readonly string[],
   supplierNamesById: ReadonlyMap<string, string> = new Map(),

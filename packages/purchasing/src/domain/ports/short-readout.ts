@@ -5,10 +5,10 @@ export type CommittedCustomerName = Readonly<{
   name: string;
 }>;
 
-export interface IInventoryUncoveredReadPort {
-  getUncovered(organizationId: OrganizationId, sku: Sku): Promise<number>;
+export interface IInventoryToOrderReadPort {
+  getToOrder(organizationId: OrganizationId, sku: Sku): Promise<number>;
 
-  getUncoveredBySkus(
+  getToOrderBySkus(
     organizationId: OrganizationId,
     skus: readonly Sku[],
   ): Promise<ReadonlyMap<string, number>>;

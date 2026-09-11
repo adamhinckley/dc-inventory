@@ -77,7 +77,7 @@ describe("named feature gates", () => {
     { feature: "purchasing", url: "/internal/purchase-orders" },
     {
       feature: "purchasing",
-      url: "/internal/uncovered-skus/draft-purchase-orders",
+      url: "/internal/pre-order-skus/draft-purchase-orders",
       method: "POST",
     },
     {

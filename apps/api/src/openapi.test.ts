@@ -49,9 +49,9 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("getInternalAccountingSummary");
     expect(specs.internal).toContain("listInternalAccountingCustomerBalances");
     expect(specs.internal).toContain("listInternalAccountingPayments");
-    expect(specs.internal).toContain("draftInternalUncoveredPurchaseOrders");
-    expect(specs.internal).toContain("/internal/uncovered-skus/draft-purchase-orders");
-    expect(specs.internal).toContain("/internal/purchase-orders/sync-from-uncovered");
+    expect(specs.internal).toContain("draftInternalPreOrderPurchaseOrders");
+    expect(specs.internal).toContain("/internal/pre-order-skus/draft-purchase-orders");
+    expect(specs.internal).toContain("/internal/purchase-orders/sync-from-pre-order");
     expect(specs.internal).not.toContain("/ops/auth/");
 
     expect(specs.wholesale).toContain("/wholesale/catalog");
@@ -80,14 +80,14 @@ describe("OpenAPI stub export", () => {
       "listInternalAccountingCustomerBalances",
       "listInternalAccountingPayments",
       "listInternalCustomers",
+      "listInternalPreOrderFactories",
+      "listInternalPreOrderSkus",
       "listInternalProducts",
       "listInternalPurchaseOrders",
       "listInternalSalesOrders",
       "listInternalSellWindows",
       "listInternalSupplierProducts",
       "listInternalSuppliers",
-      "listInternalUncoveredFactories",
-      "listInternalUncoveredSkus",
     ]);
 
     for (const operation of tableOperations) {

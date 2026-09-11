@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  UNCOVERED_FACTORY_LIST_PAGE_SIZE,
-  type UncoveredFactoryListFn,
+  PRE_ORDER_FACTORY_LIST_PAGE_SIZE,
+  type PreOrderFactoryListFn,
 } from "./list-all-uncovered-factories";
-import { listPurchasing2UncoveredFactories } from "./list-purchasing-2-uncovered-factories";
+import { listPurchasing2PreOrderFactories } from "./list-purchasing-2-uncovered-factories";
 
-describe("listPurchasing2UncoveredFactories", () => {
+describe("listPurchasing2PreOrderFactories", () => {
   it("requests factories with excludeSuppliersWithOpenDraft enabled", async () => {
     const listFactoriesMock = vi.fn(async () => ({
       status: 200 as const,
@@ -18,22 +18,22 @@ describe("listPurchasing2UncoveredFactories", () => {
             supplierName: "Factory 1",
             poPrefix: "F1",
             productCount: 1,
-            totalUncoveredUnits: 10,
+            totalToOrderUnits: 10,
             needsMapping: false,
           },
         ],
         page: 1,
-        pageSize: UNCOVERED_FACTORY_LIST_PAGE_SIZE,
+        pageSize: PRE_ORDER_FACTORY_LIST_PAGE_SIZE,
         total: 1,
       },
     }));
-    const listFactories = listFactoriesMock as unknown as UncoveredFactoryListFn;
+    const listFactories = listFactoriesMock as unknown as PreOrderFactoryListFn;
 
-    const factories = await listPurchasing2UncoveredFactories(listFactories);
+    const factories = await listPurchasing2PreOrderFactories(listFactories);
 
     expect(listFactoriesMock).toHaveBeenCalledWith({
       page: 1,
-      pageSize: UNCOVERED_FACTORY_LIST_PAGE_SIZE,
+      pageSize: PRE_ORDER_FACTORY_LIST_PAGE_SIZE,
       excludeSuppliersWithOpenDraft: "true",
     });
     expect(factories).toHaveLength(1);
