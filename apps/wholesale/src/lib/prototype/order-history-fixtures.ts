@@ -131,16 +131,16 @@ export function findPrototypeOrder(documentNumber: string): PrototypeOrder | und
 
 export function prototypeOrdersPath(variant?: PrototypeOrderVariant): string {
   if (variant === undefined) {
-    return "/orders/prototype";
+    return "/order-history-prototype";
   }
-  return `/orders/prototype/${variant}`;
+  return `/order-history-prototype/${variant}`;
 }
 
 export function prototypeOrderPath(
   variant: PrototypeOrderVariant,
   documentNumber: string,
 ): string {
-  return `/orders/prototype/${variant}/${encodeURIComponent(documentNumber)}`;
+  return `/order-history-prototype/${variant}/${encodeURIComponent(documentNumber)}`;
 }
 
 export function assertPrototypeOrdersAreHistoryOnly(

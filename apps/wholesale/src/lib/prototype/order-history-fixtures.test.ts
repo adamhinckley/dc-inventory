@@ -17,7 +17,7 @@ describe("order history prototypes", () => {
   });
 
   it("builds prototype paths and accepts a b c only", () => {
-    expect(prototypeOrderPath("a", "SO-00042")).toBe("/orders/prototype/a/SO-00042");
+    expect(prototypeOrderPath("a", "SO-00042")).toBe("/order-history-prototype/a/SO-00042");
     expect(isPrototypeOrderVariant("b")).toBe(true);
     expect(isPrototypeOrderVariant("d")).toBe(false);
   });

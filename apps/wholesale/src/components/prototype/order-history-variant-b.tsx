@@ -101,7 +101,7 @@ export function OrderHistoryVariantBDetail({ order }: { order: PrototypeOrder })
   return (
     <article className="mx-auto flex max-w-2xl flex-col gap-8">
       <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
-        <Link href="/orders/prototype/b" className="hover:text-accent">
+        <Link href="/order-history-prototype/b" className="hover:text-accent">
           Orders
         </Link>
         <span className="mx-2">/</span>

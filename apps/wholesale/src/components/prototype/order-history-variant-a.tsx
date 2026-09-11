@@ -51,7 +51,7 @@ export function OrderHistoryVariantADetail({ order }: { order: PrototypeOrder })
   return (
     <article className="flex flex-col gap-8">
       <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
-        <Link href="/orders/prototype/a" className="hover:text-accent">
+        <Link href="/order-history-prototype/a" className="hover:text-accent">
           Orders
         </Link>
         <span className="mx-2">/</span>
