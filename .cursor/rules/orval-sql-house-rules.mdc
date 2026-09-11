@@ -1,0 +1,14 @@
+---
+description: Adapter SQL binds and Orval envelope loading — prevent the PR #303 class of breaks.
+alwaysApply: true
+---
+
+# Adapter SQL and Orval envelopes
+
+Mirror of [`AGENTS.md`](../../AGENTS.md) “Adapter SQL and Orval envelopes”. Incident: [PR #303](https://github.com/adamhinckley/dc-inventory/pull/303).
+
+- PGlite-test every new raw SQL adapter path (`VALUES` / `UNION` / branded uuid binds). In-memory use-case tests do not count.
+- Cast uuid (and other non-text) binds in SQL fragments. Prefer `eq(column, brandedId)` when Drizzle can type it. Raw `` sql`${brandedId}` `` is text.
+- Treat SQL rewrites (OR→VALUES, listAll→filtered SQL) as new queries — re-test the SQL.
+- Staff tables: take `busy` / `listFailed` from `useDataTable` or use `DataTable.Root`. Ban `envelope === undefined && query.isError !== true`.
+- Success = `isSuccessfulOrvalResponse` / status 2xx. Internal Orval `customFetch` does not throw on HTTP 500. Do not key loading on `!query.isError` alone.

@@ -61,6 +61,12 @@ export function useHydrated(): boolean {
  * Full-table loading chrome. Ignore React Query `isLoading` here: on the server
  * `fetchStatus` is idle, so `isLoading` is false while the client first paint
  * is fetching — that mismatch disabled the Next button (`true` vs `null`).
+ *
+ * Staff tables must take `busy` / `listFailed` from `useDataTable` (or compose
+ * `DataTable.Root`). Do not hand-roll `envelope === undefined && query.isError
+ * !== true`: Orval `customFetch` returns `{ data, status, headers }` and does
+ * not throw on HTTP 500, so `isError` stays false on a failed envelope
+ * (PR #303). Success is `isSuccessfulOrvalResponse` / status 2xx.
  */
 export function isListQueryFailed(
   hydrated: boolean,

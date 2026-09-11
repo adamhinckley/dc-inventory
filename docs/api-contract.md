@@ -274,6 +274,8 @@ When adding or changing a table:
 4. Run `pnpm gen:api`.
 5. Point the page at the regenerated hook + meta. Do not add a one-off filter component.
 
+Orval `customFetch` returns `{ data, status, headers }` and **does not throw** on HTTP 500. Treat success as `isSuccessfulOrvalResponse` / status 2xx. Staff tables take `busy` / `listFailed` from `useDataTable` (or `DataTable.Root`) — do not hand-roll `envelope === undefined && query.isError !== true`. See root `AGENTS.md` “Adapter SQL and Orval envelopes”.
+
 Do not introduce GraphQL, tRPC, a generic `?filter=JSON` query language, Elasticsearch, or a BI tool (Metabase/Superset) in v1.
 
 ---

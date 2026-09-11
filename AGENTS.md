@@ -51,6 +51,16 @@ Also obey: [`docs/tax.md`](./docs/tax.md), [`docs/customers.md`](./docs/customer
 10. **One agent, one context, one branch.** Stop when the ticket’s tests are green. Do not expand scope.
 11. **Do not start long-running servers.** Never run `pnpm dev:api`, `pnpm dev:internal`, `pnpm dev:wholesale`, `next dev`, `next start`, or equivalent (foreground or background). Do not `docker compose up` as a watch. If a server is required, tell the owner the exact commands and ports; they start it. One-shot `pnpm test`, `pnpm lint`, `pnpm db:migrate`, and `pnpm gen:api` are allowed.
 
+## Adapter SQL and Orval envelopes
+
+Prevent the [PR #303](https://github.com/adamhinckley/dc-inventory/pull/303) class of breaks (Postgres `uuid = text` 500, then an infinite spinner because Orval `customFetch` does not throw). Mirror in [`.cursor/rules/orval-sql-house-rules.mdc`](./.cursor/rules/orval-sql-house-rules.mdc). CI greps: `scripts/ci-house-rules.sh`.
+
+- **PGlite-test** every new raw SQL adapter path (`VALUES` / `UNION` / branded uuid binds). In-memory use-case tests do not count.
+- **Cast uuid** (and other non-text) binds in SQL fragments. Prefer `eq(column, brandedId)` when Drizzle can type it. Raw `` sql`${brandedId}` `` is text.
+- Treat SQL rewrites (OR→VALUES, listAll→filtered SQL) as **new queries** — re-test the SQL, do not rely on the old in-memory suite.
+- **Staff tables:** take `busy` / `listFailed` from `useDataTable` or use `DataTable.Root`. Ban hand-rolled `envelope === undefined && query.isError !== true`.
+- **Success = `isSuccessfulOrvalResponse` / status 2xx.** `customFetch` returns `{ data, status, headers }` and does not throw on HTTP 500. Do not key loading on `!query.isError` alone.
+
 ## Work packets
 
 Implementation tickets (not grilling/map decisions) must be this shape **before** `ready-for-agent`. All five fields written, not implied:
