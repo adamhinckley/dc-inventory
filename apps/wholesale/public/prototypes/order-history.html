@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Order history prototypes — David Christopher's</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Figtree:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --canvas: #f6f1e8;
+        --canvas-muted: #ebe3d6;
+        --card: #fffdf8;
+        --ink: #1f1b16;
+        --ink-muted: #5c5348;
+        --line: #e4d9c8;
+        --line-strong: #c9b89e;
+        --accent: #8a3d14;
+        --on-accent: #fffdf8;
+        --input-h: 48px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: Figtree, ui-sans-serif, system-ui, sans-serif;
+      }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+      .section-title {
+        margin: 0;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      h1 {
+        margin: 8px 0 0;
+        font-family: "Cormorant Garamond", Georgia, serif;
+        font-size: 2.25rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .muted { color: var(--ink-muted); }
+      .banner, .card, .row {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+      }
+      .banner { padding: 16px 20px; margin: 24px 0; }
+      .tabs, .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      button, .btn {
+        min-height: var(--input-h);
+        border-radius: 999px;
+        padding: 0 16px;
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+      .btn-primary { border: 0; background: var(--accent); color: var(--on-accent); }
+      .btn-secondary { border: 1px solid var(--line-strong); background: var(--card); color: var(--ink); }
+      .grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+      .grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+      .split { display: grid; gap: 24px; }
+      @media (min-width: 900px) {
+        .split { grid-template-columns: 20rem 1fr; }
+      }
+      .list { overflow: hidden; }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        padding: 16px 20px;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+      }
+      .row:last-child { border-bottom: 0; }
+      .card { padding: 20px; display: flex; flex-direction: column; gap: 12px; text-align: left; width: 100%; }
+      .pill {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+      th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--line); }
+      th { color: var(--ink-muted); font-weight: 500; }
+      .right { text-align: right; }
+      input.shop {
+        min-height: var(--input-h);
+        width: 13rem;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--canvas);
+        padding: 0 12px;
+        color: var(--ink);
+        font: inherit;
+      }
+      .aside { padding: 16px; }
+      .aside button {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        border-radius: 0;
+        text-align: left;
+        padding: 12px;
+        min-height: 0;
+      }
+      .aside button[aria-current="true"] { background: var(--canvas-muted); }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p class="section-title">Prototype</p>
+      <h1>Order History Layouts</h1>
+      <p class="muted">Mock data. Same three orders in each layout. Notes go on ADA-405.</p>
+      <div class="banner">
+        <div class="tabs" id="variant-tabs"></div>
+      </div>
+      <div id="app"></div>
+    </div>
+    <script>
+      const ORDERS = [
+        {
+          documentNumber: "SO-00042",
+          status: "Confirmed",
+          placedOn: "Sep 8, 2026",
+          ship: "200 Ship St, Seattle WA",
+          city: "Seattle",
+          total: "$366.00",
+          lines: [
+            ["Harvest Pumpkin Trio", "PUMP-TRIO", 12, "$18.50", "$222.00"],
+            ["Amber Glass Hurricane", "HURR-AMB", 6, "$24.00", "$144.00"],
+          ],
+        },
+        {
+          documentNumber: "SO-00038",
+          status: "Shipped",
+          placedOn: "Aug 22, 2026",
+          ship: "14 Market Row, Portland OR",
+          city: "Portland",
+          total: "$384.00",
+          lines: [["Linen Table Runner", "LIN-RUN-90", 24, "$16.00", "$384.00"]],
+        },
+        {
+          documentNumber: "SO-00031",
+          status: "Cancelled",
+          placedOn: "Jul 14, 2026",
+          ship: "88 Pine Ave, Boise ID",
+          city: "Boise",
+          total: "$218.00",
+          lines: [
+            ["Ceramic Compote", "CER-COM-LG", 4, "$32.00", "$128.00"],
+            ["Dried Eucalyptus Bundle", "EUC-BND", 10, "$9.00", "$90.00"],
+          ],
+        },
+      ];
+
+      const state = { variant: "overview", filter: "All", selected: "SO-00042", page: "list", so: null };
+
+      const VARIANTS = [
+        ["overview", "Overview"],
+        ["a", "A · Compact"],
+        ["b", "B · Cards"],
+        ["c", "C · Split"],
+      ];
+
+      function linesTable(order) {
+        return `<section class="list">
+          <table>
+            <thead><tr><th>Item</th><th>SKU</th><th class="right">Qty</th><th class="right">Price</th><th class="right">Total</th></tr></thead>
+            <tbody>${order.lines
+              .map(
+                (line) =>
+                  `<tr><td>${line[0]}</td><td class="muted">${line[1]}</td><td class="right">${line[2]}</td><td class="right">${line[3]}</td><td class="right">${line[4]}</td></tr>`,
+              )
+              .join("")}</tbody>
+          </table>
+          <div class="row"><strong>Subtotal</strong><strong>${order.total}</strong></div>
+        </section>`;
+      }
+
+      function shipCard(order) {
+        return `<section class="card"><strong>Ship To</strong><p class="muted" style="margin:8px 0 0">${order.ship}</p></section>`;
+      }
+
+      function renderDetail(order, back) {
+        if (state.variant === "b") {
+          const steps =
+            order.status === "Cancelled"
+              ? "Placed · Cancelled"
+              : order.status === "Shipped"
+                ? "Placed · Confirmed · Shipped"
+                : "Placed · Confirmed · Shipped";
+          return `<article>
+            <p class="muted"><button class="btn-secondary" data-back="${back}">Back to Orders</button></p>
+            <header class="card" style="text-align:center;margin:16px 0">
+              <p class="section-title">Receipt</p>
+              <h1>${order.documentNumber}</h1>
+              <p class="muted">Placed ${order.placedOn}</p>
+              <p class="pill">${order.status}</p>
+              <p class="muted">${steps}</p>
+            </header>
+            ${shipCard(order)}${linesTable(order)}
+          </article>`;
+        }
+        return `<article>
+          <p class="muted"><button class="btn-secondary" data-back="${back}">Back to Orders</button></p>
+          <header style="display:flex;justify-content:space-between;align-items:end;gap:16px;margin:16px 0">
+            <div><p class="section-title">Order</p><h1>${order.documentNumber}</h1></div>
+            <span class="pill">${order.status}</span>
+          </header>
+          ${shipCard(order)}${linesTable(order)}
+        </article>`;
+      }
+
+      function renderA() {
+        if (state.page === "detail") {
+          return renderDetail(
+            ORDERS.find((o) => o.documentNumber === state.so),
+            "a",
+          );
+        }
+        return `<div class="list">${ORDERS.map(
+          (o) => `<div class="row">
+            <div>
+              <strong data-open="a:${o.documentNumber}" style="cursor:pointer">${o.documentNumber}</strong>
+              <div class="muted">${o.status}</div>
+              <div class="muted">Ship to ${o.ship}</div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center">
+              <strong>${o.total}</strong>
+              <button class="btn-secondary" data-open="a:${o.documentNumber}">Open</button>
+            </div>
+          </div>`,
+        ).join("")}</div>`;
+      }
+
+      function renderB() {
+        if (state.page === "detail") {
+          return renderDetail(
+            ORDERS.find((o) => o.documentNumber === state.so),
+            "b",
+          );
+        }
+        const chips = ["All", "Confirmed", "Shipped", "Cancelled"];
+        const rows = ORDERS.filter((o) => state.filter === "All" || o.status === state.filter);
+        return `<div class="chips" style="margin-bottom:16px">${chips
+          .map(
+            (c) =>
+              `<button class="${c === state.filter ? "btn-primary" : "btn-secondary"}" data-filter="${c}">${c}</button>`,
+          )
+          .join("")}</div>
+        <div class="grid-2">${rows
+          .map(
+            (o) => `<button class="card" data-open="b:${o.documentNumber}">
+              <div style="display:flex;justify-content:space-between"><strong>${o.documentNumber}</strong><span class="pill">${o.status}</span></div>
+              <div class="muted">${o.placedOn} · ${o.city}</div>
+              <strong>${o.total}</strong>
+            </button>`,
+          )
+          .join("")}</div>`;
+      }
+
+      function renderC() {
+        const selected = ORDERS.find((o) => o.documentNumber === state.selected);
+        return `<div class="split">
+          <aside class="card aside">
+            ${ORDERS.map(
+              (o) =>
+                `<button aria-current="${o.documentNumber === state.selected}" data-select="${o.documentNumber}">
+                  <strong>${o.documentNumber}</strong><div class="muted">${o.status} · ${o.city}</div>
+                </button>`,
+            ).join("")}
+          </aside>
+          <div>
+            <p class="section-title">Selected</p>
+            <h1>${selected.documentNumber}</h1>
+            <p class="muted">Placed ${selected.placedOn} · ${selected.status} · ${selected.total}</p>
+            ${shipCard(selected)}${linesTable(selected)}
+          </div>
+        </div>`;
+      }
+
+      function renderOverview() {
+        return `<div class="grid-3">
+          <button class="card" data-variant="a"><strong>A · Compact</strong><p class="muted">Simple rows and a stacked detail. Closest to what is shipping.</p></button>
+          <button class="card" data-variant="b"><strong>B · Cards</strong><p class="muted">Status chips and a receipt-style detail with a short timeline.</p></button>
+          <button class="card" data-variant="c"><strong>C · Split</strong><p class="muted">List and detail on one page.</p></button>
+        </div>`;
+      }
+
+      function render() {
+        document.getElementById("variant-tabs").innerHTML = VARIANTS.map(
+          ([id, label]) =>
+            `<button class="${state.variant === id ? "btn-primary" : "btn-secondary"}" data-variant="${id}">${label}</button>`,
+        ).join("");
+        const app = document.getElementById("app");
+        if (state.variant === "overview") app.innerHTML = renderOverview();
+        if (state.variant === "a") app.innerHTML = renderA();
+        if (state.variant === "b") app.innerHTML = renderB();
+        if (state.variant === "c") app.innerHTML = renderC();
+      }
+
+      document.body.addEventListener("click", (event) => {
+        const t = event.target.closest("[data-variant],[data-open],[data-filter],[data-select],[data-back]");
+        if (!t) return;
+        if (t.dataset.variant) {
+          state.variant = t.dataset.variant;
+          state.page = "list";
+        }
+        if (t.dataset.open) {
+          const [variant, so] = t.dataset.open.split(":");
+          state.variant = variant;
+          state.page = "detail";
+          state.so = so;
+        }
+        if (t.dataset.filter) state.filter = t.dataset.filter;
+        if (t.dataset.select) state.selected = t.dataset.select;
+        if (t.dataset.back) {
+          state.variant = t.dataset.back;
+          state.page = "list";
+        }
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>
