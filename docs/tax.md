@@ -2,7 +2,7 @@
 
 This company sells **wholesale to resellers only**. It does not sell to taxable end-users. **v1 does not quote, commit, or store sales tax.**
 
-Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./database-design.md) · [`invariants.md`](./invariants.md) (C15, TX1–TX3) · [`customers.md`](./customers.md) (reseller Tax ID and exemption files are customer master, not a tax engine).
+Related: [`architecture.md`](./architecture.md) · [`database-design.md`](./database-design.md) · [`invariants.md`](./invariants.md) (C15, TX1–TX3) · [`customers.md`](./customers.md) (reseller Tax ID and exemption files are customer master, not a tax engine) · [`wholesale-resale-license-onboarding.md`](./wholesale-resale-license-onboarding.md) (resale / “wholesale license” research; does not change v1).
 
 There is no Tax bounded context in the product law. There is no `ITaxCalculator`. Checkout and invoices are merchandise amounts only.
 
