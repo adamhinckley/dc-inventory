@@ -33,6 +33,7 @@ export {
 } from "./application/apply-sales-order-line-deltas.js";
 export { DecommitSalesOrderLineUseCase } from "./application/decommit-sales-order-line.js";
 export { GetSalesOrderUseCase } from "./application/get-sales-order.js";
+export { GetSalesOrderByDocumentNumberUseCase } from "./application/get-sales-order-by-document-number.js";
 export { ListSalesOrdersUseCase } from "./application/list-sales-orders.js";
 export {
   ShipSalesOrderUseCase,

@@ -1372,6 +1372,10 @@ export const salesOrderIdParamsSchema = z.object({
   id: z.string().uuid(),
 });
 
+export const salesOrderDocumentNumberParamsSchema = z.object({
+  documentNumber: z.string().min(1),
+});
+
 const salesOrderLineInputSchema = z.object({
   productId: z.string().uuid(),
   qty: z.number().int().positive(),

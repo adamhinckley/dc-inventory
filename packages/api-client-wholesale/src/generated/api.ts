@@ -75,6 +75,10 @@ import type {
   GetWholesaleSalesOrder401,
   GetWholesaleSalesOrder403,
   GetWholesaleSalesOrder404,
+  GetWholesaleSalesOrderByDocumentNumber200,
+  GetWholesaleSalesOrderByDocumentNumber401,
+  GetWholesaleSalesOrderByDocumentNumber403,
+  GetWholesaleSalesOrderByDocumentNumber404,
   GetWholesaleSession200,
   GetWholesaleSession401,
   ListActingCustomers200,
@@ -2377,6 +2381,112 @@ export const useCreateWholesaleSalesOrder = <TError = CreateWholesaleSalesOrder4
       > => {
       return useMutation(getCreateWholesaleSalesOrderMutationOptions(options));
     }
+
+export type getWholesaleSalesOrderByDocumentNumberResponse200 = {
+  data: GetWholesaleSalesOrderByDocumentNumber200
+  status: 200
+}
+
+export type getWholesaleSalesOrderByDocumentNumberResponse401 = {
+  data: GetWholesaleSalesOrderByDocumentNumber401
+  status: 401
+}
+
+export type getWholesaleSalesOrderByDocumentNumberResponse403 = {
+  data: GetWholesaleSalesOrderByDocumentNumber403
+  status: 403
+}
+
+export type getWholesaleSalesOrderByDocumentNumberResponse404 = {
+  data: GetWholesaleSalesOrderByDocumentNumber404
+  status: 404
+}
+
+export type getWholesaleSalesOrderByDocumentNumberResponseSuccess = (getWholesaleSalesOrderByDocumentNumberResponse200) & {
+  headers: Headers;
+};
+export type getWholesaleSalesOrderByDocumentNumberResponseError = (getWholesaleSalesOrderByDocumentNumberResponse401 | getWholesaleSalesOrderByDocumentNumberResponse403 | getWholesaleSalesOrderByDocumentNumberResponse404) & {
+  headers: Headers;
+};
+
+export type getWholesaleSalesOrderByDocumentNumberResponse = (getWholesaleSalesOrderByDocumentNumberResponseSuccess | getWholesaleSalesOrderByDocumentNumberResponseError)
+
+export const getGetWholesaleSalesOrderByDocumentNumberUrl = (documentNumber: string,) => {
+
+
+
+
+  return `/wholesale/sales-orders/by-document-number/${documentNumber}`
+}
+
+/**
+ * @summary Get sales order by exact document number for session customer
+ */
+export const getWholesaleSalesOrderByDocumentNumber = async (documentNumber: string, options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleSalesOrderByDocumentNumberResponse> => {
+
+  return customFetch<getWholesaleSalesOrderByDocumentNumberResponse>(getGetWholesaleSalesOrderByDocumentNumberUrl(documentNumber),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWholesaleSalesOrderByDocumentNumberQueryKey = (documentNumber: string,) => {
+    return [
+    `/wholesale/sales-orders/by-document-number/${documentNumber}`
+    ] as const;
+    }
+
+
+export const getGetWholesaleSalesOrderByDocumentNumberQueryOptions = <TData = Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>, TError = GetWholesaleSalesOrderByDocumentNumber401 | GetWholesaleSalesOrderByDocumentNumber403 | GetWholesaleSalesOrderByDocumentNumber404>(documentNumber: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWholesaleSalesOrderByDocumentNumberQueryKey(documentNumber);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>> = ({ signal }) => getWholesaleSalesOrderByDocumentNumber(documentNumber, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: documentNumber !== null && documentNumber !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWholesaleSalesOrderByDocumentNumberQueryResult = NonNullable<Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>>
+export type GetWholesaleSalesOrderByDocumentNumberQueryError = GetWholesaleSalesOrderByDocumentNumber401 | GetWholesaleSalesOrderByDocumentNumber403 | GetWholesaleSalesOrderByDocumentNumber404
+
+
+/**
+ * @summary Get sales order by exact document number for session customer
+ */
+
+export function useGetWholesaleSalesOrderByDocumentNumber<TData = Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>, TError = GetWholesaleSalesOrderByDocumentNumber401 | GetWholesaleSalesOrderByDocumentNumber403 | GetWholesaleSalesOrderByDocumentNumber404>(
+ documentNumber: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWholesaleSalesOrderByDocumentNumberQueryOptions(documentNumber,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type getWholesaleSalesOrderResponse200 = {
   data: GetWholesaleSalesOrder200
