@@ -2,7 +2,7 @@
 
 Research and owner grill only. Do not implement a tax engine, flip [U13](./invariants.md), or invent SoloView API behavior from this note.
 
-Related: [`tax.md`](./tax.md) (v1 calculates no sales tax) · [`customers.md`](./customers.md) §9 (certs are evidence) · [`customers.md`](./customers.md) §15 (SoloView new-account form) · [`invariants.md`](./invariants.md) U12–U13, TX1–TX3 · [2026-09-07 transcript](./transcripts/2026-09-07/transcript.md) (resale certificates, Virginia).
+Related: [Wholesale resale license — onboarding](https://linear.app/adamhinckley/project/wholesale-resale-license-onboarding-620f6bb53aa7) · [`tax.md`](./tax.md) (v1 calculates no sales tax) · [`customers.md`](./customers.md) §9 (certs are evidence) · [`customers.md`](./customers.md) §15 (SoloView new-account form) · [`invariants.md`](./invariants.md) U12–U13, TX1–TX3 · [2026-09-07 transcript](./transcripts/2026-09-07/transcript.md) (resale certificates, Virginia).
 
 Header **Tax ID** is an optional reseller identifier on the account. It is **not** an exemption certificate.
 
