@@ -29,3 +29,15 @@ export function formatOrderStatus(status: string): string {
   }
   return `${status[0]?.toUpperCase() ?? ""}${status.slice(1)}`;
 }
+
+export function formatOrderDate(isoDate: string | undefined): string {
+  if (isoDate === undefined) {
+    return "—";
+  }
+  return new Date(isoDate).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}

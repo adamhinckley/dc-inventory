@@ -10,6 +10,7 @@ import {
 import {
   Button,
   Chip,
+  DescriptionList,
   formatMoneyMinorUnits,
   Table,
   useTable,
@@ -41,16 +42,12 @@ import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 function CustomerName({ customerId }: { customerId: string }) {
   const customerQuery = useGetInternalCustomer(customerId);
   if (customerQuery.data?.status !== 200) {
-    return null;
+    return "—";
   }
-  return (
-    <p className="text-body-sm text-fg-secondary mt-2">
-      Customer: {customerQuery.data.data.name}
-    </p>
-  );
+  return customerQuery.data.data.name;
 }
 
-function ShipToSnapshot({
+function shipToLines({
   shipLine1,
   shipLine2,
   shipCity,
@@ -64,28 +61,15 @@ function ShipToSnapshot({
   shipRegion?: string;
   shipPostal?: string;
   shipCountry?: string;
-}) {
+}): string[] {
   if (!shipLine1 && !shipCity) {
-    return (
-      <p className="text-body-sm text-fg-secondary mt-4">
-        Ship-to snapshot: not captured on this order.
-      </p>
-    );
+    return [];
   }
-
-  return (
-    <div className="section-flat mt-4 rounded-section p-4">
-      <h2 className="text-body-sm font-semibold text-fg">Ship To</h2>
-      <p className="text-body-sm text-fg-secondary mt-2">
-        {shipLine1}
-        {shipLine2 ? `, ${shipLine2}` : ""}
-        <br />
-        {shipCity}, {shipRegion} {shipPostal}
-        <br />
-        {shipCountry}
-      </p>
-    </div>
-  );
+  const street = [shipLine1, shipLine2].filter((part) => Boolean(part)).join(", ");
+  const locality = [shipCity, [shipRegion, shipPostal].filter(Boolean).join(" ")]
+    .filter((part) => part !== "")
+    .join(", ");
+  return [street, locality, shipCountry].filter((part): part is string => Boolean(part));
 }
 
 export function SalesOrderFrozenWorkspace({
@@ -264,29 +248,19 @@ export function SalesOrderFrozenWorkspace({
     cancelPending: cancelMutation.isPending,
   });
   const statusPresentation = salesOrderStatusPresentation(status);
+  const shipTo = shipToLines({
+    shipLine1,
+    shipLine2,
+    shipCity,
+    shipRegion,
+    shipPostal,
+    shipCountry,
+  });
 
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-form-section">
-      <header className="flex flex-col gap-region sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-action">
-            <h1 className="page-title">{documentNumber}</h1>
-            <Chip
-              icon={<Chip.Dot />}
-              style={
-                statusPresentation
-                  ? ({ "--chip-color": statusPresentation.color } as CSSProperties)
-                  : undefined
-              }
-            >
-              {statusPresentation?.label ?? status}
-            </Chip>
-          </div>
-          <p className="page-description mt-2">
-            Lines and prices are frozen for this {status} order.
-          </p>
-          <CustomerName customerId={customerId} />
-        </div>
+      <header className="flex flex-wrap items-start justify-end gap-action">
+        <h1 className="sr-only">{documentNumber}</h1>
         <div className="flex shrink-0 flex-wrap items-center gap-action">
           <Button
             type="button"
@@ -309,14 +283,51 @@ export function SalesOrderFrozenWorkspace({
         </div>
       </header>
 
-      <ShipToSnapshot
-        shipLine1={shipLine1}
-        shipLine2={shipLine2}
-        shipCity={shipCity}
-        shipRegion={shipRegion}
-        shipPostal={shipPostal}
-        shipCountry={shipCountry}
-      />
+      <DescriptionList maxColumns={4} data-testid="sales-order-summary-list">
+        <DescriptionList.Item>
+          <DescriptionList.Term>SO number</DescriptionList.Term>
+          <DescriptionList.Data>{documentNumber}</DescriptionList.Data>
+        </DescriptionList.Item>
+        <DescriptionList.Item>
+          <DescriptionList.Term>Customer</DescriptionList.Term>
+          <DescriptionList.Data pii>
+            <CustomerName customerId={customerId} />
+          </DescriptionList.Data>
+        </DescriptionList.Item>
+        <DescriptionList.Item>
+          <DescriptionList.Term>Status</DescriptionList.Term>
+          <DescriptionList.Data>
+            <Chip
+              icon={<Chip.Dot />}
+              style={
+                statusPresentation
+                  ? ({ "--chip-color": statusPresentation.color } as CSSProperties)
+                  : undefined
+              }
+            >
+              {statusPresentation?.label ?? status}
+            </Chip>
+          </DescriptionList.Data>
+        </DescriptionList.Item>
+        <DescriptionList.Item>
+          <DescriptionList.Term>Subtotal</DescriptionList.Term>
+          <DescriptionList.Data className="tabular-nums">
+            {formatMoneyMinorUnits(subtotalCents, currency)}
+          </DescriptionList.Data>
+        </DescriptionList.Item>
+        <DescriptionList.Item span={2}>
+          <DescriptionList.Term>Ship to</DescriptionList.Term>
+          <DescriptionList.Data pii>
+            {shipTo.length === 0
+              ? "—"
+              : shipTo.map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
+          </DescriptionList.Data>
+        </DescriptionList.Item>
+      </DescriptionList>
 
       <div className="flex min-h-0 flex-1 flex-col gap-tight">
         <Table sticky table={table} emptyMessage="This sales order has no lines.">
@@ -324,12 +335,6 @@ export function SalesOrderFrozenWorkspace({
           <Table.Body />
           <Table.Empty />
         </Table>
-      </div>
-
-      <div className="section-flat rounded-section px-4 py-3">
-        <p className="text-body-sm font-semibold text-fg">
-          Subtotal {formatMoneyMinorUnits(subtotalCents, currency)}
-        </p>
       </div>
     </section>
   );

@@ -2,6 +2,7 @@ import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-
 import { SalesTransactionError, type CoverShortage } from "../domain/errors.js";
 import type { ICustomerBillToSnapshotReadPort } from "../domain/ports/customer-bill-to-snapshot-read.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
+import type { IClock } from "../domain/clock.js";
 import { liveSalesOrderLines, type SalesOrder } from "../domain/sales-order.js";
 
 export type ShipSalesOrderRequest = {
@@ -33,6 +34,7 @@ export class ShipSalesOrderUseCase {
   constructor(
     private readonly uow: ISalesUnitOfWork,
     private readonly billToSnapshot: ICustomerBillToSnapshotReadPort,
+    private readonly clock?: IClock,
   ) {}
 
   async execute(input: ShipSalesOrderRequest): Promise<ShipSalesOrderResult> {
@@ -124,7 +126,11 @@ export class ShipSalesOrderUseCase {
           throw new SalesTransactionError("accounting_invalid");
         }
 
-        const shipped: SalesOrder = { ...existing, status: "shipped" };
+        const shipped: SalesOrder = {
+          ...existing,
+          status: "shipped",
+          shippedAt: existing.shippedAt ?? this.clock?.now() ?? new Date(),
+        };
         await scope.salesOrders.save(shipped, existing);
         return { ok: true, salesOrder: shipped };
       });

@@ -68,6 +68,9 @@ export async function createCommittedCustomerNamesSqlEvaluator() {
       document_number text NOT NULL,
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now(),
+      confirmed_at timestamptz,
+      shipped_at timestamptz,
+      cancelled_at timestamptz,
       UNIQUE (organization_id, id)
     );
     CREATE TABLE sales.order_lines (

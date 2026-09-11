@@ -819,7 +819,7 @@ describe("internal purchase orders HTTP", () => {
     expect(illegal.json()).toEqual({ error: "conflict" });
   });
 
-  it("returns short readout with uncovered rows and affected customers", async () => {
+  it("returns short readout with toOrder rows and affected customers", async () => {
     const passwords = new InMemoryPasswordHasher();
     const organizations = new InMemoryOrganizationRepository();
     await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
@@ -962,9 +962,9 @@ describe("internal purchase orders HTTP", () => {
     });
     expect(readout.statusCode).toBe(200);
     expect(readout.json()).toEqual({
-      uncovered: [
-        { sku: SKU_A.value, uncovered: 10 },
-        { sku: SKU_B.value, uncovered: 0 },
+      toOrder: [
+        { sku: SKU_A.value, toOrder: 10 },
+        { sku: SKU_B.value, toOrder: 0 },
       ],
       affectedCustomers: [{ customerId: CUSTOMER_ID, name: "Acme Wholesale" }],
     });
@@ -988,9 +988,9 @@ describe("internal purchase orders HTTP", () => {
     });
     expect(cleared.statusCode).toBe(200);
     expect(cleared.json()).toEqual({
-      uncovered: [
-        { sku: SKU_A.value, uncovered: 0 },
-        { sku: SKU_B.value, uncovered: 0 },
+      toOrder: [
+        { sku: SKU_A.value, toOrder: 0 },
+        { sku: SKU_B.value, toOrder: 0 },
       ],
       affectedCustomers: [],
     });

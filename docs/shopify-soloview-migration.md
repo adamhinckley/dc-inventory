@@ -4,6 +4,8 @@ Planning and access only. Do not implement `packages/shopify-bridge` from this n
 
 This repo has no SoloView / SoloVue source, admin screenshots, or API docs. Do not invent how the current sync works. Discover it from David, SoloVue, and Shopify admin.
 
+Related / tracking: Discovery is [SoloView Shopify migration — discovery](https://linear.app/adamhinckley/project/soloview-shopify-migration-discovery-d4a192f93f5f). Seed issue [DCI-398](https://linear.app/adamhinckley/issue/DCI-398) is the discovery checklist. Implementation stays on the [Shopify channel](https://linear.app/adamhinckley/project/shopify-channel-86c419ea2311) project.
+
 ---
 
 ## Purpose

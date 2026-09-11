@@ -31,6 +31,7 @@ import {
   parseDollarsToCents,
   todayIsoDate,
 } from "../lib/customer-accounting-format";
+import { createIdempotencyKey } from "../lib/create-idempotency-key";
 import { invalidateCustomerAccountingQueries } from "../lib/customer-accounting-queries";
 
 const PAYMENT_METHOD_OPTIONS = [
@@ -40,10 +41,6 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: "cash", label: "Cash" },
   { value: "other", label: "Other" },
 ] as const;
-
-function createIdempotencyKey(): string {
-  return globalThis.crypto.randomUUID();
-}
 
 export function CustomerAccountingRecordPayment({
   customerId,

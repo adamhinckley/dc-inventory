@@ -14,7 +14,7 @@ import {
 const PAGE_SIZE = 50;
 
 export function OrdersHistoryView() {
-  const history = useListWholesaleSalesOrders({
+  const orders = useListWholesaleSalesOrders({
     page: 1,
     pageSize: PAGE_SIZE,
     sortBy: "documentNumber",
@@ -22,18 +22,18 @@ export function OrdersHistoryView() {
   });
 
   const visibleOrders = useMemo(() => {
-    const payload = history.data?.data;
+    const payload = orders.data?.data;
     const items = payload && "items" in payload ? payload.items : [];
     return items
       .filter((order) => isVisibleOrderStatus(order.status))
       .sort((left, right) => right.documentNumber.localeCompare(left.documentNumber));
-  }, [history.data?.data]);
+  }, [orders.data?.data]);
 
-  if (history.isPending) {
+  if (orders.isPending) {
     return <p className="text-ink-muted">Loading orders…</p>;
   }
 
-  if (history.isError) {
+  if (orders.isError) {
     return (
       <p className="text-sold-out" role="alert">
         Order history is unavailable. Start the API with `pnpm dev:api` and reload.
@@ -59,9 +59,8 @@ export function OrdersHistoryView() {
     <div className="overflow-hidden rounded-2xl border border-line bg-card">
       <ul className="divide-y divide-line">
         {visibleOrders.map((order) => {
-          const currency = order.lines[0]?.currency ?? "USD";
-          const subtotalCents = orderSubtotalCents(order.lines);
           const href = orderHistoryPath(order.documentNumber);
+          const currency = order.lines[0]?.currency ?? "USD";
           return (
             <li key={order.id}>
               <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -78,7 +77,7 @@ export function OrdersHistoryView() {
                 </div>
                 <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                   <p className="text-base font-medium text-ink">
-                    {formatMoneyMinorUnits(subtotalCents, currency)}
+                    {formatMoneyMinorUnits(orderSubtotalCents(order.lines), currency)}
                   </p>
                   <Link
                     href={href}

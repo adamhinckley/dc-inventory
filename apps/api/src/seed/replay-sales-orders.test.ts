@@ -278,6 +278,36 @@ describe("replay sales orders (in-memory)", () => {
       expect(order.shipCountry).toBe(planned!.shipTo.country);
     }
 
+    for (const order of confirmed) {
+      const planned = plannedForDocumentNumber(order.documentNumber);
+      const shipAt = shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
+      const expectedConfirmedAt = allocateInstant(
+        planned!.plannedInstant,
+        shipAt,
+        planned!.status === "shipped",
+      );
+      expect(order.confirmedAt?.getTime()).toBe(expectedConfirmedAt.getTime());
+      expect(order.shippedAt).toBeUndefined();
+    }
+
+    for (const order of shipped) {
+      const planned = plannedForDocumentNumber(order.documentNumber);
+      const expectedShippedAt =
+        shipInstantBySalesOrderKey.get(planned!.key) ?? planned!.plannedInstant;
+      const expectedConfirmedAt = allocateInstant(
+        planned!.plannedInstant,
+        expectedShippedAt,
+        true,
+      );
+      expect(order.confirmedAt?.getTime()).toBe(expectedConfirmedAt.getTime());
+      expect(order.shippedAt?.getTime()).toBe(expectedShippedAt.getTime());
+    }
+
+    for (const order of drafts) {
+      expect(order.confirmedAt).toBeUndefined();
+      expect(order.shippedAt).toBeUndefined();
+    }
+
     for (const order of shipped) {
       expect(order.lines.every((line) => line.qty > 0)).toBe(true);
       const invoice = await uow.invoices.findByOrderId(OrganizationId.DEFAULT, order.id);

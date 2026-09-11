@@ -117,20 +117,20 @@ export function casesForDraftPoQty(
 }
 
 /**
- * A picker click becomes a draft line. Qty covers uncovered demand,
+ * A picker click becomes a draft line. Qty covers toOrder demand,
  * rounded up to a master pack when case qty exists.
  */
 export function draftLineFromVendorProduct(product: {
   sku: string;
   catalogName: string;
   caseQty?: number | null;
-  qty?: { uncovered: number };
+  qty?: { toOrder: number };
 }): PurchaseOrderLineDraft {
   return {
     id: crypto.randomUUID(),
     sku: product.sku,
     name: product.catalogName,
-    qty: suggestedDraftPoQty(product.qty?.uncovered ?? 0, product.caseQty ?? null),
+    qty: suggestedDraftPoQty(product.qty?.toOrder ?? 0, product.caseQty ?? null),
   };
 }
 

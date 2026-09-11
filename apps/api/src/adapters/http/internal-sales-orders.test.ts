@@ -223,6 +223,7 @@ describe("internal sales orders HTTP", () => {
     });
     expect(confirmed.statusCode).toBe(200);
     expect(confirmed.json()).toMatchObject({ status: "confirmed" });
+    expect(typeof confirmed.json().confirmedAt).toBe("string");
 
     const shipped = await app.inject({
       method: "POST",
@@ -232,6 +233,7 @@ describe("internal sales orders HTTP", () => {
     });
     expect(shipped.statusCode).toBe(200);
     expect(shipped.json()).toMatchObject({ status: "shipped" });
+    expect(typeof shipped.json().shippedAt).toBe("string");
 
     const invoice = await unitOfWork.invoices.findByOrderId(
       OrganizationId.DEFAULT,
@@ -642,6 +644,57 @@ describe("internal sales orders HTTP", () => {
     for (const item of items) {
       expect(item.lines[0]?.productId).toBe(PRODUCT_ID);
     }
+  });
+
+  it("lists sales orders matching any of the repeated status filters", async () => {
+    const { app } = await startSalesApp();
+    const cookie = await staffCookie(app);
+
+    const draft = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(draft.statusCode).toBe(201);
+    const cancelled = await app.inject({
+      method: "POST",
+      url: "/internal/sales-orders",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: {
+        customerId: CUSTOMER_ID,
+        lines: [{ productId: PRODUCT_ID, qty: 1 }],
+      },
+    });
+    expect(cancelled.statusCode).toBe(201);
+    const cancel = await app.inject({
+      method: "POST",
+      url: `/internal/sales-orders/${cancelled.json().id as string}/cancel`,
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+      payload: { idempotencyKey: "http-list-status-cancel" },
+    });
+    expect(cancel.statusCode).toBe(200);
+
+    const both = await app.inject({
+      method: "GET",
+      url: "/internal/sales-orders?status=draft&status=cancelled",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(both.statusCode).toBe(200);
+    expect(
+      (both.json().items as Array<{ status: string }>).map((item) => item.status).sort(),
+    ).toEqual(["cancelled", "draft"]);
+
+    const confirmedOnly = await app.inject({
+      method: "GET",
+      url: "/internal/sales-orders?status=confirmed",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie },
+    });
+    expect(confirmedOnly.statusCode).toBe(200);
+    expect(confirmedOnly.json().items).toEqual([]);
   });
 
   it("line-jobs updates qty on a draft order", async () => {

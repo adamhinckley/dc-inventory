@@ -26,7 +26,7 @@ export const inventoryListTable = {
     { field: "onHand", label: "On hand" },
     { field: "onOrder", label: "On order" },
     { field: "allocated", label: "Allocated" },
-    { field: "committed", label: "Committed (pre-sold)" },
+    { field: "committed", label: "Pre-sold" },
     { field: "available", label: "Available (warehouse)" },
     { field: "availableToSell", label: "Available to sell" },
     { field: "sellState", label: "Sell state" },

@@ -158,6 +158,8 @@ Wholesale customer or staff may upload the file. Metadata-only rows (no file) ar
 
 **Not a gate:** customer may exist, confirm, and ship with zero certificates or only expired ones. Missing/expired is visible only — no auto-flip, no confirm block in v1.
 
+Research on what “wholesale license” actually is, Alabama MAT verify, and gate-vs-evidence: [`wholesale-resale-license-onboarding.md`](./wholesale-resale-license-onboarding.md). Do not flip this gate from that note.
+
 **Not required at create.**
 
 ---
@@ -258,7 +260,7 @@ Modal title **New Account Registration**. Close (X). Stepper: 1 Primary Informat
 **Clash with locked customer master — do not silently “fix” either side:**
 
 - U5 create is staff header-only (name, payment **terms**, credit limit). This form collects a contact, referral source, website, business type, resale number, and one address **before** any Customer exists.
-- U13: exemption certificates are **not** a create/confirm/ship gate. SoloView asks for an official resale number and says a copy of resale/import authorization will be verified.
+- U13: exemption certificates are **not** a create/confirm/ship gate. SoloView asks for an official resale number and says a copy of resale/import authorization will be verified. What that number is (Alabama Sales Tax License vs STE-1 vs out-of-state) is still open — [`wholesale-resale-license-onboarding.md`](./wholesale-resale-license-onboarding.md).
 - One “main business address” is not labeled ship-to vs bill-to. Residential / retail-storefront flags do not exist on the v1 header.
 - Header **terms** (payment clock) never appear on this form. The later PandaDoc is the legal **wholesale agreement**.
 

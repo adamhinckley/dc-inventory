@@ -164,7 +164,7 @@ export async function recordCommittedWithCover(
 }
 
 /**
- * Receive cover sequence: after GoodsReceived, FIFO-allocate uncovered committed demand.
+ * Receive cover sequence: after GoodsReceived, FIFO-allocate toOrder committed demand.
  * Caller records GoodsReceived (with demand observation) before invoking.
  */
 export async function allocateReceiveCover(

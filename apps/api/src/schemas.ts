@@ -225,7 +225,7 @@ export const inventoryStockSnapshotSchema = z.object({
   available: z.number().int(),
 });
 
-export const uncoveredSkusListQuerySchema = z.object({
+export const preOrderSkusListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   supplierId: z.string().uuid().optional(),
@@ -235,14 +235,14 @@ export const uncoveredSkusListQuerySchema = z.object({
     .transform((value) => value === "true"),
 });
 
-export const uncoveredSkuDraftPurchaseOrderRefSchema = z.object({
+export const preOrderSkuDraftPurchaseOrderRefSchema = z.object({
   id: z.string().uuid(),
   documentNumber: z.string(),
 });
 
-export const uncoveredSkuListItemSchema = z.object({
+export const preOrderSkuListItemSchema = z.object({
   sku: z.string(),
-  uncovered: z.number().int().nonnegative(),
+  toOrder: z.number().int().nonnegative(),
   onHand: z.number().int(),
   onOrder: z.number().int(),
   committed: z.number().int(),
@@ -253,26 +253,26 @@ export const uncoveredSkuListItemSchema = z.object({
   supplierNumber: z.string().nullable(),
   supplierName: z.string().nullable(),
   mappingStatus: z.enum(["mapped", "unmapped", "ambiguous"]),
-  draftPurchaseOrder: uncoveredSkuDraftPurchaseOrderRefSchema.nullable(),
+  draftPurchaseOrder: preOrderSkuDraftPurchaseOrderRefSchema.nullable(),
 });
 
-export const uncoveredSkusListResponseSchema = z.object({
-  items: z.array(uncoveredSkuListItemSchema),
+export const preOrderSkusListResponseSchema = z.object({
+  items: z.array(preOrderSkuListItemSchema),
   page: z.number().int(),
   pageSize: z.number().int(),
   total: z.number().int(),
 });
 
-export const uncoveredSkusListTable = {
+export const preOrderSkusListTable = {
   rowId: "sku",
   columns: [
     { field: "sku", label: "SKU" },
     { field: "supplierName", label: "Factory" },
     { field: "supplierNumber", label: "Factory #" },
-    { field: "uncovered", label: "Uncovered" },
+    { field: "toOrder", label: "To Order" },
     { field: "onHand", label: "On hand" },
     { field: "onOrder", label: "On order" },
-    { field: "committed", label: "Committed (pre-sold)" },
+    { field: "committed", label: "Pre-sold" },
     { field: "caseQty", label: "Master pack" },
     { field: "reorderMin", label: "Reorder min" },
     { field: "reorderMax", label: "Reorder max" },
@@ -281,7 +281,7 @@ export const uncoveredSkusListTable = {
   ],
 };
 
-export const uncoveredFactoriesListQuerySchema = z.object({
+export const preOrderFactoriesListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   excludeSuppliersWithOpenDraft: z
@@ -290,7 +290,7 @@ export const uncoveredFactoriesListQuerySchema = z.object({
     .transform((value) => value === "true"),
 });
 
-export const uncoveredFactoriesListResponseSchema = z.object({
+export const preOrderFactoriesListResponseSchema = z.object({
   items: z.array(
     z.object({
       id: z.string().min(1),
@@ -302,7 +302,7 @@ export const uncoveredFactoriesListResponseSchema = z.object({
         .regex(/^[A-Z0-9]{2,4}$/)
         .nullable(),
       productCount: z.number().int().nonnegative(),
-      totalUncoveredUnits: z.number().int().nonnegative(),
+      totalToOrderUnits: z.number().int().nonnegative(),
       needsMapping: z.boolean(),
     }),
   ),
@@ -311,14 +311,14 @@ export const uncoveredFactoriesListResponseSchema = z.object({
   total: z.number().int(),
 });
 
-export const uncoveredFactoriesListTable = {
+export const preOrderFactoriesListTable = {
   rowId: "id",
   columns: [
     { field: "supplierName", label: "Factory" },
     { field: "supplierNumber", label: "Factory #" },
     { field: "poPrefix", label: "Vendor prefix" },
     { field: "productCount", label: "Products" },
-    { field: "totalUncoveredUnits", label: "Uncovered units" },
+    { field: "totalToOrderUnits", label: "To Order units" },
   ],
 };
 
@@ -929,20 +929,20 @@ export const sellWindowDetailSchema = sellWindowListItemSchema.extend({
   skus: z.array(z.string()),
 });
 
-export const draftUncoveredPurchaseOrdersBodySchema = z.object({
+export const draftPreOrderPurchaseOrdersBodySchema = z.object({
   skus: z.array(z.string().min(1)).min(1),
 });
 
-export const draftUncoveredPurchaseOrdersResponseSchema = z.object({
+export const draftPreOrderPurchaseOrdersResponseSchema = z.object({
   purchaseOrders: z.array(purchaseOrderItemSchema),
   unmappedSkus: z.array(z.string()),
 });
 
-export const syncDraftPurchaseOrdersFromUncoveredBodySchema = z.object({
+export const syncDraftPurchaseOrdersFromPreOrderBodySchema = z.object({
   supplierIds: z.array(z.string().uuid()).optional(),
 });
 
-export const syncDraftPurchaseOrdersFromUncoveredResponseSchema = z.object({
+export const syncDraftPurchaseOrdersFromPreOrderResponseSchema = z.object({
   purchaseOrderIds: z.array(z.string().uuid()),
   syncedSupplierIds: z.array(z.string().uuid()),
   clearedSupplierIds: z.array(z.string().uuid()),
@@ -1079,9 +1079,9 @@ export const purchaseOrderGoodsReceivedListResponseSchema = z.object({
   items: z.array(purchaseOrderGoodsReceivedItemSchema),
 });
 
-export const purchaseOrderShortReadoutUncoveredRowSchema = z.object({
+export const purchaseOrderShortReadoutToOrderRowSchema = z.object({
   sku: z.string(),
-  uncovered: z.number().int().nonnegative(),
+  toOrder: z.number().int().nonnegative(),
 });
 
 export const purchaseOrderShortReadoutAffectedCustomerSchema = z.object({
@@ -1090,7 +1090,7 @@ export const purchaseOrderShortReadoutAffectedCustomerSchema = z.object({
 });
 
 export const purchaseOrderShortReadoutResponseSchema = z.object({
-  uncovered: z.array(purchaseOrderShortReadoutUncoveredRowSchema),
+  toOrder: z.array(purchaseOrderShortReadoutToOrderRowSchema),
   affectedCustomers: z.array(purchaseOrderShortReadoutAffectedCustomerSchema),
 });
 
@@ -1226,7 +1226,7 @@ export const supplierProductQtySchema = z.object({
   allocated: z.number().int(),
   available: z.number().int(),
   committed: z.number().int(),
-  uncovered: z.number().int(),
+  toOrder: z.number().int(),
 });
 
 export const supplierProductItemSchema = z.object({
@@ -1337,6 +1337,9 @@ export const salesOrderItemSchema = z.object({
   customerName: z.string().optional(),
   documentNumber: z.string(),
   status: salesOrderStatusSchema,
+  confirmedAt: z.string().datetime().optional(),
+  shippedAt: z.string().datetime().optional(),
+  cancelledAt: z.string().datetime().optional(),
   label: z.string().optional(),
   creditLimitOverriddenByStaffUserId: z.string().uuid().optional(),
   shipLine1: z.string().optional(),
@@ -1354,7 +1357,7 @@ export const salesOrderListQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["documentNumber", "status"]).default("documentNumber"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
-  status: salesOrderStatusSchema.optional(),
+  status: optionalRepeatedQuery(salesOrderStatusSchema),
   customerId: z.string().uuid().optional(),
 });
 
@@ -1484,7 +1487,7 @@ export const salesOrdersListTable = {
     placeholder: "Search SO number",
   },
   filters: [
-    { param: "status", control: "select" },
+    { param: "status", control: "multiselect" },
     { param: "customerId", control: "text" },
   ],
   sort: {

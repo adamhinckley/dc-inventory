@@ -5,6 +5,7 @@ import {
   type StaffUserId,
   type WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
+import type { IClock } from "../domain/clock.js";
 import type { ICatalogProductPort } from "../domain/ports/catalog-product.js";
 import type {
   ICustomerLookupPort,
@@ -82,6 +83,7 @@ export class ReplaceSalesOrderLinesUseCase {
     private readonly salesOrders: ISalesOrderRepository,
     private readonly customers: ICustomerLookupPort,
     private readonly catalogProducts: ICatalogProductPort,
+    private readonly clock?: IClock,
   ) {}
 
   async execute(input: ReplaceSalesOrderLinesRequest): Promise<ReplaceSalesOrderLinesResult> {
@@ -114,7 +116,12 @@ export class ReplaceSalesOrderLinesUseCase {
     }
 
     if (input.lines.length === 0) {
-      const cancelled: SalesOrder = { ...existing, status: "cancelled", lines: [] };
+      const cancelled: SalesOrder = {
+        ...existing,
+        status: "cancelled",
+        lines: [],
+        cancelledAt: existing.cancelledAt ?? this.clock?.now() ?? new Date(),
+      };
       await this.salesOrders.save(cancelled, existing);
       return { ok: true, salesOrder: cancelled };
     }

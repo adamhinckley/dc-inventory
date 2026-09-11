@@ -176,6 +176,7 @@ describe("ApplySalesOrderLineDeltasUseCase", () => {
     }
     expect(result.salesOrder.status).toBe("cancelled");
     expect(result.salesOrder.lines).toHaveLength(0);
+    expect(result.salesOrder.cancelledAt).toBeInstanceOf(Date);
   });
 
   it("still ATP-gates locked increases", async () => {

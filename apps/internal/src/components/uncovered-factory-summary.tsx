@@ -2,9 +2,9 @@
 
 import {
   getListInternalPurchaseOrdersQueryKey,
-  getListInternalUncoveredFactoriesQueryKey,
-  getListInternalUncoveredSkusQueryKey,
-  useDraftInternalUncoveredPurchaseOrders,
+  getListInternalPreOrderFactoriesQueryKey,
+  getListInternalPreOrderSkusQueryKey,
+  useDraftInternalPreOrderPurchaseOrders,
 } from "@dc-inventory/api-client-internal";
 import {
   Button,
@@ -18,17 +18,17 @@ import { FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
-import { collectUncoveredSkusForFactories } from "../lib/uncovered-collect-skus";
+import { collectPreOrderSkusForFactories } from "../lib/uncovered-collect-skus";
 import {
-  isUncoveredNeedsMappingFactoryId,
-  uncoveredFactoryDetailHref,
+  isPreOrderNeedsMappingFactoryId,
+  preOrderFactoryDetailHref,
 } from "../lib/uncovered-constants";
 import {
-  listAllUncoveredFactories,
+  listAllPreOrderFactories,
   type UncoveredFactoryRow,
 } from "../lib/list-all-uncovered-factories";
 import {
-  afterDraftUncoveredPos,
+  afterDraftPreOrderPos,
   type UncoveredBatchDraftRow,
 } from "../lib/uncovered-draft-workflow";
 import { UncoveredBatchDraftModal } from "./uncovered-batch-draft-modal";
@@ -40,7 +40,7 @@ function FactoryNameCell({ row }: { row: UncoveredFactoryRow }) {
   if (row.needsMapping) {
     return (
       <Link
-        href={uncoveredFactoryDetailHref(row.id)}
+        href={preOrderFactoryDetailHref(row.id)}
         className="text-link hover:text-link-hover inline-flex min-w-0 items-center gap-field"
       >
         <Chip
@@ -54,7 +54,7 @@ function FactoryNameCell({ row }: { row: UncoveredFactoryRow }) {
 
   return (
     <Link
-      href={uncoveredFactoryDetailHref(row.id)}
+      href={preOrderFactoryDetailHref(row.id)}
       className="text-link hover:text-link-hover block min-w-0 truncate font-medium"
     >
       {row.supplierName}
@@ -87,10 +87,10 @@ export function UncoveredFactorySummary() {
   >([]);
 
   const factoriesQuery = useQuery({
-    queryKey: [...getListInternalUncoveredFactoriesQueryKey(), "all"],
-    queryFn: () => listAllUncoveredFactories(),
+    queryKey: [...getListInternalPreOrderFactoriesQueryKey(), "all"],
+    queryFn: () => listAllPreOrderFactories(),
   });
-  const draftMutation = useDraftInternalUncoveredPurchaseOrders();
+  const draftMutation = useDraftInternalPreOrderPurchaseOrders();
 
   const rows = factoriesQuery.data ?? [];
   const busy = factoriesQuery.isPending;
@@ -131,11 +131,11 @@ export function UncoveredFactorySummary() {
         render: ({ record }) => formatFactoryCell(record, "productCount"),
       },
       {
-        id: "totalUncoveredUnits",
-        label: "Total uncovered",
+        id: "totalToOrderUnits",
+        label: "To Order",
         sort: false,
         align: "right",
-        render: ({ record }) => formatFactoryCell(record, "totalUncoveredUnits"),
+        render: ({ record }) => formatFactoryCell(record, "totalToOrderUnits"),
       },
     ],
     [],
@@ -154,23 +154,23 @@ export function UncoveredFactorySummary() {
   });
 
   const draftableFactoryIds = [...table.selection.selectedIds].filter(
-    (factoryId) => !isUncoveredNeedsMappingFactoryId(factoryId),
+    (factoryId) => !isPreOrderNeedsMappingFactoryId(factoryId),
   );
   const actionLabel =
     draftableFactoryIds.length > 0
       ? `Draft POs (${draftableFactoryIds.length})`
       : "Draft POs";
 
-  const invalidateUncoveredQueries = useCallback(async () => {
+  const invalidatePreOrderQueries = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: getListInternalPurchaseOrdersQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredFactoriesQueryKey(),
+        queryKey: getListInternalPreOrderFactoriesQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredSkusQueryKey(),
+        queryKey: getListInternalPreOrderSkusQueryKey(),
       }),
     ]);
   }, [queryClient]);
@@ -200,9 +200,9 @@ export function UncoveredFactorySummary() {
     setActionError(null);
     setStatusMessage(null);
     try {
-      const skus = await collectUncoveredSkusForFactories(draftableFactoryIds);
+      const skus = await collectPreOrderSkusForFactories(draftableFactoryIds);
       if (skus.length === 0) {
-        setStatusMessage("No uncovered SKUs found for the selected factories.");
+        setStatusMessage("No toOrder SKUs found for the selected factories.");
         return;
       }
       const result = await draftMutation.mutateAsync({ data: { skus: [...skus] } });
@@ -211,8 +211,8 @@ export function UncoveredFactorySummary() {
         return;
       }
       table.selection.clear();
-      await invalidateUncoveredQueries();
-      const next = afterDraftUncoveredPos(
+      await invalidatePreOrderQueries();
+      const next = afterDraftPreOrderPos(
         result.data.purchaseOrders,
         result.data.unmappedSkus,
         supplierNamesById,
@@ -229,14 +229,14 @@ export function UncoveredFactorySummary() {
       setBatchUnmappedNotice(next.unmappedNotice);
       setBatchModalOpen(true);
     } catch {
-      setActionError("Could not load uncovered SKUs for the selected factories.");
+      setActionError("Could not load toOrder SKUs for the selected factories.");
     } finally {
       creatingRef.current = false;
     }
   }, [
     draftMutation,
     draftableFactoryIds,
-    invalidateUncoveredQueries,
+    invalidatePreOrderQueries,
     router,
     rows,
     supplierNamesById,
@@ -260,7 +260,7 @@ export function UncoveredFactorySummary() {
         sticky
         className="min-h-0 flex-1"
         table={table}
-        emptyMessage="No factories with uncovered demand"
+        emptyMessage="No factories with toOrder demand"
       >
         <Table.Header />
         <Table.Body />

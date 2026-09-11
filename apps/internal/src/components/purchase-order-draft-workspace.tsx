@@ -303,7 +303,7 @@ function PurchaseOrderLinesTable({
         render: ({ record }: { record: PurchaseOrderLineRow }) =>
           formatSupplierProductQtyDisplay(
             statusBySku.get(record.sku) ?? "loading",
-            productBySku.get(record.sku)?.qty.uncovered,
+            productBySku.get(record.sku)?.qty.toOrder,
           ),
       },
       {

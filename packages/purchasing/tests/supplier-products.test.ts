@@ -64,7 +64,7 @@ describe("Supplier products use cases (in-memory)", () => {
       allocated: 2,
       available: 8,
       committed: 22,
-      uncovered: 7,
+      toOrder: 7,
     });
     h.factorySendCatalog.set(DEFAULT_ORG, "WIDGET-1", { caseQty: 12 });
 
@@ -110,7 +110,7 @@ describe("Supplier products use cases (in-memory)", () => {
         allocated: 2,
         available: 8,
         committed: 22,
-        uncovered: 7,
+        toOrder: 7,
       },
     });
 
@@ -333,7 +333,7 @@ describe("Supplier products use cases (in-memory)", () => {
         allocated: 0,
         available: 0,
         committed: 0,
-        uncovered: 0,
+        toOrder: 0,
       });
     }
   });

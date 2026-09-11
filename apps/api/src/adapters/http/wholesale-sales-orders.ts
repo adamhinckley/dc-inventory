@@ -152,7 +152,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         pageSize: number;
         sortBy: "documentNumber" | "status";
         sortOrder: "asc" | "desc";
-        status?: SalesOrder["status"];
+        status?: SalesOrder["status"][];
       };
       const result = await request.server.sales.listSalesOrders.execute({
         organizationId: wholesaleOrganizationId(request),
@@ -185,7 +185,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
       schema: {
         operationId: "getWholesaleSalesOrderByDocumentNumber",
         tags: ["wholesale"],
-        summary: "Get sales order for session customer by document number",
+        summary: "Get sales order by exact document number for session customer",
         params: salesOrderDocumentNumberParamsSchema,
         response: {
           200: salesOrderItemSchema,

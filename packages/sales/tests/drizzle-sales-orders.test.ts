@@ -25,6 +25,9 @@ type OrderRow = {
   documentNumber: string;
   label: string | null;
   createdAt: Date;
+  confirmedAt?: Date | null;
+  shippedAt?: Date | null;
+  cancelledAt?: Date | null;
   updatedAt?: Date;
   shipLine1?: string | null;
   shipLine2?: string | null;

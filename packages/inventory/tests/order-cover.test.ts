@@ -38,7 +38,7 @@ describe("order-cover (ADA-256)", () => {
     expect(netOrderCoverQuantity(movements, SO_A)).toBe(75);
   });
 
-  it("lists uncovered committed orders FIFO by first commit time", () => {
+  it("lists toOrder committed orders FIFO by first commit time", () => {
     const movements = [
       movement("Committed", 400, SO_B, new Date("2026-06-15T10:00:00.000Z")),
       movement("Committed", 500, SO_A, new Date("2026-06-15T09:00:00.000Z")),

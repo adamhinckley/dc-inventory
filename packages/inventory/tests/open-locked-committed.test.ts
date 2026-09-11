@@ -4,7 +4,7 @@ import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { MOVEMENT_TYPES } from "../src/index.js";
 import {
   computeLockedAvailableToSell,
-  computeUncovered,
+  computeToOrder,
   isDemandStockFigures,
 } from "./support/demand-model-api.js";
 import { demandModelHarness } from "./support/demand-model-harness.js";
@@ -81,7 +81,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(MOVEMENT_TYPES).toContain("Decommitted");
     });
 
-    ownerIt("projects committed, sellState, availableToSell, and uncovered on the snapshot read model", async () => {
+    ownerIt("projects committed, sellState, availableToSell, and toOrder on the snapshot read model", async () => {
       const h = demandModelHarness();
       const snapshot = await h.baseSnapshot(OPEN_SKU);
       expect(isDemandStockFigures(snapshot)).toBe(true);
@@ -107,7 +107,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(snapshot.committed).toBe(100_000);
       expect(snapshot.sellState).toBe("open");
       expect(snapshot.availableToSell).toBeNull();
-      expect(snapshot.uncovered).toBe(computeUncovered(100_000, 0, 0));
+      expect(snapshot.toOrder).toBe(computeToOrder(100_000, 0, 0));
     });
   });
 
@@ -199,7 +199,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
   });
 
   describe("open presell with PO gap (ADR 0008 decision 6)", () => {
-    ownerIt("after selling 1_200 on_hand 500 then PO 1_900 leaves uncovered 0 and availableToSell 1_200", async () => {
+    ownerIt("after selling 1_200 on_hand 500 then PO 1_900 leaves toOrder 0 and availableToSell 1_200", async () => {
       const h = demandModelHarness();
       await h.adjustmentIncrease.execute({
         organizationId: DEFAULT_ORG,
@@ -223,7 +223,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       const afterCommit = await h.demandSnapshot(COVER_SKU);
       expect(afterCommit.committed).toBe(1_200);
       expect(afterCommit.onHand).toBe(500);
-      expect(afterCommit.uncovered).toBe(700);
+      expect(afterCommit.toOrder).toBe(700);
 
       const inbound = await h.inboundFromPo.execute({
         organizationId: DEFAULT_ORG,
@@ -239,7 +239,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(afterPo.onHand).toBe(500);
       expect(afterPo.onOrder).toBe(1_900);
       expect(afterPo.committed).toBe(1_200);
-      expect(afterPo.uncovered).toBe(0);
+      expect(afterPo.toOrder).toBe(0);
       expect(afterPo.availableToSell).toBe(1_200);
       expect(afterPo.sellState).toBe("locked");
     });
@@ -342,7 +342,7 @@ describe("Inventory demand model — open/locked, committed, cover (ADA-174)", (
       expect(allocatedMovements.every((movement) => movement.refId === SO_COVER)).toBe(true);
     });
 
-    ownerIt("FIFO-attributes receive cover across two uncovered committed orders", async () => {
+    ownerIt("FIFO-attributes receive cover across two toOrder committed orders", async () => {
       const h = demandModelHarness();
       const SO_FIRST = "550e8400-e29b-41d4-a716-446655440080";
       const SO_SECOND = "550e8400-e29b-41d4-a716-446655440081";

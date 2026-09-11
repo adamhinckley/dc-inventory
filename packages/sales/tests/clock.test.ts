@@ -18,9 +18,11 @@ import { InMemoryCreditCheckPort } from "../src/adapters/in-memory-credit-check.
 import { InMemoryCustomerShipToSnapshotReadPort } from "../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import {
+  ApplySalesOrderLineDeltasUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
   GetSalesOrderUseCase,
+  ReplaceSalesOrderLinesUseCase,
   ShipSalesOrderUseCase,
   type ICustomerBillToSnapshotReadPort,
 } from "../src/index.js";
@@ -77,8 +79,14 @@ async function harness() {
     uow,
     create: new CreateSalesOrderUseCase(uow.salesOrders, customers, catalog, clock),
     get: new GetSalesOrderUseCase(uow.salesOrders),
-    confirm: new ConfirmSalesOrderUseCase(uow, customers, shipToSnapshot, new InMemoryCreditCheckPort()),
-    ship: new ShipSalesOrderUseCase(uow, billToSnapshot),
+    confirm: new ConfirmSalesOrderUseCase(
+      uow,
+      customers,
+      shipToSnapshot,
+      new InMemoryCreditCheckPort(),
+      clock,
+    ),
+    ship: new ShipSalesOrderUseCase(uow, billToSnapshot, clock),
     snapshot: new GetStockSnapshotUseCase(uow.inventoryReadModel),
     adjustmentIncrease: new RecordAdjustmentIncreaseUseCase(uow.ledger),
     shipToId: TEST_SHIP_TO_ID,
@@ -214,5 +222,163 @@ describe("Sales seed clock (in-memory)", () => {
       return;
     }
     expect(loaded.salesOrder.createdAt.getTime()).toBe(FIXED.getTime());
+  });
+
+  it("stamps confirmed and shipped instants from the clock", async () => {
+    const h = await harness();
+    await h.uow.run(async () => {
+      const stock = await h.adjustmentIncrease.execute({
+        organizationId: DEFAULT_ORG,
+        idempotencyKey: "clock-status-dates-stock",
+        sku: SKU,
+        quantity: 8,
+        refType: "adjustment",
+        refId: "clock-status-dates",
+      });
+      expect(stock.ok).toBe(true);
+    });
+
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 3 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    expect(created.salesOrder.confirmedAt).toBeUndefined();
+    expect(created.salesOrder.shippedAt).toBeUndefined();
+
+    h.clock.advance(60_000);
+    const confirmedAt = h.clock.now();
+    const confirmed = await h.confirm.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "clock-status-dates-confirm",
+      shipToId: h.shipToId,
+    });
+    expect(confirmed.ok).toBe(true);
+    if (!confirmed.ok) {
+      return;
+    }
+    expect(confirmed.salesOrder.confirmedAt?.getTime()).toBe(confirmedAt.getTime());
+
+    h.clock.advance(60_000);
+    const shippedAt = h.clock.now();
+    const shipped = await h.ship.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      idempotencyKey: "clock-status-dates-ship",
+    });
+    expect(shipped.ok).toBe(true);
+    if (!shipped.ok) {
+      return;
+    }
+    expect(shipped.salesOrder.confirmedAt?.getTime()).toBe(confirmedAt.getTime());
+    expect(shipped.salesOrder.shippedAt?.getTime()).toBe(shippedAt.getTime());
+  });
+
+  it("stamps cancelledAt when empty replace-lines cancels a draft", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    h.clock.advance(60_000);
+    const cancelledAt = h.clock.now();
+    const replace = new ReplaceSalesOrderLinesUseCase(
+      h.uow.salesOrders,
+      {
+        findById: async (organizationId, id) =>
+          organizationId === DEFAULT_ORG && id === CUSTOMER_ID
+            ? { id, accountStatus: "active" as const }
+            : null,
+      },
+      new InMemoryCatalogProductPort([
+        {
+          productId: PRODUCT_ID,
+          organizationId: DEFAULT_ORG,
+          sku: SKU,
+          name: "Widget",
+          unitPrice: Money.fromMinorUnits(500, "USD"),
+          active: true,
+        },
+      ]),
+      h.clock,
+    );
+    const cancelled = await replace.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      lines: [],
+    });
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) {
+      return;
+    }
+    expect(cancelled.salesOrder.status).toBe("cancelled");
+    expect(cancelled.salesOrder.cancelledAt?.getTime()).toBe(cancelledAt.getTime());
+  });
+
+  it("stamps cancelledAt when apply-line-deltas removes the last line", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const lineId = created.salesOrder.lines[0]?.id;
+    expect(lineId).toBeDefined();
+
+    h.clock.advance(60_000);
+    const cancelledAt = h.clock.now();
+    const apply = new ApplySalesOrderLineDeltasUseCase(
+      h.uow.salesOrders,
+      {
+        findById: async (organizationId, id) =>
+          organizationId === DEFAULT_ORG && id === CUSTOMER_ID
+            ? { id, accountStatus: "active" as const }
+            : null,
+      },
+      new InMemoryCatalogProductPort([
+        {
+          productId: PRODUCT_ID,
+          organizationId: DEFAULT_ORG,
+          sku: SKU,
+          name: "Widget",
+          unitPrice: Money.fromMinorUnits(500, "USD"),
+          active: true,
+        },
+      ]),
+      h.clock,
+    );
+    const cancelled = await apply.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      remove: [lineId!],
+    });
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) {
+      return;
+    }
+    expect(cancelled.salesOrder.status).toBe("cancelled");
+    expect(cancelled.salesOrder.cancelledAt?.getTime()).toBe(cancelledAt.getTime());
   });
 });

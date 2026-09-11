@@ -38,6 +38,15 @@ function toOrder(order: SalesOrder): SalesOrder {
     documentNumber: order.documentNumber,
     status: order.status,
     createdAt: new Date(order.createdAt.getTime()),
+    ...(order.confirmedAt !== undefined
+      ? { confirmedAt: new Date(order.confirmedAt.getTime()) }
+      : {}),
+    ...(order.shippedAt !== undefined
+      ? { shippedAt: new Date(order.shippedAt.getTime()) }
+      : {}),
+    ...(order.cancelledAt !== undefined
+      ? { cancelledAt: new Date(order.cancelledAt.getTime()) }
+      : {}),
     lines: order.lines.map(toLine),
     ...(order.label !== undefined ? { label: order.label } : {}),
     ...(order.placedByStaffUserId !== undefined
@@ -93,7 +102,11 @@ export class InMemorySalesOrderRepository implements ISalesOrderRepository {
       if (row.order.organizationId !== query.organizationId) {
         return false;
       }
-      if (query.status !== undefined && row.order.status !== query.status) {
+      if (
+        query.status !== undefined &&
+        query.status.length > 0 &&
+        !query.status.includes(row.order.status)
+      ) {
         return false;
       }
       if (query.customerId !== undefined && row.order.customerId !== query.customerId) {

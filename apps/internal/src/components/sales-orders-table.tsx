@@ -84,8 +84,10 @@ export function SalesOrdersTable({
       idPrefix="sales-orders"
     >
       <DataTable.Toolbar>
-        <DataTable.Search />
-        <DataTable.Filters />
+        <DataTable.FilterBar
+          resource="Sales Order"
+          pinned={["status", "customerId"]}
+        />
       </DataTable.Toolbar>
       <DataTable.Table />
       <DataTable.Pagination />

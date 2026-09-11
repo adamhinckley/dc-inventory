@@ -8,7 +8,7 @@ import {
 import { customersOrdersTable } from "./customers-orders-table";
 import { inventoryListTable } from "./inventory-list-table";
 import { receivingListTable } from "./receiving-list-table";
-import { uncoveredListTable } from "./uncovered-list-table";
+import { preOrderListTable } from "./uncovered-list-table";
 
 export type SearchParamsRecord = Record<string, string | string[] | undefined>;
 
@@ -16,7 +16,7 @@ const STAFF_TABLE_METAS: readonly TableMeta[] = [
   ...Object.values(internalTableMetadata),
   inventoryListTable,
   receivingListTable,
-  uncoveredListTable,
+  preOrderListTable,
   customersOrdersTable,
 ];
 

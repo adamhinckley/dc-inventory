@@ -245,8 +245,9 @@ export async function runReplayDemoOrders(
     demoCustomerLookup(ports.customers),
     shipToSnapshot,
     ports.creditCheck,
+    ports.clock,
   );
-  const shipSo = new ShipSalesOrderUseCase(ports.sales, ports.billToSnapshot);
+  const shipSo = new ShipSalesOrderUseCase(ports.sales, ports.billToSnapshot, ports.clock);
 
   const purchaseOrdersByKey = new Map<string, PurchaseOrder>();
   const salesOrdersByKey = new Map<string, SalesOrder>();

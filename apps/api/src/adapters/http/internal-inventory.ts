@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { PurchaseOrder } from "@dc-inventory/purchasing";
 import { Sku, StaffUserId, SupplierId } from "@dc-inventory/shared-kernel";
 import {
-  draftUncoveredPurchaseOrdersBodySchema,
-  draftUncoveredPurchaseOrdersResponseSchema,
+  draftPreOrderPurchaseOrdersBodySchema,
+  draftPreOrderPurchaseOrdersResponseSchema,
   featureDisabledResponseSchema,
   invalidResponseSchema,
   invalidSellWindowResponseSchema,
@@ -22,12 +22,12 @@ import {
   sellWindowsListResponseSchema,
   sellWindowsListTable,
   unauthorizedResponseSchema,
-  uncoveredSkusListQuerySchema,
-  uncoveredSkusListResponseSchema,
-  uncoveredSkusListTable,
-  uncoveredFactoriesListResponseSchema,
-  uncoveredFactoriesListTable,
-  uncoveredFactoriesListQuerySchema,
+  preOrderSkusListQuerySchema,
+  preOrderSkusListResponseSchema,
+  preOrderSkusListTable,
+  preOrderFactoriesListResponseSchema,
+  preOrderFactoriesListTable,
+  preOrderFactoriesListQuerySchema,
   zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 import { staffOrganizationId } from "./org-session.js";
@@ -303,25 +303,25 @@ export function registerInternalInventoryRoutes(app: FastifyInstance): void {
   );
 }
 
-export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): void {
+export function registerInternalPreOrderSkusListRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
   routes.get(
-    "/uncovered-skus",
+    "/pre-order-skus",
     {
       schema: {
-        operationId: "listInternalUncoveredSkus",
+        operationId: "listInternalPreOrderSkus",
         tags: ["internal"],
         summary: "List SKUs with factory to-order need",
-        querystring: uncoveredSkusListQuerySchema,
+        querystring: preOrderSkusListQuerySchema,
         response: {
-          200: uncoveredSkusListResponseSchema,
+          200: preOrderSkusListResponseSchema,
           400: zodValidationErrorResponseSchema,
           401: unauthorizedResponseSchema,
           403: featureDisabledResponseSchema,
         },
-        "x-table": uncoveredSkusListTable,
-      } as FastifySchema & { "x-table": typeof uncoveredSkusListTable },
+        "x-table": preOrderSkusListTable,
+      } as FastifySchema & { "x-table": typeof preOrderSkusListTable },
     },
     async (request) => {
       const query = request.query as {
@@ -330,7 +330,7 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
         supplierId?: string;
         needsMapping?: boolean;
       };
-      const result = await request.server.inventory.listUncoveredSkus.execute({
+      const result = await request.server.inventory.listPreOrderSkus.execute({
         organizationId: staffOrganizationId(request),
         page: query.page,
         pageSize: query.pageSize,
@@ -341,7 +341,7 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
       return {
         items: result.items.map((row) => ({
           sku: row.sku.value,
-          uncovered: row.uncovered,
+          toOrder: row.toOrder,
           onHand: row.onHand,
           onOrder: row.onOrder,
           committed: row.committed,
@@ -362,21 +362,21 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
   );
 
   routes.get(
-    "/uncovered-skus/factories",
+    "/pre-order-skus/factories",
     {
       schema: {
-        operationId: "listInternalUncoveredFactories",
+        operationId: "listInternalPreOrderFactories",
         tags: ["internal"],
-        summary: "List uncovered demand grouped by factory",
-        querystring: uncoveredFactoriesListQuerySchema,
+        summary: "List pre-order demand grouped by factory",
+        querystring: preOrderFactoriesListQuerySchema,
         response: {
-          200: uncoveredFactoriesListResponseSchema,
+          200: preOrderFactoriesListResponseSchema,
           400: zodValidationErrorResponseSchema,
           401: unauthorizedResponseSchema,
           403: featureDisabledResponseSchema,
         },
-        "x-table": uncoveredFactoriesListTable,
-      } as FastifySchema & { "x-table": typeof uncoveredFactoriesListTable },
+        "x-table": preOrderFactoriesListTable,
+      } as FastifySchema & { "x-table": typeof preOrderFactoriesListTable },
     },
     async (request) => {
       const query = request.query as {
@@ -384,7 +384,7 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
         pageSize: number;
         excludeSuppliersWithOpenDraft?: boolean;
       };
-      const result = await request.server.inventory.listUncoveredFactories.execute({
+      const result = await request.server.inventory.listPreOrderFactories.execute({
         organizationId: staffOrganizationId(request),
         page: query.page,
         pageSize: query.pageSize,
@@ -398,7 +398,7 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
           supplierName: row.supplierName,
           poPrefix: row.poPrefix,
           productCount: row.productCount,
-          totalUncoveredUnits: row.totalUncoveredUnits,
+          totalToOrderUnits: row.totalToOrderUnits,
           needsMapping: row.needsMapping,
         })),
         page: result.page,
@@ -409,21 +409,21 @@ export function registerInternalUncoveredSkusListRoutes(app: FastifyInstance): v
   );
 }
 
-export function registerInternalUncoveredSkusDraftPurchaseOrderRoutes(
+export function registerInternalPreOrderSkusDraftPurchaseOrderRoutes(
   app: FastifyInstance,
 ): void {
   const routes = typed(app);
 
   routes.post(
-    "/uncovered-skus/draft-purchase-orders",
+    "/pre-order-skus/draft-purchase-orders",
     {
       schema: {
-        operationId: "draftInternalUncoveredPurchaseOrders",
+        operationId: "draftInternalPreOrderPurchaseOrders",
         tags: ["internal"],
-        summary: "Create draft purchase orders from uncovered SKU selection",
-        body: draftUncoveredPurchaseOrdersBodySchema,
+        summary: "Create draft purchase orders from toOrder SKU selection",
+        body: draftPreOrderPurchaseOrdersBodySchema,
         response: {
-          201: draftUncoveredPurchaseOrdersResponseSchema,
+          201: draftPreOrderPurchaseOrdersResponseSchema,
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
           403: featureDisabledResponseSchema,
@@ -432,7 +432,7 @@ export function registerInternalUncoveredSkusDraftPurchaseOrderRoutes(
     },
     async (request, reply) => {
       const body = request.body as { skus: string[] };
-      const result = await request.server.purchasing.draftPurchaseOrdersFromUncoveredSkus.execute({
+      const result = await request.server.purchasing.draftPurchaseOrdersFromPreOrderSkus.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: StaffUserId.parse(request.staffAuth?.staffUserId ?? ""),
         skus: body.skus,

@@ -427,6 +427,138 @@ describe("wholesale sales orders (ADA-272)", () => {
     });
   });
 
+  it("GET by document number returns confirmed order for session customer", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "DOCNUM-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const orderId = created.json().id as string;
+    const documentNumber = created.json().documentNumber as string;
+
+    const confirmed = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${orderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: {
+        idempotencyKey: "docnum-confirm",
+        shipToId: API_TEST_SHIP_TO_ID,
+      },
+    });
+    expect(confirmed.statusCode).toBe(200);
+
+    const fetched = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/by-document-number/${documentNumber}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(fetched.statusCode).toBe(200);
+    expect(fetched.json()).toMatchObject({
+      id: orderId,
+      documentNumber,
+      customerId: CUSTOMER_A_ID,
+      status: "confirmed",
+    });
+  });
+
+  it("GET by document number returns 404 for another customer's order", async () => {
+    const { app, shipToRepo } = await startApp();
+    await seedShipTo(shipToRepo, CUSTOMER_B_ID, API_TEST_SHIP_TO_ID_B, "300 Buyer B St");
+    const staffInternal = await loginStaffInternal(app);
+    const buyerBCookie = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "buyer-b@local.test",
+        password: "buyer-b-secret",
+      },
+    }).then((res) => wholesaleCookie(res));
+    const actingCookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "DOCNUM-SCOPE-SKU");
+
+    const buyerOrder = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(buyerOrder.statusCode).toBe(201);
+    const documentNumber = buyerOrder.json().documentNumber as string;
+    const buyerOrderId = buyerOrder.json().id as string;
+
+    const buyerConfirmed = await app.inject({
+      method: "POST",
+      url: `/wholesale/sales-orders/${buyerOrderId}/confirm`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: buyerBCookie },
+      payload: {
+        idempotencyKey: "docnum-buyer-confirm",
+        shipToId: API_TEST_SHIP_TO_ID_B,
+      },
+    });
+    expect(buyerConfirmed.statusCode).toBe(200);
+
+    await selectCustomer(app, actingCookie, CUSTOMER_A_ID);
+
+    const forbidden = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/by-document-number/${documentNumber}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: actingCookie },
+    });
+    expect(forbidden.statusCode).toBe(404);
+    expect(forbidden.json()).toEqual({ error: "not_found" });
+  });
+
+  it("GET by document number returns 404 for missing document number", async () => {
+    const { app } = await startApp();
+    const cookie = await loginStaffActing(app);
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const missing = await app.inject({
+      method: "GET",
+      url: "/wholesale/sales-orders/by-document-number/SO-99999",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(missing.statusCode).toBe(404);
+    expect(missing.json()).toEqual({ error: "not_found" });
+  });
+
+  it("GET by document number returns 404 for draft order", async () => {
+    const { app } = await startApp();
+    const staffInternal = await loginStaffInternal(app);
+    const cookie = await loginStaffActing(app);
+    const productId = await createProduct(app, staffInternal, "DOCNUM-DRAFT-SKU");
+
+    await selectCustomer(app, cookie, CUSTOMER_A_ID);
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/wholesale/sales-orders",
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+      payload: { lines: [{ productId, qty: 1 }] },
+    });
+    expect(created.statusCode).toBe(201);
+    const documentNumber = created.json().documentNumber as string;
+
+    const draft = await app.inject({
+      method: "GET",
+      url: `/wholesale/sales-orders/by-document-number/${documentNumber}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: cookie },
+    });
+    expect(draft.statusCode).toBe(404);
+    expect(draft.json()).toEqual({ error: "not_found" });
+  });
+
   it("second create opens a second labelled draft; both list as open carts", async () => {
     const { app } = await startApp();
     const staffInternal = await loginStaffInternal(app);

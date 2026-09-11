@@ -2178,6 +2178,14 @@ export const getListWholesaleSalesOrdersUrl = (params?: ListWholesaleSalesOrders
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["status"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
 
     if (value !== undefined) {
       normalizedParams.append(key, value === null ? 'null' : String(value))
@@ -2412,7 +2420,7 @@ export const getGetWholesaleSalesOrderByDocumentNumberUrl = (documentNumber: str
 }
 
 /**
- * @summary Get sales order for session customer by document number
+ * @summary Get sales order by exact document number for session customer
  */
 export const getWholesaleSalesOrderByDocumentNumber = async (documentNumber: string, options?: Parameters<typeof customFetch>[1]): Promise<getWholesaleSalesOrderByDocumentNumberResponse> => {
 
@@ -2459,7 +2467,7 @@ export type GetWholesaleSalesOrderByDocumentNumberQueryError = GetWholesaleSales
 
 
 /**
- * @summary Get sales order for session customer by document number
+ * @summary Get sales order by exact document number for session customer
  */
 
 export function useGetWholesaleSalesOrderByDocumentNumber<TData = Awaited<ReturnType<typeof getWholesaleSalesOrderByDocumentNumber>>, TError = GetWholesaleSalesOrderByDocumentNumber401 | GetWholesaleSalesOrderByDocumentNumber403 | GetWholesaleSalesOrderByDocumentNumber404>(

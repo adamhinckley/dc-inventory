@@ -2,10 +2,10 @@
 
 import {
   getListInternalPurchaseOrdersQueryKey,
-  getListInternalUncoveredFactoriesQueryKey,
-  getListInternalUncoveredSkusQueryKey,
-  useDraftInternalUncoveredPurchaseOrders,
-  useListInternalUncoveredSkus,
+  getListInternalPreOrderFactoriesQueryKey,
+  getListInternalPreOrderSkusQueryKey,
+  useDraftInternalPreOrderPurchaseOrders,
+  useListInternalPreOrderSkus,
 } from "@dc-inventory/api-client-internal";
 import {
   unwrapListData,
@@ -26,28 +26,28 @@ import { FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
-import { collectUncoveredSkusForFactories } from "../lib/uncovered-collect-skus";
-import { listPurchasing2UncoveredFactories } from "../lib/list-purchasing-2-uncovered-factories";
+import { collectPreOrderSkusForFactories } from "../lib/uncovered-collect-skus";
+import { listPurchasing2PreOrderFactories } from "../lib/list-purchasing-2-uncovered-factories";
 import { syncPurchasing2DraftPurchaseOrders } from "../lib/purchasing-2-sync-draft-pos";
 import {
-  isPurchasing2UncoveredNeedsMappingFactoryId,
+  isPurchasing2PreOrderNeedsMappingFactoryId,
   purchasing2PurchaseOrderHref,
 } from "../lib/purchasing-2-uncovered-constants";
-import { afterDraftUncoveredPos } from "../lib/uncovered-draft-workflow";
+import { afterDraftPreOrderPos } from "../lib/uncovered-draft-workflow";
 import { loadSuppliersMissingPoPrefix } from "../lib/missing-supplier-po-prefix";
 import type { SupplierDetail } from "../lib/supplier-types";
 import { suggestedDraftPoQty } from "../lib/purchase-order-line-math";
 import { replaceTableUrlParams } from "../lib/table-url-params";
-import { uncoveredListTable } from "../lib/uncovered-list-table";
+import { preOrderListTable } from "../lib/uncovered-list-table";
 import { MissingSupplierPoPrefixDialog } from "./missing-supplier-po-prefix-dialog";
 
-type UncoveredListParams = NonNullable<
-  Parameters<typeof useListInternalUncoveredSkus>[0]
+type PreOrderListParams = NonNullable<
+  Parameters<typeof useListInternalPreOrderSkus>[0]
 >;
 
-type UncoveredApiRow = {
+type PreOrderApiRow = {
   sku: string;
-  uncovered: number;
+  toOrder: number;
   onHand: number;
   onOrder: number;
   committed: number;
@@ -61,22 +61,22 @@ type UncoveredApiRow = {
   draftPurchaseOrder: { id: string; documentNumber: string } | null;
 };
 
-type UncoveredRow = UncoveredApiRow & {
+type PreOrderRow = PreOrderApiRow & {
   suggestedQty: number;
 };
 
-function withSuggestedQty(row: UncoveredApiRow): UncoveredRow {
+function withSuggestedQty(row: PreOrderApiRow): PreOrderRow {
   return {
     ...row,
-    suggestedQty: suggestedDraftPoQty(row.uncovered, row.caseQty ?? null),
+    suggestedQty: suggestedDraftPoQty(row.toOrder, row.caseQty ?? null),
   };
 }
 
 function buildSkuListParams(
   factoryId: string,
   params: ListQueryParams = {},
-): UncoveredListParams {
-  if (isPurchasing2UncoveredNeedsMappingFactoryId(factoryId)) {
+): PreOrderListParams {
+  if (isPurchasing2PreOrderNeedsMappingFactoryId(factoryId)) {
     return {
       ...params,
       needsMapping: "true",
@@ -90,22 +90,22 @@ function buildSkuListParams(
   };
 }
 
-function useUncoveredFactorySkuList(
+function usePreOrderFactorySkuList(
   factoryId: string,
-): ListQueryHook<UncoveredListParams, UncoveredRow> {
+): ListQueryHook<PreOrderListParams, PreOrderRow> {
   return (params) => {
-    const query = useListInternalUncoveredSkus(buildSkuListParams(factoryId, params));
+    const query = useListInternalPreOrderSkus(buildSkuListParams(factoryId, params));
 
-    const data = useMemo((): ListQueryResult<UncoveredRow>["data"] => {
+    const data = useMemo((): ListQueryResult<PreOrderRow>["data"] => {
       const envelope = unwrapListData(
-        query.data as ListQueryResult<UncoveredRow>["data"],
+        query.data as ListQueryResult<PreOrderRow>["data"],
       );
       if (!envelope) {
-        return query.data as ListQueryResult<UncoveredRow>["data"];
+        return query.data as ListQueryResult<PreOrderRow>["data"];
       }
 
       const items = envelope.items.map((item) =>
-        withSuggestedQty(item as UncoveredApiRow),
+        withSuggestedQty(item as PreOrderApiRow),
       );
 
       const orval = query.data;
@@ -123,7 +123,7 @@ function useUncoveredFactorySkuList(
             ...orval.data,
             items,
           },
-        } as ListQueryResult<UncoveredRow>["data"];
+        } as ListQueryResult<PreOrderRow>["data"];
       }
 
       return {
@@ -139,7 +139,7 @@ function useUncoveredFactorySkuList(
   };
 }
 
-function formatCell(row: UncoveredRow, field: keyof UncoveredRow): string {
+function formatCell(row: PreOrderRow, field: keyof PreOrderRow): string {
   const value = row[field];
   if (value === null || value === undefined) {
     return "—";
@@ -147,7 +147,7 @@ function formatCell(row: UncoveredRow, field: keyof UncoveredRow): string {
   return String(value);
 }
 
-function SkuCell({ row }: { row: UncoveredRow }) {
+function SkuCell({ row }: { row: PreOrderRow }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
       <span className="truncate font-medium">{row.sku}</span>
@@ -175,7 +175,7 @@ function SkuCell({ row }: { row: UncoveredRow }) {
 }
 
 const DETAIL_COLUMN_SPECS = [
-  { id: "uncovered", label: "To Order" },
+  { id: "toOrder", label: "To Order" },
   { id: "onHand", label: "On hand" },
   { id: "onOrder", label: "On order" },
   { id: "committed", label: "Pre-sold" },
@@ -183,7 +183,7 @@ const DETAIL_COLUMN_SPECS = [
   { id: "reorderMin", label: "Reorder min" },
   { id: "reorderMax", label: "Reorder max" },
   { id: "suggestedQty", label: "Suggested qty" },
-] as const satisfies readonly { id: keyof UncoveredRow; label: string }[];
+] as const satisfies readonly { id: keyof PreOrderRow; label: string }[];
 
 export function Purchasing2UncoveredDetail({
   factoryId,
@@ -202,18 +202,18 @@ export function Purchasing2UncoveredDetail({
     readonly SupplierDetail[]
   >([]);
 
-  const needsMapping = isPurchasing2UncoveredNeedsMappingFactoryId(factoryId);
+  const needsMapping = isPurchasing2PreOrderNeedsMappingFactoryId(factoryId);
   const factoriesQuery = useQuery({
     queryKey: [
-      ...getListInternalUncoveredFactoriesQueryKey(),
+      ...getListInternalPreOrderFactoriesQueryKey(),
       "purchasing-2",
       "excludeSuppliersWithOpenDraft",
     ],
-    queryFn: () => listPurchasing2UncoveredFactories(),
+    queryFn: () => listPurchasing2PreOrderFactories(),
   });
-  const draftMutation = useDraftInternalUncoveredPurchaseOrders();
+  const draftMutation = useDraftInternalPreOrderPurchaseOrders();
   const useSkuList = useMemo(
-    () => useUncoveredFactorySkuList(factoryId),
+    () => usePreOrderFactorySkuList(factoryId),
     [factoryId],
   );
 
@@ -223,12 +223,12 @@ export function Purchasing2UncoveredDetail({
   );
 
   const onParamsChange = useCallback((params: ListQueryParams) => {
-    replaceTableUrlParams(uncoveredListTable, params);
+    replaceTableUrlParams(preOrderListTable, params);
   }, []);
 
   const { items, query, setState, total, page, pageSize, pageCount } =
     useDataTable({
-      meta: uncoveredListTable,
+      meta: preOrderListTable,
       queryHook: useSkuList,
       initialParams,
       onParamsChange,
@@ -240,7 +240,7 @@ export function Purchasing2UncoveredDetail({
     query.isLoading === true ||
     (envelope === undefined && query.isError !== true);
 
-  const columns = useMemo<TableColumnDef<UncoveredRow>[]>(
+  const columns = useMemo<TableColumnDef<PreOrderRow>[]>(
     () => [
       {
         id: "sku",
@@ -255,14 +255,14 @@ export function Purchasing2UncoveredDetail({
         label,
         sort: false as const,
         align: "right" as const,
-        render: ({ record }: { record: UncoveredRow }) => formatCell(record, id),
+        render: ({ record }: { record: PreOrderRow }) => formatCell(record, id),
       })),
     ],
     [],
   );
 
   const table = useTable({
-    data: items as UncoveredRow[],
+    data: items as PreOrderRow[],
     isPending: busy,
     isError: query.isError === true,
     columns,
@@ -299,16 +299,16 @@ export function Purchasing2UncoveredDetail({
     return names;
   }, [factorySummary]);
 
-  const invalidateUncoveredQueries = useCallback(async () => {
+  const invalidatePreOrderQueries = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: getListInternalPurchaseOrdersQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredFactoriesQueryKey(),
+        queryKey: getListInternalPreOrderFactoriesQueryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: getListInternalUncoveredSkusQueryKey(),
+        queryKey: getListInternalPreOrderSkusQueryKey(),
       }),
     ]);
   }, [queryClient]);
@@ -337,7 +337,7 @@ export function Purchasing2UncoveredDetail({
     setActionError(null);
     setStatusMessage(null);
     try {
-      const skus = await collectUncoveredSkusForFactories([factoryId]);
+      const skus = await collectPreOrderSkusForFactories([factoryId]);
       if (skus.length === 0) {
         setStatusMessage("No SKUs to order for this factory.");
         return;
@@ -347,13 +347,13 @@ export function Purchasing2UncoveredDetail({
         setActionError("Could not create draft purchase order.");
         return;
       }
-      await invalidateUncoveredQueries();
+      await invalidatePreOrderQueries();
       try {
         await syncPurchasing2DraftPurchaseOrders(queryClient, [factoryId]);
       } catch {
         // Ignore a failed resync after a successful Save Draft.
       }
-      const next = afterDraftUncoveredPos(
+      const next = afterDraftPreOrderPos(
         result.data.purchaseOrders,
         result.data.unmappedSkus,
         supplierNamesById,
@@ -380,7 +380,7 @@ export function Purchasing2UncoveredDetail({
     draftMutation,
     factoryId,
     factorySummary?.supplierId,
-    invalidateUncoveredQueries,
+    invalidatePreOrderQueries,
     needsMapping,
     queryClient,
     router,
@@ -415,13 +415,13 @@ export function Purchasing2UncoveredDetail({
                 <>
                   {factorySummary.productCount} product
                   {factorySummary.productCount === 1 ? "" : "s"} ·{" "}
-                  {factorySummary.totalUncoveredUnits} total units to order
+                  {factorySummary.totalToOrderUnits} total units to order
                 </>
               ) : (
                 <>
                   {factorySummary.productCount} product
                   {factorySummary.productCount === 1 ? "" : "s"} ready for a first draft PO ·{" "}
-                  {factorySummary.totalUncoveredUnits} total units to order
+                  {factorySummary.totalToOrderUnits} total units to order
                 </>
               )}
             </p>

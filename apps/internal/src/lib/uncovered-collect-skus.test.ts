@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { collectUncoveredSkusForFactories } from "./uncovered-collect-skus";
+import { collectPreOrderSkusForFactories } from "./uncovered-collect-skus";
 
-describe("collectUncoveredSkusForFactories", () => {
+describe("collectPreOrderSkusForFactories", () => {
   it("throws when a SKU page request fails instead of returning a partial list", async () => {
     const listSkus = vi.fn(async () => ({
       status: 403 as const,
@@ -9,10 +9,10 @@ describe("collectUncoveredSkusForFactories", () => {
     }));
 
     await expect(
-      collectUncoveredSkusForFactories(
+      collectPreOrderSkusForFactories(
         ["factory-a"],
-        listSkus as unknown as Parameters<typeof collectUncoveredSkusForFactories>[1],
+        listSkus as unknown as Parameters<typeof collectPreOrderSkusForFactories>[1],
       ),
-    ).rejects.toThrow("Could not load uncovered SKUs.");
+    ).rejects.toThrow("Could not load toOrder SKUs.");
   });
 });

@@ -211,9 +211,9 @@ The wholesale spec is an **ordering API**, not a cut-down admin:
 | `POST /wholesale/sales-orders` | Always opens a **new** draft (`lines`, optional `label` ≤ 80 chars). No find-or-create. |
 | `PATCH /wholesale/sales-orders/:id` | Replace lines; `label` omitted keeps, `null` clears, string renames. Empty `lines` cancels that cart only. |
 | `POST /wholesale/sales-orders/:id/confirm` | Place order (Sales confirm + Inventory allocate). |
-| `GET /wholesale/sales-orders` | Own order history (paginated; session `customerId`) |
-| `GET /wholesale/sales-orders/:id` | Own order detail by UUID |
-| `GET /wholesale/sales-orders/by-document-number/:documentNumber` | Own order detail by `documentNumber` (404 for draft or another customer) |
+| `GET /wholesale/sales-orders` | Own order history (paginated) |
+| `GET /wholesale/sales-orders/by-document-number/:documentNumber` | Own non-draft order detail by document number |
+| `GET /wholesale/sales-orders/:id` | Own order detail |
 
 Do not generate `x-table` for these. Do not expose `/internal/reports/*` on the wholesale spec.
 
