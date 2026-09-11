@@ -2626,6 +2626,153 @@ paths:
                     required:
                       - error
                     additionalProperties: false
+  /wholesale/sales-orders/by-document-number/{documentNumber}:
+    get:
+      operationId: getWholesaleSalesOrderByDocumentNumber
+      summary: Get sales order for session customer by document number
+      tags:
+        - wholesale
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: documentNumber
+          required: true
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  customerId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  customerName:
+                    type: string
+                  documentNumber:
+                    type: string
+                  status:
+                    type: string
+                    enum:
+                      - draft
+                      - confirmed
+                      - shipped
+                      - cancelled
+                  label:
+                    type: string
+                  creditLimitOverriddenByStaffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  shipLine1:
+                    type: string
+                  shipLine2:
+                    nullable: true
+                    type: string
+                  shipCity:
+                    type: string
+                  shipRegion:
+                    type: string
+                  shipPostal:
+                    type: string
+                  shipCountry:
+                    type: string
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        productId:
+                          type: string
+                          format: uuid
+                          pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                        sku:
+                          type: string
+                        name:
+                          type: string
+                        qty:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        unitPriceCents:
+                          type: integer
+                          minimum: -9007199254740991
+                          maximum: 9007199254740991
+                        currency:
+                          type: string
+                          minLength: 3
+                          maxLength: 3
+                        taxCategoryCode:
+                          type: string
+                      required:
+                        - id
+                        - sku
+                        - name
+                        - qty
+                        - unitPriceCents
+                        - currency
+                      additionalProperties: false
+                required:
+                  - id
+                  - customerId
+                  - documentNumber
+                  - status
+                  - lines
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - needs_customer
+                required:
+                  - error
+                additionalProperties: false
+        "404":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - not_found
+                required:
+                  - error
+                additionalProperties: false
   /wholesale/sales-orders/{id}:
     get:
       operationId: getWholesaleSalesOrder

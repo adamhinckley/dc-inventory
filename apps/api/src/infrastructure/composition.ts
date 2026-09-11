@@ -212,6 +212,7 @@ import {
   CreateSalesOrderUseCase,
   DrizzleCommittedCustomerNamesListQuery,
   DrizzleSalesOrderRepository,
+  GetSalesOrderByDocumentNumberUseCase,
   GetSalesOrderUseCase,
   InMemoryCommittedCustomerNamesListQuery,
   InMemorySalesOrderRepository,
@@ -406,6 +407,7 @@ export type SalesHttpServices = {
   replaceSalesOrderLines: ReplaceSalesOrderLinesUseCase;
   applySalesOrderLineDeltas: ApplySalesOrderLineDeltasUseCase;
   getSalesOrder: GetSalesOrderUseCase;
+  getSalesOrderByDocumentNumber: GetSalesOrderByDocumentNumberUseCase;
   confirmSalesOrder: ConfirmSalesOrderUseCase;
   cancelSalesOrder: CancelSalesOrderUseCase;
   shipSalesOrder: ShipSalesOrderUseCase;
@@ -832,6 +834,7 @@ function salesServices(
       catalogProduct,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
+    getSalesOrderByDocumentNumber: new GetSalesOrderByDocumentNumberUseCase(salesOrderRepo),
     confirmSalesOrder: new ConfirmSalesOrderUseCase(
       unitOfWork.sales,
       customers,
