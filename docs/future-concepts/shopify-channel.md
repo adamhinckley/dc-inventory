@@ -4,7 +4,7 @@ External marketplace hub for **retail Shopify** and **Faire wholesale** (via Sho
 
 Do not implement until Demand model (`availableToSell`) and Sales confirm/commit packets are green.
 
-Related: [`../architecture.md`](../architecture.md) · [`../stack.md`](../stack.md) · [`../adr/0008-available-to-sell-open-locked.md`](../adr/0008-available-to-sell-open-locked.md)
+Related: [`../architecture.md`](../architecture.md) · [`../stack.md`](../stack.md) · [`../adr/0008-available-to-sell-open-locked.md`](../adr/0008-available-to-sell-open-locked.md) · [`../shopify-soloview-migration.md`](../shopify-soloview-migration.md) (SoloView cutover + Adam’s access)
 
 ---
 

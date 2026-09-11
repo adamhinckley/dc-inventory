@@ -26,4 +26,4 @@ A native Faire Partner API is a second integration. Faire already consumes Shopi
 - Open SKU sentinel qty for Shopify, Faire commission/net settlement, and retail `Customer` identity are owner-gated ([`invariants.md`](../invariants.md) §18 style): failing tests first.
 - Test against a Partner development store and Bogus Gateway / Shopify Payments test mode — not the live brand shop.
 
-Related: [2026-08-27 highlights](../transcripts/2026-08-27/highlights.md) (SoloView → Shopify → Faire). First GraphQL app: [Create apps using the Dev Dashboard](https://shopify.dev/docs/apps/build/dev-dashboard/create-apps-using-dev-dashboard) (API-only; see [`shopify-channel.md`](../future-concepts/shopify-channel.md) § First-time Shopify setup).
+Related: [2026-08-27 highlights](../transcripts/2026-08-27/highlights.md) (SoloView → Shopify → Faire). First GraphQL app: [Create apps using the Dev Dashboard](https://shopify.dev/docs/apps/build/dev-dashboard/create-apps-using-dev-dashboard) (API-only; see [`shopify-channel.md`](../future-concepts/shopify-channel.md) § First-time Shopify setup). Access and cutover: [`shopify-soloview-migration.md`](../shopify-soloview-migration.md).
