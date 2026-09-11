@@ -159,8 +159,9 @@ export async function runReplaySalesOrders(
     demoCustomerLookup(ports.customers),
     shipToSnapshot,
     ports.creditCheck,
+    ports.clock,
   );
-  const ship = new ShipSalesOrderUseCase(ports.uow, ports.billToSnapshot);
+  const ship = new ShipSalesOrderUseCase(ports.uow, ports.billToSnapshot, ports.clock);
   const shipInstantBySalesOrderKey = new Map(
     input.plan.shippedInvoices.map((row) => [row.salesOrderKey, row.plannedInstant]),
   );

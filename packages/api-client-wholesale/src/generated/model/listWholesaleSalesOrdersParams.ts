@@ -6,7 +6,6 @@
  */
 import type { ListWholesaleSalesOrdersSortBy } from './listWholesaleSalesOrdersSortBy';
 import type { ListWholesaleSalesOrdersSortOrder } from './listWholesaleSalesOrdersSortOrder';
-import type { ListWholesaleSalesOrdersStatus } from './listWholesaleSalesOrdersStatus';
 
 export type ListWholesaleSalesOrdersParams = {
 q?: string;
@@ -22,5 +21,5 @@ page?: number;
 pageSize?: number;
 sortBy?: ListWholesaleSalesOrdersSortBy;
 sortOrder?: ListWholesaleSalesOrdersSortOrder;
-status?: ListWholesaleSalesOrdersStatus;
+status?: 'draft' | 'confirmed' | 'shipped' | 'cancelled' | ('draft' | 'confirmed' | 'shipped' | 'cancelled')[];
 };

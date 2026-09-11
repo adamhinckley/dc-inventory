@@ -1,6 +1,7 @@
 import { OrderId, OrganizationId, type StaffUserId } from "@dc-inventory/shared-kernel";
 import { SalesTransactionError } from "../domain/errors.js";
 import type { ISalesUnitOfWork } from "../domain/ports/sales-order-repository.js";
+import type { IClock } from "../domain/clock.js";
 import { liveSalesOrderLines, type SalesOrder } from "../domain/sales-order.js";
 
 export type CancelSalesOrderRequest = {
@@ -22,7 +23,10 @@ export type CancelSalesOrderResult =
     };
 
 export class CancelSalesOrderUseCase {
-  constructor(private readonly uow: ISalesUnitOfWork) {}
+  constructor(
+    private readonly uow: ISalesUnitOfWork,
+    private readonly clock?: IClock,
+  ) {}
 
   async execute(input: CancelSalesOrderRequest): Promise<CancelSalesOrderResult> {
     void input.staffUserId;
@@ -40,7 +44,11 @@ export class CancelSalesOrderUseCase {
         }
 
         if (existing.status === "draft") {
-          const cancelled: SalesOrder = { ...existing, status: "cancelled" };
+          const cancelled: SalesOrder = {
+            ...existing,
+            status: "cancelled",
+            cancelledAt: existing.cancelledAt ?? this.clock?.now() ?? new Date(),
+          };
           await scope.salesOrders.save(cancelled, existing);
           return { ok: true, salesOrder: cancelled };
         }
@@ -97,7 +105,11 @@ export class CancelSalesOrderUseCase {
           }
         }
 
-        const cancelled: SalesOrder = { ...existing, status: "cancelled" };
+        const cancelled: SalesOrder = {
+          ...existing,
+          status: "cancelled",
+          cancelledAt: existing.cancelledAt ?? this.clock?.now() ?? new Date(),
+        };
         await scope.salesOrders.save(cancelled, existing);
         return { ok: true, salesOrder: cancelled };
       });

@@ -11,6 +11,7 @@ import type {
   ICustomerLookupPort,
   ISalesUnitOfWork,
 } from "../domain/ports/sales-order-repository.js";
+import type { IClock } from "../domain/clock.js";
 import type { SalesOrder, SalesOrderLine } from "../domain/sales-order.js";
 import { confirmAccountStatusGate } from "./account-status-gate.js";
 
@@ -85,6 +86,7 @@ export class ConfirmSalesOrderUseCase {
     private readonly customers: ICustomerLookupPort,
     private readonly shipTos: ICustomerShipToSnapshotReadPort,
     private readonly creditCheck: ICreditCheckPort,
+    private readonly clock?: IClock,
   ) {}
 
   async execute(input: ConfirmSalesOrderRequest): Promise<ConfirmSalesOrderResult> {
@@ -204,6 +206,7 @@ export class ConfirmSalesOrderUseCase {
           {
             ...existing,
             status: "confirmed",
+            confirmedAt: existing.confirmedAt ?? this.clock?.now() ?? new Date(),
             ...(input.overrideCredit
               ? { creditLimitOverriddenByStaffUserId: input.staffUserId }
               : {}),

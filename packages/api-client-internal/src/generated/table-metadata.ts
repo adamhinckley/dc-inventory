@@ -358,7 +358,7 @@ export const listInternalSalesOrdersTable = {
   "filters": [
     {
       "param": "status",
-      "control": "select"
+      "control": "multiselect"
     },
     {
       "param": "customerId",

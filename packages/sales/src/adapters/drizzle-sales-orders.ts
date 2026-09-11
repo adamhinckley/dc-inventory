@@ -59,6 +59,9 @@ function toOrder(header: typeof orders.$inferSelect, lines: SalesOrderLine[]): S
     documentNumber: header.documentNumber,
     status: header.status,
     createdAt: header.createdAt,
+    ...(header.confirmedAt !== null ? { confirmedAt: header.confirmedAt } : {}),
+    ...(header.shippedAt !== null ? { shippedAt: header.shippedAt } : {}),
+    ...(header.cancelledAt !== null ? { cancelledAt: header.cancelledAt } : {}),
     lines,
     ...(header.label !== null ? { label: header.label } : {}),
     ...(header.placedByStaffUserId !== null
@@ -124,8 +127,8 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
 
   async list(query: ListSalesOrdersQuery): Promise<SalesOrderListPage> {
     const clauses = [eq(orders.organizationId, query.organizationId)];
-    if (query.status !== undefined) {
-      clauses.push(eq(orders.status, query.status));
+    if (query.status !== undefined && query.status.length > 0) {
+      clauses.push(inArray(orders.status, query.status));
     }
     if (query.customerId !== undefined) {
       clauses.push(eq(orders.customerId, query.customerId));
@@ -239,6 +242,9 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         documentNumber: order.documentNumber,
         label: order.label ?? null,
         createdAt: order.createdAt,
+        confirmedAt: order.confirmedAt ?? null,
+        shippedAt: order.shippedAt ?? null,
+        cancelledAt: order.cancelledAt ?? null,
         placedByStaffUserId: order.placedByStaffUserId ?? null,
         creditLimitOverriddenByStaffUserId: order.creditLimitOverriddenByStaffUserId ?? null,
         shipLine1: order.shipLine1,
@@ -267,6 +273,9 @@ export class DrizzleSalesOrderRepository implements ISalesOrderRepository {
         shipRegion: order.shipRegion,
         shipPostal: order.shipPostal,
         shipCountry: order.shipCountry,
+        confirmedAt: order.confirmedAt ?? null,
+        shippedAt: order.shippedAt ?? null,
+        cancelledAt: order.cancelledAt ?? null,
         updatedAt: new Date(),
       })
       .where(eq(orders.id, order.id));

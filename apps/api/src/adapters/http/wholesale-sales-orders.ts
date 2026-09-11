@@ -151,7 +151,7 @@ export function registerWholesaleSalesOrderRoutes(app: FastifyInstance): void {
         pageSize: number;
         sortBy: "documentNumber" | "status";
         sortOrder: "asc" | "desc";
-        status?: SalesOrder["status"];
+        status?: SalesOrder["status"][];
       };
       const result = await request.server.sales.listSalesOrders.execute({
         organizationId: wholesaleOrganizationId(request),

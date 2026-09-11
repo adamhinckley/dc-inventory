@@ -825,11 +825,13 @@ function salesServices(
       salesOrderRepo,
       customers,
       catalogProduct,
+      clock,
     ),
     applySalesOrderLineDeltas: new ApplySalesOrderLineDeltasUseCase(
       salesOrderRepo,
       customers,
       catalogProduct,
+      clock,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
     confirmSalesOrder: new ConfirmSalesOrderUseCase(
@@ -837,9 +839,10 @@ function salesServices(
       customers,
       shipToSnapshot,
       creditCheck,
+      clock,
     ),
-    cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales),
-    shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot),
+    cancelSalesOrder: new CancelSalesOrderUseCase(unitOfWork.sales, clock),
+    shipSalesOrder: new ShipSalesOrderUseCase(unitOfWork.sales, billToSnapshot, clock),
   };
 }
 
