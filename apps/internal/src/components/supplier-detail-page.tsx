@@ -3,6 +3,7 @@
 import { useGetInternalSupplier } from "@dc-inventory/api-client-internal";
 import { DetailView, ExplorerView } from "@dc-inventory/ui";
 import type { ListQueryParams } from "@dc-inventory/ui-internal";
+import { orvalDetailViewError } from "../lib/orval-query-load";
 import type { SupplierDetail } from "../lib/supplier-types";
 import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { SupplierEditForm } from "./supplier-edit-form";
@@ -23,7 +24,7 @@ export function SupplierDetailPage({
   return (
     <DetailView<SupplierDetail>
       loading={query.isLoading}
-      error={query.isError ? query.error : undefined}
+      error={orvalDetailViewError(query)}
       data={supplier}
     >
       {(loaded) => (

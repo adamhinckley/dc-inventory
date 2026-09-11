@@ -23,6 +23,7 @@ import {
   SHIP_TOS_DESCRIPTION,
   SHIP_TOS_EMPTY_MESSAGE,
 } from "../lib/customer-address-empty-copy";
+import { orvalQueryFailed } from "../lib/orval-query-load";
 import type { CustomerShipToRow } from "../lib/customer-types";
 
 const shipToSchema = z.object({
@@ -138,6 +139,7 @@ export function CustomerShipTosPanel({
 
   const table = useTable({
     data: items,
+    isError: orvalQueryFailed(query),
     columns,
     rowActions: canManage ? rowActions : undefined,
     getRowId: (row) => row.id,
