@@ -18,9 +18,11 @@ import { InMemoryCreditCheckPort } from "../src/adapters/in-memory-credit-check.
 import { InMemoryCustomerShipToSnapshotReadPort } from "../src/adapters/in-memory-customer-ship-to-snapshot-read.js";
 import { InMemorySalesUnitOfWork } from "../src/adapters/in-memory-sales-unit-of-work.js";
 import {
+  ApplySalesOrderLineDeltasUseCase,
   ConfirmSalesOrderUseCase,
   CreateSalesOrderUseCase,
   GetSalesOrderUseCase,
+  ReplaceSalesOrderLinesUseCase,
   ShipSalesOrderUseCase,
   type ICustomerBillToSnapshotReadPort,
 } from "../src/index.js";
@@ -278,5 +280,105 @@ describe("Sales seed clock (in-memory)", () => {
     }
     expect(shipped.salesOrder.confirmedAt?.getTime()).toBe(confirmedAt.getTime());
     expect(shipped.salesOrder.shippedAt?.getTime()).toBe(shippedAt.getTime());
+  });
+
+  it("stamps cancelledAt when empty replace-lines cancels a draft", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+
+    h.clock.advance(60_000);
+    const cancelledAt = h.clock.now();
+    const replace = new ReplaceSalesOrderLinesUseCase(
+      h.uow.salesOrders,
+      {
+        findById: async (organizationId, id) =>
+          organizationId === DEFAULT_ORG && id === CUSTOMER_ID
+            ? { id, accountStatus: "active" as const }
+            : null,
+      },
+      new InMemoryCatalogProductPort([
+        {
+          productId: PRODUCT_ID,
+          organizationId: DEFAULT_ORG,
+          sku: SKU,
+          name: "Widget",
+          unitPrice: Money.fromMinorUnits(500, "USD"),
+          active: true,
+        },
+      ]),
+      h.clock,
+    );
+    const cancelled = await replace.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      lines: [],
+    });
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) {
+      return;
+    }
+    expect(cancelled.salesOrder.status).toBe("cancelled");
+    expect(cancelled.salesOrder.cancelledAt?.getTime()).toBe(cancelledAt.getTime());
+  });
+
+  it("stamps cancelledAt when apply-line-deltas removes the last line", async () => {
+    const h = await harness();
+    const created = await h.create.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: CUSTOMER_ID,
+      lines: [{ productId: PRODUCT_ID, qty: 1 }],
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      return;
+    }
+    const lineId = created.salesOrder.lines[0]?.id;
+    expect(lineId).toBeDefined();
+
+    h.clock.advance(60_000);
+    const cancelledAt = h.clock.now();
+    const apply = new ApplySalesOrderLineDeltasUseCase(
+      h.uow.salesOrders,
+      {
+        findById: async (organizationId, id) =>
+          organizationId === DEFAULT_ORG && id === CUSTOMER_ID
+            ? { id, accountStatus: "active" as const }
+            : null,
+      },
+      new InMemoryCatalogProductPort([
+        {
+          productId: PRODUCT_ID,
+          organizationId: DEFAULT_ORG,
+          sku: SKU,
+          name: "Widget",
+          unitPrice: Money.fromMinorUnits(500, "USD"),
+          active: true,
+        },
+      ]),
+      h.clock,
+    );
+    const cancelled = await apply.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      salesOrderId: created.salesOrder.id,
+      remove: [lineId!],
+    });
+    expect(cancelled.ok).toBe(true);
+    if (!cancelled.ok) {
+      return;
+    }
+    expect(cancelled.salesOrder.status).toBe("cancelled");
+    expect(cancelled.salesOrder.cancelledAt?.getTime()).toBe(cancelledAt.getTime());
   });
 });

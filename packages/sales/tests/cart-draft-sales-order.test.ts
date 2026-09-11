@@ -182,6 +182,7 @@ describe("multi-cart drafts (one customer, many open drafts)", () => {
     }
     expect(replaced.salesOrder.status).toBe("cancelled");
     expect(replaced.salesOrder.lines).toHaveLength(0);
+    expect(replaced.salesOrder.cancelledAt).toBeInstanceOf(Date);
 
     const remaining = openDraftsForCustomer(h);
     expect(remaining.map((row) => row.order.id)).toEqual([keep.salesOrderId]);

@@ -825,11 +825,13 @@ function salesServices(
       salesOrderRepo,
       customers,
       catalogProduct,
+      clock,
     ),
     applySalesOrderLineDeltas: new ApplySalesOrderLineDeltasUseCase(
       salesOrderRepo,
       customers,
       catalogProduct,
+      clock,
     ),
     getSalesOrder: new GetSalesOrderUseCase(salesOrderRepo),
     confirmSalesOrder: new ConfirmSalesOrderUseCase(
