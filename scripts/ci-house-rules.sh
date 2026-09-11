@@ -8,19 +8,11 @@ cd "$root"
 
 fail=0
 
-# Factory SKU tables still hand-roll busy on main; PR #303 switches them to
-# useDataTable `busy` / `listFailed`. Drop these once that PR merges.
-envelope_allowlist='
-apps/internal/src/components/purchasing-2-uncovered-detail.tsx
-apps/internal/src/components/uncovered-factory-detail.tsx
-'
-
-# Pre-order VALUES pair list is the #303 SQL cast. Drop once that PR merges.
-# stock-ledger VALUES rows already include ::uuid / ::integer casts, so they
-# pass the nearby-cast check without an allowlist.
-values_allowlist='
-apps/api/src/adapters/pre-order-open-draft-purchase-order-read-port.ts
-'
+# No current exceptions. Factory SKU tables use useDataTable busy/listFailed;
+# pre-order VALUES binds cast supplier id as uuid. stock-ledger VALUES rows
+# already include ::uuid / ::integer casts.
+envelope_allowlist=''
+values_allowlist=''
 
 allowlisted() {
   local needle="$1"
