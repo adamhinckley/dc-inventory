@@ -234,19 +234,13 @@ export function UncoveredFactoryDetail({
     replaceTableUrlParams(preOrderListTable, params);
   }, []);
 
-  const { items, query, setState, total, page, pageSize, pageCount } =
+  const { items, query, setState, total, page, pageSize, pageCount, busy, listFailed } =
     useDataTable({
       meta: preOrderListTable,
       queryHook: useSkuList,
       initialParams,
       onParamsChange,
     });
-
-  const envelope = unwrapListData(query.data);
-  const busy =
-    query.isPending === true ||
-    query.isLoading === true ||
-    (envelope === undefined && query.isError !== true);
 
   const columns = useMemo<TableColumnDef<PreOrderRow>[]>(
     () => [
@@ -272,7 +266,7 @@ export function UncoveredFactoryDetail({
   const table = useTable({
     data: items as PreOrderRow[],
     isPending: busy,
-    isError: query.isError === true,
+    isError: query.isError === true || listFailed,
     columns,
     getRowId: (row) => row.sku,
     fillColumn: "sku",

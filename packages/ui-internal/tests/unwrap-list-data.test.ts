@@ -43,6 +43,18 @@ describe("isListQueryFailed", () => {
     expect(isListTableBusy(true, undefined, isListQueryFailed(true, unauthorized))).toBe(false);
   });
 
+  it("stops the table spinner when the SKU list returns a 500 Orval envelope", () => {
+    const serverError = {
+      status: 500,
+      data: { error: "internal_error", message: "An unexpected error occurred." },
+      headers: new Headers(),
+    } as never;
+    const listFailed = isListQueryFailed(true, serverError);
+    expect(listFailed).toBe(true);
+    expect(unwrapListData(serverError)).toBeUndefined();
+    expect(isListTableBusy(true, unwrapListData(serverError), listFailed)).toBe(false);
+  });
+
   it("treats a successful empty list envelope as success", () => {
     const empty = {
       status: 200,
