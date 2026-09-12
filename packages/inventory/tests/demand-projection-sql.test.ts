@@ -7,6 +7,7 @@ import {
 } from "../src/domain/demand-model.js";
 import {
   isShopSellableSql,
+  matchesWholesaleAvailabilityFilterSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
 } from "../src/persistence/demand-projection-sql.js";
@@ -191,6 +192,30 @@ describe("demand projection SQL lockstep", () => {
     expect(params).toContain(nowIso);
   });
 
+  it("builds executable matchesWholesaleAvailabilityFilterSql WHERE fragments", () => {
+    const db = drizzle.mock({ schema: { stockSnapshots } });
+    const nowIso = NOW.toISOString();
+    const columns = {
+      onHand: stockSnapshots.onHand,
+      onOrder: stockSnapshots.onOrder,
+      committed: stockSnapshots.committed,
+      stickyLocked: stockSnapshots.stickyLocked,
+      windowOpensAt: stockSnapshots.windowOpensAt,
+      windowClosesAt: stockSnapshots.windowClosesAt,
+    };
+    const { sql: selectSql } = db
+      .select({
+        matches: matchesWholesaleAvailabilityFilterSql(columns, nowIso, {
+          inStockOnly: true,
+          preOrderOnly: false,
+        }).as("matches"),
+      })
+      .from(stockSnapshots)
+      .toSQL();
+    expect(selectSql).toContain("AND");
+    expect(selectSql).toContain("NOT");
+  });
+
   it("builds executable isShopSellableSql WHERE fragments", () => {
     const db = drizzle.mock({ schema: { stockSnapshots } });
     const nowIso = NOW.toISOString();
@@ -263,4 +288,132 @@ describe("isShopSellableSql", () => {
       await expect(evaluateIsShopSellable(testCase.row, NOW)).resolves.toBe(testCase.expected);
     },
   );
+});
+
+const AVAILABILITY_MATRIX_FIXTURES = [
+  {
+    label: "open empty",
+    row: {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: false,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+  },
+  {
+    label: "open stocked",
+    row: {
+      onHand: 4,
+      onOrder: 0,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: false,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+  },
+  {
+    label: "locked on PO",
+    row: {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      committed: 0,
+      stickyLocked: true,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+  },
+  {
+    label: "locked sold out",
+    row: {
+      onHand: 5,
+      onOrder: 100,
+      allocated: 0,
+      committed: 100,
+      stickyLocked: true,
+      windowOpensAt: null,
+      windowClosesAt: null,
+    },
+  },
+] as const satisfies ReadonlyArray<{
+  label: string;
+  row: DemandProjectionFixtureRow;
+}>;
+
+const AVAILABILITY_MATRIX_FILTERS = [
+  { label: "inStock on + preOrder on", filters: { inStockOnly: true, preOrderOnly: true } },
+  { label: "inStock on + preOrder off", filters: { inStockOnly: true, preOrderOnly: false } },
+  { label: "inStock off + preOrder on", filters: { inStockOnly: false, preOrderOnly: true } },
+  { label: "inStock off + preOrder off", filters: { inStockOnly: false, preOrderOnly: false } },
+] as const;
+
+function projectedQtyFromFixture(row: DemandProjectionFixtureRow, now: Date) {
+  const projected = projectRow(row, now);
+  return {
+    onHand: row.onHand,
+    onOrder: row.onOrder,
+    allocated: row.allocated,
+    available: projected.available,
+    committed: row.committed,
+    sellState: projected.sellState,
+    availableToSell: projected.availableToSell,
+  };
+}
+
+/** Mirror of catalog `matchesWholesaleAvailabilityFilter` for SQL parity tests. */
+function matchesWholesaleAvailabilityFilterInMemory(
+  qty: ReturnType<typeof projectedQtyFromFixture>,
+  filters: { inStockOnly: boolean; preOrderOnly: boolean },
+): boolean {
+  if (!filters.inStockOnly && !filters.preOrderOnly) {
+    return true;
+  }
+  const warehouseReady =
+    qty.sellState === "locked" &&
+    qty.availableToSell !== null &&
+    qty.availableToSell > 0;
+  const openPresale = qty.sellState === "open";
+  if (filters.inStockOnly && filters.preOrderOnly) {
+    return warehouseReady || openPresale;
+  }
+  if (filters.inStockOnly) {
+    return warehouseReady;
+  }
+  return openPresale;
+}
+
+describe("matchesWholesaleAvailabilityFilterSql", () => {
+  let evaluateMatches: (
+    row: DemandProjectionFixtureRow,
+    now: Date,
+    filters: { inStockOnly: boolean; preOrderOnly: boolean },
+  ) => Promise<boolean>;
+  let closeEvaluator: () => Promise<void>;
+
+  beforeAll(async () => {
+    const evaluator = await createDemandProjectionSqlEvaluator();
+    evaluateMatches = evaluator.evaluateMatchesWholesaleAvailabilityFilter.bind(evaluator);
+    closeEvaluator = evaluator.close.bind(evaluator);
+  });
+
+  afterAll(async () => {
+    await closeEvaluator();
+  });
+
+  it.each(
+    AVAILABILITY_MATRIX_FILTERS.flatMap((filterCase) =>
+      AVAILABILITY_MATRIX_FIXTURES.map(
+        (fixture) =>
+          [`${filterCase.label} / ${fixture.label}`, filterCase.filters, fixture.row] as const,
+      ),
+    ),
+  )("%s", async (_label, filters, row) => {
+    const qty = projectedQtyFromFixture(row, NOW);
+    const expected = matchesWholesaleAvailabilityFilterInMemory(qty, filters);
+    await expect(evaluateMatches(row, NOW, filters)).resolves.toBe(expected);
+  });
 });

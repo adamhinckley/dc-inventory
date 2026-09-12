@@ -4,9 +4,11 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { boolean, integer, pgTable, timestamp } from "drizzle-orm/pg-core";
 import {
   isShopSellableSql,
+  matchesWholesaleAvailabilityFilterSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
   type DemandProjectionSnapshotColumns,
+  type WholesaleAvailabilityFilterSqlOptions,
 } from "../../src/persistence/demand-projection-sql.js";
 
 const demandProjectionFixture = pgTable("demand_projection_fixture", {
@@ -107,6 +109,22 @@ function buildIsShopSellableQuery(db: DemandProjectionSqlDb, nowIso: string, war
   return db
     .select({
       isShopSellable: isShopSellableSql(available, projectionColumns, nowIso).as("is_shop_sellable"),
+    })
+    .from(demandProjectionFixture);
+}
+
+function buildMatchesWholesaleAvailabilityFilterQuery(
+  db: DemandProjectionSqlDb,
+  nowIso: string,
+  filters: WholesaleAvailabilityFilterSqlOptions,
+) {
+  return db
+    .select({
+      matches: matchesWholesaleAvailabilityFilterSql(
+        projectionColumns,
+        nowIso,
+        filters,
+      ).as("matches"),
     })
     .from(demandProjectionFixture);
 }
@@ -224,6 +242,27 @@ export async function createDemandProjectionSqlEvaluator() {
         throw new Error("isShopSellable SQL evaluation returned no row");
       }
       return evaluated.is_shop_sellable;
+    },
+    async evaluateMatchesWholesaleAvailabilityFilter(
+      row: DemandProjectionFixtureRow,
+      now: Date,
+      filters: WholesaleAvailabilityFilterSqlOptions,
+    ): Promise<boolean> {
+      await seedFixtureRows(client, [row]);
+      const nowIso = now.toISOString();
+      const { sql: selectSql, params } = buildMatchesWholesaleAvailabilityFilterQuery(
+        db,
+        nowIso,
+        filters,
+      ).toSQL();
+      const result = await client.query<{
+        matches: boolean;
+      }>(selectSql, params);
+      const evaluated = result.rows[0];
+      if (evaluated === undefined) {
+        throw new Error("matchesWholesaleAvailabilityFilter SQL evaluation returned no row");
+      }
+      return evaluated.matches;
     },
     async close(): Promise<void> {
       await client.close();

@@ -4,10 +4,11 @@ import {
   type Product,
   type ProductQty,
   emptyProductCatalogAttributes,
+  resolveWholesaleAvailabilityFilters,
 } from "@dc-inventory/catalog";
 import {
-  isShopSellableSql,
   isWholesaleHiddenBeforeOpenSql,
+  matchesWholesaleAvailabilityFilterSql,
   staffCatalogAvailableToSellOrderBySql,
   staffCatalogDemandProjectionSql,
   type IClock,
@@ -314,12 +315,18 @@ function buildStaffCatalogListQueries(
     nowIso,
     demandProjectionCatalogColumns,
   );
+  const availabilityFilters = resolveWholesaleAvailabilityFilters(query);
   if (query.hideZeroInventory === true) {
     clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
   }
-  if (query.availableOnly === true) {
+  if (availabilityFilters.inStockOnly || availabilityFilters.preOrderOnly) {
     clauses.push(
-      isShopSellableSql(available, demandProjectionColumns, nowIso, demandProjectionCatalogColumns),
+      matchesWholesaleAvailabilityFilterSql(
+        demandProjectionColumns,
+        nowIso,
+        availabilityFilters,
+        demandProjectionCatalogColumns,
+      ),
     );
   }
   if (query.hideBeforeOpen === true) {
@@ -381,7 +388,8 @@ function buildStaffCatalogListQueries(
   );
   const needsInventoryJoin =
     query.hideZeroInventory === true ||
-    query.availableOnly === true ||
+    availabilityFilters.inStockOnly ||
+    availabilityFilters.preOrderOnly ||
     query.hideBeforeOpen === true ||
     query.sellState !== undefined;
 
