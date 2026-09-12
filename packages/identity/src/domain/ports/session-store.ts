@@ -52,6 +52,7 @@ export interface ISessionStore {
   touch(id: SessionId, lastSeenAt: Date): Promise<void>;
   updateCustomerId(id: SessionId, customerId: CustomerId | null): Promise<void>;
   delete(id: SessionId): Promise<void>;
+  deleteByStaffUserId(staffUserId: StaffUserId): Promise<void>;
   findStaffResolved?(id: SessionId): Promise<StaffResolvedSession | null>;
   findWholesaleResolved?(id: SessionId): Promise<WholesaleResolvedSession | null>;
   findOpsResolved?(id: SessionId): Promise<OpsResolvedSession | null>;

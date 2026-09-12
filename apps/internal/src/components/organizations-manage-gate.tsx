@@ -12,7 +12,7 @@ export function OrganizationsManageGate({ children }: { children: ReactNode }) {
       <section className="section-flat max-w-xl p-panel">
         <h1 className="page-title">Not Available</h1>
         <p className="page-description mt-2">
-          Only Platform users can add companies.
+          Only Platform users can manage companies.
         </p>
         <p className="mt-4">
           <Link href="/catalog" className="text-link hover:text-link-hover">

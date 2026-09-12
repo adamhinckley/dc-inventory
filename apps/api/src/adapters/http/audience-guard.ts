@@ -11,9 +11,17 @@ function isAuthRoute(request: FastifyRequest): boolean {
   return url.includes("/auth/");
 }
 
+const PLATFORM_OPERATION_IDS = new Set([
+  "createInternalOrganization",
+  "listInternalOrganizations",
+  "deleteInternalOrganization",
+]);
+
 function isPlatformRoute(request: FastifyRequest): boolean {
   const schema = request.routeOptions.schema as { operationId?: string } | undefined;
-  return schema?.operationId === "createInternalOrganization";
+  return (
+    schema?.operationId !== undefined && PLATFORM_OPERATION_IDS.has(schema.operationId)
+  );
 }
 
 function isOpsLoginRoute(request: FastifyRequest): boolean {

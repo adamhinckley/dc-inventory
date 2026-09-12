@@ -16,6 +16,10 @@ import { OrganizationId, PlatformUserId, StaffUserId } from "@dc-inventory/share
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { InMemoryDatabase } from "../in-memory-database.js";
+import {
+  InMemoryOrganizationOccupancyReadPort,
+  type IOrganizationOccupancyReadPort,
+} from "../organization-occupancy-read-port.js";
 import { buildApp } from "../../app.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
 
@@ -47,6 +51,7 @@ async function startOrganizationsApp(
   overrides: {
     emailSender?: IEmailSender;
     licensingProvisioner?: ILicensingTenantProvisioner;
+    organizationOccupancy?: IOrganizationOccupancyReadPort;
   } = {},
 ) {
   const passwords = new InMemoryPasswordHasher();
@@ -100,6 +105,7 @@ async function startOrganizationsApp(
     emailSender,
     licensingStore,
     licensingProvisioner: overrides.licensingProvisioner,
+    organizationOccupancy: overrides.organizationOccupancy,
   });
   apps.push(app);
 
@@ -152,6 +158,87 @@ const createPayload = {
   staffDisplayName: "Harbor Owner",
   staffEmail: "owner@harbor.test",
 };
+
+describe("list and delete internal organizations", () => {
+  it("forbids staff from listing or deleting organizations", async () => {
+    const { app, staffCookie } = await startOrganizationsApp();
+    const session = await staffCookie("staff@local.test", "acme");
+
+    const listForbidden = await app.inject({
+      method: "GET",
+      url: "/internal/organizations",
+      cookies: { [STAFF_SESSION_COOKIE]: session },
+    });
+    expect(listForbidden.statusCode).toBe(403);
+    expect(listForbidden.json()).toEqual({ error: "forbidden" });
+
+    const deleteForbidden = await app.inject({
+      method: "DELETE",
+      url: `/internal/organizations/${BETA_ORG}`,
+      cookies: { [STAFF_SESSION_COOKIE]: session },
+    });
+    expect(deleteForbidden.statusCode).toBe(403);
+    expect(deleteForbidden.json()).toEqual({ error: "forbidden" });
+  });
+
+  it("lists DEFAULT and a second org for platform users", async () => {
+    const { app, platformCookie } = await startOrganizationsApp();
+    const session = await platformCookie();
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/organizations",
+      cookies: { [STAFF_SESSION_COOKIE]: session },
+    });
+
+    expect(listed.statusCode).toBe(200);
+    const body = listed.json();
+    expect(body.total).toBe(2);
+    expect(body.items.map((item: { slug: string }) => item.slug).sort()).toEqual([
+      "acme",
+      "beta",
+    ]);
+  });
+
+  it("refuses deleting DEFAULT, deletes an empty org, and refuses busy orgs", async () => {
+    const occupancy = new InMemoryOrganizationOccupancyReadPort();
+    const { app, platformCookie, organizations, staffUsers } = await startOrganizationsApp({
+      organizationOccupancy: occupancy,
+    });
+    const session = await platformCookie();
+
+    const deleteDefault = await app.inject({
+      method: "DELETE",
+      url: `/internal/organizations/${OrganizationId.DEFAULT}`,
+      cookies: { [STAFF_SESSION_COOKIE]: session },
+    });
+    expect(deleteDefault.statusCode).toBe(409);
+    expect(deleteDefault.json()).toEqual({ error: "default_organization" });
+
+    occupancy.markOccupied(BETA_ORG);
+    const busy = await app.inject({
+      method: "DELETE",
+      url: `/internal/organizations/${BETA_ORG}`,
+      cookies: { [STAFF_SESSION_COOKIE]: session },
+    });
+    expect(busy.statusCode).toBe(409);
+    expect(busy.json()).toEqual({ error: "org_not_empty" });
+    expect(await organizations.findById(BETA_ORG)).not.toBeNull();
+
+    const emptyHarness = await startOrganizationsApp();
+    const emptySession = await emptyHarness.platformCookie();
+    const deleted = await emptyHarness.app.inject({
+      method: "DELETE",
+      url: `/internal/organizations/${BETA_ORG}`,
+      cookies: { [STAFF_SESSION_COOKIE]: emptySession },
+    });
+    expect(deleted.statusCode).toBe(204);
+    expect(await emptyHarness.organizations.findById(BETA_ORG)).toBeNull();
+    expect(await emptyHarness.staffUsers.findById(
+      StaffUserId.parse("10000000-0000-4000-8000-000000000002"),
+    )).toBeNull();
+  });
+});
 
 describe("create internal organization", () => {
   it("allows Platform users and provisions licensing twin + invite", async () => {

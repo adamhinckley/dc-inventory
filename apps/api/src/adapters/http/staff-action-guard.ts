@@ -151,7 +151,10 @@ function actionsFor(
   return asActions(mapped, request);
 }
 
-const PLATFORM_ONLY_OPERATIONS = new Set(["createInternalOrganization"]);
+const PLATFORM_ONLY_OPERATIONS = new Set([
+  "createInternalOrganization",
+  "deleteInternalOrganization",
+]);
 
 function hasStaffActionMapping(schema: FastifySchema | undefined): boolean {
   const id = operationId(schema);

@@ -195,6 +195,42 @@ export const listInternalCustomersTable = {
   }
 } as const satisfies InternalTableMetadata;
 
+export const listInternalOrganizationsTable = {
+  "rowId": "id",
+  "columns": [
+    {
+      "field": "name",
+      "label": "Name"
+    },
+    {
+      "field": "slug",
+      "label": "Slug"
+    },
+    {
+      "field": "id",
+      "label": "Id"
+    }
+  ],
+  "search": {
+    "param": "q",
+    "fields": [
+      "name",
+      "slug"
+    ],
+    "placeholder": "Search name or slug"
+  },
+  "filters": [],
+  "sort": {
+    "defaultBy": "name",
+    "defaultOrder": "asc",
+    "fields": [
+      "name",
+      "slug",
+      "id"
+    ]
+  }
+} as const satisfies InternalTableMetadata;
+
 export const listInternalPreOrderFactoriesTable = {
   "rowId": "id",
   "columns": [
@@ -591,6 +627,7 @@ export const internalTableMetadata = {
   listInternalAccountingCustomerBalances: listInternalAccountingCustomerBalancesTable,
   listInternalAccountingPayments: listInternalAccountingPaymentsTable,
   listInternalCustomers: listInternalCustomersTable,
+  listInternalOrganizations: listInternalOrganizationsTable,
   listInternalPreOrderFactories: listInternalPreOrderFactoriesTable,
   listInternalPreOrderSkus: listInternalPreOrderSkusTable,
   listInternalProducts: listInternalProductsTable,

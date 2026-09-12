@@ -1,14 +1,14 @@
 "use client";
 
 import {
-  getGetInternalSessionQueryKey,
+  getListInternalOrganizationsQueryKey,
   useCreateInternalOrganization,
   type createInternalOrganization,
 } from "@dc-inventory/api-client-internal";
-import { Form, TextInput, useFormSubmit } from "@dc-inventory/ui";
+import { Form, TextInput, useExplorerView, useFormSubmit } from "@dc-inventory/ui";
 import { deriveOrganizationSlugFromDisplayName } from "../lib/organization-slug";
 import { Building2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormContext, type ControllerFieldState, type ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
 
@@ -20,12 +20,6 @@ const createOrganizationSchema = z.object({
 });
 
 type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>;
-
-type SuccessState = {
-  companyName: string;
-  adminName: string;
-  email: string;
-};
 
 function OrganizationSlugFields({
   slugTouched,
@@ -84,54 +78,32 @@ function OrganizationSlugFields({
 }
 
 export function OrganizationCreateForm() {
+  const { setCreateOpen } = useExplorerView();
   const [slugTouched, setSlugTouched] = useState(false);
-  const [success, setSuccess] = useState<SuccessState | null>(null);
-  const submittedRef = useRef<CreateOrganizationInput | null>(null);
   const { mutateAsync } = useCreateInternalOrganization();
 
   const onSubmit = useFormSubmit<
     CreateOrganizationInput,
     Awaited<ReturnType<typeof createInternalOrganization>>
   >({
-    mutate: async (data) => {
-      submittedRef.current = data;
-      return mutateAsync({
+    mutate: async (data) =>
+      mutateAsync({
         data: {
           name: data.name.trim(),
           slug: data.slug.trim(),
           staffDisplayName: data.staffDisplayName.trim(),
           staffEmail: data.staffEmail.trim(),
         },
-      });
-    },
-    successMessage: "Organization created",
-    invalidate: getGetInternalSessionQueryKey(),
+      }),
+    successMessage: "Invite sent",
+    invalidate: getListInternalOrganizationsQueryKey(),
     onSuccess: (result) => {
-      const data = submittedRef.current;
-      if (result.status === 201 && data !== null) {
-        setSuccess({
-          companyName: data.name.trim(),
-          adminName: data.staffDisplayName.trim(),
-          email: data.staffEmail.trim(),
-        });
+      if (result.status === 201) {
+        setSlugTouched(false);
+        setCreateOpen(false);
       }
     },
   });
-
-  if (success !== null) {
-    return (
-      <section className="section-flat max-w-xl p-panel">
-        <h2 className="page-title">Invite Sent</h2>
-        <p className="page-description mt-2">
-          Company {success.companyName} created. Invite sent to {success.adminName} (
-          {success.email}).
-        </p>
-        <p className="mt-4 text-body-sm text-fg-secondary">
-          No password was set on this form. The first admin sets it from the invite link.
-        </p>
-      </section>
-    );
-  }
 
   return (
     <Form

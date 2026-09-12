@@ -60,6 +60,14 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
     return rows[0] === undefined ? null : toStaffUser(rows[0]);
   }
 
+  async listByOrganizationId(organizationId: OrganizationId): Promise<readonly StaffUser[]> {
+    const rows = await this.db
+      .select()
+      .from(staffUsers)
+      .where(eq(staffUsers.organizationId, organizationId));
+    return rows.map(toStaffUser);
+  }
+
   async save(user: StaffUser): Promise<void> {
     const email = normalizeEmail(user.email);
     const displayName = parseDisplayName(user.displayName);
