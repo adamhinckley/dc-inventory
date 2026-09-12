@@ -70,7 +70,7 @@ safe-outputs:
             const scope = (process.env.GITHUB_WORKFLOW_SCOPE || '').trim().toLowerCase().replace(/\s+/g, ' ');
             const key = `security-review|adamhinckley/dc-inventory|${process.env.GITHUB_SHA}|${scope}`;
             async function gql(query, variables = {}) {
-              const response = await fetch('https://api.linear.app/graphql', { method: 'POST', headers: { Authorization: process.env.LINEAR_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables }) });
+              const response = await fetch('https://api.linear.app/graphql', { method: 'POST', headers: { Authorization: `Bearer ${process.env.LINEAR_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ query, variables }) });
               const body = await response.json();
               if (!response.ok || body.errors) throw new Error(JSON.stringify(body.errors || body));
               return body.data;
