@@ -131,6 +131,52 @@ export function isWholesaleHiddenBeforeOpenSql(
   )`;
 }
 
+/** WHERE fragment: locked SKU with ATP > 0 (warehouse-ready). */
+export function isWarehouseReadySql(
+  columns: DemandProjectionSnapshotColumns,
+  nowIso: string,
+  catalog?: DemandProjectionCatalogColumns,
+): SQL<boolean> {
+  const projection = staffCatalogDemandProjectionSql(columns, nowIso, catalog);
+  return sql<boolean>`(${projection.isLockedForSell} AND ${projection.availableToSell} > 0)`;
+}
+
+/** WHERE fragment: open SKU (pre-order / no numeric cap). */
+export function isOpenPresaleSql(
+  columns: DemandProjectionSnapshotColumns,
+  nowIso: string,
+  catalog?: DemandProjectionCatalogColumns,
+): SQL<boolean> {
+  const projection = staffCatalogDemandProjectionSql(columns, nowIso, catalog);
+  return sql<boolean>`NOT ${projection.isLockedForSell}`;
+}
+
+export type WholesaleAvailabilityFilterSqlOptions = Readonly<{
+  inStockOnly: boolean;
+  preOrderOnly: boolean;
+}>;
+
+/** WHERE fragment: inStockOnly × preOrderOnly wholesale availability matrix. */
+export function matchesWholesaleAvailabilityFilterSql(
+  columns: DemandProjectionSnapshotColumns,
+  nowIso: string,
+  filters: WholesaleAvailabilityFilterSqlOptions,
+  catalog?: DemandProjectionCatalogColumns,
+): SQL<boolean> {
+  if (!filters.inStockOnly && !filters.preOrderOnly) {
+    return sql<boolean>`true`;
+  }
+  const warehouseReady = isWarehouseReadySql(columns, nowIso, catalog);
+  const openPresale = isOpenPresaleSql(columns, nowIso, catalog);
+  if (filters.inStockOnly && filters.preOrderOnly) {
+    return sql<boolean>`(${warehouseReady} OR ${openPresale})`;
+  }
+  if (filters.inStockOnly) {
+    return warehouseReady;
+  }
+  return openPresale;
+}
+
 /** WHERE fragment: every open SKU; locked SKUs by availableToSell > 0. */
 export function isShopSellableSql(
   warehouseAvailable: SQL<number>,
@@ -138,11 +184,13 @@ export function isShopSellableSql(
   nowIso: string,
   catalog?: DemandProjectionCatalogColumns,
 ): SQL<boolean> {
-  const projection = staffCatalogDemandProjectionSql(columns, nowIso, catalog);
-  return sql<boolean>`(CASE
-    WHEN ${projection.isLockedForSell} THEN ${projection.availableToSell} > 0
-    ELSE true
-  END)`;
+  void warehouseAvailable;
+  return matchesWholesaleAvailabilityFilterSql(
+    columns,
+    nowIso,
+    { inStockOnly: true, preOrderOnly: true },
+    catalog,
+  );
 }
 
 /** ORDER BY fragment for availableToSell matching in-memory null placement. */

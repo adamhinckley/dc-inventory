@@ -119,6 +119,36 @@ describe("Catalog use cases (in-memory)", () => {
     expect(listed.items[1]?.product.webWholesale).toBe(false);
   });
 
+  it("includes locked sold-out SKUs on the staff list when availability filters are unset", async () => {
+    const h = harness();
+    const lockedSoldOut = await createProduct(h, {
+      sku: "STAFF-LOCKED-SOLD-OUT",
+      name: "Staff locked sold out",
+    });
+    h.qty.set(DEFAULT_ORG, lockedSoldOut.sku.value, {
+      onHand: 5,
+      onOrder: 100,
+      allocated: 0,
+      available: 5,
+      committed: 100,
+      sellState: "locked",
+      availableToSell: 0,
+    });
+
+    const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: OTHER_STAFF,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    expect(listed.items.some((row) => row.product.sku.value === lockedSoldOut.sku.value)).toBe(
+      true,
+    );
+  });
+
   it("includes caseQty on the staff list", async () => {
     const h = harness();
     const product = await createProduct(h, { sku: "HEX-BOLT-GALV" });
@@ -320,6 +350,145 @@ describe("Catalog use cases (in-memory)", () => {
     expect(
       listed.items.some((row) => row.product.sku.value === lockedLeftoverOnly.sku.value),
     ).toBe(false);
+  });
+
+  async function seedWholesaleAvailabilityMatrix(h: ReturnType<typeof harness>) {
+    const openStocked = await createProduct(h, {
+      sku: "MATRIX-OPEN-STOCKED",
+      name: "Matrix open stocked",
+    });
+    const openEmpty = await createProduct(h, {
+      sku: "MATRIX-OPEN-EMPTY",
+      name: "Matrix open empty",
+    });
+    const lockedOnPo = await createProduct(h, {
+      sku: "MATRIX-LOCKED-PO",
+      name: "Matrix locked on PO",
+    });
+    const lockedSoldOut = await createProduct(h, {
+      sku: "MATRIX-LOCKED-SOLD-OUT",
+      name: "Matrix locked sold out",
+    });
+    h.qty.set(DEFAULT_ORG, openStocked.sku.value, {
+      onHand: 4,
+      onOrder: 0,
+      allocated: 0,
+      available: 4,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    h.qty.set(DEFAULT_ORG, openEmpty.sku.value, {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    h.qty.set(DEFAULT_ORG, lockedOnPo.sku.value, {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "locked",
+      availableToSell: 100,
+    });
+    h.qty.set(DEFAULT_ORG, lockedSoldOut.sku.value, {
+      onHand: 5,
+      onOrder: 100,
+      allocated: 0,
+      available: 5,
+      committed: 100,
+      sellState: "locked",
+      availableToSell: 0,
+    });
+    return { openStocked, openEmpty, lockedOnPo, lockedSoldOut };
+  }
+
+  it("wholesale inStock on + preOrder on lists locked ATP>0 or open", async () => {
+    const h = harness();
+    await seedWholesaleAvailabilityMatrix(h);
+
+    const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+      inStockOnly: true,
+      preOrderOnly: true,
+    });
+
+    expect(listed.items.map((row) => row.product.sku.value).sort()).toEqual(
+      ["MATRIX-LOCKED-PO", "MATRIX-OPEN-EMPTY", "MATRIX-OPEN-STOCKED"].sort(),
+    );
+  });
+
+  it("wholesale inStock on + preOrder off lists locked ATP>0 only", async () => {
+    const h = harness();
+    await seedWholesaleAvailabilityMatrix(h);
+
+    const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+      inStockOnly: true,
+      preOrderOnly: false,
+    });
+
+    expect(listed.items.map((row) => row.product.sku.value)).toEqual(["MATRIX-LOCKED-PO"]);
+  });
+
+  it("wholesale inStock off + preOrder on lists open only", async () => {
+    const h = harness();
+    await seedWholesaleAvailabilityMatrix(h);
+
+    const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+      inStockOnly: false,
+      preOrderOnly: true,
+    });
+
+    expect(listed.items.map((row) => row.product.sku.value).sort()).toEqual(
+      ["MATRIX-OPEN-EMPTY", "MATRIX-OPEN-STOCKED"].sort(),
+    );
+  });
+
+  it("wholesale inStock off + preOrder off lists all shop-visible rows", async () => {
+    const h = harness();
+    await seedWholesaleAvailabilityMatrix(h);
+
+    const listed = await h.listWholesale.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: CUSTOMER_ID,
+      page: 1,
+      pageSize: 25,
+      sortBy: "name",
+      sortOrder: "asc",
+      inStockOnly: false,
+      preOrderOnly: false,
+    });
+
+    expect(listed.items.map((row) => row.product.sku.value).sort()).toEqual(
+      [
+        "MATRIX-LOCKED-PO",
+        "MATRIX-LOCKED-SOLD-OUT",
+        "MATRIX-OPEN-EMPTY",
+        "MATRIX-OPEN-STOCKED",
+      ].sort(),
+    );
   });
 
   it("hides future scheduled windows from the wholesale list but keeps post-close locked SKUs visible", async () => {

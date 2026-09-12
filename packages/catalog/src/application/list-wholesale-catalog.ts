@@ -1,7 +1,7 @@
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 import type { ICatalogListQuery } from "../domain/ports/catalog-list-query.js";
 import type { Product } from "../domain/product.js";
-import type { ProductQty } from "../domain/qty.js";
+import { resolveWholesaleAvailabilityFilters, type ProductQty } from "../domain/qty.js";
 
 export type WholesaleCatalogSortBy = "name" | "available";
 export type SortOrder = "asc" | "desc";
@@ -16,6 +16,8 @@ export type ListWholesaleCatalogRequest = {
   sortBy: WholesaleCatalogSortBy;
   sortOrder: SortOrder;
   availableOnly?: boolean;
+  inStockOnly?: boolean;
+  preOrderOnly?: boolean;
 };
 
 export type WholesaleCatalogListRow = {
@@ -37,6 +39,11 @@ export class ListWholesaleCatalogUseCase {
     input: ListWholesaleCatalogRequest,
   ): Promise<ListWholesaleCatalogResult> {
     void input.customerId;
+    const availability = resolveWholesaleAvailabilityFilters({
+      inStockOnly: input.inStockOnly,
+      preOrderOnly: input.preOrderOnly,
+      availableOnly: input.availableOnly,
+    });
     const page = await this.catalogList.list({
       organizationId: input.organizationId,
       q: input.q,
@@ -46,7 +53,8 @@ export class ListWholesaleCatalogUseCase {
       sortBy: input.sortBy,
       sortOrder: input.sortOrder,
       shopVisibleOnly: true,
-      availableOnly: input.availableOnly ?? true,
+      inStockOnly: availability.inStockOnly,
+      preOrderOnly: availability.preOrderOnly,
       hideBeforeOpen: true,
     });
     return {

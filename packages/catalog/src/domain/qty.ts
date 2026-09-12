@@ -77,12 +77,85 @@ export const ZERO_QTY: ProductQty = {
   availableToSell: null,
 };
 
+/** Locked SKU with inbound ATP ready to ship (warehouse-ready). */
+export function isWarehouseReady(qty: ProductQty): boolean {
+  return (
+    qty.sellState === "locked" &&
+    qty.availableToSell !== null &&
+    qty.availableToSell > 0
+  );
+}
+
+/** Open SKU (pre-order / no numeric cap). Shop visibility is separate. */
+export function isOpenPresale(qty: ProductQty): boolean {
+  return qty.sellState === "open";
+}
+
+export type WholesaleAvailabilityFilters = Readonly<{
+  inStockOnly: boolean;
+  preOrderOnly: boolean;
+}>;
+
+/** Maps legacy availableOnly or explicit inStockOnly × preOrderOnly toggles. */
+export function resolveWholesaleAvailabilityFilters(input: {
+  inStockOnly?: boolean;
+  preOrderOnly?: boolean;
+  availableOnly?: boolean;
+}): WholesaleAvailabilityFilters {
+  if (input.inStockOnly !== undefined || input.preOrderOnly !== undefined) {
+    return Object.freeze({
+      inStockOnly: input.inStockOnly ?? true,
+      preOrderOnly: input.preOrderOnly ?? true,
+    });
+  }
+  const legacy = input.availableOnly ?? true;
+  return Object.freeze({ inStockOnly: legacy, preOrderOnly: legacy });
+}
+
+/**
+ * Returns resolved wholesale availability toggles when the list query explicitly
+ * requests filtering; null preserves staff/CSV behavior (show locked sold-out).
+ */
+export function resolveCatalogListAvailabilityFilter(input: {
+  inStockOnly?: boolean;
+  preOrderOnly?: boolean;
+  availableOnly?: boolean;
+}): WholesaleAvailabilityFilters | null {
+  if (
+    input.inStockOnly === undefined &&
+    input.preOrderOnly === undefined &&
+    input.availableOnly === undefined
+  ) {
+    return null;
+  }
+  return resolveWholesaleAvailabilityFilters(input);
+}
+
+/** Wholesale list availability matrix (inStockOnly × preOrderOnly). */
+export function matchesWholesaleAvailabilityFilter(
+  qty: ProductQty,
+  filters: WholesaleAvailabilityFilters,
+): boolean {
+  if (!filters.inStockOnly && !filters.preOrderOnly) {
+    return true;
+  }
+  const warehouseReady = isWarehouseReady(qty);
+  const openPresale = isOpenPresale(qty);
+  if (filters.inStockOnly && filters.preOrderOnly) {
+    return warehouseReady || openPresale;
+  }
+  if (filters.inStockOnly) {
+    return warehouseReady;
+  }
+  return openPresale;
+}
+
 /** Wholesale shop filter: every open SKU; locked SKUs by availableToSell. */
 export function isShopSellable(qty: ProductQty): boolean {
-  if (qty.sellState === "locked") {
-    return qty.availableToSell !== null && qty.availableToSell > 0;
-  }
-  return true;
+  return matchesWholesaleAvailabilityFilter(qty, {
+    inStockOnly: true,
+    preOrderOnly: true,
+  });
 }
 
 /** Qty to show on wholesale product cards (locked ATP only; open SKUs show no number). */

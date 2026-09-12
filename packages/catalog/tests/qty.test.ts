@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   isWholesaleHiddenBeforeOpen,
   isShopSellable,
+  isWarehouseReady,
+  isOpenPresale,
+  matchesWholesaleAvailabilityFilter,
+  resolveCatalogListAvailabilityFilter,
+  resolveWholesaleAvailabilityFilters,
   shopAvailabilityLabel,
   shopDisplayAvailableQty,
   type ProductQty,
@@ -62,6 +67,131 @@ describe("isWholesaleHiddenBeforeOpen", () => {
         { now },
       ),
     ).toBe(false);
+  });
+});
+
+describe("isWarehouseReady", () => {
+  it("is true for locked SKUs with ATP > 0", () => {
+    expect(
+      isWarehouseReady(
+        qty({
+          sellState: "locked",
+          availableToSell: 100,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("is false for open SKUs", () => {
+    expect(isWarehouseReady(qty({ available: 12 }))).toBe(false);
+  });
+
+  it("is false for locked sold-out SKUs even with warehouse leftover", () => {
+    expect(
+      isWarehouseReady(
+        qty({
+          sellState: "locked",
+          available: 5,
+          availableToSell: 0,
+        }),
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("isOpenPresale", () => {
+  it("is true for open SKUs", () => {
+    expect(isOpenPresale(qty({ available: 0 }))).toBe(true);
+  });
+
+  it("is false for locked SKUs", () => {
+    expect(isOpenPresale(qty({ sellState: "locked", availableToSell: 10 }))).toBe(false);
+  });
+});
+
+describe("resolveWholesaleAvailabilityFilters", () => {
+  it("maps legacy availableOnly true to both toggles on", () => {
+    expect(resolveWholesaleAvailabilityFilters({ availableOnly: true })).toEqual({
+      inStockOnly: true,
+      preOrderOnly: true,
+    });
+  });
+
+  it("maps legacy availableOnly false to both toggles off", () => {
+    expect(resolveWholesaleAvailabilityFilters({ availableOnly: false })).toEqual({
+      inStockOnly: false,
+      preOrderOnly: false,
+    });
+  });
+
+  it("defaults both toggles on when unset", () => {
+    expect(resolveWholesaleAvailabilityFilters({})).toEqual({
+      inStockOnly: true,
+      preOrderOnly: true,
+    });
+  });
+});
+
+describe("resolveCatalogListAvailabilityFilter", () => {
+  it("returns null when no availability flags are set (staff/CSV default)", () => {
+    expect(resolveCatalogListAvailabilityFilter({})).toBeNull();
+  });
+
+  it("resolves when legacy availableOnly is set", () => {
+    expect(resolveCatalogListAvailabilityFilter({ availableOnly: false })).toEqual({
+      inStockOnly: false,
+      preOrderOnly: false,
+    });
+  });
+
+  it("resolves when inStockOnly or preOrderOnly is set", () => {
+    expect(resolveCatalogListAvailabilityFilter({ inStockOnly: true })).toEqual({
+      inStockOnly: true,
+      preOrderOnly: true,
+    });
+  });
+});
+
+describe("matchesWholesaleAvailabilityFilter", () => {
+  const openEmpty = qty({ available: 0 });
+  const openStocked = qty({ available: 4 });
+  const lockedOnPo = qty({ sellState: "locked", availableToSell: 100 });
+  const lockedSoldOut = qty({
+    sellState: "locked",
+    available: 5,
+    availableToSell: 0,
+  });
+
+  it("inStock on + preOrder on shows locked ATP>0 or open", () => {
+    const filters = { inStockOnly: true, preOrderOnly: true };
+    expect(matchesWholesaleAvailabilityFilter(openEmpty, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(openStocked, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(lockedOnPo, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(lockedSoldOut, filters)).toBe(false);
+  });
+
+  it("inStock on + preOrder off shows locked ATP>0 only", () => {
+    const filters = { inStockOnly: true, preOrderOnly: false };
+    expect(matchesWholesaleAvailabilityFilter(openEmpty, filters)).toBe(false);
+    expect(matchesWholesaleAvailabilityFilter(openStocked, filters)).toBe(false);
+    expect(matchesWholesaleAvailabilityFilter(lockedOnPo, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(lockedSoldOut, filters)).toBe(false);
+  });
+
+  it("inStock off + preOrder on shows open only", () => {
+    const filters = { inStockOnly: false, preOrderOnly: true };
+    expect(matchesWholesaleAvailabilityFilter(openEmpty, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(openStocked, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(lockedOnPo, filters)).toBe(false);
+    expect(matchesWholesaleAvailabilityFilter(lockedSoldOut, filters)).toBe(false);
+  });
+
+  it("inStock off + preOrder off shows all shop-visible rows", () => {
+    const filters = { inStockOnly: false, preOrderOnly: false };
+    expect(matchesWholesaleAvailabilityFilter(openEmpty, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(openStocked, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(lockedOnPo, filters)).toBe(true);
+    expect(matchesWholesaleAvailabilityFilter(lockedSoldOut, filters)).toBe(true);
   });
 });
 
