@@ -54,7 +54,8 @@ export function useWholesaleAddToCart({
   sellState,
 }: UseWholesaleAddToCartInput) {
   const queryClient = useQueryClient();
-  const { activeDraft, customerId, setActiveCart } = useActiveCart();
+  const { activeDraft, customerId, setActiveCart, isPending: activeCartPending } =
+    useActiveCart();
   const createOrder = useCreateWholesaleSalesOrder();
   const applyLineDeltas = useApplyWholesaleSalesOrderLineDeltas();
   const [pending, setPending] = useState(false);
@@ -151,6 +152,9 @@ export function useWholesaleAddToCart({
   }
 
   async function applyQty(qty: number): Promise<ApplyCartQtyResult> {
+    if (activeCartPending) {
+      return { ok: false, message: "Loading cart…" };
+    }
     if (qty < 0 || !Number.isInteger(qty)) {
       return { ok: false, message: "Enter a quantity of 1 or more" };
     }
@@ -210,5 +214,5 @@ export function useWholesaleAddToCart({
     }
   }
 
-  return { applyQty, pending, inCart, cartQty, maxQty };
+  return { applyQty, pending: pending || activeCartPending, inCart, cartQty, maxQty };
 }

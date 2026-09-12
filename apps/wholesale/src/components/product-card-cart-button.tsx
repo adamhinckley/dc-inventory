@@ -51,7 +51,7 @@ export function ProductCardCartButton({
   const router = useRouter();
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
-  const { signedIn, pending: sessionPending } = useWholesaleSession();
+  const { signedIn } = useWholesaleSession();
   const { applyQty, pending, inCart, cartQty, maxQty } = useWholesaleAddToCart({
     productId,
     name,
@@ -66,17 +66,13 @@ export function ProductCardCartButton({
   const nextQty = (cartQty ?? 0) + 1;
   const atCap = cartQtyOverCap(nextQty, maxQty);
   const blocked = !inStock || atCap;
-  const busy = pending || sessionPending;
 
   async function onClick() {
-    if (sessionPending) {
+    if (blocked || pending) {
       return;
     }
     if (!signedIn) {
       router.push(loginHref(category));
-      return;
-    }
-    if (blocked || pending) {
       return;
     }
     const result = await applyQty(nextQty);
@@ -100,8 +96,8 @@ export function ProductCardCartButton({
       <button
         type="button"
         aria-label={label}
-        disabled={blocked || busy}
-        aria-busy={busy}
+        disabled={blocked || pending}
+        aria-busy={pending}
         onClick={() => {
           void onClick();
         }}
@@ -117,11 +113,13 @@ export function ProductCardCartButton({
         ) : null}
       </button>
       <p
-        className="absolute bottom-2 left-2 right-12 z-10 min-h-4 text-[0.6875rem] leading-4 text-sold-out"
+        className={`absolute bottom-2 left-2 right-12 z-10 text-[0.6875rem] leading-4 text-sold-out ${
+          message === null ? "pointer-events-none" : "min-h-4"
+        }`}
         role="status"
         aria-live="polite"
       >
-        {message ?? "\u00a0"}
+        {message ?? ""}
       </p>
     </>
   );
