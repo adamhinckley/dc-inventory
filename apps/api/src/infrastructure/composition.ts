@@ -80,6 +80,7 @@ import {
 } from "@dc-inventory/customers";
 import {
   ClearActingCustomerUseCase,
+  CreateStaffUserUseCase,
   DrizzleIdentityUnitOfWork,
   DrizzleOpsUserRepository,
   DrizzleSessionStore,
@@ -335,6 +336,7 @@ export type IdentityHttpServices = {
   selectActingCustomer: SelectActingCustomerUseCase;
   clearActingCustomer: ClearActingCustomerUseCase;
   registerOrganizationWithLicensing: RegisterOrganizationWithLicensingUseCase;
+  createStaffUser: CreateStaffUserUseCase;
 };
 
 export type CatalogHttpServices = {
@@ -1437,6 +1439,13 @@ export function composeAppServices(
         ),
         new EnsureLicensingTenantUseCase(licensingProvisioner),
         new RollbackOrganizationRegistrationUseCase(organizationRepo, staffUsers),
+      ),
+      createStaffUser: new CreateStaffUserUseCase(
+        organizationRepo,
+        staffUsers,
+        passwords,
+        emailSender,
+        createStaffInviteLinks(),
       ),
     },
     customers: customersServices(

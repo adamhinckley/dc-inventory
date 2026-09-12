@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { registerStaffAudienceGuard } from "../adapters/http/audience-guard.js";
 import { registerFeatureGuard } from "../adapters/http/feature-guard.js";
 import { registerInternalAuthRoutes } from "../adapters/http/internal-auth.js";
+import { registerInternalStaffRoutes } from "../adapters/http/internal-staff.js";
 import { registerInternalCustomerRoutes } from "../adapters/http/internal-customers.js";
 import { registerInternalAccountingRoutes } from "../adapters/http/internal-accounting.js";
 import { registerInternalInvoiceRoutes } from "../adapters/http/internal-invoices.js";
@@ -28,6 +29,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerStaffAudienceGuard(app);
   registerStaffActionGuard(app);
   registerInternalOrganizationRoutes(app);
+  registerInternalStaffRoutes(app);
   await app.register(async (customers) => {
     registerFeatureGuard(customers, "customers", "staff");
     registerInternalCustomerRoutes(customers);

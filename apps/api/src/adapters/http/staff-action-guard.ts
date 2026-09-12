@@ -96,6 +96,7 @@ const ACTION_BY_OPERATION: Readonly<
   setInternalCustomerPaymentPlan: "payment_plans_manage",
   endInternalCustomerPaymentPlan: "payment_plans_manage",
   createInternalOrganization: "organizations_manage",
+  createInternalStaff: "staff_manage",
 };
 
 type OperationSchema = FastifySchema & {

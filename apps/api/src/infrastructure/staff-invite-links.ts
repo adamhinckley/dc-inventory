@@ -1,4 +1,7 @@
-import type { RegisterOrganizationInviteLinks } from "@dc-inventory/identity";
+import type {
+  CreateStaffUserInviteLinks,
+  RegisterOrganizationInviteLinks,
+} from "@dc-inventory/identity";
 
 function internalAppBaseUrl(): string {
   const configured = process.env.INTERNAL_APP_URL?.trim();
@@ -8,7 +11,8 @@ function internalAppBaseUrl(): string {
   return "http://localhost:3000";
 }
 
-export function createStaffInviteLinks(): RegisterOrganizationInviteLinks {
+export function createStaffInviteLinks(): RegisterOrganizationInviteLinks &
+  CreateStaffUserInviteLinks {
   const baseUrl = internalAppBaseUrl();
   return {
     buildSetPasswordUrl({ organizationSlug, staffUserId, staffEmail }) {
