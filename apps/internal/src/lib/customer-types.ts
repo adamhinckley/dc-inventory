@@ -28,9 +28,20 @@ export type CustomerCertificateRow = Extract<
   { status: 200 }
 >["data"]["items"][number];
 
-export type StaffSessionRoles = Extract<
+export type InternalSession = Extract<
   Awaited<ReturnType<typeof getInternalSession>>,
   { status: 200 }
->["data"]["roles"];
+>["data"];
+
+export type StaffSessionRoles = Extract<InternalSession, { audience: "staff" }>["roles"];
 
 export type StaffSessionRole = StaffSessionRoles[number];
+
+export function staffRolesFromSession(
+  session: InternalSession | undefined,
+): StaffSessionRoles {
+  if (session === undefined || session.audience !== "staff") {
+    return [];
+  }
+  return session.roles;
+}

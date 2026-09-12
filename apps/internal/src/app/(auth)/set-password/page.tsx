@@ -11,6 +11,7 @@ function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const audience = searchParams.get("audience") === "platform" ? "platform" : "staff";
   const setPassword = useSetPasswordInternal();
   const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +25,7 @@ function SetPasswordForm() {
     const password = String(form.get("password") ?? "");
     setError(null);
     setPassword.mutate(
-      { data: { token, password } },
+      { data: { token, password, audience } },
       {
         onSuccess: (result) => {
           if (!isSuccessfulOrvalResponse(result)) {

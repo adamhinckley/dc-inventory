@@ -2,7 +2,7 @@
 
 import { AppShell } from "@dc-inventory/ui";
 import { Building2 } from "lucide-react";
-import { useCanManageOrganizations } from "../lib/staff-organizations-manage";
+import { useIsPlatformSession } from "../lib/staff-organizations-manage";
 
 function PlatformMark() {
   return (
@@ -13,9 +13,9 @@ function PlatformMark() {
 }
 
 export function PlatformNavItems() {
-  const canManageOrganizations = useCanManageOrganizations();
+  const isPlatformSession = useIsPlatformSession();
 
-  if (!canManageOrganizations) {
+  if (!isPlatformSession) {
     return null;
   }
 

@@ -43,8 +43,8 @@ export function StaffSessionGate({ children }: { children: ReactNode }) {
       >
         <h1 className="page-title">Sign in</h1>
         <p className="page-description mt-2">
-          Staff sign-in. After <code>pnpm db:seed:phase1</code>, use organization{" "}
-          <code>acme</code> with <code>staff@local.test</code>.
+          Staff sign-in uses organization <code>acme</code> with <code>staff@local.test</code>.
+          Platform sign-in uses <code>adam@local.test</code> with no organization slug.
         </p>
         <div className="mt-8">
           <StaffSignInForm

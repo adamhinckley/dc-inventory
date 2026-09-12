@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useCanManageOrganizations } from "../lib/staff-organizations-manage";
+import { useIsPlatformSession } from "../lib/staff-organizations-manage";
 
 export function OrganizationsManageGate({ children }: { children: ReactNode }) {
-  const allowed = useCanManageOrganizations();
+  const allowed = useIsPlatformSession();
 
   if (!allowed) {
     return (
       <section className="section-flat max-w-xl p-panel">
         <h1 className="page-title">Not Available</h1>
         <p className="page-description mt-2">
-          Only DEFAULT / platform admins can add companies.
+          Only Platform users can add companies.
         </p>
         <p className="mt-4">
           <Link href="/catalog" className="text-link hover:text-link-hover">

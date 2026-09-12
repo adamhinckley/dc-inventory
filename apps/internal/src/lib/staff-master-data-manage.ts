@@ -1,5 +1,5 @@
 import { useGetInternalSession } from "@dc-inventory/api-client-internal";
-import type { StaffSessionRole } from "./customer-types";
+import { staffRolesFromSession, type StaffSessionRole } from "./customer-types";
 
 /** Mirrors `master_data_manage` in staff-action-policy.ts (admin | purchasing). */
 const MASTER_DATA_MANAGE_ROLES = new Set<StaffSessionRole>(["admin", "purchasing"]);
@@ -10,7 +10,8 @@ export function canManageMasterData(roles: readonly StaffSessionRole[]): boolean
 
 export function useCanManageMasterData(): boolean {
   const sessionQuery = useGetInternalSession();
-  const roles =
-    sessionQuery.data?.status === 200 ? sessionQuery.data.data.roles : [];
+  const session =
+    sessionQuery.data?.status === 200 ? sessionQuery.data.data : undefined;
+  const roles = staffRolesFromSession(session);
   return canManageMasterData(roles);
 }
