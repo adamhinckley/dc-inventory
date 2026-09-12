@@ -49,7 +49,7 @@ export class JoinBackedSessionStore implements ISessionStore {
     if (user === null || user.organizationId !== session.organizationId) {
       return null;
     }
-    return { session, email: user.email, roles: user.roles };
+    return { session, email: user.email, displayName: user.displayName, roles: user.roles };
   }
 
   async findWholesaleResolved(id: SessionId): Promise<WholesaleResolvedSession | null> {

@@ -74,6 +74,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
           audience: "staff" as const,
           staffUserId: result.staffUserId,
           email: result.email,
+          displayName: result.displayName,
           organizationId: result.organizationId,
           roles: [...result.roles],
         };
@@ -93,6 +94,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         audience: "platform" as const,
         platformUserId: result.platformUserId,
         email: result.email,
+        displayName: result.displayName,
       };
     },
   );
@@ -178,6 +180,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
           audience: "staff" as const,
           staffUserId: staffResult.staffUserId,
           email: staffResult.email,
+          displayName: staffResult.displayName,
           organizationId: staffResult.organizationId,
           roles: [...staffResult.roles],
         };
@@ -190,6 +193,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         audience: "platform" as const,
         platformUserId: platformResult.platformUserId,
         email: platformResult.email,
+        displayName: platformResult.displayName,
       };
     },
   );

@@ -9,6 +9,7 @@ describe("isPlatformSession", () => {
         audience: "staff",
         staffUserId: "550e8400-e29b-41d4-a716-446655440001",
         email: "staff@local.test",
+        displayName: "Test Staff",
         organizationId: "00000000-0000-0000-0000-000000000000",
         roles: ["admin"],
       }),
@@ -18,6 +19,7 @@ describe("isPlatformSession", () => {
         audience: "platform",
         platformUserId: "550e8400-e29b-41d4-a716-446655440010",
         email: "adam@local.test",
+        displayName: "Adam Platform",
       }),
     ).toBe(true);
   });

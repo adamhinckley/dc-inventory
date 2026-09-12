@@ -21,6 +21,7 @@ export type LoginStaffResult =
       sessionId: SessionId;
       staffUserId: StaffUserId;
       email: string;
+      displayName: string;
       organizationId: OrganizationId;
       roles: readonly StaffRole[];
     }
@@ -76,6 +77,7 @@ export class LoginStaffUseCase {
       sessionId: session.id,
       staffUserId: user.id,
       email: user.email,
+      displayName: user.displayName,
       organizationId: user.organizationId,
       roles: user.roles,
     };

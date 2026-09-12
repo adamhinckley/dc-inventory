@@ -25,6 +25,7 @@ export type NewSession = {
 export type StaffResolvedSession = {
   session: Session;
   email: string;
+  displayName: string;
   roles: readonly StaffRole[];
 };
 
@@ -42,6 +43,7 @@ export type OpsResolvedSession = {
 export type PlatformResolvedSession = {
   session: Session;
   email: string;
+  displayName: string;
 };
 
 export interface ISessionStore {
