@@ -198,7 +198,7 @@ Exact wholesale write scope for contacts/addresses follows [`api-contract.md`](.
 
 | Topic | Owner / next step |
 |---|---|
-| Default values for terms and credit limit at create | Ask David |
+| Default values for terms and credit limit at **staff create** (U5 dialog) | Ask David — onboarding approve / staff-for-them default credit limit is locked in §15 |
 | Terms free text vs Net 30/60/90 enum | Product call (G13 successor) |
 | Which contact gets confirmation / invoice email | Product call |
 | Confirmation email send (`IEmailSender`) | Deferred send-job; confirm use case owns the port when built |
@@ -206,7 +206,7 @@ Exact wholesale write scope for contacts/addresses follows [`api-contract.md`](.
 | Credit-limit **formula** (G6) | **Closed** — [`accounting.md`](./accounting.md) §7; enforcement is a Sales packet |
 | Bulk customer import | Out of scope |
 | Implementation migration, OpenAPI, demo seed | Separate work packet after this spec |
-| **Account request + wholesale agreement** (observed on live SoloView, 2026-09) | Owner grill — see §15. Not U5–U14. Do not treat header **terms** (payment clock) as this document |
+| **Onboarding — three tiers** (pending until approve, staff-for-them, Tier 1 org) | Locked destination — see §15. Map: [DCI-406](https://linear.app/adamhinckley/issue/DCI-406). Supersedes [DCI-413](https://linear.app/adamhinckley/issue/DCI-413) account-request docs packet |
 
 ---
 
@@ -236,41 +236,56 @@ Fits [`architecture.md` §13](./architecture.md#13-implementation-order-when-cod
 
 ---
 
-## 15. Account request and wholesale agreement (observed, not locked)
+## 15. Onboarding — three tiers (locked destination)
 
-Live SoloView (David Christopher wholesale) for a **new** shop signup:
+**Supersedes:** Customer-on-submit / on-hold-on-register destination from [DCI-412](https://linear.app/adamhinckley/issue/DCI-412) / [DCI-411](https://linear.app/adamhinckley/issue/DCI-411) and the account-request docs packet [DCI-413](https://linear.app/adamhinckley/issue/DCI-413) — both replaced by this section ([DCI-421](https://linear.app/adamhinckley/issue/DCI-421)). Implementation map: [DCI-406](https://linear.app/adamhinckley/issue/DCI-406/onboarding-three-tiers-map). Linear project: **Onboarding — three tiers** (folds the former account-request project).
 
-1. Buyer completes **New Account Registration** (three-step modal — screenshots in [Wholesale screenshots](https://app.notion.com/p/3d00df01ce2e803f9131d35c9666cc9e), 2026-09-03).
-2. Staff **approve** the request (internal).
-3. Buyer receives a **PandaDoc** email and must sign the legal terms and conditions.
-4. Only after that is the buyer a shop-ready wholesale user.
+Three separate doors, in order. David today is tier 2 of the first tenant (`DEFAULT`). The next company is a new tier-1 org, then their David, then their people.
 
-This repo does **not** model that sequence yet. Wholesale `/register` is still mailto (company, email, phone; new vs existing).
+| Tier | Who acts | What is created |
+|---|---|---|
+| **1. Business** | Ops on **`DEFAULT` / platform only** | `Organization` + first staff `admin` (invite, not password-on-form) |
+| **2. Super user** | That first admin (David-shaped) | They **are** the result of tier 1. G8 `admin`. Not a new role. |
+| **3. Staff + customers** | That super user | More `StaffUser`s (roles at create) and customers via **pending until approve** or **staff-for-them** |
 
-### Observed request form (SoloView)
+Prototype PR [#305](https://github.com/adamhinckley/dc-inventory/pull/305) is **throwaway** — not a docs or shipping pattern. Live SoloView’s PandaDoc wholesale agreement is observed legacy only; this destination does **not** model PandaDoc or a signature provider.
 
-Modal title **New Account Registration**. Close (X). Stepper: 1 Primary Information → 2 Business Credentials → 3 Main Business Address. Previous / Next; step 3 **Submit**. Trade-only copy on step 1 (retailers should use the trade site; 24/7 order management). These screenshots are the **new** path only — existing-account “register for web access” is not shown.
+### Tier 1 locks
 
-| Step | Fields on screen |
+| Lock | Rule |
 |---|---|
-| **1 Primary Information** | Email; how did you hear about us (dropdown); your name; your title; business name; business website |
-| **2 Business Credentials** | Country; type of business (dropdown); official resale number certificate. Copy: after register, a copy of authorization for resale or importation of product for retail sales is required and will be verified |
-| **3 Main Business Address** | Business name (again); address; address continued; country; postal code; city; state; phone. Checkboxes: retail store front; residential address |
+| `organizations_manage` | **`DEFAULT` / platform only** — not every tenant admin ([`invariants.md`](./invariants.md) G8) |
+| Org slug | Company **display name → editable derived slug** — not a free-typed slug as the primary input |
+| First admin | **Display name + email**; **invite**, not password-on-form |
+| Display names | Required on staff, wholesale, and ops users + `organizations.name` |
+| Password | Set-password only: **8+ characters**, upper, lower, number (shared validator) |
+| Invites | `IEmailSender`; local dev uses **Mailpit** in Compose |
 
-**Clash with locked customer master — do not silently “fix” either side:**
+### Tier 3 — customers: pending until approve
 
-- U5 create is staff header-only (name, payment **terms**, credit limit). This form collects a contact, referral source, website, business type, resale number, and one address **before** any Customer exists.
-- U13: exemption certificates are **not** a create/confirm/ship gate. SoloView asks for an official resale number and says a copy of resale/import authorization will be verified. What that number is (Alabama Sales Tax License vs STE-1 vs out-of-state) is still open — [`wholesale-resale-license-onboarding.md`](./wholesale-resale-license-onboarding.md).
-- One “main business address” is not labeled ship-to vs bill-to. Residential / retail-storefront flags do not exist on the v1 header.
-- Header **terms** (payment clock) never appear on this form. The later PandaDoc is the legal **wholesale agreement**.
+**Public apply** (wholesale `/register` when wired): stores a **Pending application** — **not** a `Customer`. Buyer sees pending success; no shop login yet. Do not invent an `AccountRequest` aggregate name — the pending store is its own row, distinct from the customer header.
 
-| What exists today | What does not |
+**Staff review:** internal **`/customers/applications`**. Business name opens full detail; **Approve** / **Reject**.
+
+| Action | Result |
 |---|---|
-| Staff create a Customer (U5); status defaults `active` | A pending **account request** distinct from a Customer |
-| `active` / `on hold` / `inactive` (U10) | A fourth status or “awaiting agreement” state |
-| Header **terms** = payment clock (Net 30-style; invoice due date) | A **wholesale agreement** (legal T&Cs). Not the same word as header terms |
-| Wholesale `/register` is mailto — customer service enables web access | Identity API for self-serve request; staff approve queue; signature provider |
+| **Approve** | Creates `Customer` **`active`** with **terms** (required) + **credit limit** (defaults to **$10,000**, editable); exemption cert with **jurisdiction + number** (U13 evidence — not a gate); `WholesaleUser` bound to that customer; **invite** email (not password-on-form) |
+| **Reject** | **No `Customer` created.** Pending row closed with no downstream records |
+| **Staff-for-them** (`admin`) | Same end state as Approve **without** a prior pending row — admin creates customer (**terms** required; credit limit defaults to **$10,000**, editable) + wholesale login + invite on the internal dashboard |
 
-**Do not invent in packets:** whether the request is its own aggregate vs a Customer created `inactive`; whether unsigned agreement blocks login, confirm, or both; whether PandaDoc is a required vendor vs an `IAgreementPort`; whether existing-account “register for web access” also requires a new signature; which request fields become Customer / contact / ship-to / bill-to vs stay on the request only; whether the resale number (and the promised authorization copy) is required on the request despite U13.
+**Who may (tier 3):** `staff_manage` and wholesale login creation are **`admin` only** ([DCI-409](https://linear.app/adamhinckley/issue/DCI-409)). `purchasing` may create `Customer` headers via existing `master_data_manage` but may **not** create shop logins.
 
-Grill David / product, then lock gates in this doc + `invariants.md` before an implementation packet.
+**U10 unchanged:** `active` / `on hold` / `inactive` gates buy and confirm as locked in §8. Pending is **not** a fourth customer status — no `Customer` exists until approve.
+
+**U13 unchanged:** exemption certificates are evidence only — not a create/confirm/ship gate. On the approve path, collect **jurisdiction + number** only. **No exemption certificate file upload** in this wave. What the number represents (Alabama Sales Tax License vs STE-1 vs out-of-state) stays open — [`wholesale-resale-license-onboarding.md`](./wholesale-resale-license-onboarding.md).
+
+**Deferred this wave:** existing-account “register for web access” bind flow ([DCI-419](https://linear.app/adamhinckley/issue/DCI-419)); cert verification / flipping U13 ([DCI-399](https://linear.app/adamhinckley/issue/DCI-399)).
+
+Header **terms** (payment clock, **required**) and **credit limit** (defaults to **$10,000**, editable) are set at approve or staff-for-them — not on the public apply form. They are not a legal wholesale agreement document.
+
+| What exists today | What this destination adds (packets after this doc lock) |
+|---|---|
+| Staff create a `Customer` (U5); status defaults `active` | Pending application store distinct from `Customer` |
+| `active` / `on hold` / `inactive` (U10) | Approve / reject / staff-for-them paths — no fourth status |
+| Wholesale `/register` is mailto | Public apply → pending; internal review at `/customers/applications` |
+| No wholesale login / invite path | Approve or staff-for-them → `WholesaleUser` + invite |

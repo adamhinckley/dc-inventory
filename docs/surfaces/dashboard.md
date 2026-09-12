@@ -32,6 +32,7 @@ Related: [`README.md`](./README.md) (both apps + deferred) · [`customer-account
 | Stock adjustment | Shrink, count, damage |
 | Reorder min / max | Per SKU at the default location |
 | Customer create / edit | See [`customer-account.md`](./customer-account.md) — list, detail, G8 writes |
+| Pending application review | `/customers/applications` — Approve / Reject ([`customers.md`](../customers.md) §15) |
 | Sales order confirm / cancel / ship | Confirm allocates stock |
 | Invoice from order | On confirm **or** on ship — pick one |
 | Record payment and apply to invoices | Partial pay allowed |
