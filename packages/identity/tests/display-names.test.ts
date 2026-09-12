@@ -124,7 +124,7 @@ describe("Identity required display names", () => {
       slug: "beta-wholesale",
       name: TEST_BETA_ORG_NAME,
       staffEmail: "owner@beta.test",
-      staffPassword: "beta-secret",
+      staffPassword: "Beta-secret1",
       staffDisplayName: "Beta Owner",
     });
 
