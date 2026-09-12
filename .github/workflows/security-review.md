@@ -25,6 +25,9 @@ on:
 permissions:
   contents: read
   copilot-requests: write
+engine:
+  id: copilot
+  model: gpt-5.6-sol
 imports:
   - .github/agents/dc-inventory-security.agent.md
 network:
