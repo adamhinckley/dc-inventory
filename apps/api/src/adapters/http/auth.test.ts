@@ -7,6 +7,7 @@ import {
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { InMemoryCustomerRepository } from "@dc-inventory/customers";
+import { InMemoryLicensingStore } from "@dc-inventory/licensing";
 import {
   InMemoryClock,
   InMemoryOrganizationRepository,
@@ -40,6 +41,9 @@ const OWNER_ID = OpsUserId.parse("55555555-5555-4555-8555-555555555555");
 const PLATFORM_ID = PlatformUserId.parse("66666666-6666-4666-8666-666666666666");
 const CUSTOMER_ID = CustomerId.parse("33333333-3333-4333-8333-333333333333");
 const ACME_SLUG = "acme";
+const BETA_ORG = OrganizationId.parse("660e8400-e29b-41d4-a716-446655440099");
+const BETA_SLUG = "beta";
+const BETA_OPERATOR_ID = OpsUserId.parse("77777777-7777-4777-8777-777777777777");
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
@@ -122,6 +126,52 @@ async function startAuthApp(
   });
   apps.push(app);
   return { app, clock };
+}
+
+async function startTwoOrgOpsSubscriptionApp() {
+  const passwords = new InMemoryPasswordHasher();
+  const organizations = new InMemoryOrganizationRepository();
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
+  await organizations.save({ id: BETA_ORG, slug: BETA_SLUG, name: "Beta Wholesale" });
+  const opsUsers = new InMemoryOpsUserRepository();
+  const sessions = new InMemorySessionStore();
+  const licensingStore = new InMemoryLicensingStore();
+  const clock = new InMemoryClock(new Date("2026-08-27T00:00:00.000Z"));
+
+  await opsUsers.save({
+    id: OPERATOR_ID,
+    tenantId: OrganizationId.DEFAULT,
+    displayName: "Acme Ops User",
+    email: "acme-ops@local.test",
+    passwordHash: await passwords.hash("operator-secret"),
+    kind: "operator",
+  });
+  await opsUsers.save({
+    id: BETA_OPERATOR_ID,
+    tenantId: BETA_ORG,
+    displayName: "Beta Ops User",
+    email: "beta-ops@local.test",
+    passwordHash: await passwords.hash("operator-secret"),
+    kind: "operator",
+  });
+
+  const acmeSubscription = licensingStore.createSubscription(OrganizationId.DEFAULT, "enterprise");
+  licensingStore.recordPayment(OrganizationId.DEFAULT, acmeSubscription.id, "pi_acme_sub");
+  const betaSubscription = licensingStore.createSubscription(BETA_ORG, "starter");
+  licensingStore.recordPayment(BETA_ORG, betaSubscription.id, "pi_beta_sub");
+
+  const app = await buildApp({
+    logger: false,
+    database: new InMemoryDatabase(),
+    clock,
+    opsUsers,
+    sessions,
+    passwords,
+    organizationRepo: organizations,
+    licensingStore,
+  });
+  apps.push(app);
+  return { app };
 }
 
 function cookieValue(
@@ -864,6 +914,56 @@ describe("opaque session HTTP", () => {
     });
     expect(expired.statusCode).toBe(401);
     expect(expired.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("scopes GET /ops/subscription to the ops session tenant", async () => {
+    const { app } = await startTwoOrgOpsSubscriptionApp();
+
+    const acmeLogin = await app.inject({
+      method: "POST",
+      url: "/ops/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "acme-ops@local.test",
+        password: "operator-secret",
+      },
+    });
+    expect(acmeLogin.statusCode).toBe(200);
+    const acmeCookie = cookieValue(acmeLogin, OPS_SESSION_COOKIE);
+
+    const acmeSubscription = await app.inject({
+      method: "GET",
+      url: "/ops/subscription",
+      cookies: { [OPS_SESSION_COOKIE]: acmeCookie?.value ?? "" },
+    });
+    expect(acmeSubscription.statusCode).toBe(200);
+    expect(acmeSubscription.json()).toEqual({
+      status: "active",
+      plan: "enterprise",
+    });
+
+    const betaLogin = await app.inject({
+      method: "POST",
+      url: "/ops/auth/login",
+      payload: {
+        organizationSlug: BETA_SLUG,
+        email: "beta-ops@local.test",
+        password: "operator-secret",
+      },
+    });
+    expect(betaLogin.statusCode).toBe(200);
+    const betaCookie = cookieValue(betaLogin, OPS_SESSION_COOKIE);
+
+    const betaSubscription = await app.inject({
+      method: "GET",
+      url: "/ops/subscription",
+      cookies: { [OPS_SESSION_COOKIE]: betaCookie?.value ?? "" },
+    });
+    expect(betaSubscription.statusCode).toBe(200);
+    expect(betaSubscription.json()).toEqual({
+      status: "active",
+      plan: "starter",
+    });
   });
 
   it("rejects staff and wholesale cookies and wrong-audience tokens on ops routes", async () => {
