@@ -21,8 +21,8 @@
         <h1 class="page-title">Add Company</h1>
         <p class="page-desc">
           Only DEFAULT / platform admins use this screen. It provisions a new wholesale company on
-          the same app: organization slug + first admin email. An invite email is sent — no password
-          on this form.
+          the same app: organization slug, first admin name, and first admin email. An invite email
+          is sent to that person — no password on this form.
         </p>
         <form id="org-form" novalidate>
           <div class="field">
@@ -40,10 +40,21 @@
             <span class="help">Lowercase letters, numbers, and hyphens. Used in URLs.</span>
           </div>
           <div class="field">
+            <label for="adminName">First Admin Name <span class="req">*</span></label>
+            <input
+              id="adminName"
+              name="adminName"
+              type="text"
+              required
+              autocomplete="name"
+              placeholder="The person the invite email is going to"
+            />
+          </div>
+          <div class="field">
             <label for="adminEmail">First Admin Email <span class="req">*</span></label>
             <input id="adminEmail" name="adminEmail" type="email" required autocomplete="email" />
           </div>
-          <p id="form-error" class="error-text hidden">Enter a valid org slug and email.</p>
+          <p id="form-error" class="error-text hidden">Enter a valid org slug, first admin name, and email.</p>
           <div class="actions">
             <button type="submit">Add Company And Invite</button>
           </div>
@@ -51,7 +62,7 @@
       </div>
 
       <div id="success-view" class="success hidden">
-        <h2 id="success-detail">Company created. Invite sent to {email}.</h2>
+        <h2 id="success-detail">Company created. Invite sent to {name} ({email}).</h2>
         <p>No password was set on this form. The first admin sets it from the invite link.</p>
         <p style="margin-top: 16px"><a href="./index.html">Back to Prototype Index</a></p>
       </div>
@@ -66,9 +77,10 @@
           form.reportValidity();
           return;
         }
+        const name = document.getElementById("adminName").value.trim();
         const email = document.getElementById("adminEmail").value.trim();
         document.getElementById("success-detail").textContent =
-          `Company created. Invite sent to ${email}.`;
+          `Company created. Invite sent to ${name} (${email}).`;
         document.getElementById("form-view").classList.add("hidden");
         document.getElementById("success-view").classList.remove("hidden");
       });
