@@ -261,9 +261,9 @@ Locked in [`customers.md`](../customers.md) §15. Map: [DCI-406](https://linear.
 
 **Table:** pending applications only — not customers. Row or business name opens full application detail.
 
-**Actions (`admin`):** **Approve** (creates active customer + terms/credit + cert jurisdiction/number + wholesale login + invite) · **Reject** (closes pending; no customer created).
+**Actions (`admin`):** **Approve** (creates active customer + **terms** required + credit limit defaults to **$10,000** editable + cert jurisdiction/number + wholesale login + invite) · **Reject** (closes pending; no customer created).
 
-**Not on this page:** staff-for-them create (admin uses **Create Customer** on `/customers` plus wholesale login path — same end state without a pending row). `purchasing` may create customer headers via `master_data_manage` but not shop logins ([DCI-409](https://linear.app/adamhinckley/issue/DCI-409)).
+**Not on this page:** staff-for-them create (admin uses **Create Customer** on `/customers` with **terms** required and credit limit default **$10,000** editable, plus wholesale login path — same end state without a pending row). `purchasing` may create customer headers via `master_data_manage` but not shop logins ([DCI-409](https://linear.app/adamhinckley/issue/DCI-409)).
 
 U13: cert jurisdiction + number on approve; evidence only — not a gate. No cert file upload this wave.
 

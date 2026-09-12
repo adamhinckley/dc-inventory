@@ -561,7 +561,7 @@ Still open elsewhere (do not invent defaults):
 | Topic | Status |
 |---|---|
 | Terms enum (Net 30/60/90) vs free text | Product call — [`customers.md`](./customers.md) §12 |
-| Default terms / credit limit at create | Ask David — [`customers.md`](./customers.md) §12 |
+| Default terms / credit limit at **staff create** (U5) | Ask David — onboarding approve / staff-for-them: credit limit defaults to **$10,000** (editable); terms required — [`customers.md`](./customers.md) §15 |
 | Which contact receives confirmation / invoice email | Product call — [`customers.md`](./customers.md) §12 |
 | Confirmation email (`IEmailSender`) | Deferred send-job; port on confirm use case when built |
 | Statement | PDF projection + `IEmailSender`, after the email provider — [`accounting.md`](./accounting.md) §9. Do not overload Invoice |

@@ -198,7 +198,7 @@ Exact wholesale write scope for contacts/addresses follows [`api-contract.md`](.
 
 | Topic | Owner / next step |
 |---|---|
-| Default values for terms and credit limit at create | Ask David |
+| Default values for terms and credit limit at **staff create** (U5 dialog) | Ask David — onboarding approve / staff-for-them default credit limit is locked in §15 |
 | Terms free text vs Net 30/60/90 enum | Product call (G13 successor) |
 | Which contact gets confirmation / invoice email | Product call |
 | Confirmation email send (`IEmailSender`) | Deferred send-job; confirm use case owns the port when built |
@@ -269,9 +269,9 @@ Prototype PR [#305](https://github.com/adamhinckley/dc-inventory/pull/305) is **
 
 | Action | Result |
 |---|---|
-| **Approve** | Creates `Customer` **`active`** with terms + credit limit; exemption cert with **jurisdiction + number** (U13 evidence — not a gate); `WholesaleUser` bound to that customer; **invite** email (not password-on-form) |
+| **Approve** | Creates `Customer` **`active`** with **terms** (required) + **credit limit** (defaults to **$10,000**, editable); exemption cert with **jurisdiction + number** (U13 evidence — not a gate); `WholesaleUser` bound to that customer; **invite** email (not password-on-form) |
 | **Reject** | **No `Customer` created.** Pending row closed with no downstream records |
-| **Staff-for-them** (`admin`) | Same end state as Approve **without** a prior pending row — admin creates customer + wholesale login + invite on the internal dashboard |
+| **Staff-for-them** (`admin`) | Same end state as Approve **without** a prior pending row — admin creates customer (**terms** required; credit limit defaults to **$10,000**, editable) + wholesale login + invite on the internal dashboard |
 
 **Who may (tier 3):** `staff_manage` and wholesale login creation are **`admin` only** ([DCI-409](https://linear.app/adamhinckley/issue/DCI-409)). `purchasing` may create `Customer` headers via existing `master_data_manage` but may **not** create shop logins.
 
@@ -281,7 +281,7 @@ Prototype PR [#305](https://github.com/adamhinckley/dc-inventory/pull/305) is **
 
 **Deferred this wave:** existing-account “register for web access” bind flow ([DCI-419](https://linear.app/adamhinckley/issue/DCI-419)); cert verification / flipping U13 ([DCI-399](https://linear.app/adamhinckley/issue/DCI-399)).
 
-Header **terms** (payment clock) are set at approve or staff-for-them — not on the public apply form. They are not a legal wholesale agreement document.
+Header **terms** (payment clock, **required**) and **credit limit** (defaults to **$10,000**, editable) are set at approve or staff-for-them — not on the public apply form. They are not a legal wholesale agreement document.
 
 | What exists today | What this destination adds (packets after this doc lock) |
 |---|---|
