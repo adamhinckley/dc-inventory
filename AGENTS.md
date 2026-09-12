@@ -88,7 +88,21 @@ If asked to invent ledger math, authz matrices, AR rules, sales tax, software-bi
 
 ## Agent skills
 
-Per-repo wiring for Matt Pocock engineering skills (`setup-matt-pocock-skills`, `wayfinder`, `improve-codebase-architecture`, …). Skills live under [`.agents/skills/`](./.agents/skills/).
+Per-repo wiring for Matt Pocock engineering skills. Skills live under [`.agents/skills/`](./.agents/skills/) and are locked in [`skills-lock.json`](./skills-lock.json).
+
+| Skill | Role |
+|---|---|
+| `setup-matt-pocock-skills` | One-time tracker / domain wiring (already applied below) |
+| `wayfinder` | Multi-session decision map on Linear |
+| `grilling` | HITL interview primitive (wayfinder default ticket) |
+| `domain-modeling` | Glossary / ADR sharpening (always with grilling) |
+| `research` | AFK fact-finding subagent (wayfinder research tickets) |
+| `prototype` | HITL throwaway artifact (wayfinder prototype tickets) |
+| `handoff` | Compact a session into / out of a wayfinder map |
+| `to-spec` | Collapse a cleared map into one spec |
+| `to-tickets` | Slice a spec into tracer-bullet implementation tickets |
+| `improve-codebase-architecture` | Periodic deepening survey (HTML report; no code edits) |
+| `unslop` | Strip AI tells from writing |
 
 ### Issue tracker
 
