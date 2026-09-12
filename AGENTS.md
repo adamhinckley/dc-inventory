@@ -85,3 +85,15 @@ Do:
 If another ticket produces this packet's Given, Linear-block it. Do not write "can start immediately" when the port, flag, or HTTP is still missing. If two tickets share a use case, name which issue owns the use case and which owns HTTP/UI.
 
 If asked to invent ledger math, authz matrices, AR rules, sales tax, software-billing/flag catalogs, or operator-platform message kinds without failing tests already in the repo — **stop and ask the owner**.
+
+## Agent skills
+
+Per-repo wiring for Matt Pocock engineering skills (`setup-matt-pocock-skills`, `wayfinder`, `improve-codebase-architecture`, …). Skills live under [`.agents/skills/`](./.agents/skills/).
+
+### Issue tracker
+
+Linear on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview). See [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md) (includes **Wayfinding operations** for `/wayfinder`).
+
+### Domain docs
+
+Single-context: root [`CONTEXT.md`](./CONTEXT.md) + [`docs/adr/`](./docs/adr/). See [`docs/agents/domain.md`](./docs/agents/domain.md).
