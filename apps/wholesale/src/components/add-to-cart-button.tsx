@@ -1,37 +1,15 @@
 "use client";
 
-import {
-  useApplyWholesaleSalesOrderLineDeltas,
-  useCreateWholesaleSalesOrder,
-} from "@dc-inventory/api-client-wholesale";
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   cartQtyCapMessage,
   cartQtyOverCap,
-  findDraftCartLine,
-  linesForReplace,
   parseCartQty,
-  toReplaceLines,
 } from "../lib/cart-line-qty";
-import { cartLinesToDeltaBody } from "../lib/cart-line-deltas";
-import { trackCartReplaceEnd, trackCartReplaceStart } from "../lib/cart-mutation-gate";
-import { wholesaleShortageErrorMessage } from "../lib/confirm-shortage-message";
-import { lookupWholesaleProductId } from "../lib/lookup-wholesale-product-id";
-import {
-  shopDisplayAvailableQty,
-  type ShopSellState,
-} from "../lib/shop-availability";
-import { useActiveCart } from "../lib/use-active-cart";
-import {
-  buildOptimisticDraftOrder,
-  readDraftCartList,
-  wholesaleDraftCartQueryKey,
-  writeDraftCartOrder,
-  type OptimisticLineMeta,
-} from "../lib/wholesale-cart-cache";
+import { type ShopSellState } from "../lib/shop-availability";
+import { useWholesaleAddToCart } from "../lib/use-wholesale-add-to-cart";
 
 export type AddToCartButtonProps = {
   productId: string;
@@ -65,28 +43,26 @@ export function AddToCartButton({
   availableToSell,
   sellState,
 }: AddToCartButtonProps) {
-  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const fromCategory = searchParams.get("category");
   const continueHref =
     fromCategory !== null && fromCategory.length > 0
       ? `/products?category=${encodeURIComponent(fromCategory)}`
       : "/products";
-  const { activeDraft, setActiveCart } = useActiveCart();
-  const createOrder = useCreateWholesaleSalesOrder();
-  const applyLineDeltas = useApplyWholesaleSalesOrderLineDeltas();
+  const { applyQty, pending, inCart, cartQty, maxQty } = useWholesaleAddToCart({
+    productId,
+    name,
+    unitPriceCents,
+    currency,
+    available,
+    availableToSell,
+    sellState,
+  });
   const qtyFieldId = `cart-qty-${productId}`;
-  const maxQty = shopDisplayAvailableQty({ available, availableToSell, sellState });
   const [qtyInput, setQtyInput] = useState("1");
   const [qtyTouched, setQtyTouched] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
 
-  const draft = activeDraft;
-  const cartLine =
-    draft === undefined ? undefined : findDraftCartLine(draft.lines, productId, name);
-  const inCart = cartLine !== undefined;
-  const cartQty = cartLine?.qty ?? null;
   const inputDisabled = pending || (disabled && !inCart);
   useEffect(() => {
     if (qtyTouched) {
@@ -103,10 +79,6 @@ export function AddToCartButton({
     }
     setQtyInput(String(cartQty));
   }, [cartQty, qtyTouched, maxQty]);
-
-  function lineMeta(): OptimisticLineMeta {
-    return { name, unitPriceCents, currency, sku: cartLine?.sku };
-  }
 
   function setQty(raw: string) {
     const parsed = parseCartQty(raw);
@@ -131,86 +103,23 @@ export function AddToCartButton({
       setMessage("Enter a quantity of 1 or more");
       return;
     }
-    if (qty > 0 && maxQty !== null && cartQtyOverCap(qty, maxQty)) {
-      setMessage(cartQtyCapMessage(maxQty));
+    const result = await applyQty(qty);
+    if (!result.ok) {
+      setMessage(result.message);
       return;
     }
-    setMessage(null);
-
-    if (draft !== undefined) {
-      if (inCart && qty === cartQty) {
-        setMessage("In cart");
-        return;
-      }
-      const others = draft.lines.filter((line) => line !== cartLine);
-      const nextLines =
-        qty === 0
-          ? others
-          : [
-              ...others,
-              {
-                productId,
-                sku: cartLine?.sku ?? "",
-                name,
-                qty,
-              },
-            ];
-      const targetLines =
-        linesForReplace(nextLines) ??
-        (await toReplaceLines(nextLines, lookupWholesaleProductId));
-      if (targetLines === null) {
-        setMessage("Could not update cart");
-        return;
-      }
-      const deltaBody = cartLinesToDeltaBody(draft.lines, targetLines);
-
-      const previous = readDraftCartList(queryClient);
-      writeDraftCartOrder(
-        queryClient,
-        buildOptimisticDraftOrder(draft, targetLines, new Map([[productId, lineMeta()]])),
-      );
-      setPending(true);
-      trackCartReplaceStart(draft.id);
-      try {
-        const response = await applyLineDeltas.mutateAsync({
-          id: draft.id,
-          data: deltaBody,
-        });
-        if (response.status === 200) {
-          writeDraftCartOrder(queryClient, response.data);
-        }
-        setQtyTouched(false);
-        setMessage(qty === 0 ? "Removed from cart" : inCart ? "Updated cart" : "Added to cart");
-      } catch (error: unknown) {
-        if (previous !== undefined) {
-          queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
-        }
-        setMessage(wholesaleShortageErrorMessage(error, "Could not update cart"));
-      } finally {
-        trackCartReplaceEnd(draft.id);
-        setPending(false);
-      }
+    setQtyTouched(false);
+    if (result.kind === "same") {
+      setMessage("In cart");
       return;
     }
-
-    setPending(true);
-    try {
-      const response = await createOrder.mutateAsync({
-        data: { lines: [{ productId, qty }] },
-      });
-      if (response.status === 201) {
-        writeDraftCartOrder(queryClient, response.data);
-        setActiveCart(response.data.id);
-      }
-      setQtyTouched(false);
-      setMessage("Added to cart");
-    } catch (error) {
-      setMessage(
-        wholesaleShortageErrorMessage(error, "Could not add to cart"),
-      );
-    } finally {
-      setPending(false);
-    }
+    setMessage(
+      result.kind === "removed"
+        ? "Removed from cart"
+        : result.kind === "updated"
+          ? "Updated cart"
+          : "Added to cart",
+    );
   }
 
   const buttonLabel = pending

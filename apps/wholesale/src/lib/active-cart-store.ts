@@ -73,6 +73,10 @@ export function setStoredActiveCart(customerId: string, value: StoredActiveCart)
   emit();
 }
 
+export function readStoredActiveCart(customerId: string): StoredActiveCart {
+  return getSnapshot(activeCartStorageKey(customerId));
+}
+
 export function useStoredActiveCart(customerId: string | null): StoredActiveCart {
   const key = customerId === null ? null : activeCartStorageKey(customerId);
   const read = useCallback(() => (key === null ? null : getSnapshot(key)), [key]);

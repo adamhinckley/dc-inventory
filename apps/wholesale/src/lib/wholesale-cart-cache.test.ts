@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   buildOptimisticDraftOrder,
+  readActiveDraftCart,
   readDraftCartOrder,
   removeDraftCartOrder,
   writeDraftCartOrder,
   wholesaleDraftCartQueryKey,
   readDraftCartList,
 } from "./wholesale-cart-cache";
+import { setStoredActiveCart } from "./active-cart-store";
 import { QueryClient } from "@tanstack/react-query";
 import type { WholesaleDraftCartOrder } from "./wholesale-cart-cache";
 
@@ -138,5 +140,15 @@ describe("writeDraftCartOrder", () => {
     removeDraftCartOrder(queryClient, "order-1");
     expect(readDraftCartList(queryClient)?.data.items).toEqual([]);
     expect(readDraftCartList(queryClient)?.data.total).toBe(0);
+  });
+
+  it("resolves the active draft from cached carts and stored preference", () => {
+    const queryClient = new QueryClient();
+    writeDraftCartOrder(queryClient, cartOne);
+    writeDraftCartOrder(queryClient, cartTwo);
+    setStoredActiveCart("cust-1", "order-1");
+    expect(readActiveDraftCart(queryClient, "cust-1")?.id).toBe("order-1");
+    setStoredActiveCart("cust-1", null);
+    expect(readActiveDraftCart(queryClient, "cust-1")?.id).toBe("order-2");
   });
 });

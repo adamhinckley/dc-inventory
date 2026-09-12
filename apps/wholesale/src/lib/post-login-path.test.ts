@@ -28,4 +28,16 @@ describe("postLoginPath", () => {
       }),
     ).toBe("/products");
   });
+
+  it("returns to the catalog category when one was carried through login", () => {
+    expect(
+      postLoginPath(
+        {
+          mode: "buyer",
+          customerId: "00000000-0000-0000-0000-000000000002",
+        },
+        { category: "Ribbon" },
+      ),
+    ).toBe("/products?category=Ribbon");
+  });
 });
