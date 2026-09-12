@@ -16,7 +16,6 @@ import { OpsUserId } from "../src/domain/ops-user.js";
 import { InvalidRequiredTextError } from "../src/domain/required-text.js";
 import {
   TEST_BETA_ORG_NAME,
-  TEST_OPS_DISPLAY_NAME,
   TEST_ORG_NAME,
   TEST_STAFF_DISPLAY_NAME,
   testOrganization,
@@ -27,6 +26,21 @@ describe("Identity required display names", () => {
     const organizations = new InMemoryOrganizationRepository();
     await expect(
       organizations.save(testOrganization({ id: OrganizationId.DEFAULT, slug: "acme", name: "   " })),
+    ).rejects.toThrow(InvalidRequiredTextError);
+  });
+
+  it("rejects undefined staff display names on save", async () => {
+    const passwords = new InMemoryPasswordHasher();
+    const staffUsers = new InMemoryStaffUserRepository();
+    await expect(
+      staffUsers.save({
+        id: StaffUserId.parse("550e8400-e29b-41d4-a716-446655440001"),
+        organizationId: OrganizationId.DEFAULT,
+        displayName: undefined as unknown as string,
+        email: "staff@local.test",
+        passwordHash: await passwords.hash("secret"),
+        roles: ["admin"],
+      }),
     ).rejects.toThrow(InvalidRequiredTextError);
   });
 
@@ -130,8 +144,11 @@ describe("Identity required display names", () => {
     expect(staff?.displayName).toBe("Beta Owner");
   });
 
-  it("trims surrounding whitespace from saved names", async () => {
+  it("trims surrounding whitespace from saved organization and display names", async () => {
     const organizations = new InMemoryOrganizationRepository();
+    const passwords = new InMemoryPasswordHasher();
+    const staffUsers = new InMemoryStaffUserRepository();
+
     await organizations.save(
       testOrganization({
         id: OrganizationId.DEFAULT,
@@ -141,5 +158,16 @@ describe("Identity required display names", () => {
     );
     const org = await organizations.findBySlug("acme");
     expect(org?.name).toBe(TEST_ORG_NAME);
+
+    await staffUsers.save({
+      id: StaffUserId.parse("550e8400-e29b-41d4-a716-446655440001"),
+      organizationId: OrganizationId.DEFAULT,
+      displayName: `  ${TEST_STAFF_DISPLAY_NAME}  `,
+      email: "staff@local.test",
+      passwordHash: await passwords.hash("secret"),
+      roles: ["admin"],
+    });
+    const staff = await staffUsers.findById(StaffUserId.parse("550e8400-e29b-41d4-a716-446655440001"));
+    expect(staff?.displayName).toBe(TEST_STAFF_DISPLAY_NAME);
   });
 });

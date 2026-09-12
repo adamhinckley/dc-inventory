@@ -6,7 +6,10 @@ export class InvalidRequiredTextError extends Error {
   }
 }
 
-export function parseNonEmptyText(field: string, value: string): string {
+export function parseNonEmptyText(field: string, value: string | undefined | null): string {
+  if (value === undefined || value === null) {
+    throw new InvalidRequiredTextError(field);
+  }
   const trimmed = value.trim();
   if (trimmed.length === 0) {
     throw new InvalidRequiredTextError(field);
@@ -14,10 +17,10 @@ export function parseNonEmptyText(field: string, value: string): string {
   return trimmed;
 }
 
-export function parseDisplayName(value: string): string {
+export function parseDisplayName(value: string | undefined | null): string {
   return parseNonEmptyText("displayName", value);
 }
 
-export function parseOrganizationName(value: string): string {
+export function parseOrganizationName(value: string | undefined | null): string {
   return parseNonEmptyText("organization name", value);
 }

@@ -10,6 +10,9 @@ export default defineConfig({
       "@dc-inventory/identity/schema": fileURLToPath(
         new URL("./packages/identity/src/persistence/schema.ts", import.meta.url),
       ),
+      "@dc-inventory/identity/test-fixtures": fileURLToPath(
+        new URL("./packages/identity/src/test-fixtures.ts", import.meta.url),
+      ),
       "@dc-inventory/identity": fileURLToPath(
         new URL("./packages/identity/src/index.ts", import.meta.url),
       ),

@@ -4,6 +4,7 @@ import {
   InMemorySessionStore,
   InMemoryStaffUserRepository,
 } from "@dc-inventory/identity";
+import { testStaffUser } from "@dc-inventory/identity/test-fixtures";
 import { InMemoryLicensingStore, LicensingFeatures } from "@dc-inventory/licensing";
 import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -23,13 +24,15 @@ async function authenticatedLicensingApp(store: InMemoryLicensingStore) {
   const sessions = new InMemorySessionStore();
   const passwords = new InMemoryPasswordHasher();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "default", name: "Acme Wholesale" });
-  await staffUsers.save({
-    id: StaffUserId.parse("11111111-1111-4111-8111-111111111111"),
-    organizationId: OrganizationId.DEFAULT,
-    email: "staff@example.test",
-    passwordHash: await passwords.hash("secret"),
-    roles: ["admin"],
-  });
+  await staffUsers.save(
+    testStaffUser({
+      id: StaffUserId.parse("11111111-1111-4111-8111-111111111111"),
+      organizationId: OrganizationId.DEFAULT,
+      email: "staff@example.test",
+      passwordHash: await passwords.hash("secret"),
+      roles: ["admin"],
+    }),
+  );
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),
