@@ -498,7 +498,33 @@ paths:
           name: sortOrder
           required: false
         - schema:
-            default: true
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: inStockOnly
+          required: false
+          description: Include locked SKUs with available-to-sell > 0 (warehouse-ready).
+            Defaults to true when omitted.
+        - schema:
+            anyOf:
+              - type: string
+                enum:
+                  - "true"
+              - type: string
+                enum:
+                  - "false"
+              - type: boolean
+          in: query
+          name: preOrder
+          required: false
+          description: Include open SKUs (pre-order). Defaults to true when omitted.
+        - schema:
             anyOf:
               - type: string
                 enum:
@@ -510,6 +536,8 @@ paths:
           in: query
           name: availableOnly
           required: false
+          description: Legacy wholesale availability toggle. Prefer inStockOnly and
+            preOrder. When neither new param is sent, maps to both toggles.
       responses:
         "200":
           description: Default Response

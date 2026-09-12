@@ -183,10 +183,17 @@ export const categoryListResponseSchema = z.object({
   items: z.array(z.object({ name: z.string() })),
 });
 
-const catalogAvailableOnlyQuery = z
+const catalogBooleanQuery = z
   .union([z.literal("true"), z.literal("false"), z.boolean()])
-  .default(true)
   .transform((value) => value === true || value === "true");
+
+const catalogOptionalBooleanQuery = catalogBooleanQuery.optional();
+
+const catalogAvailableOnlyQuery = catalogBooleanQuery
+  .default(true)
+  .describe(
+    "Legacy wholesale availability toggle. Prefer inStockOnly and preOrder. When neither new param is sent, maps to both toggles.",
+  );
 
 export const catalogQuerySchema = z.object({
   q: z.string().optional(),
@@ -195,6 +202,12 @@ export const catalogQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(25),
   sortBy: z.enum(["name", "available"]).default("name"),
   sortOrder: z.enum(["asc", "desc"]).default("asc"),
+  inStockOnly: catalogOptionalBooleanQuery.describe(
+    "Include locked SKUs with available-to-sell > 0 (warehouse-ready). Defaults to true when omitted.",
+  ),
+  preOrder: catalogOptionalBooleanQuery.describe(
+    "Include open SKUs (pre-order). Defaults to true when omitted.",
+  ),
   availableOnly: catalogAvailableOnlyQuery,
 });
 

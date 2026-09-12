@@ -714,6 +714,132 @@ describe("catalog HTTP", () => {
     expect(includeUnavailable.json().total).toBe(4);
   });
 
+  async function seedWholesaleAvailabilityMatrix(
+    app: Awaited<ReturnType<typeof buildApp>>,
+    staff: string,
+    qtyRead: InMemoryQtyReadPort,
+  ) {
+    const skus = [
+      { sku: "MATRIX-OPEN-STOCKED", name: "Matrix open stocked" },
+      { sku: "MATRIX-OPEN-EMPTY", name: "Matrix open empty" },
+      { sku: "MATRIX-LOCKED-PO", name: "Matrix locked on PO" },
+      { sku: "MATRIX-LOCKED-SOLD-OUT", name: "Matrix locked sold out" },
+    ] as const;
+    for (const row of skus) {
+      const created = await app.inject({
+        method: "POST",
+        url: "/internal/products",
+        cookies: { [STAFF_SESSION_COOKIE]: staff },
+        payload: {
+          sku: row.sku,
+          name: row.name,
+          uom: "EA",
+          memberPriceCents: 100,
+          listPriceCents: 100,
+          webWholesale: true,
+        },
+      });
+      expect(created.statusCode).toBe(201);
+    }
+    qtyRead.set(OrganizationId.DEFAULT, "MATRIX-OPEN-STOCKED", {
+      onHand: 4,
+      onOrder: 0,
+      allocated: 0,
+      available: 4,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    qtyRead.set(OrganizationId.DEFAULT, "MATRIX-OPEN-EMPTY", {
+      onHand: 0,
+      onOrder: 0,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "open",
+      availableToSell: null,
+    });
+    qtyRead.set(OrganizationId.DEFAULT, "MATRIX-LOCKED-PO", {
+      onHand: 0,
+      onOrder: 100,
+      allocated: 0,
+      available: 0,
+      committed: 0,
+      sellState: "locked",
+      availableToSell: 100,
+    });
+    qtyRead.set(OrganizationId.DEFAULT, "MATRIX-LOCKED-SOLD-OUT", {
+      onHand: 5,
+      onOrder: 100,
+      allocated: 0,
+      available: 5,
+      committed: 100,
+      sellState: "locked",
+      availableToSell: 0,
+    });
+  }
+
+  async function listWholesaleSkus(
+    app: Awaited<ReturnType<typeof buildApp>>,
+    wholesale: string,
+    query = "",
+  ) {
+    const response = await app.inject({
+      method: "GET",
+      url: `/wholesale/catalog${query}`,
+      cookies: { [WHOLESALE_SESSION_COOKIE]: wholesale },
+    });
+    expect(response.statusCode).toBe(200);
+    return (response.json().items as Array<{ sku: string }>).map((item) => item.sku).sort();
+  }
+
+  it("filters wholesale catalog by inStockOnly x preOrder query params", async () => {
+    const qtyRead = new InMemoryQtyReadPort();
+    const app = await startCatalogApp(new InMemoryProductRepository(), qtyRead);
+    const staff = await staffCookie(app);
+    await seedWholesaleAvailabilityMatrix(app, staff, qtyRead);
+    const wholesale = await wholesaleCookie(app);
+
+    const defaultListed = await listWholesaleSkus(app, wholesale);
+    const legacyAvailableOnly = await listWholesaleSkus(app, wholesale, "?availableOnly=true");
+    const explicitBothOn = await listWholesaleSkus(
+      app,
+      wholesale,
+      "?inStockOnly=true&preOrder=true",
+    );
+    expect(defaultListed).toEqual([
+      "MATRIX-LOCKED-PO",
+      "MATRIX-OPEN-EMPTY",
+      "MATRIX-OPEN-STOCKED",
+    ]);
+    expect(legacyAvailableOnly).toEqual(defaultListed);
+    expect(explicitBothOn).toEqual(defaultListed);
+
+    const inStockOnPreOrderOff = await listWholesaleSkus(
+      app,
+      wholesale,
+      "?inStockOnly=true&preOrder=false",
+    );
+    expect(inStockOnPreOrderOff).toEqual(["MATRIX-LOCKED-PO"]);
+
+    const inStockOffPreOrderOn = await listWholesaleSkus(
+      app,
+      wholesale,
+      "?inStockOnly=false&preOrder=true",
+    );
+    expect(inStockOffPreOrderOn).toEqual(["MATRIX-OPEN-EMPTY", "MATRIX-OPEN-STOCKED"]);
+
+    const bothOff = await listWholesaleSkus(app, wholesale, "?inStockOnly=false&preOrder=false");
+    const legacyUnavailable = await listWholesaleSkus(app, wholesale, "?availableOnly=false");
+    expect(bothOff).toEqual([
+      "MATRIX-LOCKED-PO",
+      "MATRIX-LOCKED-SOLD-OUT",
+      "MATRIX-OPEN-EMPTY",
+      "MATRIX-OPEN-STOCKED",
+    ]);
+    expect(legacyUnavailable).toEqual(bothOff);
+  });
+
   it("passes every declared wholesale filter into the repository query", async () => {
     const productRepo = new RecordingProductRepository();
     const app = await startCatalogApp(productRepo);
@@ -724,6 +850,8 @@ describe("catalog HTTP", () => {
       "sortBy",
       "sortOrder",
       "availableOnly",
+      "inStockOnly",
+      "preOrder",
     ]);
     const declaredFilters = Object.keys(catalogQuerySchema.shape).filter(
       (name) => !nonFilterParams.has(name),

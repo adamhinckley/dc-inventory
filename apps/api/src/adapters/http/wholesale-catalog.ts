@@ -67,6 +67,8 @@ export function registerWholesaleCatalogRoutes(app: FastifyInstance): void {
         pageSize: request.query.pageSize,
         sortBy: request.query.sortBy,
         sortOrder: request.query.sortOrder,
+        inStockOnly: request.query.inStockOnly,
+        preOrderOnly: request.query.preOrder,
         availableOnly: request.query.availableOnly,
       });
       return {
