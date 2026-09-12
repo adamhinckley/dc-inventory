@@ -22,7 +22,7 @@ async function authenticatedLicensingApp(store: InMemoryLicensingStore) {
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const passwords = new InMemoryPasswordHasher();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: "default" });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "default", name: "Acme Wholesale" });
   await staffUsers.save({
     id: StaffUserId.parse("11111111-1111-4111-8111-111111111111"),
     organizationId: OrganizationId.DEFAULT,

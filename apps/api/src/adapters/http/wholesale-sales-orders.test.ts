@@ -47,7 +47,7 @@ async function startApp(options?: {
 }) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -92,6 +92,7 @@ async function startApp(options?: {
   await staffUsers.save({
     id: STAFF_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -99,6 +100,7 @@ async function startApp(options?: {
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "wholesale@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_A_ID,
@@ -106,6 +108,7 @@ async function startApp(options?: {
   await wholesaleUsers.save({
     id: WholesaleUserId.parse("77777777-7777-4777-8777-777777777777"),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "buyer-b@local.test",
     passwordHash: await passwords.hash("buyer-b-secret"),
     customerId: CUSTOMER_B_ID,

@@ -46,7 +46,7 @@ async function startCatalogApp(
 ) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -62,6 +62,7 @@ async function startCatalogApp(
   await staffUsers.save({
     id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -69,6 +70,7 @@ async function startCatalogApp(
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "wholesale@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_ID,
@@ -967,12 +969,13 @@ describe("catalog HTTP", () => {
     try {
       const passwords = new InMemoryPasswordHasher();
       const organizations = new InMemoryOrganizationRepository();
-      await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+      await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
       const staffUsers = new InMemoryStaffUserRepository();
       const sessions = new InMemorySessionStore();
       await staffUsers.save({
         id: STAFF_ID,
         organizationId: OrganizationId.DEFAULT,
+        displayName: "Test Staff",
         email: "staff@local.test",
         passwordHash: await passwords.hash("staff-secret"),
         roles: ["admin"],

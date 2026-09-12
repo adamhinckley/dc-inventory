@@ -3,8 +3,11 @@ import {
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
   PHASE1_PRODUCTS,
+  PHASE1_NORTHSTAR_WHOLESALE_DISPLAY_NAME,
   PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
+  PHASE1_STAFF_DISPLAY_NAME,
   PHASE1_STAFF_EMAIL,
+  PHASE1_WHOLESALE_DISPLAY_NAME,
   PHASE1_WHOLESALE_EMAIL,
 } from "../phase1-fixture.js";
 import { DEMO_NAMED_CUSTOMERS } from "../reconciliation/expectations.js";
@@ -324,16 +327,22 @@ export function planCustomersAndShipTos(
 
 export function planIdentityEmails(): {
   staffEmail: string;
+  staffDisplayName: string;
   wholesaleEmail: string;
+  wholesaleDisplayName: string;
   wholesaleCustomerKey: "acme";
   secondaryWholesaleEmail: string;
+  secondaryWholesaleDisplayName: string;
   secondaryWholesaleCustomerKey: "northstar";
 } {
   return {
     staffEmail: PHASE1_STAFF_EMAIL,
+    staffDisplayName: PHASE1_STAFF_DISPLAY_NAME,
     wholesaleEmail: PHASE1_WHOLESALE_EMAIL,
+    wholesaleDisplayName: PHASE1_WHOLESALE_DISPLAY_NAME,
     wholesaleCustomerKey: "acme",
     secondaryWholesaleEmail: PHASE1_NORTHSTAR_WHOLESALE_EMAIL,
+    secondaryWholesaleDisplayName: PHASE1_NORTHSTAR_WHOLESALE_DISPLAY_NAME,
     secondaryWholesaleCustomerKey: "northstar",
   };
 }

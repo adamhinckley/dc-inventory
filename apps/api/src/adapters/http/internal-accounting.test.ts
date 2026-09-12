@@ -45,7 +45,7 @@ afterEach(async () => {
 async function startAccountingApp() {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const customers = new InMemoryCustomerRepository();
@@ -57,6 +57,7 @@ async function startAccountingApp() {
   await staffUsers.save({
     id: STAFF_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],

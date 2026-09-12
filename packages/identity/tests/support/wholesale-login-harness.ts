@@ -69,10 +69,11 @@ export function wholesaleLoginHarness(options: WholesaleLoginHarnessOptions = {}
 export async function seedWholesaleLoginFixture(
   h: ReturnType<typeof wholesaleLoginHarness>,
 ) {
-  await h.organizations.save({ id: DEFAULT_ORG, slug: ACME_SLUG });
+  await h.organizations.save({ id: DEFAULT_ORG, slug: ACME_SLUG, name: "Acme Wholesale" });
   await h.wholesaleUsers.save({
     id: WHOLESALE_ID,
     organizationId: DEFAULT_ORG,
+    displayName: "Test Wholesale User",
     email: "wholesale@local.test",
     passwordHash: await h.passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_ID,

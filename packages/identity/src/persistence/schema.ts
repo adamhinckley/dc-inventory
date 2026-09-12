@@ -59,6 +59,7 @@ export const opsUsers = identity.table(
   "ops_users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    displayName: text("display_name").notNull(),
     email: text("email").notNull(),
     passwordHash: text("password_hash"),
     kind: opsUserKind("kind").notNull(),
@@ -75,6 +76,7 @@ export const opsUsers = identity.table(
 
 export const organizations = identity.table("organizations", {
   id: text("id").primaryKey(),
+  name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   ...timestamps(),
 });
@@ -84,6 +86,7 @@ export const staffUsers = identity.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: text("organization_id").notNull().default("DEFAULT"),
+    displayName: text("display_name").notNull(),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
     roles: staffRole("roles")
@@ -105,6 +108,7 @@ export const wholesaleUsers = identity.table(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     organizationId: text("organization_id").notNull().default("DEFAULT"),
+    displayName: text("display_name").notNull(),
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
     customerId: uuid("customer_id")

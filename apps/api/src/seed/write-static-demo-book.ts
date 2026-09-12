@@ -283,6 +283,7 @@ export async function runWriteStaticDemoBook(
   const staff: StaffUser = {
     id: existingStaff?.id ?? StaffUserId.parse(newId()),
     organizationId: OrganizationId.DEFAULT,
+    displayName: existingStaff?.displayName ?? plan.master.staffDisplayName,
     email: plan.master.staffEmail,
     passwordHash: await ports.passwords.hash(staffPassword),
     roles: withDemoStaffRoles(existingStaff?.roles),
@@ -296,6 +297,7 @@ export async function runWriteStaticDemoBook(
   const wholesale: WholesaleUser = {
     id: existingWholesale?.id ?? WholesaleUserId.parse(newId()),
     organizationId: OrganizationId.DEFAULT,
+    displayName: existingWholesale?.displayName ?? plan.master.wholesaleDisplayName,
     email: plan.master.wholesaleEmail,
     passwordHash: await ports.passwords.hash(wholesalePassword),
     customerId: acme.id,
@@ -315,6 +317,8 @@ export async function runWriteStaticDemoBook(
   const secondaryWholesale: WholesaleUser = {
     id: existingSecondaryWholesale?.id ?? WholesaleUserId.parse(newId()),
     organizationId: OrganizationId.DEFAULT,
+    displayName:
+      existingSecondaryWholesale?.displayName ?? plan.master.secondaryWholesaleDisplayName,
     email: plan.master.secondaryWholesaleEmail,
     passwordHash: await ports.passwords.hash(wholesalePassword),
     customerId: northstar.id,

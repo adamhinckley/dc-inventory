@@ -48,7 +48,7 @@ async function startAuthApp(
 ) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const opsUsers = new InMemoryOpsUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
@@ -65,6 +65,7 @@ async function startAuthApp(
   await staffUsers.save({
     id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -72,6 +73,7 @@ async function startAuthApp(
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "wholesale@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: CUSTOMER_ID,
@@ -79,6 +81,7 @@ async function startAuthApp(
   await opsUsers.save({
     id: OPERATOR_ID,
     tenantId: OrganizationId.DEFAULT,
+    displayName: "Test Ops User",
     email: "operator@local.test",
     passwordHash: await passwords.hash("operator-secret"),
     kind: "operator",
@@ -86,6 +89,7 @@ async function startAuthApp(
   await opsUsers.save({
     id: OWNER_ID,
     tenantId: OrganizationId.DEFAULT,
+    displayName: "Test Ops User",
     email: "owner@local.test",
     passwordHash: await passwords.hash("owner-secret"),
     kind: "business_owner",

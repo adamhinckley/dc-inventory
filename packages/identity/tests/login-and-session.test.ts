@@ -96,7 +96,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
 }
 
 async function seedAcmeOrg(h: ReturnType<typeof harness>) {
-  await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+  await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
 }
 
 describe("Identity login and sessions (in-memory)", () => {
@@ -106,6 +106,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.opsUsers.save({
       id: OPERATOR_ID,
       tenantId: OrganizationId.DEFAULT,
+      displayName: "Test Ops User",
       email: "operator@local.test",
       passwordHash: await h.passwords.hash("operator-secret"),
       kind: "operator",
@@ -113,6 +114,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.opsUsers.save({
       id: OWNER_ID,
       tenantId: OrganizationId.DEFAULT,
+      displayName: "Test Ops User",
       email: "owner@local.test",
       passwordHash: await h.passwords.hash("owner-secret"),
       kind: "business_owner",
@@ -154,6 +156,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -187,6 +190,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -219,6 +223,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Wholesale User",
       email: "wholesale@local.test",
       passwordHash: await h.passwords.hash("wholesale-secret"),
       customerId: CUSTOMER_ID,
@@ -238,6 +243,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Wholesale User",
       email: "wholesale@local.test",
       passwordHash: await h.passwords.hash("wholesale-secret"),
       customerId: OTHER_CUSTOMER,
@@ -259,6 +265,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -298,6 +305,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -337,6 +345,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -365,6 +374,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -398,6 +408,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -426,12 +437,13 @@ describe("Identity login and sessions (in-memory)", () => {
     const betaStaffId = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440099");
     const betaWholesaleId = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440098");
 
-    await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
-    await h.organizations.save({ id: betaOrgId, slug: BETA_SLUG });
+    await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
+    await h.organizations.save({ id: betaOrgId, slug: BETA_SLUG, name: "Beta Wholesale" });
 
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("acme-secret"),
       roles: ["admin"],
@@ -439,6 +451,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.staffUsers.save({
       id: betaStaffId,
       organizationId: betaOrgId,
+      displayName: "Test Staff",
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("beta-secret"),
       roles: ["purchasing"],
@@ -446,6 +459,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Wholesale User",
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("acme-secret"),
       customerId: CUSTOMER_ID,
@@ -453,6 +467,7 @@ describe("Identity login and sessions (in-memory)", () => {
     await h.wholesaleUsers.save({
       id: betaWholesaleId,
       organizationId: betaOrgId,
+      displayName: "Test Wholesale User",
       email: "buyer@acme.com",
       passwordHash: await h.passwords.hash("beta-secret"),
       customerId: OTHER_CUSTOMER,

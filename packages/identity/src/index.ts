@@ -93,6 +93,12 @@ export {
   type SessionAudience,
 } from "./domain/session.js";
 export type { Organization } from "./domain/organization.js";
+export {
+  InvalidRequiredTextError,
+  parseDisplayName,
+  parseNonEmptyText,
+  parseOrganizationName,
+} from "./domain/required-text.js";
 export { STAFF_ROLES, type StaffRole } from "./domain/staff-role.js";
 export type { StaffUser } from "./domain/staff-user.js";
 export type { WholesaleUser } from "./domain/wholesale-user.js";

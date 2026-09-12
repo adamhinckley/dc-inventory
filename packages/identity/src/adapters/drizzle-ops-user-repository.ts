@@ -1,6 +1,7 @@
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import { normalizeEmail } from "../domain/email.js";
+import { parseDisplayName } from "../domain/required-text.js";
 import { OpsUserId, type OpsUser } from "../domain/ops-user.js";
 import type { IOpsUserRepository } from "../domain/ports/ops-user-repository.js";
 import { opsUsers } from "../persistence/schema.js";
@@ -34,10 +35,12 @@ export class DrizzleOpsUserRepository implements IOpsUserRepository {
 
   async save(user: OpsUser): Promise<void> {
     const email = normalizeEmail(user.email);
+    const displayName = parseDisplayName(user.displayName);
     await this.db
       .insert(opsUsers)
       .values({
         id: user.id,
+        displayName,
         tenantId: user.tenantId,
         email,
         passwordHash: user.passwordHash,
@@ -46,6 +49,7 @@ export class DrizzleOpsUserRepository implements IOpsUserRepository {
       .onConflictDoUpdate({
         target: opsUsers.id,
         set: {
+          displayName,
           tenantId: user.tenantId,
           email,
           passwordHash: user.passwordHash,
@@ -63,6 +67,7 @@ function toOpsUser(row: typeof opsUsers.$inferSelect): OpsUser | null {
   return {
     id: OpsUserId.parse(row.id),
     tenantId: OrganizationId.parse(row.tenantId),
+    displayName: row.displayName,
     email: row.email,
     passwordHash: row.passwordHash,
     kind: row.kind,

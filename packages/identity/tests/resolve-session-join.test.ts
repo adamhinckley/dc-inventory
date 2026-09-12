@@ -79,7 +79,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
 }
 
 async function seedAcmeOrg(h: ReturnType<typeof harness>) {
-  await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+  await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
 }
 
 describe("Resolve session joined reads", () => {
@@ -89,6 +89,7 @@ describe("Resolve session joined reads", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -105,6 +106,7 @@ describe("Resolve session joined reads", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: BETA_ORG_ID,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await h.passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -122,6 +124,7 @@ describe("Resolve session joined reads", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Wholesale User",
       email: "buyer@local.test",
       passwordHash: await h.passwords.hash("buyer-secret"),
       customerId: CUSTOMER_ID,
@@ -147,6 +150,7 @@ describe("Resolve session joined reads", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Wholesale User",
       email: "buyer@local.test",
       passwordHash: await h.passwords.hash("buyer-secret"),
       customerId: CUSTOMER_ID,
@@ -163,6 +167,7 @@ describe("Resolve session joined reads", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: BETA_ORG_ID,
+      displayName: "Test Wholesale User",
       email: "buyer@local.test",
       passwordHash: await h.passwords.hash("buyer-secret"),
       customerId: CUSTOMER_ID,
@@ -179,6 +184,7 @@ describe("Resolve session joined reads", () => {
     await h.opsUsers.save({
       id: OPERATOR_ID,
       tenantId: OrganizationId.DEFAULT,
+      displayName: "Test Ops User",
       email: "operator@local.test",
       passwordHash: await h.passwords.hash("operator-secret"),
       kind: "operator",
@@ -195,6 +201,7 @@ describe("Resolve session joined reads", () => {
     await h.opsUsers.save({
       id: OPERATOR_ID,
       tenantId: BETA_ORG_ID,
+      displayName: "Test Ops User",
       email: "operator@local.test",
       passwordHash: await h.passwords.hash("operator-secret"),
       kind: "operator",
@@ -211,6 +218,7 @@ describe("Resolve session joined reads", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Wholesale User",
       email: "buyer@local.test",
       passwordHash: await h.passwords.hash("buyer-secret"),
       customerId: CUSTOMER_ID,
@@ -239,6 +247,7 @@ describe("Resolve session joined reads", () => {
     await h.wholesaleUsers.save({
       id: WHOLESALE_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Wholesale User",
       email: "buyer@local.test",
       passwordHash: await h.passwords.hash("buyer-secret"),
       customerId: CUSTOMER_ID,
@@ -246,6 +255,7 @@ describe("Resolve session joined reads", () => {
     await h.opsUsers.save({
       id: OPERATOR_ID,
       tenantId: OrganizationId.DEFAULT,
+      displayName: "Test Ops User",
       email: "operator@local.test",
       passwordHash: await h.passwords.hash("operator-secret"),
       kind: "operator",

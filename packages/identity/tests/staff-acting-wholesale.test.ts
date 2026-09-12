@@ -52,7 +52,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
 }
 
 async function seedOrg(h: ReturnType<typeof harness>) {
-  await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+  await h.organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
 }
 
 async function seedStaffUser(
@@ -67,6 +67,7 @@ async function seedStaffUser(
   await h.staffUsers.save({
     id: input.id,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Staff",
     email: input.email,
     passwordHash: await h.passwords.hash(input.password),
     roles: input.roles,
@@ -77,6 +78,7 @@ async function seedWholesaleBuyer(h: ReturnType<typeof harness>) {
   await h.wholesaleUsers.save({
     id: WHOLESALE_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "buyer@local.test",
     passwordHash: await h.passwords.hash("buyer-secret"),
     customerId: CUSTOMER_ID,

@@ -1,5 +1,6 @@
 import type { OrganizationId } from "@dc-inventory/shared-kernel";
 import { normalizeEmail } from "../domain/email.js";
+import { parseDisplayName } from "../domain/required-text.js";
 import type { OpsUser, OpsUserId } from "../domain/ops-user.js";
 import type { IOpsUserRepository } from "../domain/ports/ops-user-repository.js";
 
@@ -20,7 +21,11 @@ export class InMemoryOpsUserRepository implements IOpsUserRepository {
   }
 
   async save(user: OpsUser): Promise<void> {
-    const stored = { ...user, email: normalizeEmail(user.email) };
+    const stored = {
+      ...user,
+      displayName: parseDisplayName(user.displayName),
+      email: normalizeEmail(user.email),
+    };
     this.byId.set(stored.id, stored);
     this.byTenantEmail.set(emailKey(stored.tenantId, stored.email), stored);
   }

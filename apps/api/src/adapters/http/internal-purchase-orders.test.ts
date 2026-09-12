@@ -50,7 +50,7 @@ afterEach(async () => {
 async function startPurchasingApp() {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const shipPorts = testShipAccountingReadPorts();
@@ -78,6 +78,7 @@ async function startPurchasingApp() {
   await staffUsers.save({
     id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -671,7 +672,7 @@ describe("internal purchase orders HTTP", () => {
   it("gates and runs cancel remaining on partially received purchase orders", async () => {
     const passwords = new InMemoryPasswordHasher();
     const organizations = new InMemoryOrganizationRepository();
-    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
     const staffUsers = new InMemoryStaffUserRepository();
     const sessions = new InMemorySessionStore();
     const shipPorts = testShipAccountingReadPorts();
@@ -692,6 +693,7 @@ describe("internal purchase orders HTTP", () => {
       await staffUsers.save({
         id: StaffUserId.parse(`20000000-0000-4000-8000-00000000000${index}`),
         organizationId: OrganizationId.DEFAULT,
+        displayName: "Test Staff",
         email: `${role}@cancel-remaining.test`,
         passwordHash: await passwords.hash("staff-secret"),
         roles: [role],
@@ -822,7 +824,7 @@ describe("internal purchase orders HTTP", () => {
   it("returns short readout with toOrder rows and affected customers", async () => {
     const passwords = new InMemoryPasswordHasher();
     const organizations = new InMemoryOrganizationRepository();
-    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
     const staffUsers = new InMemoryStaffUserRepository();
     const sessions = new InMemorySessionStore();
     const customerRepo = new InMemoryCustomerRepository();
@@ -880,6 +882,7 @@ describe("internal purchase orders HTTP", () => {
     await staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await passwords.hash("staff-secret"),
       roles: ["admin"],
