@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create Organization — Platform Admin</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="banner">
+      <strong>Throwaway prototype.</strong> DEFAULT / platform admin only.
+      <a href="./index.html">All screens</a>
+    </div>
+    <header class="topbar">
+      <div class="topbar-title">Internal · Platform</div>
+      <div class="topbar-meta"><a href="./index.html">Prototype Index</a></div>
+    </header>
+    <main class="page">
+      <div id="form-view" class="card">
+        <p class="page-kicker">DEFAULT / Platform Admin Only</p>
+        <h1 class="page-title">Create Organization</h1>
+        <p class="page-desc">
+          Provisions a new org and invites its first admin. This screen is not for ordinary staff.
+        </p>
+        <p class="note">
+          An invite email is sent to the first admin. Do not collect a password on this form — they
+          set it from the invite link.
+        </p>
+        <form id="org-form" novalidate>
+          <div class="field">
+            <label for="orgSlug">Org Slug <span class="req">*</span></label>
+            <input
+              id="orgSlug"
+              name="orgSlug"
+              type="text"
+              required
+              class="mono"
+              pattern="[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?"
+              placeholder="acme-wholesale"
+              autocomplete="off"
+            />
+            <span class="help">Lowercase letters, numbers, and hyphens. Used in URLs.</span>
+          </div>
+          <div class="field">
+            <label for="adminEmail">First Admin Email <span class="req">*</span></label>
+            <input id="adminEmail" name="adminEmail" type="email" required autocomplete="email" />
+          </div>
+          <p id="form-error" class="error-text hidden">Enter a valid org slug and email.</p>
+          <div class="actions">
+            <button type="submit">Create Organization And Invite</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="success-view" class="success hidden">
+        <h2>Organization Created</h2>
+        <p id="success-detail"></p>
+        <p style="margin-top: 12px">Invite email sent. No password was set on this form.</p>
+        <p style="margin-top: 16px"><a href="./index.html">Back to Prototype Index</a></p>
+      </div>
+    </main>
+    <script>
+      const form = document.getElementById("org-form");
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const ok = form.checkValidity();
+        document.getElementById("form-error").classList.toggle("hidden", ok);
+        if (!ok) {
+          form.reportValidity();
+          return;
+        }
+        const slug = document.getElementById("orgSlug").value.trim();
+        const email = document.getElementById("adminEmail").value.trim();
+        document.getElementById("success-detail").textContent =
+          `Org “${slug}” is ready. First admin invite sent to ${email}.`;
+        document.getElementById("form-view").classList.add("hidden");
+        document.getElementById("success-view").classList.remove("hidden");
+      });
+    </script>
+  </body>
+</html>
