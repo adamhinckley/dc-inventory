@@ -138,9 +138,6 @@ importers:
       '@dc-inventory/api-client-internal':
         specifier: workspace:*
         version: link:../../packages/api-client-internal
-      '@dc-inventory/identity':
-        specifier: workspace:*
-        version: link:../../packages/identity
       '@dc-inventory/ui':
         specifier: workspace:*
         version: link:../../packages/ui

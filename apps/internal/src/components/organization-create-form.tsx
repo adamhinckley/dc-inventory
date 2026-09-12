@@ -5,8 +5,8 @@ import {
   useCreateInternalOrganization,
   type createInternalOrganization,
 } from "@dc-inventory/api-client-internal";
-import { deriveOrganizationSlugFromDisplayName } from "@dc-inventory/identity";
 import { Form, TextInput, useFormSubmit } from "@dc-inventory/ui";
+import { deriveOrganizationSlugFromDisplayName } from "../lib/organization-slug";
 import { Building2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useFormContext, type ControllerFieldState, type ControllerRenderProps } from "react-hook-form";
