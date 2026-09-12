@@ -763,6 +763,23 @@ function FormControl({
       return (
         <FormTextInput type="text" placeholder={form.placeholder} data-testid={testId} pii={pii} />
       )
+    case 'email':
+      return (
+        <FormTextInput type="email" placeholder={form.placeholder} data-testid={testId} pii={pii} />
+      )
+    case 'url':
+      return (
+        <FormTextInput type="url" placeholder={form.placeholder} data-testid={testId} pii={pii} />
+      )
+    case 'password':
+      return (
+        <FormTextInput
+          type="password"
+          placeholder={form.placeholder}
+          data-testid={testId}
+          pii={pii}
+        />
+      )
     case 'number':
       return (
         <FormNumberInput
