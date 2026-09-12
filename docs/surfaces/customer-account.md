@@ -15,11 +15,12 @@ Language: say **ship-to** and **bill-to**; **customer number** (not customer ID 
 | App | Route | Purpose |
 | --- | --- | --- |
 | Internal | `/customers` | List all customers; create (G8) |
+| Internal | `/customers/applications` | Pending application review — Approve / Reject ([`customers.md`](../customers.md) §15) |
 | Internal | `/customers/:id` | Live master detail + composed order history |
 | Internal | `/sales` | Customer column links to `/customers/:customerId` |
 | Wholesale | `/account` | Buyer-visible account (buyer session only) |
 
-Wholesale order history stays on `/orders`. Do not build SoloView three-step registration on this map.
+Wholesale order history stays on `/orders`. Public apply UI follows [`customers.md`](../customers.md) §15 (pending until approve) — not SoloView’s three-step modal on this map.
 
 ---
 
@@ -254,9 +255,24 @@ Authoritative CRUD gates: [`customers.md`](../customers.md) §11. UI detail is t
 
 ---
 
+## Internal: `/customers/applications` (pending review)
+
+Locked in [`customers.md`](../customers.md) §15. Map: [DCI-406](https://linear.app/adamhinckley/issue/DCI-406).
+
+**Table:** pending applications only — not customers. Row or business name opens full application detail.
+
+**Actions (`admin`):** **Approve** (creates active customer + terms/credit + cert jurisdiction/number + wholesale login + invite) · **Reject** (closes pending; no customer created).
+
+**Not on this page:** staff-for-them create (admin uses **Create Customer** on `/customers` plus wholesale login path — same end state without a pending row). `purchasing` may create customer headers via `master_data_manage` but not shop logins ([DCI-409](https://linear.app/adamhinckley/issue/DCI-409)).
+
+U13: cert jurisdiction + number on approve; evidence only — not a gate. No cert file upload this wave.
+
+---
+
 ## Out of scope (this spec)
 
-- SoloView account request, staff approve queue, PandaDoc / wholesale agreement ([`customers.md`](../customers.md) §15)
+- Existing-account “register for web access” bind flow ([DCI-419](https://linear.app/adamhinckley/issue/DCI-419))
+- PandaDoc / wholesale agreement signature (superseded destination — [`customers.md`](../customers.md) §15)
 - Customer picker on `/sales` filter (follow-up)
 - Ship-to or cert delete on wholesale
 - Buyer edit of contacts, bill-to, terms, credit limit, status

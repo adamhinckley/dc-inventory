@@ -507,12 +507,17 @@ Commands use this matrix:
 | Write-off, credit memo, void payment (`ar_adjust`) | yes | no | no | no | yes |
 | Create / end payment plan (`payment_plans_manage`) | yes | no | no | no | yes |
 | Edit customer credit limit (`credit_limit_manage`) | yes | no | no | no | yes |
+| Manage organizations — tier 1 (`organizations_manage`) | no | no | no | no | no |
+| Create / deactivate staff; edit roles (`staff_manage`) | yes | no | no | no | no |
+| Create wholesale shop logins (`WholesaleUser` + invite) | yes | no | no | no | no |
 
 Users may hold more than one role and authorization succeeds if any role grants the
 action. Empty or unknown role sets grant no commands. `sales_support` is the code value
 for sales support; `accounting` is the AR role ([`accounting.md`](./accounting.md) §8). Editing the credit-limit field moves out of
 `master_data_manage`. New roles or actions require this table and the static policy to change
 together. v1 has no permission CMS, per-user grants, per-amount thresholds, or feature-flag replacement for RBAC.
+
+**Onboarding (locked [DCI-406](https://linear.app/adamhinckley/issue/DCI-406), [DCI-409](https://linear.app/adamhinckley/issue/DCI-409)):** `organizations_manage` is **`DEFAULT` / platform only** — ops provisions a new tenant, not every tenant admin. `staff_manage` and wholesale login creation are **`admin` only** within a tenant. Customer onboarding is **pending until approve** or **staff-for-them** — see [`customers.md`](./customers.md) §15. U5, U10, and U13 meaning unchanged.
 
 ### G9. Purchasing state machine (cancel, over/under receive)
 
@@ -561,7 +566,7 @@ Still open elsewhere (do not invent defaults):
 | Confirmation email (`IEmailSender`) | Deferred send-job; port on confirm use case when built |
 | Statement | PDF projection + `IEmailSender`, after the email provider — [`accounting.md`](./accounting.md) §9. Do not overload Invoice |
 | Tracking | Explicitly deferred |
-| Account request + wholesale agreement (SoloView: staff approve, then PandaDoc sign) | Observed 2026-09 — [`customers.md`](./customers.md) §15. Not header **terms**. Do not invent gates |
+| Onboarding — three tiers (pending until approve, staff-for-them, Tier 1 org) | Locked — [`customers.md`](./customers.md) §15. Map: [DCI-406](https://linear.app/adamhinckley/issue/DCI-406). Supersedes account-request / Customer-on-submit destination ([DCI-413](https://linear.app/adamhinckley/issue/DCI-413)) |
 
 ### G14. Tenancy, currency, clock
 
