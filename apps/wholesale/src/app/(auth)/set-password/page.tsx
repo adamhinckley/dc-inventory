@@ -1,10 +1,11 @@
 "use client";
 
 import { useSetPasswordWholesale } from "@dc-inventory/api-client-wholesale";
-import { PASSWORD_POLICY_UI_COPY } from "@dc-inventory/identity";
+import { PASSWORD_POLICY_UI_COPY } from "@dc-inventory/identity/password-policy";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
+import { ShopPage } from "../../../components/shop-page";
 
 function SetPasswordForm() {
   const router = useRouter();
@@ -87,8 +88,10 @@ function SetPasswordForm() {
 
 export default function SetPasswordPage() {
   return (
-    <Suspense fallback={<p className="text-ink-muted">Loading…</p>}>
-      <SetPasswordForm />
-    </Suspense>
+    <ShopPage>
+      <Suspense fallback={<p className="text-ink-muted">Loading…</p>}>
+        <SetPasswordForm />
+      </Suspense>
+    </ShopPage>
   );
 }

@@ -1,9 +1,9 @@
 import type {
-  ClaimedSetPasswordToken,
-  ClaimSetPasswordTokenInput,
   ISetPasswordTokenStore,
   MintedSetPasswordToken,
   MintSetPasswordTokenInput,
+  SetPasswordTokenLookupInput,
+  ValidSetPasswordToken,
 } from "../domain/ports/set-password-token-store.js";
 import { hashSetPasswordToken } from "./set-password-token-hash.js";
 
@@ -28,7 +28,7 @@ export class InMemorySetPasswordTokenStore implements ISetPasswordTokenStore {
     return { rawToken };
   }
 
-  async claim(input: ClaimSetPasswordTokenInput): Promise<ClaimedSetPasswordToken | null> {
+  async findValid(input: SetPasswordTokenLookupInput): Promise<ValidSetPasswordToken | null> {
     const stored = this.byHash.get(hashSetPasswordToken(input.rawToken));
     if (stored === undefined) {
       return null;
@@ -40,7 +40,22 @@ export class InMemorySetPasswordTokenStore implements ISetPasswordTokenStore {
     ) {
       return null;
     }
-    stored.consumedAt = input.now;
     return { userId: stored.userId, audience: stored.audience };
+  }
+
+  async consume(input: SetPasswordTokenLookupInput): Promise<boolean> {
+    const stored = this.byHash.get(hashSetPasswordToken(input.rawToken));
+    if (stored === undefined) {
+      return false;
+    }
+    if (
+      stored.consumedAt !== null ||
+      stored.expiresAt.getTime() <= input.now.getTime() ||
+      stored.audience !== input.expectedAudience
+    ) {
+      return false;
+    }
+    stored.consumedAt = input.now;
+    return true;
   }
 }

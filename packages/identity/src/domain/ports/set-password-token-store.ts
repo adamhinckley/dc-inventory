@@ -10,18 +10,19 @@ export type MintedSetPasswordToken = {
   rawToken: string;
 };
 
-export type ClaimSetPasswordTokenInput = {
+export type SetPasswordTokenLookupInput = {
   rawToken: string;
   expectedAudience: SetPasswordAudience;
   now: Date;
 };
 
-export type ClaimedSetPasswordToken = {
+export type ValidSetPasswordToken = {
   userId: string;
   audience: SetPasswordAudience;
 };
 
 export interface ISetPasswordTokenStore {
   mint(input: MintSetPasswordTokenInput): Promise<MintedSetPasswordToken>;
-  claim(input: ClaimSetPasswordTokenInput): Promise<ClaimedSetPasswordToken | null>;
+  findValid(input: SetPasswordTokenLookupInput): Promise<ValidSetPasswordToken | null>;
+  consume(input: SetPasswordTokenLookupInput): Promise<boolean>;
 }

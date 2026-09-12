@@ -1006,6 +1006,51 @@ describe("set-password HTTP", () => {
     });
     expect(weak.statusCode).toBe(400);
     expect(weak.json()).toEqual({ error: "invalid", violation: "too_short" });
+
+    const validAfterPolicyFailure = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: staffToken.rawToken, password: "ValidPass1" },
+    });
+    expect(validAfterPolicyFailure.statusCode).toBe(200);
+    expect(validAfterPolicyFailure.json()).toEqual({ ok: true });
+  });
+
+  it("rejects reused and expired tokens with generic invalid", async () => {
+    const { app, clock, setPasswordTokens } = await startSetPasswordApp();
+    const { rawToken } = await setPasswordTokens.mint({
+      audience: "staff",
+      userId: STAFF_ID,
+      expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: rawToken, password: "StaffPass1" },
+    });
+    expect(first.statusCode).toBe(200);
+
+    const reused = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: rawToken, password: "StaffPass2" },
+    });
+    expect(reused.statusCode).toBe(400);
+    expect(reused.json()).toEqual({ error: "invalid" });
+
+    const expired = await setPasswordTokens.mint({
+      audience: "staff",
+      userId: STAFF_ID,
+      expiresAt: new Date(clock.now().getTime() - 1_000),
+    });
+    const expiredResponse = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: expired.rawToken, password: "StaffPass1" },
+    });
+    expect(expiredResponse.statusCode).toBe(400);
+    expect(expiredResponse.json()).toEqual({ error: "invalid" });
   });
 });
 

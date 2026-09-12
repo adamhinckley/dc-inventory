@@ -1,11 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import type {
-  ClaimedSetPasswordToken,
-  ClaimSetPasswordTokenInput,
   ISetPasswordTokenStore,
   MintedSetPasswordToken,
   MintSetPasswordTokenInput,
+  SetPasswordTokenLookupInput,
+  ValidSetPasswordToken,
 } from "../domain/ports/set-password-token-store.js";
 import type { SetPasswordAudience } from "../domain/set-password-token.js";
 import { setPasswordTokens } from "../persistence/schema.js";
@@ -30,7 +30,34 @@ export class DrizzleSetPasswordTokenStore implements ISetPasswordTokenStore {
     return { rawToken };
   }
 
-  async claim(input: ClaimSetPasswordTokenInput): Promise<ClaimedSetPasswordToken | null> {
+  async findValid(input: SetPasswordTokenLookupInput): Promise<ValidSetPasswordToken | null> {
+    const tokenHash = hashSetPasswordToken(input.rawToken);
+    const rows = await this.db
+      .select({
+        userId: setPasswordTokens.userId,
+        audience: setPasswordTokens.audience,
+      })
+      .from(setPasswordTokens)
+      .where(
+        and(
+          eq(setPasswordTokens.tokenHash, tokenHash),
+          eq(setPasswordTokens.audience, input.expectedAudience),
+          isNull(setPasswordTokens.consumedAt),
+          gt(setPasswordTokens.expiresAt, input.now),
+        ),
+      )
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      return null;
+    }
+    return {
+      userId: row.userId,
+      audience: row.audience as SetPasswordAudience,
+    };
+  }
+
+  async consume(input: SetPasswordTokenLookupInput): Promise<boolean> {
     const tokenHash = hashSetPasswordToken(input.rawToken);
     const rows = await this.db
       .update(setPasswordTokens)
@@ -43,17 +70,7 @@ export class DrizzleSetPasswordTokenStore implements ISetPasswordTokenStore {
           gt(setPasswordTokens.expiresAt, input.now),
         ),
       )
-      .returning({
-        userId: setPasswordTokens.userId,
-        audience: setPasswordTokens.audience,
-      });
-    const row = rows[0];
-    if (row === undefined) {
-      return null;
-    }
-    return {
-      userId: row.userId,
-      audience: row.audience as SetPasswordAudience,
-    };
+      .returning({ id: setPasswordTokens.id });
+    return rows[0] !== undefined;
   }
 }

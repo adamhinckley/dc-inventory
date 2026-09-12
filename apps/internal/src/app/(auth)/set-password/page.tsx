@@ -1,7 +1,7 @@
 "use client";
 
 import { useSetPasswordInternal } from "@dc-inventory/api-client-internal";
-import { PASSWORD_POLICY_UI_COPY } from "@dc-inventory/identity";
+import { PASSWORD_POLICY_UI_COPY } from "@dc-inventory/identity/password-policy";
 import { Button, Input, Label, LabeledField, isSuccessfulOrvalResponse } from "@dc-inventory/ui";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";

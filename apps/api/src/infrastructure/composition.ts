@@ -81,6 +81,7 @@ import {
 import {
   ClearActingCustomerUseCase,
   CreateStaffUserUseCase,
+  CreateWholesaleUserUseCase,
   DrizzleIdentityUnitOfWork,
   DrizzleOpsUserRepository,
   DrizzleSessionStore,
@@ -126,6 +127,7 @@ import {
 } from "@dc-inventory/identity";
 import { createEmailSenderFromEnv } from "./email-sender-config.js";
 import { createStaffInviteLinks } from "./staff-invite-links.js";
+import { createWholesaleInviteLinks } from "./wholesale-invite-links.js";
 import {
   DrizzleLicensingReadRepository,
   DrizzleLicensingTenantProvisioner,
@@ -341,6 +343,7 @@ export type IdentityHttpServices = {
   clearActingCustomer: ClearActingCustomerUseCase;
   registerOrganizationWithLicensing: RegisterOrganizationWithLicensingUseCase;
   createStaffUser: CreateStaffUserUseCase;
+  createWholesaleUser: CreateWholesaleUserUseCase;
   setPasswordStaff: SetPasswordUseCase;
   setPasswordWholesale: SetPasswordUseCase;
 };
@@ -1460,6 +1463,13 @@ export function composeAppServices(
         passwords,
         emailSender,
         staffInviteLinks,
+      ),
+      createWholesaleUser: new CreateWholesaleUserUseCase(
+        organizationRepo,
+        wholesaleUsers,
+        passwords,
+        emailSender,
+        wholesaleInviteLinks,
       ),
       setPasswordStaff: new SetPasswordUseCase(
         setPasswordTokens,

@@ -6,6 +6,7 @@
   "description": "Identity context: opaque staff and wholesale sessions. No Better Auth.",
   "exports": {
     ".": "./src/index.ts",
+    "./password-policy": "./src/domain/password-policy.ts",
     "./schema": "./src/persistence/schema.ts",
     "./test-fixtures": "./src/test-fixtures.ts"
   },

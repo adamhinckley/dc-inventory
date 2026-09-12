@@ -43,17 +43,19 @@ export class SetPasswordUseCase {
       return { ok: false, reason: "invalid" };
     }
 
-    const claimed = await this.tokens.claim({
+    const now = this.clock.now();
+    const lookup = {
       rawToken: input.token,
       expectedAudience: input.audience,
-      now: this.clock.now(),
-    });
-    if (claimed === null) {
+      now,
+    };
+    const token = await this.tokens.findValid(lookup);
+    if (token === null) {
       return { ok: false, reason: "invalid" };
     }
 
     if (input.audience === "staff") {
-      const userId = StaffUserId.parse(claimed.userId);
+      const userId = StaffUserId.parse(token.userId);
       const user = await this.staffUsers.findById(userId);
       if (user === null) {
         return { ok: false, reason: "invalid" };
@@ -62,10 +64,11 @@ export class SetPasswordUseCase {
         ...user,
         passwordHash: await this.passwords.hash(input.password),
       });
+      await this.tokens.consume(lookup);
       return { ok: true };
     }
 
-    const userId = WholesaleUserId.parse(claimed.userId);
+    const userId = WholesaleUserId.parse(token.userId);
     const user = await this.wholesaleUsers.findById(userId);
     if (user === null) {
       return { ok: false, reason: "invalid" };
@@ -74,6 +77,7 @@ export class SetPasswordUseCase {
       ...user,
       passwordHash: await this.passwords.hash(input.password),
     });
+    await this.tokens.consume(lookup);
     return { ok: true };
   }
 }

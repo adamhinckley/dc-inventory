@@ -36,9 +36,14 @@ async function createHarness() {
 }
 
 describe("DrizzleSetPasswordTokenStore (PGlite)", () => {
-  it("mints and claims a valid staff token once", async () => {
+  it("mints, finds, and consumes a valid staff token once", async () => {
     const { store, clock } = await createHarness();
     const expiresAt = new Date(NOW.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const lookup = (rawToken: string) => ({
+      rawToken,
+      expectedAudience: "staff" as const,
+      now: clock.now(),
+    });
 
     const minted = await store.mint({
       audience: "staff",
@@ -47,21 +52,13 @@ describe("DrizzleSetPasswordTokenStore (PGlite)", () => {
     });
 
     expect(minted.rawToken.length).toBeGreaterThan(20);
-
-    const claimed = await store.claim({
-      rawToken: minted.rawToken,
-      expectedAudience: "staff",
-      now: clock.now(),
+    expect(await store.findValid(lookup(minted.rawToken))).toEqual({
+      userId: USER_ID,
+      audience: "staff",
     });
-    expect(claimed).toEqual({ userId: USER_ID, audience: "staff" });
-
-    await expect(
-      store.claim({
-        rawToken: minted.rawToken,
-        expectedAudience: "staff",
-        now: clock.now(),
-      }),
-    ).resolves.toBeNull();
+    expect(await store.consume(lookup(minted.rawToken))).toBe(true);
+    expect(await store.findValid(lookup(minted.rawToken))).toBeNull();
+    expect(await store.consume(lookup(minted.rawToken))).toBe(false);
   });
 
   it("rejects expired, wrong-audience, and unknown tokens", async () => {
@@ -71,34 +68,24 @@ describe("DrizzleSetPasswordTokenStore (PGlite)", () => {
       userId: USER_ID,
       expiresAt: new Date(NOW.getTime() - 1_000),
     });
+    const lookup = (rawToken: string, expectedAudience: "staff" | "wholesale" = "staff") => ({
+      rawToken,
+      expectedAudience,
+      now: clock.now(),
+    });
 
-    await expect(
-      store.claim({
-        rawToken: minted.rawToken,
-        expectedAudience: "staff",
-        now: clock.now(),
-      }),
-    ).resolves.toBeNull();
+    expect(await store.findValid(lookup(minted.rawToken))).toBeNull();
+    expect(await store.consume(lookup(minted.rawToken))).toBe(false);
 
     const wholesale = await store.mint({
       audience: "wholesale",
       userId: USER_ID,
       expiresAt: new Date(NOW.getTime() + 7 * 24 * 60 * 60 * 1000),
     });
-    await expect(
-      store.claim({
-        rawToken: wholesale.rawToken,
-        expectedAudience: "staff",
-        now: clock.now(),
-      }),
-    ).resolves.toBeNull();
+    expect(await store.findValid(lookup(wholesale.rawToken, "staff"))).toBeNull();
+    expect(await store.consume(lookup(wholesale.rawToken, "staff"))).toBe(false);
 
-    await expect(
-      store.claim({
-        rawToken: "unknown-token",
-        expectedAudience: "staff",
-        now: clock.now(),
-      }),
-    ).resolves.toBeNull();
+    expect(await store.findValid(lookup("unknown-token"))).toBeNull();
+    expect(await store.consume(lookup("unknown-token"))).toBe(false);
   });
 });

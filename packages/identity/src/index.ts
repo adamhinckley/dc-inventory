@@ -100,11 +100,11 @@ export type {
   LoginThrottleResult,
 } from "./domain/ports/login-throttle.js";
 export type {
-  ClaimedSetPasswordToken,
-  ClaimSetPasswordTokenInput,
   ISetPasswordTokenStore,
   MintedSetPasswordToken,
   MintSetPasswordTokenInput,
+  SetPasswordTokenLookupInput,
+  ValidSetPasswordToken,
 } from "./domain/ports/set-password-token-store.js";
 export type { IOrganizationRepository } from "./domain/ports/organization-repository.js";
 export type { IOpsUserRepository } from "./domain/ports/ops-user-repository.js";

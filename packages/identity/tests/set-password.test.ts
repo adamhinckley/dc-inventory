@@ -166,6 +166,42 @@ describe("SetPasswordUseCase", () => {
     ).toEqual({ ok: false, reason: "invalid" });
   });
 
+  it("does not consume the token when the user row is missing", async () => {
+    const h = harness();
+    const missingUserId = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440099");
+    const { rawToken } = await h.tokens.mint({
+      audience: "staff",
+      userId: missingUserId,
+      expiresAt: new Date(NOW.getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    expect(
+      await h.setPassword.execute({
+        token: rawToken,
+        password: "ValidPass1",
+        audience: "staff",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+
+    await h.staffUsers.save(
+      testStaffUser({
+        id: missingUserId,
+        organizationId: OrganizationId.DEFAULT,
+        email: "late.staff@local.test",
+        roles: ["admin"],
+        passwordHash: await h.passwords.hash("pending-secret"),
+      }),
+    );
+
+    expect(
+      await h.setPassword.execute({
+        token: rawToken,
+        password: "ValidPass1",
+        audience: "staff",
+      }),
+    ).toEqual({ ok: true });
+  });
+
   it("returns password policy violations without consuming the token", async () => {
     const h = harness();
     await h.staffUsers.save(
