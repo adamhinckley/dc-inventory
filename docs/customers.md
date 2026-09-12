@@ -254,7 +254,7 @@ Prototype PR [#305](https://github.com/adamhinckley/dc-inventory/pull/305) is **
 
 | Lock | Rule |
 |---|---|
-| `organizations_manage` | **Platform user only** — not tenant staff ([`invariants.md`](./invariants.md) G8) |
+| `organizations_manage` | **`DEFAULT` / platform only** — not every tenant admin ([`invariants.md`](./invariants.md) G8) |
 | Org slug | Company **display name → editable derived slug** — not a free-typed slug as the primary input |
 | First admin | **Display name + email**; **invite**, not password-on-form |
 | Display names | Required on staff, wholesale, and ops users + `organizations.name` |

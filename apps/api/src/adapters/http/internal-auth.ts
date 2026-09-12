@@ -2,10 +2,10 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   internalSessionResponseSchema,
+  internalSetPasswordBodySchema,
   internalLoginBodySchema,
   loginBodySchema,
   logoutResponseSchema,
-  setPasswordBodySchema,
   setPasswordFailureResponseSchema,
   setPasswordSuccessResponseSchema,
   tooManyLoginAttemptsResponseSchema,
@@ -133,7 +133,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         operationId: "setPasswordInternal",
         tags: ["internal-auth"],
         summary: "Set staff or platform password from invite token",
-        body: setPasswordBodySchema,
+        body: internalSetPasswordBodySchema,
         response: {
           200: setPasswordSuccessResponseSchema,
           400: setPasswordFailureResponseSchema,

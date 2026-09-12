@@ -32,6 +32,7 @@ describe("local demo boot (ADA-51)", () => {
     expect(compose).not.toMatch(/^\s+image:\s*(awscli|localstack)/m);
     expect(compose).toContain("PHASE1_STAFF_PASSWORD");
     expect(compose).toContain("PHASE1_WHOLESALE_PASSWORD");
+    expect(compose).toContain("PHASE1_PLATFORM_PASSWORD");
     expect(compose).toContain("image: axllent/mailpit:v1.27");
     expect(compose).toContain("MAILPIT_UI_PORT:-8025");
     expect(compose).toContain("MAILPIT_SMTP_PORT:-1025");
@@ -59,10 +60,12 @@ describe("local demo boot (ADA-51)", () => {
     expect(rootEnv).toContain(
       "PHASE1_WHOLESALE_PASSWORD=phase1-wholesale-placeholder",
     );
+    expect(rootEnv).toContain("PHASE1_PLATFORM_PASSWORD=phase1-platform-placeholder");
     expect(apiEnv).toContain("PHASE1_STAFF_PASSWORD=phase1-staff-placeholder");
     expect(apiEnv).toContain(
       "PHASE1_WHOLESALE_PASSWORD=phase1-wholesale-placeholder",
     );
+    expect(apiEnv).toContain("PHASE1_PLATFORM_PASSWORD=phase1-platform-placeholder");
     expect(apiEnv).toContain("DEMO_SEED=dc-inventory-demo-1");
     expect(apiEnv).toMatch(/^DEMO_SEED_RESET=/m);
     expect(apiEnv).toContain("SMTP_HOST=localhost");
@@ -105,6 +108,12 @@ describe("local demo boot (ADA-51)", () => {
     ) as { dialect: string; entries: unknown[] };
     expect(journal.dialect).toBe("postgresql");
     expect(Array.isArray(journal.entries)).toBe(true);
+    const tags = (journal.entries as { tag: string }[]).map((entry) => entry.tag);
+    expect(tags).toContain("0051_identity_set_password_tokens");
+    expect(tags).toContain("0052_identity_platform_users");
+    expect(tags.indexOf("0051_identity_set_password_tokens")).toBeLessThan(
+      tags.indexOf("0052_identity_platform_users"),
+    );
   });
 
   it("records demo-only locks that are not invariants §18", () => {

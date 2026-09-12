@@ -3,6 +3,7 @@
 import { AppShell } from "@dc-inventory/ui";
 import type { ReactNode } from "react";
 import { dashboardNav } from "../lib/dashboard-routes";
+import { useIsPlatformSession } from "../lib/staff-organizations-manage";
 import { AccountNavMenu } from "./account-nav-menu";
 import {
   DashboardBreadcrumb,
@@ -20,6 +21,20 @@ function WorkspaceMark() {
   );
 }
 
+function WorkspaceNavItems() {
+  const isPlatformSession = useIsPlatformSession();
+  if (isPlatformSession) {
+    return null;
+  }
+  return (
+    <AppShell.NavGroup id="workspace" label="Workspace" icon={<WorkspaceMark />}>
+      {dashboardNav.map((item) => (
+        <AppShell.NavItem key={item.href} href={item.href} label={item.label} />
+      ))}
+    </AppShell.NavGroup>
+  );
+}
+
 export function DashboardFrame({ children }: { children: ReactNode }) {
   return (
     <StaffSessionGate>
@@ -28,15 +43,7 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
         <AppShell
           nav={
             <AppShell.Nav href="/catalog">
-              <AppShell.NavGroup id="workspace" label="Workspace" icon={<WorkspaceMark />}>
-                {dashboardNav.map((item) => (
-                  <AppShell.NavItem
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                  />
-                ))}
-              </AppShell.NavGroup>
+              <WorkspaceNavItems />
               <PlatformNavItems />
               <AppShell.NavFooter>
                 <AccountNavMenu />

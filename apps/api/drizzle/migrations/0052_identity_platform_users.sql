@@ -17,3 +17,27 @@ DO $$ BEGIN
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
+--> statement-breakpoint
+CREATE OR REPLACE FUNCTION identity.enforce_staff_platform_email_disjoint()
+RETURNS trigger AS $$
+BEGIN
+  IF TG_TABLE_NAME = 'platform_users' THEN
+    IF EXISTS (SELECT 1 FROM identity.staff_users WHERE email = NEW.email) THEN
+      RAISE EXCEPTION 'email already used by staff user';
+    END IF;
+  ELSIF TG_TABLE_NAME = 'staff_users' THEN
+    IF EXISTS (SELECT 1 FROM identity.platform_users WHERE email = NEW.email) THEN
+      RAISE EXCEPTION 'email already used by platform user';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;--> statement-breakpoint
+DROP TRIGGER IF EXISTS platform_users_staff_platform_email_disjoint ON identity.platform_users;--> statement-breakpoint
+CREATE TRIGGER platform_users_staff_platform_email_disjoint
+BEFORE INSERT OR UPDATE OF email ON identity.platform_users
+FOR EACH ROW EXECUTE FUNCTION identity.enforce_staff_platform_email_disjoint();--> statement-breakpoint
+DROP TRIGGER IF EXISTS staff_users_staff_platform_email_disjoint ON identity.staff_users;--> statement-breakpoint
+CREATE TRIGGER staff_users_staff_platform_email_disjoint
+BEFORE INSERT OR UPDATE OF email ON identity.staff_users
+FOR EACH ROW EXECUTE FUNCTION identity.enforce_staff_platform_email_disjoint();

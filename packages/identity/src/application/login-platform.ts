@@ -3,6 +3,7 @@ import type { IClock } from "../domain/clock.js";
 import { normalizeEmail } from "../domain/email.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { IPlatformUserRepository } from "../domain/ports/platform-user-repository.js";
+import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { ISessionStore } from "../domain/ports/session-store.js";
 
 export type LoginPlatformRequest = {
@@ -22,6 +23,7 @@ export type LoginPlatformResult =
 export class LoginPlatformUseCase {
   constructor(
     private readonly platformUsers: IPlatformUserRepository,
+    private readonly staffUsers: IStaffUserRepository,
     private readonly sessions: ISessionStore,
     private readonly passwords: IPasswordHasher,
     private readonly clock: IClock,
@@ -29,6 +31,10 @@ export class LoginPlatformUseCase {
 
   async execute(input: LoginPlatformRequest): Promise<LoginPlatformResult> {
     const email = normalizeEmail(input.email);
+    if (await this.staffUsers.findByEmailGlobally(email) !== null) {
+      await this.passwords.verifyDummy(input.password);
+      return { ok: false };
+    }
     const user = await this.platformUsers.findByEmail(email);
     if (user === null) {
       await this.passwords.verifyDummy(input.password);

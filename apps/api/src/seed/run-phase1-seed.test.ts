@@ -84,6 +84,7 @@ describe("Phase 1 seed (in-memory)", () => {
     const staffLogin = await new LoginStaffUseCase(
       ports.organizations,
       ports.staffUsers,
+      ports.platformUsers,
       sessions,
       ports.passwords,
       clock,
@@ -96,6 +97,7 @@ describe("Phase 1 seed (in-memory)", () => {
 
     const platformLogin = await new LoginPlatformUseCase(
       ports.platformUsers,
+      ports.staffUsers,
       sessions,
       ports.passwords,
       clock,

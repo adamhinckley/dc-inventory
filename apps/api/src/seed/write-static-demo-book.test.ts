@@ -8,6 +8,7 @@ import {
   InMemoryClock,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
+  InMemoryPlatformUserRepository,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
@@ -325,6 +326,7 @@ describe("static demo book writer (in-memory)", () => {
     const staffLogin = await new LoginStaffUseCase(
       ports.organizations,
       ports.staffUsers,
+      new InMemoryPlatformUserRepository(),
       sessions,
       ports.passwords,
       clock,

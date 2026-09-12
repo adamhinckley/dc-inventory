@@ -1,11 +1,15 @@
 import { useGetInternalSession } from "@dc-inventory/api-client-internal";
+import type { InternalSession } from "./customer-types";
+
+export function isPlatformSession(session: InternalSession | undefined): boolean {
+  return session?.audience === "platform";
+}
 
 export function useIsPlatformSession(): boolean {
   const sessionQuery = useGetInternalSession();
-  if (sessionQuery.data?.status !== 200) {
-    return false;
-  }
-  return sessionQuery.data.data.audience === "platform";
+  const session =
+    sessionQuery.data?.status === 200 ? sessionQuery.data.data : undefined;
+  return isPlatformSession(session);
 }
 
 /** @deprecated Use useIsPlatformSession — organizations_manage is Platform-user-only. */

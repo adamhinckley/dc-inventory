@@ -120,11 +120,11 @@ export class DrizzleSessionStore implements ISessionStore {
     if (row === undefined) {
       return null;
     }
-    const session = toSession(row.session);
-    if (session.audience !== "platform" || session.platformUserId === null) {
+    if (row.session.organizationId !== null) {
       return null;
     }
-    if (session.organizationId !== null) {
+    const session = toSession(row.session);
+    if (session.audience !== "platform" || session.platformUserId === null) {
       return null;
     }
     return {

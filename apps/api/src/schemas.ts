@@ -37,11 +37,19 @@ export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
 
-export const setPasswordBodySchema = z.object({
+export const internalSetPasswordBodySchema = z.object({
   token: z.string().min(1),
   password: z.string().min(1),
   audience: z.enum(["staff", "platform"]).optional(),
 });
+
+export const wholesaleSetPasswordBodySchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(1),
+});
+
+/** @deprecated Use internalSetPasswordBodySchema or wholesaleSetPasswordBodySchema */
+export const setPasswordBodySchema = internalSetPasswordBodySchema;
 
 export const setPasswordSuccessResponseSchema = z.object({
   ok: z.literal(true),

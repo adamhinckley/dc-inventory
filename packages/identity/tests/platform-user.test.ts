@@ -24,6 +24,7 @@ describe("Platform user", () => {
     const clock = new InMemoryClock(new Date("2026-09-12T12:00:00.000Z"));
     const passwords = new InMemoryPasswordHasher();
     const platformUsers = new InMemoryPlatformUserRepository();
+    const staffUsers = new InMemoryStaffUserRepository();
     const sessions = new InMemorySessionStore();
     await platformUsers.save({
       id: PLATFORM_ID,
@@ -34,6 +35,7 @@ describe("Platform user", () => {
 
     const login = await new LoginPlatformUseCase(
       platformUsers,
+      staffUsers,
       sessions,
       passwords,
       clock,
@@ -95,6 +97,7 @@ describe("Platform user", () => {
     const staffLogin = await new LoginStaffUseCase(
       organizations,
       staffUsers,
+      platformUsers,
       sessions,
       passwords,
       clock,
@@ -107,6 +110,7 @@ describe("Platform user", () => {
 
     const platformLogin = await new LoginPlatformUseCase(
       platformUsers,
+      staffUsers,
       sessions,
       passwords,
       clock,

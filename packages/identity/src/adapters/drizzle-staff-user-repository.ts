@@ -42,6 +42,15 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
     return rows[0] === undefined ? null : toStaffUser(rows[0]);
   }
 
+  async findByEmailGlobally(email: string): Promise<StaffUser | null> {
+    const rows = await this.db
+      .select()
+      .from(staffUsers)
+      .where(eq(staffUsers.email, normalizeEmail(email)))
+      .limit(1);
+    return rows[0] === undefined ? null : toStaffUser(rows[0]);
+  }
+
   async findById(id: StaffUserId): Promise<StaffUser | null> {
     const rows = await this.db
       .select()
@@ -54,6 +63,14 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
   async save(user: StaffUser): Promise<void> {
     const email = normalizeEmail(user.email);
     const displayName = parseDisplayName(user.displayName);
+    const platformConflict = await this.db
+      .select({ id: platformUsers.id })
+      .from(platformUsers)
+      .where(eq(platformUsers.email, email))
+      .limit(1);
+    if (platformConflict[0] !== undefined) {
+      throw new Error("email already used by platform user");
+    }
     await this.db
       .insert(staffUsers)
       .values({

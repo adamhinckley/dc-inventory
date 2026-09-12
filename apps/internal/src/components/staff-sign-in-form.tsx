@@ -56,7 +56,6 @@ export function StaffSignInForm({
           name="organizationSlug"
           autoComplete="organization"
           placeholder="acme"
-          defaultValue="acme"
         />
       </LabeledField>
       <LabeledField>

@@ -21,6 +21,16 @@ export class InMemoryStaffUserRepository implements IStaffUserRepository {
     return this.byOrgEmail.get(emailKey(organizationId, email)) ?? null;
   }
 
+  async findByEmailGlobally(email: string): Promise<StaffUser | null> {
+    const normalized = normalizeEmail(email);
+    for (const user of this.byId.values()) {
+      if (user.email === normalized) {
+        return user;
+      }
+    }
+    return null;
+  }
+
   async findById(id: StaffUserId): Promise<StaffUser | null> {
     return this.byId.get(id) ?? null;
   }

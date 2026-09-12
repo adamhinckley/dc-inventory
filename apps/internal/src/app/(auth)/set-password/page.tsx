@@ -15,6 +15,8 @@ function SetPasswordForm() {
   const setPassword = useSetPasswordInternal();
   const [error, setError] = useState<string | null>(null);
 
+  const accountKind = audience === "platform" ? "platform" : "staff";
+
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (token.length === 0) {
@@ -49,7 +51,7 @@ function SetPasswordForm() {
     <section className="section-flat w-full max-w-md p-panel">
       <h1 className="page-title">Set your password</h1>
       <p className="page-description mt-2">
-        Choose a password to finish setting up your staff account.
+        Choose a password to finish setting up your {accountKind} account.
       </p>
       <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
         <LabeledField>

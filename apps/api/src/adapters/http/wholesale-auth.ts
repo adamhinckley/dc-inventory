@@ -8,7 +8,7 @@ import {
   logoutResponseSchema,
   notFoundResponseSchema,
   selectActingCustomerBodySchema,
-  setPasswordBodySchema,
+  wholesaleSetPasswordBodySchema,
   setPasswordFailureResponseSchema,
   setPasswordSuccessResponseSchema,
   tooManyLoginAttemptsResponseSchema,
@@ -131,7 +131,7 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
         operationId: "setPasswordWholesale",
         tags: ["wholesale-auth"],
         summary: "Set wholesale password from invite token",
-        body: setPasswordBodySchema,
+        body: wholesaleSetPasswordBodySchema,
         response: {
           200: setPasswordSuccessResponseSchema,
           400: setPasswordFailureResponseSchema,

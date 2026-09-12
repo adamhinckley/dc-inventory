@@ -1445,12 +1445,14 @@ export function composeAppServices(
       loginStaff: new LoginStaffUseCase(
         organizationRepo,
         staffUsers,
+        platformUsers,
         sessions,
         passwords,
         clock,
       ),
       loginPlatform: new LoginPlatformUseCase(
         platformUsers,
+        staffUsers,
         sessions,
         passwords,
         clock,

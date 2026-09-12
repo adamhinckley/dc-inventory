@@ -4,7 +4,7 @@ import { normalizeEmail } from "../domain/email.js";
 import { parseDisplayName } from "../domain/required-text.js";
 import type { IPlatformUserRepository } from "../domain/ports/platform-user-repository.js";
 import type { PlatformUser } from "../domain/platform-user.js";
-import { platformUsers } from "../persistence/schema.js";
+import { platformUsers, staffUsers } from "../persistence/schema.js";
 import type { IdentityDrizzle } from "./drizzle-staff-user-repository.js";
 
 export class DrizzlePlatformUserRepository implements IPlatformUserRepository {
@@ -31,6 +31,14 @@ export class DrizzlePlatformUserRepository implements IPlatformUserRepository {
   async save(user: PlatformUser): Promise<void> {
     const email = normalizeEmail(user.email);
     const displayName = parseDisplayName(user.displayName);
+    const staffConflict = await this.db
+      .select({ id: staffUsers.id })
+      .from(staffUsers)
+      .where(eq(staffUsers.email, email))
+      .limit(1);
+    if (staffConflict[0] !== undefined) {
+      throw new Error("email already used by staff user");
+    }
     await this.db
       .insert(platformUsers)
       .values({
