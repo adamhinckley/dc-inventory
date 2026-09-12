@@ -1,5 +1,6 @@
 export { ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS } from "./adapters/active-wholesale-login-account-status.js";
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
+export { InMemoryEmailSender } from "./adapters/in-memory-email-sender.js";
 export { InMemoryLoginThrottle } from "./adapters/in-memory-login-throttle.js";
 export { InMemoryIdentityUnitOfWork } from "./adapters/in-memory-identity-unit-of-work.js";
 export { InMemoryOpsUserRepository } from "./adapters/in-memory-ops-user-repository.js";
@@ -61,6 +62,7 @@ export {
   type PasswordPolicyResult,
   type PasswordPolicyViolation,
 } from "./domain/password-policy.js";
+export type { EmailMessage, IEmailSender } from "./domain/ports/email-sender.js";
 export type { IIdentityUnitOfWork } from "./domain/ports/identity-unit-of-work.js";
 export type {
   ILoginThrottle,

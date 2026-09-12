@@ -9,7 +9,7 @@ function readText(relativePath: string): string {
 }
 
 describe("local demo boot (ADA-51)", () => {
-  it("Compose file declares Postgres 18 and pinned MinIO with placeholder credentials", () => {
+  it("Compose file declares Postgres 18, pinned MinIO, and Mailpit with placeholder credentials", () => {
     const compose = readText("docker-compose.yml");
     expect(compose).toMatch(/image:\s*postgres:18\b/);
     expect(compose).toMatch(/postgres18_data:\/var\/lib\/postgresql$/m);
@@ -32,6 +32,9 @@ describe("local demo boot (ADA-51)", () => {
     expect(compose).not.toMatch(/^\s+image:\s*(awscli|localstack)/m);
     expect(compose).toContain("PHASE1_STAFF_PASSWORD");
     expect(compose).toContain("PHASE1_WHOLESALE_PASSWORD");
+    expect(compose).toContain("image: axllent/mailpit:v1.27");
+    expect(compose).toContain("MAILPIT_UI_PORT:-8025");
+    expect(compose).toContain("MAILPIT_SMTP_PORT:-1025");
   });
 
   it("keeps committed env examples as placeholders only", () => {
@@ -40,6 +43,8 @@ describe("local demo boot (ADA-51)", () => {
     expect(rootEnv).toContain("POSTGRES_PASSWORD=postgres");
     expect(rootEnv).toContain("MINIO_ROOT_USER=minio");
     expect(rootEnv).toContain("MINIO_ROOT_PASSWORD=minio-placeholder");
+    expect(rootEnv).toContain("MAILPIT_UI_PORT=8025");
+    expect(rootEnv).toContain("MAILPIT_SMTP_PORT=1025");
 
     const apiEnv = readText("apps/api/.env.example");
     expect(apiEnv).toMatch(/^DATABASE_TARGET=local$/m);
@@ -60,6 +65,9 @@ describe("local demo boot (ADA-51)", () => {
     );
     expect(apiEnv).toContain("DEMO_SEED=dc-inventory-demo-1");
     expect(apiEnv).toMatch(/^DEMO_SEED_RESET=/m);
+    expect(apiEnv).toContain("SMTP_HOST=localhost");
+    expect(apiEnv).toContain("SMTP_PORT=1025");
+    expect(apiEnv).toContain("SMTP_FROM=noreply@dc-inventory.test");
     expect(rootEnv).not.toMatch(/scrypt\$/);
     expect(apiEnv).not.toMatch(/scrypt\$/);
 
