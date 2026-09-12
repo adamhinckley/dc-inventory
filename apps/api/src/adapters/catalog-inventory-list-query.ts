@@ -4,7 +4,7 @@ import {
   type Product,
   type ProductQty,
   emptyProductCatalogAttributes,
-  resolveWholesaleAvailabilityFilters,
+  resolveCatalogListAvailabilityFilter,
 } from "@dc-inventory/catalog";
 import {
   isWholesaleHiddenBeforeOpenSql,
@@ -315,11 +315,14 @@ function buildStaffCatalogListQueries(
     nowIso,
     demandProjectionCatalogColumns,
   );
-  const availabilityFilters = resolveWholesaleAvailabilityFilters(query);
+  const availabilityFilters = resolveCatalogListAvailabilityFilter(query);
   if (query.hideZeroInventory === true) {
     clauses.push(or(gt(onHand, 0), gt(onOrder, 0), gt(allocated, 0), gt(committed, 0))!);
   }
-  if (availabilityFilters.inStockOnly || availabilityFilters.preOrderOnly) {
+  if (
+    availabilityFilters !== null &&
+    (availabilityFilters.inStockOnly || availabilityFilters.preOrderOnly)
+  ) {
     clauses.push(
       matchesWholesaleAvailabilityFilterSql(
         demandProjectionColumns,
@@ -388,8 +391,8 @@ function buildStaffCatalogListQueries(
   );
   const needsInventoryJoin =
     query.hideZeroInventory === true ||
-    availabilityFilters.inStockOnly ||
-    availabilityFilters.preOrderOnly ||
+    (availabilityFilters !== null &&
+      (availabilityFilters.inStockOnly || availabilityFilters.preOrderOnly)) ||
     query.hideBeforeOpen === true ||
     query.sellState !== undefined;
 

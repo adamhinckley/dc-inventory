@@ -5,6 +5,7 @@ import {
   isWarehouseReady,
   isOpenPresale,
   matchesWholesaleAvailabilityFilter,
+  resolveCatalogListAvailabilityFilter,
   resolveWholesaleAvailabilityFilters,
   shopAvailabilityLabel,
   shopDisplayAvailableQty,
@@ -125,6 +126,26 @@ describe("resolveWholesaleAvailabilityFilters", () => {
 
   it("defaults both toggles on when unset", () => {
     expect(resolveWholesaleAvailabilityFilters({})).toEqual({
+      inStockOnly: true,
+      preOrderOnly: true,
+    });
+  });
+});
+
+describe("resolveCatalogListAvailabilityFilter", () => {
+  it("returns null when no availability flags are set (staff/CSV default)", () => {
+    expect(resolveCatalogListAvailabilityFilter({})).toBeNull();
+  });
+
+  it("resolves when legacy availableOnly is set", () => {
+    expect(resolveCatalogListAvailabilityFilter({ availableOnly: false })).toEqual({
+      inStockOnly: false,
+      preOrderOnly: false,
+    });
+  });
+
+  it("resolves when inStockOnly or preOrderOnly is set", () => {
+    expect(resolveCatalogListAvailabilityFilter({ inStockOnly: true })).toEqual({
       inStockOnly: true,
       preOrderOnly: true,
     });

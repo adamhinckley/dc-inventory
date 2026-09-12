@@ -112,6 +112,25 @@ export function resolveWholesaleAvailabilityFilters(input: {
   return Object.freeze({ inStockOnly: legacy, preOrderOnly: legacy });
 }
 
+/**
+ * Returns resolved wholesale availability toggles when the list query explicitly
+ * requests filtering; null preserves staff/CSV behavior (show locked sold-out).
+ */
+export function resolveCatalogListAvailabilityFilter(input: {
+  inStockOnly?: boolean;
+  preOrderOnly?: boolean;
+  availableOnly?: boolean;
+}): WholesaleAvailabilityFilters | null {
+  if (
+    input.inStockOnly === undefined &&
+    input.preOrderOnly === undefined &&
+    input.availableOnly === undefined
+  ) {
+    return null;
+  }
+  return resolveWholesaleAvailabilityFilters(input);
+}
+
 /** Wholesale list availability matrix (inStockOnly × preOrderOnly). */
 export function matchesWholesaleAvailabilityFilter(
   qty: ProductQty,

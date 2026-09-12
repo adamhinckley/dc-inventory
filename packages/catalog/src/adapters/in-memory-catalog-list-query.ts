@@ -13,7 +13,7 @@ import type { IQtyReadPort } from "../domain/ports/qty-read.js";
 import {
   isWholesaleHiddenBeforeOpen,
   matchesWholesaleAvailabilityFilter,
-  resolveWholesaleAvailabilityFilters,
+  resolveCatalogListAvailabilityFilter,
   ZERO_QTY,
 } from "../domain/qty.js";
 
@@ -97,8 +97,9 @@ export class InMemoryCatalogListQuery implements ICatalogListQuery {
           return false;
         }
       }
-      const availability = resolveWholesaleAvailabilityFilters(query);
+      const availability = resolveCatalogListAvailabilityFilter(query);
       if (
+        availability !== null &&
         (availability.inStockOnly || availability.preOrderOnly) &&
         !matchesWholesaleAvailabilityFilter(row.qty, availability)
       ) {

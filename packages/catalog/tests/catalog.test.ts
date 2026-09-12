@@ -119,6 +119,36 @@ describe("Catalog use cases (in-memory)", () => {
     expect(listed.items[1]?.product.webWholesale).toBe(false);
   });
 
+  it("includes locked sold-out SKUs on the staff list when availability filters are unset", async () => {
+    const h = harness();
+    const lockedSoldOut = await createProduct(h, {
+      sku: "STAFF-LOCKED-SOLD-OUT",
+      name: "Staff locked sold out",
+    });
+    h.qty.set(DEFAULT_ORG, lockedSoldOut.sku.value, {
+      onHand: 5,
+      onOrder: 100,
+      allocated: 0,
+      available: 5,
+      committed: 100,
+      sellState: "locked",
+      availableToSell: 0,
+    });
+
+    const listed = await h.listStaff.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: OTHER_STAFF,
+      page: 1,
+      pageSize: 25,
+      sortBy: "sku",
+      sortOrder: "asc",
+    });
+
+    expect(listed.items.some((row) => row.product.sku.value === lockedSoldOut.sku.value)).toBe(
+      true,
+    );
+  });
+
   it("includes caseQty on the staff list", async () => {
     const h = harness();
     const product = await createProduct(h, { sku: "HEX-BOLT-GALV" });
