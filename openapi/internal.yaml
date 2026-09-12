@@ -323,6 +323,146 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/staff:
+    post:
+      operationId: createInternalStaff
+      summary: Create staff user and send invite
+      tags:
+        - internal-staff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                  minLength: 1
+                email:
+                  type: string
+                  minLength: 1
+                roles:
+                  minItems: 1
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - admin
+                      - purchasing
+                      - warehouse
+                      - sales_support
+                      - accounting
+              required:
+                - displayName
+                - email
+                - roles
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  displayName:
+                    type: string
+                  email:
+                    type: string
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                      enum:
+                        - admin
+                        - purchasing
+                        - warehouse
+                        - sales_support
+                        - accounting
+                required:
+                  - id
+                  - displayName
+                  - email
+                  - roles
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - invalid_request
+                      message:
+                        type: string
+                        enum:
+                          - The request is invalid.
+                      requestId:
+                        type: string
+                    required:
+                      - error
+                      - message
+                      - requestId
+                    additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - duplicate_email
+                required:
+                  - error
+                additionalProperties: false
   /internal/customers:
     get:
       operationId: listInternalCustomers

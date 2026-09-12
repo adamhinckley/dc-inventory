@@ -48,6 +48,12 @@ export {
   type CreateWholesaleUserRequest,
   type CreateWholesaleUserResult,
 } from "./application/create-wholesale-user.js";
+export {
+  CreateStaffUserUseCase,
+  type CreateStaffUserInviteLinks,
+  type CreateStaffUserRequest,
+  type CreateStaffUserResult,
+} from "./application/create-staff-user.js";
 export { buildWholesaleInviteEmail } from "./application/wholesale-invite-email.js";
 export {
   STAFF_ACTIONS,

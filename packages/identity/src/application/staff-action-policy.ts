@@ -11,6 +11,7 @@ export const STAFF_ACTIONS = [
   "payment_plans_manage",
   "credit_limit_manage",
   "organizations_manage",
+  "staff_manage",
 ] as const;
 
 export type StaffAction = (typeof STAFF_ACTIONS)[number];
@@ -29,6 +30,7 @@ const ALLOWED_ROLES: Readonly<Record<StaffAction, ReadonlySet<StaffRole>>> = {
   payment_plans_manage: new Set(["admin", "accounting"]),
   credit_limit_manage: new Set(["admin", "accounting"]),
   organizations_manage: new Set(["admin"]),
+  staff_manage: new Set(["admin"]),
 };
 
 export function canStaffPerform(

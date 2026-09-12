@@ -142,6 +142,12 @@ import type {
   CreateInternalSalesOrder404,
   CreateInternalSalesOrder409,
   CreateInternalSalesOrderBody,
+  CreateInternalStaff201,
+  CreateInternalStaff400,
+  CreateInternalStaff401,
+  CreateInternalStaff403,
+  CreateInternalStaff409,
+  CreateInternalStaffBody,
   CreateInternalSupplier201,
   CreateInternalSupplier400,
   CreateInternalSupplier401,
@@ -910,6 +916,117 @@ export const useCreateInternalOrganization = <TError = CreateInternalOrganizatio
         TContext
       > => {
       return useMutation(getCreateInternalOrganizationMutationOptions(options));
+    }
+
+export type createInternalStaffResponse201 = {
+  data: CreateInternalStaff201
+  status: 201
+}
+
+export type createInternalStaffResponse400 = {
+  data: CreateInternalStaff400
+  status: 400
+}
+
+export type createInternalStaffResponse401 = {
+  data: CreateInternalStaff401
+  status: 401
+}
+
+export type createInternalStaffResponse403 = {
+  data: CreateInternalStaff403
+  status: 403
+}
+
+export type createInternalStaffResponse409 = {
+  data: CreateInternalStaff409
+  status: 409
+}
+
+export type createInternalStaffResponseSuccess = (createInternalStaffResponse201) & {
+  headers: Headers;
+};
+export type createInternalStaffResponseError = (createInternalStaffResponse400 | createInternalStaffResponse401 | createInternalStaffResponse403 | createInternalStaffResponse409) & {
+  headers: Headers;
+};
+
+export type createInternalStaffResponse = (createInternalStaffResponseSuccess | createInternalStaffResponseError)
+
+export const getCreateInternalStaffUrl = () => {
+
+
+
+
+  return `/internal/staff`
+}
+
+/**
+ * @summary Create staff user and send invite
+ */
+export const createInternalStaff = async (createInternalStaffBody: CreateInternalStaffBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalStaffResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalStaffResponse>(getCreateInternalStaffUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalStaffBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalStaffMutationOptions = <TError = CreateInternalStaff400 | CreateInternalStaff401 | CreateInternalStaff403 | CreateInternalStaff409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalStaff>>, TError,{data: CreateInternalStaffBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalStaff>>, TError,{data: CreateInternalStaffBody}, TContext> => {
+
+const mutationKey = ['createInternalStaff'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalStaff>>, {data: CreateInternalStaffBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInternalStaff(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalStaffMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalStaff>>>
+    export type CreateInternalStaffMutationBody = CreateInternalStaffBody
+    export type CreateInternalStaffMutationError = CreateInternalStaff400 | CreateInternalStaff401 | CreateInternalStaff403 | CreateInternalStaff409
+
+    /**
+ * @summary Create staff user and send invite
+ */
+export const useCreateInternalStaff = <TError = CreateInternalStaff400 | CreateInternalStaff401 | CreateInternalStaff403 | CreateInternalStaff409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalStaff>>, TError,{data: CreateInternalStaffBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalStaff>>,
+        TError,
+        {data: CreateInternalStaffBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalStaffMutationOptions(options));
     }
 
 export type listInternalCustomersResponse200 = {

@@ -6,4 +6,5 @@ export const dashboardNav = [
   { href: "/sales", label: "Sales" },
   { href: "/accounting", label: "Accounting" },
   { href: "/reports", label: "Reports" },
+  { href: "/staff", label: "Staff" },
 ] as const;

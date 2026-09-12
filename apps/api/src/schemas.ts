@@ -31,13 +31,32 @@ export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
 
+export const staffRoleSchema = z.enum([
+  "admin",
+  "purchasing",
+  "warehouse",
+  "sales_support",
+  "accounting",
+]);
+
 export const staffSessionResponseSchema = z.object({
   staffUserId: z.string().uuid(),
   email: z.string(),
   organizationId: z.string(),
-  roles: z.array(
-    z.enum(["admin", "purchasing", "warehouse", "sales_support", "accounting"]),
-  ),
+  roles: z.array(staffRoleSchema),
+});
+
+export const staffUserItemSchema = z.object({
+  id: z.string().uuid(),
+  displayName: z.string(),
+  email: z.string(),
+  roles: z.array(staffRoleSchema),
+});
+
+export const staffUserWriteBodySchema = z.object({
+  displayName: z.string().min(1),
+  email: z.string().min(1),
+  roles: z.array(staffRoleSchema).min(1),
 });
 
 export const wholesaleSessionResponseSchema = z.object({
