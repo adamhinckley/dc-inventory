@@ -1,0 +1,96 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { cartQtyOverCap } from "../lib/cart-line-qty";
+import { shopAvailabilityLabel, type ShopSellState } from "../lib/shop-availability";
+import { useWholesaleAddToCart } from "../lib/use-wholesale-add-to-cart";
+import { useWholesaleSignedIn } from "../lib/use-wholesale-signed-in";
+
+export type ProductCardCartButtonProps = {
+  productId: string;
+  name: string;
+  unitPriceCents: number;
+  currency: string;
+  available: number;
+  availableToSell: number | null;
+  sellState: ShopSellState;
+};
+
+function CartGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 4h2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.3h8.6a1.5 1.5 0 0 0 1.5-1.2L21 8H6.2M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm9 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+      />
+    </svg>
+  );
+}
+
+export function ProductCardCartButton({
+  productId,
+  name,
+  unitPriceCents,
+  currency,
+  available,
+  availableToSell,
+  sellState,
+}: ProductCardCartButtonProps) {
+  const router = useRouter();
+  const signedIn = useWholesaleSignedIn();
+  const { applyQty, pending, inCart, cartQty, maxQty } = useWholesaleAddToCart({
+    productId,
+    name,
+    unitPriceCents,
+    currency,
+    available,
+    availableToSell,
+    sellState,
+  });
+  const { inStock } = shopAvailabilityLabel({ available, availableToSell, sellState });
+  const nextQty = (cartQty ?? 0) + 1;
+  const atCap = cartQtyOverCap(nextQty, maxQty);
+  const blocked = !inStock || atCap;
+
+  async function onClick() {
+    if (!signedIn) {
+      router.push("/login");
+      return;
+    }
+    if (blocked || pending) {
+      return;
+    }
+    await applyQty(nextQty);
+  }
+
+  const label = !inStock
+    ? `${name} is unavailable`
+    : atCap
+      ? `${name} is already at the available quantity in the cart`
+      : inCart
+        ? `Add another ${name} to cart, ${cartQty} in cart`
+        : `Add ${name} to cart`;
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={blocked || pending}
+      onClick={() => {
+        void onClick();
+      }}
+      className="absolute right-2 top-2 z-10 inline-flex size-9 cursor-pointer items-center justify-center rounded-full bg-overlay text-ink shadow-[0_1px_4px_rgb(31_27_22_/_0.45)] ring-2 ring-ink hover:bg-accent hover:text-on-accent hover:ring-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <CartGlyph />
+      {inCart && cartQty !== null && cartQty > 0 ? (
+        <span className="absolute -right-1 -top-1 inline-flex min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.625rem] font-semibold leading-4 text-on-accent ring-1 ring-overlay">
+          {cartQty > 99 ? "99+" : cartQty}
+        </span>
+      ) : null}
+    </button>
+  );
+}

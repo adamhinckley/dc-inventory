@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatMoneyMinorUnits } from "../lib/format-money";
 import { productImageIsPlaceholder, productImageSrc } from "../lib/product-image";
 import { shopDisplayAvailableQty, type ShopSellState } from "../lib/shop-availability";
+import { ProductCardCartButton } from "./product-card-cart-button";
 
 export type ProductCardProps = {
   id: string;
@@ -56,36 +57,47 @@ export function ProductCard({
 
   return (
     <article className="product-card group flex h-full flex-col">
-      <Link
-        href={href}
-        tabIndex={-1}
-        aria-hidden="true"
-        className="product-card-image relative block aspect-square overflow-hidden rounded-xl bg-canvas-muted"
-      >
-        {/* Catalog image URLs come from the API; next/image host allowlist is later. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={productImageSrc(imageUrl)}
-          alt=""
-          loading="lazy"
-          className={
-            productImageIsPlaceholder(imageUrl)
-              ? "h-full w-full object-contain"
-              : "h-full w-full object-cover"
-          }
+      <div className="relative">
+        <Link
+          href={href}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="product-card-image relative block aspect-square overflow-hidden rounded-xl bg-canvas-muted"
+        >
+          {/* Catalog image URLs come from the API; next/image host allowlist is later. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={productImageSrc(imageUrl)}
+            alt=""
+            loading="lazy"
+            className={
+              productImageIsPlaceholder(imageUrl)
+                ? "h-full w-full object-contain"
+                : "h-full w-full object-cover"
+            }
+          />
+          {pill !== null ? (
+            <span
+              className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] ${
+                pill.tone === "sold-out"
+                  ? "bg-sold-out text-on-accent"
+                  : "bg-overlay/95 text-ink shadow-sm"
+              }`}
+            >
+              {pill.label}
+            </span>
+          ) : null}
+        </Link>
+        <ProductCardCartButton
+          productId={id}
+          name={name}
+          unitPriceCents={wholesalePrice}
+          currency={currency}
+          available={available}
+          availableToSell={availableToSell}
+          sellState={sellState}
         />
-        {pill !== null ? (
-          <span
-            className={`absolute left-2.5 top-2.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-[0.12em] ${
-              pill.tone === "sold-out"
-                ? "bg-sold-out text-on-accent"
-                : "bg-overlay/95 text-ink shadow-sm"
-            }`}
-          >
-            {pill.label}
-          </span>
-        ) : null}
-      </Link>
+      </div>
       <div className="flex flex-1 flex-col gap-1 pt-3">
         <p className="text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-ink-muted">
           {sku}
