@@ -60,9 +60,14 @@ export class InMemorySessionStore implements ISessionStore {
 
   async deleteByCustomerId(customerId: CustomerId): Promise<void> {
     for (const [id, session] of this.byId) {
-      if (session.customerId === customerId) {
-        this.byId.delete(id);
+      if (session.customerId !== customerId) {
+        continue;
       }
+      if (session.wholesaleUserId !== null) {
+        this.byId.delete(id);
+        continue;
+      }
+      this.byId.set(id, { ...session, customerId: null });
     }
   }
 }

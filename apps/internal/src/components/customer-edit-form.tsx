@@ -17,7 +17,7 @@ import type { CustomerDetail } from "../lib/customer-types";
 const editCustomerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   terms: z.string().min(1, "Terms are required"),
-  creditLimitDollars: z.coerce.number().min(0),
+  creditLimitDollars: z.coerce.number().int().min(0),
   taxId: z.string().optional().nullable(),
   accountStatus: z.enum(["active", "on_hold", "inactive"]),
   staffNote: z.string().optional().nullable(),

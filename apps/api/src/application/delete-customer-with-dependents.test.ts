@@ -114,6 +114,43 @@ describe("DeleteCustomerWithDependentsUseCase", () => {
     ).toBeNull();
   });
 
+  it("clears staff acting customerId instead of deleting the wholesale session", async () => {
+    const h = await harness();
+    const created = await h.createCustomer.execute({
+      organizationId: ORG,
+      staffUserId: STAFF_ID,
+      name: "Acting Target",
+      creditLimitCents: 0,
+      currency: "USD",
+      terms: "Net 30",
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) {
+      throw new Error("expected create");
+    }
+
+    const staffActing = await h.sessions.create({
+      audience: "wholesale",
+      organizationId: ORG,
+      staffUserId: STAFF_ID,
+      platformUserId: null,
+      wholesaleUserId: null,
+      opsUserId: null,
+      customerId: created.customer.id,
+      createdAt: new Date("2026-09-12T00:00:00.000Z"),
+      lastSeenAt: new Date("2026-09-12T00:00:00.000Z"),
+    });
+
+    expect(
+      await h.useCase.execute({ organizationId: ORG, customerId: created.customer.id }),
+    ).toEqual({ ok: true });
+
+    const stored = await h.sessions.findById(staffActing.id);
+    expect(stored).not.toBeNull();
+    expect(stored?.customerId).toBeNull();
+    expect(stored?.staffUserId).toBe(STAFF_ID);
+  });
+
   it("refuses customers with occupancy", async () => {
     const h = await harness();
     const created = await h.createCustomer.execute({

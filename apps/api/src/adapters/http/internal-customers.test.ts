@@ -449,7 +449,9 @@ describe("internal customers staff-for-them wholesale invite", () => {
       },
     });
     expect(created.statusCode).toBe(201);
-    const customerId = created.json().id as string;
+    const createdBody = created.json() as { id: string; customerNumber: string };
+    expect(createdBody.customerNumber).toBe("CUST-00001");
+    const customerId = createdBody.id;
 
     const deleted = await app.inject({
       method: "DELETE",
@@ -477,6 +479,7 @@ describe("internal customers staff-for-them wholesale invite", () => {
       },
     });
     expect(recreate.statusCode).toBe(201);
+    expect((recreate.json() as { customerNumber: string }).customerNumber).toBe("CUST-00002");
   });
 
   it("refuses to delete a customer with orders or AR", async () => {

@@ -25,7 +25,7 @@ import { useCanManageStaff } from "../lib/staff-manage";
 const baseCreateCustomerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   terms: z.enum(CUSTOMER_TERMS),
-  creditLimitDollars: z.coerce.number().min(0, "Credit limit is required"),
+  creditLimitDollars: z.coerce.number().int().min(0, "Credit limit is required"),
   wholesaleEmail: z.string().optional(),
   wholesaleDisplayName: z.string().optional(),
 });
