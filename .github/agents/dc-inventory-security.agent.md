@@ -76,4 +76,4 @@ Proof:
 - <observable acceptance criteria and named regression tests for the implementer>
 ```
 
-Proof is proposed acceptance criteria, not a claim that this reviewer ran tests. Put the cited revision and finding evidence in each ticket. After creation, return the project link and every issue link, and identify any failed or skipped creation. Never claim a partial batch was fully created.
+Proof is proposed acceptance criteria, not a claim that this reviewer ran tests. Put the cited revision and finding evidence in the handoff payload. The trusted writer reports the project link and every issue link, and identifies any failed or skipped creation. This reviewer must never claim that Linear work was created.
