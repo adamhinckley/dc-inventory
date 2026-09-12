@@ -21,7 +21,7 @@ export function PlatformNavItems() {
 
   return (
     <AppShell.NavGroup id="platform" label="Platform" icon={<PlatformMark />}>
-      <AppShell.NavItem href="/organizations/new" label="Add Company" />
+      <AppShell.NavItem href="/organizations" label="Companies" />
     </AppShell.NavGroup>
   );
 }

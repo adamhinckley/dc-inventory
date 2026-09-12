@@ -51,6 +51,11 @@ export {
   type RegisterOrganizationResult,
 } from "./application/register-organization.js";
 export { RollbackOrganizationRegistrationUseCase } from "./application/rollback-organization-registration.js";
+export { ListOrganizationsUseCase } from "./application/list-organizations.js";
+export {
+  DeleteOrganizationUseCase,
+  type DeleteOrganizationResult,
+} from "./application/delete-organization.js";
 export { buildStaffInviteEmail } from "./application/staff-invite-email.js";
 export {
   CreateWholesaleUserUseCase,
@@ -111,7 +116,11 @@ export type {
   SetPasswordTokenLookupInput,
   ValidSetPasswordToken,
 } from "./domain/ports/set-password-token-store.js";
-export type { IOrganizationRepository } from "./domain/ports/organization-repository.js";
+export type {
+  IOrganizationRepository,
+  ListOrganizationsQuery,
+  OrganizationListPage,
+} from "./domain/ports/organization-repository.js";
 export type { IOpsUserRepository } from "./domain/ports/ops-user-repository.js";
 export type { IPasswordHasher } from "./domain/ports/password-hasher.js";
 export type { ISessionStore } from "./domain/ports/session-store.js";

@@ -155,6 +155,11 @@ import type {
   CreateInternalSupplier403,
   CreateInternalSupplier409,
   CreateInternalSupplierBody,
+  DeleteInternalOrganization204,
+  DeleteInternalOrganization401,
+  DeleteInternalOrganization403,
+  DeleteInternalOrganization404,
+  DeleteInternalOrganization409,
   DraftInternalPreOrderPurchaseOrders201,
   DraftInternalPreOrderPurchaseOrders400,
   DraftInternalPreOrderPurchaseOrders401,
@@ -294,6 +299,11 @@ import type {
   ListInternalLicensingSubscriptions200,
   ListInternalLicensingSubscriptions401,
   ListInternalLicensingSubscriptionsParams,
+  ListInternalOrganizations200,
+  ListInternalOrganizations400,
+  ListInternalOrganizations401,
+  ListInternalOrganizations403,
+  ListInternalOrganizationsParams,
   ListInternalPreOrderFactories200,
   ListInternalPreOrderFactories400,
   ListInternalPreOrderFactories401,
@@ -897,6 +907,119 @@ export function useGetInternalSession<TData = Awaited<ReturnType<typeof getInter
 
 
 
+export type listInternalOrganizationsResponse200 = {
+  data: ListInternalOrganizations200
+  status: 200
+}
+
+export type listInternalOrganizationsResponse400 = {
+  data: ListInternalOrganizations400
+  status: 400
+}
+
+export type listInternalOrganizationsResponse401 = {
+  data: ListInternalOrganizations401
+  status: 401
+}
+
+export type listInternalOrganizationsResponse403 = {
+  data: ListInternalOrganizations403
+  status: 403
+}
+
+export type listInternalOrganizationsResponseSuccess = (listInternalOrganizationsResponse200) & {
+  headers: Headers;
+};
+export type listInternalOrganizationsResponseError = (listInternalOrganizationsResponse400 | listInternalOrganizationsResponse401 | listInternalOrganizationsResponse403) & {
+  headers: Headers;
+};
+
+export type listInternalOrganizationsResponse = (listInternalOrganizationsResponseSuccess | listInternalOrganizationsResponseError)
+
+export const getListInternalOrganizationsUrl = (params?: ListInternalOrganizationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/internal/organizations?${stringifiedParams}` : `/internal/organizations`
+}
+
+/**
+ * @summary List organizations (Platform user only)
+ */
+export const listInternalOrganizations = async (params?: ListInternalOrganizationsParams, options?: Parameters<typeof customFetch>[1]): Promise<listInternalOrganizationsResponse> => {
+
+  return customFetch<listInternalOrganizationsResponse>(getListInternalOrganizationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInternalOrganizationsQueryKey = (params?: ListInternalOrganizationsParams,) => {
+    return [
+    `/internal/organizations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInternalOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalOrganizations>>, TError = ListInternalOrganizations400 | ListInternalOrganizations401 | ListInternalOrganizations403>(params?: ListInternalOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInternalOrganizationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInternalOrganizations>>> = ({ signal }) => listInternalOrganizations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInternalOrganizations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInternalOrganizationsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalOrganizations>>>
+export type ListInternalOrganizationsQueryError = ListInternalOrganizations400 | ListInternalOrganizations401 | ListInternalOrganizations403
+
+
+/**
+ * @summary List organizations (Platform user only)
+ */
+
+export function useListInternalOrganizations<TData = Awaited<ReturnType<typeof listInternalOrganizations>>, TError = ListInternalOrganizations400 | ListInternalOrganizations401 | ListInternalOrganizations403>(
+ params?: ListInternalOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInternalOrganizationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export type createInternalOrganizationResponse201 = {
   data: CreateInternalOrganization201
   status: 201
@@ -1016,6 +1139,111 @@ export const useCreateInternalOrganization = <TError = CreateInternalOrganizatio
         TContext
       > => {
       return useMutation(getCreateInternalOrganizationMutationOptions(options));
+    }
+
+export type deleteInternalOrganizationResponse204 = {
+  data: DeleteInternalOrganization204
+  status: 204
+}
+
+export type deleteInternalOrganizationResponse401 = {
+  data: DeleteInternalOrganization401
+  status: 401
+}
+
+export type deleteInternalOrganizationResponse403 = {
+  data: DeleteInternalOrganization403
+  status: 403
+}
+
+export type deleteInternalOrganizationResponse404 = {
+  data: DeleteInternalOrganization404
+  status: 404
+}
+
+export type deleteInternalOrganizationResponse409 = {
+  data: DeleteInternalOrganization409
+  status: 409
+}
+
+export type deleteInternalOrganizationResponseSuccess = (deleteInternalOrganizationResponse204) & {
+  headers: Headers;
+};
+export type deleteInternalOrganizationResponseError = (deleteInternalOrganizationResponse401 | deleteInternalOrganizationResponse403 | deleteInternalOrganizationResponse404 | deleteInternalOrganizationResponse409) & {
+  headers: Headers;
+};
+
+export type deleteInternalOrganizationResponse = (deleteInternalOrganizationResponseSuccess | deleteInternalOrganizationResponseError)
+
+export const getDeleteInternalOrganizationUrl = (id: string,) => {
+
+
+
+
+  return `/internal/organizations/${id}`
+}
+
+/**
+ * @summary Delete an empty organization (Platform user only)
+ */
+export const deleteInternalOrganization = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<deleteInternalOrganizationResponse> => {
+
+  return customFetch<deleteInternalOrganizationResponse>(getDeleteInternalOrganizationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteInternalOrganizationMutationOptions = <TError = DeleteInternalOrganization401 | DeleteInternalOrganization403 | DeleteInternalOrganization404 | DeleteInternalOrganization409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInternalOrganization>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInternalOrganization>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteInternalOrganization'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInternalOrganization>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteInternalOrganization(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInternalOrganizationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInternalOrganization>>>
+
+    export type DeleteInternalOrganizationMutationError = DeleteInternalOrganization401 | DeleteInternalOrganization403 | DeleteInternalOrganization404 | DeleteInternalOrganization409
+
+    /**
+ * @summary Delete an empty organization (Platform user only)
+ */
+export const useDeleteInternalOrganization = <TError = DeleteInternalOrganization401 | DeleteInternalOrganization403 | DeleteInternalOrganization404 | DeleteInternalOrganization409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInternalOrganization>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInternalOrganization>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteInternalOrganizationMutationOptions(options));
     }
 
 export type createInternalStaffResponse201 = {

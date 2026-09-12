@@ -616,6 +616,64 @@ export const createInternalOrganizationResponseSchema = z.object({
   inviteSentTo: z.string(),
 });
 
+export const organizationItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  slug: z.string(),
+});
+
+export const organizationListQuerySchema = z.object({
+  q: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25),
+  sortBy: z.enum(["name", "slug", "id"]).default("name"),
+  sortOrder: z.enum(["asc", "desc"]).default("asc"),
+});
+
+export const organizationListResponseSchema = z.object({
+  items: z.array(organizationItemSchema),
+  page: z.number().int(),
+  pageSize: z.number().int(),
+  total: z.number().int(),
+});
+
+export const organizationsListTable = {
+  rowId: "id",
+  columns: [
+    { field: "name", label: "Name" },
+    { field: "slug", label: "Slug" },
+    { field: "id", label: "Id" },
+  ],
+  search: {
+    param: "q",
+    fields: ["name", "slug"],
+    placeholder: "Search name or slug",
+  },
+  filters: [],
+  sort: {
+    defaultBy: "name",
+    defaultOrder: "asc",
+    fields: ["name", "slug", "id"],
+  },
+};
+
+export const organizationIdParamsSchema = z.object({
+  id: z.string(),
+});
+
+export const defaultOrganizationResponseSchema = z.object({
+  error: z.literal("default_organization"),
+});
+
+export const orgNotEmptyResponseSchema = z.object({
+  error: z.literal("org_not_empty"),
+});
+
+export const deleteInternalOrganizationConflictResponseSchema = z.union([
+  defaultOrganizationResponseSchema,
+  orgNotEmptyResponseSchema,
+]);
+
 export const invalidSellWindowResponseSchema = z.object({
   error: z.literal("invalid_sell_window"),
 });

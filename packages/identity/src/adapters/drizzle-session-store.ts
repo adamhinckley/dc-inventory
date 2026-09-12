@@ -6,7 +6,7 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import type {
   ISessionStore,
   NewSession,
@@ -249,6 +249,17 @@ export class DrizzleSessionStore implements ISessionStore {
 
   async delete(id: SessionId): Promise<void> {
     await this.db.delete(sessions).where(eq(sessions.id, id));
+  }
+
+  async deleteByStaffUserId(staffUserId: StaffUserId): Promise<void> {
+    await this.db
+      .delete(sessions)
+      .where(
+        or(
+          eq(sessions.staffUserId, staffUserId),
+          and(eq(sessions.actorType, "staff"), eq(sessions.actorId, staffUserId)),
+        )!,
+      );
   }
 }
 

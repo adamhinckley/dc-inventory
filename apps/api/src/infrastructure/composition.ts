@@ -107,6 +107,8 @@ import {
   LogoutUseCase,
   RegisterOrganizationUseCase,
   RollbackOrganizationRegistrationUseCase,
+  ListOrganizationsUseCase,
+  DeleteOrganizationUseCase,
   ResolvePlatformSessionUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
@@ -327,6 +329,12 @@ import { DrizzleImportLocationAdapter } from "../adapters/drizzle-import-locatio
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { RegisterOrganizationWithLicensingUseCase } from "../application/register-organization-with-licensing.js";
+import { DeleteOrganizationWithOccupancyUseCase } from "../application/delete-organization-with-occupancy.js";
+import {
+  InMemoryOrganizationOccupancyReadPort,
+  type IOrganizationOccupancyReadPort,
+} from "../adapters/organization-occupancy-read-port.js";
+import { DrizzleOrganizationOccupancyReadPort } from "../adapters/drizzle-organization-occupancy-read-port.js";
 import { CreateCustomerWithWholesaleUserUseCase } from "../application/create-customer-with-wholesale-user.js";
 import { RollbackCustomerStaffForThemUseCase } from "../application/rollback-customer-staff-for-them.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
@@ -352,6 +360,8 @@ export type IdentityHttpServices = {
   selectActingCustomer: SelectActingCustomerUseCase;
   clearActingCustomer: ClearActingCustomerUseCase;
   registerOrganizationWithLicensing: RegisterOrganizationWithLicensingUseCase;
+  listOrganizations: ListOrganizationsUseCase;
+  deleteOrganizationWithOccupancy: DeleteOrganizationWithOccupancyUseCase;
   createStaffUser: CreateStaffUserUseCase;
   createWholesaleUser: CreateWholesaleUserUseCase;
   setPasswordStaff: SetPasswordUseCase;
@@ -575,6 +585,7 @@ export type AppServiceOverrides = {
   licensingStore?: InMemoryLicensingStore;
   licensingRepository?: ILicensingReadRepository;
   licensingProvisioner?: ILicensingTenantProvisioner;
+  organizationOccupancy?: IOrganizationOccupancyReadPort;
 };
 
 function catalogServices(
@@ -1169,6 +1180,16 @@ export function composeAppServices(
     (identityDb
       ? new DrizzleOrganizationRepository(identityDb)
       : new InMemoryOrganizationRepository());
+  const organizationOccupancy =
+    overrides.organizationOccupancy ??
+    (appDb !== undefined
+      ? new DrizzleOrganizationOccupancyReadPort(appDb)
+      : new InMemoryOrganizationOccupancyReadPort());
+  const deleteOrganization = new DeleteOrganizationUseCase(
+    organizationRepo,
+    staffUsers,
+    sessions,
+  );
   const identityUnitOfWork =
     identityDb !== undefined
       ? new DrizzleIdentityUnitOfWork(identityDb)
@@ -1505,6 +1526,12 @@ export function composeAppServices(
         ),
         new EnsureLicensingTenantUseCase(licensingProvisioner),
         new RollbackOrganizationRegistrationUseCase(organizationRepo, staffUsers),
+      ),
+      listOrganizations: new ListOrganizationsUseCase(organizationRepo),
+      deleteOrganizationWithOccupancy: new DeleteOrganizationWithOccupancyUseCase(
+        organizationRepo,
+        organizationOccupancy,
+        deleteOrganization,
       ),
       createStaffUser: new CreateStaffUserUseCase(
         organizationRepo,

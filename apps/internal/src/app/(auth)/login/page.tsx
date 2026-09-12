@@ -18,7 +18,7 @@ function LoginForm() {
       defaultOrganizationSlug={defaultStaffOrganizationSlug(prefill.organization)}
       defaultEmail={prefill.email}
       onSignedIn={(session) => {
-        router.push(session.audience === "platform" ? "/organizations/new" : "/catalog");
+        router.push(session.audience === "platform" ? "/organizations" : "/catalog");
       }}
     />
   );

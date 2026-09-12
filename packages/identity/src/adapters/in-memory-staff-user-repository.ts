@@ -35,6 +35,10 @@ export class InMemoryStaffUserRepository implements IStaffUserRepository {
     return this.byId.get(id) ?? null;
   }
 
+  async listByOrganizationId(organizationId: OrganizationId): Promise<readonly StaffUser[]> {
+    return [...this.byId.values()].filter((user) => user.organizationId === organizationId);
+  }
+
   async save(user: StaffUser): Promise<void> {
     const stored = {
       ...user,
