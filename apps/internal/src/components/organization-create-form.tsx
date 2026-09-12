@@ -32,11 +32,13 @@ function OrganizationSlugFields({
   const companyName = form.watch("name");
 
   useEffect(() => {
-    if (!slugTouched) {
-      form.setValue("slug", deriveOrganizationSlugFromDisplayName(companyName), {
-        shouldValidate: true,
-      });
+    if (slugTouched) {
+      return;
     }
+    const slug = deriveOrganizationSlugFromDisplayName(companyName);
+    // Empty derived slug is the initial (and cleared-name) state. Validating
+    // it marks the field invalid before the user has typed anything.
+    form.setValue("slug", slug, { shouldValidate: slug.length > 0 });
   }, [companyName, form, slugTouched]);
 
   return (

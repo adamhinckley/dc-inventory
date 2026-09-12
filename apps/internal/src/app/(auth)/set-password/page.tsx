@@ -10,8 +10,11 @@ import {
   isSuccessfulOrvalResponse,
 } from "@dc-inventory/ui";
 import {
+  inviteDisplayNameFromSearchParams,
   loginPathWithOnboarding,
   onboardingPrefillFromSearchParams,
+  SET_PASSWORD_LEAD,
+  setPasswordHeading,
 } from "../../../lib/onboarding-login";
 import {
   PASSWORD_POLICY_UI_COPY,
@@ -27,13 +30,12 @@ function SetPasswordForm() {
   const token = searchParams.get("token") ?? "";
   const audience = searchParams.get("audience") === "platform" ? "platform" : "staff";
   const prefill = onboardingPrefillFromSearchParams(searchParams);
+  const displayName = inviteDisplayNameFromSearchParams(searchParams);
   const loginHref = loginPathWithOnboarding(prefill);
   const setPassword = useSetPasswordInternal();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const passwordType = showPassword ? "text" : "password";
-
-  const accountKind = audience === "platform" ? "platform" : "staff";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,10 +77,10 @@ function SetPasswordForm() {
 
   return (
     <section className="section-flat w-full max-w-md p-panel">
-      <h1 className="page-title">Set your password</h1>
-      <p className="page-description mt-2">
-        Choose a password to finish setting up your {accountKind} account.
-      </p>
+      <h1 className="page-title">{setPasswordHeading(displayName)}</h1>
+      {displayName.length > 0 ? (
+        <p className="page-description mt-2">{SET_PASSWORD_LEAD}</p>
+      ) : null}
       <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
         <LabeledField>
           <Label htmlFor="password">Password</Label>

@@ -9,9 +9,10 @@ describe("buildInternalSetPasswordUrl", () => {
         "raw-token",
         "harbor-wholesale",
         "owner@harbor.test",
+        "Harbor Owner",
       ),
     ).toBe(
-      "http://dc-internal.test:3000/set-password?token=raw-token&organization=harbor-wholesale&email=owner%40harbor.test",
+      "http://dc-internal.test:3000/set-password?token=raw-token&organization=harbor-wholesale&email=owner%40harbor.test&name=Harbor+Owner",
     );
   });
 });
