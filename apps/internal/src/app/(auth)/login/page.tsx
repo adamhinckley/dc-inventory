@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { StaffSignInForm } from "../../../components/staff-sign-in-form";
+import { dashboardHomePath } from "../../../lib/dashboard-home-path";
 import {
   defaultStaffOrganizationSlug,
   onboardingPrefillFromSearchParams,
@@ -18,7 +19,7 @@ function LoginForm() {
       defaultOrganizationSlug={defaultStaffOrganizationSlug(prefill.organization)}
       defaultEmail={prefill.email}
       onSignedIn={(session) => {
-        router.push(session.audience === "platform" ? "/organizations" : "/catalog");
+        router.push(dashboardHomePath(session.audience));
       }}
     />
   );

@@ -10,5 +10,7 @@ describe("StaffSessionGate", () => {
     expect(source).not.toContain("<Dialog");
     expect(source).toContain("enabled: sessionQueryEnabled");
     expect(source).toContain("StaffSignInForm");
+    expect(source).toContain("dashboardHomePath");
+    expect(source).toContain('session.audience === "platform"');
   });
 });

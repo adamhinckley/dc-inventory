@@ -5,7 +5,9 @@ import {
   useGetInternalSession,
 } from "@dc-inventory/api-client-internal";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { dashboardHomePath } from "../lib/dashboard-home-path";
 import {
   isStaffSessionSignedIn,
   shouldShowStaffSessionLoading,
@@ -14,6 +16,7 @@ import { StaffSignInForm } from "./staff-sign-in-form";
 
 export function StaffSessionGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [sessionQueryEnabled, setSessionQueryEnabled] = useState(false);
   useEffect(() => {
     setSessionQueryEnabled(true);
@@ -48,10 +51,13 @@ export function StaffSessionGate({ children }: { children: ReactNode }) {
         </p>
         <div className="mt-8">
           <StaffSignInForm
-            onSignedIn={() => {
+            onSignedIn={(session) => {
               void queryClient.invalidateQueries({
                 queryKey: getGetInternalSessionQueryKey(),
               });
+              if (session.audience === "platform") {
+                router.replace(dashboardHomePath("platform"));
+              }
             }}
           />
         </div>
