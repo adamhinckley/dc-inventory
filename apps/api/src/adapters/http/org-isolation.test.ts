@@ -5,11 +5,14 @@ import {
 import { InMemoryCustomerRepository } from "@dc-inventory/customers";
 import {
   InMemoryClock,
+  InMemoryOpsUserRepository,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
+  OpsUserId,
+  type StaffRole,
 } from "@dc-inventory/identity";
 import {
   RecordAdjustmentIncreaseUseCase,
@@ -31,6 +34,7 @@ import { testShipAccountingReadPorts } from "../../adapters/test-ship-accounting
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import {
+  OPS_SESSION_COOKIE,
   STAFF_SESSION_COOKIE,
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
@@ -47,6 +51,17 @@ const ACME_WHOLESALE_ID = WholesaleUserId.parse("33333333-3333-4333-8333-3333333
 const BETA_WHOLESALE_ID = WholesaleUserId.parse("44444444-4444-4444-8444-444444444444");
 const ACME_CUSTOMER_ID = CustomerId.parse("55555555-5555-4555-8555-555555555555");
 const BETA_CUSTOMER_ID = CustomerId.parse("66666666-6666-4666-8666-666666666666");
+const ACME_OPERATOR_ID = OpsUserId.parse("77777777-7777-4777-8777-777777777777");
+const ACME_OWNER_ID = OpsUserId.parse("88888888-8888-4888-8888-888888888888");
+const BETA_OPERATOR_ID = OpsUserId.parse("99999999-9999-4999-8999-999999999999");
+
+const STAFF_ROLES = [
+  "admin",
+  "warehouse",
+  "purchasing",
+  "sales_support",
+  "accounting",
+] as const satisfies readonly StaffRole[];
 
 const apps: Array<Awaited<ReturnType<typeof buildApp>>> = [];
 
@@ -60,6 +75,7 @@ async function startTwoOrgIsolationApp() {
   await organizations.save({ id: DEFAULT_ORG, slug: ACME_SLUG, name: "Acme Wholesale" });
   await organizations.save({ id: BETA_ORG, slug: BETA_SLUG, name: "Beta Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
+  const opsUsers = new InMemoryOpsUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
@@ -77,6 +93,19 @@ async function startTwoOrgIsolationApp() {
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
   });
+  for (const [index, role] of STAFF_ROLES.entries()) {
+    if (role === "admin") {
+      continue;
+    }
+    await staffUsers.save({
+      id: StaffUserId.parse(`10000000-0000-4000-8000-00000000000${index}`),
+      organizationId: DEFAULT_ORG,
+      displayName: "Test Staff",
+      email: `acme-${role}@local.test`,
+      passwordHash: await passwords.hash("staff-secret"),
+      roles: [role],
+    });
+  }
   await staffUsers.save({
     id: BETA_STAFF_ID,
     organizationId: BETA_ORG,
@@ -84,6 +113,31 @@ async function startTwoOrgIsolationApp() {
     email: "beta-staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
+  });
+
+  await opsUsers.save({
+    id: ACME_OPERATOR_ID,
+    tenantId: DEFAULT_ORG,
+    displayName: "Acme Ops User",
+    email: "acme-ops@local.test",
+    passwordHash: await passwords.hash("operator-secret"),
+    kind: "operator",
+  });
+  await opsUsers.save({
+    id: ACME_OWNER_ID,
+    tenantId: DEFAULT_ORG,
+    displayName: "Acme Owner",
+    email: "acme-owner@local.test",
+    passwordHash: await passwords.hash("owner-secret"),
+    kind: "business_owner",
+  });
+  await opsUsers.save({
+    id: BETA_OPERATOR_ID,
+    tenantId: BETA_ORG,
+    displayName: "Beta Ops User",
+    email: "beta-ops@local.test",
+    passwordHash: await passwords.hash("operator-secret"),
+    kind: "operator",
   });
 
   await customerRepo.save({
@@ -187,6 +241,7 @@ async function startTwoOrgIsolationApp() {
     database: new InMemoryDatabase(),
     clock,
     staffUsers,
+    opsUsers,
     wholesaleUsers,
     sessions,
     passwords,
@@ -230,6 +285,20 @@ async function loginWholesale(
     payload: { organizationSlug, email, password: "wholesale-secret" },
   });
   return login.cookies.find((row) => row.name === WHOLESALE_SESSION_COOKIE)?.value ?? "";
+}
+
+async function loginOps(
+  app: Awaited<ReturnType<typeof buildApp>>,
+  email: string,
+  password: string,
+  organizationSlug = ACME_SLUG,
+): Promise<string> {
+  const login = await app.inject({
+    method: "POST",
+    url: "/ops/auth/login",
+    payload: { organizationSlug, email, password },
+  });
+  return login.cookies.find((row) => row.name === OPS_SESSION_COOKIE)?.value ?? "";
 }
 
 describe("two-org HTTP isolation (ADA-169)", () => {
@@ -312,41 +381,74 @@ describe("two-org HTTP isolation (ADA-169)", () => {
     });
   });
 
-  it("scopes licensing subscription and payment history to the staff session org", async () => {
-    const { app } = await startTwoOrgIsolationApp();
-    const cookie = await loginStaff(app, "acme-staff@local.test");
+  it.each(STAFF_ROLES)(
+    "returns 404 for %s staff on removed internal licensing history routes",
+    async (role) => {
+      const { app } = await startTwoOrgIsolationApp();
+      const email = role === "admin" ? "acme-staff@local.test" : `acme-${role}@local.test`;
+      const cookie = await loginStaff(app, email);
 
-    const subscriptions = await app.inject({
-      method: "GET",
-      url: "/internal/licensing/subscriptions",
-      cookies: { [STAFF_SESSION_COOKIE]: cookie },
-    });
-    expect(subscriptions.statusCode).toBe(200);
-    expect(subscriptions.json()).toMatchObject({
-      items: [{ plan: "enterprise", status: "active" }],
-      page: 1,
-      pageSize: 25,
-      total: 1,
-    });
+      for (const url of [
+        "/internal/licensing/subscriptions",
+        "/internal/licensing/payments",
+      ]) {
+        const response = await app.inject({
+          method: "GET",
+          url,
+          cookies: { [STAFF_SESSION_COOKIE]: cookie },
+        });
+        expect(response.statusCode).toBe(404);
+      }
+    },
+  );
 
-    const payments = await app.inject({
-      method: "GET",
-      url: "/internal/licensing/payments",
-      cookies: { [STAFF_SESSION_COOKIE]: cookie },
-    });
-    expect(payments.statusCode).toBe(200);
-    expect(payments.json()).toMatchObject({
-      items: [{ providerRef: "pi_acme_sub", amountCents: 1000 }],
-      page: 1,
-      pageSize: 25,
-      total: 1,
-    });
-    expect(
-      (payments.json() as { items: Array<{ providerRef: string }> }).items.some(
-        (row) => row.providerRef === "pi_beta_sub",
-      ),
-    ).toBe(false);
-  });
+  it.each([
+    ["operator", "acme-ops@local.test", "operator-secret"],
+    ["business_owner", "acme-owner@local.test", "owner-secret"],
+  ] as const)(
+    "scopes ops payment history to the %s session tenant",
+    async (_kind, email, password) => {
+      const { app } = await startTwoOrgIsolationApp();
+
+      const acmeCookie = await loginOps(app, email, password);
+      const acmePayments = await app.inject({
+        method: "GET",
+        url: "/ops/payments",
+        cookies: { [OPS_SESSION_COOKIE]: acmeCookie },
+      });
+      expect(acmePayments.statusCode).toBe(200);
+      expect(acmePayments.json()).toMatchObject({
+        items: [{ providerRef: "pi_acme_sub", amountCents: 1000 }],
+        page: 1,
+        pageSize: 25,
+        total: 1,
+      });
+      expect(
+        (acmePayments.json() as { items: Array<{ providerRef: string }> }).items.some(
+          (row) => row.providerRef === "pi_beta_sub",
+        ),
+      ).toBe(false);
+
+      const betaCookie = await loginOps(app, "beta-ops@local.test", "operator-secret", BETA_SLUG);
+      const betaPayments = await app.inject({
+        method: "GET",
+        url: "/ops/payments",
+        cookies: { [OPS_SESSION_COOKIE]: betaCookie },
+      });
+      expect(betaPayments.statusCode).toBe(200);
+      expect(betaPayments.json()).toMatchObject({
+        items: [{ providerRef: "pi_beta_sub", amountCents: 1000 }],
+        page: 1,
+        pageSize: 25,
+        total: 1,
+      });
+      expect(
+        (betaPayments.json() as { items: Array<{ providerRef: string }> }).items.some(
+          (row) => row.providerRef === "pi_acme_sub",
+        ),
+      ).toBe(false);
+    },
+  );
 
   it("ignores spoofed organizationId in staff product create body", async () => {
     const { app, productRepo, cookie } = await startTwoOrgIsolationApp().then(async (seed) => ({

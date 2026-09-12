@@ -881,6 +881,13 @@ describe("opaque session HTTP", () => {
         cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
       });
       expect(subscription.statusCode).toBe(200);
+
+      const payments = await app.inject({
+        method: "GET",
+        url: "/ops/payments",
+        cookies: { [OPS_SESSION_COOKIE]: cookie?.value ?? "" },
+      });
+      expect(payments.statusCode).toBe(200);
     },
   );
 
@@ -888,6 +895,7 @@ describe("opaque session HTTP", () => {
     const { app, clock } = await startAuthApp();
     for (const request of [
       { method: "GET" as const, url: "/ops/subscription" },
+      { method: "GET" as const, url: "/ops/payments" },
       { method: "GET" as const, url: "/ops/auth/session" },
       { method: "POST" as const, url: "/ops/auth/logout" },
     ]) {
@@ -914,6 +922,70 @@ describe("opaque session HTTP", () => {
     });
     expect(expired.statusCode).toBe(401);
     expect(expired.json()).toEqual({ error: "unauthorized" });
+  });
+
+  it("scopes GET /ops/payments to the ops session tenant", async () => {
+    const { app } = await startTwoOrgOpsSubscriptionApp();
+
+    const acmeLogin = await app.inject({
+      method: "POST",
+      url: "/ops/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "acme-ops@local.test",
+        password: "operator-secret",
+      },
+    });
+    expect(acmeLogin.statusCode).toBe(200);
+    const acmeCookie = cookieValue(acmeLogin, OPS_SESSION_COOKIE);
+
+    const acmePayments = await app.inject({
+      method: "GET",
+      url: "/ops/payments",
+      cookies: { [OPS_SESSION_COOKIE]: acmeCookie?.value ?? "" },
+    });
+    expect(acmePayments.statusCode).toBe(200);
+    expect(acmePayments.json()).toMatchObject({
+      items: [{ providerRef: "pi_acme_sub", amountCents: 1000 }],
+      page: 1,
+      pageSize: 25,
+      total: 1,
+    });
+    expect(
+      (acmePayments.json() as { items: Array<{ providerRef: string }> }).items.some(
+        (row) => row.providerRef === "pi_beta_sub",
+      ),
+    ).toBe(false);
+
+    const betaLogin = await app.inject({
+      method: "POST",
+      url: "/ops/auth/login",
+      payload: {
+        organizationSlug: BETA_SLUG,
+        email: "beta-ops@local.test",
+        password: "operator-secret",
+      },
+    });
+    expect(betaLogin.statusCode).toBe(200);
+    const betaCookie = cookieValue(betaLogin, OPS_SESSION_COOKIE);
+
+    const betaPayments = await app.inject({
+      method: "GET",
+      url: "/ops/payments",
+      cookies: { [OPS_SESSION_COOKIE]: betaCookie?.value ?? "" },
+    });
+    expect(betaPayments.statusCode).toBe(200);
+    expect(betaPayments.json()).toMatchObject({
+      items: [{ providerRef: "pi_beta_sub", amountCents: 1000 }],
+      page: 1,
+      pageSize: 25,
+      total: 1,
+    });
+    expect(
+      (betaPayments.json() as { items: Array<{ providerRef: string }> }).items.some(
+        (row) => row.providerRef === "pi_acme_sub",
+      ),
+    ).toBe(false);
   });
 
   it("scopes GET /ops/subscription to the ops session tenant", async () => {
@@ -990,19 +1062,21 @@ describe("opaque session HTTP", () => {
     const wholesaleToken =
       cookieValue(wholesaleLogin, WHOLESALE_SESSION_COOKIE)?.value ?? "";
 
-    for (const cookies of [
-      { [STAFF_SESSION_COOKIE]: staffToken },
-      { [WHOLESALE_SESSION_COOKIE]: wholesaleToken },
-      { [OPS_SESSION_COOKIE]: staffToken },
-      { [OPS_SESSION_COOKIE]: wholesaleToken },
-    ]) {
-      const response = await app.inject({
-        method: "GET",
-        url: "/ops/subscription",
-        cookies,
-      });
-      expect(response.statusCode).toBe(401);
-      expect(response.json()).toEqual({ error: "unauthorized" });
+    for (const url of ["/ops/subscription", "/ops/payments"]) {
+      for (const cookies of [
+        { [STAFF_SESSION_COOKIE]: staffToken },
+        { [WHOLESALE_SESSION_COOKIE]: wholesaleToken },
+        { [OPS_SESSION_COOKIE]: staffToken },
+        { [OPS_SESSION_COOKIE]: wholesaleToken },
+      ]) {
+        const response = await app.inject({
+          method: "GET",
+          url,
+          cookies,
+        });
+        expect(response.statusCode).toBe(401);
+        expect(response.json()).toEqual({ error: "unauthorized" });
+      }
     }
   });
 

@@ -54,6 +54,8 @@ describe("OpenAPI stub export", () => {
     expect(specs.internal).toContain("/internal/purchase-orders/sync-from-pre-order");
     expect(specs.internal).not.toMatch(/uncovered/i);
     expect(specs.internal).not.toContain("/ops/auth/");
+    expect(specs.internal).not.toContain("/internal/licensing/subscriptions");
+    expect(specs.internal).not.toContain("/internal/licensing/payments");
 
     expect(specs.wholesale).toContain("/wholesale/catalog");
     expect(specs.wholesale).toContain("/wholesale/auth/login");
@@ -62,8 +64,10 @@ describe("OpenAPI stub export", () => {
     expect(specs.wholesale).not.toContain("/internal/");
 
     expect(specs.ops).toContain("/ops/subscription");
+    expect(specs.ops).toContain("/ops/payments");
     expect(specs.ops).toContain("/ops/auth/login");
     expect(specs.ops).toContain("loginOps");
+    expect(specs.ops).toContain("listOpsPayments");
     expect(specs.ops).not.toContain("/internal/");
     expect(specs.ops).not.toContain("x-table");
   });

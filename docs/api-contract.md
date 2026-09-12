@@ -62,9 +62,9 @@ CI fails if committed specs do not match the running route schemas (`gen:api` + 
 
 | Artifact | Used by | Contains |
 |---|---|---|
-| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export, **feature bootstrap** (read-only names), **issue submit** |
+| `openapi/internal.yaml` | Staff dashboard | Commands, lists (`x-table`), reports (`x-chart` / series DTOs), import/export, **feature bootstrap** (read-only names; not software billing history), **issue submit** |
 | `openapi/wholesale.yaml` | Client shop | Catalog browse/PDP, cart, checkout, own orders, own account, **feature bootstrap** |
-| `openapi/ops.yaml` | Operator / business owner | Subscription, software payment history, add-ons, flag admin, checkout/manual payment, **issue submit** |
+| `openapi/ops.yaml` | Operator / business owner | `GET /ops/subscription`, `GET /ops/payments`, add-ons, flag admin, checkout/manual payment, **issue submit** |
 | `packages/api-client-internal` | `apps/internal` | Orval hooks, types |
 | `packages/api-client-wholesale` | `apps/wholesale` | Orval hooks, types |
 | `packages/api-client-ops` | `apps/ops` | Orval hooks, types |

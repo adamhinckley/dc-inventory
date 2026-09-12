@@ -23,6 +23,9 @@ import type {
   GetOpsSession401,
   GetOpsSubscription200,
   GetOpsSubscription401,
+  ListOpsPayments200,
+  ListOpsPayments401,
+  ListOpsPaymentsParams,
   LoginOps200,
   LoginOps401,
   LoginOps429,
@@ -422,6 +425,109 @@ export function useGetOpsSubscription<TData = Awaited<ReturnType<typeof getOpsSu
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetOpsSubscriptionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listOpsPaymentsResponse200 = {
+  data: ListOpsPayments200
+  status: 200
+}
+
+export type listOpsPaymentsResponse401 = {
+  data: ListOpsPayments401
+  status: 401
+}
+
+export type listOpsPaymentsResponseSuccess = (listOpsPaymentsResponse200) & {
+  headers: Headers;
+};
+export type listOpsPaymentsResponseError = (listOpsPaymentsResponse401) & {
+  headers: Headers;
+};
+
+export type listOpsPaymentsResponse = (listOpsPaymentsResponseSuccess | listOpsPaymentsResponseError)
+
+export const getListOpsPaymentsUrl = (params?: ListOpsPaymentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/ops/payments?${stringifiedParams}` : `/ops/payments`
+}
+
+/**
+ * @summary List software subscription payments for the ops session tenant
+ */
+export const listOpsPayments = async (params?: ListOpsPaymentsParams, options?: Parameters<typeof customFetch>[1]): Promise<listOpsPaymentsResponse> => {
+
+  return customFetch<listOpsPaymentsResponse>(getListOpsPaymentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOpsPaymentsQueryKey = (params?: ListOpsPaymentsParams,) => {
+    return [
+    `/ops/payments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListOpsPaymentsQueryOptions = <TData = Awaited<ReturnType<typeof listOpsPayments>>, TError = ListOpsPayments401>(params?: ListOpsPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpsPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOpsPaymentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOpsPayments>>> = ({ signal }) => listOpsPayments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOpsPayments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOpsPaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof listOpsPayments>>>
+export type ListOpsPaymentsQueryError = ListOpsPayments401
+
+
+/**
+ * @summary List software subscription payments for the ops session tenant
+ */
+
+export function useListOpsPayments<TData = Awaited<ReturnType<typeof listOpsPayments>>, TError = ListOpsPayments401>(
+ params?: ListOpsPaymentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOpsPayments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOpsPaymentsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
