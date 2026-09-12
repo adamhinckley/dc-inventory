@@ -521,6 +521,10 @@ export const inviteFailedResponseSchema = z.object({
   error: z.literal("invite_failed"),
 });
 
+export const licensingTwinFailedResponseSchema = z.object({
+  error: z.literal("licensing_twin_failed"),
+});
+
 export const createInternalOrganizationBodySchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),

@@ -6,6 +6,7 @@ import {
   forbiddenResponseSchema,
   invalidResponseSchema,
   inviteFailedResponseSchema,
+  licensingTwinFailedResponseSchema,
   slugTakenResponseSchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
@@ -36,11 +37,13 @@ export function registerInternalOrganizationRoutes(app: FastifyInstance): void {
           403: forbiddenResponseSchema,
           409: slugTakenResponseSchema,
           502: inviteFailedResponseSchema,
+          503: licensingTwinFailedResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const result = await request.server.identity.registerOrganization.execute(request.body);
+      const result =
+        await request.server.identity.registerOrganizationWithLicensing.execute(request.body);
       if (!result.ok) {
         if (result.reason === "slug_taken") {
           return reply.code(409).send({ error: "slug_taken" as const });
@@ -48,12 +51,11 @@ export function registerInternalOrganizationRoutes(app: FastifyInstance): void {
         if (result.reason === "invite_failed") {
           return reply.code(502).send({ error: "invite_failed" as const });
         }
+        if (result.reason === "licensing_twin_failed") {
+          return reply.code(503).send({ error: "licensing_twin_failed" as const });
+        }
         return sendInvalid(reply);
       }
-
-      await request.server.licensing.ensureLicensingTenant.execute({
-        tenantId: result.organizationId,
-      });
 
       return reply.code(201).send({
         organizationId: result.organizationId,

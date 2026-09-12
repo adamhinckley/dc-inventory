@@ -16,6 +16,13 @@ describe("organization slug derivation", () => {
     expect(deriveOrganizationSlugFromDisplayName(longName)).toHaveLength(48);
   });
 
+  it("does not leave a trailing hyphen when truncating", () => {
+    const name = `${"a".repeat(47)}-extra`;
+    const slug = deriveOrganizationSlugFromDisplayName(name);
+    expect(slug).not.toMatch(/-$/);
+    expect(slug.length).toBeLessThanOrEqual(48);
+  });
+
   it("validates slug pattern", () => {
     expect(isOrganizationSlugValid("harbor-wholesale")).toBe(true);
     expect(isOrganizationSlugValid("Bad Slug")).toBe(false);

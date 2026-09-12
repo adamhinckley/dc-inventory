@@ -33,12 +33,14 @@ export { LogoutUseCase } from "./application/logout.js";
 export { ListActingCustomersUseCase } from "./application/list-acting-customers.js";
 export { SelectActingCustomerUseCase } from "./application/select-acting-customer.js";
 export { ClearActingCustomerUseCase } from "./application/clear-acting-customer.js";
+export { InviteDeliveryError } from "./application/invite-delivery-error.js";
 export {
   RegisterOrganizationUseCase,
   type RegisterOrganizationInviteLinks,
   type RegisterOrganizationRequest,
   type RegisterOrganizationResult,
 } from "./application/register-organization.js";
+export { RollbackOrganizationRegistrationUseCase } from "./application/rollback-organization-registration.js";
 export { buildStaffInviteEmail } from "./application/staff-invite-email.js";
 export {
   CreateWholesaleUserUseCase,

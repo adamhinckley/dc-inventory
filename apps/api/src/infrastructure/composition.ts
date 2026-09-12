@@ -102,6 +102,7 @@ import {
   LoginWholesaleUseCase,
   LogoutUseCase,
   RegisterOrganizationUseCase,
+  RollbackOrganizationRegistrationUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   SelectActingCustomerUseCase,
@@ -313,6 +314,7 @@ import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import { DrizzleImportLocationAdapter } from "../adapters/drizzle-import-locations.js";
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
+import { RegisterOrganizationWithLicensingUseCase } from "../application/register-organization-with-licensing.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
@@ -332,7 +334,7 @@ export type IdentityHttpServices = {
   listActingCustomers: ListActingCustomersUseCase;
   selectActingCustomer: SelectActingCustomerUseCase;
   clearActingCustomer: ClearActingCustomerUseCase;
-  registerOrganization: RegisterOrganizationUseCase;
+  registerOrganizationWithLicensing: RegisterOrganizationWithLicensingUseCase;
 };
 
 export type CatalogHttpServices = {
@@ -549,6 +551,7 @@ export type AppServiceOverrides = {
   sellWindowRepo?: ISellWindowRepository;
   licensingStore?: InMemoryLicensingStore;
   licensingRepository?: ILicensingReadRepository;
+  licensingProvisioner?: ILicensingTenantProvisioner;
 };
 
 function catalogServices(
@@ -1084,9 +1087,10 @@ export function composeAppServices(
       ? new DrizzleLicensingReadRepository(licensingDb)
       : inMemoryLicensing!);
   const licensingProvisioner: ILicensingTenantProvisioner =
-    licensingDb !== undefined
+    overrides.licensingProvisioner ??
+    (licensingDb !== undefined
       ? new DrizzleLicensingTenantProvisioner(licensingDb)
-      : inMemoryLicensing!;
+      : inMemoryLicensing!);
   const features =
     overrides.features ??
     (readFeaturesAllCoreOn() || !licensingDb
@@ -1424,11 +1428,15 @@ export function composeAppServices(
         clock,
       ),
       clearActingCustomer: new ClearActingCustomerUseCase(sessions, staffUsers, clock),
-      registerOrganization: new RegisterOrganizationUseCase(
-        identityUnitOfWork,
-        passwords,
-        emailSender,
-        createStaffInviteLinks(),
+      registerOrganizationWithLicensing: new RegisterOrganizationWithLicensingUseCase(
+        new RegisterOrganizationUseCase(
+          identityUnitOfWork,
+          passwords,
+          emailSender,
+          createStaffInviteLinks(),
+        ),
+        new EnsureLicensingTenantUseCase(licensingProvisioner),
+        new RollbackOrganizationRegistrationUseCase(organizationRepo, staffUsers),
       ),
     },
     customers: customersServices(

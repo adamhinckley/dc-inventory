@@ -5,12 +5,12 @@ import {
   useCreateInternalOrganization,
   type createInternalOrganization,
 } from "@dc-inventory/api-client-internal";
-import { Form, useFormSubmit } from "@dc-inventory/ui";
+import { deriveOrganizationSlugFromDisplayName } from "@dc-inventory/identity";
+import { Form, TextInput, useFormSubmit } from "@dc-inventory/ui";
 import { Building2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, type ControllerFieldState, type ControllerRenderProps } from "react-hook-form";
 import { z } from "zod";
-import { deriveOrganizationSlugFromDisplayName } from "../lib/organization-slug";
 
 const createOrganizationSchema = z.object({
   name: z.string().min(1, "Company name is required"),
@@ -36,14 +36,6 @@ function OrganizationSlugFields({
 }) {
   const form = useFormContext<CreateOrganizationInput>();
   const companyName = form.watch("name");
-  const slug = form.watch("slug");
-
-  useEffect(() => {
-    const derived = deriveOrganizationSlugFromDisplayName(companyName);
-    if (!slugTouched && slug !== derived) {
-      setSlugTouched(true);
-    }
-  }, [companyName, setSlugTouched, slug, slugTouched]);
 
   useEffect(() => {
     if (!slugTouched) {
@@ -56,7 +48,34 @@ function OrganizationSlugFields({
   return (
     <>
       <Form.Field name="name" label="Company Display Name" required form={{ kind: "text" }} />
-      <Form.Field name="slug" label="Slug" required form={{ kind: "text" }} />
+      <Form.Field
+        name="slug"
+        label="Slug"
+        required
+        form={{
+          kind: "text",
+          render: ({
+            rhf,
+            fieldState,
+          }: {
+            rhf: ControllerRenderProps<CreateOrganizationInput, "slug">;
+            fieldState: ControllerFieldState;
+          }) => (
+            <TextInput
+              name={rhf.name}
+              value={String(rhf.value ?? "")}
+              onBlur={rhf.onBlur}
+              ref={rhf.ref}
+              onChange={(value: string) => {
+                setSlugTouched(true);
+                rhf.onChange(value);
+              }}
+              data-invalid={fieldState.error ? true : undefined}
+              data-testid="form-slug"
+            />
+          ),
+        }}
+      />
       <p className="text-body-sm text-fg-secondary">
         Auto-filled from the display name (lowercase, hyphens). Edit if that slug is already taken.
       </p>

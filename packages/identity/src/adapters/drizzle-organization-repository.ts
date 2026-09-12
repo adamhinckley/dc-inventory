@@ -48,6 +48,10 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
         set: { name, slug: organization.slug, updatedAt: new Date() },
       });
   }
+
+  async deleteById(id: OrganizationId): Promise<void> {
+    await this.db.delete(organizations).where(eq(organizations.id, id));
+  }
 }
 
 function toOrganization(row: typeof organizations.$inferSelect): Organization {

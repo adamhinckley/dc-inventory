@@ -4,6 +4,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryEmailSender } from "../src/adapters/in-memory-email-sender.js";
+import type { EmailMessage, IEmailSender } from "../src/domain/ports/email-sender.js";
 import { InMemoryIdentityUnitOfWork } from "../src/adapters/in-memory-identity-unit-of-work.js";
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
@@ -16,17 +17,25 @@ import {
 
 const ACME_STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440011");
 
-function harness() {
+class FailingEmailSender implements IEmailSender {
+  readonly sent: EmailMessage[] = [];
+
+  async send(message: EmailMessage): Promise<void> {
+    this.sent.push({ ...message });
+    throw new Error("delivery failed");
+  }
+}
+
+function harness(emailSender: InMemoryEmailSender | FailingEmailSender = new InMemoryEmailSender()) {
   const passwords = new InMemoryPasswordHasher();
-  const email = new InMemoryEmailSender();
   const staffUsers = new InMemoryStaffUserRepository();
   const uow = new InMemoryIdentityUnitOfWork(undefined, staffUsers);
   return {
     passwords,
-    email,
+    email: emailSender,
     staffUsers,
     uow,
-    registerOrganization: new RegisterOrganizationUseCase(uow, passwords, email, {
+    registerOrganization: new RegisterOrganizationUseCase(uow, passwords, emailSender, {
       buildSetPasswordUrl: ({ organizationSlug, staffUserId, staffEmail }) =>
         `https://internal.test/set-password?org=${organizationSlug}&user=${staffUserId}&email=${staffEmail}`,
     }),
@@ -141,6 +150,26 @@ describe("RegisterOrganization (in-memory)", () => {
       staffEmail: "other@beta.test",
     });
     expect(duplicateSlug).toEqual({ ok: false, reason: "slug_taken" });
+  });
+
+  it("rolls back org and staff when invite delivery fails so slug can be retried", async () => {
+    const h = harness(new FailingEmailSender());
+
+    const failed = await h.registerOrganization.execute({
+      slug: "harbor-wholesale",
+      ...validRegistration,
+      staffEmail: "owner@harbor.test",
+    });
+    expect(failed).toEqual({ ok: false, reason: "invite_failed" });
+    expect(await h.uow.organizations.findBySlug("harbor-wholesale")).toBeNull();
+
+    const working = harness();
+    const retry = await working.registerOrganization.execute({
+      slug: "harbor-wholesale",
+      ...validRegistration,
+      staffEmail: "owner@harbor.test",
+    });
+    expect(retry.ok).toBe(true);
   });
 
   it("rejects invalid slug, email, org name, or staff display name", async () => {

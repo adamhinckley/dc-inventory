@@ -120,6 +120,7 @@ import type {
   CreateInternalOrganization403,
   CreateInternalOrganization409,
   CreateInternalOrganization502,
+  CreateInternalOrganization503,
   CreateInternalOrganizationBody,
   CreateInternalProduct201,
   CreateInternalProduct400,
@@ -820,10 +821,15 @@ export type createInternalOrganizationResponse502 = {
   status: 502
 }
 
+export type createInternalOrganizationResponse503 = {
+  data: CreateInternalOrganization503
+  status: 503
+}
+
 export type createInternalOrganizationResponseSuccess = (createInternalOrganizationResponse201) & {
   headers: Headers;
 };
-export type createInternalOrganizationResponseError = (createInternalOrganizationResponse400 | createInternalOrganizationResponse401 | createInternalOrganizationResponse403 | createInternalOrganizationResponse409 | createInternalOrganizationResponse502) & {
+export type createInternalOrganizationResponseError = (createInternalOrganizationResponse400 | createInternalOrganizationResponse401 | createInternalOrganizationResponse403 | createInternalOrganizationResponse409 | createInternalOrganizationResponse502 | createInternalOrganizationResponse503) & {
   headers: Headers;
 };
 
@@ -861,7 +867,7 @@ return customFetch<createInternalOrganizationResponse>(getCreateInternalOrganiza
 
 
 
-export const getCreateInternalOrganizationMutationOptions = <TError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502,
+export const getCreateInternalOrganizationMutationOptions = <TError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalOrganization>>, TError,{data: CreateInternalOrganizationBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createInternalOrganization>>, TError,{data: CreateInternalOrganizationBody}, TContext> => {
 
@@ -890,12 +896,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateInternalOrganizationMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalOrganization>>>
     export type CreateInternalOrganizationMutationBody = CreateInternalOrganizationBody
-    export type CreateInternalOrganizationMutationError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502
+    export type CreateInternalOrganizationMutationError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503
 
     /**
  * @summary Provision a new organization and invite its first admin (DEFAULT platform only)
  */
-export const useCreateInternalOrganization = <TError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502,
+export const useCreateInternalOrganization = <TError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalOrganization>>, TError,{data: CreateInternalOrganizationBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createInternalOrganization>>,

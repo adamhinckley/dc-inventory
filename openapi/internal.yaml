@@ -309,6 +309,20 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+        "503":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - licensing_twin_failed
+                required:
+                  - error
+                additionalProperties: false
   /internal/customers:
     get:
       operationId: listInternalCustomers

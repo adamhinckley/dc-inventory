@@ -5,4 +5,5 @@ export interface IOrganizationRepository {
   findBySlug(slug: string): Promise<Organization | null>;
   findById(id: OrganizationId): Promise<Organization | null>;
   save(organization: Organization): Promise<void>;
+  deleteById(id: OrganizationId): Promise<void>;
 }
