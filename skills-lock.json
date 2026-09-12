@@ -6,6 +6,12 @@
       "sourceType": "github",
       "skillPath": "plugins/backend-development/skills/architecture-patterns/SKILL.md",
       "computedHash": "a66aaa5aa49b75bec12b6270dcde8794b1f0cc75fbb9ecb999e43f8b723b461f"
+    },
+    "unslop": {
+      "source": "cursor/plugins",
+      "sourceType": "github",
+      "skillPath": "pstack/skills/unslop/SKILL.md",
+      "computedHash": "c6d2572294d933a428211921069e9a248490e9b466ca59437cb4d9de248600ca"
     }
   }
 }
