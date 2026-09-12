@@ -8,16 +8,26 @@ export type StaffInviteEmailInput = {
   staffEmail: string;
   staffUserId: StaffUserId;
   setPasswordUrl: string;
+  /** Tier 1 first admin vs tier 3 additional staff — default admin. */
+  inviteKind?: "admin" | "staff";
 };
 
+function inviteBody(organizationName: string, inviteKind: "admin" | "staff"): string {
+  return inviteKind === "staff"
+    ? `You've been invited to join ${organizationName} as staff.`
+    : `You've been invited as an admin for ${organizationName}.`;
+}
+
 export function buildStaffInviteEmail(input: StaffInviteEmailInput): EmailMessage {
+  const inviteKind = input.inviteKind ?? "admin";
+
   return {
     to: input.staffEmail,
     subject: `You're invited to ${input.organizationName}`,
     text: [
       `Hi ${input.staffDisplayName},`,
       "",
-      `You've been invited as an admin for ${input.organizationName}.`,
+      inviteBody(input.organizationName, inviteKind),
       `Set your password to sign in: ${input.setPasswordUrl}`,
       "",
       `Organization slug: ${input.organizationSlug}`,

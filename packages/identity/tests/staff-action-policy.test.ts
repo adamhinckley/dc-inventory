@@ -20,19 +20,29 @@ const EXPECTED: Readonly<Record<StaffAction, readonly StaffRole[]>> = {
   payment_plans_manage: ["admin", "accounting"],
   credit_limit_manage: ["admin", "accounting"],
   organizations_manage: ["admin"],
+  staff_manage: ["admin"],
 };
 
 describe("static staff action policy", () => {
-  it.each(STAFF_ACTIONS.filter((action) => action !== "organizations_manage"))(
-    "matches the G8 role matrix for %s",
-    (action) => {
-      for (const role of STAFF_ROLES) {
-        expect(canStaffPerform([role], action), `${role} on ${action}`).toBe(
-          EXPECTED[action].includes(role),
-        );
-      }
-    },
-  );
+  it.each(
+    STAFF_ACTIONS.filter(
+      (action) => action !== "organizations_manage" && action !== "staff_manage",
+    ),
+  )("matches the G8 role matrix for %s", (action) => {
+    for (const role of STAFF_ROLES) {
+      expect(canStaffPerform([role], action), `${role} on ${action}`).toBe(
+        EXPECTED[action].includes(role),
+      );
+    }
+  });
+
+  it("grants staff_manage to admin only", () => {
+    for (const role of STAFF_ROLES) {
+      expect(canStaffPerform([role], "staff_manage"), `${role} on staff_manage`).toBe(
+        role === "admin",
+      );
+    }
+  });
 
   it("allows any granting role and denies an empty role set", () => {
     expect(canStaffPerform(["warehouse", "purchasing"], "stock_manage")).toBe(true);
