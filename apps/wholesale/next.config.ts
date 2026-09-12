@@ -12,7 +12,7 @@ function apiProxyOrigin(): string {
 }
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@dc-inventory/api-client-wholesale"],
+  transpilePackages: ["@dc-inventory/api-client-wholesale", "@dc-inventory/identity"],
   // Cursor/simple-browser preview throws on Next's indicator SVG when the
   // viewport changes (Permission denied: correspondingUseElement).
   devIndicators: false,

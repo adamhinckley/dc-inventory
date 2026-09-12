@@ -44,9 +44,9 @@ See [`README.md`](../README.md) for `.test` hostnames and Fly proxy notes.
 
 Mailpit catches every message the API sends through `IEmailSender`. No real mail leaves your machine.
 
-1. Ensure Compose is up (`docker compose up -d --wait`).
+1. From the repo root, `pnpm mailpit` starts the Mailpit container (if needed) and opens the inbox UI (default [http://localhost:8025](http://localhost:8025)).
 2. Boot the API with `apps/api/.env` copied from `.env.example` (SMTP vars set).
-3. Open the Mailpit UI: [http://localhost:8025](http://localhost:8025) (or your `MAILPIT_UI_PORT`).
+3. Or start the whole stack with `docker compose up -d --wait` and open the UI yourself.
 4. Trigger an invite once the staff / wholesale invite HTTP packets land. Until then, you can prove the wiring from a Node REPL or a one-off script:
 
 ```bash

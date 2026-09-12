@@ -9,8 +9,12 @@ type SignedInSession =
   | { audience: "platform" };
 
 export function StaffSignInForm({
+  defaultOrganizationSlug = "acme",
+  defaultEmail = "",
   onSignedIn,
 }: {
+  defaultOrganizationSlug?: string;
+  defaultEmail?: string;
   onSignedIn?: (session: SignedInSession) => void;
 }) {
   const login = useLoginInternal();
@@ -55,6 +59,7 @@ export function StaffSignInForm({
           type="text"
           name="organizationSlug"
           autoComplete="organization"
+          defaultValue={defaultOrganizationSlug}
           placeholder="acme"
         />
       </LabeledField>
@@ -65,6 +70,7 @@ export function StaffSignInForm({
           type="email"
           name="email"
           autoComplete="username"
+          defaultValue={defaultEmail}
           required
         />
       </LabeledField>

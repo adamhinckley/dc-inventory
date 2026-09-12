@@ -12,6 +12,7 @@
     "db:migrate": "pnpm --filter @dc-inventory/api db:migrate",
     "db:sync:local-from-neon": "pnpm --filter @dc-inventory/api db:sync:local-from-neon",
     "db:seed:phase1": "pnpm --filter @dc-inventory/api db:seed:phase1",
+    "mailpit": "bash scripts/open-mailpit.sh",
     "seed:demo": "pnpm --filter @dc-inventory/api seed:demo",
     "lint": "tsc --noEmit -p tsconfig.json && pnpm --filter @dc-inventory/api typecheck && pnpm --filter @dc-inventory/shared-kernel typecheck && pnpm --filter @dc-inventory/identity typecheck && pnpm --filter @dc-inventory/customers typecheck && pnpm --filter @dc-inventory/catalog typecheck && pnpm --filter @dc-inventory/inventory typecheck && pnpm --filter @dc-inventory/purchasing typecheck && pnpm --filter @dc-inventory/sales typecheck && pnpm --filter @dc-inventory/accounting typecheck && pnpm --filter @dc-inventory/licensing typecheck && pnpm typecheck:clients && pnpm --filter @dc-inventory/wholesale typecheck && pnpm --filter @dc-inventory/internal typecheck && pnpm --filter @dc-inventory/ui typecheck && pnpm --filter @dc-inventory/ui-internal typecheck",
     "dev:api": "pnpm --filter @dc-inventory/api dev",

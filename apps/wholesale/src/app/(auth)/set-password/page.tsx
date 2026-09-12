@@ -1,8 +1,15 @@
 "use client";
 
 import { useSetPasswordWholesale } from "@dc-inventory/api-client-wholesale";
-import { PASSWORD_POLICY_UI_COPY } from "@dc-inventory/identity/password-policy";
 import Link from "next/link";
+import {
+  loginPathWithOnboarding,
+  onboardingPrefillFromSearchParams,
+} from "../../../lib/onboarding-login";
+import {
+  PASSWORD_POLICY_UI_COPY,
+  readMatchingNewPassword,
+} from "../../../lib/password-policy-ui-copy";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { ShopPage } from "../../../components/shop-page";
@@ -11,8 +18,11 @@ function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const loginHref = loginPathWithOnboarding(onboardingPrefillFromSearchParams(searchParams));
   const setPassword = useSetPasswordWholesale();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordType = showPassword ? "text" : "password";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -21,14 +31,22 @@ function SetPasswordForm() {
       return;
     }
     const form = new FormData(event.currentTarget);
-    const password = String(form.get("password") ?? "");
+    const matched = readMatchingNewPassword(
+      String(form.get("password") ?? ""),
+      String(form.get("confirmPassword") ?? ""),
+    );
+    if (!matched.ok) {
+      setError(matched.error);
+      return;
+    }
+    const password = matched.password;
     setError(null);
     setPassword.mutate(
       { data: { token, password } },
       {
         onSuccess: (response) => {
           if (response.status === 200) {
-            router.push("/login");
+            router.push(loginHref);
             return;
           }
           if (response.status === 400 && "violation" in response.data) {
@@ -55,12 +73,30 @@ function SetPasswordForm() {
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-ink">Password</span>
           <input
-            type="password"
+            type={passwordType}
             name="password"
             autoComplete="new-password"
             required
             className="shop-input"
           />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-ink">Confirm Password</span>
+          <input
+            type={passwordType}
+            name="confirmPassword"
+            autoComplete="new-password"
+            required
+            className="shop-input"
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm text-ink-muted">
+          <input
+            type="checkbox"
+            checked={showPassword}
+            onChange={(event) => setShowPassword(event.target.checked)}
+          />
+          Show Password
         </label>
         <p className="text-sm text-ink-muted">{PASSWORD_POLICY_UI_COPY}</p>
         {error !== null ? (
@@ -78,7 +114,7 @@ function SetPasswordForm() {
       </form>
       <p className="mt-6 text-sm text-ink-muted">
         Already have a password?{" "}
-        <Link href="/login" className="font-medium text-accent hover:text-accent-hover">
+        <Link href={loginHref} className="font-medium text-accent hover:text-accent-hover">
           Sign in
         </Link>
       </p>

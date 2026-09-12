@@ -261,6 +261,8 @@ describe("internal customers staff-for-them wholesale invite", () => {
       subject: "You're invited to Acme Wholesale wholesale",
     });
     expect(emailSender.sent[0]?.text).toContain("/set-password?token=");
+    expect(emailSender.sent[0]?.text).toContain("organization=acme");
+    expect(emailSender.sent[0]?.text).toContain("email=buyer%40harbor.test");
   });
 
   it("defaults wholesale display name to customer name", async () => {

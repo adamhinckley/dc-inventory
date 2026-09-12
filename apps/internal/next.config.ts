@@ -14,6 +14,7 @@ function apiProxyOrigin(): string {
 const nextConfig: NextConfig = {
   transpilePackages: [
     "@dc-inventory/api-client-internal",
+    "@dc-inventory/identity",
     "@dc-inventory/ui",
     "@dc-inventory/ui-internal",
   ],
