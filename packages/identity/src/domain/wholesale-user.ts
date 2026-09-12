@@ -7,6 +7,7 @@ import type {
 export type WholesaleUser = {
   id: WholesaleUserId;
   organizationId: OrganizationId;
+  displayName: string;
   email: string;
   passwordHash: string;
   customerId: CustomerId;

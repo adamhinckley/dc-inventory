@@ -2,6 +2,7 @@ import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Organization } from "../domain/organization.js";
+import { parseOrganizationName } from "../domain/required-text.js";
 import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
 import { organizations, sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
 
@@ -34,15 +35,17 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
   }
 
   async save(organization: Organization): Promise<void> {
+    const name = parseOrganizationName(organization.name);
     await this.db
       .insert(organizations)
       .values({
         id: organization.id,
+        name,
         slug: organization.slug,
       })
       .onConflictDoUpdate({
         target: organizations.id,
-        set: { slug: organization.slug, updatedAt: new Date() },
+        set: { name, slug: organization.slug, updatedAt: new Date() },
       });
   }
 }
@@ -50,6 +53,7 @@ export class DrizzleOrganizationRepository implements IOrganizationRepository {
 function toOrganization(row: typeof organizations.$inferSelect): Organization {
   return {
     id: OrganizationId.parse(row.id),
+    name: row.name,
     slug: row.slug,
   };
 }

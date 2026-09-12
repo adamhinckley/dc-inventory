@@ -27,7 +27,7 @@ async function startRbacApp() {
   const organizations = new InMemoryOrganizationRepository();
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
 
   for (const [index, role] of (
     ["admin", "purchasing", "warehouse", "sales_support", "accounting"] as const
@@ -35,6 +35,7 @@ async function startRbacApp() {
     await staffUsers.save({
       id: StaffUserId.parse(`10000000-0000-4000-8000-00000000000${index}`),
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: `${role}@local.test`,
       passwordHash: await passwords.hash("staff-secret"),
       roles: [role],

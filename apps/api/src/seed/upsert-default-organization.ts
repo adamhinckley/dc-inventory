@@ -1,6 +1,6 @@
 import type { IOrganizationRepository } from "@dc-inventory/identity";
 import { OrganizationId } from "@dc-inventory/shared-kernel";
-import { PHASE1_ORGANIZATION_SLUG } from "./phase1-fixture.js";
+import { PHASE1_ORGANIZATION_NAME, PHASE1_ORGANIZATION_SLUG } from "./phase1-fixture.js";
 import { Phase1SeedError } from "./run-phase1-seed.js";
 
 export async function upsertDefaultOrganization(
@@ -15,5 +15,6 @@ export async function upsertDefaultOrganization(
   await organizations.save({
     id: OrganizationId.DEFAULT,
     slug: PHASE1_ORGANIZATION_SLUG,
+    name: PHASE1_ORGANIZATION_NAME,
   });
 }

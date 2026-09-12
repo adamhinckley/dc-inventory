@@ -6,7 +6,8 @@
   "description": "Identity context: opaque staff and wholesale sessions. No Better Auth.",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/persistence/schema.ts"
+    "./schema": "./src/persistence/schema.ts",
+    "./test-fixtures": "./src/test-fixtures.ts"
   },
   "scripts": {
     "test": "vitest run",

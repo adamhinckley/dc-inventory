@@ -54,12 +54,13 @@ afterEach(async () => {
 async function startReopenApp() {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   await staffUsers.save({
     id: STAFF_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -342,12 +343,13 @@ describe("POST /internal/inventory/close-skus", () => {
   it("closes a sell window membership and sets manuallyClosedAt", async () => {
     const passwords = new InMemoryPasswordHasher();
     const organizations = new InMemoryOrganizationRepository();
-    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
     const staffUsers = new InMemoryStaffUserRepository();
     const sessions = new InMemorySessionStore();
     await staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await passwords.hash("staff-secret"),
       roles: ["admin"],
@@ -486,12 +488,13 @@ describe("POST /internal/inventory/close-skus", () => {
   it("still closes membership SKUs when the sell window is already calendar-closed", async () => {
     const passwords = new InMemoryPasswordHasher();
     const organizations = new InMemoryOrganizationRepository();
-    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme" });
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
     const staffUsers = new InMemoryStaffUserRepository();
     const sessions = new InMemorySessionStore();
     await staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: await passwords.hash("staff-secret"),
       roles: ["admin"],

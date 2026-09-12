@@ -20,7 +20,9 @@ import {
   PHASE1_CUSTOMER_CURRENCY,
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
+  PHASE1_STAFF_DISPLAY_NAME,
   PHASE1_STAFF_EMAIL,
+  PHASE1_WHOLESALE_DISPLAY_NAME,
   PHASE1_WHOLESALE_EMAIL,
 } from "./phase1-fixture.js";
 import { DEMO_NAMED_CUSTOMERS } from "./reconciliation/expectations.js";
@@ -94,6 +96,7 @@ async function upsertStaff(
   const staff: StaffUser = {
     id: existing?.id ?? StaffUserId.parse(newId()),
     organizationId: OrganizationId.DEFAULT,
+    displayName: existing?.displayName ?? PHASE1_STAFF_DISPLAY_NAME,
     email: PHASE1_STAFF_EMAIL,
     passwordHash: await ports.passwords.hash(password),
     roles: withDemoStaffRoles(existing?.roles),
@@ -114,6 +117,7 @@ async function upsertWholesale(
   const wholesale: WholesaleUser = {
     id: existing?.id ?? WholesaleUserId.parse(newId()),
     organizationId: OrganizationId.DEFAULT,
+    displayName: existing?.displayName ?? PHASE1_WHOLESALE_DISPLAY_NAME,
     email: PHASE1_WHOLESALE_EMAIL,
     passwordHash: await ports.passwords.hash(password),
     customerId,

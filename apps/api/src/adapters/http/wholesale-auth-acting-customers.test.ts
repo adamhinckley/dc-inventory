@@ -39,7 +39,7 @@ afterEach(async () => {
 async function startActingCustomersApp() {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -90,6 +90,7 @@ async function startActingCustomersApp() {
   await staffUsers.save({
     id: STAFF_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -97,6 +98,7 @@ async function startActingCustomersApp() {
   await wholesaleUsers.save({
     id: WHOLESALE_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "wholesale@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: ACTIVE_CUSTOMER_ID,
@@ -104,6 +106,7 @@ async function startActingCustomersApp() {
   await wholesaleUsers.save({
     id: WholesaleUserId.parse("77777777-7777-4777-8777-777777777777"),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "onhold@local.test",
     passwordHash: await passwords.hash("onhold-secret"),
     customerId: ON_HOLD_CUSTOMER_ID,
@@ -111,6 +114,7 @@ async function startActingCustomersApp() {
   await wholesaleUsers.save({
     id: WholesaleUserId.parse("88888888-8888-4888-8888-888888888888"),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "inactive@local.test",
     passwordHash: await passwords.hash("inactive-secret"),
     customerId: INACTIVE_CUSTOMER_ID,
@@ -320,6 +324,7 @@ describe("wholesale acting customer picker HTTP", () => {
     await wholesaleUsers.save({
       id: WholesaleUserId.parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab"),
       organizationId: OTHER_ORG_ID,
+      displayName: "Test Wholesale User",
       email: "other-org@local.test",
       passwordHash: "hash",
       customerId: OTHER_ORG_CUSTOMER_ID,

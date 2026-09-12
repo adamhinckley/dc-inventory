@@ -2,6 +2,7 @@ import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { normalizeEmail } from "../domain/email.js";
+import { parseDisplayName } from "../domain/required-text.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { StaffUser } from "../domain/staff-user.js";
 import {
@@ -50,11 +51,13 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
 
   async save(user: StaffUser): Promise<void> {
     const email = normalizeEmail(user.email);
+    const displayName = parseDisplayName(user.displayName);
     await this.db
       .insert(staffUsers)
       .values({
         id: user.id,
         organizationId: user.organizationId,
+        displayName,
         email,
         passwordHash: user.passwordHash,
         roles: [...user.roles],
@@ -63,6 +66,7 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
         target: staffUsers.id,
         set: {
           organizationId: user.organizationId,
+          displayName,
           email,
           passwordHash: user.passwordHash,
           roles: [...user.roles],
@@ -76,6 +80,7 @@ function toStaffUser(row: typeof staffUsers.$inferSelect): StaffUser {
   return {
     id: StaffUserId.parse(row.id),
     organizationId: OrganizationId.parse(row.organizationId),
+    displayName: row.displayName,
     email: row.email,
     passwordHash: row.passwordHash,
     roles: row.roles,

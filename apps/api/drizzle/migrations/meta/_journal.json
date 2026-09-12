@@ -344,6 +344,13 @@
       "when": 1791555600000,
       "tag": "0049_sales_orders_status_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1791655600000,
+      "tag": "0050_identity_display_names",
+      "breakpoints": true
     }
   ]
 }

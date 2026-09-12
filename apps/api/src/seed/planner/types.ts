@@ -101,9 +101,12 @@ export type DemoBookPlan = {
     customers: PlannedCustomer[];
     shipTos: PlannedShipTo[];
     staffEmail: string;
+    staffDisplayName: string;
     wholesaleEmail: string;
+    wholesaleDisplayName: string;
     wholesaleCustomerKey: "acme";
     secondaryWholesaleEmail: string;
+    secondaryWholesaleDisplayName: string;
     secondaryWholesaleCustomerKey: "northstar";
   };
   purchaseOrders: PlannedPurchaseOrder[];

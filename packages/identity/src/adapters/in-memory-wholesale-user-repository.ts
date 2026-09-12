@@ -4,6 +4,7 @@ import type {
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { normalizeEmail } from "../domain/email.js";
+import { parseDisplayName } from "../domain/required-text.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
 import type { WholesaleUser } from "../domain/wholesale-user.js";
 
@@ -36,7 +37,11 @@ export class InMemoryWholesaleUserRepository implements IWholesaleUserRepository
   }
 
   async save(user: WholesaleUser): Promise<void> {
-    const stored = { ...user, email: normalizeEmail(user.email) };
+    const stored = {
+      ...user,
+      displayName: parseDisplayName(user.displayName),
+      email: normalizeEmail(user.email),
+    };
     this.byId.set(stored.id, stored);
     this.byOrgEmail.set(emailKey(stored.organizationId, stored.email), stored);
   }

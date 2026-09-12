@@ -5,14 +5,18 @@
 
 export const PHASE1_CUSTOMER_NAME = "Acme Wholesale";
 export const PHASE1_ORGANIZATION_SLUG = "acme";
+export const PHASE1_ORGANIZATION_NAME = "Acme Wholesale";
 export const PHASE1_CUSTOMER_TERMS = "Net 30";
 export const PHASE1_CUSTOMER_CREDIT_LIMIT_CENTS = 1_000_000;
 export const PHASE1_CUSTOMER_CURRENCY = "USD";
 
 export const PHASE1_STAFF_EMAIL = "staff@local.test";
+export const PHASE1_STAFF_DISPLAY_NAME = "Demo Staff";
 export const PHASE1_WHOLESALE_EMAIL = "wholesale@local.test";
+export const PHASE1_WHOLESALE_DISPLAY_NAME = "Acme Shop User";
 /** Second demo shop login for Northstar Big Box (staff-acting picker smoke). */
 export const PHASE1_NORTHSTAR_WHOLESALE_EMAIL = "northstar@local.test";
+export const PHASE1_NORTHSTAR_WHOLESALE_DISPLAY_NAME = "Northstar Shop User";
 
 export const PHASE1_PRODUCT_SKUS = [
   "HEX-BOLT-GALV",

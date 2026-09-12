@@ -88,6 +88,7 @@ async function seedWholesaleUsers(wholesaleUsers: InMemoryWholesaleUserRepositor
   await wholesaleUsers.save({
     id: wholesaleUserIdForIndex(1),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "active@local.test",
     passwordHash: "hash",
     customerId: ACTIVE_CUSTOMER_ID,
@@ -95,6 +96,7 @@ async function seedWholesaleUsers(wholesaleUsers: InMemoryWholesaleUserRepositor
   await wholesaleUsers.save({
     id: wholesaleUserIdForIndex(2),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "onhold@local.test",
     passwordHash: "hash",
     customerId: ON_HOLD_CUSTOMER_ID,
@@ -102,6 +104,7 @@ async function seedWholesaleUsers(wholesaleUsers: InMemoryWholesaleUserRepositor
   await wholesaleUsers.save({
     id: wholesaleUserIdForIndex(3),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "inactive@local.test",
     passwordHash: "hash",
     customerId: INACTIVE_CUSTOMER_ID,
@@ -137,6 +140,7 @@ describe("createActingCustomerHeaderReadPort", () => {
     await staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: "hash",
       roles: ["admin"],

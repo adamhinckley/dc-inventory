@@ -66,8 +66,8 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       connection = createDatabaseConnection(databaseUrl);
 
       await connection.sql`
-        insert into identity.organizations (id, slug)
-        values (${organizationId}, ${organizationSlug})
+        insert into identity.organizations (id, slug, name)
+        values (${organizationId}, ${organizationSlug}, 'Integration Test Org')
       `;
       await connection.sql`
         insert into customers.customers
@@ -368,8 +368,8 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       connection = createDatabaseConnection(databaseUrl);
 
       await connection.sql`
-        insert into identity.organizations (id, slug)
-        values (${organizationId}, ${organizationSlug})
+        insert into identity.organizations (id, slug, name)
+        values (${organizationId}, ${organizationSlug}, 'Integration Test Org')
       `;
 
       for (let index = 0; index < seededCustomerCount; index += 1) {

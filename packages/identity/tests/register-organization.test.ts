@@ -7,6 +7,11 @@ import { InMemoryIdentityUnitOfWork } from "../src/adapters/in-memory-identity-u
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
 import { RegisterOrganizationUseCase } from "../src/application/register-organization.js";
+import {
+  TEST_BETA_ORG_NAME,
+  TEST_STAFF_DISPLAY_NAME,
+  testStaffUser,
+} from "./support/fixtures.js";
 
 const ACME_STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440011");
 
@@ -22,19 +27,27 @@ function harness() {
   };
 }
 
+const validRegistration = {
+  name: TEST_BETA_ORG_NAME,
+  staffDisplayName: TEST_STAFF_DISPLAY_NAME,
+};
+
 describe("RegisterOrganization (in-memory)", () => {
   it("creates a distinct Beta org and first staff without touching Acme DEFAULT data", async () => {
     const h = harness();
-    await h.staffUsers.save({
-      id: ACME_STAFF_ID,
-      organizationId: OrganizationId.DEFAULT,
-      email: "owner@acme.test",
-      passwordHash: await h.passwords.hash("acme-secret"),
-      roles: ["admin"],
-    });
+    await h.staffUsers.save(
+      testStaffUser({
+        id: ACME_STAFF_ID,
+        organizationId: OrganizationId.DEFAULT,
+        email: "owner@acme.test",
+        passwordHash: await h.passwords.hash("acme-secret"),
+        roles: ["admin"],
+      }),
+    );
 
     const result = await h.registerOrganization.execute({
       slug: "beta-wholesale",
+      ...validRegistration,
       staffEmail: "owner@beta.test",
       staffPassword: "Beta-secret1",
     });
@@ -48,7 +61,11 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(OrganizationId.parse(result.organizationId)).toBe(result.organizationId);
 
     const betaOrg = await h.uow.organizations.findBySlug("beta-wholesale");
-    expect(betaOrg).toEqual({ id: result.organizationId, slug: "beta-wholesale" });
+    expect(betaOrg).toEqual({
+      id: result.organizationId,
+      slug: "beta-wholesale",
+      name: TEST_BETA_ORG_NAME,
+    });
 
     const betaStaff = await h.staffUsers.findByEmail(result.organizationId, "owner@beta.test");
     expect(betaStaff).not.toBeNull();
@@ -64,16 +81,19 @@ describe("RegisterOrganization (in-memory)", () => {
 
   it("allows the same email in DEFAULT and a new org", async () => {
     const h = harness();
-    await h.staffUsers.save({
-      id: ACME_STAFF_ID,
-      organizationId: OrganizationId.DEFAULT,
-      email: "shared@local.test",
-      passwordHash: await h.passwords.hash("acme-secret"),
-      roles: ["admin"],
-    });
+    await h.staffUsers.save(
+      testStaffUser({
+        id: ACME_STAFF_ID,
+        organizationId: OrganizationId.DEFAULT,
+        email: "shared@local.test",
+        passwordHash: await h.passwords.hash("acme-secret"),
+        roles: ["admin"],
+      }),
+    );
 
     const result = await h.registerOrganization.execute({
       slug: "beta",
+      ...validRegistration,
       staffEmail: "shared@local.test",
       staffPassword: "Beta-secret1",
     });
@@ -97,6 +117,7 @@ describe("RegisterOrganization (in-memory)", () => {
 
     const first = await h.registerOrganization.execute({
       slug: "beta",
+      ...validRegistration,
       staffEmail: "owner@beta.test",
       staffPassword: "Beta-secret1",
     });
@@ -104,18 +125,20 @@ describe("RegisterOrganization (in-memory)", () => {
 
     const duplicateSlug = await h.registerOrganization.execute({
       slug: "beta",
+      ...validRegistration,
       staffEmail: "other@beta.test",
       staffPassword: "Other-secret1",
     });
     expect(duplicateSlug).toEqual({ ok: false, reason: "slug_taken" });
   });
 
-  it("rejects invalid slug, email, or password", async () => {
+  it("rejects invalid slug, email, password, org name, or staff display name", async () => {
     const h = harness();
 
     expect(
       await h.registerOrganization.execute({
         slug: "Bad Slug",
+        ...validRegistration,
         staffEmail: "owner@beta.test",
         staffPassword: "secret",
       }),
@@ -124,6 +147,7 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(
       await h.registerOrganization.execute({
         slug: "beta",
+        ...validRegistration,
         staffEmail: "   ",
         staffPassword: "secret",
       }),
@@ -132,8 +156,29 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(
       await h.registerOrganization.execute({
         slug: "beta",
+        ...validRegistration,
         staffEmail: "owner@beta.test",
         staffPassword: "",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+
+    expect(
+      await h.registerOrganization.execute({
+        slug: "beta",
+        name: " ",
+        staffDisplayName: TEST_STAFF_DISPLAY_NAME,
+        staffEmail: "owner@beta.test",
+        staffPassword: "secret",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+
+    expect(
+      await h.registerOrganization.execute({
+        slug: "beta",
+        name: TEST_BETA_ORG_NAME,
+        staffDisplayName: " ",
+        staffEmail: "owner@beta.test",
+        staffPassword: "secret",
       }),
     ).toEqual({ ok: false, reason: "invalid" });
   });
@@ -144,6 +189,7 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(
       await h.registerOrganization.execute({
         slug: "beta",
+        ...validRegistration,
         staffEmail: "owner@beta.test",
         staffPassword: "short1A",
       }),
@@ -152,6 +198,7 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(
       await h.registerOrganization.execute({
         slug: "beta",
+        ...validRegistration,
         staffEmail: "owner@beta.test",
         staffPassword: "beta-secret1",
       }),
@@ -160,6 +207,7 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(
       await h.registerOrganization.execute({
         slug: "beta",
+        ...validRegistration,
         staffEmail: "owner@beta.test",
         staffPassword: "BETA-SECRET1",
       }),
@@ -168,6 +216,7 @@ describe("RegisterOrganization (in-memory)", () => {
     expect(
       await h.registerOrganization.execute({
         slug: "beta",
+        ...validRegistration,
         staffEmail: "owner@beta.test",
         staffPassword: "Beta-secret",
       }),

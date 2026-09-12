@@ -19,6 +19,7 @@ export type OpsActorKind = "operator" | "business_owner";
 export type OpsUser = {
   id: OpsUserId;
   tenantId: OrganizationId;
+  displayName: string;
   email: string;
   passwordHash: string;
   kind: OpsActorKind;

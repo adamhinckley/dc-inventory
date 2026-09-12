@@ -1,5 +1,6 @@
 import type { OrganizationId } from "@dc-inventory/shared-kernel";
 import type { Organization } from "../domain/organization.js";
+import { parseOrganizationName } from "../domain/required-text.js";
 import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
 
 export class InMemoryOrganizationRepository implements IOrganizationRepository {
@@ -15,7 +16,10 @@ export class InMemoryOrganizationRepository implements IOrganizationRepository {
   }
 
   async save(organization: Organization): Promise<void> {
-    const stored = { ...organization };
+    const stored = {
+      ...organization,
+      name: parseOrganizationName(organization.name),
+    };
     this.byId.set(stored.id, stored);
     this.bySlug.set(stored.slug, stored);
   }

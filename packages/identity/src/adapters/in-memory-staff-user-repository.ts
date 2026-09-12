@@ -1,5 +1,6 @@
 import type { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { normalizeEmail } from "../domain/email.js";
+import { parseDisplayName } from "../domain/required-text.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { StaffUser } from "../domain/staff-user.js";
 
@@ -22,6 +23,7 @@ export class InMemoryStaffUserRepository implements IStaffUserRepository {
   async save(user: StaffUser): Promise<void> {
     const stored = {
       ...user,
+      displayName: parseDisplayName(user.displayName),
       email: normalizeEmail(user.email),
       roles: [...user.roles],
     };

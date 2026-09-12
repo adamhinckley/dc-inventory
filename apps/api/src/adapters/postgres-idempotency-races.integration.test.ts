@@ -46,8 +46,8 @@ describe.skipIf(!integrationEnabled || !databaseUrl)(
       second = createDatabaseConnection(databaseUrl);
 
       await first.sql`
-        insert into identity.organizations (id, slug)
-        values (${organizationId}, ${organizationSlug})
+        insert into identity.organizations (id, slug, name)
+        values (${organizationId}, ${organizationSlug}, 'Integration Test Org')
       `;
       await first.sql`
         insert into inventory.locations (organization_id, code, is_pick_bin)

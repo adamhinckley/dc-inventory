@@ -4,6 +4,7 @@ import {
   InMemorySessionStore,
   InMemoryStaffUserRepository,
 } from "@dc-inventory/identity";
+import { testStaffUser } from "@dc-inventory/identity/test-fixtures";
 import type { FeatureName, IFeatures } from "@dc-inventory/licensing";
 import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import { afterEach, describe, expect, it } from "vitest";
@@ -30,14 +31,16 @@ async function authenticatedApp(disabled: FeatureName) {
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
   const passwords = new InMemoryPasswordHasher();
-  await organizations.save({ id: OrganizationId.DEFAULT, slug: "default" });
-  await staffUsers.save({
-    id: StaffUserId.parse("11111111-1111-4111-8111-111111111111"),
-    organizationId: OrganizationId.DEFAULT,
-    email: "staff@example.test",
-    passwordHash: await passwords.hash("secret"),
-    roles: ["admin"],
-  });
+  await organizations.save({ id: OrganizationId.DEFAULT, slug: "default", name: "Acme Wholesale" });
+  await staffUsers.save(
+    testStaffUser({
+      id: StaffUserId.parse("11111111-1111-4111-8111-111111111111"),
+      organizationId: OrganizationId.DEFAULT,
+      email: "staff@example.test",
+      passwordHash: await passwords.hash("secret"),
+      roles: ["admin"],
+    }),
+  );
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),

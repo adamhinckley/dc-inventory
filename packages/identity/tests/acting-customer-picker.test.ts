@@ -167,6 +167,7 @@ async function seedStaffActingSession(h: ReturnType<typeof harness>) {
   await h.staffUsers.save({
     id: STAFF_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Staff",
     email: "staff@local.test",
     passwordHash: "hash",
     roles: ["admin"],
@@ -174,6 +175,7 @@ async function seedStaffActingSession(h: ReturnType<typeof harness>) {
   await h.wholesaleUsers.save({
     id: WHOLESALE_ID,
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "buyer@local.test",
     passwordHash: "hash",
     customerId: ACTIVE_CUSTOMER_ID,
@@ -181,6 +183,7 @@ async function seedStaffActingSession(h: ReturnType<typeof harness>) {
   await h.wholesaleUsers.save({
     id: WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440008"),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "onhold@local.test",
     passwordHash: "hash",
     customerId: ON_HOLD_CUSTOMER_ID,
@@ -188,6 +191,7 @@ async function seedStaffActingSession(h: ReturnType<typeof harness>) {
   await h.wholesaleUsers.save({
     id: WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440009"),
     organizationId: OrganizationId.DEFAULT,
+    displayName: "Test Wholesale User",
     email: "inactive@local.test",
     passwordHash: "hash",
     customerId: INACTIVE_CUSTOMER_ID,
@@ -250,6 +254,7 @@ describe("acting customer picker use cases", () => {
     await h.staffUsers.save({
       id: STAFF_ID,
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Test Staff",
       email: "staff@local.test",
       passwordHash: "hash",
       roles: ["admin"],
@@ -353,6 +358,7 @@ describe("acting customer picker use cases", () => {
     await h.wholesaleUsers.save({
       id: WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440010"),
       organizationId: OTHER_ORG_ID,
+      displayName: "Test Wholesale User",
       email: "other@local.test",
       passwordHash: "hash",
       customerId: OTHER_ORG_CUSTOMER_ID,

@@ -5,6 +5,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import { normalizeEmail } from "../domain/email.js";
+import { parseDisplayName } from "../domain/required-text.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
 import type { WholesaleUser } from "../domain/wholesale-user.js";
 import { wholesaleUsers } from "../persistence/schema.js";
@@ -55,11 +56,13 @@ export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository 
 
   async save(user: WholesaleUser): Promise<void> {
     const email = normalizeEmail(user.email);
+    const displayName = parseDisplayName(user.displayName);
     await this.db
       .insert(wholesaleUsers)
       .values({
         id: user.id,
         organizationId: user.organizationId,
+        displayName,
         email,
         passwordHash: user.passwordHash,
         customerId: user.customerId,
@@ -68,6 +71,7 @@ export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository 
         target: wholesaleUsers.id,
         set: {
           organizationId: user.organizationId,
+          displayName,
           email,
           passwordHash: user.passwordHash,
           customerId: user.customerId,
@@ -81,6 +85,7 @@ function toWholesaleUser(row: typeof wholesaleUsers.$inferSelect): WholesaleUser
   return {
     id: WholesaleUserId.parse(row.id),
     organizationId: OrganizationId.parse(row.organizationId),
+    displayName: row.displayName,
     email: row.email,
     passwordHash: row.passwordHash,
     customerId: CustomerId.parse(row.customerId),

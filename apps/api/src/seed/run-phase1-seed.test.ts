@@ -107,10 +107,11 @@ describe("Phase 1 seed (in-memory)", () => {
 
   it("upgrades existing demo staff roles to include accounting", async () => {
     const ports = seedPorts();
-    await ports.organizations.save({ id: OrganizationId.DEFAULT, slug: PHASE1_ORGANIZATION_SLUG });
+    await ports.organizations.save({ id: OrganizationId.DEFAULT, slug: PHASE1_ORGANIZATION_SLUG, name: "Acme Wholesale" });
     await ports.staffUsers.save({
       id: StaffUserId.parse("11111111-1111-4111-8111-111111111111"),
       organizationId: OrganizationId.DEFAULT,
+      displayName: "Demo Staff",
       email: PHASE1_STAFF_EMAIL,
       passwordHash: await ports.passwords.hash("staff-placeholder"),
       roles: ["admin"],

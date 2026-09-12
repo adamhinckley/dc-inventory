@@ -9,12 +9,15 @@ import { isPasswordPolicyCompliant } from "../domain/password-policy.js";
 import type { Organization } from "../domain/organization.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { IIdentityUnitOfWork } from "../domain/ports/identity-unit-of-work.js";
+import { parseDisplayName, parseOrganizationName } from "../domain/required-text.js";
 import type { StaffUser } from "../domain/staff-user.js";
 
 export type RegisterOrganizationRequest = {
   slug: string;
+  name: string;
   staffEmail: string;
   staffPassword: string;
+  staffDisplayName: string;
 };
 
 export type RegisterOrganizationResult =
@@ -43,6 +46,15 @@ export class RegisterOrganizationUseCase {
     const email = normalizeEmail(input.staffEmail);
     const password = input.staffPassword;
 
+    let organizationName: string;
+    let staffDisplayName: string;
+    try {
+      organizationName = parseOrganizationName(input.name);
+      staffDisplayName = parseDisplayName(input.staffDisplayName);
+    } catch {
+      return { ok: false, reason: "invalid" };
+    }
+
     if (
       !SLUG_PATTERN.test(slug) ||
       email.length === 0 ||
@@ -60,10 +72,11 @@ export class RegisterOrganizationUseCase {
 
       const organizationId = OrganizationId.parse(newUuid());
 
-      const organization: Organization = { id: organizationId, slug };
+      const organization: Organization = { id: organizationId, slug, name: organizationName };
       const staffUser: StaffUser = {
         id: StaffUserId.parse(newUuid()),
         organizationId,
+        displayName: staffDisplayName,
         email,
         passwordHash: await this.passwords.hash(password),
         roles: ["admin"],

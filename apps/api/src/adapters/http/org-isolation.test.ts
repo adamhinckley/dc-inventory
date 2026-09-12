@@ -57,8 +57,8 @@ afterEach(async () => {
 async function startTwoOrgIsolationApp() {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
-  await organizations.save({ id: DEFAULT_ORG, slug: ACME_SLUG });
-  await organizations.save({ id: BETA_ORG, slug: BETA_SLUG });
+  await organizations.save({ id: DEFAULT_ORG, slug: ACME_SLUG, name: "Acme Wholesale" });
+  await organizations.save({ id: BETA_ORG, slug: BETA_SLUG, name: "Beta Wholesale" });
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -72,6 +72,7 @@ async function startTwoOrgIsolationApp() {
   await staffUsers.save({
     id: ACME_STAFF_ID,
     organizationId: DEFAULT_ORG,
+    displayName: "Test Staff",
     email: "acme-staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -79,6 +80,7 @@ async function startTwoOrgIsolationApp() {
   await staffUsers.save({
     id: BETA_STAFF_ID,
     organizationId: BETA_ORG,
+    displayName: "Test Staff",
     email: "beta-staff@local.test",
     passwordHash: await passwords.hash("staff-secret"),
     roles: ["admin"],
@@ -104,6 +106,7 @@ async function startTwoOrgIsolationApp() {
   await wholesaleUsers.save({
     id: ACME_WHOLESALE_ID,
     organizationId: DEFAULT_ORG,
+    displayName: "Test Wholesale User",
     email: "acme-shop@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: ACME_CUSTOMER_ID,
@@ -111,6 +114,7 @@ async function startTwoOrgIsolationApp() {
   await wholesaleUsers.save({
     id: BETA_WHOLESALE_ID,
     organizationId: BETA_ORG,
+    displayName: "Test Wholesale User",
     email: "beta-shop@local.test",
     passwordHash: await passwords.hash("wholesale-secret"),
     customerId: BETA_CUSTOMER_ID,
