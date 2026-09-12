@@ -1,29 +1,43 @@
 "use client";
 
 import { useLoginInternal } from "@dc-inventory/api-client-internal";
-import { Button, Input, Label, LabeledField, isSuccessfulOrvalResponse } from "@dc-inventory/ui";
+import { Button, Input, Label, LabeledField } from "@dc-inventory/ui";
 import { useState, type FormEvent } from "react";
 
-export function StaffSignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
+type SignedInSession =
+  | { audience: "staff" }
+  | { audience: "platform" };
+
+export function StaffSignInForm({
+  onSignedIn,
+}: {
+  onSignedIn?: (session: SignedInSession) => void;
+}) {
   const login = useLoginInternal();
   const [error, setError] = useState<string | null>(null);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const organizationSlug = String(form.get("organizationSlug") ?? "");
+    const organizationSlugRaw = String(form.get("organizationSlug") ?? "").trim();
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
     setError(null);
     login.mutate(
-      { data: { organizationSlug, email, password } },
+      {
+        data: {
+          ...(organizationSlugRaw.length > 0 ? { organizationSlug: organizationSlugRaw } : {}),
+          email,
+          password,
+        },
+      },
       {
         onSuccess: (result) => {
-          if (!isSuccessfulOrvalResponse(result)) {
+          if (result.status !== 200) {
             setError("Sign-in failed.");
             return;
           }
-          onSignedIn?.();
+          onSignedIn?.({ audience: result.data.audience });
         },
         onError: () => {
           setError("Sign-in failed.");
@@ -33,17 +47,15 @@ export function StaffSignInForm({ onSignedIn }: { onSignedIn?: () => void }) {
   }
 
   return (
-    <form className="flex flex-col gap-field-group" onSubmit={onSubmit}>
+    <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
       <LabeledField>
-        <Label htmlFor="organizationSlug">Organization</Label>
+        <Label htmlFor="organizationSlug">Organization (staff only)</Label>
         <Input
           id="organizationSlug"
           type="text"
           name="organizationSlug"
           autoComplete="organization"
           placeholder="acme"
-          defaultValue="acme"
-          required
         />
       </LabeledField>
       <LabeledField>

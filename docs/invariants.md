@@ -507,7 +507,7 @@ Commands use this matrix:
 | Write-off, credit memo, void payment (`ar_adjust`) | yes | no | no | no | yes |
 | Create / end payment plan (`payment_plans_manage`) | yes | no | no | no | yes |
 | Edit customer credit limit (`credit_limit_manage`) | yes | no | no | no | yes |
-| Manage organizations — tier 1 (`organizations_manage`) | yes | no | no | no | no |
+| Manage organizations — tier 1 (`organizations_manage`) | Platform user only | no | no | no | no |
 | Create / deactivate staff; edit roles (`staff_manage`) | yes | no | no | no | no |
 | Create wholesale shop logins (`WholesaleUser` + invite) | yes | no | no | no | no |
 
@@ -517,7 +517,7 @@ for sales support; `accounting` is the AR role ([`accounting.md`](./accounting.m
 `master_data_manage`. New roles or actions require this table and the static policy to change
 together. v1 has no permission CMS, per-user grants, per-amount thresholds, or feature-flag replacement for RBAC.
 
-**Onboarding (locked [DCI-406](https://linear.app/adamhinckley/issue/DCI-406), [DCI-409](https://linear.app/adamhinckley/issue/DCI-409)):** `organizations_manage` is **`DEFAULT` / platform only** — ops provisions a new tenant, not every tenant admin. `staff_manage` and wholesale login creation are **`admin` only** within a tenant. Customer onboarding is **pending until approve** or **staff-for-them** — see [`customers.md`](./customers.md) §15. U5, U10, and U13 meaning unchanged.
+**Onboarding (locked [DCI-406](https://linear.app/adamhinckley/issue/DCI-406), [DCI-409](https://linear.app/adamhinckley/issue/DCI-409)):** `organizations_manage` is **Platform-user-only** — ops provisions a new tenant via Platform login, not tenant staff admin. `staff_manage` and wholesale login creation are **`admin` only** within a tenant. Customer onboarding is **pending until approve** or **staff-for-them** — see [`customers.md`](./customers.md) §15. U5, U10, and U13 meaning unchanged.
 
 ### G9. Purchasing state machine (cancel, over/under receive)
 

@@ -1,12 +1,13 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
+  internalSessionResponseSchema,
+  internalSetPasswordBodySchema,
+  internalLoginBodySchema,
   loginBodySchema,
   logoutResponseSchema,
-  setPasswordBodySchema,
   setPasswordFailureResponseSchema,
   setPasswordSuccessResponseSchema,
-  staffSessionResponseSchema,
   tooManyLoginAttemptsResponseSchema,
   unauthorizedResponseSchema,
 } from "../../schemas.js";
@@ -18,8 +19,8 @@ import {
   WHOLESALE_SESSION_COOKIE,
 } from "./auth-cookies.js";
 import {
-  createLoginThrottlePreHandler,
-  resetLoginThrottle,
+  createInternalLoginThrottlePreHandler,
+  resetInternalLoginThrottle,
 } from "./login-throttle.js";
 
 function typed(app: FastifyInstance) {
@@ -33,38 +34,65 @@ function unauthorized(reply: FastifyReply, request: FastifyRequest, token: strin
   return reply.code(401).send({ error: "unauthorized" as const });
 }
 
+function isStaffLogin(body: { organizationSlug?: string }): boolean {
+  return body.organizationSlug !== undefined && body.organizationSlug.trim().length > 0;
+}
+
 export function registerInternalAuthRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
   routes.post(
     "/auth/login",
     {
-      preHandler: createLoginThrottlePreHandler("staff"),
+      preHandler: createInternalLoginThrottlePreHandler(),
       schema: {
         operationId: "loginInternal",
         tags: ["internal-auth"],
-        summary: "Staff login; sets HttpOnly staff_session",
-        body: loginBodySchema,
+        summary: "Staff or Platform login; sets HttpOnly staff_session",
+        body: internalLoginBodySchema,
         response: {
-          200: staffSessionResponseSchema,
+          200: internalSessionResponseSchema,
           401: unauthorizedResponseSchema,
           429: tooManyLoginAttemptsResponseSchema,
         },
       },
     },
     async (request, reply) => {
-      const result = await request.server.identity.loginStaff.execute(request.body);
+      if (isStaffLogin(request.body)) {
+        const result = await request.server.identity.loginStaff.execute({
+          organizationSlug: request.body.organizationSlug!.trim(),
+          email: request.body.email,
+          password: request.body.password,
+        });
+        if (!result.ok) {
+          return reply.code(401).send({ error: "unauthorized" as const });
+        }
+        await resetInternalLoginThrottle(request, "staff");
+        clearLegacySessionCookie(reply, WHOLESALE_SESSION_COOKIE, request);
+        setSessionCookie(reply, STAFF_SESSION_COOKIE, result.sessionId, request);
+        return {
+          audience: "staff" as const,
+          staffUserId: result.staffUserId,
+          email: result.email,
+          organizationId: result.organizationId,
+          roles: [...result.roles],
+        };
+      }
+
+      const result = await request.server.identity.loginPlatform.execute({
+        email: request.body.email,
+        password: request.body.password,
+      });
       if (!result.ok) {
         return reply.code(401).send({ error: "unauthorized" as const });
       }
-      await resetLoginThrottle(request, "staff");
+      await resetInternalLoginThrottle(request, "platform");
       clearLegacySessionCookie(reply, WHOLESALE_SESSION_COOKIE, request);
       setSessionCookie(reply, STAFF_SESSION_COOKIE, result.sessionId, request);
       return {
-        staffUserId: result.staffUserId,
+        audience: "platform" as const,
+        platformUserId: result.platformUserId,
         email: result.email,
-        organizationId: result.organizationId,
-        roles: [...result.roles],
       };
     },
   );
@@ -75,7 +103,7 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
       schema: {
         operationId: "logoutInternal",
         tags: ["internal-auth"],
-        summary: "Revoke staff session and clear cookie",
+        summary: "Revoke staff or platform session and clear cookie",
         response: {
           200: logoutResponseSchema,
           401: unauthorizedResponseSchema,
@@ -84,8 +112,13 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
     },
     async (request, reply) => {
       const token = request.cookies[STAFF_SESSION_COOKIE];
-      const result = await request.server.identity.logoutStaff.execute(token);
-      if (!result.ok) {
+      const staffResult = await request.server.identity.logoutStaff.execute(token);
+      if (staffResult.ok) {
+        clearSessionCookie(reply, STAFF_SESSION_COOKIE, request);
+        return { ok: true as const };
+      }
+      const platformResult = await request.server.identity.logoutPlatform.execute(token);
+      if (!platformResult.ok) {
         return unauthorized(reply, request, token);
       }
       clearSessionCookie(reply, STAFF_SESSION_COOKIE, request);
@@ -99,8 +132,8 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
       schema: {
         operationId: "setPasswordInternal",
         tags: ["internal-auth"],
-        summary: "Set staff password from invite token",
-        body: setPasswordBodySchema,
+        summary: "Set staff or platform password from invite token",
+        body: internalSetPasswordBodySchema,
         response: {
           200: setPasswordSuccessResponseSchema,
           400: setPasswordFailureResponseSchema,
@@ -108,10 +141,11 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
       },
     },
     async (request, reply) => {
+      const audience = request.body.audience ?? "staff";
       const result = await request.server.identity.setPasswordStaff.execute({
         token: request.body.token,
         password: request.body.password,
-        audience: "staff",
+        audience,
       });
       if (!result.ok) {
         if (result.reason === "password_policy") {
@@ -129,24 +163,33 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
       schema: {
         operationId: "getInternalSession",
         tags: ["internal-auth"],
-        summary: "Current staff session",
+        summary: "Current staff or platform session",
         response: {
-          200: staffSessionResponseSchema,
+          200: internalSessionResponseSchema,
           401: unauthorizedResponseSchema,
         },
       },
     },
     async (request, reply) => {
       const token = request.cookies[STAFF_SESSION_COOKIE];
-      const result = await request.server.identity.resolveStaff.execute(token);
-      if (!result.ok) {
+      const staffResult = await request.server.identity.resolveStaff.execute(token);
+      if (staffResult.ok) {
+        return {
+          audience: "staff" as const,
+          staffUserId: staffResult.staffUserId,
+          email: staffResult.email,
+          organizationId: staffResult.organizationId,
+          roles: [...staffResult.roles],
+        };
+      }
+      const platformResult = await request.server.identity.resolvePlatform.execute(token);
+      if (!platformResult.ok) {
         return unauthorized(reply, request, token);
       }
       return {
-        staffUserId: result.staffUserId,
-        email: result.email,
-        organizationId: result.organizationId,
-        roles: [...result.roles],
+        audience: "platform" as const,
+        platformUserId: platformResult.platformUserId,
+        email: platformResult.email,
       };
     },
   );

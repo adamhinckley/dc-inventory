@@ -11,8 +11,11 @@ function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const audience = searchParams.get("audience") === "platform" ? "platform" : "staff";
   const setPassword = useSetPasswordInternal();
   const [error, setError] = useState<string | null>(null);
+
+  const accountKind = audience === "platform" ? "platform" : "staff";
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,7 +27,7 @@ function SetPasswordForm() {
     const password = String(form.get("password") ?? "");
     setError(null);
     setPassword.mutate(
-      { data: { token, password } },
+      { data: { token, password, audience } },
       {
         onSuccess: (result) => {
           if (!isSuccessfulOrvalResponse(result)) {
@@ -48,7 +51,7 @@ function SetPasswordForm() {
     <section className="section-flat w-full max-w-md p-panel">
       <h1 className="page-title">Set your password</h1>
       <p className="page-description mt-2">
-        Choose a password to finish setting up your staff account.
+        Choose a password to finish setting up your {accountKind} account.
       </p>
       <form className="mt-8 flex flex-col gap-field-group" onSubmit={onSubmit}>
         <LabeledField>

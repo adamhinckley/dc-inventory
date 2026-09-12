@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { canManageOrganizations } from "./staff-organizations-manage";
+import { isPlatformSession } from "./staff-organizations-manage";
 
-describe("canManageOrganizations", () => {
-  it("allows DEFAULT platform admins only", () => {
-    expect(canManageOrganizations(["admin"], "DEFAULT")).toBe(true);
-    expect(canManageOrganizations(["purchasing"], "DEFAULT")).toBe(false);
-    expect(canManageOrganizations(["admin"], "660e8400-e29b-41d4-a716-446655440099")).toBe(
-      false,
-    );
+describe("isPlatformSession", () => {
+  it("returns true only when the internal session audience is platform", () => {
+    expect(isPlatformSession(undefined)).toBe(false);
+    expect(
+      isPlatformSession({
+        audience: "staff",
+        staffUserId: "550e8400-e29b-41d4-a716-446655440001",
+        email: "staff@local.test",
+        organizationId: "00000000-0000-0000-0000-000000000000",
+        roles: ["admin"],
+      }),
+    ).toBe(false);
+    expect(
+      isPlatformSession({
+        audience: "platform",
+        platformUserId: "550e8400-e29b-41d4-a716-446655440010",
+        email: "adam@local.test",
+      }),
+    ).toBe(true);
   });
 });

@@ -12,6 +12,7 @@ import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS } from "../src/adapters/active-wholesale-login-account-status.js";
 import { InMemoryOrganizationRepository } from "../src/adapters/in-memory-organization-repository.js";
 import { InMemoryOpsUserRepository } from "../src/adapters/in-memory-ops-user-repository.js";
+import { InMemoryPlatformUserRepository } from "../src/adapters/in-memory-platform-user-repository.js";
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
 import { InMemorySessionStore } from "../src/adapters/in-memory-session-store.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
@@ -47,6 +48,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   const opsUsers = new InMemoryOpsUserRepository();
+  const platformUsers = new InMemoryPlatformUserRepository();
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -55,6 +57,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
     passwords,
     organizations,
     opsUsers,
+    platformUsers,
     staffUsers,
     wholesaleUsers,
     sessions,
@@ -68,6 +71,7 @@ function harness(at = new Date("2026-08-23T02:00:00.000Z")) {
     loginStaff: new LoginStaffUseCase(
       organizations,
       staffUsers,
+      platformUsers,
       sessions,
       passwords,
       clock,

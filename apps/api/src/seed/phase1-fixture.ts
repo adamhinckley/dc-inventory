@@ -12,6 +12,8 @@ export const PHASE1_CUSTOMER_CURRENCY = "USD";
 
 export const PHASE1_STAFF_EMAIL = "staff@local.test";
 export const PHASE1_STAFF_DISPLAY_NAME = "Demo Staff";
+export const PHASE1_PLATFORM_EMAIL = "adam@local.test";
+export const PHASE1_PLATFORM_DISPLAY_NAME = "Adam Platform";
 export const PHASE1_WHOLESALE_EMAIL = "wholesale@local.test";
 export const PHASE1_WHOLESALE_DISPLAY_NAME = "Acme Shop User";
 /** Second demo shop login for Northstar Big Box (staff-acting picker smoke). */

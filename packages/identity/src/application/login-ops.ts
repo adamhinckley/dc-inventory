@@ -61,6 +61,7 @@ export class LoginOpsUseCase {
       audience: "ops",
       organizationId: user.tenantId,
       staffUserId: null,
+      platformUserId: null,
       wholesaleUserId: null,
       opsUserId: user.id,
       customerId: null,

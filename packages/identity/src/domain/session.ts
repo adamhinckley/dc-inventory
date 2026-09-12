@@ -1,6 +1,7 @@
 import type {
   CustomerId,
   OrganizationId,
+  PlatformUserId,
   SessionId,
   StaffUserId,
   WholesaleUserId,
@@ -11,13 +12,14 @@ export const SESSION_IDLE_MS = 30 * 60 * 1000;
 export const SESSION_ABSOLUTE_MS = 8 * 60 * 60 * 1000;
 export const SESSION_TOUCH_DEBOUNCE_MS = 5 * 60 * 1000;
 
-export type SessionAudience = "staff" | "wholesale" | "ops";
+export type SessionAudience = "staff" | "wholesale" | "ops" | "platform";
 
 export type Session = {
   id: SessionId;
   audience: SessionAudience;
-  organizationId: OrganizationId;
+  organizationId: OrganizationId | null;
   staffUserId: StaffUserId | null;
+  platformUserId: PlatformUserId | null;
   wholesaleUserId: WholesaleUserId | null;
   opsUserId: OpsUserId | null;
   customerId: CustomerId | null;

@@ -4,10 +4,12 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
+import type { SetPasswordInternalBodyAudience } from './setPasswordInternalBodyAudience';
 
 export type SetPasswordInternalBody = {
   /** @minLength 1 */
   token: string;
   /** @minLength 1 */
   password: string;
+  audience?: SetPasswordInternalBodyAudience;
 };

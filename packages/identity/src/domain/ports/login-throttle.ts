@@ -1,4 +1,4 @@
-export type LoginAudience = "staff" | "wholesale" | "ops";
+export type LoginAudience = "staff" | "wholesale" | "ops" | "platform";
 
 export type LoginThrottleKey = {
   audience: LoginAudience;

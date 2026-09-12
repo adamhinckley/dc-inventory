@@ -11,6 +11,11 @@ function isAuthRoute(request: FastifyRequest): boolean {
   return url.includes("/auth/");
 }
 
+function isPlatformRoute(request: FastifyRequest): boolean {
+  const schema = request.routeOptions.schema as { operationId?: string } | undefined;
+  return schema?.operationId === "createInternalOrganization";
+}
+
 function isOpsLoginRoute(request: FastifyRequest): boolean {
   const url = request.routeOptions.url ?? request.url.split("?")[0] ?? "";
   return url === "/auth/login" || url === "/ops/auth/login";
@@ -32,20 +37,38 @@ export function registerStaffAudienceGuard(app: FastifyInstance): void {
     if (request.staffAuth !== undefined) {
       return;
     }
-    const token = request.cookies[STAFF_SESSION_COOKIE];
-    const result = await request.server.identity.resolveStaff.execute(token);
-    if (!result.ok) {
-      if (token !== undefined && token.length > 0) {
-        clearSessionCookie(reply, STAFF_SESSION_COOKIE, request);
+    if (request.platformAuth !== undefined) {
+      if (isPlatformRoute(request)) {
+        return;
       }
       return sendUnauthorized(reply);
     }
-    request.staffAuth = {
-      staffUserId: result.staffUserId,
-      email: result.email,
-      organizationId: result.organizationId,
-      roles: result.roles,
-    };
+    const token = request.cookies[STAFF_SESSION_COOKIE];
+    const staffResult = await request.server.identity.resolveStaff.execute(token);
+    if (staffResult.ok) {
+      request.staffAuth = {
+        staffUserId: staffResult.staffUserId,
+        email: staffResult.email,
+        organizationId: staffResult.organizationId,
+        roles: staffResult.roles,
+      };
+      return;
+    }
+    const platformResult = await request.server.identity.resolvePlatform.execute(token);
+    if (platformResult.ok) {
+      if (!isPlatformRoute(request)) {
+        return sendUnauthorized(reply);
+      }
+      request.platformAuth = {
+        platformUserId: platformResult.platformUserId,
+        email: platformResult.email,
+      };
+      return;
+    }
+    if (token !== undefined && token.length > 0) {
+      clearSessionCookie(reply, STAFF_SESSION_COOKIE, request);
+    }
+    return sendUnauthorized(reply);
   });
 }
 

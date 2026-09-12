@@ -7,6 +7,7 @@ import {
 } from "@dc-inventory/customers";
 import {
   DrizzleOrganizationRepository,
+  DrizzlePlatformUserRepository,
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
   ScryptPasswordHasher,
@@ -17,6 +18,7 @@ import { createDatabaseConnection } from "../infrastructure/db.js";
 import {
   PHASE1_CUSTOMER_NAME,
   PHASE1_ORGANIZATION_SLUG,
+  PHASE1_PLATFORM_EMAIL,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
 } from "./phase1-fixture.js";
@@ -36,7 +38,9 @@ function loadLocalEnvFiles(): void {
 
 loadLocalEnvFiles();
 
-function readSecret(name: "PHASE1_STAFF_PASSWORD" | "PHASE1_WHOLESALE_PASSWORD"): string {
+function readSecret(
+  name: "PHASE1_STAFF_PASSWORD" | "PHASE1_WHOLESALE_PASSWORD" | "PHASE1_PLATFORM_PASSWORD",
+): string {
   const value = process.env[name]?.trim() ?? "";
   if (value.length === 0) {
     throw new Phase1SeedError(
@@ -54,6 +58,9 @@ try {
       organizations: new DrizzleOrganizationRepository(
         connection.db as unknown as IdentityDrizzle,
       ),
+      platformUsers: new DrizzlePlatformUserRepository(
+        connection.db as unknown as IdentityDrizzle,
+      ),
       staffUsers: new DrizzleStaffUserRepository(connection.db as unknown as IdentityDrizzle),
       wholesaleUsers: new DrizzleWholesaleUserRepository(
         connection.db as unknown as IdentityDrizzle,
@@ -63,11 +70,12 @@ try {
     {
       staffPassword: readSecret("PHASE1_STAFF_PASSWORD"),
       wholesalePassword: readSecret("PHASE1_WHOLESALE_PASSWORD"),
+      platformPassword: readSecret("PHASE1_PLATFORM_PASSWORD"),
     },
   );
   await connection.sql.end({ timeout: 5 });
   console.log(
-    `Phase 1 seed upserted ${PHASE1_CUSTOMER_NAME} (${PHASE1_ORGANIZATION_SLUG}), ${PHASE1_STAFF_EMAIL}, ${PHASE1_WHOLESALE_EMAIL} (customer ${result.customer.id}). Catalog stays empty until Product Browser import.`,
+    `Phase 1 seed upserted ${PHASE1_CUSTOMER_NAME} (${PHASE1_ORGANIZATION_SLUG}), ${PHASE1_PLATFORM_EMAIL}, ${PHASE1_STAFF_EMAIL}, ${PHASE1_WHOLESALE_EMAIL} (customer ${result.customer.id}). Catalog stays empty until Product Browser import.`,
   );
 } catch (error) {
   if (error instanceof MissingDatabaseUrlError || error instanceof Phase1SeedError) {

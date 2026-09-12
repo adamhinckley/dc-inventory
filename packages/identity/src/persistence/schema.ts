@@ -34,6 +34,7 @@ export const actorType = identity.enum("actor_type", [
   "staff",
   "wholesale",
   "ops",
+  "platform",
 ]);
 
 export const staffRole = identity.enum("staff_role", [
@@ -103,6 +104,20 @@ export const staffUsers = identity.table(
   }),
 );
 
+export const platformUsers = identity.table(
+  "platform_users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    displayName: text("display_name").notNull(),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    ...timestamps(),
+  },
+  (table) => ({
+    emailUnique: uniqueIndex("platform_users_email_unique").on(table.email),
+  }),
+);
+
 export const wholesaleUsers = identity.table(
   "wholesale_users",
   {
@@ -130,7 +145,8 @@ export const sessions = identity.table("sessions", {
   actorType: actorType("actor_type").notNull(),
   actorId: uuid("actor_id").notNull(),
   staffUserId: uuid("staff_user_id").references(() => staffUsers.id),
-  organizationId: text("organization_id").notNull().default("DEFAULT"),
+  platformUserId: uuid("platform_user_id").references(() => platformUsers.id),
+  organizationId: text("organization_id"),
   customerId: uuid("customer_id").references(() => customers.id),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" })
     .notNull()

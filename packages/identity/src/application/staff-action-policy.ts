@@ -36,13 +36,10 @@ const ALLOWED_ROLES: Readonly<Record<StaffAction, ReadonlySet<StaffRole>>> = {
 export function canStaffPerform(
   roles: readonly StaffRole[],
   action: StaffAction,
-  context?: StaffActionContext,
+  _context?: StaffActionContext,
 ): boolean {
   if (action === "organizations_manage") {
-    return (
-      context?.organizationId === OrganizationId.DEFAULT &&
-      roles.some((role) => ALLOWED_ROLES.organizations_manage.has(role))
-    );
+    return false;
   }
   const allowedRoles = ALLOWED_ROLES[action];
   return roles.some((role) => allowedRoles.has(role));

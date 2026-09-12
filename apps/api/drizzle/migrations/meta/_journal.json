@@ -358,6 +358,13 @@
       "when": 1791755600000,
       "tag": "0051_identity_set_password_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1791855600000,
+      "tag": "0052_identity_platform_users",
+      "breakpoints": true
     }
   ]
 }

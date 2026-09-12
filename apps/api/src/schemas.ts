@@ -6,6 +6,12 @@ export const loginBodySchema = z.object({
   password: z.string().min(1),
 });
 
+export const internalLoginBodySchema = z.object({
+  organizationSlug: z.string().optional(),
+  email: z.string().min(1),
+  password: z.string().min(1),
+});
+
 export const unauthorizedResponseSchema = z.object({
   error: z.literal("unauthorized"),
 });
@@ -31,10 +37,19 @@ export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
 
-export const setPasswordBodySchema = z.object({
+export const internalSetPasswordBodySchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(1),
+  audience: z.enum(["staff", "platform"]).optional(),
+});
+
+export const wholesaleSetPasswordBodySchema = z.object({
   token: z.string().min(1),
   password: z.string().min(1),
 });
+
+/** @deprecated Use internalSetPasswordBodySchema or wholesaleSetPasswordBodySchema */
+export const setPasswordBodySchema = internalSetPasswordBodySchema;
 
 export const setPasswordSuccessResponseSchema = z.object({
   ok: z.literal(true),
@@ -56,11 +71,23 @@ export const staffRoleSchema = z.enum([
 ]);
 
 export const staffSessionResponseSchema = z.object({
+  audience: z.literal("staff"),
   staffUserId: z.string().uuid(),
   email: z.string(),
   organizationId: z.string(),
   roles: z.array(staffRoleSchema),
 });
+
+export const platformSessionResponseSchema = z.object({
+  audience: z.literal("platform"),
+  platformUserId: z.string().uuid(),
+  email: z.string(),
+});
+
+export const internalSessionResponseSchema = z.discriminatedUnion("audience", [
+  staffSessionResponseSchema,
+  platformSessionResponseSchema,
+]);
 
 export const staffUserItemSchema = z.object({
   id: z.string().uuid(),

@@ -7,6 +7,7 @@ import {
   InMemoryClock,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
+  InMemoryPlatformUserRepository,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
@@ -31,6 +32,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
   it("lets seeded staff and wholesale sessions see an empty catalog", async () => {
     const passwords = new InMemoryPasswordHasher();
     const organizations = new InMemoryOrganizationRepository();
+    const platformUsers = new InMemoryPlatformUserRepository();
     const staffUsers = new InMemoryStaffUserRepository();
     const wholesaleUsers = new InMemoryWholesaleUserRepository();
     const sessions = new InMemorySessionStore();
@@ -42,6 +44,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
       {
         customers: customerRepo,
         organizations,
+        platformUsers,
         staffUsers,
         wholesaleUsers,
         passwords,
@@ -49,6 +52,7 @@ describe("Phase 1 seed-shaped HTTP lists", () => {
       {
         staffPassword: "staff-placeholder",
         wholesalePassword: "wholesale-placeholder",
+        platformPassword: "platform-placeholder",
       },
     );
 

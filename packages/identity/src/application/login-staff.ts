@@ -4,6 +4,7 @@ import { normalizeEmail } from "../domain/email.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { ISessionStore } from "../domain/ports/session-store.js";
 import type { IOrganizationRepository } from "../domain/ports/organization-repository.js";
+import type { IPlatformUserRepository } from "../domain/ports/platform-user-repository.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { StaffRole } from "../domain/staff-role.js";
 import { resolveLoginOrganizationId } from "./resolve-login-organization.js";
@@ -29,6 +30,7 @@ export class LoginStaffUseCase {
   constructor(
     private readonly organizations: IOrganizationRepository,
     private readonly staffUsers: IStaffUserRepository,
+    private readonly platformUsers: IPlatformUserRepository,
     private readonly sessions: ISessionStore,
     private readonly passwords: IPasswordHasher,
     private readonly clock: IClock,
@@ -44,6 +46,10 @@ export class LoginStaffUseCase {
       return { ok: false };
     }
     const email = normalizeEmail(input.email);
+    if (await this.platformUsers.findByEmail(email) !== null) {
+      await this.passwords.verifyDummy(input.password);
+      return { ok: false };
+    }
     const user = await this.staffUsers.findByEmail(organizationId, email);
     if (user === null) {
       await this.passwords.verifyDummy(input.password);
@@ -58,6 +64,7 @@ export class LoginStaffUseCase {
       audience: "staff",
       organizationId: user.organizationId,
       staffUserId: user.id,
+      platformUserId: null,
       wholesaleUserId: null,
       opsUserId: null,
       customerId: null,

@@ -242,5 +242,9 @@ declare module "fastify" {
       kind: "operator" | "business_owner";
       tenantId: string;
     };
+    platformAuth?: {
+      platformUserId: string;
+      email: string;
+    };
   }
 }

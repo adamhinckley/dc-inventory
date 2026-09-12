@@ -12,6 +12,7 @@ import {
   PurchaseOrderId,
   SessionId,
   StaffUserId,
+  PlatformUserId,
   SupplierId,
   TenantId,
   WholesaleUserId,
@@ -31,6 +32,7 @@ describe("branded IDs", () => {
     expect(InvoiceId.parse(UUID)).toBe(UUID);
     expect(SupplierId.parse(UUID)).toBe(UUID);
     expect(StaffUserId.parse(UUID)).toBe(UUID);
+    expect(PlatformUserId.parse(UUID)).toBe(UUID);
     expect(WholesaleUserId.parse(UUID)).toBe(UUID);
     expect(SessionId.parse(UUID)).toBe(UUID);
   });

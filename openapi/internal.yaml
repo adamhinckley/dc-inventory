@@ -8,7 +8,7 @@ paths:
   /internal/auth/login:
     post:
       operationId: loginInternal
-      summary: Staff login; sets HttpOnly staff_session
+      summary: Staff or Platform login; sets HttpOnly staff_session
       tags:
         - internal-auth
       requestBody:
@@ -20,7 +20,6 @@ paths:
               properties:
                 organizationSlug:
                   type: string
-                  minLength: 1
                 email:
                   type: string
                   minLength: 1
@@ -28,7 +27,6 @@ paths:
                   type: string
                   minLength: 1
               required:
-                - organizationSlug
                 - email
                 - password
       responses:
@@ -37,32 +35,55 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  staffUserId:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  email:
-                    type: string
-                  organizationId:
-                    type: string
-                  roles:
-                    type: array
-                    items:
-                      type: string
-                      enum:
-                        - admin
-                        - purchasing
-                        - warehouse
-                        - sales_support
-                        - accounting
-                required:
-                  - staffUserId
-                  - email
-                  - organizationId
-                  - roles
-                additionalProperties: false
+                oneOf:
+                  - type: object
+                    properties:
+                      audience:
+                        type: string
+                        enum:
+                          - staff
+                      staffUserId:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      email:
+                        type: string
+                      organizationId:
+                        type: string
+                      roles:
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                            - admin
+                            - purchasing
+                            - warehouse
+                            - sales_support
+                            - accounting
+                    required:
+                      - audience
+                      - staffUserId
+                      - email
+                      - organizationId
+                      - roles
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      audience:
+                        type: string
+                        enum:
+                          - platform
+                      platformUserId:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      email:
+                        type: string
+                    required:
+                      - audience
+                      - platformUserId
+                      - email
+                    additionalProperties: false
         "401":
           description: Default Response
           content:
@@ -100,7 +121,7 @@ paths:
   /internal/auth/logout:
     post:
       operationId: logoutInternal
-      summary: Revoke staff session and clear cookie
+      summary: Revoke staff or platform session and clear cookie
       tags:
         - internal-auth
       responses:
@@ -135,7 +156,7 @@ paths:
   /internal/auth/set-password:
     post:
       operationId: setPasswordInternal
-      summary: Set staff password from invite token
+      summary: Set staff or platform password from invite token
       tags:
         - internal-auth
       requestBody:
@@ -151,6 +172,11 @@ paths:
                 password:
                   type: string
                   minLength: 1
+                audience:
+                  type: string
+                  enum:
+                    - staff
+                    - platform
               required:
                 - token
                 - password
@@ -193,7 +219,7 @@ paths:
   /internal/auth/session:
     get:
       operationId: getInternalSession
-      summary: Current staff session
+      summary: Current staff or platform session
       tags:
         - internal-auth
       responses:
@@ -202,32 +228,55 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  staffUserId:
-                    type: string
-                    format: uuid
-                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
-                  email:
-                    type: string
-                  organizationId:
-                    type: string
-                  roles:
-                    type: array
-                    items:
-                      type: string
-                      enum:
-                        - admin
-                        - purchasing
-                        - warehouse
-                        - sales_support
-                        - accounting
-                required:
-                  - staffUserId
-                  - email
-                  - organizationId
-                  - roles
-                additionalProperties: false
+                oneOf:
+                  - type: object
+                    properties:
+                      audience:
+                        type: string
+                        enum:
+                          - staff
+                      staffUserId:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      email:
+                        type: string
+                      organizationId:
+                        type: string
+                      roles:
+                        type: array
+                        items:
+                          type: string
+                          enum:
+                            - admin
+                            - purchasing
+                            - warehouse
+                            - sales_support
+                            - accounting
+                    required:
+                      - audience
+                      - staffUserId
+                      - email
+                      - organizationId
+                      - roles
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      audience:
+                        type: string
+                        enum:
+                          - platform
+                      platformUserId:
+                        type: string
+                        format: uuid
+                        pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                      email:
+                        type: string
+                    required:
+                      - audience
+                      - platformUserId
+                      - email
+                    additionalProperties: false
         "401":
           description: Default Response
           content:
@@ -245,8 +294,8 @@ paths:
   /internal/organizations:
     post:
       operationId: createInternalOrganization
-      summary: Provision a new organization and invite its first admin (DEFAULT
-        platform only)
+      summary: Provision a new organization and invite its first admin (Platform user
+        only)
       tags:
         - internal-organizations
       requestBody:

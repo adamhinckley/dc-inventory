@@ -109,7 +109,6 @@ const ACTION_BY_OPERATION: Readonly<
   adjustInternalInvoice: "ar_adjust",
   setInternalCustomerPaymentPlan: "payment_plans_manage",
   endInternalCustomerPaymentPlan: "payment_plans_manage",
-  createInternalOrganization: "organizations_manage",
   createInternalStaff: "staff_manage",
 };
 
@@ -152,8 +151,13 @@ function actionsFor(
   return asActions(mapped, request);
 }
 
+const PLATFORM_ONLY_OPERATIONS = new Set(["createInternalOrganization"]);
+
 function hasStaffActionMapping(schema: FastifySchema | undefined): boolean {
   const id = operationId(schema);
+  if (id !== undefined && PLATFORM_ONLY_OPERATIONS.has(id)) {
+    return true;
+  }
   return id !== undefined && ACTION_BY_OPERATION[id] !== undefined;
 }
 
@@ -180,6 +184,10 @@ export function registerStaffActionGuard(app: FastifyInstance): void {
   });
 
   app.addHook("preHandler", async (request: FastifyRequest, reply) => {
+    const id = operationId(request.routeOptions.schema);
+    if (id !== undefined && PLATFORM_ONLY_OPERATIONS.has(id)) {
+      return;
+    }
     const actions = actionsFor(request.routeOptions.schema, request);
     if (actions === undefined) {
       return;

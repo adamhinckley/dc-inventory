@@ -6,8 +6,7 @@
  */
 
 export type LoginInternalBody = {
-  /** @minLength 1 */
-  organizationSlug: string;
+  organizationSlug?: string;
   /** @minLength 1 */
   email: string;
   /** @minLength 1 */

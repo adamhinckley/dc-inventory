@@ -107,17 +107,22 @@ import {
   LogoutUseCase,
   RegisterOrganizationUseCase,
   RollbackOrganizationRegistrationUseCase,
+  ResolvePlatformSessionUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   SelectActingCustomerUseCase,
   SetPasswordUseCase,
   ScryptPasswordHasher,
   DrizzleOrganizationRepository,
+  DrizzlePlatformUserRepository,
+  InMemoryPlatformUserRepository,
+  LoginPlatformUseCase,
   type IPasswordHasher,
   type ILoginThrottle,
   type IOrganizationRepository,
   type ISessionStore,
   type ISetPasswordTokenStore,
+  type IPlatformUserRepository,
   type IStaffUserRepository,
   type IWholesaleLoginAccountStatusReadPort,
   type IWholesaleUserRepository,
@@ -333,12 +338,15 @@ export type IdentityHttpServices = {
   loginOps: LoginOpsUseCase;
   loginThrottle: ILoginThrottle;
   loginStaff: LoginStaffUseCase;
+  loginPlatform: LoginPlatformUseCase;
   logoutOps: LogoutUseCase;
   resolveOps: ResolveOpsSessionUseCase;
   loginWholesale: LoginWholesaleUseCase;
   logoutStaff: LogoutUseCase;
+  logoutPlatform: LogoutUseCase;
   logoutWholesale: LogoutUseCase;
   resolveStaff: ResolveStaffSessionUseCase;
+  resolvePlatform: ResolvePlatformSessionUseCase;
   resolveWholesale: ResolveWholesaleSessionUseCase;
   listActingCustomers: ListActingCustomersUseCase;
   selectActingCustomer: SelectActingCustomerUseCase;
@@ -520,6 +528,7 @@ export type AppServices = {
 
 export type AppServiceOverrides = {
   opsUsers?: IOpsUserRepository;
+  platformUsers?: IPlatformUserRepository;
   features?: IFeatures;
   clock?: IClock;
   database?: IDatabase;
@@ -1127,6 +1136,11 @@ export function composeAppServices(
     (identityDb
       ? new DrizzleStaffUserRepository(identityDb)
       : new InMemoryStaffUserRepository());
+  const platformUsers =
+    overrides.platformUsers ??
+    (identityDb
+      ? new DrizzlePlatformUserRepository(identityDb)
+      : new InMemoryPlatformUserRepository());
   const opsUsers =
     overrides.opsUsers ??
     (identityDb
@@ -1431,6 +1445,14 @@ export function composeAppServices(
       loginStaff: new LoginStaffUseCase(
         organizationRepo,
         staffUsers,
+        platformUsers,
+        sessions,
+        passwords,
+        clock,
+      ),
+      loginPlatform: new LoginPlatformUseCase(
+        platformUsers,
+        staffUsers,
         sessions,
         passwords,
         clock,
@@ -1445,8 +1467,14 @@ export function composeAppServices(
         wholesaleAccountStatus,
       ),
       logoutStaff: new LogoutUseCase(sessions, clock, "staff"),
+      logoutPlatform: new LogoutUseCase(sessions, clock, "platform"),
       logoutWholesale: new LogoutUseCase(sessions, clock, "wholesale"),
       resolveStaff: new ResolveStaffSessionUseCase(sessions, staffUsers, clock),
+      resolvePlatform: new ResolvePlatformSessionUseCase(
+        sessions,
+        platformUsers,
+        clock,
+      ),
       resolveWholesale: new ResolveWholesaleSessionUseCase(
         sessions,
         wholesaleUsers,
@@ -1490,6 +1518,7 @@ export function composeAppServices(
         setPasswordTokens,
         staffUsers,
         wholesaleUsers,
+        platformUsers,
         passwords,
         clock,
       ),
@@ -1497,6 +1526,7 @@ export function composeAppServices(
         setPasswordTokens,
         staffUsers,
         wholesaleUsers,
+        platformUsers,
         passwords,
         clock,
       ),

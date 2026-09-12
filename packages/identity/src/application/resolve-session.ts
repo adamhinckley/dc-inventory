@@ -2,12 +2,14 @@ import {
   type CustomerId,
   InvalidIdError,
   type OrganizationId,
+  PlatformUserId,
   SessionId,
   type StaffUserId,
   type WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import type { OpsActorKind, OpsUserId } from "../domain/ops-user.js";
+import type { IPlatformUserRepository } from "../domain/ports/platform-user-repository.js";
 import type { IOpsUserRepository } from "../domain/ports/ops-user-repository.js";
 import type { ISessionStore } from "../domain/ports/session-store.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
@@ -49,6 +51,14 @@ export type ResolveWholesaleSessionResult =
       email: string;
       customerId: CustomerId;
       organizationId: OrganizationId;
+    }
+  | { ok: false; reason: SessionFailureReason };
+
+export type ResolvePlatformSessionResult =
+  | {
+      ok: true;
+      platformUserId: PlatformUserId;
+      email: string;
     }
   | { ok: false; reason: SessionFailureReason };
 
@@ -149,6 +159,9 @@ export class ResolveStaffSessionUseCase {
       if (session.audience !== "staff" || session.staffUserId === null) {
         return { ok: false, reason: "wrong_audience" };
       }
+      if (session.organizationId === null) {
+        return { ok: false, reason: "invalid" };
+      }
       const now = this.clock.now();
       if (isSessionExpired(session, now)) {
         await this.sessions.delete(session.id);
@@ -170,6 +183,9 @@ export class ResolveStaffSessionUseCase {
     }
     if (session.audience !== "staff" || session.staffUserId === null) {
       return { ok: false, reason: "wrong_audience" };
+    }
+    if (session.organizationId === null) {
+      return { ok: false, reason: "invalid" };
     }
     const now = this.clock.now();
     if (isSessionExpired(session, now)) {
@@ -232,7 +248,7 @@ export class ResolveWholesaleSessionUseCase {
       }
       if (mode === "staff_acting") {
         const staffUserId = session.staffUserId;
-        if (staffUserId === null) {
+        if (staffUserId === null || session.organizationId === null) {
           await this.sessions.delete(session.id);
           return { ok: false, reason: "invalid" };
         }
@@ -249,7 +265,11 @@ export class ResolveWholesaleSessionUseCase {
       }
       const wholesaleUserId = session.wholesaleUserId;
       const customerId = session.customerId;
-      if (wholesaleUserId === null || customerId === null) {
+      if (
+        wholesaleUserId === null ||
+        customerId === null ||
+        session.organizationId === null
+      ) {
         return { ok: false, reason: "wrong_audience" };
       }
       await maybeTouchSession(this.sessions, session, now);
@@ -275,6 +295,10 @@ export class ResolveWholesaleSessionUseCase {
       return { ok: false, reason: "expired" };
     }
     if (session.staffUserId !== null && session.wholesaleUserId === null) {
+      if (session.organizationId === null) {
+        await this.sessions.delete(session.id);
+        return { ok: false, reason: "invalid" };
+      }
       const user = await this.staffUsers.findById(session.staffUserId);
       if (user === null) {
         await this.sessions.delete(session.id);
@@ -295,7 +319,11 @@ export class ResolveWholesaleSessionUseCase {
         organizationId: session.organizationId,
       };
     }
-    if (session.wholesaleUserId === null || session.customerId === null) {
+    if (
+      session.wholesaleUserId === null ||
+      session.customerId === null ||
+      session.organizationId === null
+    ) {
       return { ok: false, reason: "wrong_audience" };
     }
     const user = await this.wholesaleUsers.findById(session.wholesaleUserId);
@@ -389,6 +417,83 @@ export class ResolveOpsSessionUseCase {
       email: user.email,
       kind: user.kind,
       tenantId: user.tenantId,
+    };
+  }
+}
+
+export class ResolvePlatformSessionUseCase {
+  constructor(
+    private readonly sessions: ISessionStore,
+    private readonly platformUsers: IPlatformUserRepository,
+    private readonly clock: IClock,
+  ) {}
+
+  async execute(
+    rawSessionId: string | null | undefined,
+  ): Promise<ResolvePlatformSessionResult> {
+    if (rawSessionId === null || rawSessionId === undefined || rawSessionId.length === 0) {
+      return { ok: false, reason: "missing" };
+    }
+    const sessionId = parseSessionId(rawSessionId);
+    if (sessionId === null) {
+      return { ok: false, reason: "invalid" };
+    }
+    const findPlatformResolved = this.sessions.findPlatformResolved;
+    if (findPlatformResolved !== undefined) {
+      const resolved = await findPlatformResolved.call(this.sessions, sessionId);
+      if (resolved === null) {
+        return {
+          ok: false,
+          reason: await joinedSessionMissFailure(this.sessions, sessionId, "platform"),
+        };
+      }
+      const { session, email } = resolved;
+      if (session.audience !== "platform" || session.platformUserId === null) {
+        return { ok: false, reason: "wrong_audience" };
+      }
+      if (session.organizationId !== null) {
+        await this.sessions.delete(session.id);
+        return { ok: false, reason: "invalid" };
+      }
+      const now = this.clock.now();
+      if (isSessionExpired(session, now)) {
+        await this.sessions.delete(session.id);
+        return { ok: false, reason: "expired" };
+      }
+      await maybeTouchSession(this.sessions, session, now);
+      return {
+        ok: true,
+        platformUserId: session.platformUserId,
+        email,
+      };
+    }
+
+    const session = await this.sessions.findById(sessionId);
+    if (session === null) {
+      return { ok: false, reason: "invalid" };
+    }
+    if (session.audience !== "platform" || session.platformUserId === null) {
+      return { ok: false, reason: "wrong_audience" };
+    }
+    if (session.organizationId !== null) {
+      await this.sessions.delete(session.id);
+      return { ok: false, reason: "invalid" };
+    }
+    const now = this.clock.now();
+    if (isSessionExpired(session, now)) {
+      await this.sessions.delete(session.id);
+      return { ok: false, reason: "expired" };
+    }
+    const user = await this.platformUsers.findById(session.platformUserId);
+    if (user === null) {
+      await this.sessions.delete(session.id);
+      return { ok: false, reason: "invalid" };
+    }
+    await maybeTouchSession(this.sessions, session, now);
+    return {
+      ok: true,
+      platformUserId: session.platformUserId,
+      email: user.email,
     };
   }
 }
