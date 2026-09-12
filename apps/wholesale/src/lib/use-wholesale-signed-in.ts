@@ -5,7 +5,12 @@ import {
   useGetWholesaleSession,
 } from "@dc-inventory/api-client-wholesale";
 
-export function useWholesaleSignedIn(): boolean {
+export type WholesaleSessionState = {
+  signedIn: boolean;
+  pending: boolean;
+};
+
+export function useWholesaleSession(): WholesaleSessionState {
   const session = useGetWholesaleSession({
     query: {
       queryKey: getGetWholesaleSessionQueryKey(),
@@ -13,5 +18,12 @@ export function useWholesaleSignedIn(): boolean {
     },
   });
 
-  return session.isSuccess && session.data.status === 200;
+  return {
+    signedIn: session.isSuccess && session.data.status === 200,
+    pending: session.isPending,
+  };
+}
+
+export function useWholesaleSignedIn(): boolean {
+  return useWholesaleSession().signedIn;
 }

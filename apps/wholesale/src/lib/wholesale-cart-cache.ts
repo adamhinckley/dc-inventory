@@ -2,6 +2,8 @@ import type { QueryKey } from "@tanstack/react-query";
 import type { ListWholesaleSalesOrdersQueryResult } from "@dc-inventory/api-client-wholesale";
 import { getListWholesaleSalesOrdersQueryKey } from "@dc-inventory/api-client-wholesale";
 import type { QueryClient } from "@tanstack/react-query";
+import { resolveActiveCart } from "./active-cart";
+import { readStoredActiveCart } from "./active-cart-store";
 import { wholesaleDraftCartParams } from "./wholesale-draft-cart";
 
 type DraftCartListData = Extract<ListWholesaleSalesOrdersQueryResult, { status: 200 }>["data"];
@@ -72,6 +74,16 @@ export function readDraftCartOrder(
   orderId: string,
 ): WholesaleDraftCartOrder | undefined {
   return readDraftCartList(queryClient)?.data.items.find((item) => item.id === orderId);
+}
+
+/** Resolve the draft quick-add will PATCH from cached list + stored preference. */
+export function readActiveDraftCart(
+  queryClient: QueryClient,
+  customerId: string,
+): WholesaleDraftCartOrder | undefined {
+  const drafts = readDraftCartList(queryClient)?.data.items ?? [];
+  const active = resolveActiveCart(drafts, readStoredActiveCart(customerId));
+  return active.kind === "draft" ? active.draft : undefined;
 }
 
 export type OptimisticLineMeta = {

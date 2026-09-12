@@ -6,7 +6,7 @@ import {
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ShopPage } from "../../../components/shop-page";
 import { company } from "../../../lib/company";
@@ -14,6 +14,8 @@ import { postLoginPath } from "../../../lib/post-login-path";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const category = searchParams.get("category");
   const queryClient = useQueryClient();
   const login = useLoginWholesale();
   const [error, setError] = useState<string | null>(null);
@@ -34,9 +36,9 @@ export default function LoginPage() {
             queryKey: getGetWholesaleSessionQueryKey(),
           });
           if (response.status === 200) {
-            router.push(postLoginPath(response.data));
+            router.push(postLoginPath(response.data, { category }));
           } else {
-            router.push("/products");
+            router.push(postLoginPath({ mode: "buyer", customerId: null }, { category }));
           }
         },
         onError: () => {

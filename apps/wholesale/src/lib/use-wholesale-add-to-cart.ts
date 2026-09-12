@@ -6,6 +6,7 @@ import {
 } from "@dc-inventory/api-client-wholesale";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { runExclusiveDraftCreate } from "./cart-create-gate";
 import { cartLinesToDeltaBody } from "./cart-line-deltas";
 import {
   cartQtyCapMessage,
@@ -21,10 +22,12 @@ import { shopDisplayAvailableQty, type ShopSellState } from "./shop-availability
 import { useActiveCart } from "./use-active-cart";
 import {
   buildOptimisticDraftOrder,
+  readActiveDraftCart,
   readDraftCartList,
   wholesaleDraftCartQueryKey,
   writeDraftCartOrder,
   type OptimisticLineMeta,
+  type WholesaleDraftCartOrder,
 } from "./wholesale-cart-cache";
 
 export type ApplyCartQtyResult =
@@ -51,7 +54,7 @@ export function useWholesaleAddToCart({
   sellState,
 }: UseWholesaleAddToCartInput) {
   const queryClient = useQueryClient();
-  const { activeDraft, setActiveCart } = useActiveCart();
+  const { activeDraft, customerId, setActiveCart } = useActiveCart();
   const createOrder = useCreateWholesaleSalesOrder();
   const applyLineDeltas = useApplyWholesaleSalesOrderLineDeltas();
   const [pending, setPending] = useState(false);
@@ -67,6 +70,86 @@ export function useWholesaleAddToCart({
     return { name, unitPriceCents, currency, sku: cartLine?.sku };
   }
 
+  function resolveDraft(): WholesaleDraftCartOrder | undefined {
+    if (draft !== undefined) {
+      return draft;
+    }
+    if (customerId === null) {
+      return undefined;
+    }
+    return readActiveDraftCart(queryClient, customerId);
+  }
+
+  async function patchDraft(
+    currentDraft: WholesaleDraftCartOrder,
+    qty: number,
+  ): Promise<ApplyCartQtyResult> {
+    const currentLine = findDraftCartLine(currentDraft.lines, productId, name);
+    const currentInCart = currentLine !== undefined;
+    const currentQty = currentLine?.qty ?? null;
+
+    if (currentInCart && qty === currentQty) {
+      return { ok: true, kind: "same" };
+    }
+
+    const others = currentDraft.lines.filter((line) => line !== currentLine);
+    const nextLines =
+      qty === 0
+        ? others
+        : [
+            ...others,
+            {
+              productId,
+              sku: currentLine?.sku ?? "",
+              name,
+              qty,
+            },
+          ];
+    const targetLines =
+      linesForReplace(nextLines) ??
+      (await toReplaceLines(nextLines, lookupWholesaleProductId));
+    if (targetLines === null) {
+      return { ok: false, message: "Could not update cart" };
+    }
+    const deltaBody = cartLinesToDeltaBody(currentDraft.lines, targetLines);
+
+    const previous = readDraftCartList(queryClient);
+    writeDraftCartOrder(
+      queryClient,
+      buildOptimisticDraftOrder(
+        currentDraft,
+        targetLines,
+        new Map([[productId, lineMeta()]]),
+      ),
+    );
+    setPending(true);
+    trackCartReplaceStart(currentDraft.id);
+    try {
+      const response = await applyLineDeltas.mutateAsync({
+        id: currentDraft.id,
+        data: deltaBody,
+      });
+      if (response.status === 200) {
+        writeDraftCartOrder(queryClient, response.data);
+      }
+      return {
+        ok: true,
+        kind: qty === 0 ? "removed" : currentInCart ? "updated" : "added",
+      };
+    } catch (error: unknown) {
+      if (previous !== undefined) {
+        queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
+      }
+      return {
+        ok: false,
+        message: wholesaleShortageErrorMessage(error, "Could not update cart"),
+      };
+    } finally {
+      trackCartReplaceEnd(currentDraft.id);
+      setPending(false);
+    }
+  }
+
   async function applyQty(qty: number): Promise<ApplyCartQtyResult> {
     if (qty < 0 || !Number.isInteger(qty)) {
       return { ok: false, message: "Enter a quantity of 1 or more" };
@@ -78,62 +161,9 @@ export function useWholesaleAddToCart({
       return { ok: false, message: cartQtyCapMessage(maxQty) };
     }
 
-    if (draft !== undefined) {
-      if (inCart && qty === cartQty) {
-        return { ok: true, kind: "same" };
-      }
-      const others = draft.lines.filter((line) => line !== cartLine);
-      const nextLines =
-        qty === 0
-          ? others
-          : [
-              ...others,
-              {
-                productId,
-                sku: cartLine?.sku ?? "",
-                name,
-                qty,
-              },
-            ];
-      const targetLines =
-        linesForReplace(nextLines) ??
-        (await toReplaceLines(nextLines, lookupWholesaleProductId));
-      if (targetLines === null) {
-        return { ok: false, message: "Could not update cart" };
-      }
-      const deltaBody = cartLinesToDeltaBody(draft.lines, targetLines);
-
-      const previous = readDraftCartList(queryClient);
-      writeDraftCartOrder(
-        queryClient,
-        buildOptimisticDraftOrder(draft, targetLines, new Map([[productId, lineMeta()]])),
-      );
-      setPending(true);
-      trackCartReplaceStart(draft.id);
-      try {
-        const response = await applyLineDeltas.mutateAsync({
-          id: draft.id,
-          data: deltaBody,
-        });
-        if (response.status === 200) {
-          writeDraftCartOrder(queryClient, response.data);
-        }
-        return {
-          ok: true,
-          kind: qty === 0 ? "removed" : inCart ? "updated" : "added",
-        };
-      } catch (error: unknown) {
-        if (previous !== undefined) {
-          queryClient.setQueryData(wholesaleDraftCartQueryKey, previous);
-        }
-        return {
-          ok: false,
-          message: wholesaleShortageErrorMessage(error, "Could not update cart"),
-        };
-      } finally {
-        trackCartReplaceEnd(draft.id);
-        setPending(false);
-      }
+    const currentDraft = resolveDraft();
+    if (currentDraft !== undefined) {
+      return patchDraft(currentDraft, qty);
     }
 
     if (qty === 0) {
@@ -142,14 +172,34 @@ export function useWholesaleAddToCart({
 
     setPending(true);
     try {
-      const response = await createOrder.mutateAsync({
-        data: { lines: [{ productId, qty }] },
+      const created = await runExclusiveDraftCreate(async () => {
+        if (customerId !== null) {
+          const existing = readActiveDraftCart(queryClient, customerId);
+          if (existing !== undefined) {
+            return existing;
+          }
+        }
+        const response = await createOrder.mutateAsync({
+          data: { lines: [{ productId, qty }] },
+        });
+        if (response.status === 201) {
+          writeDraftCartOrder(queryClient, response.data);
+          setActiveCart(response.data.id);
+          return response.data;
+        }
+        return null;
       });
-      if (response.status === 201) {
-        writeDraftCartOrder(queryClient, response.data);
-        setActiveCart(response.data.id);
+
+      if (created === null) {
+        return { ok: false, message: "Could not add to cart" };
       }
-      return { ok: true, kind: "added" };
+
+      const createdLine = findDraftCartLine(created.lines, productId, name);
+      if (createdLine !== undefined && createdLine.qty === qty) {
+        return { ok: true, kind: "added" };
+      }
+
+      return patchDraft(created, qty);
     } catch (error) {
       return {
         ok: false,
