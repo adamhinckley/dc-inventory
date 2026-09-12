@@ -547,7 +547,7 @@ export const getLoginInternalUrl = () => {
 }
 
 /**
- * @summary Staff login; sets HttpOnly staff_session
+ * @summary Staff or Platform login; sets HttpOnly staff_session
  */
 export const loginInternal = async (loginInternalBody: LoginInternalBody, options?: Parameters<typeof customFetch>[1]): Promise<loginInternalResponse> => {
 
@@ -602,7 +602,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type LoginInternalMutationError = LoginInternal401 | LoginInternal429
 
     /**
- * @summary Staff login; sets HttpOnly staff_session
+ * @summary Staff or Platform login; sets HttpOnly staff_session
  */
 export const useLoginInternal = <TError = LoginInternal401 | LoginInternal429,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginInternal>>, TError,{data: LoginInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -643,7 +643,7 @@ export const getLogoutInternalUrl = () => {
 }
 
 /**
- * @summary Revoke staff session and clear cookie
+ * @summary Revoke staff or platform session and clear cookie
  */
 export const logoutInternal = async ( options?: Parameters<typeof customFetch>[1]): Promise<logoutInternalResponse> => {
 
@@ -692,7 +692,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type LogoutInternalMutationError = LogoutInternal401
 
     /**
- * @summary Revoke staff session and clear cookie
+ * @summary Revoke staff or platform session and clear cookie
  */
 export const useLogoutInternal = <TError = LogoutInternal401,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof logoutInternal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -733,7 +733,7 @@ export const getSetPasswordInternalUrl = () => {
 }
 
 /**
- * @summary Set staff password from invite token
+ * @summary Set staff or platform password from invite token
  */
 export const setPasswordInternal = async (setPasswordInternalBody: SetPasswordInternalBody, options?: Parameters<typeof customFetch>[1]): Promise<setPasswordInternalResponse> => {
 
@@ -788,7 +788,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SetPasswordInternalMutationError = SetPasswordInternal400
 
     /**
- * @summary Set staff password from invite token
+ * @summary Set staff or platform password from invite token
  */
 export const useSetPasswordInternal = <TError = SetPasswordInternal400,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPasswordInternal>>, TError,{data: SetPasswordInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -829,7 +829,7 @@ export const getGetInternalSessionUrl = () => {
 }
 
 /**
- * @summary Current staff session
+ * @summary Current staff or platform session
  */
 export const getInternalSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<getInternalSessionResponse> => {
 
@@ -876,7 +876,7 @@ export type GetInternalSessionQueryError = GetInternalSession401
 
 
 /**
- * @summary Current staff session
+ * @summary Current staff or platform session
  */
 
 export function useGetInternalSession<TData = Awaited<ReturnType<typeof getInternalSession>>, TError = GetInternalSession401>(
@@ -950,7 +950,7 @@ export const getCreateInternalOrganizationUrl = () => {
 }
 
 /**
- * @summary Provision a new organization and invite its first admin (DEFAULT platform only)
+ * @summary Provision a new organization and invite its first admin (Platform user only)
  */
 export const createInternalOrganization = async (createInternalOrganizationBody: CreateInternalOrganizationBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalOrganizationResponse> => {
 
@@ -1005,7 +1005,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateInternalOrganizationMutationError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503
 
     /**
- * @summary Provision a new organization and invite its first admin (DEFAULT platform only)
+ * @summary Provision a new organization and invite its first admin (Platform user only)
  */
 export const useCreateInternalOrganization = <TError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalOrganization>>, TError,{data: CreateInternalOrganizationBody}, TContext>, request?: SecondParameter<typeof customFetch>}

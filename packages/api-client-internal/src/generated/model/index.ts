@@ -747,6 +747,7 @@ export * from './setPasswordInternal400';
 export * from './setPasswordInternal400Error';
 export * from './setPasswordInternal400Violation';
 export * from './setPasswordInternalBody';
+export * from './setPasswordInternalBodyAudience';
 export * from './shipInternalSalesOrder200';
 export * from './shipInternalSalesOrder200LinesItem';
 export * from './shipInternalSalesOrder200Status';

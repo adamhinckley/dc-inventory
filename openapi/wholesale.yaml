@@ -124,6 +124,11 @@ paths:
                 password:
                   type: string
                   minLength: 1
+                audience:
+                  type: string
+                  enum:
+                    - staff
+                    - platform
               required:
                 - token
                 - password

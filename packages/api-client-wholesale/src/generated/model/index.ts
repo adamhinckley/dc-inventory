@@ -227,6 +227,7 @@ export * from './setPasswordWholesale400';
 export * from './setPasswordWholesale400Error';
 export * from './setPasswordWholesale400Violation';
 export * from './setPasswordWholesaleBody';
+export * from './setPasswordWholesaleBodyAudience';
 export * from './updateWholesaleAccountCustomerNote200';
 export * from './updateWholesaleAccountCustomerNote200AccountStatus';
 export * from './updateWholesaleAccountCustomerNote400';
