@@ -74,6 +74,7 @@ export const staffSessionResponseSchema = z.object({
   audience: z.literal("staff"),
   staffUserId: z.string().uuid(),
   email: z.string(),
+  displayName: z.string(),
   organizationId: z.string(),
   roles: z.array(staffRoleSchema),
 });
@@ -82,6 +83,7 @@ export const platformSessionResponseSchema = z.object({
   audience: z.literal("platform"),
   platformUserId: z.string().uuid(),
   email: z.string(),
+  displayName: z.string(),
 });
 
 export const internalSessionResponseSchema = z.discriminatedUnion("audience", [

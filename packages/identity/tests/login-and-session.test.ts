@@ -183,6 +183,7 @@ describe("Identity login and sessions (in-memory)", () => {
       ok: true,
       staffUserId: STAFF_ID,
       email: "staff@local.test",
+      displayName: "Test Staff",
       organizationId: OrganizationId.DEFAULT,
       roles: ["admin"],
     });

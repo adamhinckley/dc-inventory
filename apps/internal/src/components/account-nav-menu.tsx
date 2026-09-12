@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Check, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { accountMenuIdentity } from "../lib/account-menu-identity";
 import { COLOR_SCHEMES, type ColorScheme } from "../lib/color-scheme";
 import {
   completeStaffSignOut,
@@ -37,10 +38,9 @@ export function AccountNavMenu() {
   const logout = useLogoutInternal();
   const [signOutError, setSignOutError] = useState<string | null>(null);
 
-  const email =
-    session.isSuccess && session.data.status === 200
-      ? session.data.data.email
-      : "Signed in";
+  const identity = accountMenuIdentity(
+    session.isSuccess && session.data.status === 200 ? session.data.data : undefined,
+  );
 
   function signOut() {
     setSignOutError(null);
@@ -75,7 +75,12 @@ export function AccountNavMenu() {
         align="end"
         data-testid="shell-account-menu"
       >
-        <p className="item-padding text-caption text-fg-secondary">{email}</p>
+        <div className="item-padding">
+          <p className="text-body font-semibold text-fg">{identity.displayName}</p>
+          {identity.email.length > 0 && identity.email !== identity.displayName ? (
+            <p className="text-caption text-fg-secondary">{identity.email}</p>
+          ) : null}
+        </div>
         <Menu.Separator />
         <Menu.Group>
           <Menu.GroupLabel>Appearance</Menu.GroupLabel>

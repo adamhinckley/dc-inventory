@@ -54,6 +54,7 @@ describe("Platform user", () => {
       ok: true,
       platformUserId: PLATFORM_ID,
       email: "adam@local.test",
+      displayName: "Adam Platform",
     });
 
     const stored = await sessions.findById(login.sessionId);

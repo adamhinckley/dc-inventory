@@ -72,6 +72,7 @@ export class DrizzleSessionStore implements ISessionStore {
       .select({
         session: sessions,
         email: staffUsers.email,
+        displayName: staffUsers.displayName,
         roles: staffUsers.roles,
         organizationId: staffUsers.organizationId,
       })
@@ -99,6 +100,7 @@ export class DrizzleSessionStore implements ISessionStore {
     return {
       session,
       email: row.email,
+      displayName: row.displayName,
       roles: row.roles,
     };
   }
@@ -108,6 +110,7 @@ export class DrizzleSessionStore implements ISessionStore {
       .select({
         session: sessions,
         email: platformUsers.email,
+        displayName: platformUsers.displayName,
       })
       .from(sessions)
       .innerJoin(
@@ -130,6 +133,7 @@ export class DrizzleSessionStore implements ISessionStore {
     return {
       session,
       email: row.email,
+      displayName: row.displayName,
     };
   }
 

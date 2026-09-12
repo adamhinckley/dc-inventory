@@ -172,6 +172,7 @@ describe("opaque session HTTP", () => {
       audience: "staff",
       staffUserId: STAFF_ID,
       email: "staff@local.test",
+      displayName: "Test Staff",
       organizationId: OrganizationId.DEFAULT,
       roles: ["admin"],
     });
@@ -223,6 +224,7 @@ describe("opaque session HTTP", () => {
       audience: "staff",
       staffUserId: STAFF_ID,
       email: "staff@local.test",
+      displayName: "Test Staff",
       organizationId: OrganizationId.DEFAULT,
       roles: ["admin"],
     });
@@ -243,6 +245,7 @@ describe("opaque session HTTP", () => {
       audience: "platform",
       platformUserId: PLATFORM_ID,
       email: "adam@local.test",
+      displayName: "Adam Platform",
     });
     const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
     expect(cookie?.name).toBe(STAFF_SESSION_COOKIE);
@@ -257,6 +260,7 @@ describe("opaque session HTTP", () => {
       audience: "platform",
       platformUserId: PLATFORM_ID,
       email: "adam@local.test",
+      displayName: "Adam Platform",
     });
 
     const catalog = await app.inject({

@@ -29,6 +29,7 @@ export type ResolveStaffSessionResult =
       ok: true;
       staffUserId: StaffUserId;
       email: string;
+      displayName: string;
       organizationId: OrganizationId;
       roles: readonly StaffRole[];
     }
@@ -59,6 +60,7 @@ export type ResolvePlatformSessionResult =
       ok: true;
       platformUserId: PlatformUserId;
       email: string;
+      displayName: string;
     }
   | { ok: false; reason: SessionFailureReason };
 
@@ -155,7 +157,7 @@ export class ResolveStaffSessionUseCase {
           reason: await joinedSessionMissFailure(this.sessions, sessionId, "staff"),
         };
       }
-      const { session, email, roles } = resolved;
+      const { session, email, displayName, roles } = resolved;
       if (session.audience !== "staff" || session.staffUserId === null) {
         return { ok: false, reason: "wrong_audience" };
       }
@@ -172,6 +174,7 @@ export class ResolveStaffSessionUseCase {
         ok: true,
         staffUserId: session.staffUserId,
         email,
+        displayName,
         organizationId: session.organizationId,
         roles,
       };
@@ -206,6 +209,7 @@ export class ResolveStaffSessionUseCase {
       ok: true,
       staffUserId: session.staffUserId,
       email: user.email,
+      displayName: user.displayName,
       organizationId: session.organizationId,
       roles: user.roles,
     };
@@ -447,7 +451,7 @@ export class ResolvePlatformSessionUseCase {
           reason: await joinedSessionMissFailure(this.sessions, sessionId, "platform"),
         };
       }
-      const { session, email } = resolved;
+      const { session, email, displayName } = resolved;
       if (session.audience !== "platform" || session.platformUserId === null) {
         return { ok: false, reason: "wrong_audience" };
       }
@@ -465,6 +469,7 @@ export class ResolvePlatformSessionUseCase {
         ok: true,
         platformUserId: session.platformUserId,
         email,
+        displayName,
       };
     }
 
@@ -494,6 +499,7 @@ export class ResolvePlatformSessionUseCase {
       ok: true,
       platformUserId: session.platformUserId,
       email: user.email,
+      displayName: user.displayName,
     };
   }
 }

@@ -17,6 +17,7 @@ export type LoginPlatformResult =
       sessionId: SessionId;
       platformUserId: PlatformUserId;
       email: string;
+      displayName: string;
     }
   | { ok: false };
 
@@ -61,6 +62,7 @@ export class LoginPlatformUseCase {
       sessionId: session.id,
       platformUserId: user.id,
       email: user.email,
+      displayName: user.displayName,
     };
   }
 }

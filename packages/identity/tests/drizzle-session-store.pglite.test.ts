@@ -88,6 +88,7 @@ describe("DrizzleSessionStore platform sessions (PGlite)", () => {
         platformUserId: PLATFORM_ID,
       }),
       email: "adam@local.test",
+      displayName: "Adam Platform",
     });
 
     clock.advance(1);
@@ -116,6 +117,7 @@ describe("DrizzleSessionStore platform sessions (PGlite)", () => {
       ok: true,
       platformUserId: PLATFORM_ID,
       email: "adam@local.test",
+      displayName: "Adam Platform",
     });
   });
 
