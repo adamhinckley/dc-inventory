@@ -138,6 +138,29 @@ export const sessions = identity.table("sessions", {
   ...timestamps(),
 });
 
+export const setPasswordAudience = identity.enum("set_password_audience", [
+  "staff",
+  "wholesale",
+  "platform",
+]);
+
+export const setPasswordTokens = identity.table(
+  "set_password_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tokenHash: text("token_hash").notNull(),
+    audience: setPasswordAudience("audience").notNull(),
+    userId: uuid("user_id").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true, mode: "date" }),
+    ...timestamps(),
+  },
+  (table) => ({
+    tokenHashUnique: uniqueIndex("set_password_tokens_token_hash_unique").on(table.tokenHash),
+    expiresAtIdx: index("set_password_tokens_expires_at_idx").on(table.expiresAt),
+  }),
+);
+
 export const loginThrottleCounters = identity.table(
   "login_throttle_counters",
   {

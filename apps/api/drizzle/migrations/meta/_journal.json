@@ -351,6 +351,13 @@
       "when": 1791655600000,
       "tag": "0050_identity_display_names",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1791755600000,
+      "tag": "0051_identity_set_password_tokens",
+      "breakpoints": true
     }
   ]
 }

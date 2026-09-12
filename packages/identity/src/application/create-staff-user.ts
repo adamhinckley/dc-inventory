@@ -27,7 +27,7 @@ export type CreateStaffUserInviteLinks = {
     organizationSlug: string;
     staffUserId: StaffUserIdType;
     staffEmail: string;
-  }): string;
+  }): Promise<string>;
 };
 
 export type CreateStaffUserResult =
@@ -112,7 +112,7 @@ export class CreateStaffUserUseCase {
           staffEmail: email,
           staffUserId,
           inviteKind: "staff",
-          setPasswordUrl: this.inviteLinks.buildSetPasswordUrl({
+          setPasswordUrl: await this.inviteLinks.buildSetPasswordUrl({
             organizationSlug: organization.slug,
             staffUserId,
             staffEmail: email,

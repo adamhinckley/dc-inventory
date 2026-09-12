@@ -1,29 +1,28 @@
 import {
   SET_PASSWORD_TOKEN_TTL_MS,
-  type CreateStaffUserInviteLinks,
+  type CreateWholesaleUserInviteLinks,
   type IClock,
   type ISetPasswordTokenStore,
-  type RegisterOrganizationInviteLinks,
 } from "@dc-inventory/identity";
 
-function internalAppBaseUrl(): string {
-  const configured = process.env.INTERNAL_APP_URL?.trim();
+function wholesaleAppBaseUrl(): string {
+  const configured = process.env.WHOLESALE_APP_URL?.trim();
   if (configured !== undefined && configured.length > 0) {
     return configured.replace(/\/$/, "");
   }
-  return "http://localhost:3000";
+  return "http://localhost:3002";
 }
 
-export function createStaffInviteLinks(
+export function createWholesaleInviteLinks(
   tokenStore: ISetPasswordTokenStore,
   clock: IClock,
-): RegisterOrganizationInviteLinks & CreateStaffUserInviteLinks {
-  const baseUrl = internalAppBaseUrl();
+): CreateWholesaleUserInviteLinks {
+  const baseUrl = wholesaleAppBaseUrl();
   return {
-    async buildSetPasswordUrl({ staffUserId }) {
+    async buildSetPasswordUrl({ wholesaleUserId }) {
       const { rawToken } = await tokenStore.mint({
-        audience: "staff",
-        userId: staffUserId,
+        audience: "wholesale",
+        userId: wholesaleUserId,
         expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
       });
       const params = new URLSearchParams({ token: rawToken });

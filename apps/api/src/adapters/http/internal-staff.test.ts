@@ -102,7 +102,7 @@ describe("internal staff create", () => {
       to: "new.warehouse@local.test",
       subject: "You're invited to Acme Wholesale",
     });
-    expect(emailSender.sent[0]?.text).toContain("/set-password?");
+    expect(emailSender.sent[0]?.text).toContain("/set-password?token=");
   });
 
   it("rejects non-admin roles and unauthenticated requests", async () => {

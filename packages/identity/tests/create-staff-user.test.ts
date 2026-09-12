@@ -30,8 +30,8 @@ function harness() {
       passwords,
       emailSender,
       {
-        buildSetPasswordUrl: ({ organizationSlug, staffUserId, staffEmail }) =>
-          `https://internal.test/set-password?org=${organizationSlug}&user=${staffUserId}&email=${staffEmail}`,
+        buildSetPasswordUrl: async () =>
+          "https://internal.test/set-password?token=test-staff-token",
       },
     ),
   };
@@ -85,7 +85,7 @@ describe("CreateStaffUser (in-memory)", () => {
       subject: `You're invited to ${TEST_ORG_NAME}`,
     });
     expect(h.emailSender.sent[0]?.text).toContain("Warehouse Lead");
-    expect(h.emailSender.sent[0]?.text).toContain("https://internal.test/set-password");
+    expect(h.emailSender.sent[0]?.text).toContain("/set-password?token=");
   });
 
   it("rejects empty roles", async () => {

@@ -31,6 +31,22 @@ export const logoutResponseSchema = z.object({
   ok: z.literal(true),
 });
 
+export const setPasswordBodySchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(1),
+});
+
+export const setPasswordSuccessResponseSchema = z.object({
+  ok: z.literal(true),
+});
+
+export const setPasswordFailureResponseSchema = z.object({
+  error: z.literal("invalid"),
+  violation: z
+    .enum(["too_short", "missing_uppercase", "missing_lowercase", "missing_number"])
+    .optional(),
+});
+
 export const staffRoleSchema = z.enum([
   "admin",
   "purchasing",

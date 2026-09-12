@@ -398,6 +398,9 @@ import type {
   SetInternalCustomerPaymentPlan404,
   SetInternalCustomerPaymentPlan409,
   SetInternalCustomerPaymentPlanBody,
+  SetPasswordInternal200,
+  SetPasswordInternal400,
+  SetPasswordInternalBody,
   ShipInternalSalesOrder200,
   ShipInternalSalesOrder400,
   ShipInternalSalesOrder401,
@@ -699,6 +702,102 @@ export const useLogoutInternal = <TError = LogoutInternal401,
         TContext
       > => {
       return useMutation(getLogoutInternalMutationOptions(options));
+    }
+
+export type setPasswordInternalResponse200 = {
+  data: SetPasswordInternal200
+  status: 200
+}
+
+export type setPasswordInternalResponse400 = {
+  data: SetPasswordInternal400
+  status: 400
+}
+
+export type setPasswordInternalResponseSuccess = (setPasswordInternalResponse200) & {
+  headers: Headers;
+};
+export type setPasswordInternalResponseError = (setPasswordInternalResponse400) & {
+  headers: Headers;
+};
+
+export type setPasswordInternalResponse = (setPasswordInternalResponseSuccess | setPasswordInternalResponseError)
+
+export const getSetPasswordInternalUrl = () => {
+
+
+
+
+  return `/internal/auth/set-password`
+}
+
+/**
+ * @summary Set staff password from invite token
+ */
+export const setPasswordInternal = async (setPasswordInternalBody: SetPasswordInternalBody, options?: Parameters<typeof customFetch>[1]): Promise<setPasswordInternalResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<setPasswordInternalResponse>(getSetPasswordInternalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(setPasswordInternalBody)
+  }
+);}
+
+
+
+
+
+export const getSetPasswordInternalMutationOptions = <TError = SetPasswordInternal400,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPasswordInternal>>, TError,{data: SetPasswordInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setPasswordInternal>>, TError,{data: SetPasswordInternalBody}, TContext> => {
+
+const mutationKey = ['setPasswordInternal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setPasswordInternal>>, {data: SetPasswordInternalBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setPasswordInternal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetPasswordInternalMutationResult = NonNullable<Awaited<ReturnType<typeof setPasswordInternal>>>
+    export type SetPasswordInternalMutationBody = SetPasswordInternalBody
+    export type SetPasswordInternalMutationError = SetPasswordInternal400
+
+    /**
+ * @summary Set staff password from invite token
+ */
+export const useSetPasswordInternal = <TError = SetPasswordInternal400,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPasswordInternal>>, TError,{data: SetPasswordInternalBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setPasswordInternal>>,
+        TError,
+        {data: SetPasswordInternalBody},
+        TContext
+      > => {
+      return useMutation(getSetPasswordInternalMutationOptions(options));
     }
 
 export type getInternalSessionResponse200 = {

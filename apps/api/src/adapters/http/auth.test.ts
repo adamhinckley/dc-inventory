@@ -12,11 +12,13 @@ import {
   InMemoryOpsUserRepository,
   InMemoryPasswordHasher,
   InMemorySessionStore,
+  InMemorySetPasswordTokenStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
   LOGIN_THROTTLE_MAX_ATTEMPTS,
   LOGIN_THROTTLE_WINDOW_MS,
   OpsUserId,
+  SET_PASSWORD_TOKEN_TTL_MS,
   SESSION_IDLE_MS,
 } from "@dc-inventory/identity";
 import { afterEach, describe, expect, it } from "vitest";
@@ -871,3 +873,184 @@ describe("opaque session HTTP", () => {
     });
   });
 });
+
+describe("set-password HTTP", () => {
+  async function startSetPasswordApp() {
+    const clock = new InMemoryClock(new Date("2026-09-12T12:00:00.000Z"));
+    const passwords = new InMemoryPasswordHasher();
+    const organizations = new InMemoryOrganizationRepository();
+    const staffUsers = new InMemoryStaffUserRepository();
+    const wholesaleUsers = new InMemoryWholesaleUserRepository();
+    const sessions = new InMemorySessionStore();
+    const setPasswordTokens = new InMemorySetPasswordTokenStore();
+    const customerRepo = new InMemoryCustomerRepository();
+    await organizations.save({ id: OrganizationId.DEFAULT, slug: ACME_SLUG, name: "Acme Wholesale" });
+    await customerRepo.save({
+      id: CUSTOMER_ID,
+      organizationId: OrganizationId.DEFAULT,
+      name: "Acme Wholesale",
+      creditLimit: Money.fromMinorUnits(1_000_000, "USD"),
+      terms: "NET30",
+      createdAt: new Date("2026-08-24T03:30:00.000Z"),
+    });
+    await staffUsers.save({
+      id: STAFF_ID,
+      organizationId: OrganizationId.DEFAULT,
+      displayName: "Invited Staff",
+      email: "invited.staff@local.test",
+      passwordHash: await passwords.hash("pending-secret"),
+      roles: ["admin"],
+    });
+    await wholesaleUsers.save({
+      id: WHOLESALE_ID,
+      organizationId: OrganizationId.DEFAULT,
+      displayName: "Invited Wholesale",
+      email: "invited.wholesale@local.test",
+      passwordHash: await passwords.hash("pending-secret"),
+      customerId: CUSTOMER_ID,
+    });
+    const app = await buildApp({
+      logger: false,
+      database: new InMemoryDatabase(),
+      clock,
+      staffUsers,
+      wholesaleUsers,
+      sessions,
+      passwords,
+      setPasswordTokens,
+      organizationRepo: organizations,
+      customerRepo,
+    });
+    apps.push(app);
+    return { app, clock, passwords, setPasswordTokens, staffUsers, wholesaleUsers };
+  }
+
+  it("sets staff password without creating a session cookie", async () => {
+    const { app, clock, passwords, setPasswordTokens, staffUsers } = await startSetPasswordApp();
+    const { rawToken } = await setPasswordTokens.mint({
+      audience: "staff",
+      userId: STAFF_ID,
+      expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: rawToken, password: "StaffPass1" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ ok: true });
+    expect(setCookieHeaders(response)).toHaveLength(0);
+    const saved = await staffUsers.findById(STAFF_ID);
+    expect(await passwords.verify("StaffPass1", saved!.passwordHash)).toBe(true);
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        organizationSlug: ACME_SLUG,
+        email: "invited.staff@local.test",
+        password: "StaffPass1",
+      },
+    });
+    expect(login.statusCode).toBe(200);
+  });
+
+  it("sets wholesale password without creating a session cookie", async () => {
+    const { app, clock, passwords, setPasswordTokens, wholesaleUsers } = await startSetPasswordApp();
+    const { rawToken } = await setPasswordTokens.mint({
+      audience: "wholesale",
+      userId: WHOLESALE_ID,
+      expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/wholesale/auth/set-password",
+      payload: { token: rawToken, password: "ShopPass1" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ ok: true });
+    expect(setCookieHeaders(response)).toHaveLength(0);
+    const saved = await wholesaleUsers.findById(WHOLESALE_ID);
+    expect(await passwords.verify("ShopPass1", saved!.passwordHash)).toBe(true);
+  });
+
+  it("returns generic invalid for wrong audience mount and policy errors for weak passwords", async () => {
+    const { app, clock, setPasswordTokens } = await startSetPasswordApp();
+    const wholesaleToken = await setPasswordTokens.mint({
+      audience: "wholesale",
+      userId: WHOLESALE_ID,
+      expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    const wrongMount = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: wholesaleToken.rawToken, password: "ShopPass1" },
+    });
+    expect(wrongMount.statusCode).toBe(400);
+    expect(wrongMount.json()).toEqual({ error: "invalid" });
+
+    const staffToken = await setPasswordTokens.mint({
+      audience: "staff",
+      userId: STAFF_ID,
+      expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+    const weak = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: staffToken.rawToken, password: "short" },
+    });
+    expect(weak.statusCode).toBe(400);
+    expect(weak.json()).toEqual({ error: "invalid", violation: "too_short" });
+
+    const validAfterPolicyFailure = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: staffToken.rawToken, password: "ValidPass1" },
+    });
+    expect(validAfterPolicyFailure.statusCode).toBe(200);
+    expect(validAfterPolicyFailure.json()).toEqual({ ok: true });
+  });
+
+  it("rejects reused and expired tokens with generic invalid", async () => {
+    const { app, clock, setPasswordTokens } = await startSetPasswordApp();
+    const { rawToken } = await setPasswordTokens.mint({
+      audience: "staff",
+      userId: STAFF_ID,
+      expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: rawToken, password: "StaffPass1" },
+    });
+    expect(first.statusCode).toBe(200);
+
+    const reused = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: rawToken, password: "StaffPass2" },
+    });
+    expect(reused.statusCode).toBe(400);
+    expect(reused.json()).toEqual({ error: "invalid" });
+
+    const expired = await setPasswordTokens.mint({
+      audience: "staff",
+      userId: STAFF_ID,
+      expiresAt: new Date(clock.now().getTime() - 1_000),
+    });
+    const expiredResponse = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: expired.rawToken, password: "StaffPass1" },
+    });
+    expect(expiredResponse.statusCode).toBe(400);
+    expect(expiredResponse.json()).toEqual({ error: "invalid" });
+  });
+});
+

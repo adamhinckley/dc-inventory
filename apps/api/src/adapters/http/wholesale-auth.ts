@@ -8,6 +8,9 @@ import {
   logoutResponseSchema,
   notFoundResponseSchema,
   selectActingCustomerBodySchema,
+  setPasswordBodySchema,
+  setPasswordFailureResponseSchema,
+  setPasswordSuccessResponseSchema,
   tooManyLoginAttemptsResponseSchema,
   unauthorizedResponseSchema,
   wholesaleSessionResponseSchema,
@@ -118,6 +121,36 @@ export function registerWholesaleAuthRoutes(app: FastifyInstance): void {
       clearLegacySessionCookie(reply, STAFF_SESSION_COOKIE, request);
       setSessionCookie(reply, WHOLESALE_SESSION_COOKIE, result.sessionId, request);
       return toWholesaleSessionBody(result);
+    },
+  );
+
+  routes.post(
+    "/auth/set-password",
+    {
+      schema: {
+        operationId: "setPasswordWholesale",
+        tags: ["wholesale-auth"],
+        summary: "Set wholesale password from invite token",
+        body: setPasswordBodySchema,
+        response: {
+          200: setPasswordSuccessResponseSchema,
+          400: setPasswordFailureResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.identity.setPasswordWholesale.execute({
+        token: request.body.token,
+        password: request.body.password,
+        audience: "wholesale",
+      });
+      if (!result.ok) {
+        if (result.reason === "password_policy") {
+          return reply.code(400).send({ error: "invalid" as const, violation: result.violation });
+        }
+        return reply.code(400).send({ error: "invalid" as const });
+      }
+      return { ok: true as const };
     },
   );
 

@@ -28,7 +28,7 @@ export type CreateWholesaleUserInviteLinks = {
     organizationSlug: string;
     wholesaleUserId: WholesaleUserIdType;
     wholesaleEmail: string;
-  }): string;
+  }): Promise<string>;
 };
 
 export type CreateWholesaleUserResult =
@@ -96,7 +96,7 @@ export class CreateWholesaleUserUseCase {
           displayName,
           wholesaleEmail: email,
           wholesaleUserId,
-          setPasswordUrl: this.inviteLinks.buildSetPasswordUrl({
+          setPasswordUrl: await this.inviteLinks.buildSetPasswordUrl({
             organizationSlug: organization.slug,
             wholesaleUserId,
             wholesaleEmail: email,

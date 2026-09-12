@@ -81,6 +81,7 @@ import {
 import {
   ClearActingCustomerUseCase,
   CreateStaffUserUseCase,
+  CreateWholesaleUserUseCase,
   DrizzleIdentityUnitOfWork,
   DrizzleOpsUserRepository,
   DrizzleSessionStore,
@@ -92,10 +93,12 @@ import {
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
   DrizzleLoginThrottle,
+  DrizzleSetPasswordTokenStore,
   InMemoryIdentityUnitOfWork,
   InMemoryLoginThrottle,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
+  InMemorySetPasswordTokenStore,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
@@ -107,12 +110,14 @@ import {
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   SelectActingCustomerUseCase,
+  SetPasswordUseCase,
   ScryptPasswordHasher,
   DrizzleOrganizationRepository,
   type IPasswordHasher,
   type ILoginThrottle,
   type IOrganizationRepository,
   type ISessionStore,
+  type ISetPasswordTokenStore,
   type IStaffUserRepository,
   type IWholesaleLoginAccountStatusReadPort,
   type IWholesaleUserRepository,
@@ -122,6 +127,7 @@ import {
 } from "@dc-inventory/identity";
 import { createEmailSenderFromEnv } from "./email-sender-config.js";
 import { createStaffInviteLinks } from "./staff-invite-links.js";
+import { createWholesaleInviteLinks } from "./wholesale-invite-links.js";
 import {
   DrizzleLicensingReadRepository,
   DrizzleLicensingTenantProvisioner,
@@ -337,6 +343,9 @@ export type IdentityHttpServices = {
   clearActingCustomer: ClearActingCustomerUseCase;
   registerOrganizationWithLicensing: RegisterOrganizationWithLicensingUseCase;
   createStaffUser: CreateStaffUserUseCase;
+  createWholesaleUser: CreateWholesaleUserUseCase;
+  setPasswordStaff: SetPasswordUseCase;
+  setPasswordWholesale: SetPasswordUseCase;
 };
 
 export type CatalogHttpServices = {
@@ -517,6 +526,7 @@ export type AppServiceOverrides = {
   wholesaleUsers?: IWholesaleUserRepository;
   sessions?: ISessionStore;
   passwords?: IPasswordHasher;
+  setPasswordTokens?: ISetPasswordTokenStore;
   loginThrottle?: ILoginThrottle;
   organizationRepo?: IOrganizationRepository;
   customerRepo?: ICustomerRepository;
@@ -1120,6 +1130,13 @@ export function composeAppServices(
   const passwords =
     overrides.passwords ??
     (identityDb ? new ScryptPasswordHasher() : new InMemoryPasswordHasher());
+  const setPasswordTokens =
+    overrides.setPasswordTokens ??
+    (identityDb
+      ? new DrizzleSetPasswordTokenStore(identityDb)
+      : new InMemorySetPasswordTokenStore());
+  const staffInviteLinks = createStaffInviteLinks(setPasswordTokens, clock);
+  const wholesaleInviteLinks = createWholesaleInviteLinks(setPasswordTokens, clock);
   const organizationRepo =
     overrides.organizationRepo ??
     (identityDb
@@ -1435,7 +1452,7 @@ export function composeAppServices(
           identityUnitOfWork,
           passwords,
           emailSender,
-          createStaffInviteLinks(),
+          staffInviteLinks,
         ),
         new EnsureLicensingTenantUseCase(licensingProvisioner),
         new RollbackOrganizationRegistrationUseCase(organizationRepo, staffUsers),
@@ -1445,7 +1462,28 @@ export function composeAppServices(
         staffUsers,
         passwords,
         emailSender,
-        createStaffInviteLinks(),
+        staffInviteLinks,
+      ),
+      createWholesaleUser: new CreateWholesaleUserUseCase(
+        organizationRepo,
+        wholesaleUsers,
+        passwords,
+        emailSender,
+        wholesaleInviteLinks,
+      ),
+      setPasswordStaff: new SetPasswordUseCase(
+        setPasswordTokens,
+        staffUsers,
+        wholesaleUsers,
+        passwords,
+        clock,
+      ),
+      setPasswordWholesale: new SetPasswordUseCase(
+        setPasswordTokens,
+        staffUsers,
+        wholesaleUsers,
+        passwords,
+        clock,
       ),
     },
     customers: customersServices(

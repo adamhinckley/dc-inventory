@@ -105,6 +105,64 @@ paths:
                   - error
                   - retryAfterSeconds
                 additionalProperties: false
+  /wholesale/auth/set-password:
+    post:
+      operationId: setPasswordWholesale
+      summary: Set wholesale password from invite token
+      tags:
+        - wholesale-auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  minLength: 1
+                password:
+                  type: string
+                  minLength: 1
+              required:
+                - token
+                - password
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+                required:
+                  - ok
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                  violation:
+                    type: string
+                    enum:
+                      - too_short
+                      - missing_uppercase
+                      - missing_lowercase
+                      - missing_number
+                required:
+                  - error
+                additionalProperties: false
   /wholesale/auth/logout:
     post:
       operationId: logoutWholesale

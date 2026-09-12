@@ -132,6 +132,64 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/auth/set-password:
+    post:
+      operationId: setPasswordInternal
+      summary: Set staff password from invite token
+      tags:
+        - internal-auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  minLength: 1
+                password:
+                  type: string
+                  minLength: 1
+              required:
+                - token
+                - password
+      responses:
+        "200":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    enum:
+                      - true
+                required:
+                  - ok
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                  violation:
+                    type: string
+                    enum:
+                      - too_short
+                      - missing_uppercase
+                      - missing_lowercase
+                      - missing_number
+                required:
+                  - error
+                additionalProperties: false
   /internal/auth/session:
     get:
       operationId: getInternalSession

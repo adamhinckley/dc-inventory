@@ -94,7 +94,7 @@ describe("Identity required display names", () => {
     const uow = new InMemoryIdentityUnitOfWork(undefined, staffUsers);
     const email = new InMemoryEmailSender();
     const registerOrganization = new RegisterOrganizationUseCase(uow, passwords, email, {
-      buildSetPasswordUrl: () => "https://internal.test/set-password",
+      buildSetPasswordUrl: async () => "https://internal.test/set-password?token=test",
     });
 
     expect(
@@ -122,7 +122,7 @@ describe("Identity required display names", () => {
     const staffUsers = new InMemoryStaffUserRepository();
     const uow = new InMemoryIdentityUnitOfWork(undefined, staffUsers);
     const registerOrganization = new RegisterOrganizationUseCase(uow, passwords, email, {
-      buildSetPasswordUrl: () => "https://internal.test/set-password",
+      buildSetPasswordUrl: async () => "https://internal.test/set-password?token=test",
     });
 
     const result = await registerOrganization.execute({

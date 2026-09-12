@@ -3,6 +3,9 @@ import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import {
   loginBodySchema,
   logoutResponseSchema,
+  setPasswordBodySchema,
+  setPasswordFailureResponseSchema,
+  setPasswordSuccessResponseSchema,
   staffSessionResponseSchema,
   tooManyLoginAttemptsResponseSchema,
   unauthorizedResponseSchema,
@@ -86,6 +89,36 @@ export function registerInternalAuthRoutes(app: FastifyInstance): void {
         return unauthorized(reply, request, token);
       }
       clearSessionCookie(reply, STAFF_SESSION_COOKIE, request);
+      return { ok: true as const };
+    },
+  );
+
+  routes.post(
+    "/auth/set-password",
+    {
+      schema: {
+        operationId: "setPasswordInternal",
+        tags: ["internal-auth"],
+        summary: "Set staff password from invite token",
+        body: setPasswordBodySchema,
+        response: {
+          200: setPasswordSuccessResponseSchema,
+          400: setPasswordFailureResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.identity.setPasswordStaff.execute({
+        token: request.body.token,
+        password: request.body.password,
+        audience: "staff",
+      });
+      if (!result.ok) {
+        if (result.reason === "password_policy") {
+          return reply.code(400).send({ error: "invalid" as const, violation: result.violation });
+        }
+        return reply.code(400).send({ error: "invalid" as const });
+      }
       return { ok: true as const };
     },
   );

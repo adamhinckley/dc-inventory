@@ -37,8 +37,8 @@ function harness() {
       passwords,
       email,
       {
-        buildSetPasswordUrl: ({ organizationSlug, wholesaleUserId, wholesaleEmail }) =>
-          `https://wholesale.test/set-password?org=${organizationSlug}&user=${wholesaleUserId}&email=${wholesaleEmail}`,
+        buildSetPasswordUrl: async () =>
+          "https://wholesale.test/set-password?token=test-wholesale-token",
       },
     ),
   };
@@ -88,7 +88,7 @@ describe("CreateWholesaleUser (in-memory)", () => {
       to: "buyer@local.test",
       subject: `You're invited to ${TEST_ORG_NAME} wholesale`,
     });
-    expect(h.email.sent[0]?.text).toContain("https://wholesale.test/set-password");
+    expect(h.email.sent[0]?.text).toContain("/set-password?token=");
     expect(h.email.sent[0]?.text).toContain("Harbor Buyer");
   });
 
