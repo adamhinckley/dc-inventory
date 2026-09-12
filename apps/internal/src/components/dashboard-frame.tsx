@@ -9,6 +9,7 @@ import {
   DashboardBreadcrumbProvider,
 } from "./dashboard-breadcrumb";
 import { DashboardTableUrlCleanup } from "./dashboard-table-url-cleanup";
+import { PlatformNavItems } from "./platform-nav-items";
 import { StaffSessionGate } from "./staff-sign-in-dialog";
 
 function WorkspaceMark() {
@@ -36,6 +37,7 @@ export function DashboardFrame({ children }: { children: ReactNode }) {
                   />
                 ))}
               </AppShell.NavGroup>
+              <PlatformNavItems />
               <AppShell.NavFooter>
                 <AccountNavMenu />
               </AppShell.NavFooter>
