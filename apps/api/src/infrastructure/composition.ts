@@ -80,6 +80,7 @@ import {
 } from "@dc-inventory/customers";
 import {
   ClearActingCustomerUseCase,
+  DrizzleIdentityUnitOfWork,
   DrizzleOpsUserRepository,
   DrizzleSessionStore,
   InMemoryOpsUserRepository,
@@ -90,6 +91,7 @@ import {
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
   DrizzleLoginThrottle,
+  InMemoryIdentityUnitOfWork,
   InMemoryLoginThrottle,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
@@ -99,6 +101,7 @@ import {
   LoginStaffUseCase,
   LoginWholesaleUseCase,
   LogoutUseCase,
+  RegisterOrganizationUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   SelectActingCustomerUseCase,
@@ -116,8 +119,11 @@ import {
   type IEmailSender,
 } from "@dc-inventory/identity";
 import { createEmailSenderFromEnv } from "./email-sender-config.js";
+import { createStaffInviteLinks } from "./staff-invite-links.js";
 import {
   DrizzleLicensingReadRepository,
+  DrizzleLicensingTenantProvisioner,
+  EnsureLicensingTenantUseCase,
   featuresAllCoreOn,
   InMemoryLicensingStore,
   GetLatestSubscriptionUseCase,
@@ -126,6 +132,7 @@ import {
   ListLicensingSubscriptionsUseCase,
   type IFeatures,
   type ILicensingReadRepository,
+  type ILicensingTenantProvisioner,
   type LicensingDrizzle,
 } from "@dc-inventory/licensing";
 import {
@@ -325,6 +332,7 @@ export type IdentityHttpServices = {
   listActingCustomers: ListActingCustomersUseCase;
   selectActingCustomer: SelectActingCustomerUseCase;
   clearActingCustomer: ClearActingCustomerUseCase;
+  registerOrganization: RegisterOrganizationUseCase;
 };
 
 export type CatalogHttpServices = {
@@ -443,6 +451,7 @@ export type LicensingHttpServices = {
   listSubscriptions: ListLicensingSubscriptionsUseCase;
   listPayments: ListLicensingPaymentsUseCase;
   getLatestSubscription: GetLatestSubscriptionUseCase;
+  ensureLicensingTenant: EnsureLicensingTenantUseCase;
 };
 
 export type CloseSkusForPresellHttpRequest = {
@@ -939,11 +948,15 @@ function accountingServices(input: AccountingServicesInput): AccountingHttpServi
   };
 }
 
-function licensingServices(repository: ILicensingReadRepository): LicensingHttpServices {
+function licensingServices(
+  repository: ILicensingReadRepository,
+  provisioner: ILicensingTenantProvisioner,
+): LicensingHttpServices {
   return {
     listSubscriptions: new ListLicensingSubscriptionsUseCase(repository),
     listPayments: new ListLicensingPaymentsUseCase(repository),
     getLatestSubscription: new GetLatestSubscriptionUseCase(repository),
+    ensureLicensingTenant: new EnsureLicensingTenantUseCase(provisioner),
   };
 }
 
@@ -1070,6 +1083,10 @@ export function composeAppServices(
     (licensingDb
       ? new DrizzleLicensingReadRepository(licensingDb)
       : inMemoryLicensing!);
+  const licensingProvisioner: ILicensingTenantProvisioner =
+    licensingDb !== undefined
+      ? new DrizzleLicensingTenantProvisioner(licensingDb)
+      : inMemoryLicensing!;
   const features =
     overrides.features ??
     (readFeaturesAllCoreOn() || !licensingDb
@@ -1102,6 +1119,10 @@ export function composeAppServices(
     (identityDb
       ? new DrizzleOrganizationRepository(identityDb)
       : new InMemoryOrganizationRepository());
+  const identityUnitOfWork =
+    identityDb !== undefined
+      ? new DrizzleIdentityUnitOfWork(identityDb)
+      : new InMemoryIdentityUnitOfWork(organizationRepo, staffUsers);
   const loginThrottle =
     overrides.loginThrottle ??
     (identityDb
@@ -1403,6 +1424,12 @@ export function composeAppServices(
         clock,
       ),
       clearActingCustomer: new ClearActingCustomerUseCase(sessions, staffUsers, clock),
+      registerOrganization: new RegisterOrganizationUseCase(
+        identityUnitOfWork,
+        passwords,
+        emailSender,
+        createStaffInviteLinks(),
+      ),
     },
     customers: customersServices(
       customerRepo,
@@ -1455,7 +1482,7 @@ export function composeAppServices(
       readPorts.accountStatus,
       creditCheck,
     ),
-    licensing: licensingServices(licensingRepository),
+    licensing: licensingServices(licensingRepository, licensingProvisioner),
     inventory: inventoryServices(
       unitOfWork,
       purchaseOrderRepo,

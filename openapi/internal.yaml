@@ -184,6 +184,131 @@ paths:
                 required:
                   - error
                 additionalProperties: false
+  /internal/organizations:
+    post:
+      operationId: createInternalOrganization
+      summary: Provision a new organization and invite its first admin (DEFAULT
+        platform only)
+      tags:
+        - internal-organizations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                slug:
+                  type: string
+                  minLength: 1
+                staffDisplayName:
+                  type: string
+                  minLength: 1
+                staffEmail:
+                  type: string
+                  minLength: 1
+              required:
+                - name
+                - slug
+                - staffDisplayName
+                - staffEmail
+      responses:
+        "201":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizationId:
+                    type: string
+                  staffUserId:
+                    type: string
+                    format: uuid
+                    pattern: ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+                  slug:
+                    type: string
+                  inviteSentTo:
+                    type: string
+                required:
+                  - organizationId
+                  - staffUserId
+                  - slug
+                  - inviteSentTo
+                additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid
+                required:
+                  - error
+                additionalProperties: false
+        "401":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - unauthorized
+                required:
+                  - error
+                additionalProperties: false
+        "403":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - forbidden
+                required:
+                  - error
+                additionalProperties: false
+        "409":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - slug_taken
+                required:
+                  - error
+                additionalProperties: false
+        "502":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invite_failed
+                required:
+                  - error
+                additionalProperties: false
   /internal/customers:
     get:
       operationId: listInternalCustomers

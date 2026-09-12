@@ -162,6 +162,9 @@ importers:
       react-dom:
         specifier: ^19.2.8
         version: 19.2.8(react@19.2.8)
+      react-hook-form:
+        specifier: ^7.62.0
+        version: 7.86.0(react@19.2.8)
       zod:
         specifier: ^3.25.76
         version: 3.25.76

@@ -513,6 +513,28 @@ export const invalidResponseSchema = z.object({
   error: z.literal("invalid"),
 });
 
+export const slugTakenResponseSchema = z.object({
+  error: z.literal("slug_taken"),
+});
+
+export const inviteFailedResponseSchema = z.object({
+  error: z.literal("invite_failed"),
+});
+
+export const createInternalOrganizationBodySchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1),
+  staffDisplayName: z.string().min(1),
+  staffEmail: z.string().min(1),
+});
+
+export const createInternalOrganizationResponseSchema = z.object({
+  organizationId: z.string(),
+  staffUserId: z.string().uuid(),
+  slug: z.string(),
+  inviteSentTo: z.string(),
+});
+
 export const invalidSellWindowResponseSchema = z.object({
   error: z.literal("invalid_sell_window"),
 });
