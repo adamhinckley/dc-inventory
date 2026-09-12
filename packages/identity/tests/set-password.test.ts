@@ -1,12 +1,14 @@
 import {
   CustomerId,
   OrganizationId,
+  PlatformUserId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
+import { InMemoryPlatformUserRepository } from "../src/adapters/in-memory-platform-user-repository.js";
 import { InMemorySetPasswordTokenStore } from "../src/adapters/in-memory-set-password-token-store.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
 import { InMemoryWholesaleUserRepository } from "../src/adapters/in-memory-wholesale-user-repository.js";
@@ -24,14 +26,16 @@ function harness() {
   const tokens = new InMemorySetPasswordTokenStore();
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
+  const platformUsers = new InMemoryPlatformUserRepository();
   const setPassword = new SetPasswordUseCase(
     tokens,
     staffUsers,
     wholesaleUsers,
+    platformUsers,
     passwords,
     clock,
   );
-  return { clock, passwords, tokens, staffUsers, wholesaleUsers, setPassword };
+  return { clock, passwords, tokens, staffUsers, wholesaleUsers, platformUsers, setPassword };
 }
 
 describe("SetPasswordUseCase", () => {
@@ -236,20 +240,29 @@ describe("SetPasswordUseCase", () => {
     ).toEqual({ ok: true });
   });
 
-  it("fails closed for platform audience", async () => {
+  it("sets a platform password from a valid platform token", async () => {
     const h = harness();
+    const platformId = PlatformUserId.parse("550e8400-e29b-41d4-a716-446655440099");
+    await h.platformUsers.save({
+      id: platformId,
+      displayName: "Adam Platform",
+      email: "adam@local.test",
+      passwordHash: await h.passwords.hash("pending-secret"),
+    });
     const { rawToken } = await h.tokens.mint({
       audience: "platform",
-      userId: STAFF_ID,
+      userId: platformId,
       expiresAt: new Date(NOW.getTime() + SET_PASSWORD_TOKEN_TTL_MS),
     });
 
-    expect(
-      await h.setPassword.execute({
-        token: rawToken,
-        password: "ValidPass1",
-        audience: "platform",
-      }),
-    ).toEqual({ ok: false, reason: "invalid" });
+    const result = await h.setPassword.execute({
+      token: rawToken,
+      password: "ValidPass1",
+      audience: "platform",
+    });
+
+    expect(result).toEqual({ ok: true });
+    const saved = await h.platformUsers.findById(platformId);
+    expect(await h.passwords.verify("ValidPass1", saved!.passwordHash)).toBe(true);
   });
 });

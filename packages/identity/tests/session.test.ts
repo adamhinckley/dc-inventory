@@ -16,6 +16,7 @@ function session(lastSeenAt: Date): Session {
     staffUserId: StaffUserId.parse("550e8400-e29b-41d4-a716-446655440001"),
     wholesaleUserId: null,
     opsUserId: null,
+    platformUserId: null,
     customerId: null,
     createdAt: BASE,
     lastSeenAt,

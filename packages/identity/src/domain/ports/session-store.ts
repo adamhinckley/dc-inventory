@@ -1,6 +1,7 @@
 import type {
   CustomerId,
   OrganizationId,
+  PlatformUserId,
   SessionId,
   StaffUserId,
   WholesaleUserId,
@@ -11,8 +12,9 @@ import type { Session, SessionAudience } from "../session.js";
 
 export type NewSession = {
   audience: SessionAudience;
-  organizationId: OrganizationId;
+  organizationId: OrganizationId | null;
   staffUserId: StaffUserId | null;
+  platformUserId: PlatformUserId | null;
   wholesaleUserId: WholesaleUserId | null;
   opsUserId: OpsUserId | null;
   customerId: CustomerId | null;
@@ -37,6 +39,11 @@ export type OpsResolvedSession = {
   tenantId: OrganizationId;
 };
 
+export type PlatformResolvedSession = {
+  session: Session;
+  email: string;
+};
+
 export interface ISessionStore {
   create(input: NewSession): Promise<Session>;
   findById(id: SessionId): Promise<Session | null>;
@@ -46,4 +53,5 @@ export interface ISessionStore {
   findStaffResolved?(id: SessionId): Promise<StaffResolvedSession | null>;
   findWholesaleResolved?(id: SessionId): Promise<WholesaleResolvedSession | null>;
   findOpsResolved?(id: SessionId): Promise<OpsResolvedSession | null>;
+  findPlatformResolved?(id: SessionId): Promise<PlatformResolvedSession | null>;
 }

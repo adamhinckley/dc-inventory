@@ -62,13 +62,13 @@ describe("static staff action policy", () => {
     expect(canStaffPerform(["accounting"], "master_data_manage")).toBe(false);
   });
 
-  it("grants organizations_manage only to DEFAULT platform admins", () => {
-    const defaultAdmin = { organizationId: OrganizationId.DEFAULT };
-    expect(canStaffPerform(["admin"], "organizations_manage", defaultAdmin)).toBe(true);
-    expect(canStaffPerform(["purchasing"], "organizations_manage", defaultAdmin)).toBe(false);
-    expect(canStaffPerform(["admin"], "organizations_manage", { organizationId: BETA_ORG })).toBe(
-      false,
-    );
+  it("never grants organizations_manage to staff roles", () => {
+    for (const role of STAFF_ROLES) {
+      expect(
+        canStaffPerform([role], "organizations_manage", { organizationId: OrganizationId.DEFAULT }),
+        `${role} on organizations_manage`,
+      ).toBe(false);
+    }
     expect(canStaffPerform(["admin"], "organizations_manage")).toBe(false);
   });
 });

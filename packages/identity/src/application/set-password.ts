@@ -1,10 +1,12 @@
 import {
   StaffUserId,
+  PlatformUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import type { IClock } from "../domain/clock.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { ISetPasswordTokenStore } from "../domain/ports/set-password-token-store.js";
+import type { IPlatformUserRepository } from "../domain/ports/platform-user-repository.js";
 import type { IStaffUserRepository } from "../domain/ports/staff-user-repository.js";
 import type { IWholesaleUserRepository } from "../domain/ports/wholesale-user-repository.js";
 import {
@@ -29,6 +31,7 @@ export class SetPasswordUseCase {
     private readonly tokens: ISetPasswordTokenStore,
     private readonly staffUsers: IStaffUserRepository,
     private readonly wholesaleUsers: IWholesaleUserRepository,
+    private readonly platformUsers: IPlatformUserRepository,
     private readonly passwords: IPasswordHasher,
     private readonly clock: IClock,
   ) {}
@@ -39,16 +42,31 @@ export class SetPasswordUseCase {
       return { ok: false, reason: "password_policy", violation: policy.violation };
     }
 
-    if (input.audience === "platform") {
-      return { ok: false, reason: "invalid" };
-    }
-
     const now = this.clock.now();
     const lookup = {
       rawToken: input.token,
       expectedAudience: input.audience,
       now,
     };
+
+    if (input.audience === "platform") {
+      const token = await this.tokens.findValid(lookup);
+      if (token === null) {
+        return { ok: false, reason: "invalid" };
+      }
+      const userId = PlatformUserId.parse(token.userId);
+      const user = await this.platformUsers.findById(userId);
+      if (user === null) {
+        return { ok: false, reason: "invalid" };
+      }
+      await this.platformUsers.save({
+        ...user,
+        passwordHash: await this.passwords.hash(input.password),
+      });
+      await this.tokens.consume(lookup);
+      return { ok: true };
+    }
+
     const token = await this.tokens.findValid(lookup);
     if (token === null) {
       return { ok: false, reason: "invalid" };

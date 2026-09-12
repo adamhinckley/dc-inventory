@@ -22,6 +22,7 @@ export {
   PurchaseOrderId,
   SessionId,
   StaffUserId,
+  PlatformUserId,
   SupplierId,
   TenantId,
   WholesaleUserId,

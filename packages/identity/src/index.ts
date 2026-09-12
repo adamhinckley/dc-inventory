@@ -9,6 +9,8 @@ export { InMemoryOrganizationRepository } from "./adapters/in-memory-organizatio
 export { InMemoryPasswordHasher } from "./adapters/in-memory-password-hasher.js";
 export { InMemorySessionStore } from "./adapters/in-memory-session-store.js";
 export { InMemoryStaffUserRepository } from "./adapters/in-memory-staff-user-repository.js";
+export { InMemoryPlatformUserRepository } from "./adapters/in-memory-platform-user-repository.js";
+export { DrizzlePlatformUserRepository } from "./adapters/drizzle-platform-user-repository.js";
 export { InMemoryWholesaleUserRepository } from "./adapters/in-memory-wholesale-user-repository.js";
 export { ScryptPasswordHasher } from "./adapters/scrypt-password-hasher.js";
 export { DrizzleOpsUserRepository } from "./adapters/drizzle-ops-user-repository.js";
@@ -34,6 +36,7 @@ export {
   type SetPasswordRequest,
   type SetPasswordResult,
 } from "./application/set-password.js";
+export { LoginPlatformUseCase } from "./application/login-platform.js";
 export { LoginStaffUseCase } from "./application/login-staff.js";
 export { LoginWholesaleUseCase } from "./application/login-wholesale.js";
 export { LogoutUseCase } from "./application/logout.js";
@@ -70,9 +73,11 @@ export {
 } from "./application/staff-action-policy.js";
 export {
   ResolveOpsSessionUseCase,
+  ResolvePlatformSessionUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   type ResolveOpsSessionResult,
+  type ResolvePlatformSessionResult,
   type ResolveStaffSessionResult,
   type ResolveWholesaleSessionResult,
   type SessionFailureReason,
@@ -114,6 +119,7 @@ export type {
   ActingCustomerPickerRow,
   IActingCustomerHeaderReadPort,
 } from "./domain/ports/acting-customer-header-read.js";
+export type { IPlatformUserRepository } from "./domain/ports/platform-user-repository.js";
 export type { IStaffUserRepository } from "./domain/ports/staff-user-repository.js";
 export type { IWholesaleUserRepository } from "./domain/ports/wholesale-user-repository.js";
 export type { IWholesaleLoginAccountStatusReadPort } from "./domain/ports/wholesale-login-account-status-read.js";
@@ -147,6 +153,7 @@ export {
   parseOrganizationName,
 } from "./domain/required-text.js";
 export { STAFF_ROLES, type StaffRole } from "./domain/staff-role.js";
+export type { PlatformUser } from "./domain/platform-user.js";
 export type { StaffUser } from "./domain/staff-user.js";
 export type { WholesaleUser } from "./domain/wholesale-user.js";
 export {

@@ -8,6 +8,7 @@ import {
   loginThrottleCounters,
   opsUsers,
   organizations,
+  platformUsers,
   sessions,
   staffUsers,
   wholesaleUsers,
@@ -16,6 +17,7 @@ import {
 export type IdentityTransactionDrizzle = PostgresJsDatabase<{
   organizations: typeof organizations;
   opsUsers: typeof opsUsers;
+  platformUsers: typeof platformUsers;
   staffUsers: typeof staffUsers;
   wholesaleUsers: typeof wholesaleUsers;
   sessions: typeof sessions;

@@ -113,6 +113,7 @@ describe("Wholesale staff acting (ADA-268 owner tests)", () => {
         audience: "wholesale",
         organizationId: OrganizationId.DEFAULT,
         staffUserId: ADMIN_STAFF_ID,
+        platformUserId: null,
         wholesaleUserId: null,
         customerId: null,
         opsUserId: null,
@@ -208,6 +209,7 @@ describe("Wholesale staff acting (ADA-268 owner tests)", () => {
       expect(stored).toMatchObject({
         audience: "wholesale",
         staffUserId: staffId,
+        platformUserId: null,
         wholesaleUserId: null,
         customerId: null,
       });
@@ -265,6 +267,7 @@ describe("Wholesale staff acting (ADA-268 owner tests)", () => {
         audience: "wholesale",
         organizationId: OrganizationId.DEFAULT,
         staffUserId: ADMIN_STAFF_ID,
+        platformUserId: null,
         wholesaleUserId: null,
         opsUserId: null,
         customerId: null,

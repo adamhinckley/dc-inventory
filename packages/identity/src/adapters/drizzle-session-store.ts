@@ -1,6 +1,7 @@
 import {
   CustomerId,
   OrganizationId,
+  PlatformUserId,
   SessionId,
   StaffUserId,
   WholesaleUserId,
@@ -10,12 +11,13 @@ import type {
   ISessionStore,
   NewSession,
   OpsResolvedSession,
+  PlatformResolvedSession,
   StaffResolvedSession,
   WholesaleResolvedSession,
 } from "../domain/ports/session-store.js";
 import { OpsUserId } from "../domain/ops-user.js";
 import type { Session, SessionAudience } from "../domain/session.js";
-import { opsUsers, sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
+import { opsUsers, platformUsers, sessions, staffUsers, wholesaleUsers } from "../persistence/schema.js";
 import type { IdentityDrizzle } from "./drizzle-staff-user-repository.js";
 
 export class DrizzleSessionStore implements ISessionStore {
@@ -25,20 +27,24 @@ export class DrizzleSessionStore implements ISessionStore {
     const actorId =
       input.audience === "staff"
         ? input.staffUserId
-        : input.audience === "wholesale"
-          ? (input.wholesaleUserId ?? input.staffUserId)
-          : input.opsUserId;
+        : input.audience === "platform"
+          ? input.platformUserId
+          : input.audience === "wholesale"
+            ? (input.wholesaleUserId ?? input.staffUserId)
+            : input.opsUserId;
     if (actorId === null) {
       throw new Error("session actor is required");
     }
     const staffUserId =
       input.audience === "wholesale" && input.staffUserId !== null ? input.staffUserId : null;
+    const platformUserId = input.audience === "platform" ? input.platformUserId : null;
     const [row] = await this.db
       .insert(sessions)
       .values({
         actorType: input.audience,
         actorId,
         staffUserId,
+        platformUserId,
         organizationId: input.organizationId,
         customerId: input.customerId,
         lastSeenAt: input.lastSeenAt,
@@ -84,6 +90,9 @@ export class DrizzleSessionStore implements ISessionStore {
     if (session.audience !== "staff" || session.staffUserId === null) {
       return null;
     }
+    if (session.organizationId === null) {
+      return null;
+    }
     if (OrganizationId.parse(row.organizationId) !== session.organizationId) {
       return null;
     }
@@ -91,6 +100,36 @@ export class DrizzleSessionStore implements ISessionStore {
       session,
       email: row.email,
       roles: row.roles,
+    };
+  }
+
+  async findPlatformResolved(id: SessionId): Promise<PlatformResolvedSession | null> {
+    const rows = await this.db
+      .select({
+        session: sessions,
+        email: platformUsers.email,
+      })
+      .from(sessions)
+      .innerJoin(
+        platformUsers,
+        and(eq(sessions.actorType, "platform"), eq(sessions.actorId, platformUsers.id)),
+      )
+      .where(eq(sessions.id, id))
+      .limit(1);
+    const row = rows[0];
+    if (row === undefined) {
+      return null;
+    }
+    const session = toSession(row.session);
+    if (session.audience !== "platform" || session.platformUserId === null) {
+      return null;
+    }
+    if (session.organizationId !== null) {
+      return null;
+    }
+    return {
+      session,
+      email: row.email,
     };
   }
 
@@ -117,6 +156,9 @@ export class DrizzleSessionStore implements ISessionStore {
     }
     const session = toSession(row.session);
     if (session.audience !== "wholesale") {
+      return null;
+    }
+    if (session.organizationId === null) {
       return null;
     }
     if (session.staffUserId !== null && session.wholesaleUserId === null) {
@@ -171,6 +213,9 @@ export class DrizzleSessionStore implements ISessionStore {
     if (session.audience !== "ops" || session.opsUserId === null) {
       return null;
     }
+    if (session.organizationId === null) {
+      return null;
+    }
     const tenantId = OrganizationId.parse(row.tenantId);
     if (tenantId !== session.organizationId) {
       return null;
@@ -205,12 +250,29 @@ export class DrizzleSessionStore implements ISessionStore {
 
 function toSession(row: typeof sessions.$inferSelect): Session {
   const audience = row.actorType as SessionAudience;
+  const organizationId =
+    row.organizationId === null ? null : OrganizationId.parse(row.organizationId);
+  if (audience === "platform") {
+    return {
+      id: SessionId.parse(row.id),
+      audience,
+      organizationId: null,
+      staffUserId: null,
+      platformUserId: PlatformUserId.parse(row.actorId),
+      wholesaleUserId: null,
+      opsUserId: null,
+      customerId: null,
+      createdAt: row.createdAt,
+      lastSeenAt: row.lastSeenAt,
+    };
+  }
   if (audience === "wholesale" && row.staffUserId !== null) {
     return {
       id: SessionId.parse(row.id),
       audience,
-      organizationId: OrganizationId.parse(row.organizationId),
+      organizationId,
       staffUserId: StaffUserId.parse(row.staffUserId),
+      platformUserId: null,
       wholesaleUserId: null,
       opsUserId: null,
       customerId: row.customerId === null ? null : CustomerId.parse(row.customerId),
@@ -221,8 +283,9 @@ function toSession(row: typeof sessions.$inferSelect): Session {
   return {
     id: SessionId.parse(row.id),
     audience,
-    organizationId: OrganizationId.parse(row.organizationId),
+    organizationId,
     staffUserId: audience === "staff" ? StaffUserId.parse(row.actorId) : null,
+    platformUserId: null,
     wholesaleUserId:
       audience === "wholesale" ? WholesaleUserId.parse(row.actorId) : null,
     opsUserId: audience === "ops" ? OpsUserId.parse(row.actorId) : null,
