@@ -20,7 +20,7 @@ Then click through:
 
 1. `wholesale-apply.html` — buyer self-serve apply
 2. `internal-review-queue.html` — staff pending applications (+ create-for-them)
-3. `internal-create-organization.html` — DEFAULT / platform admin creates an org
+3. `internal-create-organization.html` — **Add Company** (Adam / platform): how Adam adds a new wholesale company to the app (slug + first admin email)
 4. `internal-create-staff.html` — admin creates staff with G8 roles
 5. `set-password.html` — invite-link password set
 

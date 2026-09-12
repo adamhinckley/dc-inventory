@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Create Organization — Platform Admin</title>
+    <title>Add Company — Adam / Platform Admin</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="banner">
-      <strong>Throwaway prototype.</strong> DEFAULT / platform admin only.
+      <strong>Throwaway prototype.</strong> How Adam adds a new company. DEFAULT / platform admin only.
       <a href="./index.html">All screens</a>
     </div>
     <header class="topbar">
@@ -17,18 +17,16 @@
     </header>
     <main class="page">
       <div id="form-view" class="card">
-        <p class="page-kicker">DEFAULT / Platform Admin Only</p>
-        <h1 class="page-title">Create Organization</h1>
+        <p class="page-kicker">Adam / Platform Admin</p>
+        <h1 class="page-title">Add Company</h1>
         <p class="page-desc">
-          Provisions a new org and invites its first admin. This screen is not for ordinary staff.
-        </p>
-        <p class="note">
-          An invite email is sent to the first admin. Do not collect a password on this form — they
-          set it from the invite link.
+          Only DEFAULT / platform admins use this screen. It provisions a new wholesale company on
+          the same app: organization slug + first admin email. An invite email is sent — no password
+          on this form.
         </p>
         <form id="org-form" novalidate>
           <div class="field">
-            <label for="orgSlug">Org Slug <span class="req">*</span></label>
+            <label for="orgSlug">Organization Slug <span class="req">*</span></label>
             <input
               id="orgSlug"
               name="orgSlug"
@@ -47,15 +45,14 @@
           </div>
           <p id="form-error" class="error-text hidden">Enter a valid org slug and email.</p>
           <div class="actions">
-            <button type="submit">Create Organization And Invite</button>
+            <button type="submit">Add Company And Invite</button>
           </div>
         </form>
       </div>
 
       <div id="success-view" class="success hidden">
-        <h2>Organization Created</h2>
-        <p id="success-detail"></p>
-        <p style="margin-top: 12px">Invite email sent. No password was set on this form.</p>
+        <h2 id="success-detail">Company created. Invite sent to {email}.</h2>
+        <p>No password was set on this form. The first admin sets it from the invite link.</p>
         <p style="margin-top: 16px"><a href="./index.html">Back to Prototype Index</a></p>
       </div>
     </main>
@@ -69,10 +66,9 @@
           form.reportValidity();
           return;
         }
-        const slug = document.getElementById("orgSlug").value.trim();
         const email = document.getElementById("adminEmail").value.trim();
         document.getElementById("success-detail").textContent =
-          `Org “${slug}” is ready. First admin invite sent to ${email}.`;
+          `Company created. Invite sent to ${email}.`;
         document.getElementById("form-view").classList.add("hidden");
         document.getElementById("success-view").classList.remove("hidden");
       });
