@@ -3,7 +3,7 @@
 import { useListWholesaleCategories } from "@dc-inventory/api-client-wholesale";
 import type { CatalogBrowseParams } from "../lib/catalog-list-params";
 
-/** Sidebar / filter-drawer body: in-stock toggle first, then the category list. */
+/** Sidebar / filter-drawer body: availability toggles first, then the category list. */
 export function CatalogFilters({
   params,
   onChange,
@@ -17,7 +17,8 @@ export function CatalogFilters({
   const payload = categories.data?.data;
   const names = payload !== undefined && "items" in payload ? payload.items.map((c) => c.name) : [];
   const activeCategory = params.category;
-  const showAvailableOnly = params.availableOnly !== false;
+  const showInStockOnly = params.inStockOnly !== false;
+  const showPreOrder = params.preOrder !== false;
 
   const itemClass = (active: boolean) =>
     `flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
@@ -28,15 +29,24 @@ export function CatalogFilters({
 
   return (
     <div className="flex min-h-0 flex-col gap-8">
-      <section aria-label="Availability" className="shrink-0">
+      <section aria-label="Availability" className="flex shrink-0 flex-col gap-1">
         <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink hover:bg-canvas-muted">
           <input
             type="checkbox"
-            checked={showAvailableOnly}
-            onChange={(event) => onChange({ availableOnly: event.target.checked })}
+            checked={showInStockOnly}
+            onChange={(event) => onChange({ inStockOnly: event.target.checked })}
             className="size-4 rounded border-line accent-accent"
           />
           <span className="font-medium">In stock only</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink hover:bg-canvas-muted">
+          <input
+            type="checkbox"
+            checked={showPreOrder}
+            onChange={(event) => onChange({ preOrder: event.target.checked })}
+            className="size-4 rounded border-line accent-accent"
+          />
+          <span className="font-medium">Pre-order</span>
         </label>
       </section>
 

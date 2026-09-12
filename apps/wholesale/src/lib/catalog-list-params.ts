@@ -8,7 +8,8 @@ export type CatalogBrowseParams = {
   pageSize?: number;
   sortBy?: CatalogSortBy;
   sortOrder?: CatalogSortOrder;
-  availableOnly?: boolean;
+  inStockOnly?: boolean;
+  preOrder?: boolean;
 };
 
 export const DEFAULT_PAGE = 1;
@@ -75,8 +76,12 @@ function cleanText(value: string | null): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function parseAvailabilityToggle(searchParams: URLSearchParams, key: "inStockOnly" | "preOrder"): boolean {
+  const raw = searchParams.get(key);
+  return raw === null ? true : raw !== "false";
+}
+
 export function parseCatalogListParams(searchParams: URLSearchParams): CatalogBrowseParams {
-  const availableOnlyRaw = searchParams.get("availableOnly");
   const q = cleanText(searchParams.get("q"));
   const category = cleanText(searchParams.get("category"));
 
@@ -86,15 +91,17 @@ export function parseCatalogListParams(searchParams: URLSearchParams): CatalogBr
     page: parsePositiveInt(searchParams.get("page"), DEFAULT_PAGE),
     pageSize: parsePageSize(searchParams.get("pageSize")),
     ...sortKeyToParams(parseSortKey(searchParams.get("sort"))),
-    availableOnly: availableOnlyRaw === null ? true : availableOnlyRaw !== "false",
+    inStockOnly: parseAvailabilityToggle(searchParams, "inStockOnly"),
+    preOrder: parseAvailabilityToggle(searchParams, "preOrder"),
   };
 }
 
-/** Always send availableOnly to the API so the shop default is explicit server-side. */
+/** Always send availability toggles to the API so the shop default is explicit server-side. */
 export function wholesaleCatalogRequestParams(params: CatalogBrowseParams): CatalogBrowseParams {
   return {
     ...params,
-    availableOnly: params.availableOnly !== false,
+    inStockOnly: params.inStockOnly !== false,
+    preOrder: params.preOrder !== false,
   };
 }
 
@@ -141,8 +148,11 @@ export function buildCatalogListSearchParams(params: CatalogBrowseParams): strin
   if (params.page !== undefined && params.page > DEFAULT_PAGE) {
     next.set("page", String(params.page));
   }
-  if (params.availableOnly === false) {
-    next.set("availableOnly", "false");
+  if (params.inStockOnly === false) {
+    next.set("inStockOnly", "false");
+  }
+  if (params.preOrder === false) {
+    next.set("preOrder", "false");
   }
 
   return next.toString();

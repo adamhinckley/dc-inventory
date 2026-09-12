@@ -10,23 +10,28 @@ import {
 } from "./catalog-list-params";
 
 describe("catalog-list-params", () => {
-  it("defaults to available-only page one, 48 per page, name A–Z", () => {
+  it("defaults to in-stock + pre-order page one, 48 per page, name A–Z", () => {
     expect(parseCatalogListParams(new URLSearchParams())).toEqual({
       page: 1,
       pageSize: 48,
       sortBy: "name",
       sortOrder: "asc",
-      availableOnly: true,
+      inStockOnly: true,
+      preOrder: true,
     });
     expect(buildCatalogListSearchParams(parseCatalogListParams(new URLSearchParams()))).toBe(
       "",
     );
   });
 
-  it("round-trips pagination and the available-only opt-out", () => {
-    const params = parseCatalogListParams(new URLSearchParams("page=3&availableOnly=false"));
-    expect(params).toMatchObject({ page: 3, availableOnly: false });
-    expect(buildCatalogListSearchParams(params)).toBe("page=3&availableOnly=false");
+  it("round-trips pagination and availability opt-outs", () => {
+    const params = parseCatalogListParams(
+      new URLSearchParams("page=3&inStockOnly=false&preOrder=false"),
+    );
+    expect(params).toMatchObject({ page: 3, inStockOnly: false, preOrder: false });
+    expect(buildCatalogListSearchParams(params)).toBe(
+      "page=3&inStockOnly=false&preOrder=false",
+    );
   });
 
   it("round-trips search, category, sort, and page size", () => {
@@ -40,7 +45,8 @@ describe("catalog-list-params", () => {
       pageSize: 96,
       sortBy: "available",
       sortOrder: "desc",
-      availableOnly: true,
+      inStockOnly: true,
+      preOrder: true,
     });
     expect(buildCatalogListSearchParams(params)).toBe(
       "q=vase&category=Ribbon&sort=available-desc&pageSize=96&page=2",
@@ -58,7 +64,8 @@ describe("catalog-list-params", () => {
     expect(changeCatalogListParams(onPageThree, { q: "vase" }).page).toBe(1);
     expect(changeCatalogListParams(onPageThree, { pageSize: 96 }).page).toBe(1);
     expect(changeCatalogListParams(onPageThree, { category: "Halloween" }).page).toBe(1);
-    expect(changeCatalogListParams(onPageThree, { availableOnly: false }).page).toBe(1);
+    expect(changeCatalogListParams(onPageThree, { inStockOnly: false }).page).toBe(1);
+    expect(changeCatalogListParams(onPageThree, { preOrder: false }).page).toBe(1);
     expect(changeCatalogListParams(onPageThree, { page: 4 })).toMatchObject({
       page: 4,
       category: "Ribbon",
@@ -74,19 +81,70 @@ describe("catalog-list-params", () => {
     expect(buildCatalogListSearchParams(cleared)).toBe("");
   });
 
-  it("always sends availableOnly to the catalog API", () => {
+  it("always sends availability toggles to the catalog API", () => {
     expect(wholesaleCatalogRequestParams(parseCatalogListParams(new URLSearchParams()))).toEqual({
       page: 1,
       pageSize: 48,
       sortBy: "name",
       sortOrder: "asc",
-      availableOnly: true,
+      inStockOnly: true,
+      preOrder: true,
     });
     expect(
       wholesaleCatalogRequestParams(
-        parseCatalogListParams(new URLSearchParams("availableOnly=false")),
-      ).availableOnly,
-    ).toBe(false);
+        parseCatalogListParams(new URLSearchParams("inStockOnly=false")),
+      ),
+    ).toMatchObject({ inStockOnly: false, preOrder: true });
+    expect(
+      wholesaleCatalogRequestParams(
+        parseCatalogListParams(new URLSearchParams("preOrder=false")),
+      ),
+    ).toMatchObject({ inStockOnly: true, preOrder: false });
+    expect(
+      wholesaleCatalogRequestParams(
+        parseCatalogListParams(new URLSearchParams("inStockOnly=false&preOrder=false")),
+      ),
+    ).toMatchObject({ inStockOnly: false, preOrder: false });
+  });
+
+  it("reads and writes each availability checkbox independently", () => {
+    expect(parseCatalogListParams(new URLSearchParams("inStockOnly=false")).inStockOnly).toBe(
+      false,
+    );
+    expect(parseCatalogListParams(new URLSearchParams("preOrder=false")).preOrder).toBe(false);
+    expect(buildCatalogListSearchParams({ inStockOnly: false, preOrder: true })).toBe(
+      "inStockOnly=false",
+    );
+    expect(buildCatalogListSearchParams({ inStockOnly: true, preOrder: false })).toBe(
+      "preOrder=false",
+    );
+  });
+
+  it("round-trips the four availability filter URL shapes", () => {
+    const combos = [
+      { query: "", expected: { inStockOnly: true, preOrder: true }, built: "" },
+      {
+        query: "inStockOnly=false",
+        expected: { inStockOnly: false, preOrder: true },
+        built: "inStockOnly=false",
+      },
+      {
+        query: "preOrder=false",
+        expected: { inStockOnly: true, preOrder: false },
+        built: "preOrder=false",
+      },
+      {
+        query: "inStockOnly=false&preOrder=false",
+        expected: { inStockOnly: false, preOrder: false },
+        built: "inStockOnly=false&preOrder=false",
+      },
+    ] as const;
+
+    for (const combo of combos) {
+      const params = parseCatalogListParams(new URLSearchParams(combo.query));
+      expect(params).toMatchObject(combo.expected);
+      expect(buildCatalogListSearchParams(params)).toBe(combo.built);
+    }
   });
 
   it("computes page count from total and page size", () => {

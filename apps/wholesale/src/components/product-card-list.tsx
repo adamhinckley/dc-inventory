@@ -230,7 +230,12 @@ export function ProductCardList() {
   const pageCount = catalogListPageCount(total, loaded?.pageSize ?? pageSize);
   const category = params.category;
   const q = params.q ?? "";
-  const activeFilterCount = (category !== undefined ? 1 : 0) + (params.availableOnly === false ? 1 : 0);
+  const inStockOnly = params.inStockOnly !== false;
+  const preOrder = params.preOrder !== false;
+  const activeFilterCount =
+    (category !== undefined ? 1 : 0) +
+    (params.inStockOnly === false ? 1 : 0) +
+    (params.preOrder === false ? 1 : 0);
 
   const toolbar = (
     <div className="shop-toolbar -mx-6 border-b border-line px-6 py-3">
@@ -304,14 +309,22 @@ export function ProductCardList() {
       </p>
     );
   } else if (loaded.items.length === 0) {
+    const emptyAvailabilityMessage =
+      inStockOnly && preOrder
+        ? "Nothing in stock or available for pre-order right now. Adjust your filters to see more."
+        : inStockOnly
+          ? "Nothing in stock right now. Turn on Pre-order to include open items."
+          : preOrder
+            ? "Nothing available for pre-order right now. Turn on In stock only to include warehouse-ready items."
+            : "No products in this view yet.";
+    const hasAvailabilityFilter = inStockOnly || preOrder;
+
     body = (
       <div className="flex flex-col items-start gap-4 rounded-2xl border border-line bg-card p-8">
         <p className="text-ink-muted">
           {q.length > 0
             ? `Nothing matches “${q}”${category !== undefined ? ` in ${category}` : ""}.`
-            : params.availableOnly !== false
-              ? "Nothing in stock here right now. Turn off In stock only to see the full range."
-              : "No products in this view yet."}
+            : emptyAvailabilityMessage}
         </p>
         <div className="flex flex-wrap gap-2">
           {q.length > 0 ? (
@@ -331,10 +344,28 @@ export function ProductCardList() {
               All products
             </Link>
           ) : null}
-          {params.availableOnly !== false ? (
+          {q.length === 0 && inStockOnly && !preOrder ? (
             <button
               type="button"
-              onClick={() => replaceParams({ availableOnly: false })}
+              onClick={() => replaceParams({ preOrder: true })}
+              className="shop-button-secondary inline-flex min-h-10 cursor-pointer items-center px-4 text-sm"
+            >
+              Include pre-order
+            </button>
+          ) : null}
+          {q.length === 0 && !inStockOnly && preOrder ? (
+            <button
+              type="button"
+              onClick={() => replaceParams({ inStockOnly: true })}
+              className="shop-button-secondary inline-flex min-h-10 cursor-pointer items-center px-4 text-sm"
+            >
+              Include in-stock items
+            </button>
+          ) : null}
+          {q.length === 0 && hasAvailabilityFilter ? (
+            <button
+              type="button"
+              onClick={() => replaceParams({ inStockOnly: false, preOrder: false })}
               className="shop-button-secondary inline-flex min-h-10 cursor-pointer items-center px-4 text-sm"
             >
               Show everything
