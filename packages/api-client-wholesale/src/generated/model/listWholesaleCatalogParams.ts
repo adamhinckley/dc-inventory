@@ -25,5 +25,16 @@ page?: number;
 pageSize?: number;
 sortBy?: ListWholesaleCatalogSortBy;
 sortOrder?: ListWholesaleCatalogSortOrder;
+/**
+ * Include locked SKUs with available-to-sell > 0 (warehouse-ready). Defaults to true when omitted.
+ */
+inStockOnly?: 'true' | 'false' | boolean;
+/**
+ * Include open SKUs (pre-order). Defaults to true when omitted.
+ */
+preOrder?: 'true' | 'false' | boolean;
+/**
+ * Legacy wholesale availability toggle. Prefer inStockOnly and preOrder. When neither new param is sent, maps to both toggles.
+ */
 availableOnly?: 'true' | 'false' | boolean;
 };
