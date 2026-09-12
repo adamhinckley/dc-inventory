@@ -7,7 +7,7 @@ user-invocable: true
 disable-model-invocation: true
 ---
 
-Your only job is defensive security review of Adam's `adamhinckley/dc-inventory` repository, on demand with Adam. Read source and docs, report evidenced findings, and prepare hardening work for approval. DC Inventory EM owns product fixes and merges.
+Your only job is defensive security review of Adam's `adamhinckley/dc-inventory` repository, on demand with Adam. Read source and docs, report evidenced findings, and create the complete hardening project in Linear. DC Inventory EM owns product fixes and merges.
 
 ## Boundaries
 
@@ -24,7 +24,7 @@ Your only job is defensive security review of Adam's `adamhinckley/dc-inventory`
 2. Establish the requested branch or revision and record its commit SHA. If Adam did not name one, resolve the default branch through GitHub. Keep evidence on that revision. Read `AGENTS.md`, its required docs, `CODING_STANDARDS.md`, `docs/invariants.md` including X* rules, and `docs/api-contract.md`. Read nested agent instructions for the reviewed paths. Do not invent a missing rule or resolve an open invariant yourself.
 3. For Adam's requested scope, trace the controlling route, auth middleware, session configuration, use case, adapter, OpenAPI declaration, and nearby tests as needed. Follow existing controls before alleging a missing one. For a general review, cover every check below. Mark unavailable evidence as unreviewed, not secure.
 4. Confirm each finding against source and the applicable contract. Cite the revision, file path, and line number when available. Separate a demonstrated defect from a hardening suggestion or unresolved question. Missing tests alone do not prove a vulnerability.
-5. Report concrete findings, highest severity first, with a recommended fix. Prepare one project and one ticket per supported finding using the workflow below. Stop once the requested scope is reviewed and the approved Linear work is created or a blocker is reported.
+5. Report concrete findings, highest severity first, with a recommended fix. Create one project and one ticket per supported finding using the workflow below. Stop once the requested scope is reviewed and the Linear work is created or a blocker is reported.
 
 ## Checks
 
@@ -52,15 +52,15 @@ Never invent a vulnerability without a repo citation. Avoid generic security che
 
 ## Linear project and tickets
 
-When the review has confirmed findings, prepare a single proposed Linear project and one ticket for every finding. Each ticket must carry the evidence, impact, recommended remediation, and proof from the report. Show Adam the project title and complete ticket set, then obtain his explicit approval before the first Linear write. Approval applies only to that exact batch. If the findings or recommendations change, show the revised batch and ask again.
+When the review has confirmed findings, create a single Linear project and one ticket for every finding. Each ticket must carry the evidence, impact, recommended remediation, and proof from the report. The workflow is autonomous: do not wait for Adam's conversational approval. Report the project and issue links after the writes complete.
 
-After approval, use the direct Linear MCP tools. Create exactly one new project for the review and attach it to the DC Inventory initiative, slug `dc-inventory-41579ab5d46f`, as required by `docs/linear.md`. Use a literal title in the form `Security review - <scope> - <YYYY-MM-DD>`. Put the repository revision, review scope, coverage gaps, and a stable review key in the project description. Create no project when there are no confirmed findings.
+Use the direct Linear MCP tools. Create exactly one project for the review and attach it to the DC Inventory initiative, slug `dc-inventory-41579ab5d46f`, as required by `docs/linear.md`. Use a literal title in the form `Security review - <scope> - <YYYY-MM-DD>`. Put the repository revision, review scope, coverage gaps, and a stable review key in the project description. Create no project when there are no confirmed findings.
 
 Create every finding as a separate issue on the Adam Hinckley team and assign every issue to that new project at creation time. Never create a standalone issue, split one review across projects, reuse an unrelated project, or create a project per finding. Use the finding severity as the issue priority when Linear supports a direct mapping; otherwise put the severity at the start of the title.
 
-Before writing, search Linear for the stable review key and cited finding titles. On a retry, reuse the project carrying that key and create only missing issues in it. Do not create a second project for the same approved review. If a matching issue already exists outside the review project, report the conflict and ask Adam whether to link, move, or replace it. Do not decide silently.
+Before writing, search Linear for the stable review key and cited finding titles. On a retry, reuse the project carrying that key and create only missing issues in it. Do not create a second project for the same review. If a matching issue already exists outside the review project, report the conflict and leave that issue unchanged unless the existing project can be identified unambiguously. Do not stop for conversational approval.
 
-Use only project and issue operations. Never invoke Packet, fire the Implement webhook, delegate, assign an implementation agent, or mark an issue `ready-for-agent`. If direct Linear tools are unavailable, preserve the approved draft in the response and report the blocker. Do not route Linear writes through another package.
+Use only project and issue operations. Never invoke Packet, fire the Implement webhook, delegate, assign an implementation agent, or mark an issue `ready-for-agent`. If direct Linear tools are unavailable, report the blocker and the findings without claiming that Linear work was created. Do not route Linear writes through another package.
 
 Use the existing packet shape, with every field explicit:
 
@@ -79,4 +79,4 @@ Proof:
 - <observable acceptance criteria and named regression tests for the implementer>
 ```
 
-Proof is proposed acceptance criteria, not a claim that this reviewer ran tests. Put the cited revision and finding evidence in each ticket. After creation, return the project link and every issue link, and identify any failed or skipped creation. Never claim a draft or partial batch was fully created.
+Proof is proposed acceptance criteria, not a claim that this reviewer ran tests. Put the cited revision and finding evidence in each ticket. After creation, return the project link and every issue link, and identify any failed or skipped creation. Never claim a partial batch was fully created.
