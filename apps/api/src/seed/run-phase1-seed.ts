@@ -2,8 +2,10 @@ import type { Customer, ICustomerRepository } from "@dc-inventory/customers";
 import type {
   IPasswordHasher,
   IOrganizationRepository,
+  IPlatformUserRepository,
   IStaffUserRepository,
   IWholesaleUserRepository,
+  PlatformUser,
   StaffUser,
   WholesaleUser,
 } from "@dc-inventory/identity";
@@ -11,6 +13,7 @@ import {
   CustomerId,
   Money,
   OrganizationId,
+  PlatformUserId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
@@ -20,6 +23,8 @@ import {
   PHASE1_CUSTOMER_CURRENCY,
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
+  PHASE1_PLATFORM_DISPLAY_NAME,
+  PHASE1_PLATFORM_EMAIL,
   PHASE1_STAFF_DISPLAY_NAME,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_DISPLAY_NAME,
@@ -31,6 +36,7 @@ import { upsertDefaultOrganization } from "./upsert-default-organization.js";
 export type Phase1SeedPorts = {
   customers: ICustomerRepository;
   organizations: IOrganizationRepository;
+  platformUsers: IPlatformUserRepository;
   staffUsers: IStaffUserRepository;
   wholesaleUsers: IWholesaleUserRepository;
   passwords: IPasswordHasher;
@@ -39,10 +45,12 @@ export type Phase1SeedPorts = {
 export type Phase1SeedSecrets = {
   staffPassword: string;
   wholesalePassword: string;
+  platformPassword: string;
 };
 
 export type Phase1SeedResult = {
   customer: Customer;
+  platform: PlatformUser;
   staff: StaffUser;
   wholesale: WholesaleUser;
 };
@@ -86,6 +94,21 @@ async function upsertCustomer(ports: Phase1SeedPorts): Promise<Customer> {
   };
   await ports.customers.save(customer);
   return customer;
+}
+
+async function upsertPlatform(
+  ports: Phase1SeedPorts,
+  password: string,
+): Promise<PlatformUser> {
+  const existing = await ports.platformUsers.findByEmail(PHASE1_PLATFORM_EMAIL);
+  const platform: PlatformUser = {
+    id: existing?.id ?? PlatformUserId.parse(newId()),
+    displayName: existing?.displayName ?? PHASE1_PLATFORM_DISPLAY_NAME,
+    email: PHASE1_PLATFORM_EMAIL,
+    passwordHash: await ports.passwords.hash(password),
+  };
+  await ports.platformUsers.save(platform);
+  return platform;
 }
 
 async function upsertStaff(
@@ -139,11 +162,16 @@ export async function runPhase1Seed(
     "PHASE1_WHOLESALE_PASSWORD",
     secrets.wholesalePassword,
   );
+  const platformPassword = requirePassword(
+    "PHASE1_PLATFORM_PASSWORD",
+    secrets.platformPassword,
+  );
 
   const customer = await upsertCustomer(ports);
   await upsertDefaultOrganization(ports.organizations);
+  const platform = await upsertPlatform(ports, platformPassword);
   const staff = await upsertStaff(ports, staffPassword);
   const wholesale = await upsertWholesale(ports, customer.id, wholesalePassword);
 
-  return { customer, staff, wholesale };
+  return { customer, platform, staff, wholesale };
 }

@@ -10,6 +10,7 @@ export type DemoSeedProfile = (typeof DEMO_SEED_PROFILES)[number];
 export type DemoSeedSecrets = {
   staffPassword: string;
   wholesalePassword: string;
+  platformPassword: string;
 };
 
 export type DemoSeedConfig = {
@@ -32,7 +33,7 @@ function parseDemoSeedProfile(raw: string | undefined): DemoSeedProfile {
 
 function readSecret(
   env: NodeJS.ProcessEnv,
-  name: "PHASE1_STAFF_PASSWORD" | "PHASE1_WHOLESALE_PASSWORD",
+  name: "PHASE1_STAFF_PASSWORD" | "PHASE1_WHOLESALE_PASSWORD" | "PHASE1_PLATFORM_PASSWORD",
 ): string {
   const value = env[name]?.trim() ?? "";
   if (value.length === 0) {
@@ -54,6 +55,7 @@ export function parseDemoSeedConfig(env: NodeJS.ProcessEnv = process.env): DemoS
     secrets: {
       staffPassword: readSecret(env, "PHASE1_STAFF_PASSWORD"),
       wholesalePassword: readSecret(env, "PHASE1_WHOLESALE_PASSWORD"),
+      platformPassword: readSecret(env, "PHASE1_PLATFORM_PASSWORD"),
     },
   };
 }

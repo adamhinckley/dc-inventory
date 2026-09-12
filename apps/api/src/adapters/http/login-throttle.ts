@@ -5,9 +5,28 @@ import type {
 import type { FastifyReply, FastifyRequest, preHandlerHookHandler } from "fastify";
 
 type LoginBody = {
-  organizationSlug: string;
+  organizationSlug?: string;
   email: string;
 };
+
+function isStaffLogin(body: LoginBody): boolean {
+  return body.organizationSlug !== undefined && body.organizationSlug.trim().length > 0;
+}
+
+export function createInternalLoginThrottlePreHandler(): preHandlerHookHandler {
+  return async (request, reply) => {
+    const audience: LoginAudience = isStaffLogin(request.body as LoginBody)
+      ? "staff"
+      : "platform";
+    const result = await request.server.identity.loginThrottle.attempt(
+      loginThrottleKey(request, audience),
+    );
+    if (result.allowed) {
+      return;
+    }
+    sendTooManyLoginAttempts(reply, result.retryAfterSeconds);
+  };
+}
 
 export function createLoginThrottlePreHandler(
   audience: LoginAudience,
@@ -23,11 +42,18 @@ export function createLoginThrottlePreHandler(
   };
 }
 
-export async function resetLoginThrottle(
+export async function resetInternalLoginThrottle(
   request: FastifyRequest,
   audience: LoginAudience,
 ): Promise<void> {
   await request.server.identity.loginThrottle.reset(loginThrottleKey(request, audience));
+}
+
+export async function resetLoginThrottle(
+  request: FastifyRequest,
+  audience: LoginAudience,
+): Promise<void> {
+  await resetInternalLoginThrottle(request, audience);
 }
 
 function loginThrottleKey(
@@ -35,10 +61,14 @@ function loginThrottleKey(
   audience: LoginAudience,
 ): LoginThrottleKey {
   const body = request.body as LoginBody;
+  const accountIdentifier =
+    audience === "platform"
+      ? normalize(body.email)
+      : `${normalize(body.organizationSlug ?? "")}\u0000${normalize(body.email)}`;
   return {
     audience,
     source: request.ip,
-    accountIdentifier: `${normalize(body.organizationSlug)}\u0000${normalize(body.email)}`,
+    accountIdentifier,
   };
 }
 

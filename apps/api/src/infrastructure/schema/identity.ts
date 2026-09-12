@@ -8,6 +8,7 @@ export {
   loginThrottleCounters,
   opsUserKind,
   opsUsers,
+  platformUsers,
   sessions,
   staffUsers,
   wholesaleUsers,

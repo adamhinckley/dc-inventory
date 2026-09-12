@@ -7,9 +7,11 @@ import {
   InMemoryClock,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
+  InMemoryPlatformUserRepository,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
+  LoginPlatformUseCase,
   LoginStaffUseCase,
   LoginWholesaleUseCase,
   ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS,
@@ -22,6 +24,7 @@ import {
   PHASE1_CUSTOMER_NAME,
   PHASE1_CUSTOMER_TERMS,
   PHASE1_ORGANIZATION_SLUG,
+  PHASE1_PLATFORM_EMAIL,
   PHASE1_PRODUCT_SKUS,
   PHASE1_STAFF_EMAIL,
   PHASE1_WHOLESALE_EMAIL,
@@ -32,6 +35,7 @@ function seedPorts() {
   return {
     customers: new InMemoryCustomerRepository(),
     organizations: new InMemoryOrganizationRepository(),
+    platformUsers: new InMemoryPlatformUserRepository(),
     staffUsers: new InMemoryStaffUserRepository(),
     wholesaleUsers: new InMemoryWholesaleUserRepository(),
     passwords: new InMemoryPasswordHasher(),
@@ -48,6 +52,7 @@ describe("Phase 1 seed (in-memory)", () => {
     const first = await runPhase1Seed(ports, {
       staffPassword: "staff-placeholder",
       wholesalePassword: "wholesale-placeholder",
+      platformPassword: "platform-placeholder",
     });
 
     expect(first.customer.name).toBe(PHASE1_CUSTOMER_NAME);
@@ -57,6 +62,7 @@ describe("Phase 1 seed (in-memory)", () => {
     );
     expect(first.customer.creditLimit.currency).toBe(PHASE1_CUSTOMER_CURRENCY);
     expect(first.staff.email).toBe(PHASE1_STAFF_EMAIL);
+    expect(first.platform.email).toBe(PHASE1_PLATFORM_EMAIL);
     expect(first.wholesale.email).toBe(PHASE1_WHOLESALE_EMAIL);
     expect(first.wholesale.customerId).toBe(first.customer.id);
 
@@ -66,8 +72,10 @@ describe("Phase 1 seed (in-memory)", () => {
     const second = await runPhase1Seed(ports, {
       staffPassword: "staff-placeholder-rotated",
       wholesalePassword: "wholesale-placeholder-rotated",
+      platformPassword: "platform-placeholder-rotated",
     });
     expect(second.customer.id).toBe(first.customer.id);
+    expect(second.platform.id).toBe(first.platform.id);
     expect(second.staff.id).toBe(first.staff.id);
     expect(second.wholesale.id).toBe(first.wholesale.id);
     expect(await ports.customers.findByName(OrganizationId.DEFAULT, PHASE1_CUSTOMER_NAME)).toEqual(second.customer);
@@ -85,6 +93,17 @@ describe("Phase 1 seed (in-memory)", () => {
       password: "staff-placeholder-rotated",
     });
     expect(staffLogin.ok).toBe(true);
+
+    const platformLogin = await new LoginPlatformUseCase(
+      ports.platformUsers,
+      sessions,
+      ports.passwords,
+      clock,
+    ).execute({
+      email: PHASE1_PLATFORM_EMAIL,
+      password: "platform-placeholder-rotated",
+    });
+    expect(platformLogin.ok).toBe(true);
 
     const wholesaleLogin = await new LoginWholesaleUseCase(
       ports.organizations,
@@ -120,6 +139,7 @@ describe("Phase 1 seed (in-memory)", () => {
     const seeded = await runPhase1Seed(ports, {
       staffPassword: "staff-placeholder",
       wholesalePassword: "wholesale-placeholder",
+      platformPassword: "platform-placeholder",
     });
 
     expect(seeded.staff.roles).toEqual(["admin", "accounting"]);
@@ -128,7 +148,11 @@ describe("Phase 1 seed (in-memory)", () => {
   it("rejects empty passwords and does not invent a sixth SKU", async () => {
     const ports = seedPorts();
     await expect(
-      runPhase1Seed(ports, { staffPassword: "   ", wholesalePassword: "ok" }),
+      runPhase1Seed(ports, {
+        staffPassword: "   ",
+        wholesalePassword: "ok",
+        platformPassword: "ok",
+      }),
     ).rejects.toBeInstanceOf(Phase1SeedError);
     expect(PHASE1_PRODUCT_SKUS).not.toContain("INTERNAL-ONLY");
     expect(new Set(PHASE1_PRODUCT_SKUS).size).toBe(5);

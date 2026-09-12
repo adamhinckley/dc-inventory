@@ -19,16 +19,25 @@ function sendInvalid(reply: FastifyReply) {
   return reply.code(400).send({ error: "invalid" as const });
 }
 
+function sendForbidden(reply: FastifyReply) {
+  return reply.code(403).send({ error: "forbidden" as const });
+}
+
 export function registerInternalOrganizationRoutes(app: FastifyInstance): void {
   const routes = typed(app);
 
   routes.post(
     "/organizations",
     {
+      preHandler: async (request, reply) => {
+        if (request.platformAuth === undefined) {
+          return sendForbidden(reply);
+        }
+      },
       schema: {
         operationId: "createInternalOrganization",
         tags: ["internal-organizations"],
-        summary: "Provision a new organization and invite its first admin (DEFAULT platform only)",
+        summary: "Provision a new organization and invite its first admin (Platform user only)",
         body: createInternalOrganizationBodySchema,
         response: {
           201: createInternalOrganizationResponseSchema,

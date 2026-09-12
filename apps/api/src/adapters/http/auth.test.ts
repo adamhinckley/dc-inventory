@@ -2,6 +2,7 @@ import {
   CustomerId,
   Money,
   OrganizationId,
+  PlatformUserId,
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
@@ -11,6 +12,7 @@ import {
   InMemoryOrganizationRepository,
   InMemoryOpsUserRepository,
   InMemoryPasswordHasher,
+  InMemoryPlatformUserRepository,
   InMemorySessionStore,
   InMemorySetPasswordTokenStore,
   InMemoryStaffUserRepository,
@@ -35,6 +37,7 @@ const STAFF_ID = StaffUserId.parse("11111111-1111-4111-8111-111111111111");
 const WHOLESALE_ID = WholesaleUserId.parse("22222222-2222-4222-8222-222222222222");
 const OPERATOR_ID = OpsUserId.parse("44444444-4444-4444-8444-444444444444");
 const OWNER_ID = OpsUserId.parse("55555555-5555-4555-8555-555555555555");
+const PLATFORM_ID = PlatformUserId.parse("66666666-6666-4666-8666-666666666666");
 const CUSTOMER_ID = CustomerId.parse("33333333-3333-4333-8333-333333333333");
 const ACME_SLUG = "acme";
 
@@ -54,6 +57,7 @@ async function startAuthApp(
   const staffUsers = new InMemoryStaffUserRepository();
   const opsUsers = new InMemoryOpsUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
+  const platformUsers = new InMemoryPlatformUserRepository();
   const sessions = new InMemorySessionStore();
   const customerRepo = new InMemoryCustomerRepository();
   await customerRepo.save({
@@ -96,6 +100,12 @@ async function startAuthApp(
     passwordHash: await passwords.hash("owner-secret"),
     kind: "business_owner",
   });
+  await platformUsers.save({
+    id: PLATFORM_ID,
+    displayName: "Adam Platform",
+    email: "adam@local.test",
+    passwordHash: await passwords.hash("platform-secret"),
+  });
   const app = await buildApp({
     logger: false,
     database: new InMemoryDatabase(),
@@ -103,6 +113,7 @@ async function startAuthApp(
     staffUsers,
     opsUsers,
     wholesaleUsers,
+    platformUsers,
     sessions,
     passwords,
     organizationRepo: organizations,
@@ -158,6 +169,7 @@ describe("opaque session HTTP", () => {
     });
     expect(login.statusCode).toBe(200);
     expect(login.json()).toEqual({
+      audience: "staff",
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
@@ -208,11 +220,51 @@ describe("opaque session HTTP", () => {
     });
     expect(session.statusCode).toBe(200);
     expect(session.json()).toEqual({
+      audience: "staff",
       staffUserId: STAFF_ID,
       email: "staff@local.test",
       organizationId: OrganizationId.DEFAULT,
       roles: ["admin"],
     });
+  });
+
+  it("sets HttpOnly staff_session on platform login without organizationSlug", async () => {
+    const { app } = await startAuthApp();
+    const login = await app.inject({
+      method: "POST",
+      url: "/internal/auth/login",
+      payload: {
+        email: "adam@local.test",
+        password: "platform-secret",
+      },
+    });
+    expect(login.statusCode).toBe(200);
+    expect(login.json()).toEqual({
+      audience: "platform",
+      platformUserId: PLATFORM_ID,
+      email: "adam@local.test",
+    });
+    const cookie = cookieValue(login, STAFF_SESSION_COOKIE);
+    expect(cookie?.name).toBe(STAFF_SESSION_COOKIE);
+
+    const session = await app.inject({
+      method: "GET",
+      url: "/internal/auth/session",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie?.value ?? "" },
+    });
+    expect(session.statusCode).toBe(200);
+    expect(session.json()).toEqual({
+      audience: "platform",
+      platformUserId: PLATFORM_ID,
+      email: "adam@local.test",
+    });
+
+    const catalog = await app.inject({
+      method: "GET",
+      url: "/internal/products",
+      cookies: { [STAFF_SESSION_COOKIE]: cookie?.value ?? "" },
+    });
+    expect(catalog.statusCode).toBe(401);
   });
 
   it("sets wholesale_session and snapshots customerId", async () => {
@@ -881,6 +933,7 @@ describe("set-password HTTP", () => {
     const organizations = new InMemoryOrganizationRepository();
     const staffUsers = new InMemoryStaffUserRepository();
     const wholesaleUsers = new InMemoryWholesaleUserRepository();
+    const platformUsers = new InMemoryPlatformUserRepository();
     const sessions = new InMemorySessionStore();
     const setPasswordTokens = new InMemorySetPasswordTokenStore();
     const customerRepo = new InMemoryCustomerRepository();
@@ -909,12 +962,19 @@ describe("set-password HTTP", () => {
       passwordHash: await passwords.hash("pending-secret"),
       customerId: CUSTOMER_ID,
     });
+    await platformUsers.save({
+      id: PLATFORM_ID,
+      displayName: "Adam Platform",
+      email: "invited.platform@local.test",
+      passwordHash: await passwords.hash("pending-secret"),
+    });
     const app = await buildApp({
       logger: false,
       database: new InMemoryDatabase(),
       clock,
       staffUsers,
       wholesaleUsers,
+      platformUsers,
       sessions,
       passwords,
       setPasswordTokens,
@@ -922,7 +982,7 @@ describe("set-password HTTP", () => {
       customerRepo,
     });
     apps.push(app);
-    return { app, clock, passwords, setPasswordTokens, staffUsers, wholesaleUsers };
+    return { app, clock, passwords, setPasswordTokens, staffUsers, wholesaleUsers, platformUsers };
   }
 
   it("sets staff password without creating a session cookie", async () => {
@@ -1051,6 +1111,25 @@ describe("set-password HTTP", () => {
     });
     expect(expiredResponse.statusCode).toBe(400);
     expect(expiredResponse.json()).toEqual({ error: "invalid" });
+  });
+
+  it("sets platform password from audience=platform", async () => {
+    const { app, clock, passwords, setPasswordTokens, platformUsers } = await startSetPasswordApp();
+    const { rawToken } = await setPasswordTokens.mint({
+      audience: "platform",
+      userId: PLATFORM_ID,
+      expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/internal/auth/set-password",
+      payload: { token: rawToken, password: "PlatformPass1", audience: "platform" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const saved = await platformUsers.findById(PLATFORM_ID);
+    expect(await passwords.verify("PlatformPass1", saved!.passwordHash)).toBe(true);
   });
 });
 

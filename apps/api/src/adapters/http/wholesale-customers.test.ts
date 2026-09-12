@@ -3,6 +3,7 @@ import {
   InMemoryClock,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
+  InMemoryPlatformUserRepository,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
@@ -23,6 +24,7 @@ afterEach(async () => {
 async function startSeededApp() {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
+  const platformUsers = new InMemoryPlatformUserRepository();
   const staffUsers = new InMemoryStaffUserRepository();
   const wholesaleUsers = new InMemoryWholesaleUserRepository();
   const sessions = new InMemorySessionStore();
@@ -32,6 +34,7 @@ async function startSeededApp() {
     {
       customers: customerRepo,
       organizations,
+      platformUsers,
       staffUsers,
       wholesaleUsers,
       passwords,
@@ -39,6 +42,7 @@ async function startSeededApp() {
     {
       staffPassword: "staff-secret",
       wholesalePassword: "wholesale-secret",
+      platformPassword: "platform-secret",
     },
   );
 
