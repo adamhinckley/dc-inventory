@@ -33,4 +33,8 @@ export type CreateInternalCustomerBody = {
   customerNote?: string | null;
   /** @nullable */
   staffNote?: string | null;
+  /** @minLength 1 */
+  wholesaleEmail?: string;
+  /** @minLength 1 */
+  wholesaleDisplayName?: string;
 };

@@ -87,6 +87,7 @@ import type {
   CreateInternalCustomer401,
   CreateInternalCustomer403,
   CreateInternalCustomer409,
+  CreateInternalCustomer502,
   CreateInternalCustomerBillTo201,
   CreateInternalCustomerBillTo400,
   CreateInternalCustomerBillTo401,
@@ -1266,10 +1267,15 @@ export type createInternalCustomerResponse409 = {
   status: 409
 }
 
+export type createInternalCustomerResponse502 = {
+  data: CreateInternalCustomer502
+  status: 502
+}
+
 export type createInternalCustomerResponseSuccess = (createInternalCustomerResponse201) & {
   headers: Headers;
 };
-export type createInternalCustomerResponseError = (createInternalCustomerResponse400 | createInternalCustomerResponse401 | createInternalCustomerResponse403 | createInternalCustomerResponse409) & {
+export type createInternalCustomerResponseError = (createInternalCustomerResponse400 | createInternalCustomerResponse401 | createInternalCustomerResponse403 | createInternalCustomerResponse409 | createInternalCustomerResponse502) & {
   headers: Headers;
 };
 
@@ -1307,7 +1313,7 @@ return customFetch<createInternalCustomerResponse>(getCreateInternalCustomerUrl(
 
 
 
-export const getCreateInternalCustomerMutationOptions = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409,
+export const getCreateInternalCustomerMutationOptions = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409 | CreateInternalCustomer502,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext> => {
 
@@ -1336,12 +1342,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateInternalCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalCustomer>>>
     export type CreateInternalCustomerMutationBody = CreateInternalCustomerBody
-    export type CreateInternalCustomerMutationError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409
+    export type CreateInternalCustomerMutationError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409 | CreateInternalCustomer502
 
     /**
  * @summary Create customer
  */
-export const useCreateInternalCustomer = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409,
+export const useCreateInternalCustomer = <TError = CreateInternalCustomer400 | CreateInternalCustomer401 | CreateInternalCustomer403 | CreateInternalCustomer409 | CreateInternalCustomer502,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalCustomer>>, TError,{data: CreateInternalCustomerBody}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createInternalCustomer>>,

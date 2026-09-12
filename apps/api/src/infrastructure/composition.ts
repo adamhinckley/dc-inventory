@@ -322,6 +322,8 @@ import { DrizzleImportLocationAdapter } from "../adapters/drizzle-import-locatio
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
 import { RegisterOrganizationWithLicensingUseCase } from "../application/register-organization-with-licensing.js";
+import { CreateCustomerWithWholesaleUserUseCase } from "../application/create-customer-with-wholesale-user.js";
+import { RollbackCustomerStaffForThemUseCase } from "../application/rollback-customer-staff-for-them.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
@@ -371,7 +373,7 @@ export type CatalogHttpServices = {
 
 export type CustomersHttpServices = {
   listCustomers: ListCustomersUseCase;
-  createCustomer: CreateCustomerUseCase;
+  createCustomer: CreateCustomerWithWholesaleUserUseCase;
   getCustomer: GetCustomerUseCase;
   updateCustomer: UpdateCustomerUseCase;
   listContacts: ListContactsUseCase;
@@ -653,10 +655,21 @@ function customersServices(
   shipToRepo: IShipToRepository,
   billToRepo: IBillToRepository,
   exemptionRepo: IExemptionCertificateRepository,
+  createWholesaleUser: CreateWholesaleUserUseCase,
+  wholesaleUsers: IWholesaleUserRepository,
 ): CustomersHttpServices {
+  const createCustomer = new CreateCustomerUseCase(customerRepo);
+  const rollbackCustomerStaffForThem = new RollbackCustomerStaffForThemUseCase(
+    customerRepo,
+    wholesaleUsers,
+  );
   return {
     listCustomers: new ListCustomersUseCase(customerRepo),
-    createCustomer: new CreateCustomerUseCase(customerRepo),
+    createCustomer: new CreateCustomerWithWholesaleUserUseCase(
+      createCustomer,
+      createWholesaleUser,
+      rollbackCustomerStaffForThem,
+    ),
     getCustomer: new GetCustomerUseCase(customerRepo),
     updateCustomer: new UpdateCustomerUseCase(customerRepo),
     listContacts: new ListContactsUseCase(customerRepo, contactRepo),
@@ -1389,6 +1402,14 @@ export function composeAppServices(
   });
   const creditCheck = new SalesCreditCheckAdapter(accounting.availableCreditRead, clock);
 
+  const createWholesaleUser = new CreateWholesaleUserUseCase(
+    organizationRepo,
+    wholesaleUsers,
+    passwords,
+    emailSender,
+    wholesaleInviteLinks,
+  );
+
   return {
     features,
     clock,
@@ -1464,13 +1485,7 @@ export function composeAppServices(
         emailSender,
         staffInviteLinks,
       ),
-      createWholesaleUser: new CreateWholesaleUserUseCase(
-        organizationRepo,
-        wholesaleUsers,
-        passwords,
-        emailSender,
-        wholesaleInviteLinks,
-      ),
+      createWholesaleUser,
       setPasswordStaff: new SetPasswordUseCase(
         setPasswordTokens,
         staffUsers,
@@ -1492,6 +1507,8 @@ export function composeAppServices(
       shipToRepo,
       billToRepo,
       exemptionRepo,
+      createWholesaleUser,
+      wholesaleUsers,
     ),
     customerReadPorts: readPorts,
     catalog: catalogServices(

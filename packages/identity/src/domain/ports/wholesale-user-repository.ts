@@ -10,4 +10,5 @@ export interface IWholesaleUserRepository {
   findById(id: WholesaleUserId): Promise<WholesaleUser | null>;
   listCustomerIdsWithWholesaleUsers(organizationId: OrganizationId): Promise<readonly CustomerId[]>;
   save(user: WholesaleUser): Promise<void>;
+  deleteById(id: WholesaleUserId): Promise<void>;
 }

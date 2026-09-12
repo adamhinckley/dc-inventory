@@ -30,4 +30,5 @@ export interface ICustomerRepository {
   ): Promise<Customer | null>;
   allocateNextCustomerNumber(organizationId: OrganizationId): Promise<string>;
   save(customer: Customer): Promise<void>;
+  deleteById(organizationId: OrganizationId, id: CustomerId): Promise<void>;
 }

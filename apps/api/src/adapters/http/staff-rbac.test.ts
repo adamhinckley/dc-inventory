@@ -391,6 +391,7 @@ describe("staff RBAC HTTP guard", () => {
         creditLimitCents: 1_000_000,
         currency: "USD",
         terms: "Net 30",
+        wholesaleEmail: "rbac-credit@customer.test",
       },
     });
     expect(created.statusCode).toBe(201);
@@ -438,6 +439,7 @@ describe("staff RBAC HTTP guard", () => {
         creditLimitCents: 1_000_000,
         currency: "USD",
         terms: "Net 30",
+        wholesaleEmail: "sparse-patch@customer.test",
       },
     });
     expect(created.statusCode).toBe(201);
@@ -483,6 +485,7 @@ describe("staff RBAC HTTP guard", () => {
         creditLimitCents: 1_000_000,
         currency: "USD",
         terms: "Net 30",
+        wholesaleEmail: "dual-action@customer.test",
       },
     });
     expect(created.statusCode).toBe(201);
@@ -593,6 +596,7 @@ describe("staff RBAC HTTP guard", () => {
         creditLimitCents: 500_000,
         currency: "USD",
         terms: "Net 30",
+        wholesaleEmail: "admin-credit@customer.test",
       },
     });
     expect(adminCreateWithCredit.statusCode).toBe(201);

@@ -120,6 +120,8 @@ export * from './createInternalCustomer401Error';
 export * from './createInternalCustomer403';
 export * from './createInternalCustomer409';
 export * from './createInternalCustomer409Error';
+export * from './createInternalCustomer502';
+export * from './createInternalCustomer502Error';
 export * from './createInternalCustomerBillTo201';
 export * from './createInternalCustomerBillTo400';
 export * from './createInternalCustomerBillTo400Error';

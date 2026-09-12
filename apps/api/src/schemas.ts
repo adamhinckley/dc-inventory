@@ -668,6 +668,8 @@ export const customerWriteBodySchema = z.object({
   accountStatus: accountStatusSchema.optional(),
   customerNote: z.string().optional().nullable(),
   staffNote: z.string().optional().nullable(),
+  wholesaleEmail: z.string().min(1).optional(),
+  wholesaleDisplayName: z.string().min(1).optional(),
 });
 
 export const customerPatchBodySchema = z.object({
@@ -683,6 +685,10 @@ export const customerPatchBodySchema = z.object({
 
 export const duplicateCustomerNumberResponseSchema = z.object({
   error: z.literal("duplicate_customer_number"),
+});
+
+export const createInternalCustomerConflictResponseSchema = z.object({
+  error: z.enum(["duplicate_customer_number", "duplicate_email"]),
 });
 
 export const wholesaleCustomerNotePatchBodySchema = z.object({

@@ -36,6 +36,15 @@ export class InMemoryWholesaleUserRepository implements IWholesaleUserRepository
     return [...ids];
   }
 
+  async deleteById(id: WholesaleUserId): Promise<void> {
+    const existing = this.byId.get(id);
+    if (existing === undefined) {
+      return;
+    }
+    this.byId.delete(id);
+    this.byOrgEmail.delete(emailKey(existing.organizationId, existing.email));
+  }
+
   async save(user: WholesaleUser): Promise<void> {
     const stored = {
       ...user,
