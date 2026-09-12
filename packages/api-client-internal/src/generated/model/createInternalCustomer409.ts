@@ -4,8 +4,9 @@
  * DC Inventory internal API
  * OpenAPI spec version: 0.0.0
  */
-import type { CreateInternalCustomer409Error } from './createInternalCustomer409Error';
 
 export type CreateInternalCustomer409 = {
-  error: CreateInternalCustomer409Error;
+  error: 'duplicate_customer_number';
+} | {
+  error: 'duplicate_email';
 };

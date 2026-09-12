@@ -226,20 +226,39 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
           201: customerItemSchema,
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
-          409: duplicateCustomerNumberResponseSchema,
+          409: z.union([
+            duplicateCustomerNumberResponseSchema,
+            duplicateEmailResponseSchema,
+          ]),
         },
       },
     },
     async (request, reply) => {
+      const body = request.body;
       const result = await request.server.customers.createCustomer.execute({
         organizationId: staffOrganizationId(request),
         staffUserId: staffUserId(request),
-        ...request.body,
+        staffRoles: request.staffAuth?.roles ?? [],
+        name: body.name,
+        terms: body.terms,
+        creditLimitCents: body.creditLimitCents,
+        currency: body.currency,
+        customerNumber: body.customerNumber,
+        taxId: body.taxId,
+        accountStatus: body.accountStatus,
+        customerNote: body.customerNote,
+        staffNote: body.staffNote,
+        wholesaleEmail: body.wholesaleEmail,
+        wholesaleDisplayName: body.wholesaleDisplayName,
       });
       if (!result.ok) {
-        return result.reason === "duplicate_customer_number"
-          ? sendDuplicateCustomerNumber(reply)
-          : sendInvalid(reply);
+        if (result.reason === "duplicate_customer_number") {
+          return sendDuplicateCustomerNumber(reply);
+        }
+        if (result.reason === "duplicate_email") {
+          return sendDuplicate(reply);
+        }
+        return sendInvalid(reply);
       }
       return reply.code(201).send(mapCustomer(result.customer));
     },

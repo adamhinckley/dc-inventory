@@ -668,6 +668,8 @@ export const customerWriteBodySchema = z.object({
   accountStatus: accountStatusSchema.optional(),
   customerNote: z.string().optional().nullable(),
   staffNote: z.string().optional().nullable(),
+  wholesaleEmail: z.string().min(1).optional(),
+  wholesaleDisplayName: z.string().min(1).optional(),
 });
 
 export const customerPatchBodySchema = z.object({

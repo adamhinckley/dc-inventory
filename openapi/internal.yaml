@@ -780,6 +780,12 @@ paths:
                 staffNote:
                   nullable: true
                   type: string
+                wholesaleEmail:
+                  type: string
+                  minLength: 1
+                wholesaleDisplayName:
+                  type: string
+                  minLength: 1
               required:
                 - name
                 - terms
@@ -896,15 +902,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    enum:
-                      - duplicate_customer_number
-                required:
-                  - error
-                additionalProperties: false
+                anyOf:
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_customer_number
+                    required:
+                      - error
+                    additionalProperties: false
+                  - type: object
+                    properties:
+                      error:
+                        type: string
+                        enum:
+                          - duplicate_email
+                    required:
+                      - error
+                    additionalProperties: false
   /internal/customers/{id}:
     get:
       operationId: getInternalCustomer

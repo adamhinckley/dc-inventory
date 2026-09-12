@@ -23,6 +23,8 @@ type CustomerWriteBody = {
   customerNote?: string | null;
   staffNote?: string | null;
   customerNumber?: string | null;
+  wholesaleEmail?: string;
+  wholesaleDisplayName?: string;
 };
 
 function customerCreditActions(body: CustomerWriteBody | undefined): StaffAction[] {
@@ -32,8 +34,20 @@ function customerCreditActions(body: CustomerWriteBody | undefined): StaffAction
   return [];
 }
 
+function customerWholesaleLoginActions(body: CustomerWriteBody | undefined): StaffAction[] {
+  if (body?.wholesaleEmail !== undefined || body?.wholesaleDisplayName !== undefined) {
+    return ["staff_manage"];
+  }
+  return [];
+}
+
 function createInternalCustomerActions(request: FastifyRequest): readonly StaffAction[] {
-  return ["master_data_manage", ...customerCreditActions(request.body as CustomerWriteBody | undefined)];
+  const body = request.body as CustomerWriteBody | undefined;
+  return [
+    "master_data_manage",
+    ...customerCreditActions(body),
+    ...customerWholesaleLoginActions(body),
+  ];
 }
 
 function updateInternalCustomerActions(request: FastifyRequest): readonly StaffAction[] {
