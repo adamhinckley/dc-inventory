@@ -181,7 +181,7 @@ Webhook signature verification lives in the **adapter**. Failed signature = 400,
 
 Three origins, three cookies, three OpenAPI specs. CORS allowlists **exactly** those origins. An ops session is rejected on `/internal` and `/wholesale`, and vice versa.
 
-`/ops` includes: login, subscription view, payment history, add-on catalog + checkout/manual grant, flag override (operator only). It does **not** include inventory, catalog CRUD, or staff DataTables.
+`/ops` includes: login, `GET /ops/subscription`, `GET /ops/payments`, add-on catalog + checkout/manual grant, flag override (operator only). It does **not** include inventory, catalog CRUD, or staff DataTables.
 
 Webhook endpoint (e.g. `POST /ops/webhooks/stripe`) is **not** cookie-auth; it is adapter-verified. Do not put it on the wholesale spec.
 
