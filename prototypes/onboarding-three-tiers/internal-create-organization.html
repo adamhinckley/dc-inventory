@@ -21,12 +21,23 @@
         <h1 class="page-title">Add Company</h1>
         <p class="page-desc">
           Only DEFAULT / platform admins use this screen. It provisions a new wholesale company on
-          the same app: organization slug, first admin name, and first admin email. An invite email
-          is sent to that person — no password on this form.
+          the same app. Company display name is primary; slug is derived as you type and stays
+          editable if it collides. Invite goes to the first admin — no password on this form.
         </p>
         <form id="org-form" novalidate>
           <div class="field">
-            <label for="orgSlug">Organization Slug <span class="req">*</span></label>
+            <label for="companyName">Company Display Name <span class="req">*</span></label>
+            <input
+              id="companyName"
+              name="companyName"
+              type="text"
+              required
+              autocomplete="organization"
+              placeholder="Harbor Wholesale"
+            />
+          </div>
+          <div class="field">
+            <label for="orgSlug">Slug <span class="req">*</span></label>
             <input
               id="orgSlug"
               name="orgSlug"
@@ -34,10 +45,13 @@
               required
               class="mono"
               pattern="[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?"
-              placeholder="acme-wholesale"
+              placeholder="harbor-wholesale"
               autocomplete="off"
             />
-            <span class="help">Lowercase letters, numbers, and hyphens. Used in URLs.</span>
+            <span class="help">
+              Auto-filled from the display name (lowercase, hyphens). Edit if that slug is already
+              taken.
+            </span>
           </div>
           <div class="field">
             <label for="adminName">First Admin Name <span class="req">*</span></label>
@@ -54,7 +68,9 @@
             <label for="adminEmail">First Admin Email <span class="req">*</span></label>
             <input id="adminEmail" name="adminEmail" type="email" required autocomplete="email" />
           </div>
-          <p id="form-error" class="error-text hidden">Enter a valid org slug, first admin name, and email.</p>
+          <p id="form-error" class="error-text hidden">
+            Enter a company name, valid slug, first admin name, and email.
+          </p>
           <div class="actions">
             <button type="submit">Add Company And Invite</button>
           </div>
@@ -62,12 +78,33 @@
       </div>
 
       <div id="success-view" class="success hidden">
-        <h2 id="success-detail">Company created. Invite sent to {name} ({email}).</h2>
+        <h2 id="success-detail">Company {display name} created. Invite sent to {admin name} ({email}).</h2>
         <p>No password was set on this form. The first admin sets it from the invite link.</p>
         <p style="margin-top: 16px"><a href="./index.html">Back to Prototype Index</a></p>
       </div>
     </main>
     <script>
+      function slugFromName(value) {
+        return value
+          .toLowerCase()
+          .replace(/['’]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 48);
+      }
+
+      const companyName = document.getElementById("companyName");
+      const orgSlug = document.getElementById("orgSlug");
+      let slugTouched = false;
+
+      companyName.addEventListener("input", () => {
+        if (!slugTouched) orgSlug.value = slugFromName(companyName.value);
+      });
+
+      orgSlug.addEventListener("input", () => {
+        slugTouched = true;
+      });
+
       const form = document.getElementById("org-form");
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -77,10 +114,11 @@
           form.reportValidity();
           return;
         }
-        const name = document.getElementById("adminName").value.trim();
+        const displayName = companyName.value.trim();
+        const adminName = document.getElementById("adminName").value.trim();
         const email = document.getElementById("adminEmail").value.trim();
         document.getElementById("success-detail").textContent =
-          `Company created. Invite sent to ${name} (${email}).`;
+          `Company ${displayName} created. Invite sent to ${adminName} (${email}).`;
         document.getElementById("form-view").classList.add("hidden");
         document.getElementById("success-view").classList.remove("hidden");
       });
