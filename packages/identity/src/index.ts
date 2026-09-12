@@ -35,6 +35,13 @@ export { SelectActingCustomerUseCase } from "./application/select-acting-custome
 export { ClearActingCustomerUseCase } from "./application/clear-acting-customer.js";
 export { RegisterOrganizationUseCase } from "./application/register-organization.js";
 export {
+  CreateWholesaleUserUseCase,
+  type CreateWholesaleUserInviteLinks,
+  type CreateWholesaleUserRequest,
+  type CreateWholesaleUserResult,
+} from "./application/create-wholesale-user.js";
+export { buildWholesaleInviteEmail } from "./application/wholesale-invite-email.js";
+export {
   STAFF_ACTIONS,
   canStaffPerform,
   type StaffAction,
