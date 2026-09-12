@@ -41,7 +41,10 @@ export class InMemorySessionStore implements ISessionStore {
 
   async deleteByStaffUserId(staffUserId: StaffUserId): Promise<void> {
     for (const [id, session] of this.byId) {
-      if (session.staffUserId === staffUserId) {
+      const matchesStaffUserColumn = session.staffUserId === staffUserId;
+      const matchesStaffActor =
+        session.audience === "staff" && session.staffUserId === staffUserId;
+      if (matchesStaffUserColumn || matchesStaffActor) {
         this.byId.delete(id);
       }
     }

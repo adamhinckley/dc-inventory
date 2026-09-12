@@ -300,6 +300,7 @@ import type {
   ListInternalLicensingSubscriptions401,
   ListInternalLicensingSubscriptionsParams,
   ListInternalOrganizations200,
+  ListInternalOrganizations400,
   ListInternalOrganizations401,
   ListInternalOrganizations403,
   ListInternalOrganizationsParams,
@@ -911,6 +912,11 @@ export type listInternalOrganizationsResponse200 = {
   status: 200
 }
 
+export type listInternalOrganizationsResponse400 = {
+  data: ListInternalOrganizations400
+  status: 400
+}
+
 export type listInternalOrganizationsResponse401 = {
   data: ListInternalOrganizations401
   status: 401
@@ -924,7 +930,7 @@ export type listInternalOrganizationsResponse403 = {
 export type listInternalOrganizationsResponseSuccess = (listInternalOrganizationsResponse200) & {
   headers: Headers;
 };
-export type listInternalOrganizationsResponseError = (listInternalOrganizationsResponse401 | listInternalOrganizationsResponse403) & {
+export type listInternalOrganizationsResponseError = (listInternalOrganizationsResponse400 | listInternalOrganizationsResponse401 | listInternalOrganizationsResponse403) & {
   headers: Headers;
 };
 
@@ -970,7 +976,7 @@ export const getListInternalOrganizationsQueryKey = (params?: ListInternalOrgani
     }
 
 
-export const getListInternalOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalOrganizations>>, TError = ListInternalOrganizations401 | ListInternalOrganizations403>(params?: ListInternalOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInternalOrganizationsQueryOptions = <TData = Awaited<ReturnType<typeof listInternalOrganizations>>, TError = ListInternalOrganizations400 | ListInternalOrganizations401 | ListInternalOrganizations403>(params?: ListInternalOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -989,14 +995,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListInternalOrganizationsQueryResult = NonNullable<Awaited<ReturnType<typeof listInternalOrganizations>>>
-export type ListInternalOrganizationsQueryError = ListInternalOrganizations401 | ListInternalOrganizations403
+export type ListInternalOrganizationsQueryError = ListInternalOrganizations400 | ListInternalOrganizations401 | ListInternalOrganizations403
 
 
 /**
  * @summary List organizations (Platform user only)
  */
 
-export function useListInternalOrganizations<TData = Awaited<ReturnType<typeof listInternalOrganizations>>, TError = ListInternalOrganizations401 | ListInternalOrganizations403>(
+export function useListInternalOrganizations<TData = Awaited<ReturnType<typeof listInternalOrganizations>>, TError = ListInternalOrganizations400 | ListInternalOrganizations401 | ListInternalOrganizations403>(
  params?: ListInternalOrganizationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInternalOrganizations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

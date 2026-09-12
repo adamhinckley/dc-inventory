@@ -83,6 +83,14 @@ export async function execOrganizationOccupancySchema(client: PGlite): Promise<v
       updated_at timestamptz NOT NULL DEFAULT now()
     );
 
+    CREATE TABLE catalog.categories (
+      id uuid PRIMARY KEY,
+      organization_id text NOT NULL,
+      name text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
     CREATE TABLE customers.customers (
       id uuid PRIMARY KEY,
       organization_id text NOT NULL,
@@ -181,5 +189,5 @@ export async function createOrganizationOccupancyHarness() {
     occupancy,
     deleteOrganization,
   );
-  return { client, db, organizations, staffUsers, occupancy, deleteWithOccupancy };
+  return { client, db, organizations, staffUsers, sessions, occupancy, deleteWithOccupancy };
 }

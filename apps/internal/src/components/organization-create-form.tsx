@@ -78,8 +78,16 @@ function OrganizationSlugFields({
 }
 
 export function OrganizationCreateForm() {
-  const { setCreateOpen } = useExplorerView();
+  const { createOpen, setCreateOpen } = useExplorerView();
   const [slugTouched, setSlugTouched] = useState(false);
+  const [formKey, setFormKey] = useState(0);
+
+  useEffect(() => {
+    if (!createOpen) {
+      setSlugTouched(false);
+      setFormKey((key) => key + 1);
+    }
+  }, [createOpen]);
   const { mutateAsync } = useCreateInternalOrganization();
 
   const onSubmit = useFormSubmit<
@@ -99,7 +107,6 @@ export function OrganizationCreateForm() {
     invalidate: getListInternalOrganizationsQueryKey(),
     onSuccess: (result) => {
       if (result.status === 201) {
-        setSlugTouched(false);
         setCreateOpen(false);
       }
     },
@@ -107,6 +114,7 @@ export function OrganizationCreateForm() {
 
   return (
     <Form
+      key={formKey}
       schema={createOrganizationSchema}
       defaultValues={{ name: "", slug: "", staffDisplayName: "", staffEmail: "" }}
       onSubmit={onSubmit}

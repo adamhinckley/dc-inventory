@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { FastifySchema } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { OrganizationId } from "@dc-inventory/shared-kernel";
+import { InvalidIdError, OrganizationId } from "@dc-inventory/shared-kernel";
 import {
   createInternalOrganizationBodySchema,
   createInternalOrganizationResponseSchema,
@@ -18,6 +18,7 @@ import {
   organizationsListTable,
   slugTakenResponseSchema,
   unauthorizedResponseSchema,
+  zodValidationErrorResponseSchema,
 } from "../../schemas.js";
 
 function typed(app: FastifyInstance) {
@@ -54,6 +55,7 @@ export function registerInternalOrganizationRoutes(app: FastifyInstance): void {
         querystring: organizationListQuerySchema,
         response: {
           200: organizationListResponseSchema,
+          400: zodValidationErrorResponseSchema,
           401: unauthorizedResponseSchema,
           403: forbiddenResponseSchema,
         },
@@ -154,7 +156,15 @@ export function registerInternalOrganizationRoutes(app: FastifyInstance): void {
       },
     },
     async (request, reply) => {
-      const organizationId = OrganizationId.parse(request.params.id);
+      let organizationId: OrganizationId;
+      try {
+        organizationId = OrganizationId.parse(request.params.id);
+      } catch (error) {
+        if (error instanceof InvalidIdError) {
+          return sendInvalid(reply);
+        }
+        throw error;
+      }
       const result =
         await request.server.identity.deleteOrganizationWithOccupancy.execute(organizationId);
       if (!result.ok) {

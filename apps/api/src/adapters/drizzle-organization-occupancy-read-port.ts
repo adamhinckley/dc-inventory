@@ -14,10 +14,12 @@ export class DrizzleOrganizationOccupancyReadPort implements IOrganizationOccupa
     const result = await this.db.execute<{ occupied: boolean }>(sql`
       SELECT (
         EXISTS (SELECT 1 FROM catalog.products WHERE organization_id = ${organizationId}) OR
+        EXISTS (SELECT 1 FROM catalog.categories WHERE organization_id = ${organizationId}) OR
         EXISTS (SELECT 1 FROM customers.customers WHERE organization_id = ${organizationId}) OR
         EXISTS (SELECT 1 FROM sales.orders WHERE organization_id = ${organizationId}) OR
         EXISTS (SELECT 1 FROM purchasing.suppliers WHERE organization_id = ${organizationId}) OR
         EXISTS (SELECT 1 FROM purchasing.purchase_orders WHERE organization_id = ${organizationId}) OR
+        EXISTS (SELECT 1 FROM inventory.locations WHERE organization_id = ${organizationId}) OR
         EXISTS (SELECT 1 FROM inventory.stock_snapshots WHERE organization_id = ${organizationId}) OR
         EXISTS (SELECT 1 FROM inventory.stock_movements WHERE organization_id = ${organizationId})
       ) AS occupied

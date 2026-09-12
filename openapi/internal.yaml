@@ -415,6 +415,28 @@ paths:
                   - pageSize
                   - total
                 additionalProperties: false
+        "400":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invalid_request
+                  message:
+                    type: string
+                    enum:
+                      - The request is invalid.
+                  requestId:
+                    type: string
+                required:
+                  - error
+                  - message
+                  - requestId
+                additionalProperties: false
         "401":
           description: Default Response
           content:

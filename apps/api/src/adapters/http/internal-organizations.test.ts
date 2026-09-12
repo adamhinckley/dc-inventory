@@ -238,6 +238,35 @@ describe("list and delete internal organizations", () => {
       StaffUserId.parse("10000000-0000-4000-8000-000000000002"),
     )).toBeNull();
   });
+
+  it("returns not_found for unknown organization ids", async () => {
+    const { app, platformCookie } = await startOrganizationsApp();
+    const session = await platformCookie();
+    const missingOrgId = "770e8400-e29b-41d4-a716-446655440088";
+
+    const deleted = await app.inject({
+      method: "DELETE",
+      url: `/internal/organizations/${missingOrgId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: session },
+    });
+
+    expect(deleted.statusCode).toBe(404);
+    expect(deleted.json()).toEqual({ error: "not_found" });
+  });
+
+  it("returns invalid for malformed organization ids", async () => {
+    const { app, platformCookie } = await startOrganizationsApp();
+    const session = await platformCookie();
+
+    const deleted = await app.inject({
+      method: "DELETE",
+      url: "/internal/organizations/acme",
+      cookies: { [STAFF_SESSION_COOKIE]: session },
+    });
+
+    expect(deleted.statusCode).toBe(400);
+    expect(deleted.json()).toEqual({ error: "invalid" });
+  });
 });
 
 describe("create internal organization", () => {
