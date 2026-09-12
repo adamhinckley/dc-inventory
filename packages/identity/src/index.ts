@@ -53,6 +53,14 @@ export {
   LOGIN_THROTTLE_MAX_ATTEMPTS,
   LOGIN_THROTTLE_WINDOW_MS,
 } from "./domain/login-throttle-policy.js";
+export {
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_POLICY_UI_COPY,
+  isPasswordPolicyCompliant,
+  validatePassword,
+  type PasswordPolicyResult,
+  type PasswordPolicyViolation,
+} from "./domain/password-policy.js";
 export type { IIdentityUnitOfWork } from "./domain/ports/identity-unit-of-work.js";
 export type {
   ILoginThrottle,

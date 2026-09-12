@@ -5,6 +5,7 @@ import {
 } from "@dc-inventory/shared-kernel";
 import { normalizeEmail } from "../domain/email.js";
 import { newUuid } from "../domain/ids.js";
+import { isPasswordPolicyCompliant } from "../domain/password-policy.js";
 import type { Organization } from "../domain/organization.js";
 import type { IPasswordHasher } from "../domain/ports/password-hasher.js";
 import type { IIdentityUnitOfWork } from "../domain/ports/identity-unit-of-work.js";
@@ -42,7 +43,12 @@ export class RegisterOrganizationUseCase {
     const email = normalizeEmail(input.staffEmail);
     const password = input.staffPassword;
 
-    if (!SLUG_PATTERN.test(slug) || email.length === 0 || password.length === 0) {
+    if (
+      !SLUG_PATTERN.test(slug) ||
+      email.length === 0 ||
+      password.length === 0 ||
+      !isPasswordPolicyCompliant(password)
+    ) {
       return { ok: false, reason: "invalid" };
     }
 

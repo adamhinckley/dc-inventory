@@ -36,7 +36,7 @@ describe("RegisterOrganization (in-memory)", () => {
     const result = await h.registerOrganization.execute({
       slug: "beta-wholesale",
       staffEmail: "owner@beta.test",
-      staffPassword: "beta-secret",
+      staffPassword: "Beta-secret1",
     });
 
     expect(result.ok).toBe(true);
@@ -75,7 +75,7 @@ describe("RegisterOrganization (in-memory)", () => {
     const result = await h.registerOrganization.execute({
       slug: "beta",
       staffEmail: "shared@local.test",
-      staffPassword: "beta-secret",
+      staffPassword: "Beta-secret1",
     });
 
     expect(result.ok).toBe(true);
@@ -98,14 +98,14 @@ describe("RegisterOrganization (in-memory)", () => {
     const first = await h.registerOrganization.execute({
       slug: "beta",
       staffEmail: "owner@beta.test",
-      staffPassword: "beta-secret",
+      staffPassword: "Beta-secret1",
     });
     expect(first.ok).toBe(true);
 
     const duplicateSlug = await h.registerOrganization.execute({
       slug: "beta",
       staffEmail: "other@beta.test",
-      staffPassword: "other-secret",
+      staffPassword: "Other-secret1",
     });
     expect(duplicateSlug).toEqual({ ok: false, reason: "slug_taken" });
   });
@@ -134,6 +134,42 @@ describe("RegisterOrganization (in-memory)", () => {
         slug: "beta",
         staffEmail: "owner@beta.test",
         staffPassword: "",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  it("rejects passwords that violate the shared password policy", async () => {
+    const h = harness();
+
+    expect(
+      await h.registerOrganization.execute({
+        slug: "beta",
+        staffEmail: "owner@beta.test",
+        staffPassword: "short1A",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+
+    expect(
+      await h.registerOrganization.execute({
+        slug: "beta",
+        staffEmail: "owner@beta.test",
+        staffPassword: "beta-secret1",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+
+    expect(
+      await h.registerOrganization.execute({
+        slug: "beta",
+        staffEmail: "owner@beta.test",
+        staffPassword: "BETA-SECRET1",
+      }),
+    ).toEqual({ ok: false, reason: "invalid" });
+
+    expect(
+      await h.registerOrganization.execute({
+        slug: "beta",
+        staffEmail: "owner@beta.test",
+        staffPassword: "Beta-secret",
       }),
     ).toEqual({ ok: false, reason: "invalid" });
   });
