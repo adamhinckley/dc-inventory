@@ -27,6 +27,7 @@ export type CreateStaffUserInviteLinks = {
     organizationSlug: string;
     staffUserId: StaffUserIdType;
     staffEmail: string;
+    staffDisplayName: string;
   }): Promise<string>;
 };
 
@@ -116,6 +117,7 @@ export class CreateStaffUserUseCase {
             organizationSlug: organization.slug,
             staffUserId,
             staffEmail: email,
+            staffDisplayName: displayName,
           }),
         }),
       );

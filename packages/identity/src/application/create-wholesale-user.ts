@@ -28,6 +28,7 @@ export type CreateWholesaleUserInviteLinks = {
     organizationSlug: string;
     wholesaleUserId: WholesaleUserIdType;
     wholesaleEmail: string;
+    displayName: string;
   }): Promise<string>;
 };
 
@@ -100,6 +101,7 @@ export class CreateWholesaleUserUseCase {
             organizationSlug: organization.slug,
             wholesaleUserId,
             wholesaleEmail: email,
+            displayName,
           }),
         }),
       );

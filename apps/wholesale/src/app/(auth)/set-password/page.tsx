@@ -3,8 +3,11 @@
 import { useSetPasswordWholesale } from "@dc-inventory/api-client-wholesale";
 import Link from "next/link";
 import {
+  inviteDisplayNameFromSearchParams,
   loginPathWithOnboarding,
   onboardingPrefillFromSearchParams,
+  SET_PASSWORD_LEAD,
+  setPasswordHeading,
 } from "../../../lib/onboarding-login";
 import {
   PASSWORD_POLICY_UI_COPY,
@@ -18,6 +21,7 @@ function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const displayName = inviteDisplayNameFromSearchParams(searchParams);
   const loginHref = loginPathWithOnboarding(onboardingPrefillFromSearchParams(searchParams));
   const setPassword = useSetPasswordWholesale();
   const [error, setError] = useState<string | null>(null);
@@ -65,10 +69,10 @@ function SetPasswordForm() {
   return (
     <section className="mx-auto max-w-md rounded-2xl border border-line bg-card p-8 shadow-sm">
       <p className="section-title">Account</p>
-      <h1 className="page-title mt-2">Set your password</h1>
-      <p className="mt-2 text-sm text-ink-muted">
-        Choose a password to finish setting up your wholesale account.
-      </p>
+      <h1 className="page-title mt-2">{setPasswordHeading(displayName)}</h1>
+      {displayName.length > 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">{SET_PASSWORD_LEAD}</p>
+      ) : null}
       <form className="mt-8 flex flex-col gap-4" onSubmit={onSubmit}>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-ink">Password</span>

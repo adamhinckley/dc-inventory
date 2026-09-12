@@ -19,15 +19,20 @@ export function buildInternalSetPasswordUrl(
   rawToken: string,
   organizationSlug: string,
   staffEmail: string,
+  staffDisplayName: string,
 ): string {
   const params = new URLSearchParams({ token: rawToken });
   const organization = organizationSlug.trim();
   const email = staffEmail.trim();
+  const name = staffDisplayName.trim();
   if (organization.length > 0) {
     params.set("organization", organization);
   }
   if (email.length > 0) {
     params.set("email", email);
+  }
+  if (name.length > 0) {
+    params.set("name", name);
   }
   return `${baseUrl}/set-password?${params.toString()}`;
 }
@@ -38,13 +43,19 @@ export function createStaffInviteLinks(
 ): RegisterOrganizationInviteLinks & CreateStaffUserInviteLinks {
   const baseUrl = internalAppBaseUrl();
   return {
-    async buildSetPasswordUrl({ organizationSlug, staffUserId, staffEmail }) {
+    async buildSetPasswordUrl({ organizationSlug, staffUserId, staffEmail, staffDisplayName }) {
       const { rawToken } = await tokenStore.mint({
         audience: "staff",
         userId: staffUserId,
         expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
       });
-      return buildInternalSetPasswordUrl(baseUrl, rawToken, organizationSlug, staffEmail);
+      return buildInternalSetPasswordUrl(
+        baseUrl,
+        rawToken,
+        organizationSlug,
+        staffEmail,
+        staffDisplayName,
+      );
     },
   };
 }

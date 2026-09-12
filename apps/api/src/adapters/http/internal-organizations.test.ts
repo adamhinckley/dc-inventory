@@ -305,6 +305,7 @@ describe("create internal organization", () => {
     );
     expect(emailSender.sent[0]?.text).toContain("organization=harbor-wholesale");
     expect(emailSender.sent[0]?.text).toContain("email=owner%40harbor.test");
+    expect(emailSender.sent[0]?.text).toContain("name=Harbor+Owner");
   });
 
   it("forbids tenant admins outside DEFAULT", async () => {

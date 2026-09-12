@@ -30,6 +30,7 @@ export type RegisterOrganizationInviteLinks = {
     organizationSlug: string;
     staffUserId: StaffUserId;
     staffEmail: string;
+    staffDisplayName: string;
   }): Promise<string>;
 };
 
@@ -105,6 +106,7 @@ export class RegisterOrganizationUseCase {
                 organizationSlug: slug,
                 staffUserId,
                 staffEmail: email,
+                staffDisplayName,
               }),
             }),
           );
