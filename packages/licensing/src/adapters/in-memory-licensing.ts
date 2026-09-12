@@ -12,8 +12,9 @@ import type {
   LicensingListQuery,
   LicensingListPage,
 } from "../domain/ports/licensing-read-repository.js";
+import type { ILicensingTenantProvisioner } from "../domain/ports/licensing-tenant-provisioner.js";
 
-export class InMemoryLicensingStore implements ILicensingReadRepository {
+export class InMemoryLicensingStore implements ILicensingReadRepository, ILicensingTenantProvisioner {
   private readonly subscriptions = new Map<string, SubscriptionRecord>();
   private readonly payments = new Map<string, SoftwarePaymentRecord>();
   private readonly overrides = new Map<OrganizationId, TenantFeatureState["flagOverrides"]>();
@@ -132,6 +133,14 @@ export class InMemoryLicensingStore implements ILicensingReadRepository {
       subscriptionStatus: subscription?.status ?? null,
       flagOverrides: this.overrides.get(tenantId) ?? [],
     };
+  }
+
+  async ensureEmptyTenant(tenantId: OrganizationId): Promise<void> {
+    const existing = await this.getLatestSubscription(tenantId);
+    if (existing !== null) {
+      return;
+    }
+    this.createSubscription(tenantId, "twin", "trialing");
   }
 }
 

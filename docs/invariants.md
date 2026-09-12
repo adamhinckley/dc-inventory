@@ -507,7 +507,7 @@ Commands use this matrix:
 | Write-off, credit memo, void payment (`ar_adjust`) | yes | no | no | no | yes |
 | Create / end payment plan (`payment_plans_manage`) | yes | no | no | no | yes |
 | Edit customer credit limit (`credit_limit_manage`) | yes | no | no | no | yes |
-| Manage organizations — tier 1 (`organizations_manage`) | no | no | no | no | no |
+| Manage organizations — tier 1 (`organizations_manage`) | yes | no | no | no | no |
 | Create / deactivate staff; edit roles (`staff_manage`) | yes | no | no | no | no |
 | Create wholesale shop logins (`WholesaleUser` + invite) | yes | no | no | no | no |
 

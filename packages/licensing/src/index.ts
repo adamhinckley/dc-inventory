@@ -2,11 +2,13 @@ export {
   DrizzleLicensingReadRepository,
   type LicensingDrizzle,
 } from "./adapters/drizzle-licensing-read-repository.js";
+export { DrizzleLicensingTenantProvisioner } from "./adapters/drizzle-licensing-tenant-provisioner.js";
 export {
   featuresAllCoreOn,
   InMemoryFeatures,
   InMemoryLicensingStore,
 } from "./adapters/in-memory-licensing.js";
+export { EnsureLicensingTenantUseCase } from "./application/ensure-licensing-tenant.js";
 export {
   GetLatestSubscriptionUseCase,
   ListLicensingPaymentsUseCase,
@@ -41,3 +43,4 @@ export type {
 } from "./domain/licensing.js";
 export type { IFeatures } from "./domain/ports/features.js";
 export type { ILicensingReadRepository } from "./domain/ports/licensing-read-repository.js";
+export type { ILicensingTenantProvisioner } from "./domain/ports/licensing-tenant-provisioner.js";
