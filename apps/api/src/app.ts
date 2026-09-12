@@ -2,7 +2,7 @@ import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import swagger from "@fastify/swagger";
-import type { StaffRole } from "@dc-inventory/identity";
+import type { IEmailSender, StaffRole } from "@dc-inventory/identity";
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
@@ -124,6 +124,7 @@ export async function buildAudienceApp(
   app.decorate("features", features);
   app.decorate("drainState", drainState);
   app.decorate("errorReporter", errorReporter);
+  app.decorate("emailSender", services.emailSender);
   app.decorate("identity", services.identity);
   app.decorate("customers", services.customers);
   app.decorate("catalog", services.catalog);
@@ -175,6 +176,7 @@ export async function buildApp(
   app.decorate("features", services.features);
   app.decorate("drainState", drainState);
   app.decorate("errorReporter", errorReporter);
+  app.decorate("emailSender", services.emailSender);
   app.decorate("ping", services.ping);
   app.decorate("readyCheck", services.ready);
   app.decorate("identity", services.identity);
@@ -206,6 +208,7 @@ declare module "fastify" {
     features: IFeatures;
     drainState: DrainState;
     errorReporter: IErrorReporter;
+    emailSender: IEmailSender;
     ping: PingUseCase;
     readyCheck: ReadyCheckUseCase;
     identity: IdentityHttpServices;

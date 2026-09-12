@@ -26,6 +26,7 @@ Composition is explicit — no Nest-style container.
 | What | Where |
 |---|---|
 | Wire ports → adapters | [`src/infrastructure/composition.ts`](./src/infrastructure/composition.ts) (`composeAppServices`) |
+| `IEmailSender` (SMTP / in-memory) | [`src/infrastructure/email-sender-config.ts`](./src/infrastructure/email-sender-config.ts), port in `@dc-inventory/identity` |
 | Build the Fastify instance | [`src/app.ts`](./src/app.ts) (`buildApp`) |
 | Process listen | [`src/server.ts`](./src/server.ts) |
 | `DATABASE_URL` + Postgres client | [`src/infrastructure/database-url.ts`](./src/infrastructure/database-url.ts), [`src/infrastructure/db.ts`](./src/infrastructure/db.ts) |
@@ -36,7 +37,7 @@ Composition is explicit — no Nest-style container.
 
 ## Local Postgres
 
-From the **repo root**, start Compose (Postgres 18 + MinIO placeholders), copy env examples, migrate, then boot the API:
+From the **repo root**, start Compose (Postgres 18 + MinIO + Mailpit placeholders), copy env examples, migrate, then boot the API:
 
 ```bash
 docker compose up -d --wait
@@ -87,6 +88,7 @@ pnpm dev:api
 - `GET /ready` runs `SELECT 1` on the same postgres.js client Drizzle uses. `200 { "ready": true }` or `503 { "ready": false, "error": "…" }`. `/ready` does **not** migrate (OP5).
 - Catalog through operator_bridge tables (including licensing `software_payments` and the fail-soft outbox) live in [`src/infrastructure/schema/`](./src/infrastructure/schema/) and are re-exported from [`src/infrastructure/schema.ts`](./src/infrastructure/schema.ts). Do not create a second migrate home. Do not surface software payments in any UI. `IOperatorPlatform` stays no-op.
 - MinIO is in Compose so object storage is in the box. Do not wire `IFileStorage`.
+- Mailpit is in Compose for local `IEmailSender` traffic. Open [http://localhost:8025](http://localhost:8025) after sending — see [`docs/local-boot.md`](../../docs/local-boot.md).
 
 Unit tests inject `InMemoryDatabase`. They do not start Docker, open a network socket, or run migrate. Required CI (`compose-migrate-ready`) is a job step that starts Compose, runs `pnpm db:migrate`, then proves `GET /ready` — migrate is not inside this route.
 

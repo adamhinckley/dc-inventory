@@ -113,7 +113,9 @@ import {
   type IWholesaleUserRepository,
   type IdentityDrizzle,
   type IActingCustomerHeaderReadPort,
+  type IEmailSender,
 } from "@dc-inventory/identity";
+import { createEmailSenderFromEnv } from "./email-sender-config.js";
 import {
   DrizzleLicensingReadRepository,
   featuresAllCoreOn,
@@ -477,6 +479,7 @@ export type AppServices = {
   features: IFeatures;
   clock: IClock;
   database: IDatabase;
+  emailSender: IEmailSender;
   ping: PingUseCase;
   ready: ReadyCheckUseCase;
   identity: IdentityHttpServices;
@@ -496,6 +499,7 @@ export type AppServiceOverrides = {
   features?: IFeatures;
   clock?: IClock;
   database?: IDatabase;
+  emailSender?: IEmailSender;
   staffUsers?: IStaffUserRepository;
   wholesaleUsers?: IWholesaleUserRepository;
   sessions?: ISessionStore;
@@ -1030,6 +1034,7 @@ export function composeAppServices(
   overrides: AppServiceOverrides = {},
 ): AppServices {
   const clock = overrides.clock ?? new SystemClock();
+  const emailSender = overrides.emailSender ?? createEmailSenderFromEnv();
 
   let database: IDatabase;
   let identityDb: IdentityDrizzle | undefined;
@@ -1344,6 +1349,7 @@ export function composeAppServices(
     features,
     clock,
     database,
+    emailSender,
     ping: new PingUseCase(clock),
     ready: new ReadyCheckUseCase(database),
     identity: {
