@@ -7,6 +7,9 @@ export default defineConfig({
       "@dc-inventory/shared-kernel": fileURLToPath(
         new URL("./packages/shared-kernel/src/index.ts", import.meta.url),
       ),
+      "@dc-inventory/identity/password-policy": fileURLToPath(
+        new URL("./packages/identity/password-policy.ts", import.meta.url),
+      ),
       "@dc-inventory/identity/schema": fileURLToPath(
         new URL("./packages/identity/src/persistence/schema.ts", import.meta.url),
       ),

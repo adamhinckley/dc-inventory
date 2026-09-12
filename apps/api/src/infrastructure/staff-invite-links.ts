@@ -14,20 +14,37 @@ function internalAppBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+export function buildInternalSetPasswordUrl(
+  baseUrl: string,
+  rawToken: string,
+  organizationSlug: string,
+  staffEmail: string,
+): string {
+  const params = new URLSearchParams({ token: rawToken });
+  const organization = organizationSlug.trim();
+  const email = staffEmail.trim();
+  if (organization.length > 0) {
+    params.set("organization", organization);
+  }
+  if (email.length > 0) {
+    params.set("email", email);
+  }
+  return `${baseUrl}/set-password?${params.toString()}`;
+}
+
 export function createStaffInviteLinks(
   tokenStore: ISetPasswordTokenStore,
   clock: IClock,
 ): RegisterOrganizationInviteLinks & CreateStaffUserInviteLinks {
   const baseUrl = internalAppBaseUrl();
   return {
-    async buildSetPasswordUrl({ staffUserId }) {
+    async buildSetPasswordUrl({ organizationSlug, staffUserId, staffEmail }) {
       const { rawToken } = await tokenStore.mint({
         audience: "staff",
         userId: staffUserId,
         expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
       });
-      const params = new URLSearchParams({ token: rawToken });
-      return `${baseUrl}/set-password?${params.toString()}`;
+      return buildInternalSetPasswordUrl(baseUrl, rawToken, organizationSlug, staffEmail);
     },
   };
 }

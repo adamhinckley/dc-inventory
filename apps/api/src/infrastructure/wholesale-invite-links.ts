@@ -19,13 +19,21 @@ export function createWholesaleInviteLinks(
 ): CreateWholesaleUserInviteLinks {
   const baseUrl = wholesaleAppBaseUrl();
   return {
-    async buildSetPasswordUrl({ wholesaleUserId }) {
+    async buildSetPasswordUrl({ organizationSlug, wholesaleUserId, wholesaleEmail }) {
       const { rawToken } = await tokenStore.mint({
         audience: "wholesale",
         userId: wholesaleUserId,
         expiresAt: new Date(clock.now().getTime() + SET_PASSWORD_TOKEN_TTL_MS),
       });
       const params = new URLSearchParams({ token: rawToken });
+      const organization = organizationSlug.trim();
+      const email = wholesaleEmail.trim();
+      if (organization.length > 0) {
+        params.set("organization", organization);
+      }
+      if (email.length > 0) {
+        params.set("email", email);
+      }
       return `${baseUrl}/set-password?${params.toString()}`;
     },
   };

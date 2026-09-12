@@ -1,8 +1,22 @@
 "use client";
 
 import { useSetPasswordInternal } from "@dc-inventory/api-client-internal";
-import { PASSWORD_POLICY_UI_COPY } from "@dc-inventory/identity/password-policy";
-import { Button, Input, Label, LabeledField, isSuccessfulOrvalResponse } from "@dc-inventory/ui";
+import {
+  Button,
+  Checkbox,
+  Input,
+  Label,
+  LabeledField,
+  isSuccessfulOrvalResponse,
+} from "@dc-inventory/ui";
+import {
+  loginPathWithOnboarding,
+  onboardingPrefillFromSearchParams,
+} from "../../../lib/onboarding-login";
+import {
+  PASSWORD_POLICY_UI_COPY,
+  readMatchingNewPassword,
+} from "../../../lib/password-policy-ui-copy";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
@@ -12,8 +26,12 @@ function SetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const audience = searchParams.get("audience") === "platform" ? "platform" : "staff";
+  const prefill = onboardingPrefillFromSearchParams(searchParams);
+  const loginHref = loginPathWithOnboarding(prefill);
   const setPassword = useSetPasswordInternal();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordType = showPassword ? "text" : "password";
 
   const accountKind = audience === "platform" ? "platform" : "staff";
 
@@ -24,7 +42,15 @@ function SetPasswordForm() {
       return;
     }
     const form = new FormData(event.currentTarget);
-    const password = String(form.get("password") ?? "");
+    const matched = readMatchingNewPassword(
+      String(form.get("password") ?? ""),
+      String(form.get("confirmPassword") ?? ""),
+    );
+    if (!matched.ok) {
+      setError(matched.error);
+      return;
+    }
+    const password = matched.password;
     setError(null);
     setPassword.mutate(
       { data: { token, password, audience } },
@@ -38,7 +64,7 @@ function SetPasswordForm() {
             setError("This invite link is invalid or expired.");
             return;
           }
-          router.push("/login");
+          router.push(loginHref);
         },
         onError: () => {
           setError("This invite link is invalid or expired.");
@@ -58,12 +84,30 @@ function SetPasswordForm() {
           <Label htmlFor="password">Password</Label>
           <Input
             id="password"
-            type="password"
+            type={passwordType}
             name="password"
             autoComplete="new-password"
             required
           />
         </LabeledField>
+        <LabeledField>
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Input
+            id="confirmPassword"
+            type={passwordType}
+            name="confirmPassword"
+            autoComplete="new-password"
+            required
+          />
+        </LabeledField>
+        <label className="flex items-center gap-icon text-body-sm">
+          <Checkbox
+            checked={showPassword}
+            onChange={setShowPassword}
+            aria-label="Show Password"
+          />
+          Show Password
+        </label>
         <p className="text-sm text-fg-muted">{PASSWORD_POLICY_UI_COPY}</p>
         {error !== null ? (
           <p className="form-error" role="alert">
@@ -76,7 +120,7 @@ function SetPasswordForm() {
       </form>
       <p className="mt-6 text-sm text-fg-muted">
         Already have a password?{" "}
-        <Link href="/login" className="font-medium text-accent hover:text-accent-hover">
+        <Link href={loginHref} className="font-medium text-accent hover:text-accent-hover">
           Sign in
         </Link>
       </p>

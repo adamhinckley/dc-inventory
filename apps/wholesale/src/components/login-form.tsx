@@ -9,12 +9,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { company } from "../lib/company";
+import { onboardingPrefillFromSearchParams } from "../lib/onboarding-login";
 import { postLoginPath } from "../lib/post-login-path";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
+  const prefill = onboardingPrefillFromSearchParams(searchParams);
+  const organizationSlug = prefill.organization.length > 0 ? prefill.organization : "acme";
   const queryClient = useQueryClient();
   const login = useLoginWholesale();
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export function LoginForm() {
     const password = String(form.get("password") ?? "");
     setError(null);
     login.mutate(
-      { data: { organizationSlug: "acme", email, password } },
+      { data: { organizationSlug, email, password } },
       {
         onSuccess: async (response) => {
           await queryClient.invalidateQueries({
@@ -74,6 +77,7 @@ export function LoginForm() {
                 type="email"
                 name="email"
                 autoComplete="username"
+                defaultValue={prefill.email}
                 required
                 className="shop-input"
               />
