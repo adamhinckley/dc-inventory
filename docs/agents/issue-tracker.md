@@ -23,6 +23,8 @@ Infer the workspace from the Linear MCP session; do not invent a second tracker.
 
 Create a Linear issue in a project on the DC Inventory initiative.
 
+**`/to-tickets` always creates Linear issues.** Never write tickets under `.scratch/`, and never create GitHub/GitLab issues from that skill.
+
 ## When a skill says "fetch the relevant ticket"
 
 Load the Linear issue by id (e.g. `ADA-123`) via `get_issue`, including comments.
