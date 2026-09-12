@@ -9,9 +9,10 @@ import {
   type IEmailSender,
   type StaffRole,
 } from "@dc-inventory/identity";
-import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
+import { InMemoryCustomerOccupancyReadPort } from "../customer-occupancy-read-port.js";
 import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
@@ -33,7 +34,12 @@ afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startCustomersApp(options: { emailSender?: IEmailSender } = {}) {
+async function startCustomersApp(
+  options: {
+    emailSender?: IEmailSender;
+    customerOccupancy?: InMemoryCustomerOccupancyReadPort;
+  } = {},
+) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   const staffUsers = new InMemoryStaffUserRepository();
@@ -64,6 +70,7 @@ async function startCustomersApp(options: { emailSender?: IEmailSender } = {}) {
     passwords,
     organizationRepo: organizations,
     emailSender,
+    customerOccupancy: options.customerOccupancy,
   });
   apps.push(app);
 
@@ -424,5 +431,83 @@ describe("internal customers staff-for-them wholesale invite", () => {
 
     expect(created.statusCode).toBe(201);
     expect(retryEmailSender.sent).toHaveLength(1);
+  });
+
+  it("deletes a customer and its wholesale login", async () => {
+    const { app, cookie } = await startCustomersApp();
+    const admin = await cookie("admin");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Disposable Buyer",
+        terms: "Net 30",
+        wholesaleEmail: "disposable@buyer.test",
+        wholesaleDisplayName: "Disposable Buyer",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const createdBody = created.json() as { id: string; customerNumber: string };
+    expect(createdBody.customerNumber).toBe("CUST-00001");
+    const customerId = createdBody.id;
+
+    const deleted = await app.inject({
+      method: "DELETE",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+    });
+    expect(deleted.statusCode).toBe(204);
+
+    const missing = await app.inject({
+      method: "GET",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+    });
+    expect(missing.statusCode).toBe(404);
+
+    const recreate = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Disposable Buyer",
+        terms: "Net 30",
+        wholesaleEmail: "disposable@buyer.test",
+        wholesaleDisplayName: "Disposable Buyer",
+      },
+    });
+    expect(recreate.statusCode).toBe(201);
+    expect((recreate.json() as { customerNumber: string }).customerNumber).toBe("CUST-00002");
+  });
+
+  it("refuses to delete a customer with orders or AR", async () => {
+    const occupancy = new InMemoryCustomerOccupancyReadPort();
+    const { app, cookie } = await startCustomersApp({ customerOccupancy: occupancy });
+    const admin = await cookie("admin");
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Busy Buyer",
+        terms: "Net 30",
+        wholesaleEmail: "busy@buyer.test",
+        wholesaleDisplayName: "Busy Buyer",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+    occupancy.markOccupied(OrganizationId.DEFAULT, CustomerId.parse(customerId));
+
+    const refused = await app.inject({
+      method: "DELETE",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+    });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toEqual({ error: "customer_not_empty" });
   });
 });

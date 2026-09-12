@@ -1,4 +1,4 @@
-import { CustomerId, SessionId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, SessionId, type StaffUserId, type WholesaleUserId } from "@dc-inventory/shared-kernel";
 import type { InMemoryOpsUserRepository } from "../src/adapters/in-memory-ops-user-repository.js";
 import type { InMemorySessionStore } from "../src/adapters/in-memory-session-store.js";
 import type { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
@@ -42,6 +42,14 @@ export class JoinBackedSessionStore implements ISessionStore {
 
   async deleteByStaffUserId(staffUserId: StaffUserId): Promise<void> {
     return this.sessions.deleteByStaffUserId(staffUserId);
+  }
+
+  async deleteByWholesaleUserId(wholesaleUserId: WholesaleUserId): Promise<void> {
+    return this.sessions.deleteByWholesaleUserId(wholesaleUserId);
+  }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    return this.sessions.deleteByCustomerId(customerId);
   }
 
   async findStaffResolved(id: SessionId): Promise<StaffResolvedSession | null> {

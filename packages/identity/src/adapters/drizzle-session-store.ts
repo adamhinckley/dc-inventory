@@ -6,7 +6,7 @@ import {
   StaffUserId,
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne, or } from "drizzle-orm";
 import type {
   ISessionStore,
   NewSession,
@@ -259,6 +259,34 @@ export class DrizzleSessionStore implements ISessionStore {
           eq(sessions.staffUserId, staffUserId),
           and(eq(sessions.actorType, "staff"), eq(sessions.actorId, staffUserId)),
         )!,
+      );
+  }
+
+  async deleteByWholesaleUserId(wholesaleUserId: WholesaleUserId): Promise<void> {
+    await this.db
+      .delete(sessions)
+      .where(and(eq(sessions.actorType, "wholesale"), eq(sessions.actorId, wholesaleUserId)));
+  }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    const now = new Date();
+    await this.db
+      .update(sessions)
+      .set({ customerId: null, updatedAt: now })
+      .where(
+        and(
+          eq(sessions.customerId, customerId),
+          or(isNotNull(sessions.staffUserId), ne(sessions.actorType, "wholesale"))!,
+        ),
+      );
+    await this.db
+      .delete(sessions)
+      .where(
+        and(
+          eq(sessions.customerId, customerId),
+          eq(sessions.actorType, "wholesale"),
+          isNull(sessions.staffUserId),
+        ),
       );
   }
 }

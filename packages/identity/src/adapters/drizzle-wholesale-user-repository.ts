@@ -54,6 +54,19 @@ export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository 
     return [...ids];
   }
 
+  async listByCustomerId(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<readonly WholesaleUser[]> {
+    const rows = await this.db
+      .select()
+      .from(wholesaleUsers)
+      .where(
+        and(eq(wholesaleUsers.organizationId, organizationId), eq(wholesaleUsers.customerId, customerId)),
+      );
+    return rows.map(toWholesaleUser);
+  }
+
   async save(user: WholesaleUser): Promise<void> {
     const email = normalizeEmail(user.email);
     const displayName = parseDisplayName(user.displayName);

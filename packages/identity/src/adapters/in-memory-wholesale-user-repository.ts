@@ -36,6 +36,15 @@ export class InMemoryWholesaleUserRepository implements IWholesaleUserRepository
     return [...ids];
   }
 
+  async listByCustomerId(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<readonly WholesaleUser[]> {
+    return [...this.byId.values()].filter(
+      (user) => user.organizationId === organizationId && user.customerId === customerId,
+    );
+  }
+
   async deleteById(id: WholesaleUserId): Promise<void> {
     const existing = this.byId.get(id);
     if (existing === undefined) {

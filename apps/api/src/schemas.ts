@@ -674,6 +674,10 @@ export const deleteInternalOrganizationConflictResponseSchema = z.union([
   orgNotEmptyResponseSchema,
 ]);
 
+export const customerNotEmptyResponseSchema = z.object({
+  error: z.literal("customer_not_empty"),
+});
+
 export const invalidSellWindowResponseSchema = z.object({
   error: z.literal("invalid_sell_window"),
 });

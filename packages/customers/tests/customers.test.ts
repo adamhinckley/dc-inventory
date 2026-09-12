@@ -2,12 +2,14 @@ import { CustomerId, OrganizationId, StaffUserId } from "@dc-inventory/shared-ke
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { InMemoryBillToRepository } from "../src/adapters/in-memory-bill-to-repository.js";
 import { InMemoryContactRepository } from "../src/adapters/in-memory-contact-repository.js";
 import { InMemoryCustomerRepository } from "../src/adapters/in-memory-customer-repository.js";
 import { InMemoryExemptionCertificateRepository } from "../src/adapters/in-memory-exemption-certificate-repository.js";
 import { InMemoryShipToRepository } from "../src/adapters/in-memory-ship-to-repository.js";
 import { CreateContactUseCase } from "../src/application/create-contact.js";
 import { CreateCustomerUseCase } from "../src/application/create-customer.js";
+import { DeleteCustomerUseCase } from "../src/application/delete-customer.js";
 import { CreateExemptionCertificateUseCase } from "../src/application/create-exemption-certificate.js";
 import { CreateShipToUseCase } from "../src/application/create-ship-to.js";
 import { GetCustomerUseCase } from "../src/application/get-customer.js";
@@ -24,13 +26,22 @@ function harness() {
   const customers = new InMemoryCustomerRepository();
   const contacts = new InMemoryContactRepository();
   const shipTos = new InMemoryShipToRepository();
+  const billTos = new InMemoryBillToRepository();
   const exemptions = new InMemoryExemptionCertificateRepository();
   return {
     customers,
     contacts,
     shipTos,
+    billTos,
     exemptions,
     createCustomer: new CreateCustomerUseCase(customers),
+    deleteCustomer: new DeleteCustomerUseCase(
+      customers,
+      contacts,
+      shipTos,
+      billTos,
+      exemptions,
+    ),
     getCustomer: new GetCustomerUseCase(customers),
     listCustomers: new ListCustomersUseCase(customers),
     updateCustomer: new UpdateCustomerUseCase(customers),
@@ -258,6 +269,60 @@ describe("Customers use cases (in-memory)", () => {
     });
     expect(acmeContact.ok).toBe(true);
     expect(betaContact.ok).toBe(true);
+  });
+
+  it("deletes a customer and its address book rows", async () => {
+    const h = harness();
+    const acme = await createAcme(h);
+    await h.createContact.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: acme.id,
+      name: "Buyer",
+      email: "buyer@acme.test",
+    });
+    await h.createShipTo.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: acme.id,
+      line1: "123 Main",
+      city: "Ogden",
+      region: "UT",
+      postal: "84401",
+      country: "US",
+      isDefault: true,
+    });
+    await h.createExemption.execute({
+      organizationId: DEFAULT_ORG,
+      staffUserId: STAFF_ID,
+      customerId: acme.id,
+      jurisdiction: "UT",
+      status: "on_file",
+    });
+    await h.billTos.save({
+      customerId: acme.id,
+      line1: "123 Main",
+      line2: null,
+      city: "Ogden",
+      region: "UT",
+      postal: "84401",
+      country: "US",
+    });
+
+    expect(await h.deleteCustomer.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: acme.id,
+    })).toEqual({ ok: true });
+    expect(await h.customers.findById(DEFAULT_ORG, acme.id)).toBeNull();
+    expect(await h.contacts.listByCustomer(acme.id)).toEqual([]);
+    expect(await h.shipTos.listByCustomer(acme.id)).toEqual([]);
+    expect(await h.exemptions.listByCustomer(acme.id)).toEqual([]);
+    expect(await h.billTos.findByCustomerId(acme.id)).toBeNull();
+
+    expect(await h.deleteCustomer.execute({
+      organizationId: DEFAULT_ORG,
+      customerId: acme.id,
+    })).toEqual({ ok: false, reason: "not_found" });
   });
 
   it("returns not_found for a missing customer and does not invent wholesale-user create", async () => {

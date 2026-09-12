@@ -18,6 +18,7 @@ export { CopyBillToFromDefaultShipToUseCase } from "./application/copy-bill-to-f
 export { CreateBillToUseCase } from "./application/create-bill-to.js";
 export { CreateContactUseCase } from "./application/create-contact.js";
 export { CreateCustomerUseCase } from "./application/create-customer.js";
+export { DeleteCustomerUseCase, type DeleteCustomerResult } from "./application/delete-customer.js";
 export { CreateExemptionCertificateUseCase } from "./application/create-exemption-certificate.js";
 export { CreateShipToUseCase } from "./application/create-ship-to.js";
 export { GetBillToUseCase } from "./application/get-bill-to.js";

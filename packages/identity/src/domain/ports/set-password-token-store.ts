@@ -25,4 +25,5 @@ export interface ISetPasswordTokenStore {
   mint(input: MintSetPasswordTokenInput): Promise<MintedSetPasswordToken>;
   findValid(input: SetPasswordTokenLookupInput): Promise<ValidSetPasswordToken | null>;
   consume(input: SetPasswordTokenLookupInput): Promise<boolean>;
+  deleteByUserId(userId: string): Promise<void>;
 }

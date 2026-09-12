@@ -41,6 +41,7 @@ import {
   CreateBillToUseCase,
   CreateContactUseCase,
   CreateCustomerUseCase,
+  DeleteCustomerUseCase,
   CreateExemptionCertificateUseCase,
   CreateShipToUseCase,
   CustomerAccountStatusReadAdapter,
@@ -336,7 +337,13 @@ import {
 } from "../adapters/organization-occupancy-read-port.js";
 import { DrizzleOrganizationOccupancyReadPort } from "../adapters/drizzle-organization-occupancy-read-port.js";
 import { CreateCustomerWithWholesaleUserUseCase } from "../application/create-customer-with-wholesale-user.js";
+import { DeleteCustomerWithDependentsUseCase } from "../application/delete-customer-with-dependents.js";
 import { RollbackCustomerStaffForThemUseCase } from "../application/rollback-customer-staff-for-them.js";
+import {
+  InMemoryCustomerOccupancyReadPort,
+  type ICustomerOccupancyReadPort,
+} from "../adapters/customer-occupancy-read-port.js";
+import { DrizzleCustomerOccupancyReadPort } from "../adapters/drizzle-customer-occupancy-read-port.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
@@ -392,6 +399,7 @@ export type CatalogHttpServices = {
 export type CustomersHttpServices = {
   listCustomers: ListCustomersUseCase;
   createCustomer: CreateCustomerWithWholesaleUserUseCase;
+  deleteCustomer: DeleteCustomerWithDependentsUseCase;
   getCustomer: GetCustomerUseCase;
   updateCustomer: UpdateCustomerUseCase;
   listContacts: ListContactsUseCase;
@@ -586,6 +594,7 @@ export type AppServiceOverrides = {
   licensingRepository?: ILicensingReadRepository;
   licensingProvisioner?: ILicensingTenantProvisioner;
   organizationOccupancy?: IOrganizationOccupancyReadPort;
+  customerOccupancy?: ICustomerOccupancyReadPort;
 };
 
 function catalogServices(
@@ -677,11 +686,22 @@ function customersServices(
   exemptionRepo: IExemptionCertificateRepository,
   createWholesaleUser: CreateWholesaleUserUseCase,
   wholesaleUsers: IWholesaleUserRepository,
+  sessions: ISessionStore,
+  setPasswordTokens: ISetPasswordTokenStore,
+  customerOccupancy: ICustomerOccupancyReadPort,
 ): CustomersHttpServices {
   const createCustomer = new CreateCustomerUseCase(customerRepo);
   const rollbackCustomerStaffForThem = new RollbackCustomerStaffForThemUseCase(
     customerRepo,
     wholesaleUsers,
+    setPasswordTokens,
+  );
+  const deleteCustomer = new DeleteCustomerUseCase(
+    customerRepo,
+    contactRepo,
+    shipToRepo,
+    billToRepo,
+    exemptionRepo,
   );
   return {
     listCustomers: new ListCustomersUseCase(customerRepo),
@@ -689,6 +709,14 @@ function customersServices(
       createCustomer,
       createWholesaleUser,
       rollbackCustomerStaffForThem,
+    ),
+    deleteCustomer: new DeleteCustomerWithDependentsUseCase(
+      customerRepo,
+      customerOccupancy,
+      wholesaleUsers,
+      sessions,
+      setPasswordTokens,
+      deleteCustomer,
     ),
     getCustomer: new GetCustomerUseCase(customerRepo),
     updateCustomer: new UpdateCustomerUseCase(customerRepo),
@@ -1185,6 +1213,11 @@ export function composeAppServices(
     (appDb !== undefined
       ? new DrizzleOrganizationOccupancyReadPort(appDb)
       : new InMemoryOrganizationOccupancyReadPort());
+  const customerOccupancy =
+    overrides.customerOccupancy ??
+    (appDb !== undefined
+      ? new DrizzleCustomerOccupancyReadPort(appDb)
+      : new InMemoryCustomerOccupancyReadPort());
   const deleteOrganization = new DeleteOrganizationUseCase(
     organizationRepo,
     staffUsers,
@@ -1566,6 +1599,9 @@ export function composeAppServices(
       exemptionRepo,
       createWholesaleUser,
       wholesaleUsers,
+      sessions,
+      setPasswordTokens,
+      customerOccupancy,
     ),
     customerReadPorts: readPorts,
     catalog: catalogServices(

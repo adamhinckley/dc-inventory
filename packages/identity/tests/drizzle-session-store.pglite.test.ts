@@ -2,10 +2,12 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it } from "vitest";
 import {
+  CustomerId,
   OrganizationId,
   PlatformUserId,
   SessionId,
   StaffUserId,
+  WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { InMemoryClock } from "../src/adapters/in-memory-clock.js";
 import { DrizzlePlatformUserRepository } from "../src/adapters/drizzle-platform-user-repository.js";
@@ -17,6 +19,10 @@ import * as schema from "../src/persistence/schema.js";
 const PLATFORM_ID = PlatformUserId.parse("550e8400-e29b-41d4-a716-446655440010");
 const STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440011");
 const SESSION_ID = SessionId.parse("550e8400-e29b-41d4-a716-446655440012");
+const CUSTOMER_ID = CustomerId.parse("550e8400-e29b-41d4-a716-446655440020");
+const WHOLESALE_USER_ID = WholesaleUserId.parse("550e8400-e29b-41d4-a716-446655440021");
+const STAFF_ACTING_SESSION_ID = SessionId.parse("550e8400-e29b-41d4-a716-446655440022");
+const BUYER_SESSION_ID = SessionId.parse("550e8400-e29b-41d4-a716-446655440023");
 
 async function createHarness() {
   const client = new PGlite();
@@ -135,5 +141,61 @@ describe("DrizzleSessionStore platform sessions (PGlite)", () => {
     const loaded = await sessions.findById(SESSION_ID);
     expect(loaded?.organizationId).toBeNull();
     expect(loaded?.audience).toBe("platform");
+  });
+});
+
+describe("DrizzleSessionStore customer delete session cleanup (PGlite)", () => {
+  it("deleteByWholesaleUserId removes buyer sessions only", async () => {
+    const { client, sessions } = await createHarness();
+    const now = new Date("2026-09-12T12:00:00.000Z").toISOString();
+    await client.exec(`
+      INSERT INTO identity.sessions (
+        id, actor_type, actor_id, staff_user_id, organization_id, customer_id, last_seen_at, created_at, updated_at
+      ) VALUES
+        (
+          '${BUYER_SESSION_ID}', 'wholesale', '${WHOLESALE_USER_ID}', NULL,
+          '${OrganizationId.DEFAULT}', '${CUSTOMER_ID}', '${now}', '${now}', '${now}'
+        ),
+        (
+          '${STAFF_ACTING_SESSION_ID}', 'wholesale', '${STAFF_ID}', '${STAFF_ID}',
+          '${OrganizationId.DEFAULT}', '${CUSTOMER_ID}', '${now}', '${now}', '${now}'
+        );
+    `);
+
+    await sessions.deleteByWholesaleUserId(WHOLESALE_USER_ID);
+
+    expect(await sessions.findById(BUYER_SESSION_ID)).toBeNull();
+    expect(await sessions.findById(STAFF_ACTING_SESSION_ID)).not.toBeNull();
+  });
+
+  it("deleteByCustomerId clears staff acting customerId and deletes buyer sessions", async () => {
+    const { client, sessions } = await createHarness();
+    const now = new Date("2026-09-12T12:00:00.000Z").toISOString();
+    await client.exec(`
+      INSERT INTO identity.sessions (
+        id, actor_type, actor_id, staff_user_id, organization_id, customer_id, last_seen_at, created_at, updated_at
+      ) VALUES
+        (
+          '${STAFF_ACTING_SESSION_ID}', 'wholesale', '${STAFF_ID}', '${STAFF_ID}',
+          '${OrganizationId.DEFAULT}', '${CUSTOMER_ID}', '${now}', '${now}', '${now}'
+        ),
+        (
+          '${BUYER_SESSION_ID}', 'wholesale', '${WHOLESALE_USER_ID}', NULL,
+          '${OrganizationId.DEFAULT}', '${CUSTOMER_ID}', '${now}', '${now}', '${now}'
+        );
+    `);
+
+    await sessions.deleteByCustomerId(CUSTOMER_ID);
+
+    const staffActing = await sessions.findById(STAFF_ACTING_SESSION_ID);
+    expect(staffActing).toEqual(
+      expect.objectContaining({
+        audience: "wholesale",
+        staffUserId: STAFF_ID,
+        wholesaleUserId: null,
+        customerId: null,
+      }),
+    );
+    expect(await sessions.findById(BUYER_SESSION_ID)).toBeNull();
   });
 });

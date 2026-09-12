@@ -10,4 +10,5 @@ export interface IContactRepository {
     email: string,
   ): Promise<Contact | null>;
   save(contact: Contact): Promise<void>;
+  deleteByCustomerId(customerId: CustomerId): Promise<void>;
 }

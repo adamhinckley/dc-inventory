@@ -602,4 +602,36 @@ describe("staff RBAC HTTP guard", () => {
     expect(adminCreateWithCredit.statusCode).toBe(201);
     expect(adminCreateWithCredit.json()).toMatchObject({ creditLimitCents: 500_000 });
   });
+
+  it("gates customer delete to master_data_manage", async () => {
+    const { app, cookie } = await startRbacApp();
+    const purchasing = await cookie("purchasing");
+    const warehouse = await cookie("warehouse");
+    const created = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+      payload: {
+        name: "Delete Gate Customer",
+        terms: "Net 30",
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const customerId = created.json().id as string;
+
+    expectForbidden(
+      await app.inject({
+        method: "DELETE",
+        url: `/internal/customers/${customerId}`,
+        cookies: { [STAFF_SESSION_COOKIE]: warehouse },
+      }),
+    );
+
+    const allowed = await app.inject({
+      method: "DELETE",
+      url: `/internal/customers/${customerId}`,
+      cookies: { [STAFF_SESSION_COOKIE]: purchasing },
+    });
+    expect(allowed.statusCode).toBe(204);
+  });
 });

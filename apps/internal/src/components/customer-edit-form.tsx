@@ -9,13 +9,15 @@ import { Form, useDetailView, useFormSubmit } from "@dc-inventory/ui";
 import { Save } from "lucide-react";
 import { z } from "zod";
 import { CUSTOMER_ACCOUNT_STATUS_OPTIONS } from "../lib/customer-account-status";
+import { centsToWholeDollars, wholeDollarsToCents } from "../lib/customer-credit-limit";
 import { buildUpdateCustomerBody } from "../lib/customer-edit-body";
+import { customerTermsSelectOptions } from "../lib/customer-terms";
 import type { CustomerDetail } from "../lib/customer-types";
 
 const editCustomerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   terms: z.string().min(1, "Terms are required"),
-  creditLimitCents: z.coerce.number().int().min(0),
+  creditLimitDollars: z.coerce.number().int().min(0),
   taxId: z.string().optional().nullable(),
   accountStatus: z.enum(["active", "on_hold", "inactive"]),
   staffNote: z.string().optional().nullable(),
@@ -31,7 +33,14 @@ export function CustomerEditForm({ customer }: { customer: CustomerDetail }) {
     mutate: (data) =>
       mutateAsync({
         id: customer.id,
-        data: buildUpdateCustomerBody(customer, data),
+        data: buildUpdateCustomerBody(customer, {
+          name: data.name,
+          terms: data.terms,
+          creditLimitCents: wholeDollarsToCents(data.creditLimitDollars),
+          taxId: data.taxId,
+          accountStatus: data.accountStatus,
+          staffNote: data.staffNote,
+        }),
       }),
     successMessage: "Customer updated",
     invalidate: [
@@ -47,7 +56,7 @@ export function CustomerEditForm({ customer }: { customer: CustomerDetail }) {
       defaultValues={{
         name: customer.name,
         terms: customer.terms,
-        creditLimitCents: customer.creditLimitCents,
+        creditLimitDollars: centsToWholeDollars(customer.creditLimitCents),
         taxId: customer.taxId ?? "",
         accountStatus: customer.accountStatus,
         staffNote: customer.staffNote ?? "",
@@ -64,12 +73,20 @@ export function CustomerEditForm({ customer }: { customer: CustomerDetail }) {
         <p className="text-label text-fg-secondary">Customer #</p>
         <p className="mt-1 tabular-nums">{customer.customerNumber}</p>
       </div>
-      <Form.Field name="terms" label="Terms" required form={{ kind: "text" }} />
       <Form.Field
-        name="creditLimitCents"
-        label="Credit limit"
+        name="terms"
+        label="Terms"
         required
-        form={{ kind: "number" }}
+        form={{
+          kind: "select",
+          options: [...customerTermsSelectOptions(customer.terms)],
+        }}
+      />
+      <Form.Field
+        name="creditLimitDollars"
+        label="Credit Limit ($)"
+        required
+        form={{ kind: "number", min: 0, step: 1 }}
       />
       <Form.Field name="taxId" label="Tax ID" form={{ kind: "text" }} />
       <Form.Field

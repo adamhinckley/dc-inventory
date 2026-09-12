@@ -30,4 +30,12 @@ export class InMemoryContactRepository implements IContactRepository {
   async save(contact: Contact): Promise<void> {
     this.byId.set(contact.id, { ...contact, email: normalizeEmail(contact.email) });
   }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    for (const [id, row] of this.byId) {
+      if (row.customerId === customerId) {
+        this.byId.delete(id);
+      }
+    }
+  }
 }

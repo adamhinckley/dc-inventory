@@ -384,6 +384,10 @@ export class DrizzleContactRepository implements IContactRepository {
         },
       });
   }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    await this.db.delete(contacts).where(eq(contacts.customerId, customerId));
+  }
 }
 
 export function buildShipToListByCustomerQuery(
@@ -458,6 +462,10 @@ export class DrizzleShipToRepository implements IShipToRepository {
       }
     });
   }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    await this.db.delete(shipTos).where(eq(shipTos.customerId, customerId));
+  }
 }
 
 export class DrizzleExemptionCertificateRepository
@@ -505,5 +513,9 @@ export class DrizzleExemptionCertificateRepository
           updatedAt: new Date(),
         },
       });
+  }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    await this.db.delete(exemptionCertificates).where(eq(exemptionCertificates.customerId, customerId));
   }
 }

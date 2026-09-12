@@ -19,4 +19,12 @@ export class InMemoryExemptionCertificateRepository
   async save(certificate: ExemptionCertificate): Promise<void> {
     this.byId.set(certificate.id, certificate);
   }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    for (const [id, row] of this.byId) {
+      if (row.customerId === customerId) {
+        this.byId.delete(id);
+      }
+    }
+  }
 }
