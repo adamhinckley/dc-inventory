@@ -126,6 +126,9 @@ import type {
   SelectActingCustomer404,
   SelectActingCustomer409,
   SelectActingCustomerBody,
+  SetPasswordWholesale200,
+  SetPasswordWholesale400,
+  SetPasswordWholesaleBody,
   UpdateWholesaleAccountCustomerNote200,
   UpdateWholesaleAccountCustomerNote400,
   UpdateWholesaleAccountCustomerNote401,
@@ -259,6 +262,102 @@ export const useLoginWholesale = <TError = LoginWholesale401 | LoginWholesale429
         TContext
       > => {
       return useMutation(getLoginWholesaleMutationOptions(options));
+    }
+
+export type setPasswordWholesaleResponse200 = {
+  data: SetPasswordWholesale200
+  status: 200
+}
+
+export type setPasswordWholesaleResponse400 = {
+  data: SetPasswordWholesale400
+  status: 400
+}
+
+export type setPasswordWholesaleResponseSuccess = (setPasswordWholesaleResponse200) & {
+  headers: Headers;
+};
+export type setPasswordWholesaleResponseError = (setPasswordWholesaleResponse400) & {
+  headers: Headers;
+};
+
+export type setPasswordWholesaleResponse = (setPasswordWholesaleResponseSuccess | setPasswordWholesaleResponseError)
+
+export const getSetPasswordWholesaleUrl = () => {
+
+
+
+
+  return `/wholesale/auth/set-password`
+}
+
+/**
+ * @summary Set wholesale password from invite token
+ */
+export const setPasswordWholesale = async (setPasswordWholesaleBody: SetPasswordWholesaleBody, options?: Parameters<typeof customFetch>[1]): Promise<setPasswordWholesaleResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<setPasswordWholesaleResponse>(getSetPasswordWholesaleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(setPasswordWholesaleBody)
+  }
+);}
+
+
+
+
+
+export const getSetPasswordWholesaleMutationOptions = <TError = SetPasswordWholesale400,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPasswordWholesale>>, TError,{data: SetPasswordWholesaleBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setPasswordWholesale>>, TError,{data: SetPasswordWholesaleBody}, TContext> => {
+
+const mutationKey = ['setPasswordWholesale'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setPasswordWholesale>>, {data: SetPasswordWholesaleBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setPasswordWholesale(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetPasswordWholesaleMutationResult = NonNullable<Awaited<ReturnType<typeof setPasswordWholesale>>>
+    export type SetPasswordWholesaleMutationBody = SetPasswordWholesaleBody
+    export type SetPasswordWholesaleMutationError = SetPasswordWholesale400
+
+    /**
+ * @summary Set wholesale password from invite token
+ */
+export const useSetPasswordWholesale = <TError = SetPasswordWholesale400,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setPasswordWholesale>>, TError,{data: SetPasswordWholesaleBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setPasswordWholesale>>,
+        TError,
+        {data: SetPasswordWholesaleBody},
+        TContext
+      > => {
+      return useMutation(getSetPasswordWholesaleMutationOptions(options));
     }
 
 export type logoutWholesaleResponse200 = {

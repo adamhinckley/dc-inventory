@@ -2,6 +2,7 @@ export { ACTIVE_WHOLESALE_LOGIN_ACCOUNT_STATUS } from "./adapters/active-wholesa
 export { InMemoryClock } from "./adapters/in-memory-clock.js";
 export { InMemoryEmailSender } from "./adapters/in-memory-email-sender.js";
 export { InMemoryLoginThrottle } from "./adapters/in-memory-login-throttle.js";
+export { InMemorySetPasswordTokenStore } from "./adapters/in-memory-set-password-token-store.js";
 export { InMemoryIdentityUnitOfWork } from "./adapters/in-memory-identity-unit-of-work.js";
 export { InMemoryOpsUserRepository } from "./adapters/in-memory-ops-user-repository.js";
 export { InMemoryOrganizationRepository } from "./adapters/in-memory-organization-repository.js";
@@ -26,7 +27,13 @@ export {
 export { DrizzleWholesaleUserRepository } from "./adapters/drizzle-wholesale-user-repository.js";
 export { DrizzleSessionStore } from "./adapters/drizzle-session-store.js";
 export { DrizzleLoginThrottle } from "./adapters/drizzle-login-throttle.js";
+export { DrizzleSetPasswordTokenStore } from "./adapters/drizzle-set-password-token-store.js";
 export { LoginOpsUseCase } from "./application/login-ops.js";
+export {
+  SetPasswordUseCase,
+  type SetPasswordRequest,
+  type SetPasswordResult,
+} from "./application/set-password.js";
 export { LoginStaffUseCase } from "./application/login-staff.js";
 export { LoginWholesaleUseCase } from "./application/login-wholesale.js";
 export { LogoutUseCase } from "./application/logout.js";
@@ -92,6 +99,13 @@ export type {
   LoginThrottleKey,
   LoginThrottleResult,
 } from "./domain/ports/login-throttle.js";
+export type {
+  ClaimedSetPasswordToken,
+  ClaimSetPasswordTokenInput,
+  ISetPasswordTokenStore,
+  MintedSetPasswordToken,
+  MintSetPasswordTokenInput,
+} from "./domain/ports/set-password-token-store.js";
 export type { IOrganizationRepository } from "./domain/ports/organization-repository.js";
 export type { IOpsUserRepository } from "./domain/ports/ops-user-repository.js";
 export type { IPasswordHasher } from "./domain/ports/password-hasher.js";
@@ -116,6 +130,10 @@ export {
   type Session,
   type SessionAudience,
 } from "./domain/session.js";
+export {
+  SET_PASSWORD_TOKEN_TTL_MS,
+  type SetPasswordAudience,
+} from "./domain/set-password-token.js";
 export type { Organization } from "./domain/organization.js";
 export {
   deriveOrganizationSlugFromDisplayName,

@@ -30,7 +30,7 @@ export type RegisterOrganizationInviteLinks = {
     organizationSlug: string;
     staffUserId: StaffUserId;
     staffEmail: string;
-  }): string;
+  }): Promise<string>;
 };
 
 export type RegisterOrganizationResult =
@@ -101,7 +101,7 @@ export class RegisterOrganizationUseCase {
               staffDisplayName,
               staffEmail: email,
               staffUserId,
-              setPasswordUrl: this.inviteLinks.buildSetPasswordUrl({
+              setPasswordUrl: await this.inviteLinks.buildSetPasswordUrl({
                 organizationSlug: slug,
                 staffUserId,
                 staffEmail: email,

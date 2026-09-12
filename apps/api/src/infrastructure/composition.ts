@@ -92,10 +92,12 @@ import {
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
   DrizzleLoginThrottle,
+  DrizzleSetPasswordTokenStore,
   InMemoryIdentityUnitOfWork,
   InMemoryLoginThrottle,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
+  InMemorySetPasswordTokenStore,
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
@@ -107,12 +109,14 @@ import {
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   SelectActingCustomerUseCase,
+  SetPasswordUseCase,
   ScryptPasswordHasher,
   DrizzleOrganizationRepository,
   type IPasswordHasher,
   type ILoginThrottle,
   type IOrganizationRepository,
   type ISessionStore,
+  type ISetPasswordTokenStore,
   type IStaffUserRepository,
   type IWholesaleLoginAccountStatusReadPort,
   type IWholesaleUserRepository,
@@ -337,6 +341,8 @@ export type IdentityHttpServices = {
   clearActingCustomer: ClearActingCustomerUseCase;
   registerOrganizationWithLicensing: RegisterOrganizationWithLicensingUseCase;
   createStaffUser: CreateStaffUserUseCase;
+  setPasswordStaff: SetPasswordUseCase;
+  setPasswordWholesale: SetPasswordUseCase;
 };
 
 export type CatalogHttpServices = {
@@ -517,6 +523,7 @@ export type AppServiceOverrides = {
   wholesaleUsers?: IWholesaleUserRepository;
   sessions?: ISessionStore;
   passwords?: IPasswordHasher;
+  setPasswordTokens?: ISetPasswordTokenStore;
   loginThrottle?: ILoginThrottle;
   organizationRepo?: IOrganizationRepository;
   customerRepo?: ICustomerRepository;
@@ -1120,6 +1127,13 @@ export function composeAppServices(
   const passwords =
     overrides.passwords ??
     (identityDb ? new ScryptPasswordHasher() : new InMemoryPasswordHasher());
+  const setPasswordTokens =
+    overrides.setPasswordTokens ??
+    (identityDb
+      ? new DrizzleSetPasswordTokenStore(identityDb)
+      : new InMemorySetPasswordTokenStore());
+  const staffInviteLinks = createStaffInviteLinks(setPasswordTokens, clock);
+  const wholesaleInviteLinks = createWholesaleInviteLinks(setPasswordTokens, clock);
   const organizationRepo =
     overrides.organizationRepo ??
     (identityDb
@@ -1435,7 +1449,7 @@ export function composeAppServices(
           identityUnitOfWork,
           passwords,
           emailSender,
-          createStaffInviteLinks(),
+          staffInviteLinks,
         ),
         new EnsureLicensingTenantUseCase(licensingProvisioner),
         new RollbackOrganizationRegistrationUseCase(organizationRepo, staffUsers),
@@ -1445,7 +1459,21 @@ export function composeAppServices(
         staffUsers,
         passwords,
         emailSender,
-        createStaffInviteLinks(),
+        staffInviteLinks,
+      ),
+      setPasswordStaff: new SetPasswordUseCase(
+        setPasswordTokens,
+        staffUsers,
+        wholesaleUsers,
+        passwords,
+        clock,
+      ),
+      setPasswordWholesale: new SetPasswordUseCase(
+        setPasswordTokens,
+        staffUsers,
+        wholesaleUsers,
+        passwords,
+        clock,
       ),
     },
     customers: customersServices(

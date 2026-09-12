@@ -36,8 +36,8 @@ function harness(emailSender: InMemoryEmailSender | FailingEmailSender = new InM
     staffUsers,
     uow,
     registerOrganization: new RegisterOrganizationUseCase(uow, passwords, emailSender, {
-      buildSetPasswordUrl: ({ organizationSlug, staffUserId, staffEmail }) =>
-        `https://internal.test/set-password?org=${organizationSlug}&user=${staffUserId}&email=${staffEmail}`,
+      buildSetPasswordUrl: async () =>
+        "https://internal.test/set-password?token=test-org-token",
     }),
   };
 }
@@ -99,7 +99,7 @@ describe("RegisterOrganization (in-memory)", () => {
       to: "owner@beta.test",
       subject: `You're invited to ${TEST_BETA_ORG_NAME}`,
     });
-    expect(h.email.sent[0]?.text).toContain("https://internal.test/set-password");
+    expect(h.email.sent[0]?.text).toContain("/set-password?token=");
   });
 
   it("allows the same email in DEFAULT and a new org", async () => {
