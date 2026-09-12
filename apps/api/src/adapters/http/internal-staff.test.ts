@@ -100,8 +100,9 @@ describe("internal staff create", () => {
     expect(emailSender.sent).toHaveLength(1);
     expect(emailSender.sent[0]).toMatchObject({
       to: "new.warehouse@local.test",
-      subject: "Staff invite",
+      subject: "You're invited to Acme Wholesale",
     });
+    expect(emailSender.sent[0]?.text).toContain("/set-password?");
   });
 
   it("rejects non-admin roles and unauthenticated requests", async () => {
