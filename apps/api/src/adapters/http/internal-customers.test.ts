@@ -6,6 +6,7 @@ import {
   InMemorySessionStore,
   InMemoryStaffUserRepository,
   InMemoryWholesaleUserRepository,
+  type IEmailSender,
   type StaffRole,
 } from "@dc-inventory/identity";
 import { OrganizationId, StaffUserId } from "@dc-inventory/shared-kernel";
@@ -15,18 +16,29 @@ import { buildApp } from "../../app.js";
 import { InMemoryDatabase } from "../in-memory-database.js";
 import { STAFF_SESSION_COOKIE } from "./auth-cookies.js";
 
+const STAFF_FOR_THEM_DEFAULT_CREDIT_LIMIT_CENTS = 1_000_000;
+
+class FailingEmailSender implements IEmailSender {
+  readonly sent: Parameters<IEmailSender["send"]>[0][] = [];
+
+  async send(message: Parameters<IEmailSender["send"]>[0]): Promise<void> {
+    this.sent.push(message);
+    throw new Error("delivery failed");
+  }
+}
+
 const apps: FastifyInstance[] = [];
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
 });
 
-async function startCustomersApp() {
+async function startCustomersApp(options: { emailSender?: IEmailSender } = {}) {
   const passwords = new InMemoryPasswordHasher();
   const organizations = new InMemoryOrganizationRepository();
   const staffUsers = new InMemoryStaffUserRepository();
   const sessions = new InMemorySessionStore();
-  const emailSender = new InMemoryEmailSender();
+  const emailSender = options.emailSender ?? new InMemoryEmailSender();
   await organizations.save({ id: OrganizationId.DEFAULT, slug: "acme", name: "Acme Wholesale" });
 
   for (const [index, role] of (
@@ -239,7 +251,10 @@ describe("internal customers staff-for-them wholesale invite", () => {
     });
 
     expect(response.statusCode).toBe(201);
-    expect(response.json()).toMatchObject({ name: "Harbor Supply" });
+    expect(response.json()).toMatchObject({
+      name: "Harbor Supply",
+      creditLimitCents: STAFF_FOR_THEM_DEFAULT_CREDIT_LIMIT_CENTS,
+    });
     expect(emailSender.sent).toHaveLength(1);
     expect(emailSender.sent[0]).toMatchObject({
       to: "buyer@harbor.test",
@@ -352,5 +367,59 @@ describe("internal customers staff-for-them wholesale invite", () => {
     });
     expect(duplicate.statusCode).toBe(409);
     expect(duplicate.json()).toEqual({ error: "duplicate_email" });
+
+    const listed = await app.inject({
+      method: "GET",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+    });
+    expect(listed.statusCode).toBe(200);
+    expect((listed.json() as { items: unknown[] }).items).toHaveLength(1);
+  });
+
+  it("rolls back when invite delivery fails so retry is not duplicate_email", async () => {
+    const failingEmail = new FailingEmailSender();
+    const { app, cookie } = await startCustomersApp({ emailSender: failingEmail });
+    const admin = await cookie("admin");
+
+    const failed = await app.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+      payload: {
+        name: "Retry Customer",
+        terms: "Net 30",
+        wholesaleEmail: "retry@buyer.test",
+      },
+    });
+
+    expect(failed.statusCode).toBe(502);
+    expect(failed.json()).toEqual({ error: "invite_failed" });
+    expect(failingEmail.sent).toHaveLength(1);
+
+    const listedAfterFailure = await app.inject({
+      method: "GET",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: admin },
+    });
+    expect((listedAfterFailure.json() as { items: unknown[] }).items).toHaveLength(0);
+
+    const { app: retryApp, cookie: retryCookie, emailSender: retryEmailSender } =
+      await startCustomersApp();
+    const retryAdmin = await retryCookie("admin");
+
+    const created = await retryApp.inject({
+      method: "POST",
+      url: "/internal/customers",
+      cookies: { [STAFF_SESSION_COOKIE]: retryAdmin },
+      payload: {
+        name: "Retry Customer",
+        terms: "Net 30",
+        wholesaleEmail: "retry@buyer.test",
+      },
+    });
+
+    expect(created.statusCode).toBe(201);
+    expect(retryEmailSender.sent).toHaveLength(1);
   });
 });

@@ -687,6 +687,10 @@ export const duplicateCustomerNumberResponseSchema = z.object({
   error: z.literal("duplicate_customer_number"),
 });
 
+export const createInternalCustomerConflictResponseSchema = z.object({
+  error: z.enum(["duplicate_customer_number", "duplicate_email"]),
+});
+
 export const wholesaleCustomerNotePatchBodySchema = z.object({
   customerNote: z.string().nullable(),
 });

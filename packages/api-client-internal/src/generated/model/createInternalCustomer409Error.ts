@@ -10,4 +10,5 @@ export type CreateInternalCustomer409Error = typeof CreateInternalCustomer409Err
 
 export const CreateInternalCustomer409Error = {
   duplicate_customer_number: 'duplicate_customer_number',
+  duplicate_email: 'duplicate_email',
 } as const;

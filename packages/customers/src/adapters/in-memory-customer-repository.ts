@@ -94,6 +94,14 @@ export class InMemoryCustomerRepository implements ICustomerRepository {
     return formatCustomerNumber(next);
   }
 
+  async deleteById(organizationId: OrganizationId, id: CustomerId): Promise<void> {
+    const customer = this.byId.get(id);
+    if (customer === undefined || customer.organizationId !== organizationId) {
+      return;
+    }
+    this.byId.delete(id);
+  }
+
   async save(customer: Customer): Promise<void> {
     const customerNumber =
       customer.customerNumber !== undefined && customer.customerNumber.trim().length > 0

@@ -79,6 +79,10 @@ export class DrizzleWholesaleUserRepository implements IWholesaleUserRepository 
         },
       });
   }
+
+  async deleteById(id: WholesaleUserId): Promise<void> {
+    await this.db.delete(wholesaleUsers).where(eq(wholesaleUsers.id, id));
+  }
 }
 
 function toWholesaleUser(row: typeof wholesaleUsers.$inferSelect): WholesaleUser {

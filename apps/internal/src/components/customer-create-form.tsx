@@ -17,6 +17,8 @@ import {
 import { z } from "zod";
 import { useCanManageStaff } from "../lib/staff-manage";
 
+const STAFF_FOR_THEM_DEFAULT_CREDIT_LIMIT_CENTS = 1_000_000;
+
 const baseCreateCustomerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   terms: z.string().min(1, "Terms are required"),
@@ -63,8 +65,14 @@ function WholesaleDisplayNameField({
           <TextInput
             name={rhf.name}
             value={String(rhf.value ?? "")}
-            onBlur={rhf.onBlur}
+            onBlur={() => {
+              setDisplayNameTouched(true);
+              rhf.onBlur();
+            }}
             ref={rhf.ref}
+            onFocus={() => {
+              setDisplayNameTouched(true);
+            }}
             onChange={(value: string) => {
               setDisplayNameTouched(true);
               rhf.onChange(value);
@@ -112,7 +120,9 @@ export function CustomerCreateForm() {
         data: {
           name: data.name,
           terms: data.terms,
-          ...(data.creditLimitCents !== 0 ? { creditLimitCents: data.creditLimitCents } : {}),
+          ...(canManageStaff || data.creditLimitCents !== 0
+            ? { creditLimitCents: data.creditLimitCents }
+            : {}),
           customerNumber:
             data.customerNumber !== undefined && data.customerNumber.trim().length > 0
               ? data.customerNumber.trim()
@@ -141,7 +151,7 @@ export function CustomerCreateForm() {
       defaultValues={{
         name: "",
         terms: "",
-        creditLimitCents: 0,
+        creditLimitCents: canManageStaff ? STAFF_FOR_THEM_DEFAULT_CREDIT_LIMIT_CENTS : 0,
         customerNumber: "",
         wholesaleEmail: "",
         wholesaleDisplayName: "",

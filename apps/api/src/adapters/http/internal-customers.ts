@@ -35,12 +35,14 @@ import {
   customersListTable,
   duplicateEmailResponseSchema,
   duplicateCustomerNumberResponseSchema,
+  createInternalCustomerConflictResponseSchema,
   exemptionItemSchema,
   exemptionListResponseSchema,
   exemptionParamsSchema,
   exemptionPatchBodySchema,
   exemptionWriteBodySchema,
   invalidResponseSchema,
+  inviteFailedResponseSchema,
   noDefaultShipToResponseSchema,
   notFoundResponseSchema,
   shipToItemSchema,
@@ -226,10 +228,8 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
           201: customerItemSchema,
           400: invalidResponseSchema,
           401: unauthorizedResponseSchema,
-          409: z.union([
-            duplicateCustomerNumberResponseSchema,
-            duplicateEmailResponseSchema,
-          ]),
+          409: createInternalCustomerConflictResponseSchema,
+          502: inviteFailedResponseSchema,
         },
       },
     },
@@ -257,6 +257,9 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
         }
         if (result.reason === "duplicate_email") {
           return sendDuplicate(reply);
+        }
+        if (result.reason === "invite_failed") {
+          return reply.code(502).send({ error: "invite_failed" as const });
         }
         return sendInvalid(reply);
       }

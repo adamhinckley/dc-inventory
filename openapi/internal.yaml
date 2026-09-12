@@ -902,25 +902,30 @@ paths:
           content:
             application/json:
               schema:
-                anyOf:
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        enum:
-                          - duplicate_customer_number
-                    required:
-                      - error
-                    additionalProperties: false
-                  - type: object
-                    properties:
-                      error:
-                        type: string
-                        enum:
-                          - duplicate_email
-                    required:
-                      - error
-                    additionalProperties: false
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - duplicate_customer_number
+                      - duplicate_email
+                required:
+                  - error
+                additionalProperties: false
+        "502":
+          description: Default Response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                      - invite_failed
+                required:
+                  - error
+                additionalProperties: false
   /internal/customers/{id}:
     get:
       operationId: getInternalCustomer

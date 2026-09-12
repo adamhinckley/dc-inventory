@@ -245,6 +245,12 @@ export class DrizzleCustomerRepository implements ICustomerRepository {
     return allocateCustomerNumber(this.db, organizationId);
   }
 
+  async deleteById(organizationId: OrganizationId, id: CustomerId): Promise<void> {
+    await this.db
+      .delete(customers)
+      .where(and(eq(customers.id, id), eq(customers.organizationId, organizationId)));
+  }
+
   async save(customer: Customer): Promise<void> {
     await this.db
       .insert(customers)

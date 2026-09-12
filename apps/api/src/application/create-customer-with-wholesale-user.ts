@@ -1,12 +1,15 @@
-import type { CreateCustomerUseCase, Customer } from "@dc-inventory/customers";
+import type { CreateCustomerUseCase } from "@dc-inventory/customers";
 import {
   canStaffPerform,
   type CreateWholesaleUserUseCase,
   type StaffRole,
 } from "@dc-inventory/identity";
+import type { RollbackCustomerStaffForThemUseCase } from "./rollback-customer-staff-for-them.js";
 
 type CreateCustomerRequest = Parameters<CreateCustomerUseCase["execute"]>[0];
 type CreateCustomerResult = Awaited<ReturnType<CreateCustomerUseCase["execute"]>>;
+
+export const STAFF_FOR_THEM_DEFAULT_CREDIT_LIMIT_CENTS = 1_000_000;
 
 export type CreateCustomerWithWholesaleUserRequest = CreateCustomerRequest & {
   staffRoles: readonly StaffRole[];
@@ -22,6 +25,7 @@ export class CreateCustomerWithWholesaleUserUseCase {
   constructor(
     private readonly createCustomer: CreateCustomerUseCase,
     private readonly createWholesaleUser: CreateWholesaleUserUseCase,
+    private readonly rollbackCustomerStaffForThem: RollbackCustomerStaffForThemUseCase,
   ) {}
 
   async execute(
@@ -44,7 +48,15 @@ export class CreateCustomerWithWholesaleUserUseCase {
       }
     }
 
-    const customerResult = await this.createCustomer.execute(customerInput);
+    const resolvedCustomerInput =
+      isAdmin && customerInput.creditLimitCents === undefined
+        ? {
+            ...customerInput,
+            creditLimitCents: STAFF_FOR_THEM_DEFAULT_CREDIT_LIMIT_CENTS,
+          }
+        : customerInput;
+
+    const customerResult = await this.createCustomer.execute(resolvedCustomerInput);
     if (!customerResult.ok) {
       return customerResult;
     }
@@ -53,6 +65,7 @@ export class CreateCustomerWithWholesaleUserUseCase {
       return customerResult;
     }
 
+    const normalizedWholesaleEmail = wholesaleEmail!.trim();
     const displayName =
       wholesaleDisplayName !== undefined && wholesaleDisplayName.trim().length > 0
         ? wholesaleDisplayName.trim()
@@ -61,11 +74,25 @@ export class CreateCustomerWithWholesaleUserUseCase {
     const wholesaleResult = await this.createWholesaleUser.execute({
       organizationId: customerInput.organizationId,
       customerId: customerResult.customer.id,
-      email: wholesaleEmail!.trim(),
+      email: normalizedWholesaleEmail,
       displayName,
     });
 
     if (!wholesaleResult.ok) {
+      if (
+        wholesaleResult.reason === "duplicate_email" ||
+        wholesaleResult.reason === "invalid" ||
+        wholesaleResult.reason === "invite_failed"
+      ) {
+        await this.rollbackCustomerStaffForThem.execute({
+          organizationId: customerInput.organizationId,
+          customerId: customerResult.customer.id,
+          wholesaleEmail: normalizedWholesaleEmail,
+        });
+      }
+      if (wholesaleResult.reason === "invalid") {
+        return { ok: false, reason: "invalid" };
+      }
       return { ok: false, reason: wholesaleResult.reason };
     }
 
