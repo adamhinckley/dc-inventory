@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Apply for a Wholesale Account</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="banner">
+      <strong>Throwaway prototype.</strong> Shop apply — not a SoloView modal. No login after submit.
+      <a href="./index.html">All screens</a>
+    </div>
+    <header class="topbar">
+      <div class="topbar-title">Wholesale Shop</div>
+      <div class="topbar-meta"><a href="./index.html">Prototype Index</a></div>
+    </header>
+    <main class="page">
+      <div id="form-view" class="card">
+        <p class="page-kicker">New Account</p>
+        <h1 class="page-title">Apply for Wholesale Access</h1>
+        <p class="page-desc">
+          Trade buyers only. Submit this form and wait for staff review. You will not get a login
+          until the application is approved.
+        </p>
+
+        <form id="apply-form" novalidate>
+          <div class="field">
+            <label for="businessName">Business Name <span class="req">*</span></label>
+            <input id="businessName" name="businessName" type="text" required autocomplete="organization" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="contactName">Contact Name <span class="req">*</span></label>
+              <input id="contactName" name="contactName" type="text" required autocomplete="name" />
+            </div>
+            <div class="field">
+              <label for="contactPhone">Phone <span class="req">*</span></label>
+              <input id="contactPhone" name="contactPhone" type="tel" required autocomplete="tel" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="contactEmail">Email <span class="req">*</span></label>
+            <input id="contactEmail" name="contactEmail" type="email" required autocomplete="email" />
+          </div>
+
+          <p class="field-label" style="margin-bottom: 8px">Ship-To Address <span class="req">*</span></p>
+          <div class="field">
+            <label for="street">Street</label>
+            <input id="street" name="street" type="text" required autocomplete="street-address" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="city">City</label>
+              <input id="city" name="city" type="text" required autocomplete="address-level2" />
+            </div>
+            <div class="field">
+              <label for="postal">Postal Code</label>
+              <input id="postal" name="postal" type="text" required autocomplete="postal-code" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="shipState">State</label>
+            <select id="shipState" name="shipState" required></select>
+          </div>
+
+          <p class="field-label" style="margin-bottom: 8px">
+            Resale License <span class="req">*</span>
+          </p>
+          <p class="help" style="margin: -4px 0 12px">
+            State sales-tax / seller’s permit number and the issuing jurisdiction. Required on this
+            request.
+          </p>
+          <div class="field-row">
+            <div class="field">
+              <label for="resaleNumber">Resale License Number</label>
+              <input id="resaleNumber" name="resaleNumber" type="text" required class="mono" />
+            </div>
+            <div class="field">
+              <label for="resaleState">Issuing State (Jurisdiction)</label>
+              <select id="resaleState" name="resaleState" required></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="notes">Notes <span class="help">(optional leftovers)</span></label>
+            <textarea
+              id="notes"
+              name="notes"
+              placeholder="Website, how you heard about us, business type, or anything else staff should see."
+            ></textarea>
+          </div>
+
+          <p id="form-error" class="error-text hidden">Fill every required field, including a valid email.</p>
+
+          <div class="actions">
+            <button type="submit">Submit Application</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="success-view" class="success hidden">
+        <h2>Application Pending Review</h2>
+        <p>
+          We received your request. Staff will review it. There is no shop login yet — watch your
+          email for an invite after approval.
+        </p>
+        <p style="margin-top: 16px">
+          <a href="./index.html">Back to Prototype Index</a>
+        </p>
+      </div>
+    </main>
+    <script>
+      const STATES = [
+        ["AL", "Alabama"], ["AK", "Alaska"], ["AZ", "Arizona"], ["AR", "Arkansas"],
+        ["CA", "California"], ["CO", "Colorado"], ["CT", "Connecticut"], ["DE", "Delaware"],
+        ["DC", "District of Columbia"], ["FL", "Florida"], ["GA", "Georgia"], ["HI", "Hawaii"],
+        ["ID", "Idaho"], ["IL", "Illinois"], ["IN", "Indiana"], ["IA", "Iowa"],
+        ["KS", "Kansas"], ["KY", "Kentucky"], ["LA", "Louisiana"], ["ME", "Maine"],
+        ["MD", "Maryland"], ["MA", "Massachusetts"], ["MI", "Michigan"], ["MN", "Minnesota"],
+        ["MS", "Mississippi"], ["MO", "Missouri"], ["MT", "Montana"], ["NE", "Nebraska"],
+        ["NV", "Nevada"], ["NH", "New Hampshire"], ["NJ", "New Jersey"], ["NM", "New Mexico"],
+        ["NY", "New York"], ["NC", "North Carolina"], ["ND", "North Dakota"], ["OH", "Ohio"],
+        ["OK", "Oklahoma"], ["OR", "Oregon"], ["PA", "Pennsylvania"], ["RI", "Rhode Island"],
+        ["SC", "South Carolina"], ["SD", "South Dakota"], ["TN", "Tennessee"], ["TX", "Texas"],
+        ["UT", "Utah"], ["VT", "Vermont"], ["VA", "Virginia"], ["WA", "Washington"],
+        ["WV", "West Virginia"], ["WI", "Wisconsin"], ["WY", "Wyoming"],
+      ];
+
+      function fillStates(selectId) {
+        const el = document.getElementById(selectId);
+        el.innerHTML = '<option value="">Select State</option>' +
+          STATES.map(([code, name]) => `<option value="${code}">${name} (${code})</option>`).join("");
+      }
+
+      fillStates("shipState");
+      fillStates("resaleState");
+
+      const form = document.getElementById("apply-form");
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const ok = form.checkValidity();
+        document.getElementById("form-error").classList.toggle("hidden", ok);
+        if (!ok) {
+          form.reportValidity();
+          return;
+        }
+        document.getElementById("form-view").classList.add("hidden");
+        document.getElementById("success-view").classList.remove("hidden");
+      });
+    </script>
+  </body>
+</html>

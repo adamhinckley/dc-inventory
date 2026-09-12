@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add Company — Adam / Platform Admin</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="banner">
+      <strong>Throwaway prototype.</strong> How Adam adds a new company. DEFAULT / platform admin only.
+      <a href="./index.html">All screens</a>
+    </div>
+    <header class="topbar">
+      <div class="topbar-title">Internal · Platform</div>
+      <div class="topbar-meta"><a href="./index.html">Prototype Index</a></div>
+    </header>
+    <main class="page">
+      <div id="form-view" class="card">
+        <p class="page-kicker">Adam / Platform Admin</p>
+        <h1 class="page-title">Add Company</h1>
+        <p class="page-desc">
+          Only DEFAULT / platform admins use this screen. It provisions a new wholesale company on
+          the same app. Company display name is primary; slug is derived as you type and stays
+          editable if it collides. Invite goes to the first admin — no password on this form.
+        </p>
+        <form id="org-form" novalidate>
+          <div class="field">
+            <label for="companyName">Company Display Name <span class="req">*</span></label>
+            <input
+              id="companyName"
+              name="companyName"
+              type="text"
+              required
+              autocomplete="organization"
+              placeholder="Harbor Wholesale"
+            />
+          </div>
+          <div class="field">
+            <label for="orgSlug">Slug <span class="req">*</span></label>
+            <input
+              id="orgSlug"
+              name="orgSlug"
+              type="text"
+              required
+              class="mono"
+              pattern="[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?"
+              placeholder="harbor-wholesale"
+              autocomplete="off"
+            />
+            <span class="help">
+              Auto-filled from the display name (lowercase, hyphens). Edit if that slug is already
+              taken.
+            </span>
+          </div>
+          <div class="field">
+            <label for="adminName">First Admin Name <span class="req">*</span></label>
+            <input
+              id="adminName"
+              name="adminName"
+              type="text"
+              required
+              autocomplete="name"
+              placeholder="The person the invite email is going to"
+            />
+          </div>
+          <div class="field">
+            <label for="adminEmail">First Admin Email <span class="req">*</span></label>
+            <input id="adminEmail" name="adminEmail" type="email" required autocomplete="email" />
+          </div>
+          <p id="form-error" class="error-text hidden">
+            Enter a company name, valid slug, first admin name, and email.
+          </p>
+          <div class="actions">
+            <button type="submit">Add Company And Invite</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="success-view" class="success hidden">
+        <h2 id="success-detail">Company {display name} created. Invite sent to {admin name} ({email}).</h2>
+        <p>No password was set on this form. The first admin sets it from the invite link.</p>
+        <p style="margin-top: 16px"><a href="./index.html">Back to Prototype Index</a></p>
+      </div>
+    </main>
+    <script>
+      function slugFromName(value) {
+        return value
+          .toLowerCase()
+          .replace(/['’]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 48);
+      }
+
+      const companyName = document.getElementById("companyName");
+      const orgSlug = document.getElementById("orgSlug");
+      let slugTouched = false;
+
+      companyName.addEventListener("input", () => {
+        if (!slugTouched) orgSlug.value = slugFromName(companyName.value);
+      });
+
+      orgSlug.addEventListener("input", () => {
+        slugTouched = true;
+      });
+
+      const form = document.getElementById("org-form");
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const ok = form.checkValidity();
+        document.getElementById("form-error").classList.toggle("hidden", ok);
+        if (!ok) {
+          form.reportValidity();
+          return;
+        }
+        const displayName = companyName.value.trim();
+        const adminName = document.getElementById("adminName").value.trim();
+        const email = document.getElementById("adminEmail").value.trim();
+        document.getElementById("success-detail").textContent =
+          `Company ${displayName} created. Invite sent to ${adminName} (${email}).`;
+        document.getElementById("form-view").classList.add("hidden");
+        document.getElementById("success-view").classList.remove("hidden");
+      });
+    </script>
+  </body>
+</html>

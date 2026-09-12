@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create Staff — Admin</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="banner">
+      <strong>Throwaway prototype.</strong> Admin invites staff. G8 roles only.
+      <a href="./index.html">All screens</a>
+    </div>
+    <header class="topbar">
+      <div class="topbar-title">Internal · Staff</div>
+      <div class="topbar-meta"><a href="./index.html">Prototype Index</a></div>
+    </header>
+    <main class="page">
+      <div id="form-view" class="card">
+        <p class="page-kicker">Admin</p>
+        <h1 class="page-title">Create Staff</h1>
+        <p class="page-desc">
+          Invite a staff user by name and email, and assign one or more G8 roles. They set their own
+          password from the email.
+        </p>
+        <p class="note">Invite email will be sent. No password on this form.</p>
+        <form id="staff-form" novalidate>
+          <div class="field">
+            <label for="staffName">Staff Name <span class="req">*</span></label>
+            <input
+              id="staffName"
+              name="staffName"
+              type="text"
+              required
+              autocomplete="name"
+              placeholder="The person the invite email is going to"
+            />
+          </div>
+          <div class="field">
+            <label for="staffEmail">Email <span class="req">*</span></label>
+            <input id="staffEmail" name="staffEmail" type="email" required autocomplete="email" />
+          </div>
+          <div class="field">
+            <span class="field-label">Roles <span class="req">*</span></span>
+            <span class="help">G8. At least one required. Title Case labels.</span>
+            <div class="roles" role="group" aria-label="G8 Roles">
+              <label><input type="checkbox" name="roles" value="admin" /> Admin</label>
+              <label><input type="checkbox" name="roles" value="purchasing" /> Purchasing</label>
+              <label><input type="checkbox" name="roles" value="warehouse" /> Warehouse</label>
+              <label><input type="checkbox" name="roles" value="sales_support" /> Sales Support</label>
+              <label><input type="checkbox" name="roles" value="accounting" /> Accounting</label>
+            </div>
+            <p id="role-error" class="error-text hidden">Select at least one role.</p>
+          </div>
+          <p id="form-error" class="error-text hidden">Enter a name, a valid email, and at least one role.</p>
+          <div class="actions">
+            <button type="submit">Create Staff And Invite</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="success-view" class="success hidden">
+        <h2 id="success-heading">Invite sent to {name} ({email}).</h2>
+        <p id="success-detail"></p>
+        <p style="margin-top: 12px">No password was set on this form.</p>
+        <p style="margin-top: 16px"><a href="./index.html">Back to Prototype Index</a></p>
+      </div>
+    </main>
+    <script>
+      const ROLE_LABELS = {
+        admin: "Admin",
+        purchasing: "Purchasing",
+        warehouse: "Warehouse",
+        sales_support: "Sales Support",
+        accounting: "Accounting",
+      };
+
+      const form = document.getElementById("staff-form");
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const nameOk = document.getElementById("staffName").checkValidity();
+        const emailOk = document.getElementById("staffEmail").checkValidity();
+        const selected = [...form.querySelectorAll('input[name="roles"]:checked')].map((el) => el.value);
+        const rolesOk = selected.length > 0;
+        document.getElementById("role-error").classList.toggle("hidden", rolesOk);
+        document.getElementById("form-error").classList.toggle("hidden", nameOk && emailOk && rolesOk);
+        if (!nameOk || !emailOk || !rolesOk) {
+          if (!nameOk) document.getElementById("staffName").reportValidity();
+          else if (!emailOk) document.getElementById("staffEmail").reportValidity();
+          return;
+        }
+        const labels = selected.map((value) => ROLE_LABELS[value]).join(", ");
+        const name = document.getElementById("staffName").value.trim();
+        const email = document.getElementById("staffEmail").value.trim();
+        document.getElementById("success-heading").textContent =
+          `Invite sent to ${name} (${email}).`;
+        document.getElementById("success-detail").textContent = `Roles: ${labels}.`;
+        document.getElementById("form-view").classList.add("hidden");
+        document.getElementById("success-view").classList.remove("hidden");
+      });
+    </script>
+  </body>
+</html>

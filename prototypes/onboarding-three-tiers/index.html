@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Onboarding Three Tiers — Prototype Index</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="banner">
+      <strong>Throwaway prototype.</strong> Critique only. Not wired to Identity, Mailpit, or the apps.
+    </div>
+    <header class="topbar">
+      <div class="topbar-title">DC Inventory · Onboarding</div>
+      <div class="topbar-meta">Five standalone screens</div>
+    </header>
+    <main class="page">
+      <p class="page-kicker">Prototype</p>
+      <h1 class="page-title">Onboarding Three Tiers</h1>
+      <p class="page-desc">
+        Buyer apply → staff review (or staff-create) → company / staff invites → set password from
+        the invite link. Open any screen; nothing persists past a refresh.
+      </p>
+      <nav class="index-list">
+        <a class="index-item index-item--featured" href="./internal-create-organization.html">
+          <p class="page-kicker">Tier 1 · Start here if you are Adam</p>
+          <h2>Add a New Company (Adam / Platform)</h2>
+          <p>
+            How Adam adds a wholesale company to this app. Display name (primary), slug auto-derived
+            and editable, first admin name and email. Invite sent — no password on that form.
+          </p>
+        </a>
+        <a class="index-item" href="./wholesale-apply.html">
+          <h2>1. Wholesale Apply</h2>
+          <p>Buyer self-serve on the shop. Resale license + issuing state required. No login yet.</p>
+        </a>
+        <a class="index-item" href="./internal-review-queue.html">
+          <h2>2. Internal Review Queue</h2>
+          <p>Pending applications (not Customers). Approve, reject, or create a customer for them.</p>
+        </a>
+        <a class="index-item" href="./internal-create-organization.html">
+          <h2>3. Add Company (Adam / Platform)</h2>
+          <p>
+            Same screen as the featured card. DEFAULT / platform admin only. Provisions a new
+            wholesale company on the same app.
+          </p>
+        </a>
+        <a class="index-item" href="./internal-create-staff.html">
+          <h2>4. Create Staff</h2>
+          <p>Admin invites staff by name and email. Multi-select G8 roles. At least one role required.</p>
+        </a>
+        <a class="index-item" href="./set-password.html">
+          <h2>5. Set Password</h2>
+          <p>Invite link. Rules shown before submit. Client-side validation. Then “You can log in.”</p>
+        </a>
+      </nav>
+    </main>
+  </body>
+</html>

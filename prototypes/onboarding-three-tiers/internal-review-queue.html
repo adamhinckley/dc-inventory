@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pending Applications — Staff</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="banner">
+      <strong>Throwaway prototype.</strong> Pending applications — not the Customers table.
+      <a href="./index.html">All screens</a>
+    </div>
+    <header class="topbar">
+      <div class="topbar-title">Internal · Applications</div>
+      <div class="topbar-meta"><a href="./index.html">Prototype Index</a></div>
+    </header>
+    <main class="page page--wide">
+      <section id="queue-view">
+        <p class="page-kicker">Staff</p>
+        <h1 class="page-title">Pending Applications</h1>
+        <p class="page-desc">
+          These are requests, not Customers yet. Approve creates the customer and shop login and
+          sends an invite. Reject removes the row.
+        </p>
+
+        <div class="toolbar">
+          <span class="help" id="queue-count"></span>
+          <button type="button" class="btn-secondary" id="create-for-them">
+            Create Customer For Them
+          </button>
+        </div>
+
+        <div class="card" style="padding: 0">
+          <table>
+            <thead>
+              <tr>
+                <th>Business Name</th>
+                <th>Contact</th>
+                <th>Submitted</th>
+                <th>Resale</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="queue-body"></tbody>
+          </table>
+          <div id="queue-empty" class="empty hidden">No pending applications.</div>
+        </div>
+      </section>
+
+      <section id="create-view" class="hidden">
+        <p class="page-kicker">Staff · One-Shot</p>
+        <h1 class="page-title">Create Customer For Them</h1>
+        <p class="page-desc">
+          Same fields as the shop apply form. Creates the customer and sends a shop-login invite
+          immediately — no pending row.
+        </p>
+        <div class="card">
+          <form id="create-form" novalidate>
+            <div class="field">
+              <label for="businessName">Business Name <span class="req">*</span></label>
+              <input id="businessName" name="businessName" type="text" required />
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="contactName">Contact Name <span class="req">*</span></label>
+                <input id="contactName" name="contactName" type="text" required />
+              </div>
+              <div class="field">
+                <label for="contactPhone">Phone <span class="req">*</span></label>
+                <input id="contactPhone" name="contactPhone" type="tel" required />
+              </div>
+            </div>
+            <div class="field">
+              <label for="contactEmail">Email <span class="req">*</span></label>
+              <input id="contactEmail" name="contactEmail" type="email" required />
+            </div>
+            <p class="field-label" style="margin-bottom: 8px">Ship-To Address <span class="req">*</span></p>
+            <div class="field">
+              <label for="street">Street</label>
+              <input id="street" name="street" type="text" required />
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="city">City</label>
+                <input id="city" name="city" type="text" required />
+              </div>
+              <div class="field">
+                <label for="postal">Postal Code</label>
+                <input id="postal" name="postal" type="text" required />
+              </div>
+            </div>
+            <div class="field">
+              <label for="shipState">State</label>
+              <select id="shipState" name="shipState" required></select>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="resaleNumber">Resale License Number <span class="req">*</span></label>
+                <input id="resaleNumber" name="resaleNumber" type="text" required class="mono" />
+              </div>
+              <div class="field">
+                <label for="resaleState">Issuing State (Jurisdiction) <span class="req">*</span></label>
+                <select id="resaleState" name="resaleState" required></select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="notes">Notes <span class="help">(optional leftovers)</span></label>
+              <textarea id="notes" name="notes"></textarea>
+            </div>
+            <p class="note">Invite email will be sent. No password on this form.</p>
+            <p id="create-error" class="error-text hidden">Fill every required field, including a valid email.</p>
+            <div class="actions">
+              <button type="submit">Create Customer And Invite</button>
+              <button type="button" class="btn-ghost" id="back-to-queue">Back To Queue</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <div id="approve-success" class="success hidden">
+        <h2>Customer + Shop Login Created; Invite Email Sent.</h2>
+        <p id="approve-detail"></p>
+        <p style="margin-top: 16px">
+          <button type="button" class="btn-ghost" id="back-from-approve">Back To Queue</button>
+        </p>
+      </div>
+
+      <div id="create-success" class="success hidden">
+        <h2>Customer Created; Invite Email Sent.</h2>
+        <p>No pending application. The buyer can set a password from the invite and log in.</p>
+        <p style="margin-top: 16px">
+          <button type="button" class="btn-ghost" id="back-from-create">Back To Queue</button>
+        </p>
+      </div>
+    </main>
+
+    <div id="confirm-scrim" class="dialog-scrim hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="dialog">
+        <h2 id="confirm-title">Approve Application?</h2>
+        <p id="confirm-body"></p>
+        <div class="actions">
+          <button type="button" id="confirm-yes">Approve And Invite</button>
+          <button type="button" class="btn-ghost" id="confirm-no">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const STATES = [
+        ["AL", "Alabama"], ["AK", "Alaska"], ["AZ", "Arizona"], ["AR", "Arkansas"],
+        ["CA", "California"], ["CO", "Colorado"], ["CT", "Connecticut"], ["DE", "Delaware"],
+        ["DC", "District of Columbia"], ["FL", "Florida"], ["GA", "Georgia"], ["HI", "Hawaii"],
+        ["ID", "Idaho"], ["IL", "Illinois"], ["IN", "Indiana"], ["IA", "Iowa"],
+        ["KS", "Kansas"], ["KY", "Kentucky"], ["LA", "Louisiana"], ["ME", "Maine"],
+        ["MD", "Maryland"], ["MA", "Massachusetts"], ["MI", "Michigan"], ["MN", "Minnesota"],
+        ["MS", "Mississippi"], ["MO", "Missouri"], ["MT", "Montana"], ["NE", "Nebraska"],
+        ["NV", "Nevada"], ["NH", "New Hampshire"], ["NJ", "New Jersey"], ["NM", "New Mexico"],
+        ["NY", "New York"], ["NC", "North Carolina"], ["ND", "North Dakota"], ["OH", "Ohio"],
+        ["OK", "Oklahoma"], ["OR", "Oregon"], ["PA", "Pennsylvania"], ["RI", "Rhode Island"],
+        ["SC", "South Carolina"], ["SD", "South Dakota"], ["TN", "Tennessee"], ["TX", "Texas"],
+        ["UT", "Utah"], ["VT", "Vermont"], ["VA", "Virginia"], ["WA", "Washington"],
+        ["WV", "West Virginia"], ["WI", "Wisconsin"], ["WY", "Wyoming"],
+      ];
+
+      function fillStates(selectId) {
+        const el = document.getElementById(selectId);
+        el.innerHTML = '<option value="">Select State</option>' +
+          STATES.map(([code, name]) => `<option value="${code}">${name} (${code})</option>`).join("");
+      }
+
+      fillStates("shipState");
+      fillStates("resaleState");
+
+      let pending = [
+        {
+          id: "app-1",
+          business: "Bloom & Stem Co.",
+          contact: "Maya Chen",
+          email: "maya@bloomandstem.example",
+          submitted: "2026-09-10",
+          resale: "AL-RSL-44192 · AL",
+        },
+        {
+          id: "app-2",
+          business: "Valley Wholesale Florals",
+          contact: "James Ortiz",
+          email: "james@valleyflorals.example",
+          submitted: "2026-09-11",
+          resale: "TN-SL-88021 · TN",
+        },
+        {
+          id: "app-3",
+          business: "Harbor Petals LLC",
+          contact: "Priya Shah",
+          email: "priya@harborpetals.example",
+          submitted: "2026-09-12",
+          resale: "VA-ST-10244 · VA",
+        },
+      ];
+
+      let approveTarget = null;
+
+      const queueView = document.getElementById("queue-view");
+      const createView = document.getElementById("create-view");
+      const approveSuccess = document.getElementById("approve-success");
+      const createSuccess = document.getElementById("create-success");
+      const scrim = document.getElementById("confirm-scrim");
+
+      function show(el) {
+        [queueView, createView, approveSuccess, createSuccess].forEach((node) => {
+          node.classList.toggle("hidden", node !== el);
+        });
+      }
+
+      function renderQueue() {
+        const body = document.getElementById("queue-body");
+        const empty = document.getElementById("queue-empty");
+        document.getElementById("queue-count").textContent =
+          pending.length === 1 ? "1 pending" : `${pending.length} pending`;
+        body.innerHTML = pending
+          .map(
+            (row) => `
+          <tr data-id="${row.id}">
+            <td>${row.business}</td>
+            <td>${row.contact}<br /><span class="help">${row.email}</span></td>
+            <td>${row.submitted}</td>
+            <td class="mono">${row.resale}</td>
+            <td>
+              <div class="row-actions">
+                <button type="button" class="btn-sm" data-approve="${row.id}">Approve</button>
+                <button type="button" class="btn-sm btn-danger" data-reject="${row.id}">Reject</button>
+              </div>
+            </td>
+          </tr>`
+          )
+          .join("");
+        empty.classList.toggle("hidden", pending.length > 0);
+      }
+
+      document.getElementById("queue-body").addEventListener("click", (event) => {
+        const approveId = event.target.getAttribute("data-approve");
+        const rejectId = event.target.getAttribute("data-reject");
+        if (approveId) {
+          approveTarget = pending.find((row) => row.id === approveId);
+          document.getElementById("confirm-body").textContent =
+            `Approve ${approveTarget.business}? This creates the customer and shop login and sends the invite email.`;
+          scrim.classList.remove("hidden");
+        }
+        if (rejectId) {
+          pending = pending.filter((row) => row.id !== rejectId);
+          renderQueue();
+        }
+      });
+
+      document.getElementById("confirm-no").addEventListener("click", () => {
+        scrim.classList.add("hidden");
+        approveTarget = null;
+      });
+
+      document.getElementById("confirm-yes").addEventListener("click", () => {
+        if (!approveTarget) return;
+        pending = pending.filter((row) => row.id !== approveTarget.id);
+        document.getElementById("approve-detail").textContent =
+          `${approveTarget.business} — invite sent to ${approveTarget.email}.`;
+        scrim.classList.add("hidden");
+        show(approveSuccess);
+        approveTarget = null;
+        renderQueue();
+      });
+
+      document.getElementById("create-for-them").addEventListener("click", () => show(createView));
+      document.getElementById("back-to-queue").addEventListener("click", () => show(queueView));
+      document.getElementById("back-from-approve").addEventListener("click", () => show(queueView));
+      document.getElementById("back-from-create").addEventListener("click", () => show(queueView));
+
+      document.getElementById("create-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const ok = form.checkValidity();
+        document.getElementById("create-error").classList.toggle("hidden", ok);
+        if (!ok) {
+          form.reportValidity();
+          return;
+        }
+        form.reset();
+        show(createSuccess);
+      });
+
+      renderQueue();
+    </script>
+  </body>
+</html>
