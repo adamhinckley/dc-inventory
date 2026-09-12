@@ -265,4 +265,35 @@ describe("SetPasswordUseCase", () => {
     const saved = await h.platformUsers.findById(platformId);
     expect(await h.passwords.verify("ValidPass1", saved!.passwordHash)).toBe(true);
   });
+
+  it("invalidates unused tokens when the user is deleted", async () => {
+    const h = harness();
+    const { rawToken } = await h.tokens.mint({
+      audience: "wholesale",
+      userId: WHOLESALE_ID,
+      expiresAt: new Date(NOW.getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+    const other = await h.tokens.mint({
+      audience: "staff",
+      userId: STAFF_ID,
+      expiresAt: new Date(NOW.getTime() + SET_PASSWORD_TOKEN_TTL_MS),
+    });
+
+    await h.tokens.deleteByUserId(WHOLESALE_ID);
+
+    expect(
+      await h.tokens.findValid({
+        rawToken,
+        expectedAudience: "wholesale",
+        now: NOW,
+      }),
+    ).toBeNull();
+    expect(
+      await h.tokens.findValid({
+        rawToken: other.rawToken,
+        expectedAudience: "staff",
+        now: NOW,
+      }),
+    ).toEqual({ userId: STAFF_ID, audience: "staff" });
+  });
 });

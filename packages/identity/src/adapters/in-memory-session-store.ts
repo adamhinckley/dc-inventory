@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { CustomerId, SessionId, type StaffUserId } from "@dc-inventory/shared-kernel";
+import { CustomerId, SessionId, type StaffUserId, type WholesaleUserId } from "@dc-inventory/shared-kernel";
 import type { ISessionStore, NewSession } from "../domain/ports/session-store.js";
 import type { Session } from "../domain/session.js";
 
@@ -45,6 +45,22 @@ export class InMemorySessionStore implements ISessionStore {
       const matchesStaffActor =
         session.audience === "staff" && session.staffUserId === staffUserId;
       if (matchesStaffUserColumn || matchesStaffActor) {
+        this.byId.delete(id);
+      }
+    }
+  }
+
+  async deleteByWholesaleUserId(wholesaleUserId: WholesaleUserId): Promise<void> {
+    for (const [id, session] of this.byId) {
+      if (session.wholesaleUserId === wholesaleUserId) {
+        this.byId.delete(id);
+      }
+    }
+  }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    for (const [id, session] of this.byId) {
+      if (session.customerId === customerId) {
         this.byId.delete(id);
       }
     }

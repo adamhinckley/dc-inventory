@@ -1,5 +1,5 @@
 import type { ICustomerRepository } from "@dc-inventory/customers";
-import type { IWholesaleUserRepository } from "@dc-inventory/identity";
+import type { ISetPasswordTokenStore, IWholesaleUserRepository } from "@dc-inventory/identity";
 import type { CustomerId, OrganizationId } from "@dc-inventory/shared-kernel";
 
 export type RollbackCustomerStaffForThemRequest = {
@@ -12,6 +12,7 @@ export class RollbackCustomerStaffForThemUseCase {
   constructor(
     private readonly customers: ICustomerRepository,
     private readonly wholesaleUsers: IWholesaleUserRepository,
+    private readonly setPasswordTokens: ISetPasswordTokenStore,
   ) {}
 
   async execute(input: RollbackCustomerStaffForThemRequest): Promise<void> {
@@ -24,6 +25,7 @@ export class RollbackCustomerStaffForThemUseCase {
         wholesaleUser !== null &&
         wholesaleUser.customerId === input.customerId
       ) {
+        await this.setPasswordTokens.deleteByUserId(wholesaleUser.id);
         await this.wholesaleUsers.deleteById(wholesaleUser.id);
       }
     }

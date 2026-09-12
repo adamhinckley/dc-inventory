@@ -261,6 +261,16 @@ export class DrizzleSessionStore implements ISessionStore {
         )!,
       );
   }
+
+  async deleteByWholesaleUserId(wholesaleUserId: WholesaleUserId): Promise<void> {
+    await this.db
+      .delete(sessions)
+      .where(and(eq(sessions.actorType, "wholesale"), eq(sessions.actorId, wholesaleUserId)));
+  }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    await this.db.delete(sessions).where(eq(sessions.customerId, customerId));
+  }
 }
 
 function toSession(row: typeof sessions.$inferSelect): Session {

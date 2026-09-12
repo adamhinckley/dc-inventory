@@ -24,4 +24,12 @@ export class InMemoryShipToRepository implements IShipToRepository {
     }
     this.byId.set(shipTo.id, shipTo);
   }
+
+  async deleteByCustomerId(customerId: CustomerId): Promise<void> {
+    for (const [id, row] of this.byId) {
+      if (row.customerId === customerId) {
+        this.byId.delete(id);
+      }
+    }
+  }
 }

@@ -155,6 +155,11 @@ import type {
   CreateInternalSupplier403,
   CreateInternalSupplier409,
   CreateInternalSupplierBody,
+  DeleteInternalCustomer204,
+  DeleteInternalCustomer401,
+  DeleteInternalCustomer403,
+  DeleteInternalCustomer404,
+  DeleteInternalCustomer409,
   DeleteInternalOrganization204,
   DeleteInternalOrganization401,
   DeleteInternalOrganization403,
@@ -1584,6 +1589,111 @@ export const useCreateInternalCustomer = <TError = CreateInternalCustomer400 | C
         TContext
       > => {
       return useMutation(getCreateInternalCustomerMutationOptions(options));
+    }
+
+export type deleteInternalCustomerResponse204 = {
+  data: DeleteInternalCustomer204
+  status: 204
+}
+
+export type deleteInternalCustomerResponse401 = {
+  data: DeleteInternalCustomer401
+  status: 401
+}
+
+export type deleteInternalCustomerResponse403 = {
+  data: DeleteInternalCustomer403
+  status: 403
+}
+
+export type deleteInternalCustomerResponse404 = {
+  data: DeleteInternalCustomer404
+  status: 404
+}
+
+export type deleteInternalCustomerResponse409 = {
+  data: DeleteInternalCustomer409
+  status: 409
+}
+
+export type deleteInternalCustomerResponseSuccess = (deleteInternalCustomerResponse204) & {
+  headers: Headers;
+};
+export type deleteInternalCustomerResponseError = (deleteInternalCustomerResponse401 | deleteInternalCustomerResponse403 | deleteInternalCustomerResponse404 | deleteInternalCustomerResponse409) & {
+  headers: Headers;
+};
+
+export type deleteInternalCustomerResponse = (deleteInternalCustomerResponseSuccess | deleteInternalCustomerResponseError)
+
+export const getDeleteInternalCustomerUrl = (id: string,) => {
+
+
+
+
+  return `/internal/customers/${id}`
+}
+
+/**
+ * @summary Delete a customer that has no orders or AR
+ */
+export const deleteInternalCustomer = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<deleteInternalCustomerResponse> => {
+
+  return customFetch<deleteInternalCustomerResponse>(getDeleteInternalCustomerUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteInternalCustomerMutationOptions = <TError = DeleteInternalCustomer401 | DeleteInternalCustomer403 | DeleteInternalCustomer404 | DeleteInternalCustomer409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInternalCustomer>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInternalCustomer>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteInternalCustomer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInternalCustomer>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteInternalCustomer(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInternalCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInternalCustomer>>>
+
+    export type DeleteInternalCustomerMutationError = DeleteInternalCustomer401 | DeleteInternalCustomer403 | DeleteInternalCustomer404 | DeleteInternalCustomer409
+
+    /**
+ * @summary Delete a customer that has no orders or AR
+ */
+export const useDeleteInternalCustomer = <TError = DeleteInternalCustomer401 | DeleteInternalCustomer403 | DeleteInternalCustomer404 | DeleteInternalCustomer409,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInternalCustomer>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInternalCustomer>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteInternalCustomerMutationOptions(options));
     }
 
 export type getInternalCustomerResponse200 = {

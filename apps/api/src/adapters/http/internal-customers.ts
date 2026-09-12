@@ -36,6 +36,7 @@ import {
   duplicateEmailResponseSchema,
   duplicateCustomerNumberResponseSchema,
   createInternalCustomerConflictResponseSchema,
+  customerNotEmptyResponseSchema,
   exemptionItemSchema,
   exemptionListResponseSchema,
   exemptionParamsSchema,
@@ -264,6 +265,37 @@ export function registerInternalCustomerRoutes(app: FastifyInstance): void {
         return sendInvalid(reply);
       }
       return reply.code(201).send(mapCustomer(result.customer));
+    },
+  );
+
+  routes.delete(
+    "/customers/:id",
+    {
+      schema: {
+        operationId: "deleteInternalCustomer",
+        tags: ["internal-customers"],
+        summary: "Delete a customer that has no orders or AR",
+        params: customerIdParamsSchema,
+        response: {
+          204: z.null(),
+          401: unauthorizedResponseSchema,
+          404: notFoundResponseSchema,
+          409: customerNotEmptyResponseSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const result = await request.server.customers.deleteCustomer.execute({
+        organizationId: staffOrganizationId(request),
+        customerId: CustomerId.parse(request.params.id),
+      });
+      if (!result.ok) {
+        if (result.reason === "customer_not_empty") {
+          return reply.code(409).send({ error: "customer_not_empty" as const });
+        }
+        return sendNotFound(reply);
+      }
+      return reply.code(204).send(null);
     },
   );
 

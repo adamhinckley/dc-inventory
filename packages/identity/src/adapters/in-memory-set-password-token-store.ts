@@ -58,4 +58,12 @@ export class InMemorySetPasswordTokenStore implements ISetPasswordTokenStore {
     stored.consumedAt = input.now;
     return true;
   }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    for (const [hash, stored] of this.byHash) {
+      if (stored.userId === userId) {
+        this.byHash.delete(hash);
+      }
+    }
+  }
 }

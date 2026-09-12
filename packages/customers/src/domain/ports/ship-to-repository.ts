@@ -6,4 +6,5 @@ export interface IShipToRepository {
   listByCustomer(customerId: CustomerId): Promise<ShipTo[]>;
   findById(id: ShipToId): Promise<ShipTo | null>;
   save(shipTo: ShipTo): Promise<void>;
+  deleteByCustomerId(customerId: CustomerId): Promise<void>;
 }

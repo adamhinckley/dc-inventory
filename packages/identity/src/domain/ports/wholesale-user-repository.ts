@@ -9,6 +9,10 @@ export interface IWholesaleUserRepository {
   findByEmail(organizationId: OrganizationId, email: string): Promise<WholesaleUser | null>;
   findById(id: WholesaleUserId): Promise<WholesaleUser | null>;
   listCustomerIdsWithWholesaleUsers(organizationId: OrganizationId): Promise<readonly CustomerId[]>;
+  listByCustomerId(
+    organizationId: OrganizationId,
+    customerId: CustomerId,
+  ): Promise<readonly WholesaleUser[]>;
   save(user: WholesaleUser): Promise<void>;
   deleteById(id: WholesaleUserId): Promise<void>;
 }

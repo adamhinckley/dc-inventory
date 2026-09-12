@@ -7,6 +7,7 @@ import {
   InMemoryEmailSender,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
+  InMemorySetPasswordTokenStore,
   InMemoryWholesaleUserRepository,
   type IEmailSender,
 } from "@dc-inventory/identity";
@@ -50,6 +51,7 @@ async function harness(emailSender: IEmailSender = new InMemoryEmailSender()) {
   const rollbackCustomerStaffForThem = new RollbackCustomerStaffForThemUseCase(
     customers,
     wholesaleUsers,
+    new InMemorySetPasswordTokenStore(),
   );
   return {
     customers,

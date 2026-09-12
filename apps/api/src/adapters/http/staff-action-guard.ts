@@ -70,6 +70,7 @@ const ACTION_BY_OPERATION: Readonly<
   updateInternalProduct: "master_data_manage",
   updateInternalProductBySku: "master_data_manage",
   createInternalCustomer: createInternalCustomerActions,
+  deleteInternalCustomer: "master_data_manage",
   updateInternalCustomer: updateInternalCustomerActions,
   createInternalCustomerContact: "master_data_manage",
   updateInternalCustomerContact: "master_data_manage",

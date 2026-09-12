@@ -2,12 +2,16 @@
 
 import { useGetInternalCustomer } from "@dc-inventory/api-client-internal";
 import {
+  Button,
   Chip,
   DescriptionList,
   DetailView,
   formatMoneyMinorUnits,
   RouterTabs,
 } from "@dc-inventory/ui";
+import { Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   CUSTOMER_DETAIL_TAB_KEYS,
   CUSTOMER_DETAIL_TAB_LABELS,
@@ -23,6 +27,7 @@ import { useBreadcrumbLabel } from "./dashboard-breadcrumb";
 import { CustomerBillToPanel } from "./customer-bill-to-panel";
 import { CustomerCertificatesPanel } from "./customer-certificates-panel";
 import { CustomerContactsPanel } from "./customer-contacts-panel";
+import { CustomerDeleteDialog } from "./customer-delete-dialog";
 import { CustomerEditForm } from "./customer-edit-form";
 import { CustomerAccountingPanel } from "./customer-accounting-panel";
 import { CustomerOrdersPanel } from "./customer-orders-panel";
@@ -110,6 +115,8 @@ export function CustomerDetailPage({
   const query = useGetInternalCustomer(customerId);
   const customer = query.data?.status === 200 ? query.data.data : undefined;
   const canManage = useCanManageMasterData();
+  const router = useRouter();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useBreadcrumbLabel(customerId, customer?.customerNumber);
 
@@ -133,12 +140,24 @@ export function CustomerDetailPage({
                 </p>
               </div>
               {canManage ? (
-                <DetailView.EditButton
-                  size="sm"
-                  data-testid="customer-detail-edit-trigger"
-                >
-                  Edit Customer
-                </DetailView.EditButton>
+                <div className="flex flex-wrap items-center gap-action">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    data-testid="customer-detail-delete-trigger"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 className="size-icon" aria-hidden />
+                    Delete
+                  </Button>
+                  <DetailView.EditButton
+                    size="sm"
+                    data-testid="customer-detail-edit-trigger"
+                  >
+                    Edit Customer
+                  </DetailView.EditButton>
+                </div>
               ) : null}
             </header>
           </DetailView.Header>
@@ -171,12 +190,22 @@ export function CustomerDetailPage({
             </RouterTabs>
           </DetailView.Tabs>
           {canManage ? (
-            <DetailView.EditDialog
-              title="Edit customer"
-              data-testid="customer-detail-edit-dialog"
-            >
-              <CustomerEditForm customer={loaded} />
-            </DetailView.EditDialog>
+            <>
+              <DetailView.EditDialog
+                title="Edit customer"
+                data-testid="customer-detail-edit-dialog"
+              >
+                <CustomerEditForm customer={loaded} />
+              </DetailView.EditDialog>
+              <CustomerDeleteDialog
+                customer={{ id: loaded.id, name: loaded.name }}
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                onDeleted={() => {
+                  router.push("/customers");
+                }}
+              />
+            </>
           ) : null}
         </>
       )}

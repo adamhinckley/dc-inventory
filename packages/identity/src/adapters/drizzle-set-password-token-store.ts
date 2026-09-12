@@ -73,4 +73,8 @@ export class DrizzleSetPasswordTokenStore implements ISetPasswordTokenStore {
       .returning({ id: setPasswordTokens.id });
     return rows[0] !== undefined;
   }
+
+  async deleteByUserId(userId: string): Promise<void> {
+    await this.db.delete(setPasswordTokens).where(eq(setPasswordTokens.userId, userId));
+  }
 }
