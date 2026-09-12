@@ -33,7 +33,15 @@ export { LogoutUseCase } from "./application/logout.js";
 export { ListActingCustomersUseCase } from "./application/list-acting-customers.js";
 export { SelectActingCustomerUseCase } from "./application/select-acting-customer.js";
 export { ClearActingCustomerUseCase } from "./application/clear-acting-customer.js";
-export { RegisterOrganizationUseCase } from "./application/register-organization.js";
+export { InviteDeliveryError } from "./application/invite-delivery-error.js";
+export {
+  RegisterOrganizationUseCase,
+  type RegisterOrganizationInviteLinks,
+  type RegisterOrganizationRequest,
+  type RegisterOrganizationResult,
+} from "./application/register-organization.js";
+export { RollbackOrganizationRegistrationUseCase } from "./application/rollback-organization-registration.js";
+export { buildStaffInviteEmail } from "./application/staff-invite-email.js";
 export {
   CreateWholesaleUserUseCase,
   type CreateWholesaleUserInviteLinks,
@@ -45,6 +53,7 @@ export {
   STAFF_ACTIONS,
   canStaffPerform,
   type StaffAction,
+  type StaffActionContext,
 } from "./application/staff-action-policy.js";
 export {
   ResolveOpsSessionUseCase,
@@ -102,6 +111,11 @@ export {
   type SessionAudience,
 } from "./domain/session.js";
 export type { Organization } from "./domain/organization.js";
+export {
+  deriveOrganizationSlugFromDisplayName,
+  isOrganizationSlugValid,
+  normalizeOrganizationSlug,
+} from "./domain/organization-slug.js";
 export {
   InvalidRequiredTextError,
   parseDisplayName,

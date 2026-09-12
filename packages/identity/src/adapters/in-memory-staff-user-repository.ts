@@ -8,9 +8,14 @@ function emailKey(organizationId: OrganizationId, email: string): string {
   return `${organizationId}:${normalizeEmail(email)}`;
 }
 
+export type InMemoryStaffUserSnapshot = {
+  byId: Map<StaffUserId, StaffUser>;
+  byOrgEmail: Map<string, StaffUser>;
+};
+
 export class InMemoryStaffUserRepository implements IStaffUserRepository {
-  private readonly byId = new Map<StaffUserId, StaffUser>();
-  private readonly byOrgEmail = new Map<string, StaffUser>();
+  private byId = new Map<StaffUserId, StaffUser>();
+  private byOrgEmail = new Map<string, StaffUser>();
 
   async findByEmail(organizationId: OrganizationId, email: string): Promise<StaffUser | null> {
     return this.byOrgEmail.get(emailKey(organizationId, email)) ?? null;
@@ -29,5 +34,26 @@ export class InMemoryStaffUserRepository implements IStaffUserRepository {
     };
     this.byId.set(stored.id, stored);
     this.byOrgEmail.set(emailKey(stored.organizationId, stored.email), stored);
+  }
+
+  async deleteById(id: StaffUserId): Promise<void> {
+    const user = this.byId.get(id);
+    if (user === undefined) {
+      return;
+    }
+    this.byId.delete(id);
+    this.byOrgEmail.delete(emailKey(user.organizationId, user.email));
+  }
+
+  createSnapshot(): InMemoryStaffUserSnapshot {
+    return {
+      byId: new Map(this.byId),
+      byOrgEmail: new Map(this.byOrgEmail),
+    };
+  }
+
+  restoreSnapshot(snapshot: InMemoryStaffUserSnapshot): void {
+    this.byId = new Map(snapshot.byId);
+    this.byOrgEmail = new Map(snapshot.byOrgEmail);
   }
 }

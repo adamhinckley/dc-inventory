@@ -3,6 +3,8 @@ import {
   StaffUserId,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
+import { InMemoryEmailSender } from "../src/adapters/in-memory-email-sender.js";
+import type { EmailMessage, IEmailSender } from "../src/domain/ports/email-sender.js";
 import { InMemoryIdentityUnitOfWork } from "../src/adapters/in-memory-identity-unit-of-work.js";
 import { InMemoryPasswordHasher } from "../src/adapters/in-memory-password-hasher.js";
 import { InMemoryStaffUserRepository } from "../src/adapters/in-memory-staff-user-repository.js";
@@ -15,15 +17,28 @@ import {
 
 const ACME_STAFF_ID = StaffUserId.parse("550e8400-e29b-41d4-a716-446655440011");
 
-function harness() {
+class FailingEmailSender implements IEmailSender {
+  readonly sent: EmailMessage[] = [];
+
+  async send(message: EmailMessage): Promise<void> {
+    this.sent.push({ ...message });
+    throw new Error("delivery failed");
+  }
+}
+
+function harness(emailSender: InMemoryEmailSender | FailingEmailSender = new InMemoryEmailSender()) {
   const passwords = new InMemoryPasswordHasher();
   const staffUsers = new InMemoryStaffUserRepository();
   const uow = new InMemoryIdentityUnitOfWork(undefined, staffUsers);
   return {
     passwords,
+    email: emailSender,
     staffUsers,
     uow,
-    registerOrganization: new RegisterOrganizationUseCase(uow, passwords),
+    registerOrganization: new RegisterOrganizationUseCase(uow, passwords, emailSender, {
+      buildSetPasswordUrl: ({ organizationSlug, staffUserId, staffEmail }) =>
+        `https://internal.test/set-password?org=${organizationSlug}&user=${staffUserId}&email=${staffEmail}`,
+    }),
   };
 }
 
@@ -49,7 +64,6 @@ describe("RegisterOrganization (in-memory)", () => {
       slug: "beta-wholesale",
       ...validRegistration,
       staffEmail: "owner@beta.test",
-      staffPassword: "Beta-secret1",
     });
 
     expect(result.ok).toBe(true);
@@ -57,6 +71,7 @@ describe("RegisterOrganization (in-memory)", () => {
       return;
     }
     expect(result.slug).toBe("beta-wholesale");
+    expect(result.inviteSentTo).toBe("owner@beta.test");
     expect(result.organizationId).not.toBe(OrganizationId.DEFAULT);
     expect(OrganizationId.parse(result.organizationId)).toBe(result.organizationId);
 
@@ -74,9 +89,17 @@ describe("RegisterOrganization (in-memory)", () => {
     }
     expect(betaStaff.organizationId).toBe(result.organizationId);
     expect(betaStaff.id).toBe(result.staffUserId);
+    expect(await h.passwords.verify("Beta-secret1", betaStaff.passwordHash)).toBe(false);
 
     const acmeStaff = await h.staffUsers.findByEmail(OrganizationId.DEFAULT, "owner@acme.test");
     expect(acmeStaff?.id).toBe(ACME_STAFF_ID);
+
+    expect(h.email.sent).toHaveLength(1);
+    expect(h.email.sent[0]).toMatchObject({
+      to: "owner@beta.test",
+      subject: `You're invited to ${TEST_BETA_ORG_NAME}`,
+    });
+    expect(h.email.sent[0]?.text).toContain("https://internal.test/set-password");
   });
 
   it("allows the same email in DEFAULT and a new org", async () => {
@@ -95,7 +118,6 @@ describe("RegisterOrganization (in-memory)", () => {
       slug: "beta",
       ...validRegistration,
       staffEmail: "shared@local.test",
-      staffPassword: "Beta-secret1",
     });
 
     expect(result.ok).toBe(true);
@@ -119,7 +141,6 @@ describe("RegisterOrganization (in-memory)", () => {
       slug: "beta",
       ...validRegistration,
       staffEmail: "owner@beta.test",
-      staffPassword: "Beta-secret1",
     });
     expect(first.ok).toBe(true);
 
@@ -127,12 +148,31 @@ describe("RegisterOrganization (in-memory)", () => {
       slug: "beta",
       ...validRegistration,
       staffEmail: "other@beta.test",
-      staffPassword: "Other-secret1",
     });
     expect(duplicateSlug).toEqual({ ok: false, reason: "slug_taken" });
   });
 
-  it("rejects invalid slug, email, password, org name, or staff display name", async () => {
+  it("rolls back org and staff when invite delivery fails so slug can be retried", async () => {
+    const h = harness(new FailingEmailSender());
+
+    const failed = await h.registerOrganization.execute({
+      slug: "harbor-wholesale",
+      ...validRegistration,
+      staffEmail: "owner@harbor.test",
+    });
+    expect(failed).toEqual({ ok: false, reason: "invite_failed" });
+    expect(await h.uow.organizations.findBySlug("harbor-wholesale")).toBeNull();
+
+    const working = harness();
+    const retry = await working.registerOrganization.execute({
+      slug: "harbor-wholesale",
+      ...validRegistration,
+      staffEmail: "owner@harbor.test",
+    });
+    expect(retry.ok).toBe(true);
+  });
+
+  it("rejects invalid slug, email, org name, or staff display name", async () => {
     const h = harness();
 
     expect(
@@ -140,7 +180,6 @@ describe("RegisterOrganization (in-memory)", () => {
         slug: "Bad Slug",
         ...validRegistration,
         staffEmail: "owner@beta.test",
-        staffPassword: "secret",
       }),
     ).toEqual({ ok: false, reason: "invalid" });
 
@@ -149,16 +188,6 @@ describe("RegisterOrganization (in-memory)", () => {
         slug: "beta",
         ...validRegistration,
         staffEmail: "   ",
-        staffPassword: "secret",
-      }),
-    ).toEqual({ ok: false, reason: "invalid" });
-
-    expect(
-      await h.registerOrganization.execute({
-        slug: "beta",
-        ...validRegistration,
-        staffEmail: "owner@beta.test",
-        staffPassword: "",
       }),
     ).toEqual({ ok: false, reason: "invalid" });
 
@@ -168,7 +197,6 @@ describe("RegisterOrganization (in-memory)", () => {
         name: " ",
         staffDisplayName: TEST_STAFF_DISPLAY_NAME,
         staffEmail: "owner@beta.test",
-        staffPassword: "secret",
       }),
     ).toEqual({ ok: false, reason: "invalid" });
 
@@ -178,47 +206,6 @@ describe("RegisterOrganization (in-memory)", () => {
         name: TEST_BETA_ORG_NAME,
         staffDisplayName: " ",
         staffEmail: "owner@beta.test",
-        staffPassword: "secret",
-      }),
-    ).toEqual({ ok: false, reason: "invalid" });
-  });
-
-  it("rejects passwords that violate the shared password policy", async () => {
-    const h = harness();
-
-    expect(
-      await h.registerOrganization.execute({
-        slug: "beta",
-        ...validRegistration,
-        staffEmail: "owner@beta.test",
-        staffPassword: "short1A",
-      }),
-    ).toEqual({ ok: false, reason: "invalid" });
-
-    expect(
-      await h.registerOrganization.execute({
-        slug: "beta",
-        ...validRegistration,
-        staffEmail: "owner@beta.test",
-        staffPassword: "beta-secret1",
-      }),
-    ).toEqual({ ok: false, reason: "invalid" });
-
-    expect(
-      await h.registerOrganization.execute({
-        slug: "beta",
-        ...validRegistration,
-        staffEmail: "owner@beta.test",
-        staffPassword: "BETA-SECRET1",
-      }),
-    ).toEqual({ ok: false, reason: "invalid" });
-
-    expect(
-      await h.registerOrganization.execute({
-        slug: "beta",
-        ...validRegistration,
-        staffEmail: "owner@beta.test",
-        staffPassword: "Beta-secret",
       }),
     ).toEqual({ ok: false, reason: "invalid" });
   });

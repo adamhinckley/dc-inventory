@@ -1,8 +1,10 @@
 import {
   canStaffPerform,
   type StaffAction,
+  type StaffActionContext,
   type StaffRole,
 } from "@dc-inventory/identity";
+import { OrganizationId } from "@dc-inventory/shared-kernel";
 import type {
   FastifyInstance,
   FastifyReply,
@@ -93,6 +95,7 @@ const ACTION_BY_OPERATION: Readonly<
   adjustInternalInvoice: "ar_adjust",
   setInternalCustomerPaymentPlan: "payment_plans_manage",
   endInternalCustomerPaymentPlan: "payment_plans_manage",
+  createInternalOrganization: "organizations_manage",
 };
 
 type OperationSchema = FastifySchema & {
@@ -167,9 +170,15 @@ export function registerStaffActionGuard(app: FastifyInstance): void {
       return;
     }
     const roles = request.staffAuth?.roles as readonly StaffRole[] | undefined;
+    const organizationId =
+      request.staffAuth?.organizationId !== undefined
+        ? OrganizationId.parse(request.staffAuth.organizationId)
+        : undefined;
+    const context: StaffActionContext | undefined =
+      organizationId !== undefined ? { organizationId } : undefined;
     if (
       roles === undefined ||
-      !actions.every((action) => canStaffPerform(roles, action))
+      !actions.every((action) => canStaffPerform(roles, action, context))
     ) {
       return sendForbidden(reply);
     }

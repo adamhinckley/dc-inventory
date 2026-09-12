@@ -1,6 +1,7 @@
 import { OrganizationId } from "@dc-inventory/shared-kernel";
 import { describe, expect, it, vi } from "vitest";
 import {
+  EnsureLicensingTenantUseCase,
   InMemoryFeatures,
   InMemoryLicensingStore,
   LicensingFeatures,
@@ -181,5 +182,31 @@ describe("Licensing application ports", () => {
     const features = new InMemoryFeatures();
 
     await expect(features.isEnabled(DEFAULT_ORG, "customers")).resolves.toBe(true);
+  });
+
+  it("ensures an empty licensing twin without payments for a new tenant", async () => {
+    const store = new InMemoryLicensingStore();
+    const ensure = new EnsureLicensingTenantUseCase(store);
+
+    await ensure.execute({ tenantId: BETA_ORG });
+
+    const subscription = await store.getLatestSubscription(BETA_ORG);
+    expect(subscription).toMatchObject({ tenantId: BETA_ORG, plan: "twin", status: "trialing" });
+    await expect(
+      new ListLicensingPaymentsUseCase(store).execute({
+        organizationId: BETA_ORG,
+        page: 1,
+        pageSize: 25,
+      }),
+    ).resolves.toMatchObject({ items: [], total: 0 });
+
+    await ensure.execute({ tenantId: BETA_ORG });
+    await expect(
+      new ListLicensingSubscriptionsUseCase(store).execute({
+        organizationId: BETA_ORG,
+        page: 1,
+        pageSize: 25,
+      }),
+    ).resolves.toMatchObject({ total: 1 });
   });
 });

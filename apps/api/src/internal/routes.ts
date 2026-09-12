@@ -6,6 +6,7 @@ import { registerInternalCustomerRoutes } from "../adapters/http/internal-custom
 import { registerInternalAccountingRoutes } from "../adapters/http/internal-accounting.js";
 import { registerInternalInvoiceRoutes } from "../adapters/http/internal-invoices.js";
 import { registerInternalLicensingRoutes } from "../adapters/http/internal-licensing.js";
+import { registerInternalOrganizationRoutes } from "../adapters/http/internal-organizations.js";
 import { registerInternalPurchaseOrderRoutes } from "../adapters/http/internal-purchase-orders.js";
 import { registerInternalSalesOrderRoutes } from "../adapters/http/internal-sales-orders.js";
 import { registerInternalSupplierProductRoutes } from "../adapters/http/internal-supplier-products.js";
@@ -26,6 +27,7 @@ export async function internalRoutes(app: FastifyInstance): Promise<void> {
   registerInternalAuthRoutes(app);
   registerStaffAudienceGuard(app);
   registerStaffActionGuard(app);
+  registerInternalOrganizationRoutes(app);
   await app.register(async (customers) => {
     registerFeatureGuard(customers, "customers", "staff");
     registerInternalCustomerRoutes(customers);

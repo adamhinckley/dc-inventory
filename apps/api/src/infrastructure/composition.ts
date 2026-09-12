@@ -80,6 +80,7 @@ import {
 } from "@dc-inventory/customers";
 import {
   ClearActingCustomerUseCase,
+  DrizzleIdentityUnitOfWork,
   DrizzleOpsUserRepository,
   DrizzleSessionStore,
   InMemoryOpsUserRepository,
@@ -90,6 +91,7 @@ import {
   DrizzleStaffUserRepository,
   DrizzleWholesaleUserRepository,
   DrizzleLoginThrottle,
+  InMemoryIdentityUnitOfWork,
   InMemoryLoginThrottle,
   InMemoryOrganizationRepository,
   InMemoryPasswordHasher,
@@ -99,6 +101,8 @@ import {
   LoginStaffUseCase,
   LoginWholesaleUseCase,
   LogoutUseCase,
+  RegisterOrganizationUseCase,
+  RollbackOrganizationRegistrationUseCase,
   ResolveStaffSessionUseCase,
   ResolveWholesaleSessionUseCase,
   SelectActingCustomerUseCase,
@@ -116,8 +120,11 @@ import {
   type IEmailSender,
 } from "@dc-inventory/identity";
 import { createEmailSenderFromEnv } from "./email-sender-config.js";
+import { createStaffInviteLinks } from "./staff-invite-links.js";
 import {
   DrizzleLicensingReadRepository,
+  DrizzleLicensingTenantProvisioner,
+  EnsureLicensingTenantUseCase,
   featuresAllCoreOn,
   InMemoryLicensingStore,
   GetLatestSubscriptionUseCase,
@@ -126,6 +133,7 @@ import {
   ListLicensingSubscriptionsUseCase,
   type IFeatures,
   type ILicensingReadRepository,
+  type ILicensingTenantProvisioner,
   type LicensingDrizzle,
 } from "@dc-inventory/licensing";
 import {
@@ -306,6 +314,7 @@ import type { IUnitOfWork } from "../domain/unit-of-work.js";
 import { DrizzleImportLocationAdapter } from "../adapters/drizzle-import-locations.js";
 import type { AppDrizzle } from "./db.js";
 import { PingUseCase } from "../application/ping.js";
+import { RegisterOrganizationWithLicensingUseCase } from "../application/register-organization-with-licensing.js";
 import { ReadyCheckUseCase } from "../application/ready.js";
 import type { IClock } from "../domain/clock.js";
 import type { IDatabase } from "../domain/database.js";
@@ -325,6 +334,7 @@ export type IdentityHttpServices = {
   listActingCustomers: ListActingCustomersUseCase;
   selectActingCustomer: SelectActingCustomerUseCase;
   clearActingCustomer: ClearActingCustomerUseCase;
+  registerOrganizationWithLicensing: RegisterOrganizationWithLicensingUseCase;
 };
 
 export type CatalogHttpServices = {
@@ -443,6 +453,7 @@ export type LicensingHttpServices = {
   listSubscriptions: ListLicensingSubscriptionsUseCase;
   listPayments: ListLicensingPaymentsUseCase;
   getLatestSubscription: GetLatestSubscriptionUseCase;
+  ensureLicensingTenant: EnsureLicensingTenantUseCase;
 };
 
 export type CloseSkusForPresellHttpRequest = {
@@ -540,6 +551,7 @@ export type AppServiceOverrides = {
   sellWindowRepo?: ISellWindowRepository;
   licensingStore?: InMemoryLicensingStore;
   licensingRepository?: ILicensingReadRepository;
+  licensingProvisioner?: ILicensingTenantProvisioner;
 };
 
 function catalogServices(
@@ -939,11 +951,15 @@ function accountingServices(input: AccountingServicesInput): AccountingHttpServi
   };
 }
 
-function licensingServices(repository: ILicensingReadRepository): LicensingHttpServices {
+function licensingServices(
+  repository: ILicensingReadRepository,
+  provisioner: ILicensingTenantProvisioner,
+): LicensingHttpServices {
   return {
     listSubscriptions: new ListLicensingSubscriptionsUseCase(repository),
     listPayments: new ListLicensingPaymentsUseCase(repository),
     getLatestSubscription: new GetLatestSubscriptionUseCase(repository),
+    ensureLicensingTenant: new EnsureLicensingTenantUseCase(provisioner),
   };
 }
 
@@ -1070,6 +1086,11 @@ export function composeAppServices(
     (licensingDb
       ? new DrizzleLicensingReadRepository(licensingDb)
       : inMemoryLicensing!);
+  const licensingProvisioner: ILicensingTenantProvisioner =
+    overrides.licensingProvisioner ??
+    (licensingDb !== undefined
+      ? new DrizzleLicensingTenantProvisioner(licensingDb)
+      : inMemoryLicensing!);
   const features =
     overrides.features ??
     (readFeaturesAllCoreOn() || !licensingDb
@@ -1102,6 +1123,10 @@ export function composeAppServices(
     (identityDb
       ? new DrizzleOrganizationRepository(identityDb)
       : new InMemoryOrganizationRepository());
+  const identityUnitOfWork =
+    identityDb !== undefined
+      ? new DrizzleIdentityUnitOfWork(identityDb)
+      : new InMemoryIdentityUnitOfWork(organizationRepo, staffUsers);
   const loginThrottle =
     overrides.loginThrottle ??
     (identityDb
@@ -1403,6 +1428,16 @@ export function composeAppServices(
         clock,
       ),
       clearActingCustomer: new ClearActingCustomerUseCase(sessions, staffUsers, clock),
+      registerOrganizationWithLicensing: new RegisterOrganizationWithLicensingUseCase(
+        new RegisterOrganizationUseCase(
+          identityUnitOfWork,
+          passwords,
+          emailSender,
+          createStaffInviteLinks(),
+        ),
+        new EnsureLicensingTenantUseCase(licensingProvisioner),
+        new RollbackOrganizationRegistrationUseCase(organizationRepo, staffUsers),
+      ),
     },
     customers: customersServices(
       customerRepo,
@@ -1455,7 +1490,7 @@ export function composeAppServices(
       readPorts.accountStatus,
       creditCheck,
     ),
-    licensing: licensingServices(licensingRepository),
+    licensing: licensingServices(licensingRepository, licensingProvisioner),
     inventory: inventoryServices(
       unitOfWork,
       purchaseOrderRepo,

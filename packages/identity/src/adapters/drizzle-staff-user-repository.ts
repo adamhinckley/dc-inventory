@@ -74,6 +74,10 @@ export class DrizzleStaffUserRepository implements IStaffUserRepository {
         },
       });
   }
+
+  async deleteById(id: StaffUserId): Promise<void> {
+    await this.db.delete(staffUsers).where(eq(staffUsers.id, id));
+  }
 }
 
 function toStaffUser(row: typeof staffUsers.$inferSelect): StaffUser {

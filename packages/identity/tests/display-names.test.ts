@@ -5,6 +5,7 @@ import {
   WholesaleUserId,
 } from "@dc-inventory/shared-kernel";
 import { describe, expect, it } from "vitest";
+import { InMemoryEmailSender } from "../src/adapters/in-memory-email-sender.js";
 import { InMemoryIdentityUnitOfWork } from "../src/adapters/in-memory-identity-unit-of-work.js";
 import { InMemoryOpsUserRepository } from "../src/adapters/in-memory-ops-user-repository.js";
 import { InMemoryOrganizationRepository } from "../src/adapters/in-memory-organization-repository.js";
@@ -91,14 +92,16 @@ describe("Identity required display names", () => {
     const passwords = new InMemoryPasswordHasher();
     const staffUsers = new InMemoryStaffUserRepository();
     const uow = new InMemoryIdentityUnitOfWork(undefined, staffUsers);
-    const registerOrganization = new RegisterOrganizationUseCase(uow, passwords);
+    const email = new InMemoryEmailSender();
+    const registerOrganization = new RegisterOrganizationUseCase(uow, passwords, email, {
+      buildSetPasswordUrl: () => "https://internal.test/set-password",
+    });
 
     expect(
       await registerOrganization.execute({
         slug: "beta",
         name: " ",
         staffEmail: "owner@beta.test",
-        staffPassword: "beta-secret",
         staffDisplayName: TEST_STAFF_DISPLAY_NAME,
       }),
     ).toEqual({ ok: false, reason: "invalid" });
@@ -108,7 +111,6 @@ describe("Identity required display names", () => {
         slug: "beta",
         name: TEST_BETA_ORG_NAME,
         staffEmail: "owner@beta.test",
-        staffPassword: "beta-secret",
         staffDisplayName: " ",
       }),
     ).toEqual({ ok: false, reason: "invalid" });
@@ -116,15 +118,17 @@ describe("Identity required display names", () => {
 
   it("register organization persists non-empty org name and staff display name", async () => {
     const passwords = new InMemoryPasswordHasher();
+    const email = new InMemoryEmailSender();
     const staffUsers = new InMemoryStaffUserRepository();
     const uow = new InMemoryIdentityUnitOfWork(undefined, staffUsers);
-    const registerOrganization = new RegisterOrganizationUseCase(uow, passwords);
+    const registerOrganization = new RegisterOrganizationUseCase(uow, passwords, email, {
+      buildSetPasswordUrl: () => "https://internal.test/set-password",
+    });
 
     const result = await registerOrganization.execute({
       slug: "beta-wholesale",
       name: TEST_BETA_ORG_NAME,
       staffEmail: "owner@beta.test",
-      staffPassword: "Beta-secret1",
       staffDisplayName: "Beta Owner",
     });
 

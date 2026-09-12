@@ -114,6 +114,14 @@ import type {
   CreateInternalCustomerShipTo403,
   CreateInternalCustomerShipTo404,
   CreateInternalCustomerShipToBody,
+  CreateInternalOrganization201,
+  CreateInternalOrganization400,
+  CreateInternalOrganization401,
+  CreateInternalOrganization403,
+  CreateInternalOrganization409,
+  CreateInternalOrganization502,
+  CreateInternalOrganization503,
+  CreateInternalOrganizationBody,
   CreateInternalProduct201,
   CreateInternalProduct400,
   CreateInternalProduct401,
@@ -782,6 +790,127 @@ export function useGetInternalSession<TData = Awaited<ReturnType<typeof getInter
 
 
 
+
+export type createInternalOrganizationResponse201 = {
+  data: CreateInternalOrganization201
+  status: 201
+}
+
+export type createInternalOrganizationResponse400 = {
+  data: CreateInternalOrganization400
+  status: 400
+}
+
+export type createInternalOrganizationResponse401 = {
+  data: CreateInternalOrganization401
+  status: 401
+}
+
+export type createInternalOrganizationResponse403 = {
+  data: CreateInternalOrganization403
+  status: 403
+}
+
+export type createInternalOrganizationResponse409 = {
+  data: CreateInternalOrganization409
+  status: 409
+}
+
+export type createInternalOrganizationResponse502 = {
+  data: CreateInternalOrganization502
+  status: 502
+}
+
+export type createInternalOrganizationResponse503 = {
+  data: CreateInternalOrganization503
+  status: 503
+}
+
+export type createInternalOrganizationResponseSuccess = (createInternalOrganizationResponse201) & {
+  headers: Headers;
+};
+export type createInternalOrganizationResponseError = (createInternalOrganizationResponse400 | createInternalOrganizationResponse401 | createInternalOrganizationResponse403 | createInternalOrganizationResponse409 | createInternalOrganizationResponse502 | createInternalOrganizationResponse503) & {
+  headers: Headers;
+};
+
+export type createInternalOrganizationResponse = (createInternalOrganizationResponseSuccess | createInternalOrganizationResponseError)
+
+export const getCreateInternalOrganizationUrl = () => {
+
+
+
+
+  return `/internal/organizations`
+}
+
+/**
+ * @summary Provision a new organization and invite its first admin (DEFAULT platform only)
+ */
+export const createInternalOrganization = async (createInternalOrganizationBody: CreateInternalOrganizationBody, options?: Parameters<typeof customFetch>[1]): Promise<createInternalOrganizationResponse> => {
+
+    const getHeaders = (h?: HeadersInit | Headers): Record<string, string> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Array.isArray(h)) return Object.fromEntries(h);
+    return h;
+  };
+return customFetch<createInternalOrganizationResponse>(getCreateInternalOrganizationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createInternalOrganizationBody)
+  }
+);}
+
+
+
+
+
+export const getCreateInternalOrganizationMutationOptions = <TError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalOrganization>>, TError,{data: CreateInternalOrganizationBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInternalOrganization>>, TError,{data: CreateInternalOrganizationBody}, TContext> => {
+
+const mutationKey = ['createInternalOrganization'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInternalOrganization>>, {data: CreateInternalOrganizationBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInternalOrganization(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInternalOrganizationMutationResult = NonNullable<Awaited<ReturnType<typeof createInternalOrganization>>>
+    export type CreateInternalOrganizationMutationBody = CreateInternalOrganizationBody
+    export type CreateInternalOrganizationMutationError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503
+
+    /**
+ * @summary Provision a new organization and invite its first admin (DEFAULT platform only)
+ */
+export const useCreateInternalOrganization = <TError = CreateInternalOrganization400 | CreateInternalOrganization401 | CreateInternalOrganization403 | CreateInternalOrganization409 | CreateInternalOrganization502 | CreateInternalOrganization503,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInternalOrganization>>, TError,{data: CreateInternalOrganizationBody}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInternalOrganization>>,
+        TError,
+        {data: CreateInternalOrganizationBody},
+        TContext
+      > => {
+      return useMutation(getCreateInternalOrganizationMutationOptions(options));
+    }
 
 export type listInternalCustomersResponse200 = {
   data: ListInternalCustomers200
