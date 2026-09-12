@@ -144,8 +144,31 @@ describe("DrizzleSessionStore platform sessions (PGlite)", () => {
   });
 });
 
-describe("DrizzleSessionStore deleteByCustomerId (PGlite)", () => {
-  it("clears staff acting customerId and deletes buyer sessions", async () => {
+describe("DrizzleSessionStore customer delete session cleanup (PGlite)", () => {
+  it("deleteByWholesaleUserId removes buyer sessions only", async () => {
+    const { client, sessions } = await createHarness();
+    const now = new Date("2026-09-12T12:00:00.000Z").toISOString();
+    await client.exec(`
+      INSERT INTO identity.sessions (
+        id, actor_type, actor_id, staff_user_id, organization_id, customer_id, last_seen_at, created_at, updated_at
+      ) VALUES
+        (
+          '${BUYER_SESSION_ID}', 'wholesale', '${WHOLESALE_USER_ID}', NULL,
+          '${OrganizationId.DEFAULT}', '${CUSTOMER_ID}', '${now}', '${now}', '${now}'
+        ),
+        (
+          '${STAFF_ACTING_SESSION_ID}', 'wholesale', '${STAFF_ID}', '${STAFF_ID}',
+          '${OrganizationId.DEFAULT}', '${CUSTOMER_ID}', '${now}', '${now}', '${now}'
+        );
+    `);
+
+    await sessions.deleteByWholesaleUserId(WHOLESALE_USER_ID);
+
+    expect(await sessions.findById(BUYER_SESSION_ID)).toBeNull();
+    expect(await sessions.findById(STAFF_ACTING_SESSION_ID)).not.toBeNull();
+  });
+
+  it("deleteByCustomerId clears staff acting customerId and deletes buyer sessions", async () => {
     const { client, sessions } = await createHarness();
     const now = new Date("2026-09-12T12:00:00.000Z").toISOString();
     await client.exec(`
