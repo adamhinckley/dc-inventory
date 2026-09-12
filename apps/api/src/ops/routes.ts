@@ -31,8 +31,12 @@ export async function opsRoutes(app: FastifyInstance): Promise<void> {
       },
     },
     handler: async (request) => {
+      const actor = request.opsAuth;
+      if (actor === undefined) {
+        throw new Error("ops audience guard did not set opsAuth");
+      }
       const subscription = await request.server.licensing.getLatestSubscription.execute({
-        organizationId: OrganizationId.DEFAULT,
+        organizationId: OrganizationId.parse(actor.tenantId),
       });
       return subscription === null
         ? { status: "inactive" as const, plan: null }
