@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Cloud Agent install: provision Node 24 and workspace dependencies.
+# Cloud Agent install: provision Node 24, workspace dependencies, and a local
+# PostgreSQL that mirrors the repo's Compose defaults so `pnpm dev:api`,
+# migrations, and seeds work without Docker.
 #
 # The repo requires Node >=24 (see package.json "engines"), but the default
 # Cloud Agent base image ships Node 22 (exposed at /exec-daemon/node, which the
@@ -53,3 +55,25 @@ echo "node $("$BINDIR/node" -v) / pnpm $("$BINDIR/pnpm" -v)"
 
 # --- Workspace deps ----------------------------------------------------------
 pnpm install --frozen-lockfile
+
+# --- Local .env files --------------------------------------------------------
+# The apps read gitignored .env files (never committed). Seed them from the
+# committed *.env.example placeholders when missing. The API example already
+# points DATABASE_URL at the local Postgres below; the Next apps proxy :3001.
+for envpair in \
+  ".env.example:.env" \
+  "apps/api/.env.example:apps/api/.env" \
+  "apps/internal/.env.example:apps/internal/.env" \
+  "apps/wholesale/.env.example:apps/wholesale/.env"; do
+  src="${envpair%%:*}"; dst="${envpair##*:}"
+  [ -f "$src" ] && [ ! -f "$dst" ] && cp "$src" "$dst" && echo "install.sh: created $dst"
+done
+
+# --- Local PostgreSQL --------------------------------------------------------
+# The repo's documented local infra is Postgres 18 + MinIO via Docker Compose,
+# but Docker is not available in the Cloud Agent VM. We install the distro's
+# PostgreSQL (repo accepts 16+; see docs/stack.md) and mirror the Compose
+# credentials (postgres/postgres @ localhost:5432, db dc_inventory).
+bash "$REPO_ROOT/.cursor/db-provision.sh"
+
+echo "install.sh: done."

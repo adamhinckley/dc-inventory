@@ -2,11 +2,24 @@
   "name": "DC Inventory",
   "user": "ubuntu",
   "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
   "terminals": [
     {
       "name": "api",
       "command": "pnpm dev:api"
+    },
+    {
+      "name": "internal",
+      "command": "pnpm dev:internal"
+    },
+    {
+      "name": "wholesale",
+      "command": "pnpm dev:wholesale"
     }
   ],
-  "ports": [{ "name": "api", "port": 3001 }]
+  "ports": [
+    { "name": "api", "port": 3001 },
+    { "name": "internal", "port": 3000 },
+    { "name": "wholesale", "port": 3002 }
+  ]
 }
