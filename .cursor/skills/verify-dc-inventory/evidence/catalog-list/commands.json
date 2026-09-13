@@ -1,0 +1,54 @@
+{
+  "feature": "catalog-list",
+  "ranAt": "2026-09-01T18:32:00Z",
+  "surface": "http://localhost:3000",
+  "notes": [
+    "Staff form login. Password read from apps/api/.env, not printed.",
+    "Phase 1 seed left catalog empty. Table shows No results. That is the live DataTable.",
+    "Search HEX still No results. URL gained q=HEX.",
+    "Inventory snapshot captured on the same pass after goto /inventory."
+  ],
+  "commands": [
+    "doctor",
+    "launch --seed phase1 --surfaces api,internal",
+    "login-staff",
+    "wait-settle",
+    "snapshot --aria --path .cursor/skills/verify-dc-inventory/evidence/catalog-list/table.aria.yml",
+    "screenshot --path .cursor/skills/verify-dc-inventory/evidence/catalog-list/table.png --full-page",
+    "fill --role textbox --name \"Search SKU or name\" --value HEX",
+    "goto --path /inventory",
+    "wait-settle",
+    "snapshot --aria --path .cursor/skills/verify-dc-inventory/evidence/inventory-page/table.aria.yml",
+    "screenshot --path .cursor/skills/verify-dc-inventory/evidence/inventory-page/table.png --full-page",
+    "state",
+    "teardown --dry-run",
+    "teardown"
+  ],
+  "observed": {
+    "loginUrl": "http://localhost:3000/catalog",
+    "staffSessionCookie": true,
+    "passwordSource": "apps/api/.env",
+    "startedCompose": false,
+    "postgresMode": "existing",
+    "catalogEmptyState": "No results.",
+    "catalogColumnsSeen": [
+      "SKU",
+      "Name",
+      "Member price",
+      "Available",
+      "Allocated"
+    ],
+    "inventoryEmptyState": "No results.",
+    "inventoryColumnsSeen": [
+      "SKU",
+      "Name",
+      "On hand",
+      "On order",
+      "Allocated",
+      "Committed (pre-sold)",
+      "Available (warehouse)",
+      "Available to sell",
+      "Sell state"
+    ]
+  }
+}
