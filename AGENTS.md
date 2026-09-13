@@ -103,6 +103,8 @@ Per-repo wiring for Matt Pocock engineering skills. Skills live under [`.agents/
 | `to-tickets` | Slice a spec into tracer-bullet implementation tickets |
 | `improve-codebase-architecture` | Periodic deepening survey (HTML report; no code edits) |
 | `unslop` | Strip AI tells from writing |
+| `recall` | Rebuild recent working context from chat history + shared record before starting/resuming |
+| `why` | Shared-record investigation (used by `recall` for feature/bug history across tracker/chat/docs) |
 
 ### Issue tracker
 
