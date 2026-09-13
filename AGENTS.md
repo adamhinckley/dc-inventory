@@ -85,3 +85,31 @@ Do:
 If another ticket produces this packet's Given, Linear-block it. Do not write "can start immediately" when the port, flag, or HTTP is still missing. If two tickets share a use case, name which issue owns the use case and which owns HTTP/UI.
 
 If asked to invent ledger math, authz matrices, AR rules, sales tax, software-billing/flag catalogs, or operator-platform message kinds without failing tests already in the repo — **stop and ask the owner**.
+
+## Agent skills
+
+Per-repo wiring for Matt Pocock engineering skills. Skills live under [`.agents/skills/`](./.agents/skills/) and are locked in [`skills-lock.json`](./skills-lock.json).
+
+| Skill | Role |
+|---|---|
+| `setup-matt-pocock-skills` | One-time tracker / domain wiring (already applied below) |
+| `wayfinder` | Multi-session decision map on Linear |
+| `grilling` | HITL interview primitive (wayfinder default ticket) |
+| `domain-modeling` | Glossary / ADR sharpening (always with grilling) |
+| `research` | AFK fact-finding subagent (wayfinder research tickets) |
+| `prototype` | HITL throwaway artifact (wayfinder prototype tickets) |
+| `handoff` | Compact a session into / out of a wayfinder map |
+| `to-spec` | Collapse a cleared map into one spec |
+| `to-tickets` | Slice a spec into tracer-bullet implementation tickets |
+| `improve-codebase-architecture` | Periodic deepening survey (HTML report; no code edits) |
+| `unslop` | Strip AI tells from writing |
+| `recall` | Rebuild recent working context from chat history + shared record before starting/resuming |
+| `why` | Shared-record investigation (used by `recall` for feature/bug history across tracker/chat/docs) |
+
+### Issue tracker
+
+Linear on the [DC Inventory initiative](https://linear.app/adamhinckley/initiative/dc-inventory-41579ab5d46f/overview). See [`docs/agents/issue-tracker.md`](./docs/agents/issue-tracker.md) (includes **Wayfinding operations** for `/wayfinder`).
+
+### Domain docs
+
+Single-context: root [`CONTEXT.md`](./CONTEXT.md) + [`docs/adr/`](./docs/adr/). See [`docs/agents/domain.md`](./docs/agents/domain.md).
